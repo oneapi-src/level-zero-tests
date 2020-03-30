@@ -24,4 +24,5 @@
 #include "test_harness_sysman_led.hpp"
 #include "test_harness_sysman_ras.hpp"
 #include "test_harness_sysman_engine.hpp"
+#include "test_harness_sysman_temp.hpp"
 #endif

@@ -18,3 +18,5 @@ add_subdirectory(test_sysman_fan)
 add_subdirectory(test_sysman_led)
 add_subdirectory(test_sysman_ras)
 add_subdirectory(test_sysman_engine)
+add_subdirectory(test_sysman_temperature)
+
