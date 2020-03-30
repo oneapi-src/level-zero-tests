@@ -15,19 +15,18 @@ namespace level_zero_tests {
 
 uint32_t get_temp_handle_count(ze_device_handle_t device);
 
-std::vector<zet_sysman_temp_handle_t> get_temp_handles(ze_device_handle_t device,
-                                                     uint32_t &count);
+std::vector<zet_sysman_temp_handle_t>
+get_temp_handles(ze_device_handle_t device, uint32_t &count);
 
 zet_temp_properties_t get_temp_properties(zet_sysman_temp_handle_t tempHandle);
 
 zet_temp_config_t get_temp_configuration(zet_sysman_temp_handle_t tempHandle);
 
 void set_temp_configuration(zet_sysman_temp_handle_t tempHandle,
-                           zet_temp_config_t &config);
+                            zet_temp_config_t &config);
 
 double get_temp_state(zet_sysman_temp_handle_t tempHandle);
 
 } // namespace level_zero_tests
 
 #endif
-

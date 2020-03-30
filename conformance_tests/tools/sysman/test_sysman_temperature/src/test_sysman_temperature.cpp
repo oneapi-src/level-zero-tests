@@ -96,9 +96,12 @@ TEST_F(
           propertiesLater.onSubdevice == true) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
-      EXPECT_EQ(propertiesInitial.isThreshold1Supported, propertiesLater.isThreshold1Supported);
-      EXPECT_EQ(propertiesInitial.isCriticalTempSupported, propertiesLater.isCriticalTempSupported);
-      EXPECT_EQ(propertiesInitial.isThreshold2Supported, propertiesLater.isThreshold2Supported);
+      EXPECT_EQ(propertiesInitial.isThreshold1Supported,
+                propertiesLater.isThreshold1Supported);
+      EXPECT_EQ(propertiesInitial.isCriticalTempSupported,
+                propertiesLater.isCriticalTempSupported);
+      EXPECT_EQ(propertiesInitial.isThreshold2Supported,
+                propertiesLater.isThreshold2Supported);
     }
   }
 }
@@ -113,22 +116,23 @@ TEST_F(
       ASSERT_NE(nullptr, tempHandle);
       auto config = lzt::get_temp_configuration(tempHandle);
       auto properties = lzt::get_temp_properties(tempHandle);
-      if(config.enableCritical == true){
+      if (config.enableCritical == true) {
         ASSERT_EQ(properties.isCriticalTempSupported, true);
       }
-      if((config.threshold1.enableLowToHigh == true) || (config.threshold1.enableHighToLow == true)){
+      if ((config.threshold1.enableLowToHigh == true) ||
+          (config.threshold1.enableHighToLow == true)) {
         ASSERT_EQ(properties.isThreshold1Supported, true);
-	EXPECT_GT(config.threshold1.threshold, 0);
+        EXPECT_GT(config.threshold1.threshold, 0);
       }
-      if((config.threshold2.enableLowToHigh == true) || (config.threshold2.enableHighToLow == true)){
+      if ((config.threshold2.enableLowToHigh == true) ||
+          (config.threshold2.enableHighToLow == true)) {
         ASSERT_EQ(properties.isThreshold2Supported, true);
         EXPECT_GT(config.threshold2.threshold, 0);
       }
       EXPECT_LT(config.processId, UINT32_MAX);
-        
-      }
     }
   }
+}
 TEST_F(
     TempModuleTest,
     GivenValidTempHandleWhenSettingTempConfigurationThenExpectzetSysmanTemperatureSetConfigFollowedByzetSysmanTemperatureGetConfigToMatch) {
@@ -148,7 +152,8 @@ TEST_F(
         set_config.threshold1.enableLowToHigh = true;
         set_config.threshold1.enableHighToLow = false;
         double tMax = 0;
-        EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanFrequencyOcGetTjMax(freqHandle, &tMax));
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zetSysmanFrequencyOcGetTjMax(freqHandle, &tMax));
         set_config.threshold1.threshold = tMax;
         set_config.threshold2.enableLowToHigh = true;
         set_config.threshold2.enableHighToLow = false;
@@ -156,17 +161,23 @@ TEST_F(
         lzt::set_temp_configuration(tempHandle, set_config);
         auto get_config = lzt::get_temp_configuration(tempHandle);
         EXPECT_EQ(get_config.enableCritical, set_config.enableCritical);
-        EXPECT_EQ(get_config.threshold1.enableLowToHigh, set_config.threshold1.enableLowToHigh);
-        EXPECT_EQ(get_config.threshold1.enableHighToLow, set_config.threshold1.enableHighToLow);
-        EXPECT_EQ(get_config.threshold1.threshold, set_config.threshold1.threshold);
-        EXPECT_EQ(get_config.threshold2.enableLowToHigh, set_config.threshold2.enableLowToHigh);
-        EXPECT_EQ(get_config.threshold2.enableHighToLow, set_config.threshold2.enableHighToLow);
-        EXPECT_EQ(get_config.threshold2.threshold, set_config.threshold2.threshold);
+        EXPECT_EQ(get_config.threshold1.enableLowToHigh,
+                  set_config.threshold1.enableLowToHigh);
+        EXPECT_EQ(get_config.threshold1.enableHighToLow,
+                  set_config.threshold1.enableHighToLow);
+        EXPECT_EQ(get_config.threshold1.threshold,
+                  set_config.threshold1.threshold);
+        EXPECT_EQ(get_config.threshold2.enableLowToHigh,
+                  set_config.threshold2.enableLowToHigh);
+        EXPECT_EQ(get_config.threshold2.enableHighToLow,
+                  set_config.threshold2.enableHighToLow);
+        EXPECT_EQ(get_config.threshold2.threshold,
+                  set_config.threshold2.threshold);
         lzt::set_temp_configuration(tempHandle, initial_config);
-      }
       }
     }
   }
+}
 TEST_F(TempModuleTest,
        GivenValidTempHandleWhenRetrievingTempStateThenValidStateIsReturned) {
   for (auto device : devices) {
@@ -180,7 +191,8 @@ TEST_F(TempModuleTest,
         EXPECT_NE(nullptr, freqHandle);
         auto temp = lzt::get_temp_state(tempHandle);
         double tMax = 0;
-        EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanFrequencyOcGetTjMax(freqHandle, &tMax));
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zetSysmanFrequencyOcGetTjMax(freqHandle, &tMax));
         ASSERT_LE(temp, tMax);
         EXPECT_GT(temp, 0);
       }
@@ -189,5 +201,3 @@ TEST_F(TempModuleTest,
 }
 
 } // namespace
-
-
