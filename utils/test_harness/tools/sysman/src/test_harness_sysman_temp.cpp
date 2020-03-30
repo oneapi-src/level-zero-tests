@@ -41,7 +41,7 @@ zet_temp_properties_t get_temp_properties(zet_sysman_temp_handle_t tempHandle) {
   return properties;
 }
 double get_temp_state(zet_sysman_temp_handle_t tempHandle) {
-  double temp;
+  double temp = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanTemperatureGetState(tempHandle, &temp));
 }
 zet_temp_config_t get_temp_configuration(zet_sysman_temp_handle_t tempHandle) {

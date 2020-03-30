@@ -1,4 +1,4 @@
-testSysmanTemperature
+#testSysmanTemperature
 
 This test suite is for checking sysman operations on Temperature module. There are specific CTS for different Temperature module APIs.
 #zetSysmanTemperatureGet
@@ -16,9 +16,9 @@ For this API there are two test cases.
 For this API there is one test case.
 * GivenValidTempHandleWhenGettingTempStateThenValidStatesAreReturned :- Test case checks whether states API is returning success or not and states returned are valid values and not incorrect out-of-bound ones.
 #zetSysmanTemperatureGetconfig
-For this API there is one test case. Ensure that this test should run with root user only otherwise test will fail.
+For this API there is one test case.
 * GivenValidTempHandleWhenRetrievingTempConfigurationThenValidTempConfigurationIsReturned :- Test case checks whether API is returning success or not and returned values of configuration parameters are valid or not.
 #zetSysmanTemperatureSetconfig
-For this API there is one test case.
+For this API there is one test case. Ensure that this test should run with root user only otherwise test will fail.
 * GivenValidTempHandleWhenSettingTempConfigurationThenExpectzetSysmanTemperatureSetConfigFollowedByzetSysmanTemperatureGetConfigToMatch :- Test case first records initial values of configuration parameters, then sets the value of parameters, after setting values test reads those values back and then verifies them.
 
