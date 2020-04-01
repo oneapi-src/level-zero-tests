@@ -1,0 +1,12 @@
+# Copyright (C) 2019 Intel Corporation
+# SPDX-License-Identifier: MIT
+
+@PACKAGE_INIT@
+
+get_filename_component(random_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+if(NOT TARGET level_zero_tests::random)
+    include("${random_CMAKE_DIR}/random-targets.cmake")
+endif()
+
+check_required_components(random)

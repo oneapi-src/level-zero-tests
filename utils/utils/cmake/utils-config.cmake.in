@@ -1,0 +1,16 @@
+# Copyright (C) 2019 Intel Corporation
+# SPDX-License-Identifier: MIT
+
+@PACKAGE_INIT@
+
+get_filename_component(utils_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+include(CMakeFindDependencyMacro)
+#TODO: Add L0 dependency
+#find_dependency(LevelZero REQUIRED)
+
+if(NOT TARGET level_zero_tests::utils)
+    include("${utils_CMAKE_DIR}/utils-targets.cmake")
+endif()
+
+check_required_components(utils)

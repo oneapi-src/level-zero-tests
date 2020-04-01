@@ -1,0 +1,16 @@
+# Copyright (C) 2019 Intel Corporation
+# SPDX-License-Identifier: MIT
+
+@PACKAGE_INIT@
+
+get_filename_component(image_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+include(CMakeFindDependencyMacro)
+find_dependency(Boost 1.64 REQUIRED COMPONENTS boost)
+find_dependency(PNG REQUIRED)
+
+if(NOT TARGET level_zero_tests::image)
+    include("${image_CMAKE_DIR}/image-targets.cmake")
+endif()
+
+check_required_components(image)

@@ -1,0 +1,15 @@
+# Copyright (C) 2019 Intel Corporation
+# SPDX-License-Identifier: MIT
+
+@PACKAGE_INIT@
+
+get_filename_component(logging_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+include(CMakeFindDependencyMacro)
+find_dependency(Boost 1.64 REQUIRED COMPONENTS log program_options)
+
+if(NOT TARGET level_zero_tests::logging)
+    include("${logging_CMAKE_DIR}/logging-targets.cmake")
+endif()
+
+check_required_components(logging)

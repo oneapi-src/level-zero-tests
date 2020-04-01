@@ -1,0 +1,16 @@
+# Copyright (C) 2019 Intel Corporation
+# SPDX-License-Identifier: MIT
+
+@PACKAGE_INIT@
+
+get_filename_component(test_harness_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+include(CMakeFindDependencyMacro)
+#TODO: Add L0 dependency
+#find_dependency(LevelZero REQUIRED)
+
+if(NOT TARGET level_zero_tests::test_harness)
+    include("${test_harness_CMAKE_DIR}/test_harness-targets.cmake")
+endif()
+
+check_required_components(test_harness)

@@ -1,0 +1,24 @@
+# Copyright (C) 2019 Intel Corporation
+# SPDX-License-Identifier: MIT
+
+add_lzt_test(
+  NAME test_module
+  GROUP "/conformance_tests/core"
+  SOURCES
+    src/test_module.cpp
+    src/test_kernel_args.cpp
+    src/test_cooperative_kernel.cpp
+    src/main.cpp
+  LINK_LIBRARIES
+    level_zero_tests::logging
+    level_zero_tests::utils
+  KERNELS
+    cooperative_kernel
+    multi_argument_kernel_test
+    single_global_variable
+    multiple_global_variables
+    update_variable_on_device
+    module_add
+    module_build_error
+    update_variable_with_spec_constant
+)

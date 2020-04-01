@@ -1,0 +1,12 @@
+/*
+ *
+ * Copyright (C) 2019 Intel Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ */
+
+kernel void multi_device_function(global int *data) {
+  const int tid = get_global_id(0);
+  data[tid]++;
+}
