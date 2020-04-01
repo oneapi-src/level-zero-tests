@@ -51,9 +51,10 @@ zet_temp_config_t get_temp_config(zet_sysman_temp_handle_t tempHandle) {
             zetSysmanTemperatureGetConfig(tempHandle, &config));
   return config;
 }
-void set_temp_config(zet_sysman_temp_handle_t tempHandle,
-                     zet_temp_config_t &config) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanTemperatureSetConfig(tempHandle, &config));
+ze_result_t set_temp_config(zet_sysman_temp_handle_t tempHandle,
+                            zet_temp_config_t &config) {
+  ze_result_t result = zetSysmanTemperatureSetConfig(tempHandle, &config);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+  return result;
 }
 } // namespace level_zero_tests

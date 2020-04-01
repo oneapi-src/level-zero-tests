@@ -16,6 +16,7 @@
 #include "test_harness_sysman_standby.hpp"
 #include "test_harness_sysman_power.hpp"
 #include "test_harness_sysman_diagnostics.hpp"
+#include "test_harness_sysman_event.hpp"
 #include "test_harness_sysman_memory.hpp"
 #include "test_harness_sysman_fabric.hpp"
 #include "test_harness_sysman_device.hpp"

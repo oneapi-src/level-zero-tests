@@ -22,8 +22,8 @@ zet_temp_properties_t get_temp_properties(zet_sysman_temp_handle_t tempHandle);
 
 zet_temp_config_t get_temp_config(zet_sysman_temp_handle_t tempHandle);
 
-void set_temp_config(zet_sysman_temp_handle_t tempHandle,
-                     zet_temp_config_t &config);
+ze_result_t set_temp_config(zet_sysman_temp_handle_t tempHandle,
+                            zet_temp_config_t &config);
 
 double get_temp_state(zet_sysman_temp_handle_t tempHandle);
 

@@ -27,6 +27,7 @@ add_core_library(test_harness
     "tools/sysman/src/test_harness_sysman_pci.cpp"
     "tools/sysman/src/test_harness_sysman_power.cpp"
     "tools/sysman/src/test_harness_sysman_diagnostics.cpp"
+    "tools/sysman/src/test_harness_sysman_event.cpp"
     "tools/sysman/src/test_harness_sysman_memory.cpp"
     "tools/sysman/src/test_harness_sysman_fabric.cpp"
     "tools/sysman/src/test_harness_sysman_device.cpp"
