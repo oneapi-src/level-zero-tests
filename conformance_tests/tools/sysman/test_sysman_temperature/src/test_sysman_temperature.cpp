@@ -116,7 +116,7 @@ TEST_F(
       ASSERT_NE(nullptr, tempHandle);
       auto config = lzt::get_temp_config(tempHandle);
       auto properties = lzt::get_temp_properties(tempHandle);
-      if (config.enableCritical == false) {
+      if (properties.isCriticalTempSupported == false) {
         ASSERT_EQ(config.enableCritical, false);
       }
       if (properties.isThreshold1Supported == false) {
@@ -141,30 +141,43 @@ TEST_F(
       ASSERT_NE(nullptr, tempHandle);
       auto properties = lzt::get_temp_properties(tempHandle);
       auto initial_config = lzt::get_temp_config(tempHandle);
+      auto temp = lzt::get_temp_state(tempHandle);
       zet_temp_config_t set_config;
-      set_config.enableCritical = true;
-      set_config.threshold1.enableLowToHigh = true;
-      set_config.threshold1.enableHighToLow = false;
-      set_config.threshold1.threshold = 70;
-      set_config.threshold2.enableLowToHigh = true;
-      set_config.threshold2.enableHighToLow = false;
-      set_config.threshold2.threshold = 70;
-      lzt::set_temp_config(tempHandle, set_config);
-      auto get_config = lzt::get_temp_config(tempHandle);
-      EXPECT_EQ(get_config.enableCritical, set_config.enableCritical);
-      EXPECT_EQ(get_config.threshold1.enableLowToHigh,
-                set_config.threshold1.enableLowToHigh);
-      EXPECT_EQ(get_config.threshold1.enableHighToLow,
-                set_config.threshold1.enableHighToLow);
-      EXPECT_EQ(get_config.threshold1.threshold,
-                set_config.threshold1.threshold);
-      EXPECT_EQ(get_config.threshold2.enableLowToHigh,
-                set_config.threshold2.enableLowToHigh);
-      EXPECT_EQ(get_config.threshold2.enableHighToLow,
-                set_config.threshold2.enableHighToLow);
-      EXPECT_EQ(get_config.threshold2.threshold,
-                set_config.threshold2.threshold);
-      lzt::set_temp_config(tempHandle, initial_config);
+      if (properties.isCriticalTempSupported == true) {
+        set_config.enableCritical = true;
+        lzt::set_temp_config(tempHandle, set_config);
+        auto get_config = lzt::get_temp_config(tempHandle);
+        EXPECT_EQ(get_config.enableCritical, set_config.enableCritical);
+      }
+      if (properties.isThreshold1Supported == true) {
+        set_config.threshold1.enableLowToHigh = true;
+        set_config.threshold1.enableHighToLow = false;
+        set_config.threshold1.threshold = temp;
+        lzt::set_temp_config(tempHandle, set_config);
+        auto get_config = lzt::get_temp_config(tempHandle);
+        EXPECT_EQ(get_config.threshold1.enableLowToHigh,
+                  set_config.threshold1.enableLowToHigh);
+        EXPECT_EQ(get_config.threshold1.enableLowToHigh,
+                  set_config.threshold1.enableLowToHigh);
+        EXPECT_EQ(get_config.threshold1.enableHighToLow,
+                  set_config.threshold1.enableHighToLow);
+        EXPECT_EQ(get_config.threshold1.threshold,
+                  set_config.threshold1.threshold);
+      }
+      if (properties.isThreshold1Supported == true) {
+        set_config.threshold2.enableLowToHigh = true;
+        set_config.threshold2.enableHighToLow = false;
+        set_config.threshold2.threshold = temp;
+        lzt::set_temp_config(tempHandle, set_config);
+        auto get_config = lzt::get_temp_config(tempHandle);
+        EXPECT_EQ(get_config.threshold2.enableLowToHigh,
+                  set_config.threshold2.enableLowToHigh);
+        EXPECT_EQ(get_config.threshold2.enableHighToLow,
+                  set_config.threshold2.enableHighToLow);
+        EXPECT_EQ(get_config.threshold2.threshold,
+                  set_config.threshold2.threshold);
+        lzt::set_temp_config(tempHandle, initial_config);
+      }
     }
   }
 }
