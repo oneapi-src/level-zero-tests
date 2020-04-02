@@ -14,7 +14,7 @@ class TempModuleTest : public lzt::SysmanCtsClass {};
 
 TEST_F(
     TempModuleTest,
-    GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
+    GivenComponentCountZeroWhenRetrievingTempHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     lzt::get_temp_handle_count(device);
   }
@@ -22,7 +22,7 @@ TEST_F(
 
 TEST_F(
     TempModuleTest,
-    GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullTempHandlesAreReturned) {
+    GivenComponentCountZeroWhenRetrievingSysmanTempThenNotNullTempHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto tempHandles = lzt::get_temp_handles(device, count);
@@ -34,7 +34,7 @@ TEST_F(
 }
 TEST_F(
     TempModuleTest,
-    GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
+    GivenInvalidComponentCountWhenRetrievingTempHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actualCount = 0;
     lzt::get_temp_handles(device, actualCount);
@@ -114,20 +114,18 @@ TEST_F(
     auto tempHandles = lzt::get_temp_handles(device, count);
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
-      auto config = lzt::get_temp_configuration(tempHandle);
+      auto config = lzt::get_temp_config(tempHandle);
       auto properties = lzt::get_temp_properties(tempHandle);
-      if (config.enableCritical == true) {
-        ASSERT_EQ(properties.isCriticalTempSupported, true);
+      if (config.enableCritical == false) {
+        ASSERT_EQ(config.enableCritical, false);
       }
-      if ((config.threshold1.enableLowToHigh == true) ||
-          (config.threshold1.enableHighToLow == true)) {
-        ASSERT_EQ(properties.isThreshold1Supported, true);
-        EXPECT_GT(config.threshold1.threshold, 0);
+      if (properties.isThreshold1Supported == false) {
+        ASSERT_EQ(config.threshold1.enableLowToHigh, false);
+        ASSERT_EQ(config.threshold1.enableHighToLow, false);
       }
-      if ((config.threshold2.enableLowToHigh == true) ||
-          (config.threshold2.enableHighToLow == true)) {
-        ASSERT_EQ(properties.isThreshold2Supported, true);
-        EXPECT_GT(config.threshold2.threshold, 0);
+      if (properties.isThreshold2Supported == false) {
+        ASSERT_EQ(config.threshold2.enableLowToHigh, false);
+        ASSERT_EQ(config.threshold2.enableHighToLow, false);
       }
       EXPECT_LT(config.processId, UINT32_MAX);
     }
@@ -141,43 +139,36 @@ TEST_F(
     auto tempHandles = lzt::get_temp_handles(device, count);
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
-      uint32_t pCount = 0;
-      auto freqHandles = lzt::get_freq_handles(device, pCount);
-      for (auto freqHandle : freqHandles) {
-        EXPECT_NE(nullptr, freqHandle);
-        auto properties = lzt::get_temp_properties(tempHandle);
-        auto initial_config = lzt::get_temp_configuration(tempHandle);
-        zet_temp_config_t set_config;
-        set_config.enableCritical = true;
-        set_config.threshold1.enableLowToHigh = true;
-        set_config.threshold1.enableHighToLow = false;
-        double tMax = 0;
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zetSysmanFrequencyOcGetTjMax(freqHandle, &tMax));
-        set_config.threshold1.threshold = tMax;
-        set_config.threshold2.enableLowToHigh = true;
-        set_config.threshold2.enableHighToLow = false;
-        set_config.threshold2.threshold = tMax;
-        lzt::set_temp_configuration(tempHandle, set_config);
-        auto get_config = lzt::get_temp_configuration(tempHandle);
-        EXPECT_EQ(get_config.enableCritical, set_config.enableCritical);
-        EXPECT_EQ(get_config.threshold1.enableLowToHigh,
-                  set_config.threshold1.enableLowToHigh);
-        EXPECT_EQ(get_config.threshold1.enableHighToLow,
-                  set_config.threshold1.enableHighToLow);
-        EXPECT_EQ(get_config.threshold1.threshold,
-                  set_config.threshold1.threshold);
-        EXPECT_EQ(get_config.threshold2.enableLowToHigh,
-                  set_config.threshold2.enableLowToHigh);
-        EXPECT_EQ(get_config.threshold2.enableHighToLow,
-                  set_config.threshold2.enableHighToLow);
-        EXPECT_EQ(get_config.threshold2.threshold,
-                  set_config.threshold2.threshold);
-        lzt::set_temp_configuration(tempHandle, initial_config);
-      }
+      auto properties = lzt::get_temp_properties(tempHandle);
+      auto initial_config = lzt::get_temp_config(tempHandle);
+      zet_temp_config_t set_config;
+      set_config.enableCritical = true;
+      set_config.threshold1.enableLowToHigh = true;
+      set_config.threshold1.enableHighToLow = false;
+      set_config.threshold1.threshold = 70;
+      set_config.threshold2.enableLowToHigh = true;
+      set_config.threshold2.enableHighToLow = false;
+      set_config.threshold2.threshold = 70;
+      lzt::set_temp_config(tempHandle, set_config);
+      auto get_config = lzt::get_temp_config(tempHandle);
+      EXPECT_EQ(get_config.enableCritical, set_config.enableCritical);
+      EXPECT_EQ(get_config.threshold1.enableLowToHigh,
+                set_config.threshold1.enableLowToHigh);
+      EXPECT_EQ(get_config.threshold1.enableHighToLow,
+                set_config.threshold1.enableHighToLow);
+      EXPECT_EQ(get_config.threshold1.threshold,
+                set_config.threshold1.threshold);
+      EXPECT_EQ(get_config.threshold2.enableLowToHigh,
+                set_config.threshold2.enableLowToHigh);
+      EXPECT_EQ(get_config.threshold2.enableHighToLow,
+                set_config.threshold2.enableHighToLow);
+      EXPECT_EQ(get_config.threshold2.threshold,
+                set_config.threshold2.threshold);
+      lzt::set_temp_config(tempHandle, initial_config);
     }
   }
 }
+
 TEST_F(TempModuleTest,
        GivenValidTempHandleWhenRetrievingTempStateThenValidStateIsReturned) {
   for (auto device : devices) {
@@ -185,17 +176,8 @@ TEST_F(TempModuleTest,
     auto tempHandles = lzt::get_temp_handles(device, count);
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
-      uint32_t pCount = 0;
-      auto freqHandles = lzt::get_freq_handles(device, pCount);
-      for (auto freqHandle : freqHandles) {
-        EXPECT_NE(nullptr, freqHandle);
-        auto temp = lzt::get_temp_state(tempHandle);
-        double tMax = 0;
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zetSysmanFrequencyOcGetTjMax(freqHandle, &tMax));
-        ASSERT_LE(temp, tMax);
-        EXPECT_GT(temp, 0);
-      }
+      auto temp = lzt::get_temp_state(tempHandle);
+      EXPECT_GT(temp, 0);
     }
   }
 }

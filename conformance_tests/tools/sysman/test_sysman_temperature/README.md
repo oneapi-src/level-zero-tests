@@ -3,9 +3,9 @@
 This test suite is for checking sysman operations on Temperature module. There are specific CTS for different Temperature module APIs.
 #zetSysmanTemperatureGet
 For this API there are four test cases.
-* GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned :- Test case checks whether API returns non zero count value for number of Temperature handles, when zero is passed as second parameter and nullptr is passed as third parameter.
-* GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullTempHandlesAreReturned :- Test case checks whether temperature handles retrieved are valid or not, when actual count value is passed as second parameter and nullptr is passed as third parameter.
-* GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated :- Test case checks whether count value is updated to its actual value, when illegal count value is passed as second argument.
+* GivenComponentCountZeroWhenRetrievingTempHandlesThenNonZeroCountIsReturned :- Test case checks whether API returns non zero count value for number of Temperature handles, when zero is passed as second parameter and nullptr is passed as third parameter.
+* GivenComponentCountZeroWhenRetrievingTempHandlesThenNotNullTempHandlesAreReturned :- Test case checks whether temperature handles retrieved are valid or not, when actual count value is passed as second parameter and nullptr is passed as third parameter.
+* GivenInvalidComponentCountWhenRetrievingTempHandlesThenActualComponentCountIsUpdated :- Test case checks whether count value is updated to its actual value, when illegal count value is passed as second argument.
 * GivenValidComponentCountWhenCallingApiTwiceThenSimilarTempHandlesReturned :- Test checks whether API returns consistent values by retrieving array of temperature handles twice and comparing them.
 
 #zetSysmanTemperatureGetProperties
