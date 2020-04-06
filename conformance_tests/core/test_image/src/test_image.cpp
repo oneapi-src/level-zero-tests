@@ -14,8 +14,6 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-class zeImageCreateDefaultTests : public ::testing::Test {};
-
 class zeImage1DSwizzleCreateTests
     : public lzt::zeImageCreateCommonTests,
       public ::testing::WithParamInterface<
@@ -107,14 +105,6 @@ class zeImageArrayMediaGetPropertiesTests
     : public lzt::zeImageCreateCommonTests,
       public ::testing::WithParamInterface<
           std::tuple<ze_image_format_layout_t, ze_image_format_type_t>> {};
-
-TEST_F(
-    zeImageCreateDefaultTests,
-    GivenDefaultImageDescriptorWhenCreatingImageThenNotNullPointerIsReturned) {
-  ze_image_handle_t image;
-  lzt::create_ze_image(image);
-  lzt::destroy_ze_image(image);
-}
 
 TEST_P(
     zeImage1DSwizzleCreateTests,
