@@ -58,7 +58,7 @@ TEST(
       level_zero_tests::load_binary_file(filename);
   ze_module_desc_t module_description;
   module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
-  module_description.format = static_cast<ze_module_format_t>(NULL);
+  module_description.format = static_cast<ze_module_format_t>(0);
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = nullptr;
