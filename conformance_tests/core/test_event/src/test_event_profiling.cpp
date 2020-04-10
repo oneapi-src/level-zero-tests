@@ -197,14 +197,12 @@ TEST_P(EventProfilingCacheCoherencyTests,
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event5, UINT32_MAX));
-  uint8_t *output = new uint8_t[size];
-  memcpy(output, buffer5, size);
+  std::unique_ptr<uint8_t> output(new uint8_t[size]);
+  memcpy(output.get(), buffer5, size);
 
   for (int i = 0; i < size; i++) {
-    ASSERT_EQ(output[i], value);
+    ASSERT_EQ(output.get()[i], value);
   }
-
-  delete[] output;
 
   lzt::destroy_event(event1);
   lzt::destroy_event(event2);

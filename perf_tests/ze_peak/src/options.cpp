@@ -70,7 +70,15 @@ int ZePeak::parse_arguments(int argc, char **argv) {
       }
     } else if (strcmp(argv[i], "-w") == 0) {
       if ((i + 1) < argc) {
-        warmup_iterations = static_cast<int>(strtoul(argv[i + 1], NULL, 0));
+        warmup_iterations = 0;
+        unsigned long temp = strtoul(argv[i + 1], NULL, 0);
+        if (ERANGE == errno) {
+          fprintf(stderr, "%s out of range of type ulong\n", argv[i + 1]);
+        } else if (temp > UINT32_MAX) {
+          fprintf(stderr, "%ld greater than UINT32_MAX\n", temp);
+        } else {
+          warmup_iterations = static_cast<uint32_t>(temp);
+        }
         i++;
       }
     } else if ((strcmp(argv[i], "-t") == 0)) {

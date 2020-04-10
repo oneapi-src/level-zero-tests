@@ -65,12 +65,14 @@ int receive_ipc_handle() {
   if (bind(unix_rcv_socket, (struct sockaddr *)&local_addr,
            strlen(local_addr.sun_path) + sizeof(local_addr.sun_family)) == -1) {
     perror("Server Bind Error");
+    close(unix_rcv_socket);
     throw std::runtime_error("[Server] Could not bind to socket");
   }
 
   LOG_DEBUG << "[Server] Unix Socket Listening...";
   if (listen(unix_rcv_socket, 1) == -1) {
     perror("Server Listen Error");
+    close(unix_rcv_socket);
     throw std::runtime_error("[Server] Could not listen on socket");
   }
 
@@ -78,6 +80,7 @@ int receive_ipc_handle() {
   int other_socket = accept(unix_rcv_socket, (struct sockaddr *)&remote_addr,
                             (socklen_t *)&len);
   if (other_socket == -1) {
+    close(unix_rcv_socket);
     perror("Server Accept Error");
     throw std::runtime_error("[Server] Could not accept connection");
   }
@@ -85,6 +88,8 @@ int receive_ipc_handle() {
 
   int ipc_descriptor;
   if ((ipc_descriptor = lzt::read_fd_from_socket(other_socket)) < 0) {
+    close(other_socket);
+    close(unix_rcv_socket);
     perror("Server Connection Error");
     throw std::runtime_error("[Server] Failed to read IPC handle");
   }
@@ -148,6 +153,7 @@ void send_ipc_handle(const ze_ipc_mem_handle_t &ipc_handle) {
     std::this_thread::sleep_for(lzt::CONNECTION_WAIT);
     wait += lzt::CONNECTION_WAIT;
     if (wait > lzt::CONNECTION_TIMEOUT) {
+      close(unix_send_socket);
       perror("Error: ");
       throw std::runtime_error("[Client] Timed out waiting to send ipc handle");
     }
@@ -159,6 +165,7 @@ void send_ipc_handle(const ze_ipc_mem_handle_t &ipc_handle) {
          sizeof(ipc_handle_id));
   if (lzt::write_fd_to_socket(unix_send_socket,
                               static_cast<int>(ipc_handle_id)) < 0) {
+    close(unix_send_socket);
     perror("Error: ");
     throw std::runtime_error("[Client] Error sending ipc handle");
   }

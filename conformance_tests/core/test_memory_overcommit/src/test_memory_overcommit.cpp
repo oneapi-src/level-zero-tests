@@ -453,8 +453,8 @@ TEST_P(
   EXPECT_EQ(false, memory_test_failure);
 
   free_drivers_info();
-  delete host_expected_output_buffer;
-  delete host_found_output_buffer;
+  delete[] host_expected_output_buffer;
+  delete[] host_found_output_buffer;
 }
 
 INSTANTIATE_TEST_CASE_P(TestAllInputPermuntations,

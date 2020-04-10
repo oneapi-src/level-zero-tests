@@ -157,14 +157,14 @@ TEST_P(zeCommandListAppendMemoryFillPatternVerificationTests,
 
   const int pattern_size = GetParam();
   const size_t total_size = (pattern_size * 10) + 5;
-  auto pattern = new uint8_t[pattern_size];
+  std::unique_ptr<uint8_t> pattern(new uint8_t[pattern_size]);
   auto target_memory = allocate_host_memory(total_size);
 
   for (uint32_t i = 0; i < pattern_size; i++) {
-    pattern[i] = i;
+    pattern.get()[i] = i;
   }
 
-  append_memory_fill(command_list, target_memory, pattern, pattern_size,
+  append_memory_fill(command_list, target_memory, pattern.get(), pattern_size,
                      total_size, nullptr);
   append_barrier(command_list, nullptr, 0, nullptr);
   close_command_list(command_list);
@@ -176,7 +176,6 @@ TEST_P(zeCommandListAppendMemoryFillPatternVerificationTests,
         << "Memory Fill did not match.";
   }
   free_memory(target_memory);
-  delete[] pattern;
 }
 
 INSTANTIATE_TEST_CASE_P(VaryPatternSize,
