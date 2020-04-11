@@ -7,6 +7,7 @@ add_lzt_test(
   SOURCES
     src/test_copy.cpp
     src/test_copy_events.cpp
+    src/test_kernel_copy.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
@@ -15,4 +16,6 @@ add_lzt_test(
     level_zero_tests::utils
   MEDIA
     "png/test_input.png"
+  KERNELS
+    copy_module
 )
