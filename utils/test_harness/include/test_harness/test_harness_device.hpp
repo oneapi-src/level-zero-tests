@@ -62,5 +62,10 @@ void set_intermediate_cache_config(ze_kernel_handle_t kernel,
 void set_last_level_cache_config(ze_device_handle_t device,
                                  ze_cache_config_t config);
 
+void make_memory_resident(const ze_device_handle_t &device, void *memory,
+                          const size_t size);
+void evict_memory(const ze_device_handle_t &device, void *memory,
+                  const size_t size);
+
 }; // namespace level_zero_tests
 #endif

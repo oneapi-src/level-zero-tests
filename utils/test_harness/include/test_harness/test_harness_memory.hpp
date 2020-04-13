@@ -22,6 +22,8 @@ const auto memory_allocation_alignments =
 
 void *allocate_host_memory(const size_t size);
 void *allocate_host_memory(const size_t size, const size_t alignment);
+void *allocate_host_memory(const size_t size, const size_t alignment,
+                           const ze_driver_handle_t driver);
 void *allocate_device_memory(const size_t size);
 void *allocate_device_memory(const size_t size, const size_t alignment);
 void *allocate_device_memory(const size_t size, const size_t alignment,
@@ -44,6 +46,11 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flag_t dev_flags,
                              const ze_host_mem_alloc_flag_t host_flags,
                              ze_device_handle_t device);
+void *allocate_shared_memory(const size_t size, const size_t alignment,
+                             const ze_device_mem_alloc_flag_t dev_flags,
+                             const ze_host_mem_alloc_flag_t host_flags,
+                             ze_device_handle_t device,
+                             ze_driver_handle_t driver);
 void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size);
 
 void free_memory(const void *ptr);

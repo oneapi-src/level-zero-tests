@@ -193,4 +193,15 @@ void set_last_level_cache_config(ze_device_handle_t device,
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceSetLastLevelCacheConfig(device, config));
 }
 
+void make_memory_resident(const ze_device_handle_t &device, void *memory,
+                          const size_t size) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceMakeMemoryResident(device, memory, size));
+}
+
+void evict_memory(const ze_device_handle_t &device, void *memory,
+                  const size_t size) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceEvictMemory(device, memory, size));
+}
+
 }; // namespace level_zero_tests
