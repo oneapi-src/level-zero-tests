@@ -56,11 +56,17 @@ TEST_P(zeCommandQueueCreateTests,
 
   if ((descriptor.flags == ZE_COMMAND_QUEUE_FLAG_NONE) ||
       (descriptor.flags == ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY)) {
-    EXPECT_GT(static_cast<uint32_t>(properties.numAsyncComputeEngines), 0);
+    if (properties.numAsyncComputeEngines == 0) {
+      LOG_WARNING << "Not Enough Async Compute Engines to run test";
+      SUCCEED();
+    }
     descriptor.ordinal =
         static_cast<uint32_t>(properties.numAsyncComputeEngines - 1);
   } else if (descriptor.flags == ZE_COMMAND_QUEUE_FLAG_COPY_ONLY) {
-    EXPECT_GT(static_cast<uint32_t>(properties.numAsyncCopyEngines), 0);
+    if (properties.numAsyncCopyEngines == 0) {
+      LOG_WARNING << "Not Enough Copy Engines to run test";
+      SUCCEED();
+    }
     descriptor.ordinal =
         static_cast<uint32_t>(properties.numAsyncCopyEngines - 1);
   }
@@ -172,15 +178,10 @@ protected:
 
     ze_command_queue_desc_t queue_descriptor;
     queue_descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
-    queue_descriptor.flags = ZE_COMMAND_QUEUE_FLAG_COPY_ONLY;
+    queue_descriptor.flags = ZE_COMMAND_QUEUE_FLAG_NONE;
     queue_descriptor.mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
     queue_descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
-
-    ze_device_properties_t properties;
-    properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
-    EXPECT_GT((uint32_t)properties.numAsyncCopyEngines, 0);
-    queue_descriptor.ordinal = (uint32_t)properties.numAsyncCopyEngines - 1;
+    queue_descriptor.ordinal = 0;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandQueueCreate(device, &queue_descriptor, &command_queue));
     EXPECT_NE(nullptr, command_queue);
@@ -372,7 +373,10 @@ TEST_F(
   lzt::append_barrier(command_list);
   lzt::close_command_list(command_list);
 
-  EXPECT_GT((uint32_t)properties.numAsyncCopyEngines, 0);
+  if (properties.numAsyncCopyEngines == 0) {
+    LOG_WARNING << "Not Enough Copy Engines to run test";
+    SUCCEED();
+  }
   command_queue = lzt::create_command_queue(
       device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
@@ -513,6 +517,13 @@ TEST(
   auto event_copy_high = lzt::create_event(ep_time, event_desc);
   event_desc.index = 3;
   auto event_copy_low = lzt::create_event(ep_time, event_desc);
+
+  auto properties = lzt::get_device_properties(device);
+  if (properties.numAsyncCopyEngines == 0) {
+    LOG_WARNING << "Not Enough Copy Engines to run test";
+    SUCCEED();
+  }
+
   auto cmdqueue_compute_high = lzt::create_command_queue(
       device, ZE_COMMAND_QUEUE_FLAG_NONE, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
       ZE_COMMAND_QUEUE_PRIORITY_HIGH, 0);
