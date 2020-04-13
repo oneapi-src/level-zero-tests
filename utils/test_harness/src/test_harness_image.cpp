@@ -65,21 +65,6 @@ void destroy_ze_image(ze_image_handle_t image) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(image));
 }
 
-void generate_ze_image_creation_flags_list(
-    std::vector<ze_image_flag_t> &image_creation_flags_list) {
-  for (auto image_rw_flag_a : lzt::image_creation_rw_flags) {
-    for (auto image_rw_flag_b : lzt::image_creation_rw_flags) {
-      for (auto image_cached_flag : lzt::image_creation_cached_flags) {
-        ze_image_flag_t image_creation_flags =
-            static_cast<ze_image_flag_t>(static_cast<int>(image_rw_flag_a) |
-                                         static_cast<int>(image_rw_flag_b) |
-                                         static_cast<int>(image_cached_flag));
-        image_creation_flags_list.push_back(image_creation_flags);
-      }
-    }
-  }
-}
-
 #define DEFAULT_WIDTH 128
 #define DEFAULT_HEIGHT 128
 
@@ -98,7 +83,6 @@ const ze_image_desc_t zeImageCreateCommon::dflt_ze_image_desc = {
 
 zeImageCreateCommon::zeImageCreateCommon()
     : dflt_host_image_(DEFAULT_WIDTH, DEFAULT_HEIGHT) {
-  lzt::generate_ze_image_creation_flags_list(image_creation_flags_list_);
   create_ze_image(dflt_device_image_, &dflt_ze_image_desc);
   create_ze_image(dflt_device_image_2_, &dflt_ze_image_desc);
   write_image_data_pattern(dflt_host_image_, dflt_data_pattern);

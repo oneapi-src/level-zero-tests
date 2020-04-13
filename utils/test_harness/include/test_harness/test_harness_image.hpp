@@ -17,11 +17,10 @@
 
 namespace level_zero_tests {
 
-const std::vector<ze_image_flag_t> image_creation_rw_flags = {
-    ZE_IMAGE_FLAG_PROGRAM_READ, ZE_IMAGE_FLAG_PROGRAM_WRITE};
-
-const std::vector<ze_image_flag_t> image_creation_cached_flags = {
-    ZE_IMAGE_FLAG_BIAS_CACHED, ZE_IMAGE_FLAG_BIAS_UNCACHED};
+const ze_image_flag_t image_rw_flags[2] = {ZE_IMAGE_FLAG_PROGRAM_READ,
+                                           ZE_IMAGE_FLAG_PROGRAM_WRITE};
+const ze_image_flag_t image_cache_flags[2] = {ZE_IMAGE_FLAG_BIAS_CACHED,
+                                              ZE_IMAGE_FLAG_BIAS_UNCACHED};
 
 const std::vector<uint64_t> image_widths = {1, 1920};
 
@@ -36,34 +35,47 @@ const auto image_format_types =
                       ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM,
                       ZE_IMAGE_FORMAT_TYPE_FLOAT);
 
-const auto image_format_1d_swizzle_layouts =
-    ::testing::Values(ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
-                      ZE_IMAGE_FORMAT_LAYOUT_32);
-
-const auto image_format_2d_swizzle_layouts =
-    ::testing::Values(ZE_IMAGE_FORMAT_LAYOUT_8_8, ZE_IMAGE_FORMAT_LAYOUT_16_16,
-                      ZE_IMAGE_FORMAT_LAYOUT_32_32);
-
-const auto image_format_3d_swizzle_layouts = ::testing::Values(
-    ZE_IMAGE_FORMAT_LAYOUT_11_11_10, ZE_IMAGE_FORMAT_LAYOUT_5_6_5);
-
-const auto image_format_4d_swizzle_layouts = ::testing::Values(
-    ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+const std::vector<ze_image_format_layout_t> image_format_layout_uint = {
+    ZE_IMAGE_FORMAT_LAYOUT_8,           ZE_IMAGE_FORMAT_LAYOUT_8_8,
+    ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,     ZE_IMAGE_FORMAT_LAYOUT_16,
+    ZE_IMAGE_FORMAT_LAYOUT_16_16,       ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+    ZE_IMAGE_FORMAT_LAYOUT_32,          ZE_IMAGE_FORMAT_LAYOUT_32_32,
+    ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2};
+const std::vector<ze_image_format_layout_t> image_format_layout_sint = {
+    ZE_IMAGE_FORMAT_LAYOUT_8,           ZE_IMAGE_FORMAT_LAYOUT_8_8,
+    ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,     ZE_IMAGE_FORMAT_LAYOUT_16,
+    ZE_IMAGE_FORMAT_LAYOUT_16_16,       ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+    ZE_IMAGE_FORMAT_LAYOUT_32,          ZE_IMAGE_FORMAT_LAYOUT_32_32,
+    ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2};
+const std::vector<ze_image_format_layout_t> image_format_layout_unorm = {
+    ZE_IMAGE_FORMAT_LAYOUT_8,           ZE_IMAGE_FORMAT_LAYOUT_8_8,
+    ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,     ZE_IMAGE_FORMAT_LAYOUT_16,
+    ZE_IMAGE_FORMAT_LAYOUT_16_16,       ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+    ZE_IMAGE_FORMAT_LAYOUT_32,          ZE_IMAGE_FORMAT_LAYOUT_32_32,
     ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-    ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1, ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4);
+    ZE_IMAGE_FORMAT_LAYOUT_5_6_5,       ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1,
+    ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4};
+const std::vector<ze_image_format_layout_t> image_format_layout_snorm = {
+    ZE_IMAGE_FORMAT_LAYOUT_8,           ZE_IMAGE_FORMAT_LAYOUT_8_8,
+    ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,     ZE_IMAGE_FORMAT_LAYOUT_16,
+    ZE_IMAGE_FORMAT_LAYOUT_16_16,       ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+    ZE_IMAGE_FORMAT_LAYOUT_32,          ZE_IMAGE_FORMAT_LAYOUT_32_32,
+    ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2};
+const std::vector<ze_image_format_layout_t> image_format_layout_float = {
+    ZE_IMAGE_FORMAT_LAYOUT_16,          ZE_IMAGE_FORMAT_LAYOUT_16_16,
+    ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_LAYOUT_32,
+    ZE_IMAGE_FORMAT_LAYOUT_32_32,       ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32,
+    ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,  ZE_IMAGE_FORMAT_LAYOUT_11_11_10};
 
-const auto image_format_media_layouts =
-    ::testing::Values(ZE_IMAGE_FORMAT_LAYOUT_Y8, ZE_IMAGE_FORMAT_LAYOUT_NV12,
-                      ZE_IMAGE_FORMAT_LAYOUT_YUYV, ZE_IMAGE_FORMAT_LAYOUT_VYUY,
-                      ZE_IMAGE_FORMAT_LAYOUT_YVYU, ZE_IMAGE_FORMAT_LAYOUT_UYVY,
-                      ZE_IMAGE_FORMAT_LAYOUT_AYUV, ZE_IMAGE_FORMAT_LAYOUT_YUAV,
-                      ZE_IMAGE_FORMAT_LAYOUT_P010, ZE_IMAGE_FORMAT_LAYOUT_Y410,
-                      ZE_IMAGE_FORMAT_LAYOUT_P012, ZE_IMAGE_FORMAT_LAYOUT_Y16,
-                      ZE_IMAGE_FORMAT_LAYOUT_P016, ZE_IMAGE_FORMAT_LAYOUT_Y216,
-                      ZE_IMAGE_FORMAT_LAYOUT_P216, ZE_IMAGE_FORMAT_LAYOUT_P416);
-
-const std::vector<ze_image_format_swizzle_t> image_format_swizzles = {
-    ZE_IMAGE_FORMAT_SWIZZLE_R};
+const std::vector<ze_image_format_layout_t> image_format_media_layouts = {
+    ZE_IMAGE_FORMAT_LAYOUT_Y8,   ZE_IMAGE_FORMAT_LAYOUT_NV12,
+    ZE_IMAGE_FORMAT_LAYOUT_YUYV, ZE_IMAGE_FORMAT_LAYOUT_VYUY,
+    ZE_IMAGE_FORMAT_LAYOUT_YVYU, ZE_IMAGE_FORMAT_LAYOUT_UYVY,
+    ZE_IMAGE_FORMAT_LAYOUT_AYUV, ZE_IMAGE_FORMAT_LAYOUT_YUAV,
+    ZE_IMAGE_FORMAT_LAYOUT_P010, ZE_IMAGE_FORMAT_LAYOUT_Y410,
+    ZE_IMAGE_FORMAT_LAYOUT_P012, ZE_IMAGE_FORMAT_LAYOUT_Y16,
+    ZE_IMAGE_FORMAT_LAYOUT_P016, ZE_IMAGE_FORMAT_LAYOUT_Y216,
+    ZE_IMAGE_FORMAT_LAYOUT_P216, ZE_IMAGE_FORMAT_LAYOUT_P416};
 
 const std::vector<ze_image_format_swizzle_t> image_format_swizzles_all = {
     ZE_IMAGE_FORMAT_SWIZZLE_R, ZE_IMAGE_FORMAT_SWIZZLE_G,
@@ -92,15 +104,9 @@ public:
   static const ze_image_desc_t dflt_ze_image_desc;
 
   static const int8_t dflt_data_pattern = 1;
-  std::vector<ze_image_flag_t> image_creation_flags_list_;
   level_zero_tests::ImagePNG32Bit dflt_host_image_;
   ze_image_handle_t dflt_device_image_ = nullptr;
   ze_image_handle_t dflt_device_image_2_ = nullptr;
-};
-
-class zeImageCreateCommonTests : public ::testing::Test {
-protected:
-  zeImageCreateCommon img;
 };
 
 // write_image_data_pattern() writes the image in the default color order,

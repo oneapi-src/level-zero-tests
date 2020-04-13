@@ -379,13 +379,14 @@ TEST_F(
                                 memory_, size_));
 }
 
-class zeDeviceMakeImageResidentTests : public lzt::zeImageCreateCommonTests {};
+class zeDeviceMakeImageResidentTests : public testing::Test,
+                                       public lzt::zeImageCreateCommon {};
 
 TEST_F(zeDeviceMakeImageResidentTests,
        GivenDeviceImageWhenMakingImageResidentThenSuccessIsReturned) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceMakeImageResident(
                                    lzt::zeDevice::get_instance()->get_device(),
-                                   img.dflt_device_image_));
+                                   dflt_device_image_));
 }
 
 class zeDeviceEvictImageTests : public zeDeviceMakeImageResidentTests {};
@@ -394,10 +395,10 @@ TEST_F(zeDeviceEvictImageTests,
        GivenResidentDeviceImageWhenEvictingResidentImageThenSuccessIsReturned) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceMakeImageResident(
                                    lzt::zeDevice::get_instance()->get_device(),
-                                   img.dflt_device_image_));
+                                   dflt_device_image_));
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceEvictImage(lzt::zeDevice::get_instance()->get_device(),
-                               img.dflt_device_image_));
+                               dflt_device_image_));
 }
 
 } // namespace
