@@ -20,4 +20,4 @@ add_subdirectory(test_sysman_led)
 add_subdirectory(test_sysman_ras)
 add_subdirectory(test_sysman_engine)
 add_subdirectory(test_sysman_temperature)
-
+add_subdirectory(test_sysman_overclocking)
