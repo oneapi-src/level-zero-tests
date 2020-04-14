@@ -27,4 +27,5 @@
 #include "test_harness_sysman_engine.hpp"
 #include "test_harness_sysman_temp.hpp"
 #include "test_harness_sysman_overclocking.hpp"
+#include "test_harness_sysman_scheduler.hpp"
 #endif

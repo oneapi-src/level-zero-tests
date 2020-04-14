@@ -38,7 +38,7 @@ add_core_library(test_harness
     "tools/sysman/src/test_harness_sysman_engine.cpp"
     "tools/sysman/src/test_harness_sysman_temp.cpp"
     "tools/sysman/src/test_harness_sysman_overclocking.cpp"
-
+    "tools/sysman/src/test_harness_sysman_scheduler.cpp"
 
 )
 target_link_libraries(test_harness
