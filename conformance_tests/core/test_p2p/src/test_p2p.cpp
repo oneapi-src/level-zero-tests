@@ -238,7 +238,7 @@ TEST_P(zeP2PTests,
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT32_MAX));
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(dev_instance_[i].cmd_list));
-    ASSERT_EQ(*(int *)shr_mem, value + 1)
+    ASSERT_EQ(shr_mem[0], value + 1)
         << "Memory Copied from Device did not match.";
 
     lzt::destroy_module(module);
