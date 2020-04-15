@@ -29,8 +29,7 @@ protected:
     auto drivers = lzt::get_all_driver_handles();
     ASSERT_GT(drivers.size(), 0);
     auto devices = lzt::get_ze_devices(drivers[0]);
-    if (devices.size() < 2)
-      GTEST_SKIP();
+    ASSERT_GE(devices.size(), 2);
 
     for (auto dev1 : devices) {
       for (auto dev2 : devices) {
@@ -262,8 +261,6 @@ protected:
     ASSERT_GE(drivers.size(), 1);
 
     std::vector<ze_device_handle_t> devices;
-    if (devices.size() < 2)
-      GTEST_SKIP();
     ze_driver_handle_t driver;
     for (auto dg : drivers) {
       driver = dg;
@@ -273,6 +270,10 @@ protected:
         break;
     }
 
+    if (devices.size() < 2) {
+      LOG_INFO << "WARNING:  Exiting test due to lack of multiple devices";
+      return;
+    }
     get_devices_ = devices.size();
     LOG_INFO << "Detected " << get_devices_ << " devices";
 
