@@ -314,6 +314,8 @@ void DevicePropertiesTest::addDeviceHandleBySku(uint32_t vendorId,
 }
 
 void DevicePropertiesTest::populateDevicesBySku() {
+  if (lzt::get_ze_device_count() < 2)
+    GTEST_SKIP();
   for (ze_device_handle_t deviceHandle : lzt::get_ze_devices()) {
     ze_device_properties_t deviceProperties =
         lzt::get_device_properties(deviceHandle);
@@ -448,7 +450,6 @@ TEST_F(DevicePropertiesTest,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenMemoryPropertiesMatch) {
-
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -572,7 +573,6 @@ TEST_F(DevicePropertiesTest,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenSubDeviceCountsMatch) {
-
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -601,7 +601,6 @@ bool areNativeKernelUuidsEqual(ze_native_kernel_uuid_t *uuid1,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenKernelPropertiesMatch) {
-
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
