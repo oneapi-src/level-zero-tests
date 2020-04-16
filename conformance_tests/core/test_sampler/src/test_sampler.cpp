@@ -79,11 +79,11 @@ TEST(zeSamplerTests,
 static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image,
                                               int height, int width) {
   ze_image_desc_t image_description;
-  image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_8;
+  image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
   image_description.version = ZE_IMAGE_DESC_VERSION_CURRENT;
   image_description.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;
   image_description.type = ZE_IMAGE_TYPE_2D;
-  image_description.format.type = ZE_IMAGE_FORMAT_TYPE_FLOAT;
+  image_description.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
   image_description.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
   image_description.format.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
   image_description.format.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
@@ -164,7 +164,7 @@ TEST_P(
   int idx = 0;
   // translate inputs to corresponding kernel
   idx = address_mode_kernel * 4 + filter_mode_kernel * 2 + (normalize ? 0 : 1);
-  func_name_inkernel += std::to_string(idx + 1);
+  func_name_inkernel += std::to_string(idx);
 
   auto input_xeimage = create_sampler_image(input);
   auto output_xeimage_host =
