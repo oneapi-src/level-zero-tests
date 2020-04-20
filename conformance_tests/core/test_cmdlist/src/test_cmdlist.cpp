@@ -368,15 +368,21 @@ TEST_P(zeCommandListCloseAndResetTests,
        GivenCommandListWhenResetThenVerifyOnlySubsequentInstructionsExecuted) {
   ze_command_list_flag_t flags = GetParam();
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_command_list_handle_t cmdlist = lzt::create_command_list(device, flags);
   ze_command_queue_handle_t cmdq;
   if (flags == ZE_COMMAND_LIST_FLAG_COPY_ONLY) {
+    auto properties = lzt::get_device_properties(device);
+    if (properties.numAsyncCopyEngines == 0) {
+      LOG_WARNING << "Not Enough Copy Engines to run test";
+      SUCCEED();
+      return;
+    }
     cmdq = lzt::create_command_queue(device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY,
                                      ZE_COMMAND_QUEUE_MODE_DEFAULT,
                                      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   } else {
     cmdq = lzt::create_command_queue(device);
   }
+  ze_command_list_handle_t cmdlist = lzt::create_command_list(device, flags);
   const size_t num_instr = 8;
   const size_t size = 16;
 

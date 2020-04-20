@@ -59,6 +59,7 @@ TEST_P(zeCommandQueueCreateTests,
     if (properties.numAsyncComputeEngines == 0) {
       LOG_WARNING << "Not Enough Async Compute Engines to run test";
       SUCCEED();
+      return;
     }
     descriptor.ordinal =
         static_cast<uint32_t>(properties.numAsyncComputeEngines - 1);
@@ -66,6 +67,7 @@ TEST_P(zeCommandQueueCreateTests,
     if (properties.numAsyncCopyEngines == 0) {
       LOG_WARNING << "Not Enough Copy Engines to run test";
       SUCCEED();
+      return;
     }
     descriptor.ordinal =
         static_cast<uint32_t>(properties.numAsyncCopyEngines - 1);
@@ -127,8 +129,6 @@ protected:
     EXPECT_GT(params.num_command_lists, 0);
 
     print_cmdqueue_exec(params.num_command_lists, params.sync_timeout);
-    ze_command_list_desc_t list_descriptor;
-    list_descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
 
     for (uint32_t i = 0; i < params.num_command_lists; i++) {
       void *host_shared = nullptr;
@@ -162,6 +162,8 @@ protected:
       EXPECT_NE(nullptr, device_shared);
       device_buffer.push_back(static_cast<uint8_t *>(device_shared));
       ze_command_list_handle_t command_list;
+      ze_command_list_desc_t list_descriptor = {};
+      list_descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeCommandListCreate(device, &list_descriptor, &command_list));
       EXPECT_NE(nullptr, command_list);
@@ -376,6 +378,7 @@ TEST_F(
   if (properties.numAsyncCopyEngines == 0) {
     LOG_WARNING << "Not Enough Copy Engines to run test";
     SUCCEED();
+    return;
   }
   command_queue = lzt::create_command_queue(
       device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -522,6 +525,7 @@ TEST(
   if (properties.numAsyncCopyEngines == 0) {
     LOG_WARNING << "Not Enough Copy Engines to run test";
     SUCCEED();
+    return;
   }
 
   auto cmdqueue_compute_high = lzt::create_command_queue(
