@@ -28,7 +28,7 @@ static const char *usage_str =
     "\n  -h, --help               display help message"
     "\n";
 
-static uint32_t sanitize_ulong(char *in){
+static uint32_t sanitize_ulong(char *in) {
   unsigned long temp = strtoul(in, NULL, 0);
   if (ERANGE == errno) {
     fprintf(stderr, "%s out of range of type ulong\n", in);
@@ -53,27 +53,23 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       verify = true;
     } else if (strcmp(argv[i], "-i") == 0) {
       if ((i + 1) < argc) {
-        number_iterations =
-            sanitize_ulong(argv[i + 1]);
+        number_iterations = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if (strcmp(argv[i], "-s") == 0) {
       if ((i + 1) < argc) {
-        transfer_lower_limit =
-            sanitize_ulong(argv[i + 1]);
+        transfer_lower_limit = sanitize_ulong(argv[i + 1]);
         transfer_upper_limit = transfer_lower_limit;
         i++;
       }
     } else if (strcmp(argv[i], "-sb") == 0) {
       if ((i + 1) < argc) {
-        transfer_lower_limit =
-            sanitize_ulong(argv[i + 1]);
+        transfer_lower_limit = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if (strcmp(argv[i], "-se") == 0) {
       if ((i + 1) < argc) {
-        transfer_upper_limit =
-            sanitize_ulong(argv[i + 1]);
+        transfer_upper_limit = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if ((strcmp(argv[i], "-t") == 0)) {

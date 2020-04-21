@@ -37,7 +37,7 @@ static const char *usage_str =
     "\n  -h, --help                  display help message"
     "\n";
 
-static uint32_t sanitize_ulong(char *in){
+static uint32_t sanitize_ulong(char *in) {
   unsigned long temp = strtoul(in, NULL, 0);
   if (ERANGE == errno) {
     fprintf(stderr, "%s out of range of type ulong\n", in);
