@@ -25,10 +25,19 @@ class zeCommandListCreateTests
 TEST_P(
     zeCommandListCreateTests,
     GivenValidDeviceAndCommandListDescriptorWhenCreatingCommandListThenNotNullCommandListIsReturned) {
-  ze_command_list_desc_t descriptor;
+  ze_command_list_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   descriptor.flags = GetParam();
 
+  if (descriptor.flags == ZE_COMMAND_LIST_FLAG_COPY_ONLY) {
+    auto properties =
+        lzt::get_device_properties(lzt::zeDevice::get_instance()->get_device());
+    if (properties.numAsyncCopyEngines == 0) {
+      LOG_WARNING << "Not Enough Copy Engines to run test";
+      SUCCEED();
+      return;
+    }
+  }
   ze_command_list_handle_t command_list = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListCreate(lzt::zeDevice::get_instance()->get_device(),
@@ -48,7 +57,7 @@ class zeCommandListDestroyTests : public ::testing::Test {};
 TEST_F(
     zeCommandListDestroyTests,
     GivenValidDeviceAndCommandListDescriptorWhenDestroyingCommandListThenSuccessIsReturned) {
-  ze_command_list_desc_t descriptor;
+  ze_command_list_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
 
   ze_command_list_handle_t command_list = nullptr;
