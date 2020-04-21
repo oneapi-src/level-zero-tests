@@ -46,6 +46,12 @@ void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output) {
   lzt::destroy_command_list(command_list);
 }
 
+void create_ze_image(ze_device_handle_t dev, ze_image_handle_t &image,
+                     const ze_image_desc_t *image_descriptor) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(dev, image_descriptor, &image));
+  EXPECT_NE(nullptr, image);
+}
+
 void create_ze_image(ze_image_handle_t &image,
                      const ze_image_desc_t *image_descriptor) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,

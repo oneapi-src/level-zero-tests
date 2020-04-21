@@ -25,6 +25,7 @@ add_lzt_test(
   GROUP "/conformance_tests/core"
   SOURCES
     src/test_p2p.cpp
+    src/test_p2p_image_copy.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
