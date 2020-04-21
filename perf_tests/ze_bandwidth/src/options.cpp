@@ -28,6 +28,17 @@ static const char *usage_str =
     "\n  -h, --help               display help message"
     "\n";
 
+static uint32_t sanitize_ulong(char *in){
+  unsigned long temp = strtoul(in, NULL, 0);
+  if (ERANGE == errno) {
+    fprintf(stderr, "%s out of range of type ulong\n", in);
+  } else if (temp > UINT32_MAX) {
+    fprintf(stderr, "%ld greater than UINT32_MAX\n", temp);
+  } else {
+    return static_cast<uint32_t>(temp);
+  }
+}
+
 //---------------------------------------------------------------------
 // Utility function which parses the arguments to ze_peak and
 // sets the test parameters accordingly for main to execute the tests
@@ -43,26 +54,26 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-i") == 0) {
       if ((i + 1) < argc) {
         number_iterations =
-            static_cast<uint32_t>(strtoul(argv[i + 1], NULL, 0));
+            sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if (strcmp(argv[i], "-s") == 0) {
       if ((i + 1) < argc) {
         transfer_lower_limit =
-            static_cast<size_t>(strtoul(argv[i + 1], NULL, 0));
+            sanitize_ulong(argv[i + 1]);
         transfer_upper_limit = transfer_lower_limit;
         i++;
       }
     } else if (strcmp(argv[i], "-sb") == 0) {
       if ((i + 1) < argc) {
         transfer_lower_limit =
-            static_cast<size_t>(strtoul(argv[i + 1], NULL, 0));
+            sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if (strcmp(argv[i], "-se") == 0) {
       if ((i + 1) < argc) {
         transfer_upper_limit =
-            static_cast<size_t>(strtoul(argv[i + 1], NULL, 0));
+            sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if ((strcmp(argv[i], "-t") == 0)) {

@@ -80,7 +80,7 @@ public:
   bool run_int_compute = true;
   bool run_transfer_bw = true;
   bool run_kernel_lat = true;
-  int specified_platform, specified_device;
+  uint32_t specified_platform, specified_device;
   uint32_t global_bw_max_size = 1 << 29;
   uint32_t transfer_bw_max_size = 1 << 29;
   uint32_t iters = 50;

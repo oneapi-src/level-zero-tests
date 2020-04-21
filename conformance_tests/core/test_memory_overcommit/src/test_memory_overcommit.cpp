@@ -191,7 +191,6 @@ protected:
     EXPECT_NE(0, driver_count);
 
     driver_handles = new ze_driver_handle_t[driver_count];
-    ASSERT_NE(nullptr, driver_handles);
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&driver_count, driver_handles));
 
     LOG_INFO << "number of drivers " << driver_count;
@@ -208,7 +207,6 @@ protected:
                 zeDeviceGet(driver_handles[i], &device_count, NULL));
       EXPECT_NE(0, device_count);
       driver_info[i].device_handles = new ze_device_handle_t[device_count];
-      ASSERT_NE(nullptr, driver_info[i].device_handles);
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGet(driver_handles[i], &device_count,
                                                driver_info[i].device_handles));
       driver_info[i].number_device_handles = device_count;
@@ -218,7 +216,6 @@ protected:
       /* one ze_device_properties_t for each device in the driver */
       driver_info[i].device_properties =
           new ze_device_properties_t[device_count];
-      ASSERT_NE(nullptr, driver_info[i].device_properties);
       for (uint32_t j = 0; j < device_count; j++) {
         driver_info[i].device_properties[j].version =
             ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
@@ -240,7 +237,6 @@ protected:
       /* one ze_device_compute_properties_t for device in the driver */
       driver_info[i].device_compute_properties =
           new ze_device_compute_properties_t[device_count];
-      ASSERT_NE(nullptr, driver_info[i].device_compute_properties);
       for (uint32_t j = 0; j < device_count; j++) {
         driver_info[i].device_compute_properties[j].version =
             ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
@@ -260,7 +256,6 @@ protected:
       uint32_t device_memory_properties_count = 1;
       driver_info[i].device_memory_properties =
           new ze_device_memory_properties_t[device_memory_properties_count];
-      ASSERT_NE(nullptr, driver_info[i].device_memory_properties);
       for (uint32_t j = 0; j < device_memory_properties_count; j++) {
         driver_info[i].device_memory_properties[j].version =
             ZE_DEVICE_MEMORY_PROPERTIES_VERSION_CURRENT;

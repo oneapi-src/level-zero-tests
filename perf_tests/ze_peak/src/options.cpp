@@ -37,6 +37,17 @@ static const char *usage_str =
     "\n  -h, --help                  display help message"
     "\n";
 
+static uint32_t sanitize_ulong(char *in){
+  unsigned long temp = strtoul(in, NULL, 0);
+  if (ERANGE == errno) {
+    fprintf(stderr, "%s out of range of type ulong\n", in);
+  } else if (temp > UINT32_MAX) {
+    fprintf(stderr, "%ld greater than UINT32_MAX\n", temp);
+  } else {
+    return static_cast<uint32_t>(temp);
+  }
+}
+
 //---------------------------------------------------------------------
 // Utility function which parses the arguments to ze_peak and
 // sets the test parameters accordingly for main to execute the tests
@@ -50,13 +61,13 @@ int ZePeak::parse_arguments(int argc, char **argv) {
     } else if ((strcmp(argv[i], "-p") == 0) ||
                (strcmp(argv[i], "--platform") == 0)) {
       if ((i + 1) < argc) {
-        specified_platform = static_cast<int>(strtoul(argv[i + 1], NULL, 0));
+        specified_platform = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if ((strcmp(argv[i], "-d") == 0) ||
                (strcmp(argv[i], "--device") == 0)) {
       if ((i + 1) < argc) {
-        specified_device = static_cast<int>(strtoul(argv[i + 1], NULL, 0));
+        specified_device = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if (strcmp(argv[i], "-e") == 0) {
@@ -65,20 +76,12 @@ int ZePeak::parse_arguments(int argc, char **argv) {
       verbose = true;
     } else if (strcmp(argv[i], "-i") == 0) {
       if ((i + 1) < argc) {
-        iters = static_cast<uint32_t>(strtoul(argv[i + 1], NULL, 0));
+        iters = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if (strcmp(argv[i], "-w") == 0) {
       if ((i + 1) < argc) {
-        warmup_iterations = 0;
-        unsigned long temp = strtoul(argv[i + 1], NULL, 0);
-        if (ERANGE == errno) {
-          fprintf(stderr, "%s out of range of type ulong\n", argv[i + 1]);
-        } else if (temp > UINT32_MAX) {
-          fprintf(stderr, "%ld greater than UINT32_MAX\n", temp);
-        } else {
-          warmup_iterations = static_cast<uint32_t>(temp);
-        }
+        warmup_iterations = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if ((strcmp(argv[i], "-t") == 0)) {
