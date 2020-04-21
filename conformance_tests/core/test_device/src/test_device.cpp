@@ -175,8 +175,11 @@ TEST(zeDeviceGetP2PPropertiesTests,
     if (devices.size() >= 2)
       break;
   }
-  ASSERT_GE(devices.size(), 2)
-      << "less than 2 devices available for peer to peer device test";
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
 
   lzt::get_p2p_properties(devices[0], devices[1]);
 }
@@ -195,8 +198,11 @@ TEST(zeDeviceCanAccessPeerTests,
       break;
   }
 
-  ASSERT_GE(devices.size(), 2)
-      << "less than 2 devices available for peer to peer device test";
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
 
   ze_bool_t a2b, b2a;
   a2b = lzt::can_access_peer(devices[0], devices[1]);
@@ -333,6 +339,11 @@ void DevicePropertiesTest::freeDevicesBySku() {
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatcheThenDevicePropertiesMatch) {
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -393,6 +404,11 @@ TEST_F(DevicePropertiesTest,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenComputePropertiesMatch) {
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -448,7 +464,11 @@ TEST_F(DevicePropertiesTest,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenMemoryPropertiesMatch) {
-
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -490,6 +510,11 @@ TEST_F(DevicePropertiesTest,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenMemoryAccessPropertiesMatch) {
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -519,6 +544,11 @@ TEST_F(DevicePropertiesTest,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenCachePropertiesMatch) {
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -550,6 +580,11 @@ TEST_F(DevicePropertiesTest,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenPeerAccessPropertiesMatch) {
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -572,7 +607,11 @@ TEST_F(DevicePropertiesTest,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenSubDeviceCountsMatch) {
-
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 
@@ -601,7 +640,11 @@ bool areNativeKernelUuidsEqual(ze_native_kernel_uuid_t *uuid1,
 
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenKernelPropertiesMatch) {
-
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
 

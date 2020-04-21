@@ -132,7 +132,11 @@ TEST(
 TEST(
     zeIPCEventMultiDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromSecondDevicePerspective) {
-  ASSERT_GT(lzt::get_ze_device_count(), 1);
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS,
                      true);
 }
@@ -140,7 +144,11 @@ TEST(
 TEST(
     zeIPCEventMultiDeviceTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromMultipleDevicePerspective) {
-  ASSERT_GT(lzt::get_ze_device_count(), 1);
+  if (lzt::get_ze_device_count() < 2) {
+    SUCCEED();
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    return;
+  }
   run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
                      true);
 }

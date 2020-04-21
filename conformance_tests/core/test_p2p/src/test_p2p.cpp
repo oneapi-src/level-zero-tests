@@ -29,7 +29,12 @@ protected:
     auto drivers = lzt::get_all_driver_handles();
     ASSERT_GT(drivers.size(), 0);
     auto devices = lzt::get_ze_devices(drivers[0]);
-    ASSERT_GE(devices.size(), 2);
+    if (devices.size() < 2) {
+      SUCCEED();
+      LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+      skip = true;
+      return;
+    }
 
     for (auto dev1 : devices) {
       for (auto dev2 : devices) {
@@ -39,6 +44,8 @@ protected:
                   zeDeviceCanAccessPeer(dev1, dev2, &can_access));
         if (can_access == false) {
           LOG_INFO << "WARNING:  Exiting as device peer access not enabled";
+          SUCCEED();
+          skip = true;
           return;
         }
       }
@@ -72,6 +79,8 @@ protected:
   }
 
   void TearDown() override {
+    if (skip)
+      return;
     for (auto instance : dev_instance_) {
 
       lzt::destroy_command_queue(instance.cmd_q);
@@ -93,12 +102,14 @@ protected:
 
   size_t mem_size_ = 16;
   std::vector<DevInstance> dev_instance_;
+  bool skip = false;
 };
 
 TEST_P(
     zeP2PTests,
     GivenP2PDevicesWhenCopyingDeviceMemoryToAndFromRemoteDeviceThenSuccessIsReturned) {
-
+  if (skip)
+    return;
   uint32_t dev_instance_size = dev_instance_.size();
 
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
@@ -138,7 +149,8 @@ INSTANTIATE_TEST_CASE_P(
 TEST_P(
     zeP2PTests,
     GivenP2PDevicesWhenSettingAndCopyingMemoryToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
-
+  if (skip)
+    return;
   uint32_t dev_instance_size = dev_instance_.size();
 
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
@@ -193,7 +205,8 @@ INSTANTIATE_TEST_CASE_P(
 
 TEST_P(zeP2PTests,
        GivenP2PDevicesWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead) {
-
+  if (skip)
+    return;
   std::string module_name = "p2p_test.spv";
   std::string func_name = "multi_device_function";
 
@@ -271,7 +284,9 @@ protected:
     }
 
     if (devices.size() < 2) {
+      SUCCEED();
       LOG_INFO << "WARNING:  Exiting test due to lack of multiple devices";
+      skip = true;
       return;
     }
     get_devices_ = devices.size();
@@ -284,7 +299,9 @@ protected:
         EXPECT_EQ(ZE_RESULT_SUCCESS,
                   zeDeviceCanAccessPeer(dev1, dev2, &can_access));
         if (can_access == false) {
+          SUCCEED();
           LOG_INFO << "WARNING:  Exiting as device peer access not enabled";
+          skip = true;
           return;
         }
       }
@@ -556,6 +573,7 @@ protected:
   std::string kernel_name_;
   uint32_t get_devices_;
   ze_memory_type_t memory_type_;
+  bool skip = false;
 };
 
 class zeP2PKernelTestsAtomicAccess : public zeP2PKernelTests {};
@@ -563,6 +581,8 @@ class zeP2PKernelTestsAtomicAccess : public zeP2PKernelTests {};
 TEST_P(zeP2PKernelTestsAtomicAccess,
        GivenP2PDevicesWhenAtomicAccessOfPeerMemoryThenSuccessIsReturned) {
 
+  if (skip)
+    return;
   ze_device_p2p_properties_t dev_p2p_properties;
   dev_p2p_properties.version = ZE_DEVICE_P2P_PROPERTIES_VERSION_CURRENT;
 
@@ -602,7 +622,8 @@ class zeP2PKernelTestsConcurrentAccess : public zeP2PKernelTests {};
 
 TEST_P(zeP2PKernelTestsConcurrentAccess,
        GivenP2PDevicesWhenConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
-
+  if (skip)
+    return;
   kernel_name_ = std::get<0>(GetParam());
   memory_type_ = std::get<1>(GetParam());
   for (uint32_t num_concurrent = 2; num_concurrent <= get_devices_;
@@ -636,7 +657,8 @@ class zeP2PKernelTestsAtomicAndConcurrentAccess : public zeP2PKernelTests {};
 TEST_P(
     zeP2PKernelTestsAtomicAndConcurrentAccess,
     GivenP2PDevicesWhenAtomicAndConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
-
+  if (skip)
+    return;
   ze_device_p2p_properties_t dev_p2p_properties;
   dev_p2p_properties.version = ZE_DEVICE_P2P_PROPERTIES_VERSION_CURRENT;
 
