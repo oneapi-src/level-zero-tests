@@ -37,6 +37,7 @@ static uint32_t sanitize_ulong(char *in) {
   } else {
     return static_cast<uint32_t>(temp);
   }
+  return 0;
 }
 
 //---------------------------------------------------------------------
