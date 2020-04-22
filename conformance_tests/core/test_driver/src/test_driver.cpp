@@ -57,19 +57,4 @@ TEST(zeDriverGetIPCPropertiesTests,
   }
 }
 
-TEST(zeDriverGetExtentionFunctionAddressTests,
-     GivenNonNullNameWhenGettingExtFunctionAddrThenSuccessIsReturned) {
-  lzt::ze_init();
-  auto drivers = lzt::get_all_driver_handles();
-  for (auto driver : drivers) {
-    // As the conformance tests should be driver-agnostic,
-    // supply a core API to test the functionality of
-    // zeDriverGetExtensionFunctionAddress
-    void *func = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDriverGetExtensionFunctionAddress(driver, "zeInit", &func));
-    EXPECT_EQ(func, (void *)zeInit);
-  }
-}
-
 } // namespace
