@@ -9,6 +9,7 @@ add_core_library(utils
 target_link_libraries(utils
     PUBLIC
     level_zero_tests::logging
+    level_zero_tests::test_harness
     LevelZero::LevelZero
 )
 

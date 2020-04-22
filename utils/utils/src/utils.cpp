@@ -8,6 +8,7 @@
 
 #include "utils/utils.hpp"
 #include "logging/logging.hpp"
+#include "test_harness/test_harness.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -35,16 +36,45 @@ ze_device_handle_t get_default_device(ze_driver_handle_t driver) {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   static ze_device_handle_t device = nullptr;
+  int default_idx = 0;
+  char *default_name = nullptr;
   if (device)
     return device;
 
-  uint32_t count = 1;
-  result = zeDeviceGet(driver, &count, &device);
+  default_idx = std::stoi(getenv("LZT_DEFAULT_DEVICE_IDX"));
+  default_name = getenv("LZT_DEFAULT_DEVICE_NAME");
 
-  if (result || !device) {
+  std::vector<ze_device_handle_t> devices =
+      level_zero_tests::get_ze_devices(driver);
+  if (devices.size() == 0) {
     throw std::runtime_error("zeDeviceGet failed: " + to_string(result));
   }
-  LOG_TRACE << "Device retrieved";
+
+  if (default_name != nullptr) {
+    LOG_INFO << "Default Device to use has NAME:" << default_name;
+    for (auto d : devices) {
+      ze_device_properties_t device_props =
+          level_zero_tests::get_device_properties(d);
+      LOG_TRACE << "Device Name :" << device_props.name;
+      if (strcmp(default_name, device_props.name) == 0) {
+        device = d;
+        break;
+      }
+    }
+    if (!device) {
+      LOG_ERROR << "Default Device name " << default_name
+                << " invalid on this machine.";
+      throw std::runtime_error("Get Default Device failed");
+    }
+  } else {
+    if (default_idx >= devices.size()) {
+      LOG_ERROR << "Default Device index " << default_idx
+                << " invalid on this machine.";
+      throw std::runtime_error("Get Default Device failed");
+    }
+    device = devices[default_idx];
+    LOG_INFO << "Default Device retrieved at index " << default_idx;
+  }
   return device;
 }
 
@@ -584,15 +614,17 @@ void print_driver_overview(const ze_driver_handle_t driver) {
   ze_device_properties_t device_properties;
   device_properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
   auto devices = get_devices(driver);
-  if (devices.size() > 0) {
-    auto device = devices[0];
+  int device_index = 0;
+  LOG_INFO << "Device Count: " << devices.size();
+  for (auto device : devices) {
     result = zeDeviceGetProperties(device, &device_properties);
     if (result) {
       std::runtime_error("zeDeviceGetDeviceProperties failed: " +
                          to_string(result));
     }
-    LOG_TRACE << "Device properties retrieved";
+    LOG_TRACE << "Device properties retrieved for device " << device_index;
     LOG_INFO << "Device name: " << device_properties.name;
+    device_index++;
   }
 
   ze_api_version_t api_version;

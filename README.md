@@ -16,3 +16,9 @@ oneAPI Level Zero test source repository containing:
 ## Build
 
 Build instructions in [BUILD](BUILD.md) file.
+
+## Environment Variables
+* `LZT_DEFAULT_DEVICE_IDX` = [`INTEGER`] Identifying the index of the default device to load when calling get_default_device test_harness function.
+* `LZT_DEFAULT_DEVICE_NAME` = [`STRING`] Identifying the name of the default device to load when calling get_default_device test_harness function.
+
+*NOTE: `LZT_DEFAULT_DEVICE_NAME` will be used if set, otherwise `LZT_DEFAULT_DEVICE_IDX` will be used.*
