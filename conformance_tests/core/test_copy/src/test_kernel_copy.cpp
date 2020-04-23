@@ -21,7 +21,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-const size_t size = 512;
+const size_t size = 8;
 
 struct copy_data {
   uint32_t *data;
