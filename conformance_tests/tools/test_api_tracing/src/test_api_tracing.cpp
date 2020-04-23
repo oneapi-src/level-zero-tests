@@ -1434,7 +1434,6 @@ TEST_F(
   epilogues.EventPool.pfnOpenIpcHandleCb = lzt::epilogue_callback;
 
   init_event_pool();
-  // fixme ipc event
 
   ze_ipc_event_pool_handle_t handle;
   ze_event_pool_handle_t event_pool2;
