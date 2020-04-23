@@ -194,7 +194,7 @@ void validate_data_pattern(void *buff, size_t size, int8_t data_pattern) {
   int8_t *pbuff = static_cast<int8_t *>(buff);
   int8_t dp = data_pattern;
   for (size_t i = 0; i < size; i++) {
-    EXPECT_EQ(pbuff[i], dp);
+    ASSERT_EQ(pbuff[i], dp);
     dp = (dp + data_pattern) & 0xff;
   }
 }

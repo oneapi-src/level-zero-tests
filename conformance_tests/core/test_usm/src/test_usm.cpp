@@ -601,8 +601,8 @@ TEST_P(
   lzt::synchronize(command_queue, UINT32_MAX);
 
   for (uint32_t i = 0; i < size_of_chunk; i++) {
-    EXPECT_EQ((device_mem)[i], pattern);
-    EXPECT_EQ(host_mem[i], 0x0);
+    ASSERT_EQ((device_mem)[i], pattern);
+    ASSERT_EQ(host_mem[i], 0x0);
   }
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
