@@ -41,7 +41,10 @@ ze_device_handle_t get_default_device(ze_driver_handle_t driver) {
   if (device)
     return device;
 
-  default_idx = std::stoi(getenv("LZT_DEFAULT_DEVICE_IDX"));
+  char *user_device_index = getenv("LZT_DEFAULT_DEVICE_IDX");
+  if (user_device_index != nullptr) {
+    default_idx = std::stoi(user_device_index);
+  }
   default_name = getenv("LZT_DEFAULT_DEVICE_NAME");
 
   std::vector<ze_device_handle_t> devices =
