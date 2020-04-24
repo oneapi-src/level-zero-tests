@@ -112,7 +112,7 @@ protected:
               zeKernelSetArgumentValue(test_function, 5, sizeof(output_count),
                                        &output_count));
 
-    ze_command_list_desc_t command_list_description;
+    ze_command_list_desc_t command_list_description = {};
     command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
 
     ze_command_list_handle_t command_list = nullptr;

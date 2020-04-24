@@ -101,7 +101,7 @@ class zeCommandQueueDestroyTests : public ::testing::Test {};
 TEST_F(
     zeCommandQueueDestroyTests,
     GivenValidDeviceAndNonNullCommandQueueWhenDestroyingCommandQueueThenSuccessIsReturned) {
-  ze_command_queue_desc_t descriptor;
+  ze_command_queue_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
 
   ze_command_queue_handle_t command_queue = nullptr;
@@ -367,6 +367,13 @@ protected:
 TEST_F(
     CommandQueueFlagTest,
     GivenCopyFlagInCommandListWhenCommandQueueFlagisCopyThenSucessIsReturned) {
+
+  if (properties.numAsyncCopyEngines == 0) {
+    LOG_WARNING << "Not Enough Copy Engines to run test";
+    SUCCEED();
+    return;
+  }
+
   ze_command_list_handle_t command_list =
       lzt::create_command_list(device, ZE_COMMAND_LIST_FLAG_COPY_ONLY);
 
@@ -375,11 +382,6 @@ TEST_F(
   lzt::append_barrier(command_list);
   lzt::close_command_list(command_list);
 
-  if (properties.numAsyncCopyEngines == 0) {
-    LOG_WARNING << "Not Enough Copy Engines to run test";
-    SUCCEED();
-    return;
-  }
   command_queue = lzt::create_command_queue(
       device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
@@ -392,50 +394,6 @@ TEST_F(
   for (uint32_t i = 0; i < buff_size_bytes; i++) {
     char_input[i] = lzt::generate_value<uint8_t>(0, 255, 0);
   }
-  lzt::append_memory_copy(command_list, device_buffer, host_buffer,
-                          buff_size_bytes, nullptr);
-  lzt::append_barrier(command_list);
-  lzt::close_command_list(command_list);
-  ze_fence_handle_t hFence = lzt::create_fence(command_queue);
-  lzt::execute_command_lists(command_queue, 1, &command_list, hFence);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, lzt::sync_fence(hFence, UINT32_MAX));
-
-  EXPECT_EQ(0, memcmp(host_buffer, device_buffer, buff_size_bytes));
-
-  /*cleanup*/
-  lzt::destroy_fence(hFence);
-  lzt::synchronize(command_queue, UINT32_MAX);
-  lzt::destroy_command_queue(command_queue);
-  lzt::destroy_command_list(command_list);
-}
-
-TEST_F(
-    CommandQueueFlagTest,
-    GivenCopyFlagInCommandListWhenCommandQueueFlagisLogicalThenSucessIsReturned) {
-
-  ze_command_list_handle_t command_list =
-      lzt::create_command_list(device, ZE_COMMAND_LIST_FLAG_COPY_ONLY);
-
-  lzt::append_memory_copy(command_list, device_buffer, host_buffer,
-                          buff_size_bytes, nullptr);
-  lzt::append_barrier(command_list);
-  lzt::close_command_list(command_list);
-
-  ze_device_properties_t properties = lzt::get_device_properties(device);
-  command_queue = lzt::create_command_queue(
-      device, ZE_COMMAND_QUEUE_FLAG_LOGICAL_ONLY, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
-  EXPECT_EQ(0, memcmp(host_buffer, device_buffer, buff_size_bytes));
-
-  lzt::reset_command_list(command_list);
-
-  for (uint32_t i = 0; i < buff_size_bytes; i++) {
-    char_input[i] = lzt::generate_value<uint8_t>(0, 255, 0);
-  }
-
   lzt::append_memory_copy(command_list, device_buffer, host_buffer,
                           buff_size_bytes, nullptr);
   lzt::append_barrier(command_list);

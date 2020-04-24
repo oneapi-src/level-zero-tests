@@ -85,6 +85,15 @@ TEST_P(zeCommandListCreateImmediateTests,
       std::get<2>(GetParam())                // priority
   };
 
+  if (descriptor.flags == ZE_COMMAND_LIST_FLAG_COPY_ONLY) {
+    auto properties =
+        lzt::get_device_properties(lzt::zeDevice::get_instance()->get_device());
+    if (properties.numAsyncCopyEngines == 0) {
+      LOG_WARNING << "Not Enough Copy Engines to run test";
+      SUCCEED();
+      return;
+    }
+  }
   ze_command_list_handle_t command_list = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListCreateImmediate(
                                    lzt::zeDevice::get_instance()->get_device(),
