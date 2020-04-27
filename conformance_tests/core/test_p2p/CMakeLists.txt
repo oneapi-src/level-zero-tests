@@ -26,6 +26,7 @@ add_lzt_test(
   SOURCES
     src/test_p2p.cpp
     src/test_p2p_image_copy.cpp
+    src/test_p2p_mem_access.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
