@@ -19,301 +19,9 @@ namespace lzt = level_zero_tests;
 namespace {
 enum MemAccessTestType { ATOMIC, CONCURRENT, CONCURRENT_ATOMIC };
 
-class zeP2PTests : public ::testing::Test,
-                   public ::testing::WithParamInterface<ze_memory_type_t> {
-protected:
-  void SetUp() override {
-    ze_memory_type_t memory_type = GetParam();
-    ze_bool_t can_access;
-    std::vector<ze_device_handle_t> devices;
-    std::vector<ze_device_handle_t> sub_devices;
-    auto drivers = lzt::get_all_driver_handles();
-    ASSERT_GT(drivers.size(), 0);
-    auto device_scan = lzt::get_ze_devices(drivers[0]);
-    for (auto dev : device_scan) {
-      if (lzt::get_ze_sub_device_count(dev) > 0) {
-        sub_devices = lzt::get_ze_sub_devices(dev);
-        devices.insert(devices.end(), sub_devices.begin(), sub_devices.end());
-        sub_devices.clear();
-      } else {
-        devices.push_back(dev);
-      }
-    }
-    device_scan.clear();
-
-    if (devices.size() < 2) {
-      LOG_INFO << "WARNING:  Exiting test due to lack of multiple devices";
-      SUCCEED();
-      skip = true;
-      return;
-    }
-
-    for (auto device : devices) {
-      DevInstance instance;
-      instance.dev = device;
-      instance.dev_grp = drivers[0];
-      if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
-        instance.src_region = lzt::allocate_device_memory(
-            mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, device, drivers[0]);
-        instance.dst_region = lzt::allocate_device_memory(
-            mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, device, drivers[0]);
-      } else if (memory_type == ZE_MEMORY_TYPE_SHARED) {
-        instance.src_region = lzt::allocate_shared_memory(
-            mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
-        instance.dst_region = lzt::allocate_shared_memory(
-            mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
-      } else {
-        FAIL() << "Unexpected memory type";
-      }
-
-      instance.cmd_list = lzt::create_command_list(device);
-      instance.cmd_q = lzt::create_command_queue(device);
-
-      dev_instance_.push_back(instance);
-    }
-  }
-
-  void TearDown() override {
-    if (skip) {
-      return;
-    }
-    for (auto instance : dev_instance_) {
-
-      lzt::destroy_command_queue(instance.cmd_q);
-      lzt::destroy_command_list(instance.cmd_list);
-
-      lzt::free_memory(instance.src_region);
-      lzt::free_memory(instance.dst_region);
-    }
-  }
-
-  struct DevInstance {
-    ze_device_handle_t dev;
-    ze_driver_handle_t dev_grp;
-    void *src_region;
-    void *dst_region;
-    ze_command_list_handle_t cmd_list;
-    ze_command_queue_handle_t cmd_q;
-  };
-
-  size_t mem_size_ = 16;
-  std::vector<DevInstance> dev_instance_;
-  bool skip = false;
-};
-
-TEST_P(
-    zeP2PTests,
-    GivenP2PDevicesWhenCopyingDeviceMemoryToAndFromRemoteDeviceThenSuccessIsReturned) {
-  if (skip) {
-    return;
-  }
-  ze_bool_t n1_can_access_n2;
-  ze_bool_t n2_can_access_n1;
-  uint32_t copy_count = 0;
-
-  for (uint32_t i = 1; i < dev_instance_.size(); i++) {
-
-    n1_can_access_n2 =
-        lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev);
-    n2_can_access_n1 =
-        lzt::can_access_peer(dev_instance_[i].dev, dev_instance_[i - 1].dev);
-
-    if (n2_can_access_n1) {
-      lzt::append_memory_copy(dev_instance_[i - 1].cmd_list,
-                              dev_instance_[i - 1].dst_region,
-                              dev_instance_[i].src_region, mem_size_, nullptr);
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListClose(dev_instance_[i - 1].cmd_list));
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandQueueExecuteCommandLists(
-                    dev_instance_[i - 1].cmd_q, 1,
-                    &dev_instance_[i - 1].cmd_list, nullptr));
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(
-                                       dev_instance_[i - 1].cmd_q, UINT32_MAX));
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListReset(dev_instance_[i - 1].cmd_list));
-      copy_count++;
-    }
-    if (n1_can_access_n2) {
-      lzt::append_memory_copy(
-          dev_instance_[i].cmd_list, dev_instance_[i].dst_region,
-          dev_instance_[i - 1].src_region, mem_size_, nullptr);
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListClose(dev_instance_[i].cmd_list));
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
-                                       dev_instance_[i].cmd_q, 1,
-                                       &dev_instance_[i].cmd_list, nullptr));
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT32_MAX));
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListReset(dev_instance_[i].cmd_list));
-      copy_count++;
-    }
-    if (copy_count == 0) {
-      LOG_INFO << "WARNING: Exiting as no device peer access enabled";
-      SUCCEED();
-    }
-  }
-}
-
-INSTANTIATE_TEST_CASE_P(
-    GivenP2PDevicesWhenCopyingDeviceMemoryFromRemoteDeviceThenSuccessIsReturned_IP,
-    zeP2PTests, testing::Values(ZE_MEMORY_TYPE_DEVICE, ZE_MEMORY_TYPE_SHARED));
-
-TEST_P(
-    zeP2PTests,
-    GivenP2PDevicesWhenSettingAndCopyingMemoryToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
-  if (skip) {
-    return;
-  }
-  uint32_t copy_count = 0;
-  DevInstance *ptr_dev_src;
-  DevInstance *ptr_dev_dst;
-  for (uint32_t i = 1; i < dev_instance_.size(); i++) {
-    if (lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
-      ptr_dev_src = &dev_instance_[i - 1];
-      ptr_dev_dst = &dev_instance_[i];
-    } else if (lzt::can_access_peer(dev_instance_[i].dev,
-                                    dev_instance_[i - 1].dev)) {
-      ptr_dev_src = &dev_instance_[i];
-      ptr_dev_dst = &dev_instance_[i - 1];
-    } else {
-      continue;
-    }
-    uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
-        mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, ptr_dev_dst->dev));
-    uint8_t value = rand() & 0xff;
-
-    // Set memory region on source device and copy to destination device
-    lzt::append_memory_set(ptr_dev_src->cmd_list, ptr_dev_src->src_region,
-                           &value, mem_size_);
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeCommandListAppendBarrier(ptr_dev_src->cmd_list, nullptr, 0, nullptr));
-    lzt::append_memory_copy(ptr_dev_src->cmd_list, ptr_dev_dst->dst_region,
-                            ptr_dev_src->src_region, mem_size_, nullptr);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(ptr_dev_src->cmd_list));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueExecuteCommandLists(
-                  ptr_dev_src->cmd_q, 1, &ptr_dev_src->cmd_list, nullptr));
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(ptr_dev_src->cmd_q, UINT32_MAX));
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(ptr_dev_src->cmd_list));
-
-    // Copy memory region from dest device to shared mem, and verify it is
-    // correct
-    lzt::append_memory_copy(ptr_dev_dst->cmd_list, shr_mem,
-                            ptr_dev_dst->dst_region, mem_size_, nullptr);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(ptr_dev_dst->cmd_list));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueExecuteCommandLists(
-                  ptr_dev_dst->cmd_q, 1, &ptr_dev_dst->cmd_list, nullptr));
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(ptr_dev_dst->cmd_q, UINT32_MAX));
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(ptr_dev_dst->cmd_list));
-
-    for (uint32_t j = 0; j < mem_size_; j++) {
-      ASSERT_EQ(shr_mem[j], value)
-          << "Memory Copied from Device did not match.";
-    }
-    lzt::free_memory(shr_mem);
-    copy_count++;
-  }
-  if (copy_count == 0) {
-    LOG_INFO << "WARNING: Exiting as no device peer access enabled";
-    SUCCEED();
-  }
-}
-
-INSTANTIATE_TEST_CASE_P(
-    GivenP2PDevicesWhenSettingAndCopyingMemoryToRemoteDeviceThenRemoteDeviceGetsCorrectMemory_IP,
-    zeP2PTests, testing::Values(ZE_MEMORY_TYPE_DEVICE, ZE_MEMORY_TYPE_SHARED));
-
-TEST_P(zeP2PTests,
-       GivenP2PDevicesWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead) {
-  if (skip) {
-    return;
-  }
-  std::string module_name = "p2p_test.spv";
-  std::string func_name = "multi_device_function";
-
-  uint32_t access_count = 0;
-  DevInstance *ptr_dev_src;
-  DevInstance *ptr_dev_dst;
-
-  for (uint32_t i = 1; i < dev_instance_.size(); i++) {
-    if (lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
-      ptr_dev_src = &dev_instance_[i - 1];
-      ptr_dev_dst = &dev_instance_[i];
-    } else if (lzt::can_access_peer(dev_instance_[i].dev,
-                                    dev_instance_[i - 1].dev)) {
-      ptr_dev_src = &dev_instance_[i];
-      ptr_dev_dst = &dev_instance_[i - 1];
-    } else {
-      continue;
-    }
-    ze_module_handle_t module =
-        lzt::create_module(ptr_dev_src->dev, module_name);
-    uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
-        mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, ptr_dev_dst->dev));
-
-    // random memory region on destination device. Allow "space" for increment.
-    uint8_t value = rand() & 0x7f;
-    lzt::append_memory_set(ptr_dev_dst->cmd_list, ptr_dev_dst->src_region,
-                           &value, mem_size_);
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeCommandListAppendBarrier(ptr_dev_dst->cmd_list, nullptr, 0, nullptr));
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(ptr_dev_dst->cmd_list));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueExecuteCommandLists(
-                  ptr_dev_dst->cmd_q, 1, &ptr_dev_dst->cmd_list, nullptr));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(ptr_dev_dst->cmd_q, UINT32_MAX));
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(ptr_dev_dst->cmd_list));
-
-    // source device will modify memory allocated for destination device
-    lzt::create_and_execute_function(ptr_dev_src->dev, module, func_name, 1,
-                                     ptr_dev_dst->src_region);
-
-    // on destination device copy memory to shared region and verify it is
-    // correct
-    lzt::append_memory_copy(ptr_dev_dst->cmd_list, shr_mem,
-                            ptr_dev_dst->src_region, mem_size_, nullptr);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(ptr_dev_dst->cmd_list));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueExecuteCommandLists(
-                  ptr_dev_dst->cmd_q, 1, &ptr_dev_dst->cmd_list, nullptr));
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(ptr_dev_dst->cmd_q, UINT32_MAX));
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(ptr_dev_dst->cmd_list));
-    ASSERT_EQ(shr_mem[0], value + 1)
-        << "Memory Copied from Device did not match.";
-
-    lzt::destroy_module(module);
-    access_count++;
-  }
-  if (access_count == 0) {
-    LOG_INFO << "WARNING: Exiting as no device peer access enabled";
-    SUCCEED();
-  }
-}
-
-INSTANTIATE_TEST_CASE_P(
-    GivenP2PDevicesWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead_IP,
-    zeP2PTests, testing::Values(ZE_MEMORY_TYPE_DEVICE, ZE_MEMORY_TYPE_SHARED));
-
-class zeP2PKernelTests : public lzt::zeEventPoolTests,
-                         public ::testing::WithParamInterface<
-                             std::tuple<std::string, ze_memory_type_t>> {
+class zeP2PMemAccessTests : public lzt::zeEventPoolTests,
+                            public ::testing::WithParamInterface<
+                                std::tuple<std::string, ze_memory_type_t>> {
 protected:
   void SetUp() override {
 
@@ -325,7 +33,7 @@ protected:
     std::vector<ze_device_handle_t> devices;
     std::vector<ze_device_handle_t> sub_devices;
     std::vector<ze_device_handle_t> device_scan;
-    ze_driver_handle_t driver;
+    ze_driver_handle_t driver = drivers[0];
     for (auto dg : drivers) {
       driver = dg;
       device_scan = lzt::get_devices(driver);
@@ -340,8 +48,13 @@ protected:
         }
       }
       device_scan.clear();
-      if (devices.size() >= 2)
+      if (devices.size() >= 2) {
+        // use this driver
         break;
+      } else {
+        // check next driver
+        devices.clear();
+      }
     }
 
     if (devices.size() < 2) {
@@ -631,9 +344,9 @@ protected:
   bool skip = false;
 };
 
-class zeP2PKernelTestsAtomicAccess : public zeP2PKernelTests {};
+class zeP2PMemAccessTestsAtomicAccess : public zeP2PMemAccessTests {};
 
-TEST_P(zeP2PKernelTestsAtomicAccess,
+TEST_P(zeP2PMemAccessTestsAtomicAccess,
        GivenP2PDevicesWhenAtomicAccessOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {
     return;
@@ -690,14 +403,14 @@ TEST_P(zeP2PKernelTestsAtomicAccess,
 }
 
 INSTANTIATE_TEST_CASE_P(
-    TestP2PAtomicAccess, zeP2PKernelTestsAtomicAccess,
+    TestP2PAtomicAccess, zeP2PMemAccessTestsAtomicAccess,
     testing::Combine(testing::Values("atomic_access"),
                      testing::Values(ZE_MEMORY_TYPE_DEVICE,
                                      ZE_MEMORY_TYPE_SHARED)));
 
-class zeP2PKernelTestsConcurrentAccess : public zeP2PKernelTests {};
+class zeP2PMemAccessTestsConcurrentAccess : public zeP2PMemAccessTests {};
 
-TEST_P(zeP2PKernelTestsConcurrentAccess,
+TEST_P(zeP2PMemAccessTestsConcurrentAccess,
        GivenP2PDevicesWhenConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {
     return;
@@ -761,15 +474,16 @@ TEST_P(zeP2PKernelTestsConcurrentAccess,
 }
 
 INSTANTIATE_TEST_CASE_P(
-    TestP2PConcurrentAccess, zeP2PKernelTestsConcurrentAccess,
+    TestP2PConcurrentAccess, zeP2PMemAccessTestsConcurrentAccess,
     testing::Combine(testing::Values("concurrent_access"),
                      testing::Values(ZE_MEMORY_TYPE_DEVICE,
                                      ZE_MEMORY_TYPE_SHARED)));
 
-class zeP2PKernelTestsAtomicAndConcurrentAccess : public zeP2PKernelTests {};
+class zeP2PMemAccessTestsAtomicAndConcurrentAccess
+    : public zeP2PMemAccessTests {};
 
 TEST_P(
-    zeP2PKernelTestsAtomicAndConcurrentAccess,
+    zeP2PMemAccessTestsAtomicAndConcurrentAccess,
     GivenP2PDevicesWhenAtomicAndConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {
     return;
@@ -842,7 +556,8 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_CASE_P(
-    TestP2PAtomicAndConcurrentAccess, zeP2PKernelTestsAtomicAndConcurrentAccess,
+    TestP2PAtomicAndConcurrentAccess,
+    zeP2PMemAccessTestsAtomicAndConcurrentAccess,
     testing::Combine(testing::Values("atomic_access"),
                      testing::Values(ZE_MEMORY_TYPE_DEVICE,
                                      ZE_MEMORY_TYPE_SHARED)));
