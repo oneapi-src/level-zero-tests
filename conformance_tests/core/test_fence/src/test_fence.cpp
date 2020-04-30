@@ -242,9 +242,9 @@ TEST_P(
     if (use_event) {
       ep.destroy_event(host_to_dev_event[i]);
     }
+    lzt::destroy_fence(fence[i]);
     lzt::destroy_command_queue(cmdq[i]);
     lzt::destroy_command_list(cmdlist[i]);
-    lzt::destroy_fence(fence[i]);
     lzt::free_memory(buffer[i]);
   }
 }
