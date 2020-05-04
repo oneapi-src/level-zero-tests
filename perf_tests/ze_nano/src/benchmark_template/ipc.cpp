@@ -20,5 +20,5 @@ void ipc_memory_handle_get(ZeApp *benchmark, probe_config_t &probe_setting) {
   NANO_PROBE(" IPC Handle Get\t", probe_setting, zeDriverGetMemIpcHandle,
              benchmark->driver, buffer, &ipc_handle);
 
-  benchmark->memoryFree(&buffer);
+  benchmark->memoryFree(buffer);
 }
