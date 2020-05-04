@@ -32,4 +32,24 @@ get_sysman_device_properties(ze_device_handle_t device) {
 
   return properties;
 }
+
+uint32_t get_processes_count(ze_device_handle_t device) {
+  uint32_t count = 0;
+  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(device);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetSysmanProcessesGetState(hSysman, &count, nullptr));
+  return count;
+}
+
+std::vector<zet_process_state_t> get_processes_state(ze_device_handle_t device,
+                                                     uint32_t &count) {
+  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(device);
+  if (count == 0)
+    count = get_processes_count(device);
+  std::vector<zet_process_state_t> processes(count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetSysmanProcessesGetState(hSysman, &count, processes.data()));
+  return processes;
+}
+
 } // namespace level_zero_tests

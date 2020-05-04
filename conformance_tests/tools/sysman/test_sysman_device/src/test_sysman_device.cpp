@@ -119,4 +119,42 @@ TEST_F(
                             get_prop_length(propertiesInitial.driverVersion)));
   }
 }
+
+TEST_F(
+    SysmanDeviceTest,
+    GivenProcessesCountZeroWhenRetrievingProcessesStateThenSuccessIsReturned) {
+  for (auto device : devices) {
+    lzt::get_processes_count(device);
+  }
+}
+
+TEST_F(
+    SysmanDeviceTest,
+    GivenProcessesCountZeroWhenRetrievingProcessesStateThenValidProcessesStateAreReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto processes = lzt::get_processes_state(device, count);
+    if (processes.size() > 0) {
+      for (auto process : processes) {
+        EXPECT_GT(process.processId, 0u);
+        EXPECT_GT(process.memSize, 0u);
+        EXPECT_GE(process.engines, 0);
+        EXPECT_LE(process.engines, (1 << ZET_ENGINE_TYPE_DMA));
+      }
+    }
+  }
+}
+
+TEST_F(
+    SysmanDeviceTest,
+    GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
+  for (auto device : devices) {
+    uint32_t actualCount = 0;
+    lzt::get_processes_state(device, actualCount);
+    uint32_t testCount = actualCount + 1;
+    lzt::get_processes_state(device, testCount);
+    EXPECT_EQ(testCount, actualCount);
+  }
+}
+
 } // namespace
