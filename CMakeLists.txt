@@ -209,6 +209,9 @@ function(add_lzt_test_executable)
     endif()
 endfunction()
 
+set(MANIFEST_BUILD_PATH "${PROJECT_BINARY_DIR}/manifest.txt")
+install(FILES "${MANIFEST_BUILD_PATH}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+
 function(add_lzt_test)
     set(options REQUIRES_OPENCL_INTEROP)
     set(oneValueArgs NAME GROUP)
@@ -247,7 +250,7 @@ function(add_lzt_test)
     )
 
     file(APPEND
-      "${CMAKE_INSTALL_PREFIX}/manifest.txt"
+      "${MANIFEST_BUILD_PATH}"
       "${ADD_LZT_TEST_NAME}${CMAKE_NEWLINE}"
     )
 endfunction()
