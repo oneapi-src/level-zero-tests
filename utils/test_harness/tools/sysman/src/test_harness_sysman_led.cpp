@@ -31,7 +31,6 @@ std::vector<zet_sysman_led_handle_t> get_led_handles(ze_device_handle_t device,
   std::vector<zet_sysman_led_handle_t> ledHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanLedGet(hSysman, &count, ledHandles.data()));
-  EXPECT_EQ(ledHandles.size(), count);
   return ledHandles;
 }
 

@@ -31,7 +31,6 @@ get_temp_handles(ze_device_handle_t device, uint32_t &count) {
   std::vector<zet_sysman_temp_handle_t> tempHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanTemperatureGet(hSysman, &count, tempHandles.data()));
-  EXPECT_EQ(tempHandles.size(), count);
   return tempHandles;
 }
 

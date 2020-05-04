@@ -33,7 +33,6 @@ std::vector<zet_sysman_mem_handle_t> get_mem_handles(ze_device_handle_t device,
   std::vector<zet_sysman_mem_handle_t> memHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanMemoryGet(hSysman, &count, memHandles.data()));
-  EXPECT_EQ(memHandles.size(), count);
   return memHandles;
 }
 

@@ -32,7 +32,6 @@ get_diag_handles(ze_device_handle_t device, uint32_t &count) {
   std::vector<zet_sysman_diag_handle_t> diagHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanDiagnosticsGet(hSysman, &count, diagHandles.data()));
-  EXPECT_EQ(diagHandles.size(), count);
   return diagHandles;
 }
 

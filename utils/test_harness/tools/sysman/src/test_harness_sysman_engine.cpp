@@ -31,7 +31,6 @@ get_engine_handles(ze_device_handle_t device, uint32_t &count) {
   std::vector<zet_sysman_engine_handle_t> engineHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanEngineGet(hSysman, &count, engineHandles.data()));
-  EXPECT_EQ(engineHandles.size(), count);
   return engineHandles;
 }
 

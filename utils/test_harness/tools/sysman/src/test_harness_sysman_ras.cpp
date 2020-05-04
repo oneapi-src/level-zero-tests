@@ -30,7 +30,6 @@ std::vector<zet_sysman_ras_handle_t> get_ras_handles(ze_device_handle_t device,
   std::vector<zet_sysman_ras_handle_t> rasHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanRasGet(hSysman, &count, rasHandles.data()));
-  EXPECT_EQ(rasHandles.size(), count);
   return rasHandles;
 }
 

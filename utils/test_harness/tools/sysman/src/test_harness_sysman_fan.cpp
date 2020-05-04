@@ -31,7 +31,6 @@ std::vector<zet_sysman_fan_handle_t> get_fan_handles(ze_device_handle_t device,
   std::vector<zet_sysman_fan_handle_t> fanHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanFanGet(hSysman, &count, fanHandles.data()));
-  EXPECT_EQ(fanHandles.size(), count);
   return fanHandles;
 }
 

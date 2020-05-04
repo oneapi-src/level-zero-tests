@@ -31,7 +31,6 @@ std::vector<zet_sysman_psu_handle_t> get_psu_handles(ze_device_handle_t device,
   std::vector<zet_sysman_psu_handle_t> psuHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanPsuGet(hSysman, &count, psuHandles.data()));
-  EXPECT_EQ(psuHandles.size(), count);
   return psuHandles;
 }
 

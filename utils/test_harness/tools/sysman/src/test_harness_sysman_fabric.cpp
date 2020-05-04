@@ -33,7 +33,6 @@ get_fabric_port_handles(ze_device_handle_t device, uint32_t &count) {
   std::vector<zet_sysman_fabric_port_handle_t> fabricPortHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanFabricPortGet(hSysman, &count, fabricPortHandles.data()));
-  EXPECT_EQ(fabricPortHandles.size(), count);
   return fabricPortHandles;
 }
 
