@@ -189,7 +189,7 @@ void ZeApp::commandListCreate(ze_command_list_handle_t *phCommandList) {
 
 void ZeApp::commandListCreate(ze_device_handle_t device,
                               ze_command_list_handle_t *phCommandList) {
-  ze_command_list_desc_t command_list_description;
+  ze_command_list_desc_t command_list_description{};
   command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
 
   SUCCESS_OR_TERMINATE(
@@ -290,7 +290,7 @@ void ZeApp::commandQueueCreate(const uint32_t command_queue_id,
 void ZeApp::commandQueueCreate(ze_device_handle_t device,
                                const uint32_t command_queue_id,
                                ze_command_queue_handle_t *command_queue) {
-  ze_command_queue_desc_t command_queue_description;
+  ze_command_queue_desc_t command_queue_description{};
   command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
