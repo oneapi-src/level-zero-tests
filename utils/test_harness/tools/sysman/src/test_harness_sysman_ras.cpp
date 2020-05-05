@@ -18,6 +18,7 @@ namespace level_zero_tests {
 uint32_t get_ras_handles_count(zet_sysman_handle_t hSysman) {
   uint32_t count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanRasGet(hSysman, &count, nullptr));
+  EXPECT_GT(count, 0);
   return count;
 }
 

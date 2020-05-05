@@ -21,6 +21,7 @@ uint32_t get_fabric_port_handles_count(zet_sysman_handle_t hSysman) {
   uint32_t count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanFabricPortGet(hSysman, &count, nullptr));
+  EXPECT_GT(count, 0);
   return count;
 }
 
