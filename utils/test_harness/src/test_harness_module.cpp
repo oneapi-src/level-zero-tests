@@ -31,7 +31,7 @@ ze_module_handle_t create_module(ze_device_handle_t device,
 
   ze_module_desc_t module_description;
   ze_module_handle_t module;
-  ze_module_constants_t module_constants;
+  ze_module_constants_t module_constants = {};
   const std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file(filename);
 
