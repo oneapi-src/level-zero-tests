@@ -15,8 +15,8 @@
 // On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
 void L0Context::init() {
-  ze_command_list_desc_t command_list_description;
-  ze_command_queue_desc_t command_queue_description;
+  ze_command_list_desc_t command_list_description{};
+  ze_command_queue_desc_t command_queue_description{};
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   result = zeInit(ZE_INIT_FLAG_NONE);
