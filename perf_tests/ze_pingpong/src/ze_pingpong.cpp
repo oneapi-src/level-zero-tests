@@ -561,5 +561,7 @@ int main(int argc, char **argv) {
 
   context.destroy();
 
+  std::cout << std::flush;
+
   return 0;
 }

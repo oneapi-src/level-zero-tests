@@ -433,5 +433,7 @@ int main(int argc, char **argv) {
   peer.latency(true /* bidirectional */, PEER_NONE);
   std::cout << std::endl;
 
+  std::cout << std::flush;
+
   return 0;
 }

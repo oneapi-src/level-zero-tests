@@ -544,5 +544,8 @@ int main(int argc, char **argv) {
   imageCopyLatency.JsonFileName =
       Imagecopy.JsonFileName; // need to add latency values to the same file
   measure_latency(imageCopyLatency);
+
+  std::cout << std::flush;
+
   return 0;
 }

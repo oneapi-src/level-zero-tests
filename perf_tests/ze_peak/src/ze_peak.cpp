@@ -782,6 +782,8 @@ int main(int argc, char **argv) {
 
   context.clean_xe();
 
+  std::cout << std::flush;
+
   return 0;
 }
 
