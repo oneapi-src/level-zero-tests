@@ -137,9 +137,21 @@ TEST_F(
     SchedulerTest,
     GivenValidSysmanHandleWhenSettingSchedulerExclusiveModeThenSuccesseReturned) {
   for (auto device : devices) {
+    auto timeout_default_properties = lzt::get_timeout_properties(device, true);
+    zet_sched_timeout_properties_t timeout_set_properties;
+    timeout_set_properties.watchdogTimeout =
+        timeout_default_properties.watchdogTimeout;
+    auto timeslice_default_properties =
+        lzt::get_timeslice_properties(device, true);
+    zet_sched_timeslice_properties_t timeslice_set_properties;
+    timeslice_set_properties.interval = timeslice_default_properties.interval;
+    timeslice_set_properties.yieldTimeout =
+        timeslice_default_properties.yieldTimeout;
     lzt::set_exclusive_mode(device);
     auto cur_mode = lzt::get_scheduler_current_mode(device);
     ASSERT_EQ(cur_mode, ZET_SCHED_MODE_EXCLUSIVE);
+    lzt::set_timeout_mode(device, timeout_set_properties);
+    lzt::set_timeslice_mode(device, timeslice_set_properties);
   }
 }
 

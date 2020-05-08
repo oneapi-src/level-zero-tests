@@ -68,6 +68,6 @@ void set_compute_unit_debug_mode(ze_device_handle_t hDevice) {
   ze_bool_t reboot;
   zet_sysman_handle_t hSysman = lzt::get_sysman_handle(hDevice);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanSchedulerSetExclusiveMode(hSysman, &reboot));
+            zetSysmanSchedulerSetComputeUnitDebugMode(hSysman, &reboot));
 }
 } // namespace level_zero_tests

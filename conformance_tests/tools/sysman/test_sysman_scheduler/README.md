@@ -33,6 +33,7 @@ This test suite is for checking sysman operations on Scheduler module.
 ### zetSysmanSchedulerSetExclusiveMode
 
 * GivenValidSysmanHandleWhenSettingSchedulerExclusiveModeThenSuccesseReturned :- The test case changes the scheduler mode to exclusive mode and then verifies it. 
+Note: when setting ExclusiveMode always store and restore defaults from the user code.
 
 ### zetSysmanSchedulerSetComputeUnitDebugMode
 
