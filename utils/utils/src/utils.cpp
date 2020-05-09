@@ -19,16 +19,35 @@ ze_driver_handle_t get_default_driver() {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   static ze_driver_handle_t driver = nullptr;
+  int default_idx = 0;
+
   if (driver)
     return driver;
 
-  uint32_t count = 1;
-  result = zeDriverGet(&count, &driver);
+  char *user_driver_index = getenv("LZT_DEFAULT_DRIVER_IDX");
+  if (user_driver_index != nullptr) {
+    default_idx = std::stoi(user_driver_index);
+  }
 
-  if (result || !driver) {
+  std::vector<ze_driver_handle_t> drivers =
+      level_zero_tests::get_all_driver_handles();
+  if (drivers.size() == 0) {
     throw std::runtime_error("zeDriverGet failed: " + to_string(result));
   }
-  LOG_TRACE << "Device retrieved";
+
+  if (default_idx >= drivers.size()) {
+    LOG_ERROR << "Default Driver index " << default_idx
+              << " invalid on this machine.";
+    throw std::runtime_error("Get Default Driver failed");
+  }
+  driver = drivers[default_idx];
+  if (!driver) {
+    LOG_ERROR << "Invalid Driver handle at index " << default_idx;
+    throw std::runtime_error("Get Default Driver failed");
+  }
+
+  LOG_INFO << "Default Driver retrieved at index " << default_idx;
+
   return driver;
 }
 
