@@ -76,9 +76,7 @@ TEST_P(zeFenceSynchronizeTests,
             zeCommandQueueExecuteCommandLists(cq.command_queue_, 1,
                                               &cl.command_list_, fence_));
 
-  // sleep for a bit to give execution a chance to complete
-  std::chrono::milliseconds timespan(100);
-  std::this_thread::sleep_for(timespan);
+  lzt::sync_fence(fence_, UINT32_MAX);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceHostSynchronize(fence_, GetParam()));
 
@@ -105,9 +103,7 @@ TEST_F(zeFenceSynchronizeTests,
             zeCommandQueueExecuteCommandLists(cq.command_queue_, 1,
                                               &cl.command_list_, fence_));
 
-  // sleep for a bit to give execution a chance to complete
-  std::chrono::milliseconds timespan(100);
-  std::this_thread::sleep_for(timespan);
+  lzt::sync_fence(fence_, UINT32_MAX);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceQueryStatus(fence_));
   lzt::free_memory(output_buffer);
