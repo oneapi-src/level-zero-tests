@@ -79,5 +79,7 @@ std::ostream &operator<<(std::ostream &os, const ze_image_flag_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_image_type_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_fp_capabilities_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_native_kernel_uuid_t &x);
+bool operator==(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b);
+bool operator!=(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b);
 
 #endif

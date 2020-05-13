@@ -784,3 +784,11 @@ std::ostream &operator<<(std::ostream &os, const ze_fp_capabilities_t &x) {
 std::ostream &operator<<(std::ostream &os, const ze_native_kernel_uuid_t &x) {
   return os << level_zero_tests::to_string(x);
 }
+
+bool operator==(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b) {
+  return !(memcmp(id_a.id, id_b.id, ZE_MAX_DEVICE_UUID_SIZE));
+}
+
+bool operator!=(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b) {
+  return memcmp(id_a.id, id_b.id, ZE_MAX_DEVICE_UUID_SIZE);
+}
