@@ -66,17 +66,14 @@ TEST_F(
             0);
   EXPECT_GT(lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_END), 0);
 
-  EXPECT_GT(lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_END),
-            lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_START));
   EXPECT_GT(lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_END),
             lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_START));
 
   lzt::free_memory(buffer);
 }
 
-TEST_F(
-    EventProfilingTests,
-    GivenSetProfilingEventWhenResettingEventThenEventReadsNotSignaledAndTimeStampsReadZero) {
+TEST_F(EventProfilingTests,
+       GivenSetProfilingEventWhenResettingEventThenEventStatusNotReady) {
 
   auto buffer = lzt::allocate_host_memory(100000);
   const uint8_t value = 0x55;
@@ -88,13 +85,6 @@ TEST_F(
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event));
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
-
-  EXPECT_EQ(0,
-            lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_START));
-  EXPECT_EQ(0, lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_END));
-  EXPECT_EQ(0,
-            lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_START));
-  EXPECT_EQ(0, lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_END));
 
   lzt::free_memory(buffer);
 }
@@ -129,8 +119,6 @@ TEST_F(EventProfilingTests,
             0);
   EXPECT_GT(lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_END), 0);
 
-  EXPECT_GT(lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_END),
-            lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_GLOBAL_START));
   EXPECT_GT(lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_END),
             lzt::get_event_timestamp(event, ZE_EVENT_TIMESTAMP_CONTEXT_START));
 
