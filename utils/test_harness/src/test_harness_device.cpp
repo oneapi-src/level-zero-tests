@@ -15,15 +15,16 @@ namespace lzt = level_zero_tests;
 namespace level_zero_tests {
 
 zeDevice *zeDevice::instance_ = nullptr;
+std::once_flag zeDevice::instance;
 
 zeDevice *zeDevice::get_instance() {
-  if (instance_)
-    return instance_;
-  instance_ = new zeDevice;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(ZE_INIT_FLAG_NONE));
+  std::call_once(instance, []() {
+    instance_ = new zeDevice;
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(ZE_INIT_FLAG_NONE));
 
-  instance_->driver_ = lzt::get_default_driver();
-  instance_->device_ = lzt::get_default_device(instance_->driver_);
+    instance_->driver_ = lzt::get_default_driver();
+    instance_->device_ = lzt::get_default_device(instance_->driver_);
+  });
   return instance_;
 }
 

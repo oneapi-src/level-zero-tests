@@ -11,6 +11,7 @@
 
 #include <level_zero/ze_api.h>
 #include "gtest/gtest.h"
+#include <mutex>
 
 namespace level_zero_tests {
 
@@ -23,6 +24,7 @@ public:
 private:
   zeDevice();
   static zeDevice *instance_;
+  static std::once_flag instance;
   ze_device_handle_t device_ = nullptr;
   ze_driver_handle_t driver_ = nullptr;
 };
