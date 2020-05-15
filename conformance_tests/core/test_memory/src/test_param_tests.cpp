@@ -121,14 +121,5 @@ INSTANTIATE_TEST_CASE_P(zeMemAccessCommandListTests,
                         ::testing::Combine(testing::Values(MTT_HOST,
                                                            MTT_SHARED),
                                            lzt::memory_allocation_alignments));
-INSTANTIATE_TEST_CASE_P(zeMemAccessCommandListTests_1,
-                        zeMemAccessCommandListTests,
-                        ::testing::Combine(testing::Values(MTT_HOST,
-                                                           MTT_SHARED),
-                                           lzt::memory_allocation_alignments));
-INSTANTIATE_TEST_CASE_P(zeMemAccessDeviceTests, zeMemAccessTests,
-                        ::testing::Combine(testing::Values(MTT_HOST,
-                                                           MTT_SHARED),
-                                           lzt::memory_allocation_alignments));
 
 } // namespace
