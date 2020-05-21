@@ -1,0 +1,2396 @@
+#!/usr/bin/env python3
+# Copyright (C) 2020 Intel Corporation
+# SPDX-License-Identifier: MIT
+
+import sys
+import argparse
+import xml.etree.ElementTree as ElementTree
+import xml.dom.minidom as minidom
+import os
+import os.path
+import signal
+import time
+
+from zesysman import *
+
+ZESYSMAN_PROG_VERSION = "version 0.1"
+
+#
+# Output support
+#
+
+class Logger:
+    def __init__(self):
+        self.outputFile = sys.stdout
+        self.debugFile = None
+        self.teeOutput = False
+
+    # Print to standard error
+    def err(self, *args, **kwargs):
+        kwargs["file"] = sys.stderr
+        print(*args, **kwargs)
+
+    # Print to selected debug stream (suppressed when self.debugFile=None)
+    def dbg(self, *args, **kwargs):
+        if self.debugFile:
+            kwargs["file"] = self.debugFile
+            print(*args, **kwargs)
+
+    # Print to current output file, copy to stdout if tee requested:
+    def __call__(self, *args, **kwargs):
+        kwargs["file"] = self.outputFile
+        print(*args, **kwargs)
+        if self.teeOutput:
+            kwargs["file"] = sys.stdout
+            print(*args, **kwargs)
+
+    def fail(self, *args, **kwargs):
+        self.err(*args, **kwargs)
+        sys.exit(1)
+
+pr = Logger()
+
+#
+# display formats
+#
+
+maxIterations = 1
+indentStr = "    "
+condensedList = False
+
+IgnoreAttributes = [ "Number" ]
+RenameAttributes = [ "Name", "Id" ]
+IndexAttributes = [ "Index" ]
+SecondaryIndexAttributes = [ "UUID" ]
+DecorateAttributes = ["Units"]
+TableRenameNodes = { "TemperatureSensor" : "Temp",
+                     "PowerDomain" : "Power",
+                     "FrequencyDomain" : "Freq",
+                     "RequestedFrequency" : "Requested",
+                     "ActualFrequency" : "Actual",
+                     "MemoryModule" : "Mem",
+                     "ErrorDomain" : "Err",
+                     "FabricPort" : "Port",
+                     "StandbyDomain" : "Standby" }
+TableKeepNodes = [ "PCI" ]
+
+def tableNode(parent, node, text, *attrs):
+    global maxIterations
+    if parent is None:
+        if maxIterations > 1:
+            return (["Iteration"], [])
+        else:
+            return ([], [])
+    elif len(parent) == 2:
+        columns, rows = parent
+        index = len(rows)
+        rows.append({})
+
+        for attr,val in attrs:
+            if attr in IndexAttributes:
+                if attr not in columns:
+                    columns.append(attr)
+                rows[index][attr] = str(val)
+        return (columns, rows, index, "")
+    else:
+        node = TableRenameNodes.get(node, str(node))
+        attrs = [ (a,v) for a,v in attrs if a not in IgnoreAttributes ]
+        if text is None and node not in TableKeepNodes and not attrs:
+            return parent
+        if any(a in RenameAttributes for a,v in attrs):
+            attrs = [ (a,v) for a,v in attrs if a not in IndexAttributes ]
+        for attr,val in attrs:
+            node += "[" + str(val) + "]"
+        columns, rows, index, column = parent
+        if column and node:
+            column += "."
+        column += node
+        if text is not None:
+            if column not in columns:
+                columns.append(column)
+            rows[index][column] = str(text)
+        return (columns, rows, index, column)
+
+def makeTableLine(chEnd, chLine, widths):
+    return chEnd + chEnd.join([chLine * (w+2) for w in widths]) + chEnd
+
+tableEndLine = ""
+
+def tableOutputNode(node, currentIteration):
+    global maxIterations, tableEndLine
+    columns, rows = node
+    widths = [ max([len(w)] + [len(r.get(w,"")) for r in rows]) for w in columns ]
+    if currentIteration < 2:
+        tableEndLine = makeTableLine("+", "-", widths)
+        headings = [ " " + c + " " * (w - len(c)) + " " for c,w in zip(columns, widths) ]
+        innerLine = makeTableLine("|", "=", widths)
+        pr(tableEndLine)
+        pr("|" + "|".join(headings) + "|")
+        pr(innerLine)
+    for row in rows:
+        line = []
+        if maxIterations > 1:
+            row["Iteration"] = str(currentIteration)
+        for column,width in zip(columns,widths):
+            text = row.get(column, " " * (width // 2) + "-")
+            line.append(" " + text + " " * (width - len(text)) + " ")
+        pr("|" + "|".join(line) + "|")
+
+def tableOutputComplete():
+    global tableEndLine
+    pr(tableEndLine)
+
+def tableSetText(node, text, *attrs):
+    if len(node) == 4:
+        columns, rows, index, column = node
+        rows[index][column] = str(text)
+
+def csvQuote(s):
+    s = s.replace('"','""')
+    if '"' in s or "," in s or "\n" in s:
+        return '"' + s + '"'
+    else:
+        return s
+
+def csvOutputNode(node, currentIteration):
+    global maxIterations
+    columns, rows = node
+    if currentIteration < 2:
+        pr(",".join([ csvQuote(c) for c in columns ]))
+    for row in rows:
+        line = []
+        if maxIterations > 1:
+            row["Iteration"] = str(currentIteration)
+
+        for column in columns:
+            line.append(csvQuote(row.get(column,"")))
+        pr(",".join(line))
+
+def listNode(parent, node, text, *attrs):
+    global maxIterations
+    global indentStr
+    if parent is None:
+        if maxIterations > 1:
+            children = [ indentStr ]
+        else:
+            children = [ "" ]
+    else:
+        indent = parent[0]
+        n = indent + str(node)
+        children = [ indent + indentStr ]
+        attrs = [ (a,v) for a,v in attrs if a not in IgnoreAttributes ]
+        for attr,val in attrs:
+            if attr in RenameAttributes:
+                n = indent + str(val)
+            elif attr in IndexAttributes:
+                n += " " + str(val)
+            elif attr in SecondaryIndexAttributes:
+                listNode(children, attr, val)
+            elif attr in DecorateAttributes and text is not None:
+                text = str(text) + " " + str(val)
+            else:
+                n += "." + attr + "_" + str(val)
+
+        if text is None:
+            parent.append(([n], children))
+        else:
+            leaf_node = [n, str(text)]
+            parent.append((leaf_node, children))
+            # this only works because all text nodes are leaf nodes:
+            return leaf_node
+
+    return children
+
+def listDataIndent(i, node):
+    for child, descendents in node[1:]:
+        i = max(len(child[0]), i, listDataIndent(i, descendents))
+    return i
+
+def prListIndented(i, node):
+    for child, descendents in node[1:]:
+        if len(child) == 1:
+            pr(child[0])
+        else:
+            pr(child[0] + " " * (i - len(child[0])), ":", " ".join(child[1:]))
+        prListIndented(i, descendents)
+
+def listOutputNode(node, currentIteration):
+    global maxIterations
+    global condensedList
+    if maxIterations > 1:
+        pr("\nIteration", currentIteration)
+    if condensedList:
+        prListIndented(0, node)
+    else:
+        prListIndented(listDataIndent(0, node), node)
+
+def listSetText(node, text, *attrs):
+    if len(node) == 2:
+        text = str(text)
+        for attr,val in attrs:
+            if attr in DecorateAttributes:
+                text += " " + str(val)
+        node[1] = text
+
+xmlIterationCount = None
+
+def xmlNode(parent, node, text, *attrs):
+    global maxIterations, xmlIterationCount
+    if parent is None:
+        if maxIterations > 1:
+            if xmlIterationCount is None:
+                xmlIterationCount = ElementTree.Element("Iteration")
+                xmlIterationCount.set("Num", "?")
+            e = ElementTree.SubElement(xmlIterationCount, node)
+        else:
+            new_elem = ElementTree.Element(node)
+            e = new_elem
+    else:
+        new_elem = ElementTree.SubElement(parent, node)
+        e = new_elem
+    for attr, value in attrs:
+        e.set(attr, str(value))
+    if text is not None:
+        e.text = str(text)
+    return e
+
+def xmlPrettyPrint(node):
+    global indentStr
+    xml = minidom.parseString(ElementTree.tostring(node))
+    text = xml.toprettyxml(indent=indentStr).rstrip()
+    return "\n".join(text.split("\n")[1:])
+
+def xmlOutputNode(node, currentIteration):
+    global maxIterations, xmlIterationCount
+    if currentIteration == 1:
+        pr('<?xml version="1.0" ?>')
+    if maxIterations > 1 and xmlIterationCount is not None:
+        xmlIterationCount.set("Num", str(currentIteration))
+        node = xmlIterationCount
+    text = xmlPrettyPrint(node)
+    pr(text)
+
+def xmlOutputComplete():
+    global xmlIterationCount
+    xmlIterationCount = None
+
+def xmlSetText(node, text, *attrs):
+    node.text = str(text)
+
+def noAction(*args, **kwargs):
+    pass
+
+#
+# Function pointers for each format
+#
+
+class FormatNode:
+    def __init__(self, parent, name, text, *attrs):
+        self.parent = parent
+        self.name = name
+        self.text = text
+        self.attrs = attrs
+    def output(self, currentIteration):
+        pass
+    def outputComplete(self):
+        pass
+    def setText(self, text):
+        self.text = text
+
+class ListFormatNode(FormatNode):
+    def __init__(self, parent, name, text, *attrs):
+        super().__init__(parent, name, text, *attrs)
+        if parent:
+            parent = parent.node
+        self.node = listNode(parent, name, text, *attrs)
+    def output(self, currentIteration):
+        listOutputNode(self.node, currentIteration)
+    def setText(self, text):
+        super().setText(text)
+        listSetText(self.node, text, *self.attrs)
+
+class XMLFormatNode(FormatNode):
+    def __init__(self, parent, name, text, *attrs):
+        super().__init__(parent, name, text, *attrs)
+        if parent:
+            parent = parent.node
+        self.node = xmlNode(parent, name, text, *attrs)
+    def output(self, currentIteration):
+        xmlOutputNode(self.node, currentIteration)
+    def outputComplete(self):
+        xmlOutputComplete()
+    def setText(self, text):
+        super().setText(text)
+        xmlSetText(self.node, text, *self.attrs)
+
+class TableFormatNode(FormatNode):
+    def __init__(self, parent, name, text, *attrs):
+        super().__init__(parent, name, text, *attrs)
+        if parent:
+            parent = parent.node
+        self.node = tableNode(parent, name, text, *attrs)
+    def output(self, currentIteration):
+        tableOutputNode(self.node, currentIteration)
+    def outputComplete(self):
+        tableOutputComplete()
+    def setText(self, text):
+        super().setText(text)
+        tableSetText(self.node, text, *self.attrs)
+
+class CSVFormatNode(FormatNode):
+    def __init__(self, parent, name, text, *attrs):
+        super().__init__(parent, name, text, *attrs)
+        if parent:
+            parent = parent.node
+        self.node = tableNode(parent, name, text, *attrs)
+    def output(self, currentIteration):
+        csvOutputNode(self.node, currentIteration)
+    def setText(self, text):
+        super().setText(text)
+        tableSetText(self.node, text, *self.attrs)
+
+formatArgClass = { "list" : ListFormatNode, "xml" : XMLFormatNode, "table" : TableFormatNode, "csv" : CSVFormatNode }
+formatExtClass = { ".xml" : XMLFormatNode, ".csv" : CSVFormatNode }
+
+# Currently-selected Node class
+Node = ListFormatNode
+
+#
+# ZE common support
+#
+
+def resultString(result):
+    results = { ZE_RESULT_SUCCESS : "SUCCESS",
+                ZE_RESULT_NOT_READY : "NOT_READY",
+                ZE_RESULT_ERROR_DEVICE_LOST : "ERROR_DEVICE_LOST",
+                ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY : "ERROR_OUT_OF_HOST_MEMORY",
+                ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY : "ERROR_OUT_OF_DEVICE_MEMORY",
+                ZE_RESULT_ERROR_MODULE_BUILD_FAILURE : "ERROR_MODULE_BUILD_FAILURE",
+                ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS : "ERROR_INSUFFICIENT_PERMISSIONS",
+                ZE_RESULT_ERROR_NOT_AVAILABLE : "ERROR_NOT_AVAILABLE",
+                ZE_RESULT_ERROR_UNINITIALIZED : "ERROR_UNINITIALIZED",
+                ZE_RESULT_ERROR_UNSUPPORTED_VERSION : "ERROR_UNSUPPORTED_VERSION",
+                ZE_RESULT_ERROR_UNSUPPORTED_FEATURE : "ERROR_UNSUPPORTED_FEATURE",
+                ZE_RESULT_ERROR_INVALID_ARGUMENT : "ERROR_INVALID_ARGUMENT",
+                ZE_RESULT_ERROR_INVALID_NULL_HANDLE : "ERROR_INVALID_NULL_HANDLE",
+                ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE : "ERROR_HANDLE_OBJECT_IN_USE",
+                ZE_RESULT_ERROR_INVALID_NULL_POINTER : "ERROR_INVALID_NULL_POINTER",
+                ZE_RESULT_ERROR_INVALID_SIZE : "ERROR_INVALID_SIZE",
+                ZE_RESULT_ERROR_UNSUPPORTED_SIZE : "ERROR_UNSUPPORTED_SIZE",
+                ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT : "ERROR_UNSUPPORTED_ALIGNMENT",
+                ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT : "ERROR_INVALID_SYNCHRONIZATION_OBJECT",
+                ZE_RESULT_ERROR_INVALID_ENUMERATION : "ERROR_INVALID_ENUMERATION",
+                ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION : "ERROR_UNSUPPORTED_ENUMERATION",
+                ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT : "ERROR_UNSUPPORTED_IMAGE_FORMAT",
+                ZE_RESULT_ERROR_INVALID_NATIVE_BINARY : "ERROR_INVALID_NATIVE_BINARY",
+                ZE_RESULT_ERROR_INVALID_GLOBAL_NAME : "ERROR_INVALID_GLOBAL_NAME",
+                ZE_RESULT_ERROR_INVALID_KERNEL_NAME : "ERROR_INVALID_KERNEL_NAME",
+                ZE_RESULT_ERROR_INVALID_FUNCTION_NAME : "ERROR_INVALID_FUNCTION_NAME",
+                ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION : "ERROR_INVALID_GROUP_SIZE_DIMENSION",
+                ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION : "ERROR_INVALID_GLOBAL_WIDTH_DIMENSION",
+                ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX : "ERROR_INVALID_KERNEL_ARGUMENT_INDEX",
+                ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE : "ERROR_INVALID_KERNEL_ARGUMENT_SIZE",
+                ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE : "ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE",
+                ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE : "ERROR_INVALID_COMMAND_LIST_TYPE",
+                ZE_RESULT_ERROR_OVERLAPPING_REGIONS : "ERROR_OVERLAPPING_REGIONS",
+                ZE_RESULT_ERROR_UNKNOWN : "ERROR_UNKNOWN" }
+    return results.get(result, "UNKNOWN")
+
+# This is a special developer mode that forces all API functions for which a
+# replacement is available to return UNIMPLEMENTED. Normally, you would want
+# to specify --stub-unimplemented when using this mode
+if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED":
+    def zetSysmanTemperatureGet(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanTemperatureGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanTemperatureGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanPowerGet(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanPowerGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanPowerSetLimits(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanPowerGetLimits(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanPowerGetEnergyCounter(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanFrequencyGetAvailableClocks(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanEngineGet(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanEngineGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanEngineGetActivity(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanPciGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanPciGetStats(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanFabricPortGet(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanRasGet(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanRasGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanRasGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zetSysmanProcessesGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+
+#
+# For development purposes, to replace unimplemented functions
+#
+replaceUnimplementedFunctions = False
+
+# For stubs to retain state:
+stubState = {}
+
+def unimplementedFunctionCall(func, *args, **kwargs):
+    global replaceUnimplementedFunctions
+
+    pr.dbg(func, "unimplemented")
+
+    if not replaceUnimplementedFunctions:
+        raise NotImplementedError
+
+    def stubSysmanTemperatureGet(sysdev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 3)
+        elif uint32_value(count_ptr) == 3:
+            items = zet_sysman_temp_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_temp_handle(ZET_TEMP_SENSORS_GLOBAL)
+            items[1] = ulong_to_temp_handle(ZET_TEMP_SENSORS_GPU)
+            items[2] = ulong_to_temp_handle(ZET_TEMP_SENSORS_MEMORY)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubSysmanTemperatureGetProperties(temp, tempProps):
+        tempProps.type = temp_handle_to_ulong(temp)
+        tempProps.isCriticalTempSupported = False
+        tempProps.isThreshold1Supported = False
+        tempProps.isThreshold2Supported = False
+    def stubSysmanTemperatureGetState(temp):
+        global stubState
+        t = stubState.get("Temp", 50.0)
+        stubState["Temp"] = t + 0.1
+        return t
+    def stubSysmanPowerGet(sysdev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 1)
+        elif uint32_value(count_ptr) == 1:
+            p = stubState.setdefault("Pwr", {})
+            p["sustained"] = { "enabled" : True, "power" : 100000, "interval" : 1000 }
+            p["burst"] = { "enabled" : True, "power" : 150000 }
+            p["peak"] = { "powerAC" : 120000, "powerDC" : 90000 }
+            p["counter"] = { "energy" : 0, "timestamp" : 0 }
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubSysmanPowerGetProperties(pwr, pwrProps):
+        pwrProps.onSubdevice = False
+        pwrProps.canControl = True
+        pwrProps.isEnergyThresholdSupported = True
+        pwrProps.maxLimit = 200000
+    def stubSysmanPowerSetLimits(pwr, sustainedLimit, burstLimit, peakLimit):
+        global stubState
+        p = stubState["Pwr"]
+        if sustainedLimit is not None:
+            p["sustained"]["enabled"] = sustainedLimit.enabled
+            p["sustained"]["power"] = sustainedLimit.power
+            p["sustained"]["interval"] = sustainedLimit.interval
+        if burstLimit is not None:
+            p["burst"]["enabled"] = burstLimit.enabled
+            p["burst"]["power"] = burstLimit.power
+        if peakLimit is not None:
+            p["peak"]["powerAC"] = peakLimit.powerAC
+            p["peak"]["powerDC"] = peakLimit.powerDC
+    def stubSysmanPowerGetLimits(pwr, sustainedLimit, burstLimit, peakLimit):
+        global stubState
+        p = stubState["Pwr"]
+        if sustainedLimit is not None:
+            sustainedLimit.enabled = p["sustained"]["enabled"]
+            sustainedLimit.power = p["sustained"]["power"]
+            sustainedLimit.interval = p["sustained"]["interval"]
+        if burstLimit is not None:
+            burstLimit.enabled = p["burst"]["enabled"]
+            burstLimit.power = p["burst"]["power"]
+        if peakLimit is not None:
+            peakLimit.powerAC = p["peak"]["powerAC"]
+            peakLimit.powerDC = p["peak"]["powerDC"]
+    def stubSysmanPowerGetEnergyCounter(pwr, pwrCounter):
+        global stubState
+        p = stubState["Pwr"]
+        p["counter"]["energy"] += 100000000
+        p["counter"]["timestamp"] += 1000000
+        pwrCounter.energy = p["counter"]["energy"]
+        pwrCounter.timestamp = p["counter"]["timestamp"]
+    def stubSysmanFrequencyGetAvailableClocks(freq, count_ptr, freq_array):
+        freqProps = zet_freq_properties_t()
+        zeCall(zetSysmanFrequencyGetProperties, freq, freqProps)
+        freqs = []
+        freq = freqProps.min
+        while freq <= freqProps.max:
+            freqs.append(freq)
+            freq += freqProps.step
+        if freq_array is None:
+            uint32_assign(count_ptr, len(freqs))
+        elif uint32_value(count_ptr) == len(freqs):
+            results = double_array.frompointer(freq_array)
+            for i in range(len(freqs)):
+                results[i] = freqs[i]
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubSysmanEngineGet(sysdev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 4)
+        elif uint32_value(count_ptr) == 4:
+            e = stubState.setdefault("Engine", {})
+            e[ZET_ENGINE_GROUP_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZET_ENGINE_GROUP_COMPUTE_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZET_ENGINE_GROUP_MEDIA_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZET_ENGINE_GROUP_COPY_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            items = zet_sysman_engine_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_engine_handle(ZET_ENGINE_GROUP_ALL)
+            items[1] = ulong_to_engine_handle(ZET_ENGINE_GROUP_COMPUTE_ALL)
+            items[2] = ulong_to_engine_handle(ZET_ENGINE_GROUP_MEDIA_ALL)
+            items[3] = ulong_to_engine_handle(ZET_ENGINE_GROUP_COPY_ALL)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubSysmanEngineGetProperties(eng, engProps):
+        engProps.type = engine_handle_to_ulong(eng)
+    def stubSysmanEngineGetActivity(eng, utilStats):
+        global stubState
+        e = stubState["Engine"]
+        stats = e[engine_handle_to_ulong(eng)]
+        stats["timestamp"] += 1000000
+        utilStats.timestamp = stats["timestamp"]
+        if eng == ZET_ENGINE_GROUP_ALL:
+            stats["activeTime"] += 700000
+        if eng == ZET_ENGINE_GROUP_COMPUTE_ALL:
+            stats["activeTime"] += 500000
+        if eng == ZET_ENGINE_GROUP_MEDIA_ALL:
+            stats["activeTime"] += 150000
+        if eng == ZET_ENGINE_GROUP_COPY_ALL:
+            stats["activeTime"] += 50000
+        utilStats.activeTime = stats["activeTime"]
+    def stubSysmanPciGetState(sysdev, pciState):
+        pciState.status = ZET_PCI_LINK_STATUS_GREEN
+        pciState.qualityIssues = ZET_PCI_LINK_QUAL_ISSUES_NONE
+        pciState.stabilityIssues = ZET_PCI_LINK_STAB_ISSUES_NONE
+        pciState.speed.gen = 4
+        pciState.speed.width = 4
+        pciState.speed.maxBandwidth = 7880000000
+    def stubSysmanPciGetStats(sysdev, pciCounter):
+        global stubState
+        d = stubState.setdefault(sysman_handle_to_ulong(sysdev), {})
+        r = d.setdefault("PCIstats", [0,0,0,0,0])
+        pciCounter.timestamp = r[0]
+        pciCounter.replayCounter = r[1]
+        pciCounter.packetCounter = r[2]
+        pciCounter.rxCounter = r[3]
+        pciCounter.txCounter = r[4]
+        r[0] += 1000000
+        r[1] += 10
+        r[2] += 1000
+        r[3] += 788000000
+        r[4] += 78800000
+        pciCounter.maxBandwidth = 7880000000
+    def stubSysmanFabricPortGet(sysdev, count_ptr, handle_array):
+        raise NotImplementedError
+    def stubSysmanRasGet(sysdev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            items = zet_sysman_ras_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_ras_handle(ZET_RAS_ERROR_TYPE_CORRECTABLE)
+            items[1] = ulong_to_ras_handle(ZET_RAS_ERROR_TYPE_UNCORRECTABLE)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubSysmanRasGetProperties(ras, rasProps):
+        rasProps.type = ras_handle_to_ulong(ras)
+        rasProps.onSubdevice = False
+    def stubSysmanRasGetState(ras, clearErrors, err_count_ptr, errDetails):
+        uint64_assign(err_count_ptr,0)
+        if errDetails is not None:
+            errDetails.numResets = 0
+            errDetails.numProgrammingErrors = 0
+            errDetails.numDriverErrors = 0
+            errDetails.numComputeErrors = 0
+            errDetails.numNonComputeErrors = 0
+            errDetails.numCacheErrors = 0
+            errDetails.numDisplayErrors = 0
+    def stubSysmanProcessesGetState(sysdev, count_ptr, proc_array):
+        if proc_array is None:
+            uint32_assign(count_ptr, 4)
+        elif uint32_value(count_ptr) == 4:
+            procs = zet_process_state_array.frompointer(proc_array)
+            proc = zet_process_state_t()
+            proc.processId = 32765
+            proc.memSize = 0x10000
+            proc.engines = 1 << ZET_ENGINE_TYPE_OTHER | 1 << ZET_ENGINE_TYPE_COMPUTE
+            procs[0] = proc
+            proc.processId = 32766
+            proc.memSize = 0x20000
+            proc.engines = 1 << ZET_ENGINE_TYPE_3D
+            procs[1] = proc
+            proc.processId = 32767
+            proc.memSize = 0x30000
+            proc.engines = 1 << ZET_ENGINE_TYPE_MEDIA | 1 << ZET_ENGINE_TYPE_DMA
+            procs[2] = proc
+            proc.processId = 32768
+            proc.memSize = 0x40000
+            proc.engines = 1 << ZET_ENGINE_TYPE_OTHER | 1 << ZET_ENGINE_TYPE_COMPUTE | 1 << ZET_ENGINE_TYPE_3D | 1 << ZET_ENGINE_TYPE_MEDIA | 1 << ZET_ENGINE_TYPE_DMA
+            procs[3] = proc
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stillUnimplemented(*args, **kwargs):
+        raise NotImplementedError
+
+    replacements = { zetSysmanTemperatureGet : stubSysmanTemperatureGet,
+                     zetSysmanTemperatureGetProperties : stubSysmanTemperatureGetProperties,
+                     zetSysmanTemperatureGetState : stubSysmanTemperatureGetState,
+                     zetSysmanPowerGet : stubSysmanPowerGet,
+                     zetSysmanPowerGetProperties : stubSysmanPowerGetProperties,
+                     zetSysmanPowerSetLimits : stubSysmanPowerSetLimits,
+                     zetSysmanPowerGetLimits : stubSysmanPowerGetLimits,
+                     zetSysmanPowerGetEnergyCounter : stubSysmanPowerGetEnergyCounter,
+                     zetSysmanFrequencyGetAvailableClocks : stubSysmanFrequencyGetAvailableClocks,
+                     zetSysmanEngineGet : stubSysmanEngineGet,
+                     zetSysmanEngineGetProperties : stubSysmanEngineGetProperties,
+                     zetSysmanEngineGetActivity : stubSysmanEngineGetActivity,
+                     zetSysmanPciGetState : stubSysmanPciGetState,
+                     zetSysmanPciGetStats : stubSysmanPciGetStats,
+                     zetSysmanFabricPortGet : stubSysmanFabricPortGet,
+                     zetSysmanRasGet : stubSysmanRasGet,
+                     zetSysmanRasGetProperties : stubSysmanRasGetProperties,
+                     zetSysmanRasGetState : stubSysmanRasGetState,
+                     zetSysmanProcessesGetState : stubSysmanProcessesGetState }
+
+    replacementFunction = replacements.get(func, stillUnimplemented)
+
+    return replacementFunction(*args, **kwargs)
+
+# Call ZE function, stripping (first) return code and converting non-success to exception:
+def zeCall(func, *args, **kwargs):
+    rc = func(*args, **kwargs)
+    if type(rc) in (type(()),type([])):
+        val = rc[1:]
+        rc = rc[0]
+        if len(val) == 1:
+            val = val[0]
+    else:
+        val = None
+    if rc == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
+        return unimplementedFunctionCall(func, *args, **kwargs)
+    elif rc != ZE_RESULT_SUCCESS:
+        raise ValueError(resultString(rc))
+    return val
+
+# Allocate ZE struct and populate version as needed:
+def zeStruct(struct_t, version=None):
+    val = struct_t()
+    if hasattr(val, "version"):
+        if version is None:
+            version = ZE_DRIVER_PROPERTIES_VERSION_CURRENT
+        val.version = version
+    return val
+
+#
+# ZE string conversions
+#
+
+def versionString(version):
+    return str(version >> 16) + "." + str(version & 0xffff)
+
+def deviceTypeString(devType):
+    devTypes = { ZE_DEVICE_TYPE_GPU : "GPU",
+                 ZE_DEVICE_TYPE_FPGA : "FPGA" }
+    return devTypes.get(devType, "Unknown")
+
+def repairStatusString(repairStatus):
+    repairStatuses = { ZET_REPAIR_STATUS_UNSUPPORTED : "Unsupported",
+                       ZET_REPAIR_STATUS_NOT_PERFORMED : "Unrepaired",
+                       ZET_REPAIR_STATUS_PERFORMED : "Repaired" }
+    return repairStatuses.get(repairStatus, "Unknown")
+
+def tempTypeString(tempType):
+    tempTypes = { ZET_TEMP_SENSORS_GLOBAL : "Overall",
+                  ZET_TEMP_SENSORS_GPU : "GPU",
+                  ZET_TEMP_SENSORS_MEMORY : "Memory" }
+    return tempTypes.get(tempType, "Unknown")
+
+def freqTypeString(freqType):
+    freqTypes = { ZET_FREQ_DOMAIN_GPU : "GPU",
+                  ZET_FREQ_DOMAIN_MEMORY : "Memory" }
+    return freqTypes.get(freqType, "Unknown")
+
+def engTypeString(engType):
+    engTypes = { ZET_ENGINE_GROUP_ALL : "AllEngines",
+                 ZET_ENGINE_GROUP_COMPUTE_ALL : "AllComputeEngines",
+                 ZET_ENGINE_GROUP_MEDIA_ALL : "AllMediaEngines",
+                 ZET_ENGINE_GROUP_COPY_ALL : "AllCopyEngines" }
+    return engTypes.get(engType, "Unknown")
+
+def memTypeString(memType):
+    memTypes = { ZET_MEM_TYPE_HBM : "HBM",
+                 ZET_MEM_TYPE_DDR : "DDR",
+                 ZET_MEM_TYPE_SRAM : "SRAM",
+                 ZET_MEM_TYPE_L1 : "L1",
+                 ZET_MEM_TYPE_L3 : "L3",
+                 ZET_MEM_TYPE_GRF : "GRF",
+                 ZET_MEM_TYPE_SLM : "SLM" }
+    return memTypes.get(memType, "Unknown")
+
+def barTypeString(barType):
+    barTypes = { ZET_PCI_BAR_TYPE_CONFIG : "CONFIG",
+                 ZET_PCI_BAR_TYPE_MMIO : "MMIO",
+                 ZET_PCI_BAR_TYPE_VRAM : "VRAM",
+                 ZET_PCI_BAR_TYPE_ROM : "ROM",
+                 ZET_PCI_BAR_TYPE_VGA_IO : "VGA_IO",
+                 ZET_PCI_BAR_TYPE_VGA_MEM : "VGA_MEM",
+                 ZET_PCI_BAR_TYPE_INDIRECT_IO : "INDIRECT_IO",
+                 ZET_PCI_BAR_TYPE_INDIRECT_MEM : "INDIRECT_MEM",
+                 ZET_PCI_BAR_TYPE_OTHER : "OTHER" }
+    return barTypes.get(barType, "Unknown")
+
+def memHealthString(memHealth):
+    memHealths = { ZET_MEM_HEALTH_OK : "Good",
+                   ZET_MEM_HEALTH_DEGRADED : "Degraded",
+                   ZET_MEM_HEALTH_CRITICAL : "Critical",
+                   ZET_MEM_HEALTH_REPLACE : "Replace" }
+    return memHealths.get(memHealth, "Unknown")
+
+def throttleReasonsString(reasons):
+    if reasons == ZET_FREQ_THROTTLE_REASONS_NONE:
+        return "Not throttled"
+
+    throttleReasons = [(ZET_FREQ_THROTTLE_REASONS_AVE_PWR_CAP, "Exceeded sustained power limit"),
+                       (ZET_FREQ_THROTTLE_REASONS_BURST_PWR_CAP, "Exceeded burst power limit"),
+                       (ZET_FREQ_THROTTLE_REASONS_CURRENT_LIMIT, "Exceeded electrical limits"),
+                       (ZET_FREQ_THROTTLE_REASONS_THERMAL_LIMIT, "Exceeded temperature limit"),
+                       (ZET_FREQ_THROTTLE_REASONS_PSU_ALERT, "Exceeded power supply limits"),
+                       (ZET_FREQ_THROTTLE_REASONS_SW_RANGE, "Request outside software limits"),
+                       (ZET_FREQ_THROTTLE_REASONS_HW_RANGE, "Request outside hardware limits")]
+    reasonStrings = []
+    for r, s in throttleReasons:
+        if reasons & r:
+            reasons ^= r
+            reasonStrings.append(s)
+    if reasons != 0:
+        reasonStrings.append("Unknown throttle reason")
+
+    return ", ".join(reasonStrings)
+
+def pciLinkStatusString(pciLinkStatus):
+    pciLinkStatuses = { ZET_PCI_LINK_STATUS_GREEN : "Good",
+                        ZET_PCI_LINK_STATUS_YELLOW : "Degraded",
+                        ZET_PCI_LINK_STATUS_RED : "Unstable" }
+    return pciLinkStatuses.get(pciLinkStatus, "Unknown")
+
+def pciQualityIssuesString(reasons):
+    if reasons == ZET_PCI_LINK_QUAL_ISSUES_NONE:
+        return "None"
+
+    qualityIssues = [(ZET_PCI_LINK_QUAL_ISSUES_REPLAYS, "Excessive packet replays"),
+                     (ZET_PCI_LINK_QUAL_ISSUES_SPEED, "Reduced bitrate")]
+    reasonStrings = []
+    for r, s in qualityIssues:
+        if reasons & r:
+            reasons ^= r
+            reasonStrings.append(s)
+    if reasons != 0:
+        reasonStrings.append("Unknown degradation reason")
+
+    return ", ".join(reasonStrings)
+
+def pciStabilityIssuesString(reasons):
+    if reasons == ZET_PCI_LINK_STAB_ISSUES_NONE:
+        return "None"
+
+    stabilityIssues = [(ZET_PCI_LINK_STAB_ISSUES_RETRAINING, "Link retraining occurred")]
+    reasonStrings = []
+    for r, s in stabilityIssues:
+        if reasons & r:
+            reasons ^= r
+            reasonStrings.append(s)
+    if reasons != 0:
+        reasonStrings.append("Unknown stability issue")
+
+    return ", ".join(reasonStrings)
+
+def portStatusString(portStatus):
+    portStatuses = { ZET_FABRIC_PORT_STATUS_GREEN : "Good",
+                     ZET_FABRIC_PORT_STATUS_YELLOW : "Degraded",
+                     ZET_FABRIC_PORT_STATUS_RED : "Unstable",
+                     ZET_FABRIC_PORT_STATUS_BLACK : "Off" }
+    return portStatuses.get(portStatus, "Unknown")
+
+def portQualityIssuesString(reasons):
+    if reasons == ZET_FABRIC_PORT_QUAL_ISSUES_NONE:
+        return "None"
+
+    qualityIssues = [(ZET_FABRIC_PORT_QUAL_ISSUES_FEC, "Excessive error corrections"),
+                     (ZET_FABRIC_PORT_QUAL_ISSUES_LTP_CRC, "Excessive CRC errors"),
+                     (ZET_FABRIC_PORT_QUAL_ISSUES_SPEED, "Reduced bitrate")]
+    reasonStrings = []
+    for r, s in qualityIssues:
+        if reasons & r:
+            reasons ^= r
+            reasonStrings.append(s)
+    if reasons != 0:
+        reasonStrings.append("Unknown degradation reason")
+
+    return ", ".join(reasonStrings)
+
+def portStabilityIssuesString(reasons):
+    if reasons == ZET_FABRIC_PORT_STAB_ISSUES_NONE:
+        return "None"
+
+    stabilityIssues = [(ZET_FABRIC_PORT_STAB_ISSUES_TOO_MANY_REPLAYS, "Excessive packet replays"),
+                       (ZET_FABRIC_PORT_STAB_ISSUES_NO_CONNECT, "Can't connect"),
+                       (ZET_FABRIC_PORT_STAB_ISSUES_FLAPPING, "Flapping")]
+    reasonStrings = []
+    for r, s in stabilityIssues:
+        if reasons & r:
+            reasons ^= r
+            reasonStrings.append(s)
+    if reasons != 0:
+        reasonStrings.append("Unknown stability issue")
+
+    return ", ".join(reasonStrings)
+
+def rasTypeString(rasType):
+    rasTypes = { ZET_RAS_ERROR_TYPE_CORRECTABLE : "Correctable",
+                 ZET_RAS_ERROR_TYPE_UNCORRECTABLE : "Uncorrectable" }
+    return rasTypes.get(rasType, "Unknown")
+
+def stbyTypeString(stbyType):
+    stbyTypes = { ZET_STANDBY_TYPE_GLOBAL : "Global" }
+    return stbyTypes.get(stbyType, "Unknown")
+
+def stbyPromoModeString(stbyPromoMode):
+    stbyPromoModes = { ZET_STANDBY_PROMO_MODE_DEFAULT : "Enabled",
+                       ZET_STANDBY_PROMO_MODE_NEVER : "Disabled" }
+    return stbyPromoModes.get(stbyPromoMode, "Unknown")
+
+def enginesUsedString(engines):
+    if not engines:
+        return "None"
+
+    engineTypes = [(1 << ZET_ENGINE_TYPE_OTHER, "Other"),
+                   (1 << ZET_ENGINE_TYPE_COMPUTE, "Compute"),
+                   (1 << ZET_ENGINE_TYPE_3D, "3D"),
+                   (1 << ZET_ENGINE_TYPE_MEDIA, "Media"),
+                   (1 << ZET_ENGINE_TYPE_DMA, "DMA")]
+
+    engineStrings = []
+    for t, s in engineTypes:
+        if engines & t:
+            engines ^= t
+            engineStrings.append(s)
+
+    if engines != 0:
+        engineStrings.append("Unknown engine")
+
+    return ", ".join(engineStrings)
+
+def schedModeString(schedMode):
+    schedModes = { ZET_SCHED_MODE_TIMEOUT : "Timeout",
+                   ZET_SCHED_MODE_TIMESLICE : "Timeslice",
+                   ZET_SCHED_MODE_EXCLUSIVE : "Exclusive",
+                   ZET_SCHED_MODE_COMPUTE_UNIT_DEBUG : "Debug" }
+    return schedModes.get(schedMode, "Unknown")
+
+def fullUUID(uuid):
+    return uuid
+
+def tinyUUID(uuid):
+    return uuid[:2] + ".." + uuid[-2:]
+
+deviceUUID = fullUUID
+
+# Helper for indexing lists
+# To allow *args to be empty, change to: return args and zip(range(len(args[0])), *args)
+def indexed(*args):
+    return zip(range(len(args[0])), *args)
+
+def driverUUIDs(count, drivers):
+    uuids = []
+    for i in range(count):
+        driver = drivers[i]
+        driver_props = zeStruct(ze_driver_properties_t, ZE_DRIVER_PROPERTIES_VERSION_CURRENT)
+        zeCall(zeDriverGetProperties, driver, driver_props)
+        uuid_string = uuid_string_t()
+        driver_uuid_to_string(driver_props.uuid, uuid_string)
+        uuids.append(str(uuid_string.id))
+    return uuids
+
+def listDrivers(count, drivers):
+    pr.err("Available drivers:")
+    for i in range(count):
+        pr.err("Driver", i, ":")
+        driver = drivers[i]
+        api_version = zeCall(zeDriverGetApiVersion, driver)
+        pr.err("  API version:", versionString(api_version))
+        driver_props = zeStruct(ze_driver_properties_t, ZE_DRIVER_PROPERTIES_VERSION_CURRENT)
+        zeCall(zeDriverGetProperties, driver, driver_props)
+        uuid_string = uuid_string_t()
+        driver_uuid_to_string(driver_props.uuid, uuid_string)
+        pr.err("  uuid:", uuid_string.id);
+        pr.err("  driver version:", driver_props.driverVersion)
+        ipc_props = zeStruct(ze_driver_ipc_properties_t, ZE_DRIVER_IPC_PROPERTIES_VERSION_CURRENT)
+        zeCall(zeDriverGetIPCProperties, driver, ipc_props)
+        pr.err("  memsSupported:", bool(ipc_props.memsSupported))
+        pr.err("  eventsSupported:", bool(ipc_props.eventsSupported))
+
+def listDriversAndFail(count, drivers):
+    listDrivers(count, drivers)
+    pr.fail("Use --driver to specify a valid driver")
+
+def listDevices(driverIndices, deviceCounts, deviceLists):
+    pr.err("Available devices:")
+    for driver, count, devices in zip(driverIndices, deviceCounts, deviceLists):
+        for i in range(count):
+            if len(driverIndices) > 1:
+                pr.err("Device", str(driver) + "." + str(i), ":")
+            else:
+                pr.err("Device", i, ":")
+            device = devices[i]
+            device_properties = zeStruct(ze_device_properties_t, ZE_DEVICE_PROPERTIES_VERSION_CURRENT)
+            zeCall(zeDeviceGetProperties, device, device_properties)
+            devType = deviceTypeString(device_properties.type)
+            pr.err("  type:", devType)
+            pr.err("  name:", device_properties.name)
+            pr.err("  vendorId:", hex(device_properties.vendorId))
+            pr.err("  deviceId:", hex(device_properties.deviceId))
+            uuid_string = uuid_string_t()
+            device_uuid_to_string(device_properties.uuid, uuid_string)
+            pr.err("  uuid:", uuid_string.id);
+
+def listDevicesAndFail(driverIndices, deviceCounts, deviceLists):
+    listDevices(driverIndices, deviceCounts, deviceLists)
+    pr.fail("Use --device to specify a set of valid devices")
+
+def getDrivers(driverSelection):
+    driverCount = uint32_ptr()
+    zeCall(zeDriverGet, driverCount.cast(), None)
+    numDrivers = driverCount.value()
+    if numDrivers < 1:
+        pr.fail("No compatible drivers found")
+
+    drivers = ze_driver_handle_array(numDrivers)
+    zeCall(zeDriverGet, driverCount.cast(), drivers.cast())
+
+    if driverSelection:
+        indices = []
+        uuids = driverUUIDs(numDrivers, drivers)
+        for sel in driverSelection:
+            sel = sel.lower()
+
+            if sel == "list":
+                listDrivers(numDrivers, drivers)
+                exit(0)
+
+            if sel in uuids:
+                i = uuids.index(sel)
+            else:
+                try:
+                    i = int(sel)
+                    if i < 0 or i >= numDrivers:
+                        raise
+                except:
+                    pr.err("Error: Illegal driver index/UUID", sel, "specified")
+                    listDriversAndFail(numDrivers, drivers)
+            indices.append(i)
+
+        # uniquify:
+        indices = list(set(indices))
+        indices.sort()
+    else:
+        indices = range(numDrivers)
+
+    return indices, drivers
+
+def getDeviceUUIDs(deviceCounts, deviceLists):
+    uuids = []
+    for count, devices in zip(deviceCounts, deviceLists):
+        for i in range(count):
+            device = devices[i]
+            device_properties = zeStruct(ze_device_properties_t, ZE_DEVICE_PROPERTIES_VERSION_CURRENT)
+            zeCall(zeDeviceGetProperties, device, device_properties)
+            uuid_string = uuid_string_t()
+            device_uuid_to_string(device_properties.uuid, uuid_string)
+            uuids.append(str(uuid_string.id))
+
+            sysmanDevicePtr = zet_sysman_handle_ptr()
+            zeCall(zetSysmanGet, device, ZET_SYSMAN_VERSION_CURRENT, sysmanDevicePtr.cast())
+            sysman_properties = zet_sysman_properties_t()
+            zeCall(zetSysmanDeviceGetProperties, sysmanDevicePtr.value(), sysman_properties)
+            uuid_string_sysman = uuid_string_t()
+            device_uuid_to_string(sysman_properties.core.uuid, uuid_string_sysman)
+    return uuids
+
+def listDevices(driverIndices, deviceCounts, deviceLists):
+    pr.err("Available devices:")
+    for driver, count, devices in zip(driverIndices, deviceCounts, deviceLists):
+        for i in range(count):
+            if len(driverIndices) > 1:
+                pr.err("Device", str(driver) + "." + str(i), ":")
+            else:
+                pr.err("Device", i, ":")
+            device = devices[i]
+            device_properties = zeStruct(ze_device_properties_t, ZE_DEVICE_PROPERTIES_VERSION_CURRENT)
+            zeCall(zeDeviceGetProperties, device, device_properties)
+            devType = deviceTypeString(device_properties.type)
+            pr.err("  type:", devType)
+            pr.err("  name:", device_properties.name)
+            pr.err("  vendorId:", hex(device_properties.vendorId))
+            pr.err("  deviceId:", hex(device_properties.deviceId))
+            uuid_string = uuid_string_t()
+            device_uuid_to_string(device_properties.uuid, uuid_string)
+            pr.err("  uuid:", uuid_string.id);
+
+def firstMatch(sel, *places):
+    for place in places:
+        if sel in place:
+            return place.index(sel)
+    return None
+
+def getDevices(driverIndices, drivers, deviceSelection):
+    deviceFound = False
+    deviceCounts = []
+    deviceLists = []
+
+    for _,driver in zip(driverIndices, drivers):
+        deviceCount = uint32_ptr()
+        zeCall(zeDeviceGet, driver, deviceCount.cast(), None)
+
+        if deviceCount.value() > 0:
+            deviceFound = True
+            driverDevices = ze_device_handle_array(deviceCount.value())
+            zeCall(zeDeviceGet, driver, deviceCount.cast(), driverDevices.cast())
+        else:
+            driverDevices = None
+
+        deviceCounts.append(deviceCount.value())
+        deviceLists.append(driverDevices)
+
+    if not deviceFound:
+        pr.fail("No devices found")
+
+    allUUIDs = getDeviceUUIDs(deviceCounts, deviceLists)
+    allIndices = [ (r,d) for r,c in indexed(deviceCounts) for d in range(c) ]
+
+    expandedIDs = [ str(driverIndices[r]) + "." + str(d) for r,d in allIndices ]
+
+    if len(driverIndices) > 1:
+        deviceIDs = expandedIDs
+    else:
+        deviceIDs = [ str(d) for r, d in allIndices ]
+
+    if deviceSelection:
+        indices = []
+        deviceUUIDs = []
+        for sel in deviceSelection:
+            sel = sel.lower()
+
+            if sel == "list":
+                listDevices(driverIndices, deviceCounts, deviceLists)
+                exit(0)
+
+            i = firstMatch(sel, allUUIDs, deviceIDs, expandedIDs)
+
+            if i is None:
+                pr.err("Error: Illegal device index/UUID", sel, "specified")
+                listDevicesAndFail(driverIndices, deviceCounts, deviceLists)
+            else:
+                indices.append(allIndices[i])
+                deviceUUIDs.append(allUUIDs[i])
+
+        if len(driverIndices) > 1:
+            deviceIDs = [ str(driverIndices[r]) + "." + str(d) for r, d in indices ]
+        else:
+            deviceIDs = [ str(d) for r, d in indices ]
+    else:
+        indices = allIndices
+        deviceUUIDs = allUUIDs
+
+    sysmanDevices = []
+    sysmanDevicePtr = zet_sysman_handle_ptr()
+    for r,d in indices:
+        zeCall(zetSysmanGet, deviceLists[r][d], ZET_SYSMAN_VERSION_CURRENT, sysmanDevicePtr.cast())
+        sysmanDevices.append(sysmanDevicePtr.value())
+
+    return deviceIDs, deviceUUIDs, sysmanDevices
+
+#
+# Parse arguments
+#
+def parseArgs():
+    global ZESYSMAN_PROG_VERSION
+    global formatArgClass, formatExtClass, Node
+    global pr
+    global indentStr
+    global deviceUUID, maxIterations
+    global condensedList
+    global IndexAttributes, SecondaryIndexAttributes
+    global replaceUnimplementedFunctions
+
+    helpFormatter=lambda prog: argparse.HelpFormatter(prog, max_help_position=36)
+
+    parser = argparse.ArgumentParser(description="Access SYSMAN services",
+                                     formatter_class=helpFormatter)
+
+    parser.add_argument("-v","--version", action='version', version="%(prog)s " + ZESYSMAN_PROG_VERSION,
+                        help="report version information")
+    parser.add_argument("--driver", metavar='DRV', nargs='+',
+                        help="specify driver (index/UUID)")
+    parser.add_argument("-d", "--device", metavar='D', nargs='+',
+                        help="specify device (index/UUID)")
+    parser.add_argument("-i", "--show-inventory", action='store_true',
+                        help="show inventory data")
+    parser.add_argument("-l", "--show-telemetry", action='store_true',
+                        help="show telemetry data")
+    parser.add_argument("-t", "--show-temp", action='store_true',
+                        help="show temperature")
+    parser.add_argument("-p", "--show-power", action='store_true',
+                        help="show power")
+    parser.add_argument("-c", "--show-freq", "--show-clocks", action='store_true',
+                        help="show frequency")
+    parser.add_argument("-u", "--show-util", action='store_true',
+                        help="show utilization")
+    parser.add_argument("-m", "--show-mem", action='store_true',
+                        help="show memory stats")
+    parser.add_argument("-x", "--show-pci", action='store_true',
+                        help="show PCI bandwidth")
+    parser.add_argument("--show-fabric-ports", action='store_true',
+                        help="show fabric ports")
+    parser.add_argument("-b", "--show-standby", action='store_true',
+                        help="show standby promotion")
+    parser.add_argument("-e", "--show-errors", action='store_true',
+                        help="show errors")
+    parser.add_argument("-a", "--show-all", action='store_true',
+                        help="show all sysman attributes")
+    parser.add_argument("--show-device", action='store_true',
+                        help="show device attributes")
+    parser.add_argument("--show-processes", action='store_true',
+                        help="show process usage")
+    parser.add_argument("--show-scheduler", action='store_true',
+                        help="show scheduler mode")
+    parser.add_argument("--verbose", action='store_true',
+                        help="show extra attributes")
+    parser.add_argument("--poll", metavar='TIME', type=int,
+                        help="set sampling interval (in s by default)")
+    parser.add_argument("--iterations", metavar='NUM', type=int,
+                        help="samples to collect (0 = until stopped)")
+    parser.add_argument("--set-power", nargs='+', metavar=('POW','TAU'),
+                        help="set sustained power limit")
+    parser.add_argument("--set-burst-power", nargs='+', metavar=('POW',''),
+                        help="set burst power limit")
+    parser.add_argument("--set-peak-power", nargs='+', metavar=('POW',''),
+                        help="set peak power limit")
+    parser.add_argument("--set-freq", nargs='+', metavar=('MIN','MAX'),
+                        help="set frequency limits")
+    parser.add_argument("--set-scheduler", nargs='+', metavar=('MODE',''),
+                        help="set scheduler mode")
+    parser.add_argument("--clear-errors", action='store_true',
+                        help="clear error counters")
+    parser.add_argument("--set-standby", metavar='MODE',
+                        help="set sleep state promotion mode")
+    parser.add_argument("--reset", action='store_true',
+                        help="reset specified device")
+    parser.add_argument("-y", "--yes", action='store_true',
+                        help="do not ask for reset confirmation")
+    parser.add_argument("-f", "--format", metavar='FMT', choices=["list","xml","table","csv"],
+                        help="specify output format (list/xml/table/csv)")
+    parser.add_argument("--output", metavar='FILE',
+                        help="output to FILE")
+    parser.add_argument("--tee", action='store_true',
+                        help="print to standard output also")
+    parser.add_argument("--indent", metavar='COUNT', type=int,
+                        help="use COUNT space (or -COUNT tab) indents")
+    parser.add_argument("--style", choices=["condensed","aligned"],
+                        help="change output style")
+    parser.add_argument("--uuid-index", action='store_true',
+                        help="use UUID as index")
+    parser.add_argument("--ascii", action='store_true',
+                        help="use only 7-bit ascii characters")
+    # Only support development features and in-development options in developer mode
+    if os.environ.get("ZESYSMAN_DEVELOPER_MODE"):
+        parser.add_argument("-n", "--dry-run", action='store_true',
+                            help="do not make any state changes")
+        parser.add_argument("--save-profile", metavar='PROF',
+                            help="save device configuration")
+        parser.add_argument("--restore-profile", metavar='PROF',
+                            help="restore device configuration")
+        parser.add_argument("--topo-matrix", action='store_true',
+                            help="show topology matrix")
+        parser.add_argument("--subdevice", action='store_true',
+                            help="report by subdevice")
+        parser.add_argument("--tiny-uuid", action='store_true',
+                            help="print tiny device UUIDs")
+        parser.add_argument("--debug", action='store_true',
+                            help="debug (for development only)")
+        parser.add_argument("--reset-freq", action='store_true',
+                            help="reset frequency limits")
+        parser.add_argument("--stub-unimplemented", action='store_true',
+                            help="provide stubs for some unimplemented functions (for development only)")
+        parser.add_argument("--show-timestamp", action='store_true',
+                            help="show timestamps when iterating")
+
+    args = parser.parse_args()
+
+    if not os.environ.get("ZESYSMAN_DEVELOPER_MODE"):
+        args.dry_run = None
+        args.save_profile = None
+        args.restore_profile = None
+        args.topo_matrix = None
+        args.subdevice = None
+        args.tiny_uuid = None
+        args.debug = None
+        args.stub_unimplemented = None
+        args.reset_freq = None
+
+    Node = formatArgClass.get(args.format, Node)
+
+    unsupportedOpts = ["save_profile", "restore_profile"]
+    unsupportedFlags = ["topo_matrix", "subdevice"]
+
+    for field in unsupportedOpts:
+        if args.__dict__.get(field) is not None:
+            pr.fail(field.upper(), "option is not supported yet")
+
+    for field in unsupportedFlags:
+        if args.__dict__.get(field):
+            pr.fail(field.upper(), "option is not supported yet")
+
+    if args.poll and args.iterations is not None:
+        args.iterations = 0
+
+    if args.iterations is not None:
+        if args.iterations < 1:
+            maxIterations = sys.maxint
+        else:
+            maxIterations = args.iterations
+
+        args.show_telemetry = True
+
+    if args.output and args.output != "-":
+        if args.format is None:
+            ext = os.path.splitext(args.output)[1].lower()
+            Node = formatExtClass.get(ext, Node)
+        try:
+            fil = open(args.output, "w")
+        except:
+            pr.fail("Could not open file", args.output, "for writing")
+        else:
+            pr.outputFile = fil
+            pr.teeOutput = args.tee
+
+    if args.indent is not None:
+        if args.indent >= 0:
+            indentStr = " " * args.indent
+        else:
+            indentStr = "\t" * -args.indent
+
+    if args.tiny_uuid:
+        deviceUUID = tinyUUID
+
+    if args.debug:
+        pr.debugFile = sys.stderr
+
+    condensedList = (args.style == "condensed")
+
+    if args.uuid_index:
+        IndexAttributes = SecondaryIndexAttributes
+        SecondaryIndexAttributes = []
+
+    if args.stub_unimplemented:
+        replaceUnimplementedFunctions = True
+
+    return args
+
+def sigintHandler(sigNum, frame):
+    global maxIterations
+    maxIterations = 0
+
+def parseMilliwatts(opts):
+    value = 0.0
+    multiplier = 1000.0
+    remainder = []
+    if opts:
+        opt = opts.pop(0).lower()
+        split = None
+        if "m" in opt:
+            split = opt.index("m")
+        if "w" in opt:
+            if split is None:
+                split = opt.index("w")
+            else:
+                split = min(split, opt.index("w"))
+        if split is None:
+            rest = opts
+        else:
+            opt, rest = opt[:split], [opt[split:]] + opts
+
+        try:
+            value = float(opt)
+        except:
+            hitRemainder = True
+            if opt not in ["d", "def", "default"]:
+                pr.err("WARNING: Illegal power value (" + opt + "), using default/0")
+        else:
+            hitRemainder = False
+
+        for opt in rest:
+            opt = opt.lower()
+            if hitRemainder:
+                remainder.append(opt)
+            else:
+                hitRemainder = True
+                if opt in ["m", "mw", "mwatt", "mwatts", "milliwatt", "milliwatts"]:
+                    multiplier = 1.0
+                elif opt not in ["w", "wt", "watt", "watts"]:
+                    remainder.append(opt)
+    else:
+        pr.err("WARNING: No power value specified, using default/0")
+
+    return int(value * multiplier), remainder
+
+def parseMilliseconds(opts):
+    value = 0.0
+    multiplier = 1000.0
+    remainder = []
+    if opts:
+        opt = opts.pop(0).lower()
+        split = None
+        if "m" in opt:
+            split = opt.index("m")
+        if "s" in opt:
+            if split is None:
+                split = opt.index("s")
+            else:
+                split = min(split, opt.index("s"))
+        if split is None:
+            rest = opts
+        else:
+            opt, rest = opt[:split], [opt[split:]] + opts
+
+        try:
+            value = float(opt)
+        except:
+            hitRemainder = True
+            if opt not in ["d", "def", "default"]:
+                pr.err("WARNING: Illegal time value (" + opt + "), using default/0")
+        else:
+            hitRemainder = False
+
+        for opt in rest:
+            opt = opt.lower()
+            if hitRemainder:
+                remainder.append(opt)
+            else:
+                hitRemainder = True
+                if opt in ["m", "ms", "msec", "msecond", "mseconds", "millisecond", "milliseconds"]:
+                    multiplier = 1.0
+                elif opt not in ["s", "sec", "second", "seconds"]:
+                    remainder.append(opt)
+    else:
+        pr.err("WARNING: No time value specified, using default/0")
+
+    return int(value * multiplier), remainder
+
+def parseMHz(opts):
+    value = 0.0
+    multiplier = 1.0
+    remainder = []
+    if opts:
+        opt = opts.pop(0).lower()
+        split = None
+        if "m" in opt:
+            split = opt.index("m")
+        if "g" in opt:
+            if split is None:
+                split = opt.index("g")
+            else:
+                split = min(split, opt.index("g"))
+        if "h" in opt:
+            if split is None:
+                split = opt.index("h")
+            else:
+                split = min(split, opt.index("h"))
+        if "k" in opt:
+            if split is None:
+                split = opt.index("k")
+            else:
+                split = min(split, opt.index("k"))
+        if split is None:
+            rest = opts
+        else:
+            opt, rest = opt[:split], [opt[split:]] + opts
+
+        try:
+            value = float(opt)
+        except:
+            hitRemainder = True
+            if opt not in ["d", "def", "default"]:
+                pr.err("WARNING: Illegal power value (" + opt + "), using default/0")
+        else:
+            hitRemainder = False
+
+        for opt in rest:
+            opt = opt.lower()
+            if hitRemainder:
+                remainder.append(opt)
+            else:
+                hitRemainder = True
+                if opt in ["g", "ghz", "gigahertz"]:
+                    multiplier = 1000.0
+                elif opt in ["k", "khz", "kilohertz"]:
+                    multiplier = 1e-3
+                elif opt in ["h", "hz", "hertz"]:
+                    multiplier = 1e-6
+                elif opt not in ["m", "mhz", "megahertz"]:
+                    remainder.append(opt)
+    else:
+        pr.err("WARNING: No power value specified, using default/0")
+
+    return value * multiplier, remainder
+
+def parseSchedulerMode(opts):
+    opt, remainder = opts[0].lower(), opts[1:]
+
+    if opt in ["timeout", "time", "to", "t"]:
+        mode = ET_SCHED_MODE_TIMEOUT
+    elif opt in ["timeslice", "slice", "ts", "s"]:
+        mode = ZET_SCHED_MODE_TIMESLICE
+    elif opt in ["exclusive", "exc", "ex", "e", "x"]:
+        mode = ZET_SCHED_MODE_EXCLUSIVE
+    else:
+        pr.err("ERROR: Unrecognized scheduler mode", opt)
+        raise ValueError(opt)
+
+    return mode, remainder
+
+def parseMicroseconds(opts):
+    value = 0.0
+    multiplier = 1000000.0
+    remainder = []
+    if opts:
+        opt = opts.pop(0).lower()
+        split = None
+        if "u" in opt:
+            split = opt.index("u")
+        if "m" in opt:
+            split = opt.index("m")
+        if "s" in opt:
+            if split is None:
+                split = opt.index("s")
+            else:
+                split = min(split, opt.index("s"))
+        if split is None:
+            rest = opts
+        else:
+            opt, rest = opt[:split], [opt[split:]] + opts
+
+        hitRemainder = True
+
+        if opt in ["n", "none"]:
+            value = ZET_SCHED_WATCHDOG_DISABLE
+            multiplier = 1
+        elif opt not in ["d", "def", "default"]:
+            try:
+                value = float(opt)
+                hitRemainder = False
+            except:
+                pr.err("WARNING: Illegal time value (" + opt + "), using default")
+
+        for opt in rest:
+            opt = opt.lower()
+            if hitRemainder:
+                remainder.append(opt)
+            else:
+                hitRemainder = True
+                if opt in ["u", "us", "usec", "usecond", "useconds", "microsecond", "microseconds"]:
+                    multiplier = 1.0
+                if opt in ["m", "ms", "msec", "msecond", "mseconds", "millisecond", "milliseconds"]:
+                    multiplier = 1000.0
+                elif opt not in ["s", "sec", "second", "seconds"]:
+                    remainder.append(opt)
+
+    return int(value * multiplier), remainder
+
+#
+# Main program
+#
+def main():
+    global deviceUUID, maxIterations, Node
+
+    args = parseArgs()
+
+    if maxIterations > 1:
+        signal.signal(signal.SIGINT, sigintHandler)
+
+    driverIndices, drivers = getDrivers(args.driver)
+
+    deviceIDs, deviceUUIDs, devices = getDevices(driverIndices, drivers, args.device)
+
+    generatingDeviceReport = False
+
+    if args.show_all:
+        args.show_temp, args.show_power, args.show_freq, args.show_util = True, True, True, True
+        args.show_mem, args.show_pci, args.show_fabric_ports = True, True, True
+        args.show_standby, args.show_errors = True, True
+
+    if args.show_device or args.show_processes or args.show_scheduler or \
+       args.show_temp or args.show_power or args.show_freq or args.show_util or \
+       args.show_mem or args.show_pci or args.show_fabric_ports or \
+       args.show_standby or args.show_errors:
+
+        generatingDeviceReport = True
+
+        if not args.show_inventory:
+            args.show_telemetry = True
+
+    elif args.show_inventory or args.show_telemetry:
+
+        args.show_temp, args.show_power, args.show_freq, args.show_util = True, True, True, True
+        args.show_mem, args.show_pci, args.show_fabric_ports = True, True, True
+        args.show_standby, args.show_errors = True, True
+
+        generatingDeviceReport = True
+
+    if not generatingDeviceReport:
+        Node = FormatNode
+
+    if args.poll and args.poll > 0 and args.poll <= 60:
+        pollInterval = args.poll
+    else:
+        pollInterval = 1
+
+    pollDelayRequired = False
+    telemetryClosures = []
+
+    if args.reset:
+        if len(devices) != 1:
+            pr.fail("Cannot reset more than one GPU at a time")
+
+        deviceName = "%s [%s]" % (deviceIDs[0], deviceUUID(deviceUUIDs[0]))
+
+        if not args.yes:
+            answer = input("Do you really want to reset device " + deviceName + "? ")
+            args.yes = answer.lower() in ("y", "yes")
+
+        if args.yes:
+            if args.dry_run:
+                pr("Would RESET device", deviceName)
+            else:
+                pr("RESETTING device", deviceName)
+                zeCall(zetSysmanDeviceReset, devices[0])
+        else:
+            pr("NOT resetting device")
+
+        sys.exit(0)
+
+    topNode = Node(None, "Devices", None)
+
+    for devID, devUUID, device in zip(deviceIDs, deviceUUIDs, devices):
+        devNode = Node(topNode, "Device", None, ("Index", devID), ("UUID", deviceUUID(devUUID)))
+
+        if args.show_device:
+            props = zet_sysman_properties_t()
+            zeCall(zetSysmanDeviceGetProperties, device, props)
+            try:
+                repairStatus = zeCall(zetSysmanDeviceGetRepairStatus, device);
+            except NotImplementedError:
+                repairStatus = ZET_REPAIR_STATUS_UNSUPPORTED
+            Node(devNode, "Name", props.core.name)
+            devType = deviceTypeString(props.core.type)
+            Node(devNode, "Type", devType)
+            Node(devNode, "VendorId", hex(props.core.vendorId))
+            Node(devNode, "DeviceId", hex(props.core.deviceId))
+            if args.show_inventory:
+                Node(devNode, "NumSubdevices", props.numSubdevices)
+                Node(devNode, "serialNumber", props.serialNumber)
+                Node(devNode, "boardNumber", props.boardNumber)
+                Node(devNode, "brandName", props.brandName)
+                Node(devNode, "modelName", props.modelName)
+                Node(devNode, "vendorName", props.vendorName)
+                Node(devNode, "driverVersion", props.driverVersion)
+                Node(devNode, "RepairStatus", repairStatusString(repairStatus))
+                if args.verbose:
+                    Node(devNode, "coreClockRate", props.core.coreClockRate, ("Units", "MHz"))
+                    Node(devNode, "unifiedMemorySupported", bool(props.core.unifiedMemorySupported))
+                    Node(devNode, "eccMemorySupported", bool(props.core.eccMemorySupported))
+                    Node(devNode, "onDemandPageFaultsSupported", bool(props.core.onDemandPageFaultsSupported))
+                    Node(devNode, "maxCommandQueues", props.core.maxCommandQueues)
+                    Node(devNode, "numAsyncComputeEngines", props.core.numAsyncComputeEngines)
+                    Node(devNode, "numAsyncCopyEngines", props.core.numAsyncCopyEngines)
+                    Node(devNode, "maxCommandQueuePriority", props.core.maxCommandQueuePriority)
+                    Node(devNode, "numThreadsPerEU", props.core.numThreadsPerEU)
+                    Node(devNode, "physicalEUSimdWidth", props.core.physicalEUSimdWidth)
+                    Node(devNode, "numEUsPerSubslice", props.core.numEUsPerSubslice)
+                    Node(devNode, "numSubslicesPerSlice", props.core.numSubslicesPerSlice)
+                    Node(devNode, "numSlices", props.core.numSlices)
+                    Node(devNode, "timerResolution", props.core.timerResolution)
+
+        tempCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanTemperatureGet, device,tempCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            temperatures = zet_sysman_temp_handle_array(tempCount.value())
+            zeCall(zetSysmanTemperatureGet, device,tempCount.cast(), temperatures.cast())
+
+        if args.show_temp:
+            tempTop = Node(devNode, "TemperatureSensors", None)
+
+            for i in range(tempCount.value()):
+                temp = temperatures[i]
+                tempProps = zet_temp_properties_t()
+                zeCall(zetSysmanTemperatureGetProperties, temp, tempProps)
+                tempType = tempTypeString(tempProps.type)
+                if tempProps.onSubdevice:
+                    tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType),
+                                       ("SubdeviceId", tempProps.subdeviceId))
+                else:
+                    tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType))
+
+                if args.show_inventory:
+                    Node(tempNode, "CriticalTempSupported", bool(tempProps.isCriticalTempSupported))
+                    Node(tempNode, "Threshold1Supported", bool(tempProps.isThreshold1Supported))
+                    Node(tempNode, "Threshold2Supported", bool(tempProps.isThreshold2Supported))
+
+                if args.show_telemetry:
+                    if args.ascii:
+                        degC = "degC"
+                    else:
+                        degC = "°C"
+                    node = Node(tempNode, "Current", "?", ("Units", degC))
+
+                    def tempTelemetry(temp=temp, node=node, degC=degC):
+                        tempCurrent = zeCall(zetSysmanTemperatureGetState, temp)
+                        node.setText("%.1f" % tempCurrent)
+
+                    telemetryClosures.append(tempTelemetry)
+
+        pwrCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanPowerGet, device,pwrCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            powers = zet_sysman_pwr_handle_array(pwrCount.value())
+            zeCall(zetSysmanPowerGet, device, pwrCount.cast(), powers.cast())
+
+        if args.set_power or args.set_burst_power or args.set_peak_power:
+            for i in range(pwrCount.value()):
+                sustainedLimit = None
+                burstLimit = None
+                peakLimit = None
+                if args.set_power:
+                    sustainedLimit = zet_power_sustained_limit_t()
+                    sustainedLimit.enabled = True
+                    sustainedLimit.power, remainder = parseMilliwatts(args.set_power)
+                    sustainedLimit.interval, remainder = parseMilliseconds(remainder)
+                    if remainder:
+                        pr.err("WARNING: Extra set-power arguments ignored")
+                if args.set_burst_power:
+                    burstLimit = zet_power_burst_limit_t()
+                    burstLimit.enabled = True
+                    burstLimit.power, remainder = parseMilliwatts(args.set_burst_power)
+                    if remainder:
+                        pr.err("WARNING: Extra set-burst-power arguments ignored")
+                if args.set_peak_power:
+                    peakLimit = zet_power_peak_limit_t()
+                    peakLimit.powerAC, remainder = parseMilliwatts(args.set_peak_power)
+                    peakLimit.powerDC, remainder = parseMilliwatts(remainder)
+                    if remainder:
+                        pr.err("WARNING: Extra set-peak-power arguments ignored")
+                pwr = powers[i]
+                if args.dry_run:
+                    if sustainedLimit:
+                        pr("Would set sustained limit to", sustainedLimit.power, "mW,", sustainedLimit.interval, "ms")
+                    if burstLimit:
+                        pr("Would set burst limit to", burstLimit.power, "mW")
+                    if peakLimit:
+                        pr("Would set peak AC, DC limits to", peakLimit.powerAC, "mW,", peakLimit.powerDC, "mW")
+                else:
+                    zeCall(zetSysmanPowerSetLimits, pwr, sustainedLimit, burstLimit, peakLimit)
+
+        if args.show_power:
+            pwrTop = Node(devNode, "PowerDomains", None)
+
+            for i in range(pwrCount.value()):
+                pwr = powers[i]
+                pwrProps = zet_power_properties_t()
+                zeCall(zetSysmanPowerGetProperties, pwr, pwrProps)
+                if pwrProps.onSubdevice:
+                    pwrNode = Node(pwrTop, "PowerDomain", None, ("Index", i), ("Name", "Subdevice"),
+                                      ("SubdeviceId", pwrProps.subdeviceId))
+                else:
+                    pwrNode = Node(pwrTop, "PowerDomain", None, ("Index", i), ("Name", "Package"))
+
+                if args.show_inventory:
+                    if args.verbose:
+                        Node(pwrNode, "CanControl", bool(pwrProps.canControl))
+                        Node(pwrNode, "ThresholdSupported", bool(pwrProps.isEnergyThresholdSupported))
+                        Node(pwrNode, "MaxLimit", "%.3f" % (pwrProps.maxLimit / 1000), ("Units", "Watts"))
+
+                    sustainedLimit = zet_power_sustained_limit_t()
+                    burstLimit = zet_power_burst_limit_t()
+                    peakLimit = zet_power_peak_limit_t()
+                    zeCall(zetSysmanPowerGetLimits, pwr, sustainedLimit, burstLimit, peakLimit)
+                    sustainedNode = Node(pwrNode, "SustainedLimit", None)
+                    Node(sustainedNode, "Enabled", bool(sustainedLimit.enabled))
+                    Node(sustainedNode, "Power", "%.3f" % (sustainedLimit.power / 1000), ("Units", "Watts"))
+                    Node(sustainedNode, "Interval", "%.3f" % (sustainedLimit.interval / 1000), ("Units", "sec"))
+                    burstNode = Node(pwrNode, "BurstLimit", None)
+                    Node(burstNode, "Enabled", bool(burstLimit.enabled))
+                    Node(burstNode, "Power", "%.3f" % (burstLimit.power / 1000), ("Units", "Watts"))
+                    peakNode = Node(pwrNode, "PeakLimit", None)
+                    Node(peakNode, "Power", "%.3f" % (peakLimit.powerAC / 1000), ("Units", "Watts"))
+                    if peakLimit.powerDC > 0:
+                        Node(peakNode, "PowerOnDC", "%.3f" % (peakLimit.powerDC / 1000), ("Units", "Watts"))
+
+                if args.show_telemetry:
+                    pwrCounter = zet_power_energy_counter_t()
+                    zeCall(zetSysmanPowerGetEnergyCounter, pwr, pwrCounter)
+                    node = Node(pwrNode, "CurrentPower", "?", ("Units", "Watts"))
+
+                    def pwrTelemetry(pwr=pwr, pwrCounter=pwrCounter, node=node):
+                        oldEnergy, oldTimestamp = pwrCounter.energy, pwrCounter.timestamp
+                        zeCall(zetSysmanPowerGetEnergyCounter, pwr, pwrCounter)
+                        deltaE = pwrCounter.energy - oldEnergy
+                        deltaT = pwrCounter.timestamp - oldTimestamp
+                        if deltaT > 0:
+                            watts = "%.3f" % (float(deltaE) / deltaT)
+                        else:
+                            watts = "?"
+                        node.setText(watts)
+
+                    telemetryClosures.append(pwrTelemetry)
+                    pollDelayRequired = True
+
+        freqCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanFrequencyGet, device, freqCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            frequencies = zet_sysman_freq_handle_array(freqCount.value())
+            zeCall(zetSysmanFrequencyGet, device, freqCount.cast(), frequencies.cast())
+
+        if args.set_freq or args.reset_freq:
+            for i in range(freqCount.value()):
+                freqRange = zet_freq_range_t()
+                if args.reset_freq:
+                    freqRange.min = 0
+                    freqRange.max = 0
+                if args.set_freq:
+                    freqRange.min, remainder = parseMHz(args.set_freq)
+                    if remainder:
+                        freqRange.max, remainder = parseMHz(remainder)
+                        if remainder:
+                            pr.err("WARNING: Extra set-freq arguments ignored")
+                    else:
+                        freqRange.max = freqRange.min
+                freq = frequencies[i]
+                if args.dry_run:
+                    pr("Would set frequency range to", freqRange.min, "MHz -", freqRange.max, "MHz")
+                else:
+                    zeCall(zetSysmanFrequencySetRange, freq, freqRange)
+
+        if args.show_freq:
+            freqTop = Node(devNode, "FrequencyDomains", None)
+
+            for i in range(freqCount.value()):
+                freq = frequencies[i]
+                freqProps = zet_freq_properties_t()
+                zeCall(zetSysmanFrequencyGetProperties, freq, freqProps)
+                freqType = freqTypeString(freqProps.type)
+                if freqProps.onSubdevice:
+                    freqNode = Node(freqTop, "FrequencyDomain", None, ("Index", i), ("Name", freqType),
+                                       ("SubdeviceId", freqProps.subdeviceId))
+                else:
+                    freqNode = Node(freqTop, "FrequencyDomain", None, ("Index", i), ("Name", freqType))
+
+                if args.show_inventory:
+                    if args.verbose:
+                        Node(freqNode, "CanControl", bool(freqProps.canControl))
+                        Node(freqNode, "ThrottleEventSupported", bool(freqProps.isThrottleEventSupported))
+                    availFreqsNode = Node(freqNode, "AvailableFrequencies", None)
+                    Node(availFreqsNode, "Min", "%.1f" % freqProps.min, ("Units", "MHz"))
+                    Node(availFreqsNode, "Max", "%.1f" % freqProps.max, ("Units", "MHz"))
+                    Node(availFreqsNode, "Step", "%.1f" % freqProps.step, ("Units", "MHz"))
+                    if args.verbose:
+                        clockCount = uint32_ptr()
+                        try:
+                            zeCall(zetSysmanFrequencyGetAvailableClocks, freq, clockCount.cast(), None)
+                        except:
+                            pass
+                        else:
+                            clockFreqs = double_array(clockCount.value())
+                            zeCall(zetSysmanFrequencyGetAvailableClocks, freq, clockCount.cast(), clockFreqs)
+                        for clk in range(clockCount.value()):
+                            clockFreq = clockFreqs[clk]
+                            Node(availFreqsNode, "AvailableFrequency", "%.1f" % clockFreq, ("Units", "MHz"))
+
+                    freqRange = zet_freq_range_t()
+                    zeCall(zetSysmanFrequencyGetRange, freq, freqRange)
+                    rangeFreqsNode = Node(freqNode, "FrequencyRange", None)
+                    Node(rangeFreqsNode, "Min", "%.1f" % freqRange.min, ("Units", "MHz"))
+                    Node(rangeFreqsNode, "Max", "%.1f" % freqRange.max, ("Units", "MHz"))
+
+                if args.show_telemetry:
+                    freqState = zet_freq_state_t()
+                    nodes = []
+                    nodes.append(Node(freqNode, "RequestedFrequency", "?", ("Units", "MHz")))
+                    nodes.append(Node(freqNode, "ActualFrequency", "?", ("Units", "MHz")))
+                    nodes.append(Node(freqNode, "ThrottleReasons", "?"))
+                    if args.verbose:
+                        nodes.append(Node(freqNode, "Efficient", "?", ("Units", "MHz")))
+                        nodes.append(Node(freqNode, "MaximumTDP", "?", ("Units", "MHz")))
+
+                    def freqTelemetry(freq=freq, freqState=freqState, node=nodes, verbose=args.verbose):
+                        zeCall(zetSysmanFrequencyGetState, freq, freqState)
+                        node[0].setText(freqState.request)
+                        node[1].setText(freqState.actual)
+                        node[2].setText(throttleReasonsString(freqState.throttleReasons))
+                        if verbose:
+                            node[3].setText(freqState.efficient)
+                            node[4].setText(freqState.tdp)
+
+                    telemetryClosures.append(freqTelemetry)
+
+        engCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanEngineGet, device, engCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            engs = zet_sysman_engine_handle_array(engCount.value())
+            zeCall(zetSysmanEngineGet, device, engCount.cast(), engs.cast())
+
+        if args.show_util:
+            engTop = Node(devNode, "EngineGroups", None)
+
+            for i in range(engCount.value()):
+                eng = engs[i]
+                engProps = zet_engine_properties_t()
+                zeCall(zetSysmanEngineGetProperties, eng, engProps)
+                engType = engTypeString(engProps.type)
+
+                if engProps.onSubdevice:
+                    engNode = Node(engTop, "EngineGroup", None, ("Index", i), ("Name", engType),
+                                      ("SubdeviceId", engProps.subdeviceId))
+                else:
+                    engNode = Node(engTop, "EngineGroup", None, ("Index", i), ("Name", engType))
+
+                if args.show_telemetry:
+                    utilStats = zet_engine_stats_t()
+                    zeCall(zetSysmanEngineGetActivity, eng, utilStats)
+                    node = Node(engNode, "Activity", "?", ("Units", "%"))
+
+                    def utilTelemetry(eng=eng, utilStats=utilStats, node=node):
+                        oldActive, oldTimestamp = utilStats.activeTime, utilStats.timestamp
+                        zeCall(zetSysmanEngineGetActivity, eng, utilStats)
+                        deltaA = utilStats.activeTime - oldActive
+                        deltaT = utilStats.timestamp - oldTimestamp
+                        if deltaT > 0:
+                            util = "%.0f" % (100.0 * deltaA / deltaT)
+                        else:
+                            util = "?"
+                        node.setText(util)
+
+                    telemetryClosures.append(utilTelemetry)
+                    pollDelayRequired = True
+
+        memCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanMemoryGet, device, memCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            mems = zet_sysman_mem_handle_array(memCount.value())
+            zeCall(zetSysmanMemoryGet, device, memCount.cast(), mems.cast())
+
+        if args.show_mem:
+            memTop = Node(devNode, "MemoryModules", None)
+
+            for i in range(memCount.value()):
+                mem = mems[i]
+                memProps = zet_mem_properties_t()
+                zeCall(zetSysmanMemoryGetProperties, mem, memProps)
+                memType = memTypeString(memProps.type)
+
+                if memProps.onSubdevice:
+                    memNode = Node(memTop, "MemoryModule", None, ("Index", i), ("Name", memType),
+                                      ("SubdeviceId", memProps.subdeviceId))
+                else:
+                    memNode = Node(memTop, "MemoryModule", None, ("Index", i), ("Name", memType))
+
+                memState = zet_mem_state_t()
+                zeCall(zetSysmanMemoryGetState, mem, memState)
+
+                if args.show_inventory:
+                    Node(memNode, "PhysicalSize", memProps.physicalSize, ("Units", "Bytes"))
+                    Node(memNode, "AllocatableSize", memState.maxSize, ("Units", "Bytes"))
+
+                if args.show_telemetry:
+                    memCounter = zet_mem_bandwidth_t()
+                    zeCall(zetSysmanMemoryGetBandwidth, mem, memCounter)
+                    nodes = []
+                    nodes.append(Node(memNode, "Health", "?"))
+                    nodes.append(Node(memNode, "Allocated", "?", ("Units", "Bytes")))
+                    nodes.append(Node(memNode, "Free", "?", ("Units", "Bytes")))
+                    nodes.append(Node(memNode, "Utilized", "?", ("Units", "%")))
+                    nodes.append(Node(memNode, "ReadThroughput", "?", ("Units", "Bytes/s")))
+                    nodes.append(Node(memNode, "WriteThroughput", "?", ("Units", "Bytes/s")))
+                    nodes.append(Node(memNode, "Bandwidth", "?", ("Units", "%")))
+
+                    def memTelemetry(mem=mem, memState=memState, memCounter=memCounter, node=nodes):
+                        oldRead, oldWrite = memCounter.readCounter, memCounter.writeCounter
+                        oldTimestamp = memCounter.timestamp
+                        zeCall(zetSysmanMemoryGetState, mem, memState)
+                        zeCall(zetSysmanMemoryGetBandwidth, mem, memCounter)
+                        deltaR = memCounter.readCounter - oldRead
+                        deltaW = memCounter.writeCounter - oldWrite
+                        deltaT = memCounter.timestamp - oldTimestamp
+                        maxBandwidth = 1.0 * memCounter.maxBandwidth
+                        if deltaT > 0:
+                            readThroughput = "%.1f" % (1e6 * deltaR / deltaT)
+                            writeThroughput = "%.1f" % (1e6 * deltaW / deltaT)
+                            if maxBandwidth > 0:
+                                memBandwidth = "%.1f" % (1e8 * (deltaR + deltaW) / (maxBandwidth * deltaT))
+                            else:
+                                memBandwidth = "?"
+                        else:
+                            readThroughput = "?"
+                            writeThroughput = "?"
+                            memBandwidth = "?"
+
+                        node[0].setText(memHealthString(memState.health))
+                        node[1].setText(memState.allocatedSize)
+                        node[2].setText(memState.maxSize - memState.allocatedSize)
+                        node[3].setText("%.1f" % (100.0 * memState.allocatedSize / memState.maxSize))
+                        node[4].setText(readThroughput)
+                        node[5].setText(writeThroughput)
+                        node[6].setText(memBandwidth)
+
+                    telemetryClosures.append(memTelemetry)
+                    pollDelayRequired = True
+
+        # TODO: Update all of this to match HAS when available:
+        if args.show_pci:
+            pciTop = Node(devNode, "PCI", None)
+            if args.show_inventory:
+                props = zet_sysman_properties_t()
+                zeCall(zetSysmanDeviceGetProperties, device, props)
+                Node(pciTop, "DeviceId", hex(props.core.deviceId))
+                pciProps = zet_pci_properties_t()
+                zeCall(zetSysmanPciGetProperties, device, pciProps)
+                pciAddr = pciProps.address
+                address = "%02x:%02x.%x" % (pciAddr.bus, pciAddr.device, pciAddr.function)
+                if pciAddr.domain != 0:
+                    address = ("%04x:" % pciAddr.domain) + address
+                Node(pciTop, "Address", address)
+                Node(pciTop, "MaxGen", pciProps.maxSpeed.gen)
+                Node(pciTop, "MaxLanes", pciProps.maxSpeed.width)
+                Node(pciTop, "MaxBandwidth", pciProps.maxSpeed.maxBandwidth, ("Units", "Bytes/s"))
+
+                if args.verbose:
+                    barTop = Node(pciTop, "Bars", None)
+                    barCount = uint32_ptr()
+                    zeCall(zetSysmanPciGetBars, device, barCount.cast(), None)
+                    bars = zet_pci_bar_properties_array(barCount.value())
+                    zeCall(zetSysmanPciGetBars, device, barCount.cast(), bars.cast())
+
+                    for i in range(barCount.value()):
+                        bar = bars[i]
+                        barName = barTypeString(bar.type)
+                        barNode = Node(barTop, "Bar", None, ("Name", barName))
+                        Node(barNode, "Index", bar.index)
+                        Node(barNode, "Base", "0x%016x" % bar.base)
+                        Node(barNode, "Size", "0x%016x" % bar.size)
+
+            showPciTelemetry = False
+            if args.show_telemetry:
+                tmp = zet_pci_state_t()
+                try:
+                    zeCall(zetSysmanPciGetState, device, tmp)
+                except NotImplementedError:
+                    pass
+                else:
+                    showPciTelemetry = True
+                del tmp
+
+            if showPciTelemetry:
+                pciState = zet_pci_state_t()
+                pciCounter = zet_pci_stats_t()
+                zeCall(zetSysmanPciGetStats, device, pciCounter)
+
+                nodes = []
+                nodes.append(Node(pciTop, "Status", "?"))
+                nodes.append(Node(pciTop, "QualityIssues", "?"))
+                nodes.append(Node(pciTop, "StabilityIssues", "?"))
+                nodes.append(Node(pciTop, "CurrentGen", "?"))
+                nodes.append(Node(pciTop, "CurrentLanes", "?"))
+                nodes.append(Node(pciTop, "CurrentBandwidth", "?", ("Units", "Bytes/s")))
+                nodes.append(Node(pciTop, "RxThroughput", "?", ("Units", "Bytes/s")))
+                nodes.append(Node(pciTop, "TxThroughput", "?", ("Units", "Bytes/s")))
+                nodes.append(Node(pciTop, "Utilization", "?", ("Units", "%")))
+                nodes.append(Node(pciTop, "ReplayRate", "?", ("Units", "%")))
+
+                def pciTelemetry(device=device, pciState=pciState, pciCounter=pciCounter, node=nodes):
+                    oldRx, oldTx = pciCounter.rxCounter, pciCounter.txCounter
+                    oldReplay, oldPacket = pciCounter.replayCounter, pciCounter.packetCounter
+                    oldTimestamp = pciCounter.timestamp
+                    zeCall(zetSysmanPciGetState, device, pciState)
+                    zeCall(zetSysmanPciGetStats, device, pciCounter)
+                    deltaRx = pciCounter.rxCounter - oldRx
+                    deltaTx = pciCounter.txCounter - oldTx
+                    deltaReplay = pciCounter.replayCounter - oldReplay
+                    deltaPacket = pciCounter.packetCounter - oldPacket
+                    deltaT = pciCounter.timestamp - oldTimestamp
+                    maxBandwidth = 1.0 * pciCounter.maxBandwidth
+                    if deltaT > 0:
+                        rxThroughput = "%.1f" % (1e6 * deltaRx / deltaT)
+                        txThroughput = "%.1f" % (1e6 * deltaTx / deltaT)
+                        if maxBandwidth > 0:
+                            pciUtilization = "%.1f" % (1e8 * (deltaRx + deltaTx) / (maxBandwidth * deltaT))
+                        else:
+                            pciUtilization = "?"
+                    else:
+                        rxThroughput = "?"
+                        txThroughput = "?"
+                        pciUtilization = "?"
+
+                    if deltaPacket > 0 and deltaT > 0:
+                        replayRate = "%.1f" % (100.0 * deltaReplay / deltaPacket)
+                    else:
+                        replayRate = "?"
+
+                    node[0].setText(pciLinkStatusString(pciState.status))
+                    node[1].setText(pciQualityIssuesString(pciState.qualityIssues))
+                    node[2].setText(pciStabilityIssuesString(pciState.stabilityIssues))
+                    node[3].setText(pciState.speed.gen)
+                    node[4].setText(pciState.speed.width)
+                    node[5].setText(pciState.speed.maxBandwidth)
+                    node[6].setText(rxThroughput)
+                    node[7].setText(txThroughput)
+                    node[8].setText(pciUtilization)
+                    node[9].setText(replayRate)
+
+                telemetryClosures.append(pciTelemetry)
+                pollDelayRequired = True
+
+        portCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanFabricPortGet, device, portCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            ports = zet_sysman_fabric_port_handle_array(portCount.value())
+            zeCall(zetSysmanFabricPortGet, device, portCount.cast(), ports.cast())
+
+        if args.show_fabric_ports:
+            portTop = Node(devNode, "FabricPorts", None)
+
+            for i in range(portCount.value()):
+                port = ports[i]
+                portProps = zet_fabric_port_properties_t()
+                zeCall(zetSysmanFabricPortGetProperties, port, portProps)
+
+                if portProps.onSubdevice:
+                    portNode = Node(portTop, "FabricPort", None, ("Index", i),
+                                       ("SubdeviceId", portProps.subdeviceId))
+                else:
+                    portNode = Node(portTop, "FabricPort", None, ("Index", i))
+
+                if args.show_inventory:
+                    portLinkType = zet_fabric_link_type_t()
+                    portConfig = zet_fabric_port_config_t()
+
+                    zeCall(zetSysmanFabricPortGetLinkType, port, False, portLinkType)
+                    zeCall(zetSysmanFabricPortGetConfig, port, portConfig)
+
+                    Node(portNode, "Model", portProps.model)
+                    Node(portNode, "PhysicalAttachmentType", portLinkType.desc)
+                    Node(portNode, "FabricId", "?")
+                    Node(portNode, "MaxRxBitrate", portProps.maxRxSpeed.bitRate, ("Units", "Bits/sec"))
+                    Node(portNode, "MaxRxWidth", portProps.maxRxSpeed.width)
+                    Node(portNode, "MaxTxBitrate", portProps.maxTxSpeed.bitRate, ("Units", "Bits/sec"))
+                    Node(portNode, "MaxTxWidth", portProps.maxTxSpeed.width)
+                    Node(portNode, "Enabled", bool(portConfig.width))
+                    Node(portNode, "Beaconing", bool(portConfig.beaconing))
+
+                if args.show_telemetry:
+                    portState = zet_fabric_port_state_t()
+                    portCounter = zet_fabric_throughput_t()
+                    zeCall(zetSysmanFabricPortGetThroughput, port, portCounter)
+                    nodes = []
+                    nodes.append(Node(portNode, "Status", "?"))
+                    nodes.append(Node(portNode, "QualityIssues", "?"))
+                    nodes.append(Node(portNode, "StabilityIssues", "?"))
+                    nodes.append(Node(portNode, "RxThroughput", "?", ("Units", "Bytes/s")))
+                    nodes.append(Node(portNode, "TxThroughput", "?", ("Units", "Bytes/s")))
+
+                    def portTelemetry(port=port, portState=portState, portCounter=portCounter, node=nodes):
+                        oldRx, oldTx, oldTimestamp = portCounter.rxCounter, portCounter.txCounter, portCounter.timestamp
+                        zeCall(zetSysmanFabricPortGetState, port, portState)
+                        zeCall(zetSysmanFabricPortGetThroughput, port, portCounter)
+
+                        deltaRx = portCounter.rxCounter - oldRx
+                        deltaTx = portCounter.txCounter - oldTx
+                        deltaT = portCounter.timestamp - oldTimestamp
+                        maxBandwidth = 1.0 * portCounter.maxBandwidth
+                        if deltaT > 0:
+                            rxThroughput = "%.1f" % (1e6 * deltaRx / deltaT)
+                            txThroughput = "%.1f" % (1e6 * deltaWx / deltaT)
+                        else:
+                            rxThroughput = "?"
+                            txThroughput = "?"
+
+                        node[0].setText(portStatusString(portState.status))
+                        node[1].setText(portQualityIssuesString(portState.qualityIssues))
+                        node[2].setText(portStabilityIssuesString(portState.stabilityIssues))
+                        node[3].setText(rxThroughput)
+                        node[4].setText(txThroughput)
+
+                    telemetryClosures.append(portTelemetry)
+                    pollDelayRequired = True
+
+        edomCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanRasGet, device, edomCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            edoms = zet_sysman_ras_handle_array(edomCount.value())
+            zeCall(zetSysmanRasGet, device, edomCount.cast(), edoms.cast())
+
+        if args.show_errors:
+            rasTop = Node(devNode, "ErrorDomains", None)
+
+            for i in range(edomCount.value()):
+                ras = edoms[i]
+                rasProps = zet_ras_properties_t()
+                try:
+                    zeCall(zetSysmanRasGetProperties, ras, rasProps)
+                except NotImplementedError:
+                    continue
+                rasType = rasTypeString(rasProps.type)
+
+                if rasProps.onSubdevice:
+                    rasNode = Node(rasTop, "ErrorDomain", None, ("Index", i), ("Name", rasType),
+                                      ("SubdeviceId", rasProps.subdeviceId))
+                else:
+                    rasNode = Node(rasTop, "ErrorDomain", None, ("Index", i), ("Name", rasType))
+
+                showErrorTelemetry = False
+                if args.show_telemetry:
+                    tmp1, tmp2 = uint64_ptr(), zet_ras_details_t()
+                    try:
+                        zeCall(zetSysmanRasGetState, ras, False, tmp1.cast(), tmp2)
+                    except:
+                        pass
+                    else:
+                        showErrorTelemetry = True
+                    del tmp1, tmp2
+
+                if showErrorTelemetry:
+                    errTotal = uint64_ptr()
+                    errDetails = zet_ras_details_t()
+                    zeCall(zetSysmanRasGetState, ras, args.clear_errors, errTotal.cast(), errDetails)
+                    Node(rasNode, "TotalErrors", errTotal.value())
+                    Node(rasNode, "Resets", errDetails.numResets)
+                    Node(rasNode, "ProgrammingErrors", errDetails.numProgrammingErrors)
+                    Node(rasNode, "DriverErrors", errDetails.numDriverErrors)
+                    Node(rasNode, "ComputeErrors", errDetails.numComputeErrors)
+                    Node(rasNode, "NonComputeErrors", errDetails.numNonComputeErrors)
+                    Node(rasNode, "CacheErrors", errDetails.numCacheErrors)
+                    Node(rasNode, "DisplayErrors", errDetails.numDisplayErrors)
+
+        if args.clear_errors and not args.show_telemetry:
+            for i in range(edomCount.value()):
+                ras = edoms[i]
+                errTotal = uint64_ptr()
+                try:
+                    zeCall(zetSysmanRasGetState, ras, True, errTotal.cast(), None)
+                except ValueError as err:
+                    pr.err("workaround... ERROR: zetSysmanRasGetState returned error, ignoring...", err)
+
+        stbyCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanStandbyGet, device, stbyCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            stbys = zet_sysman_standby_handle_array(stbyCount.value())
+            zeCall(zetSysmanStandbyGet, device, stbyCount.cast(), stbys.cast())
+
+        if args.set_standby is not None:
+            for i in range(stbyCount.value()):
+                stby = stbys[i]
+                if args.set_standby.lower() in ["enabled", "en", "1", "y", "yes", "t", "true"]:
+                    if args.dry_run:
+                        pr("Would enable standby promotion")
+                    else:
+                        zeCall(zetSysmanStandbySetMode, stby, ZET_STANDBY_PROMO_MODE_DEFAULT)
+                elif args.set_standby.lower() in ["disabled", "dis", "0", "n", "no", "f", "false"]:
+                    if args.dry_run:
+                        pr("Would disable standby promotion")
+                    else:
+                        zeCall(zetSysmanStandbySetMode, stby, ZET_STANDBY_PROMO_MODE_NEVER)
+                else:
+                    pr.err("WARNING: ignoring unrecognized set-standby value", args.set_standby)
+
+        if args.show_standby:
+            stbyTop = Node(devNode, "StandbyDomains", None)
+
+            for i in range(stbyCount.value()):
+                stby = stbys[i]
+                stbyProps = zet_standby_properties_t()
+                zeCall(zetSysmanStandbyGetProperties, stby, stbyProps)
+                stbyType = stbyTypeString(stbyProps.type)
+
+                if stbyProps.onSubdevice:
+                    stbyNode = Node(stbyTop, "StandbyDomain", None, ("Index", i), ("Name", stbyType),
+                                       ("SubdeviceId", stbyProps.subdeviceId))
+                else:
+                    stbyNode = Node(stbyTop, "StandbyDomain", None, ("Index", i), ("Name", stbyType))
+
+                if args.show_inventory:
+                    modeString = stbyPromoModeString(zeCall(zetSysmanStandbyGetMode, stby))
+                    Node(stbyNode, "SleepStateMode", modeString)
+
+        procCount = uint32_ptr()
+        try:
+            zeCall(zetSysmanProcessesGetState, device, procCount.cast(), None)
+        except NotImplementedError:
+            pass
+        else:
+            procs = zet_process_state_array(procCount.value())
+            zeCall(zetSysmanProcessesGetState, device, procCount.cast(), procs.cast())
+
+        if args.show_processes:
+            procTop = Node(devNode, "ProcessUsages", None)
+
+            for i in range(procCount.value()):
+                proc = procs[i]
+                procNode = Node(procTop, "ProcessUsage", None, ("Id", proc.processId))
+
+                if args.show_telemetry:
+                    Node(procNode, "MemUsage", "0x%08x" % proc.memSize)
+                    engineNames = enginesUsedString(proc.engines)
+                    Node(procNode, "EngineUsage", engineNames)
+
+        schedModeCount = uint32_ptr()
+        try:
+            call(zetSysmanSchedulerGetSupportedModes, device, schedModeCount, None)
+        except:
+            pass
+        else:
+            modes = zet_sched_mode_array(schedModeCount.value())
+            call(zetSysmanSchedulerGetSupportedModes, device, schedModeCount, modes)
+
+        schedModes = []
+        for i in range(schedModeCount.value()):
+            schedModes.append(modes[i])
+
+        if args.set_scheduler and schedModes:
+            mode, remainder = parseSchedulerMode(args.set_scheduler)
+            needsReboot = False
+            if mode == ET_SCHED_MODE_TIMEOUT:
+                schedProps = zet_sched_timeout_properties_t()
+                watchdogTimeout, remainder = parseMicroseconds(remainder)
+                if watchdogTimeout == 0:
+                    zeCall(zetSysmanSchedulerGetTimeoutModeProperties, device, False, schedProps)
+                else:
+                    schedProps.watchdogTimeout = watchdogTimeout
+                if args.dry_run:
+                    pr("Would set scheduling mode to timeout")
+                else:
+                    needsReboot = zeCall(zetSysmanSchedulerSetTimeoutMode, device, schedProps)
+            elif mode == ZET_SCHED_MODE_TIMESLICE:
+                schedProps = zet_sched_timeslice_properties_t()
+                interval, remainder = parseMicroseconds(remainder)
+                yieldTimeout, remainder = parseMicroseconds(remainder)
+                if interval == 0 or yieldTimeout == 0:
+                    zeCall(zetSysmanSchedulerGetTimeoutModeProperties, device, False, schedProps)
+                if interval != 0:
+                    schedProps.interval = interval
+                if yieldTimeout != 0:
+                    schedProps.yieldTimeout = yieldTimeout
+                if args.dry_run:
+                    pr("Would set scheduling mode to timeslice")
+                else:
+                    needsReboot = zeCall(zetSysmanSchedulerSetTimesliceMode, device, schedProps)
+            elif mode == ZET_SCHED_MODE_EXCLUSIVE:
+                if args.dry_run:
+                    pr("Would set scheduling mode to exclusive")
+                else:
+                    needsReboot = zeCall(zetSysmanSchedulerSetExclusiveMode, device)
+            if remainder:
+                pr.err("WARNING: Extra set-scheduler arguments ignored")
+            if needsReboot:
+                pr.err("NOTE: reboot required")
+
+        if args.show_scheduler:
+            schedNode = Node(devNode, "Scheduler", None)
+
+            if args.show_inventory:
+                schedModesNode = Node(schedNode, "SupportedModes", None)
+                for mode in schedModes:
+                    Node(schedModesNode, "Mode", schedModeString(mode))
+                    if mode == ZET_SCHED_MODE_TIMEOUT:
+                        schedProps = zet_sched_timeout_properties_t()
+                        zeCall(zetSysmanSchedulerGetTimeoutModeProperties, device, True, schedProps)
+                        if schedProps.watchdogTimeout == ZET_SCHED_WATCHDOG_DISABLE:
+                            Node(schedModesNode, "Timeout", "Disabled")
+                        else:
+                            wd = schedProps.watchdogTimeout / 1000.0
+                            Node(schedModesNode, "DefaultTimeout", "%.3f" % wd, ("Units", "msec"))
+                    if mode == ZET_SCHED_MODE_TIMESLICE:
+                        schedProps = zet_sched_timeslice_properties_t()
+                        zeCall(zetSysmanSchedulerGetTimeoutModeProperties, device, True, schedProps)
+                        Node(schedModesNode, "DefaultInterval", "%.3f" % schedProps.interval / 1000.0, ("Units", "msec"))
+                        Node(schedModesNode, "DefaultYieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0, ("Units", "msec"))
+
+            if args.show_telemetry and schedModes:
+                mode = zeCall(zetSysmanSchedulerGetCurrentMode,device)
+                Node(schedNode, "CurrentMode", schedModeString(mode))
+                if mode == ZET_SCHED_MODE_TIMEOUT:
+                    schedProps = zet_sched_timeout_properties_t()
+                    zeCall(zetSysmanSchedulerGetTimeoutModeProperties, device, False, schedProps)
+                    if schedProps.watchdogTimeout == ZET_SCHED_WATCHDOG_DISABLE:
+                        Node(schedNode, "Timeout", "Disabled")
+                    else:
+                        wd = schedProps.watchdogTimeout / 1000.0
+                        Node(schedNode, "Timeout", "%.3f" % wd, ("Units", "msec"))
+                if mode == ZET_SCHED_MODE_TIMESLICE:
+                    schedProps = zet_sched_timeslice_properties_t()
+                    zeCall(zetSysmanSchedulerGetTimeoutModeProperties, device, False, schedProps)
+                    Node(schedNode, "Interval", "%.3f" % schedProps.interval / 1000.0, ("Units", "msec"))
+                    Node(schedNode, "YieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0, ("Units", "msec"))
+
+    currentIteration = 0
+    while currentIteration < maxIterations:
+        if pollDelayRequired:
+            time.sleep(pollInterval)
+
+        for closure in telemetryClosures:
+            closure()
+
+        currentIteration += 1
+        topNode.output(currentIteration)
+        pollDelayRequired = True
+
+    topNode.outputComplete()
+
+if __name__ == "__main__":
+    main()
