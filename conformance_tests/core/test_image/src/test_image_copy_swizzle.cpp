@@ -40,8 +40,8 @@ protected:
     image_desc_dest.format.w = ZE_IMAGE_FORMAT_SWIZZLE_R;
 
     // Create the source and dest images (with different swizzle order):
-    lzt::create_ze_image(hImageSource, &image_desc_source);
-    lzt::create_ze_image(hImageDest, &image_desc_dest);
+    hImageSource = lzt::create_ze_image(image_desc_source);
+    hImageDest = lzt::create_ze_image(image_desc_dest);
 
     // Write an image with data pattern 1 in RGBA color order to the host image:
     lzt::write_image_data_pattern(host_image_source, 1,

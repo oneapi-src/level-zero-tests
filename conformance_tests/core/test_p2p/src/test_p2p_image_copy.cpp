@@ -72,8 +72,8 @@ protected:
         0,
         0};
 
-    lzt::create_ze_image(dev0, img_dev0, &img_desc);
-    lzt::create_ze_image(dev1, img_dev1, &img_desc);
+    img_dev0 = lzt::create_ze_image(dev0, img_desc);
+    img_dev1 = lzt::create_ze_image(dev1, img_desc);
 
     command_list_dev0 = lzt::create_command_list(dev0);
     command_list_dev1 = lzt::create_command_list(dev1);

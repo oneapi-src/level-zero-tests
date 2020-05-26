@@ -56,7 +56,7 @@ void image_create_test_1d(ze_image_format_type_t format_type,
             0};                            // miplevels
 
         lzt::print_image_descriptor(image_descriptor);
-        lzt::create_ze_image(image, &image_descriptor);
+        image = lzt::create_ze_image(image_descriptor);
         lzt::get_ze_image_properties(image_descriptor);
         lzt::destroy_ze_image(image);
       }
@@ -105,7 +105,7 @@ void image_create_test_2d(ze_image_format_type_t format_type,
               0};                            // miplevels
 
           lzt::print_image_descriptor(image_descriptor);
-          lzt::create_ze_image(image, &image_descriptor);
+          image = lzt::create_ze_image(image_descriptor);
           lzt::get_ze_image_properties(image_descriptor);
           lzt::destroy_ze_image(image);
         }
@@ -147,7 +147,7 @@ void image_create_test_3d(ze_image_format_type_t format_type,
                 0};                            // miplevels
 
             lzt::print_image_descriptor(image_descriptor);
-            lzt::create_ze_image(image, &image_descriptor);
+            image = lzt::create_ze_image(image_descriptor);
             lzt::get_ze_image_properties(image_descriptor);
             lzt::destroy_ze_image(image);
           }

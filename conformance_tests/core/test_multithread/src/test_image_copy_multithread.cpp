@@ -43,7 +43,7 @@ void image_create_destroy_thread() {
   image_descriptor.depth = 1;
 
   for (int i = 0; i < thread_iters; i++) {
-    lzt::create_ze_image(image, &image_descriptor);
+    image = lzt::create_ze_image(image_descriptor);
     lzt::destroy_ze_image(image);
   }
 
@@ -71,8 +71,8 @@ void image_copy_thread(const ze_command_queue_handle_t &command_queue) {
   image_descriptor.width = 128;
   image_descriptor.height = 128;
   image_descriptor.depth = 1;
-  lzt::create_ze_image(image1, &image_descriptor);
-  lzt::create_ze_image(image2, &image_descriptor);
+  image1 = lzt::create_ze_image(image_descriptor);
+  image2 = lzt::create_ze_image(image_descriptor);
   lzt::ImagePNG32Bit source_image(image_descriptor.width,
                                   image_descriptor.height),
       dest_image(image_descriptor.width, image_descriptor.height);

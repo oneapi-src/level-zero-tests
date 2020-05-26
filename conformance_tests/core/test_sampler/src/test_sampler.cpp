@@ -91,9 +91,7 @@ static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image,
   image_description.width = width;
   image_description.height = height;
   image_description.depth = 1;
-  ze_image_handle_t image = nullptr;
-
-  lzt::create_ze_image(image, &image_description);
+  ze_image_handle_t image = lzt::create_ze_image(image_description);
 
   return image;
 }

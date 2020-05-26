@@ -344,7 +344,7 @@ static ze_image_handle_t create_test_image(int height, int width) {
   image_description.depth = 1;
   ze_image_handle_t image = nullptr;
 
-  lzt::create_ze_image(image, &image_description);
+  image = lzt::create_ze_image(image_description);
 
   return image;
 }

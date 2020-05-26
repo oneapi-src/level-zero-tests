@@ -46,25 +46,28 @@ void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output) {
   lzt::destroy_command_list(command_list);
 }
 
-void create_ze_image(ze_device_handle_t dev, ze_image_handle_t &image,
-                     const ze_image_desc_t *image_descriptor) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(dev, image_descriptor, &image));
+ze_image_handle_t create_ze_image(ze_device_handle_t dev,
+                                  ze_image_desc_t image_descriptor) {
+  ze_image_handle_t image;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(dev, &image_descriptor, &image));
   EXPECT_NE(nullptr, image);
+  return image;
 }
 
-void create_ze_image(ze_image_handle_t &image,
-                     const ze_image_desc_t *image_descriptor) {
+ze_image_handle_t create_ze_image(ze_image_desc_t image_descriptor) {
+  ze_image_handle_t image;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeImageCreate(lzt::zeDevice::get_instance()->get_device(),
-                          image_descriptor, &image));
+                          &image_descriptor, &image));
   EXPECT_NE(nullptr, image);
+  return image;
 }
 
-void create_ze_image(ze_image_handle_t &image) {
+ze_image_handle_t create_ze_image() {
   ze_image_desc_t descriptor;
   descriptor.version = ZE_IMAGE_DESC_VERSION_CURRENT;
 
-  create_ze_image(image, &descriptor);
+  return create_ze_image(descriptor);
 }
 
 void destroy_ze_image(ze_image_handle_t image) {
@@ -89,8 +92,8 @@ const ze_image_desc_t zeImageCreateCommon::dflt_ze_image_desc = {
 
 zeImageCreateCommon::zeImageCreateCommon()
     : dflt_host_image_(DEFAULT_WIDTH, DEFAULT_HEIGHT) {
-  create_ze_image(dflt_device_image_, &dflt_ze_image_desc);
-  create_ze_image(dflt_device_image_2_, &dflt_ze_image_desc);
+  dflt_device_image_ = create_ze_image(dflt_ze_image_desc);
+  dflt_device_image_2_ = create_ze_image(dflt_ze_image_desc);
   write_image_data_pattern(dflt_host_image_, dflt_data_pattern);
 }
 

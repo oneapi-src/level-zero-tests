@@ -188,12 +188,29 @@ void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
                                    hCommandList, dst, src, nullptr, hEvent));
 }
 
+void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
+                              ze_image_handle_t src, ze_image_region_t region,
+                              ze_event_handle_t hEvent) {
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyToMemory(
+                                   hCommandList, dst, src, &region, hEvent));
+}
+
 void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
                                 ze_image_handle_t dst, void *src,
                                 ze_event_handle_t hEvent) {
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyFromMemory(
                                    hCommandList, dst, src, nullptr, hEvent));
+}
+
+void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
+                                ze_image_handle_t dst, void *src,
+                                ze_image_region_t region,
+                                ze_event_handle_t hEvent) {
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyFromMemory(
+                                   hCommandList, dst, src, &region, hEvent));
 }
 
 void append_image_copy_region(ze_command_list_handle_t hCommandList,
