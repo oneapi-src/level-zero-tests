@@ -2,14 +2,16 @@
 # Copyright (C) 2020 Intel Corporation
 # SPDX-License-Identifier: MIT
 
-import sys
 import argparse
-import xml.etree.ElementTree as ElementTree
-import xml.dom.minidom as minidom
 import os
 import os.path
+import re
 import signal
+import sys
 import time
+import traceback
+import xml.etree.ElementTree as ElementTree
+import xml.dom.minidom as minidom
 
 from zesysman import *
 
@@ -49,6 +51,15 @@ class Logger:
         sys.exit(1)
 
 pr = Logger()
+
+def reportZeException():
+    eType, eValue, eTrace = sys.exc_info()
+    tb = traceback.format_tb(eTrace, limit=1)[0]
+    match = re.search(r".*zeCall\((\w+)\s*,", tb)
+    if match:
+        pr.err("WARNING:", match.group(1), "returned", eValue)
+    else:
+        pr.err("WARNING:", eValue, "returned from\n", tb.rstrip())
 
 #
 # display formats
@@ -1606,6 +1617,9 @@ def main():
                 repairStatus = zeCall(zetSysmanDeviceGetRepairStatus, device);
             except NotImplementedError:
                 repairStatus = ZET_REPAIR_STATUS_UNSUPPORTED
+            except ValueError:
+                reportZeException()
+                repairStatus = ZET_REPAIR_STATUS_UNSUPPORTED
             Node(devNode, "Name", props.core.name)
             devType = deviceTypeString(props.core.type)
             Node(devNode, "Type", devType)
@@ -1641,6 +1655,8 @@ def main():
             zeCall(zetSysmanTemperatureGet, device,tempCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             temperatures = zet_sysman_temp_handle_array(tempCount.value())
             zeCall(zetSysmanTemperatureGet, device,tempCount.cast(), temperatures.cast())
@@ -1682,6 +1698,8 @@ def main():
             zeCall(zetSysmanPowerGet, device,pwrCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             powers = zet_sysman_pwr_handle_array(pwrCount.value())
             zeCall(zetSysmanPowerGet, device, pwrCount.cast(), powers.cast())
@@ -1780,6 +1798,8 @@ def main():
             zeCall(zetSysmanFrequencyGet, device, freqCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             frequencies = zet_sysman_freq_handle_array(freqCount.value())
             zeCall(zetSysmanFrequencyGet, device, freqCount.cast(), frequencies.cast())
@@ -1871,6 +1891,8 @@ def main():
             zeCall(zetSysmanEngineGet, device, engCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             engs = zet_sysman_engine_handle_array(engCount.value())
             zeCall(zetSysmanEngineGet, device, engCount.cast(), engs.cast())
@@ -1914,6 +1936,8 @@ def main():
             zeCall(zetSysmanMemoryGet, device, memCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             mems = zet_sysman_mem_handle_array(memCount.value())
             zeCall(zetSysmanMemoryGet, device, memCount.cast(), mems.cast())
@@ -2024,6 +2048,8 @@ def main():
                     zeCall(zetSysmanPciGetState, device, tmp)
                 except NotImplementedError:
                     pass
+                except ValueError:
+                    reportZeException()
                 else:
                     showPciTelemetry = True
                 del tmp
@@ -2093,6 +2119,8 @@ def main():
             zeCall(zetSysmanFabricPortGet, device, portCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             ports = zet_sysman_fabric_port_handle_array(portCount.value())
             zeCall(zetSysmanFabricPortGet, device, portCount.cast(), ports.cast())
@@ -2169,6 +2197,8 @@ def main():
             zeCall(zetSysmanRasGet, device, edomCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             edoms = zet_sysman_ras_handle_array(edomCount.value())
             zeCall(zetSysmanRasGet, device, edomCount.cast(), edoms.cast())
@@ -2182,6 +2212,9 @@ def main():
                 try:
                     zeCall(zetSysmanRasGetProperties, ras, rasProps)
                 except NotImplementedError:
+                    continue
+                except ValueError:
+                    reportZeException()
                     continue
                 rasType = rasTypeString(rasProps.type)
 
@@ -2229,6 +2262,8 @@ def main():
             zeCall(zetSysmanStandbyGet, device, stbyCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             stbys = zet_sysman_standby_handle_array(stbyCount.value())
             zeCall(zetSysmanStandbyGet, device, stbyCount.cast(), stbys.cast())
@@ -2273,6 +2308,8 @@ def main():
             zeCall(zetSysmanProcessesGetState, device, procCount.cast(), None)
         except NotImplementedError:
             pass
+        except ValueError:
+            reportZeException()
         else:
             procs = zet_process_state_array(procCount.value())
             zeCall(zetSysmanProcessesGetState, device, procCount.cast(), procs.cast())
