@@ -1,4 +1,4 @@
-ZEPREFIX = ../../usr
+ZEPREFIX = /usr/local
 
 ZEINCLUDE = $(ZEPREFIX)/include/level_zero
 ZELIB = $(ZEPREFIX)/lib
@@ -6,6 +6,9 @@ ZELIB = $(ZEPREFIX)/lib
 SYSMAN_MODULE = zesysman.py
 SYSMAN_PROG = build/zesysman/zesysman
 SETUP_PROG = ./setup.py
+
+BUILD_EXT_FLAGS = -I $(ZEINCLUDE) -L $(ZELIB) -lze_loader --swig-opts -I$(ZEINCLUDE)
+INSTALL_FLAGS = --prefix build/zesysman --install-platlib build/zesysman --install-scripts build/zesysman
 
 INTERMEDIATE_SOURCE = zesysman_wrap.c
 EXECUTION_ARTIFACTS = zesysman.pyc build __pycache__
@@ -17,8 +20,8 @@ CSCOPE_FILES = cscope.out cscope.out.in cscope.out.po
 run : $(SYSMAN_MODULE)
 	LD_LIBRARY_PATH=$(ZELIB) $(SYSMAN_PROG) --device list
 
-$(SYSMAN_MODULE) : zesysman.i setup.py
-	$(SETUP_PROG) build_ext -I $(ZEINCLUDE) -L $(ZELIB) -lze_loader --swig-opts -I$(ZEINCLUDE) build_scripts install --prefix build/zesysman --install-platlib build/zesysman --install-scripts build/zesysman
+$(SYSMAN_MODULE) : zesysman.i setup.py zesysman
+	$(SETUP_PROG) build_ext $(BUILD_EXT_FLAGS) build_scripts install $(INSTALL_FLAGS)
 
 cscope : $(CSCOPE_FILES)
 
