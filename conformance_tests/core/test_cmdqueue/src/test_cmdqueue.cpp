@@ -309,7 +309,7 @@ TEST_P(
   std::thread child_thread(&ExecuteCommandQueue, std::ref(cq), std::ref(cl),
                            std::ref(exited));
 
-  // sleep for 5 seconds to give execution a chance to complete
+  // sleep for 500 ms to give execution a chance to complete
   std::chrono::milliseconds timespan(500);
   std::this_thread::sleep_for(timespan);
 
@@ -319,7 +319,6 @@ TEST_P(
   else
     // We expect if we are in synchronous mode that the child thread will never
     // exit:
-
     EXPECT_EQ(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS, mode);
 
   // Note: if the command queue has a mode of: ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS
@@ -327,6 +326,9 @@ TEST_P(
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
 
   child_thread.join();
+  if (mode == ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS) {
+    lzt::synchronize(cq, UINT32_MAX);
+  }
 
   ep.destroy_event(hEvent);
   lzt::destroy_command_list(cl);
