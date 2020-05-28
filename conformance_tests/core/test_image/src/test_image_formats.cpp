@@ -6,6 +6,8 @@
  *
  */
 
+#include <limits>
+
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
@@ -34,6 +36,7 @@ protected:
   ze_image_handle_t create_image_desc_format(ze_image_format_type_t format_type,
                                              bool layout32);
   void run_test(void *inbuff, void *outbuff, std::string kernel_name);
+
   ze_command_list_handle_t command_list;
   ze_command_queue_handle_t command_queue;
   ze_image_handle_t img_in, img_out;
@@ -219,5 +222,259 @@ TEST_F(ImageFormatTests,
   lzt::free_memory(outbuff);
   lzt::free_memory(inbuff);
 }
+
+class ImageFormatLayoutTests
+    : public ImageFormatTests,
+      public ::testing::WithParamInterface<ze_image_format_layout_t> {
+public:
+  template <typename T>
+  void set_up_buffers(T *&inbuff, T *&outbuff, int size_multiplier = 1);
+  template <typename T> void verify_buffer(T *&buff, int size_multiplier = 1);
+  template <typename T> void verify_buffer_float(T *&buff);
+};
+
+template <typename T>
+void ImageFormatLayoutTests::set_up_buffers(T *&inbuff, T *&outbuff,
+                                            int size_multiplier) {
+  inbuff = static_cast<T *>(
+      lzt::allocate_host_memory(image_size * sizeof(T) * size_multiplier));
+  outbuff = static_cast<T *>(
+      lzt::allocate_host_memory(image_size * sizeof(T) * size_multiplier));
+  for (int i = 0; i < (image_size * size_multiplier); i++) {
+    // set pixel value to max for data type so that when the kernel
+    // increments it, it rolls over
+    inbuff[i] = ~(0 & inbuff[i]);
+  }
+}
+template <typename T>
+void ImageFormatLayoutTests::verify_buffer(T *&buff, int size_multiplier) {
+  for (int i = 0; i < (image_size * size_multiplier); i++) {
+    ASSERT_EQ(buff[i], 0);
+  }
+}
+
+template <typename T>
+void ImageFormatLayoutTests::verify_buffer_float(T *&buff) {
+  for (int i = 0; i < image_size; i++) {
+    ASSERT_GT(buff[i], 0);
+    ASSERT_LT(buff[i], std::numeric_limits<T>::max());
+  }
+}
+
+TEST_P(ImageFormatLayoutTests,
+       GivenImageFormatLayoutWhenCopyingImageThenFormatIsCorrect) {
+
+  auto driver = lzt::get_default_driver();
+  for (auto device : lzt::get_devices(driver)) {
+
+    auto device_image_properties = lzt::get_image_properties(device);
+    if (!device_image_properties.supported) {
+      LOG_WARNING << "Device does not support images";
+      continue;
+    }
+
+    auto layout = GetParam();
+    ze_image_desc_t image_descriptor;
+    image_descriptor.version - ZE_IMAGE_DESC_VERSION_CURRENT;
+    image_descriptor.type = ZE_IMAGE_TYPE_2D;
+    image_descriptor.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_READ |
+                                               ZE_IMAGE_FLAG_PROGRAM_WRITE |
+                                               ZE_IMAGE_FLAG_BIAS_UNCACHED);
+    image_descriptor.format.layout = layout;
+    image_descriptor.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
+    image_descriptor.format.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
+    image_descriptor.format.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
+    image_descriptor.format.w = ZE_IMAGE_FORMAT_SWIZZLE_A;
+    image_descriptor.height = image_height;
+    image_descriptor.width = image_width;
+    image_descriptor.depth = 1;
+
+    switch (layout) {
+    case ZE_IMAGE_FORMAT_LAYOUT_8: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint8_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_one_component");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_16: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint16_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_one_component");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    }
+
+    break;
+    case ZE_IMAGE_FORMAT_LAYOUT_32: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint32_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_one_component");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+
+    } break;
+
+    case ZE_IMAGE_FORMAT_LAYOUT_8_8: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint16_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_two_components");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_16_16: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint32_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_two_components");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_32_32: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint64_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_two_components");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+
+    case ZE_IMAGE_FORMAT_LAYOUT_5_6_5: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UNORM;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint16_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_three_components_unorm");
+      verify_buffer_float(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_11_11_10: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_FLOAT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint32_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_three_components_float");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+
+    case ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UNORM;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint16_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_four_components_unorm");
+      verify_buffer_float(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UNORM;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint16_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_four_components_unorm");
+      verify_buffer_float(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint32_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_four_components");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint32_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_four_components");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint64_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff);
+      run_test(inbuff, outbuff, "image_format_layout_four_components");
+      verify_buffer(outbuff);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    case ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32: {
+      image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+      img_in = lzt::create_ze_image(image_descriptor);
+      img_out = lzt::create_ze_image(image_descriptor);
+      uint64_t *inbuff, *outbuff;
+      set_up_buffers(inbuff, outbuff, 2);
+      run_test(inbuff, outbuff, "image_format_layout_four_components");
+      verify_buffer(outbuff, 2);
+      lzt::free_memory(outbuff);
+      lzt::free_memory(inbuff);
+    } break;
+    default:
+      LOG_INFO << "Unhandled image format layout: " << layout;
+      break;
+    }
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(LayoutParameterization, ImageFormatLayoutTests,
+                        ::testing::Values(ZE_IMAGE_FORMAT_LAYOUT_8,
+                                          ZE_IMAGE_FORMAT_LAYOUT_16,
+                                          ZE_IMAGE_FORMAT_LAYOUT_32,
+                                          ZE_IMAGE_FORMAT_LAYOUT_8_8,
+                                          ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
+                                          ZE_IMAGE_FORMAT_LAYOUT_16_16,
+                                          ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+
+                                          ZE_IMAGE_FORMAT_LAYOUT_32_32,
+                                          ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32,
+
+                                          ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+
+                                          ZE_IMAGE_FORMAT_LAYOUT_11_11_10,
+
+                                          ZE_IMAGE_FORMAT_LAYOUT_5_6_5,
+                                          ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1,
+                                          ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4));
 
 } // namespace
