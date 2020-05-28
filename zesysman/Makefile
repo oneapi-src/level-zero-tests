@@ -1,3 +1,6 @@
+# Copyright (C) 2020 Intel Corporation
+# SPDX-License-Identifier: MIT
+
 ZEPREFIX = /usr/local
 
 ZEINCLUDE = $(ZEPREFIX)/include/level_zero
