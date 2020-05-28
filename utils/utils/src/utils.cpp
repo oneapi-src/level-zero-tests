@@ -617,17 +617,15 @@ std::string to_string(const ze_native_kernel_uuid_t uuid) {
   return result.str();
 }
 
-void print_driver_version() {
+void print_driver_version(ze_driver_handle_t driver) {
   ze_driver_properties_t properties;
-  uint32_t version = 0;
-  ze_driver_handle_t driver = get_default_driver();
+  properties.version = ZE_DRIVER_PROPERTIES_VERSION_CURRENT;
   ze_result_t result = zeDriverGetProperties(driver, &properties);
   if (result) {
     std::runtime_error("zeDriverGetProperties failed: " + to_string(result));
   }
   LOG_TRACE << "Driver version retrieved";
-  version = properties.version;
-  LOG_INFO << "Driver version: " << version;
+  LOG_INFO << "Driver version: " << properties.driverVersion;
 }
 
 void print_driver_overview(const ze_driver_handle_t driver) {
@@ -662,6 +660,7 @@ void print_driver_overview(const ze_driver_handle_t driver) {
 
 void print_driver_overview(const std::vector<ze_driver_handle_t> driver) {
   for (const ze_driver_handle_t driver : driver) {
+    print_driver_version(driver);
     print_driver_overview(driver);
   }
 }
@@ -671,7 +670,6 @@ void print_platform_overview(const std::string context) {
   if (context.size() > 0) {
     LOG_INFO << " (Context: " << context << ")";
   }
-  print_driver_version();
 
   const std::vector<ze_driver_handle_t> drivers = get_all_driver_handles();
   LOG_INFO << "Driver Handle count: " << drivers.size();
