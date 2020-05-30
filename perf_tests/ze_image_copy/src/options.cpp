@@ -67,7 +67,7 @@ int ZeImageCopy::parse_command_line(int argc, char **argv) {
 
   if (vm.count("help")) {
     std::cout << desc << std::endl;
-    return 1;
+    exit(0);
   } else if (Imagelayout == -1) {
     std::cout << "unknown format layout" << std::endl;
     std::cout << desc << std::endl;

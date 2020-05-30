@@ -19,8 +19,7 @@ ZeImageCopy ::ZeImageCopy() {
    * image with ze_app
    */
 
-  benchmark->commandQueueCreate(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                &this->command_queue);
+  benchmark->commandQueueCreate(0, &this->command_queue);
   benchmark->commandListCreate(&this->command_list);
   benchmark->commandListCreate(&this->command_list_a);
   benchmark->commandListCreate(&this->command_list_b);
