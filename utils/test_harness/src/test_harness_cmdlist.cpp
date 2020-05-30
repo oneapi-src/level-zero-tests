@@ -23,7 +23,7 @@ ze_command_list_handle_t create_command_list(ze_device_handle_t device) {
 
 ze_command_list_handle_t create_command_list(ze_device_handle_t device,
                                              ze_command_list_flag_t flags) {
-  ze_command_list_desc_t descriptor;
+  ze_command_list_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   descriptor.flags = flags;
   ze_command_list_handle_t command_list = nullptr;
@@ -49,7 +49,7 @@ ze_command_list_handle_t create_immediate_command_list(
     ze_device_handle_t device, ze_command_queue_flag_t flags,
     ze_command_queue_mode_t mode, ze_command_queue_priority_t priority,
     uint32_t ordinal) {
-  ze_command_queue_desc_t descriptor;
+  ze_command_queue_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = flags;
   descriptor.mode = mode;

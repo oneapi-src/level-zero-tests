@@ -64,7 +64,7 @@ ze_image_handle_t create_ze_image(ze_image_desc_t image_descriptor) {
 }
 
 ze_image_handle_t create_ze_image() {
-  ze_image_desc_t descriptor;
+  ze_image_desc_t descriptor = {};
   descriptor.version = ZE_IMAGE_DESC_VERSION_CURRENT;
 
   return create_ze_image(descriptor);

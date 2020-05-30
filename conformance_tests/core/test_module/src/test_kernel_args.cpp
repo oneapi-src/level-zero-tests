@@ -48,7 +48,7 @@ protected:
 };
 
 static ze_image_handle_t create_2d_uint_test_image(int width, int height) {
-  ze_image_desc_t image_description;
+  ze_image_desc_t image_description = {};
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8;
   image_description.version = ZE_IMAGE_DESC_VERSION_CURRENT;
   image_description.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_WRITE |

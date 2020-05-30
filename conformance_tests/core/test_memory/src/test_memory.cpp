@@ -169,11 +169,11 @@ TEST_P(
   const size_t alignment = std::get<3>(GetParam());
 
   void *memory = nullptr;
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   device_desc.ordinal = 1;
   device_desc.flags = dev_flags;
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   host_desc.flags = host_flags;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -315,7 +315,7 @@ TEST_P(
   const size_t alignment = std::get<2>(GetParam());
 
   void *memory = nullptr;
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   host_desc.flags = flags;
   EXPECT_EQ(ZE_RESULT_SUCCESS,

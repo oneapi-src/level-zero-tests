@@ -20,7 +20,7 @@ namespace {
 TEST(
     CommandListCreateNegativeTests,
     GivenInvalidDeviceHandleWhileCreatingCommandListThenInvalidNullHandleIsReturned) {
-  ze_command_list_desc_t descriptor;
+  ze_command_list_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   descriptor.flags = ZE_COMMAND_LIST_FLAG_NONE;
   ze_command_list_handle_t cmdlist = nullptr;
@@ -39,7 +39,7 @@ TEST(
     CommandListCreateNegativeTests,
     GivenInvalidOutPointerToTheCommandListWhileCreatingCommandListThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_command_list_desc_t descriptor;
+  ze_command_list_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   descriptor.flags = ZE_COMMAND_LIST_FLAG_NONE;
   EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
@@ -48,7 +48,7 @@ TEST(
 TEST(
     CommandListCreateImmediateNegativeTests,
     GivenInvalidDeviceHandleWhileCreatingCommandListImmediateThenInvalidNullHandleIsReturned) {
-  ze_command_queue_desc_t descriptor;
+  ze_command_queue_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = ZE_COMMAND_QUEUE_FLAG_NONE;
   descriptor.ordinal = 0;
@@ -72,7 +72,7 @@ TEST(
     CommandListCreateImmediateNegativeTests,
     GivenInvalidOutPointerToTheCommandListWhileCreatingCommandListImmediateThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_command_queue_desc_t descriptor;
+  ze_command_queue_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = ZE_COMMAND_QUEUE_FLAG_NONE;
   descriptor.ordinal = 0;

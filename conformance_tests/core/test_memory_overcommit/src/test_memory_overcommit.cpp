@@ -29,7 +29,7 @@ protected:
     const std::vector<uint8_t> binary_file = lzt::load_binary_file(path);
 
     LOG_INFO << "set up module description for path " << path;
-    ze_module_desc_t module_description;
+    ze_module_desc_t module_description = {};
     module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
     module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
     module_description.inputSize = static_cast<uint32_t>(binary_file.size());
@@ -51,7 +51,7 @@ protected:
                      uint64_t *gpu_expected_output_buffer,
                      uint64_t *host_found_output_buffer,
                      uint64_t *gpu_found_output_buffer, size_t output_count) {
-    ze_kernel_desc_t fill_function_description;
+    ze_kernel_desc_t fill_function_description = {};
     fill_function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
     fill_function_description.flags = ZE_KERNEL_FLAG_NONE;
     fill_function_description.pKernelName = "fill_device_memory";
@@ -76,7 +76,7 @@ protected:
               zeKernelSetArgumentValue(fill_function, 2, sizeof(sub_pattern),
                                        &sub_pattern));
 
-    ze_kernel_desc_t test_function_description;
+    ze_kernel_desc_t test_function_description = {};
     test_function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
     test_function_description.flags = ZE_KERNEL_FLAG_NONE;
     test_function_description.pKernelName = "test_device_memory";
@@ -159,7 +159,7 @@ protected:
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(command_list));
 
     const uint32_t command_queue_id = 0;
-    ze_command_queue_desc_t command_queue_description;
+    ze_command_queue_desc_t command_queue_description = {};
     command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
     command_queue_description.ordinal = command_queue_id;
     command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;

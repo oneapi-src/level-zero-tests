@@ -81,7 +81,7 @@ void L0Context::init() {
                              std::to_string(result));
   }
 
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
@@ -92,7 +92,7 @@ void L0Context::init() {
                              std::to_string(result));
   }
 
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
   result =
@@ -102,11 +102,11 @@ void L0Context::init() {
                              std::to_string(result));
   }
 
-  ze_device_mem_alloc_desc_t shared_device_desc;
+  ze_device_mem_alloc_desc_t shared_device_desc = {};
   shared_device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   shared_device_desc.ordinal = 0;
   shared_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  ze_host_mem_alloc_desc_t shared_host_desc;
+  ze_host_mem_alloc_desc_t shared_host_desc = {};
   shared_host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   shared_host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
   result =
@@ -214,7 +214,7 @@ void ZePingPong::create_module(L0Context &context,
                                ze_module_format_t format,
                                const char *build_flag) {
   ze_result_t result = ZE_RESULT_SUCCESS;
-  ze_module_desc_t module_description;
+  ze_module_desc_t module_description = {};
 
   module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
   module_description.format =
@@ -416,7 +416,7 @@ void ZePingPong::run_test(L0Context &context) {
 
   create_module(context, binary_file, ZE_MODULE_FORMAT_IL_SPIRV, nullptr);
 
-  ze_kernel_desc_t function_description;
+  ze_kernel_desc_t function_description = {};
 
   int *ping = static_cast<int *>(context.device_input);
   int *pong = static_cast<int *>(context.host_output);

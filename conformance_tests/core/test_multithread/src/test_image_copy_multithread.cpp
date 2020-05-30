@@ -29,7 +29,7 @@ void image_create_destroy_thread() {
 
   ze_image_handle_t image = nullptr;
 
-  ze_image_desc_t image_descriptor;
+  ze_image_desc_t image_descriptor = {};
   image_descriptor.version = ZE_IMAGE_DESC_VERSION_CURRENT;
   image_descriptor.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;
   image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
@@ -59,7 +59,7 @@ void image_copy_thread(const ze_command_queue_handle_t &command_queue) {
   ze_image_handle_t image1 = nullptr;
   ze_image_handle_t image2 = nullptr;
 
-  ze_image_desc_t image_descriptor;
+  ze_image_desc_t image_descriptor = {};
   image_descriptor.version = ZE_IMAGE_DESC_VERSION_CURRENT;
   image_descriptor.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;
   image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;

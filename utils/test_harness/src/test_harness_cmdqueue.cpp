@@ -34,7 +34,7 @@ create_command_queue(ze_device_handle_t device, ze_command_queue_flag_t flags,
                      ze_command_queue_mode_t mode,
                      ze_command_queue_priority_t priority, uint32_t ordinal) {
 
-  ze_command_queue_desc_t descriptor;
+  ze_command_queue_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = flags;
   descriptor.mode = mode;

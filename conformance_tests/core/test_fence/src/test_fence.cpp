@@ -26,7 +26,7 @@ class zeCommandQueueCreateFenceTests : public lzt::zeCommandQueueTests {};
 TEST_F(
     zeCommandQueueCreateFenceTests,
     GivenDefaultFenceDescriptorWhenCreatingFenceThenNotNullPointerIsReturned) {
-  ze_fence_desc_t descriptor;
+  ze_fence_desc_t descriptor = {};
   descriptor.version = ZE_FENCE_DESC_VERSION_CURRENT;
 
   ze_fence_handle_t fence = nullptr;
@@ -40,7 +40,7 @@ TEST_F(
 class zeFenceTests : public ::testing::Test {
 public:
   zeFenceTests() : cq(), cl() {
-    ze_fence_desc_t descriptor;
+    ze_fence_desc_t descriptor = {};
     descriptor.version = ZE_FENCE_DESC_VERSION_CURRENT;
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,

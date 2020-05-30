@@ -24,7 +24,7 @@ TEST_F(
     CommandQueueCreateNegativeTests,
     GivenInValidDeviceHandleWhenCreatingCommandQueueThenErrorInvalidNullHandleIsReturned) {
 
-  ze_command_queue_desc_t descriptor;
+  ze_command_queue_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = ZE_COMMAND_QUEUE_FLAG_COPY_ONLY;
   descriptor.mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
@@ -52,7 +52,7 @@ TEST_F(
     CommandQueueCreateNegativeTests,
     GivenInValidOutputCmdQueueWhenCreatingCommandQueueThenErrorInvalidNullHandleIsReturned) {
 
-  ze_command_queue_desc_t descriptor;
+  ze_command_queue_desc_t descriptor = {};
   descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = ZE_COMMAND_QUEUE_FLAG_COPY_ONLY;
   descriptor.mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;

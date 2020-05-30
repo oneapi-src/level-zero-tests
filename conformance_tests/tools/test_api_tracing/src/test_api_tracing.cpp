@@ -22,7 +22,7 @@ TEST(
     GivenValidDeviceAndTracerDescriptionWhenCreatingTracerThenTracerIsNotNull) {
   uint32_t user_data;
 
-  zet_tracer_desc_t tracer_desc;
+  zet_tracer_desc_t tracer_desc = {};
   tracer_desc.version = ZET_TRACER_DESC_VERSION_CURRENT;
   tracer_desc.pUserData = &user_data;
 
@@ -64,7 +64,7 @@ TEST(TracingDestroyTests,
      GivenSingleDisabledTracerWhenDestroyingTracerThenSuccessIsReturned) {
   uint32_t user_data;
 
-  zet_tracer_desc_t tracer_desc;
+  zet_tracer_desc_t tracer_desc = {};
   tracer_desc.version = ZET_TRACER_DESC_VERSION_CURRENT;
   tracer_desc.pUserData = &user_data;
   zet_tracer_handle_t tracer_handle = lzt::create_tracer_handle(tracer_desc);
@@ -87,7 +87,7 @@ protected:
         ZE_DEVICE_IMAGE_PROPERTIES_VERSION_CURRENT;
     p2p_properties.version = ZE_DEVICE_P2P_PROPERTIES_VERSION_CURRENT;
 
-    zet_tracer_desc_t tracer_desc;
+    zet_tracer_desc_t tracer_desc = {};
     tracer_desc.version = ZET_TRACER_DESC_VERSION_CURRENT;
     tracer_desc.pUserData = &user_data;
     tracer_handle = lzt::create_tracer_handle(tracer_desc);
@@ -597,11 +597,11 @@ TEST_F(
   prologues.Driver.pfnAllocSharedMemCb = lzt::prologue_callback;
   epilogues.Driver.pfnAllocSharedMemCb = lzt::epilogue_callback;
 
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   device_desc.ordinal = 0;
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
 
@@ -624,7 +624,7 @@ TEST_F(
   prologues.Driver.pfnAllocDeviceMemCb = lzt::prologue_callback;
   epilogues.Driver.pfnAllocDeviceMemCb = lzt::epilogue_callback;
 
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   device_desc.ordinal = 1;
@@ -647,7 +647,7 @@ TEST_F(
   prologues.Driver.pfnAllocHostMemCb = lzt::prologue_callback;
   epilogues.Driver.pfnAllocHostMemCb = lzt::epilogue_callback;
 
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
 
@@ -669,7 +669,7 @@ TEST_F(
   prologues.Driver.pfnFreeMemCb = lzt::prologue_callback;
   epilogues.Driver.pfnFreeMemCb = lzt::epilogue_callback;
 
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
 

@@ -69,7 +69,7 @@ void L0Context::reset_commandlist() {
 //---------------------------------------------------------------------
 void L0Context::create_module(std::vector<uint8_t> binary_file) {
   ze_result_t result = ZE_RESULT_SUCCESS;
-  ze_module_desc_t module_description;
+  ze_module_desc_t module_description = {};
 
   module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
@@ -373,7 +373,7 @@ void ZePeak::synchronize_command_queue(L0Context &context) {
 void single_event_pool_create(
     L0Context &context, ze_event_pool_handle_t *kernel_launch_event_pool) {
   ze_result_t result;
-  ze_event_pool_desc_t kernel_launch_event_pool_desc;
+  ze_event_pool_desc_t kernel_launch_event_pool_desc = {};
 
   kernel_launch_event_pool_desc.count = 1;
   kernel_launch_event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
@@ -390,7 +390,7 @@ void single_event_pool_create(
 void single_event_create(ze_event_pool_handle_t event_pool,
                          ze_event_handle_t *event) {
   ze_result_t result;
-  ze_event_desc_t event_desc;
+  ze_event_desc_t event_desc = {};
 
   event_desc.index = 0;
   event_desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;
@@ -690,7 +690,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 void ZePeak::setup_function(L0Context &context, ze_kernel_handle_t &function,
                             const char *name, void *input, void *output,
                             size_t outputSize) {
-  ze_kernel_desc_t function_description;
+  ze_kernel_desc_t function_description = {};
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;

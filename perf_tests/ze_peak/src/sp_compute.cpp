@@ -33,7 +33,7 @@ void ZePeak::ze_peak_sp_compute(L0Context &context) {
       set_workgroups(context, number_of_work_items, &workgroup_info);
 
   void *device_input_value;
-  ze_device_mem_alloc_desc_t in_device_desc;
+  ze_device_mem_alloc_desc_t in_device_desc = {};
   in_device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   in_device_desc.ordinal = 0;
   in_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
@@ -48,7 +48,7 @@ void ZePeak::ze_peak_sp_compute(L0Context &context) {
     std::cout << "device input value allocated\n";
 
   void *device_output_buffer;
-  ze_device_mem_alloc_desc_t out_device_desc;
+  ze_device_mem_alloc_desc_t out_device_desc = {};
   out_device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   out_device_desc.ordinal = 0;
   out_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;

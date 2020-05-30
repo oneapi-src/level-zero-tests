@@ -36,7 +36,7 @@ TEST(
             uint64_t(zeModuleCreate(device, nullptr, nullptr,
                                     nullptr))); // Invalid module description
   const std::string filename = "ze_matrix_multiplication.spv";
-  ze_module_desc_t module_description;
+  ze_module_desc_t module_description = {};
   const std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file(filename);
   module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
@@ -56,7 +56,7 @@ TEST(
   const std::string filename = "ze_matrix_multiplication.spv";
   const std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file(filename);
-  ze_module_desc_t module_description;
+  ze_module_desc_t module_description = {};
   module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
   module_description.format = static_cast<ze_module_format_t>(0);
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());

@@ -63,7 +63,7 @@ ZeApp::ZeApp(std::string module_path) {
 
 void ZeApp::moduleCreate(ze_device_handle_t device,
                          ze_module_handle_t *module) {
-  ze_module_desc_t module_description;
+  ze_module_desc_t module_description = {};
   module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
   module_description.inputSize = binary_file.size();
@@ -88,7 +88,7 @@ void ZeApp::memoryAlloc(size_t size, void **ptr) {
 
 void ZeApp::memoryAlloc(ze_driver_handle_t driver, ze_device_handle_t device,
                         size_t size, void **ptr) {
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
@@ -103,7 +103,7 @@ void ZeApp::memoryAllocHost(size_t size, void **ptr) {
 
 void ZeApp::memoryAllocHost(ze_driver_handle_t driver, size_t size,
                             void **ptr) {
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
   SUCCESS_OR_TERMINATE(zeDriverAllocHostMem(driver, &host_desc, size, 1, ptr));
@@ -127,7 +127,7 @@ void ZeApp::functionCreate(ze_kernel_handle_t *function,
 void ZeApp::functionCreate(ze_module_handle_t module,
                            ze_kernel_handle_t *function,
                            const char *pFunctionName) {
-  ze_kernel_desc_t function_description;
+  ze_kernel_desc_t function_description = {};
   function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
   function_description.flags = ZE_KERNEL_FLAG_NONE;
   function_description.pKernelName = pFunctionName;
@@ -312,7 +312,7 @@ void ZeApp::commandQueueExecuteCommandList(
 ze_event_pool_handle_t ZeApp::create_event_pool(uint32_t count,
                                                 ze_event_pool_flag_t flags) {
   ze_event_pool_handle_t event_pool;
-  ze_event_pool_desc_t descriptor;
+  ze_event_pool_desc_t descriptor = {};
 
   descriptor.version = ZE_EVENT_POOL_DESC_VERSION_CURRENT;
   descriptor.flags = flags;
@@ -336,7 +336,7 @@ void ZeApp::destroy_event_pool(ze_event_pool_handle_t event_pool) {
 
 void ZeApp::create_event(ze_event_pool_handle_t event_pool,
                          ze_event_handle_t &event, uint32_t index) {
-  ze_event_desc_t desc;
+  ze_event_desc_t desc = {};
   memset(&desc, 0, sizeof(desc));
   desc.version = ZE_EVENT_DESC_VERSION_CURRENT;
   desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;

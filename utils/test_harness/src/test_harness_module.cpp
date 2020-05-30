@@ -29,7 +29,7 @@ ze_module_handle_t create_module(ze_device_handle_t device,
                                  const char *build_flags,
                                  ze_module_build_log_handle_t *p_build_log) {
 
-  ze_module_desc_t module_description;
+  ze_module_desc_t module_description = {};
   ze_module_handle_t module;
   ze_module_constants_t module_constants = {};
   const std::vector<uint8_t> binary_file =
@@ -133,7 +133,7 @@ ze_kernel_handle_t create_function(ze_module_handle_t module,
                                    ze_kernel_flag_t flag,
                                    std::string func_name) {
   ze_kernel_handle_t kernel;
-  ze_kernel_desc_t kernel_description;
+  ze_kernel_desc_t kernel_description = {};
   EXPECT_TRUE((flag == ZE_KERNEL_FLAG_NONE) ||
               (flag == ZE_KERNEL_FLAG_FORCE_RESIDENCY));
   kernel_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;

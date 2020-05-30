@@ -33,7 +33,7 @@ class zeDeviceCreateSamplerTests
           ze_sampler_address_mode_t, ze_sampler_filter_mode_t, ze_bool_t>> {};
 TEST_P(zeDeviceCreateSamplerTests,
        GivenSamplerDescriptorWhenCreatingSamplerThenNotNullSamplerIsReturned) {
-  ze_sampler_desc_t descriptor;
+  ze_sampler_desc_t descriptor = {};
   descriptor.version = ZE_SAMPLER_DESC_VERSION_CURRENT;
   descriptor.addressMode = std::get<0>(GetParam());
   descriptor.filterMode = std::get<1>(GetParam());
@@ -78,7 +78,7 @@ TEST(zeSamplerTests,
 
 static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image,
                                               int height, int width) {
-  ze_image_desc_t image_description;
+  ze_image_desc_t image_description = {};
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
   image_description.version = ZE_IMAGE_DESC_VERSION_CURRENT;
   image_description.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;

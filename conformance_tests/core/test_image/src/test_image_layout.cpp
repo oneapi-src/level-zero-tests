@@ -48,7 +48,7 @@ protected:
 
 ze_image_handle_t ImageMediaLayoutTests::create_image_desc_layout(
     ze_image_format_layout_t layout) {
-  ze_image_desc_t image_desc;
+  ze_image_desc_t image_desc = {};
   ze_image_handle_t image;
   image_desc.version = ZE_IMAGE_DESC_VERSION_CURRENT;
   image_desc.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_WRITE |

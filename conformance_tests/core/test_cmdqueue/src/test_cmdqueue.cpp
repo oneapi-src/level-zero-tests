@@ -132,11 +132,11 @@ protected:
 
     for (uint32_t i = 0; i < params.num_command_lists; i++) {
       void *host_shared = nullptr;
-      ze_device_mem_alloc_desc_t h_device_desc;
+      ze_device_mem_alloc_desc_t h_device_desc = {};
       h_device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
       h_device_desc.ordinal = 1;
       h_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED;
-      ze_host_mem_alloc_desc_t h_host_desc;
+      ze_host_mem_alloc_desc_t h_host_desc = {};
       h_host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
       h_host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -147,11 +147,11 @@ protected:
       EXPECT_NE(nullptr, host_shared);
       host_buffer.push_back(static_cast<uint8_t *>(host_shared));
       void *device_shared = nullptr;
-      ze_device_mem_alloc_desc_t d_device_desc;
+      ze_device_mem_alloc_desc_t d_device_desc = {};
       d_device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
       d_device_desc.ordinal = 1;
       d_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED;
-      ze_host_mem_alloc_desc_t d_host_desc;
+      ze_host_mem_alloc_desc_t d_host_desc = {};
       d_host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
       d_host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -178,7 +178,7 @@ protected:
       list_of_command_lists.push_back(command_list);
     }
 
-    ze_command_queue_desc_t queue_descriptor;
+    ze_command_queue_desc_t queue_descriptor = {};
     queue_descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
     queue_descriptor.flags = ZE_COMMAND_QUEUE_FLAG_NONE;
     queue_descriptor.mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
@@ -254,7 +254,7 @@ TEST_P(
     zeCommandQueueExecuteCommandListTestsFence,
     GivenFenceSynchronizationWhenExecutingCommandListsThenSuccessIsReturned) {
 
-  ze_fence_desc_t fence_descriptor;
+  ze_fence_desc_t fence_descriptor = {};
   fence_descriptor.version = ZE_FENCE_DESC_VERSION_CURRENT;
   ze_fence_handle_t hFence = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,

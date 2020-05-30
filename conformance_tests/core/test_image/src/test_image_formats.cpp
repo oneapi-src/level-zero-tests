@@ -79,7 +79,7 @@ void ImageFormatTests::run_test(void *inbuff, void *outbuff,
 ze_image_handle_t
 ImageFormatTests::create_image_desc_format(ze_image_format_type_t format_type,
                                            bool layout32) {
-  ze_image_desc_t image_desc;
+  ze_image_desc_t image_desc = {};
   ze_image_handle_t image;
   image_desc.version = ZE_IMAGE_DESC_VERSION_CURRENT;
   image_desc.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_WRITE |
@@ -274,7 +274,7 @@ TEST_P(ImageFormatLayoutTests,
     }
 
     auto layout = GetParam();
-    ze_image_desc_t image_descriptor;
+    ze_image_desc_t image_descriptor = {};
     image_descriptor.version - ZE_IMAGE_DESC_VERSION_CURRENT;
     image_descriptor.type = ZE_IMAGE_TYPE_2D;
     image_descriptor.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_READ |

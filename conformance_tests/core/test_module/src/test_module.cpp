@@ -217,7 +217,7 @@ TEST_F(
   uint32_t specConstantsIDs[] = {0, 1, 3};
   ze_module_constants_t specConstants{specConstantsNum, specConstantsIDs,
                                       specConstantsValues};
-  ze_module_desc_t module_description;
+  ze_module_desc_t module_description = {};
   ze_module_handle_t module_spec;
   const std::string filename = "update_variable_with_spec_constant.spv";
   const std::vector<uint8_t> binary_file =
@@ -307,7 +307,7 @@ TEST_F(
     GivenInvalidDeviceAndBinaryFileWhenCreatingModuleThenFailsAndOutputBuildReturnsErrorString) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_module_build_log_handle_t build_log_error;
-  ze_module_desc_t module_description;
+  ze_module_desc_t module_description = {};
   size_t build_log_size;
   std::string build_log_str;
   ze_module_handle_t module_error = nullptr;

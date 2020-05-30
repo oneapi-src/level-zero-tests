@@ -28,7 +28,7 @@ void *allocate_host_memory(const size_t size, const size_t alignment) {
 void *allocate_host_memory(const size_t size, const size_t alignment,
                            const ze_driver_handle_t driver) {
 
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
 
@@ -71,7 +71,7 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
                              ze_device_handle_t device_handle,
                              ze_driver_handle_t driver) {
   void *memory = nullptr;
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.ordinal = ordinal;
   device_desc.flags = flags;
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
@@ -123,11 +123,11 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
   uint32_t ordinal = 0;
 
   void *memory = nullptr;
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.ordinal = ordinal;
   device_desc.flags = dev_flags;
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.flags = host_flags;
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   EXPECT_EQ(ZE_RESULT_SUCCESS,

@@ -110,7 +110,7 @@ protected:
                                      uint32_t group_size_x, int *arg1,
                                      int arg2) {
 
-    ze_kernel_desc_t function_description;
+    ze_kernel_desc_t function_description = {};
     function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
     function_description.flags = ZE_KERNEL_FLAG_NONE;
     function_description.pKernelName = name.c_str();

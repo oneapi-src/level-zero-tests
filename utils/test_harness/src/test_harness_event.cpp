@@ -16,7 +16,7 @@ namespace level_zero_tests {
 ze_event_pool_handle_t create_event_pool(uint32_t count,
                                          ze_event_pool_flag_t flags) {
   ze_event_pool_handle_t event_pool;
-  ze_event_pool_desc_t descriptor;
+  ze_event_pool_desc_t descriptor = {};
 
   descriptor.version = ZE_EVENT_POOL_DESC_VERSION_CURRENT;
   descriptor.flags = flags;
@@ -124,7 +124,7 @@ void zeEventPool::create_event(ze_event_handle_t &event,
                                ze_event_scope_flag_t wait) {
   // Make sure the event pool is initialized to at least defaults:
   InitEventPool();
-  ze_event_desc_t desc;
+  ze_event_desc_t desc = {};
   memset(&desc, 0, sizeof(desc));
   desc.version = ZE_EVENT_DESC_VERSION_CURRENT;
   desc.signal = signal;

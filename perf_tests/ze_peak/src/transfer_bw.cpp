@@ -74,11 +74,11 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
   size_t local_memory_size =
       static_cast<size_t>(number_of_items * sizeof(float));
 
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  ze_host_mem_alloc_desc_t host_desc;
+  ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
   result = zeDriverAllocSharedMem(context.driver, &device_desc, &host_desc,
@@ -126,7 +126,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
   size_t local_memory_size = (local_memory.size() * sizeof(float));
 
   void *device_buffer;
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;

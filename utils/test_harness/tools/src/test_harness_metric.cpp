@@ -113,7 +113,7 @@ create_metric_query_pool(zet_metric_query_pool_desc_t metricQueryPoolDesc,
 zet_metric_query_pool_handle_t
 create_metric_query_pool(uint32_t count, zet_metric_query_pool_flag_t flags,
                          zet_metric_group_handle_t metricGroup) {
-  zet_metric_query_pool_desc_t metricQueryPoolDesc;
+  zet_metric_query_pool_desc_t metricQueryPoolDesc = {};
   metricQueryPoolDesc.count = count;
   metricQueryPoolDesc.flags = flags;
   metricQueryPoolDesc.version = ZET_METRIC_QUERY_POOL_DESC_VERSION_CURRENT;

@@ -36,7 +36,7 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
       set_workgroups(context, number_of_work_items, &workgroup_info);
 
   void *device_output_buffer;
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
