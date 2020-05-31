@@ -427,15 +427,9 @@ TEST_P(
     EXPECT_EQ(false, memory_test_failure);
 
     // Logic to assign the peer which will access the shared memory
-    ze_device_handle_t device_handle_1;
-    int index;
-    if (device_in_driver_index == driver_info->number_device_handles) {
-      index = 0;
-      device_handle_1 = driver_info->device_handles[index];
-    } else {
-      index = device_in_driver_index + 1;
-      device_handle_1 = driver_info->device_handles[index];
-    }
+    int index =
+        (device_in_driver_index + 1) % driver_info->number_device_handles;
+    ze_device_handle_t device_handle_1 = driver_info->device_handles[index];
 
     // check if peer can access the shared memory
 
