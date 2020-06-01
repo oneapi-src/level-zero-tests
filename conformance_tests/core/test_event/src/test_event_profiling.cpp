@@ -102,7 +102,7 @@ TEST_F(EventProfilingTests,
   ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 1,
                                 ZE_EVENT_SCOPE_FLAG_HOST,
                                 ZE_EVENT_SCOPE_FLAG_HOST};
-  auto regular_event = lzt::create_event(ep, event_desc);
+  auto regular_event = lzt::create_event(ep_no_timestamps, event_desc);
 
   lzt::append_memory_set(cmdlist, buffer, &value1, mem_size, regular_event);
   lzt::append_wait_on_events(cmdlist, 1, &regular_event);
