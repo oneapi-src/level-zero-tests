@@ -9,7 +9,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "zet_api.h"
+#include <level_zero/zet_api.h>
 
 #define _THROWS_ZET_ERROR __attribute__((noreturn))
 #define _CAN_THROW
@@ -73,13 +73,13 @@ static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s)
 // Declarations from ze_api.h
 //
 
-%include "ze_common.h"
+%include <level_zero/ze_common.h>
 
 %apply int * OUTPUT { ze_api_version_t* version };
-%include "ze_driver.h"
+%include <level_zero/ze_driver.h>
 %clear ze_api_version_t* version;
 
-%include "ze_device.h"
+%include <level_zero/ze_device.h>
 
 // %include "ze_cmdqueue.h"
 // %include "ze_cmdlist.h"
@@ -90,7 +90,7 @@ static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s)
 %warnfilter(451) pBuildFlags;
 %warnfilter(451) pKernelName;
 
-%include "ze_module.h"
+%include <level_zero/ze_module.h>
 
 %warnfilter(+451) pBuildFlags;
 %warnfilter(+451) pKernelName;
@@ -107,9 +107,9 @@ static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s)
 // Declarations from zet_api.h
 //
 
-%include "zet_common.h"
-%include "zet_driver.h"
-%include "zet_device.h"
+%include <level_zero/zet_common.h>
+%include <level_zero/zet_driver.h>
+%include <level_zero/zet_device.h>
 
 // %include "zet_cmdlist.h"
 
@@ -172,7 +172,7 @@ typedef struct _zet_fabric_link_type_t
 %apply int * OUTPUT { zet_sched_mode_t* pMode };
 %apply int * OUTPUT { ze_bool_t* pNeedReboot };
 
-%include "zet_sysman.h"
+%include <level_zero/zet_sysman.h>
 
 %clear ze_bool_t* pNeedReboot;
 %clear zet_sched_mode_t* pMode;

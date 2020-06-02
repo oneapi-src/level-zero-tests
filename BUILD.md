@@ -77,3 +77,11 @@ cmake --build . --config Release --target install
 
 The group that any particular test executable belongs to can be seen by looking
 in its `CMakeLists.txt` file at the `add_lzt_test()` call.
+
+### Building zesysman 
+
+`zesysman` is an optional component that can be built by setting the `ENABLE_ZESYSMAN` 
+cmake flag to `yes`. Building zesysman requires the following additional dependencies
+  - `cmake` >= 3.12
+  - `swig`
+  - `python3`

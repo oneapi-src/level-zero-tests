@@ -261,10 +261,22 @@ else()
     set(CMAKE_NEWLINE "\n")
 endif()
 
+
+option(ENABLE_ZESYSMAN
+  "Enables build of zesysman"
+  NO
+)
+
+if(ENABLE_ZESYSMAN)
+  add_subdirectory(zesysman)
+endif()
+
+
 add_subdirectory(utils)
 add_subdirectory(perf_tests)
 add_subdirectory(conformance_tests)
 add_subdirectory(negative_tests)
+
 
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_BINARY_DIR}/out")
 include(InstallRequiredSystemLibraries)
