@@ -10,6 +10,7 @@ add_lzt_test(
     src/test_image_copy_multithread.cpp
     src/test_memory_multithread.cpp
     src/test_event_multithread.cpp
+    src/test_cmd_queue_multithread.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
