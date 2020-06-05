@@ -148,6 +148,83 @@ TEST_F(zeCommandListAppendMemoryFillVerificationTests,
   free_memory(local_mem);
 }
 
+class zeCommandListAppendMemoryFillSubDeviceVerificationTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<ze_memory_type_t> {};
+TEST_P(
+    zeCommandListAppendMemoryFillSubDeviceVerificationTests,
+    GivenMemoryAllocationWhenExecutingAMemoryFillWithSubDeviceThenMemoryIsSetCorrectly) {
+
+  auto memory_type = GetParam();
+  uint32_t test_count = 0;
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  const size_t size = 16;
+  void *host_memory = lzt::allocate_host_memory(size, 1, driver);
+
+  for (auto device : devices) {
+    auto subdevices = lzt::get_ze_sub_devices(device);
+
+    if (subdevices.empty()) {
+      continue;
+    }
+    test_count++;
+    for (auto subdevice : subdevices) {
+      auto command_queue = lzt::create_command_queue(subdevice);
+      auto command_list = lzt::create_command_list(subdevice);
+
+      void *memory = nullptr;
+      switch (memory_type) {
+      case ZE_MEMORY_TYPE_DEVICE:
+        memory = lzt::allocate_device_memory(
+            size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, device, driver);
+        break;
+      case ZE_MEMORY_TYPE_HOST:
+        memory = lzt::allocate_host_memory(size, 1, driver);
+        break;
+      case ZE_MEMORY_TYPE_SHARED:
+        memory = lzt::allocate_shared_memory(
+            size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+            ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device, driver);
+        break;
+      default:
+        LOG_WARNING << "Unhandled memory type for memory fill subdevice test: "
+                    << memory_type;
+      }
+
+      uint8_t pattern = 0xAB;
+      const int pattern_size = 1;
+
+      lzt::append_memory_fill(command_list, memory, &pattern, pattern_size,
+                              size, nullptr);
+      lzt::append_memory_copy(command_list, host_memory, memory, size);
+      lzt::close_command_list(command_list);
+      lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+      lzt::synchronize(command_queue, UINT32_MAX);
+
+      for (int i = 0; i < size; i++) {
+        ASSERT_EQ(static_cast<uint8_t *>(host_memory)[i], pattern)
+            << "Memory Fill did not match on sub-device";
+      }
+
+      lzt::free_memory(memory);
+      lzt::destroy_command_list(command_list);
+      lzt::destroy_command_queue(command_queue);
+    }
+  }
+  lzt::free_memory(host_memory);
+
+  if (!test_count) {
+    LOG_WARNING << "No Sub-Device Memory Fill tests run";
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(SubDeviceMemoryFills,
+                        zeCommandListAppendMemoryFillSubDeviceVerificationTests,
+                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE,
+                                          ZE_MEMORY_TYPE_HOST,
+                                          ZE_MEMORY_TYPE_SHARED));
+
 class zeCommandListAppendMemoryFillPatternVerificationTests
     : public zeCommandListAppendMemoryFillVerificationTests,
       public ::testing::WithParamInterface<size_t> {};

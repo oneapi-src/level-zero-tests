@@ -56,7 +56,7 @@ std::vector<ze_device_handle_t> get_ze_devices(uint32_t count) {
 }
 
 std::vector<ze_device_handle_t> get_ze_devices(ze_driver_handle_t driver) {
-  return get_ze_devices(get_ze_device_count(), driver);
+  return get_ze_devices(get_ze_device_count(driver), driver);
 }
 
 std::vector<ze_device_handle_t> get_ze_devices(uint32_t count,
