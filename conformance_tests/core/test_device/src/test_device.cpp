@@ -39,22 +39,6 @@ TEST(zeDeviceGetTests,
   }
 }
 
-TEST(zeDeviceGetSubDevicesTest,
-     GivenZeroCountWhenRetrievingSubDevicesThenValidCountIsReturned) {
-  lzt::get_ze_sub_device_count(lzt::zeDevice::get_instance()->get_device());
-}
-
-TEST(zeDeviceGetSubDevicesTest,
-     GivenValidCountWhenRetrievingSubDevicesThenNotNullSubDeviceReturned) {
-
-  std::vector<ze_device_handle_t> sub_devices =
-      lzt::get_ze_sub_devices(lzt::zeDevice::get_instance()->get_device());
-
-  for (auto sub_device : sub_devices) {
-    EXPECT_NE(nullptr, sub_device);
-  }
-}
-
 TEST(zeDeviceGetDevicePropertiesTests,
      GivenValidDeviceWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
 
@@ -697,4 +681,25 @@ TEST_F(DevicePropertiesTest,
     }
   }
 }
+
+TEST(
+    SubDeviceEnumeration,
+    GivenRootDeviceWhenGettingSubdevicesThenAllSubdevicesHaveCorrectProperties) {
+
+  for (auto device : lzt::get_ze_devices()) {
+    std::vector<ze_device_handle_t> sub_devices =
+        lzt::get_ze_sub_devices(device);
+
+    auto root_dev_props = lzt::get_device_properties(device);
+
+    for (auto sub_device : sub_devices) {
+      ASSERT_NE(nullptr, sub_device);
+      auto sub_dev_props = lzt::get_device_properties(sub_device);
+
+      EXPECT_EQ(root_dev_props.type, sub_dev_props.type);
+      EXPECT_EQ(root_dev_props.vendorId, sub_dev_props.vendorId);
+    }
+  }
+}
+
 } // namespace
