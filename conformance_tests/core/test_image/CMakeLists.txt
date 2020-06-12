@@ -6,7 +6,6 @@ add_lzt_test(
   GROUP "/conformance_tests/core"
   SOURCES
     src/test_image.cpp
-    src/test_image_copy_swizzle.cpp
     src/test_image_formats.cpp
     src/test_image_layout.cpp
     src/main.cpp
