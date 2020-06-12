@@ -809,11 +809,12 @@ TEST_F(zeKernelCreateTests,
 
 class zeKernelLaunchTests
     : public ::zeKernelCreateTests,
-      public ::testing::WithParamInterface<enum TestType> {};
+      public ::testing::WithParamInterface<enum TestType> {
+protected:
+  void test_kernel_execution();
+};
 
-TEST_P(
-    zeKernelLaunchTests,
-    GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecution) {
+void zeKernelLaunchTests::test_kernel_execution() {
   ze_device_compute_properties_t dev_compute_properties;
   dev_compute_properties.version = ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -867,9 +868,51 @@ TEST_P(
   }
 }
 
+TEST_P(
+    zeKernelLaunchTests,
+    GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecution) {
+  test_kernel_execution();
+}
+
 INSTANTIATE_TEST_CASE_P(
     TestFunctionAndFunctionIndirectAndMultipleFunctionsIndirect,
     zeKernelLaunchTests,
+    testing::Values(FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT));
+
+class zeKernelLaunchSubDeviceTests : public zeKernelLaunchTests {
+protected:
+  void SetUp() override {
+
+    auto driver = lzt::get_default_driver();
+    auto devices = lzt::get_devices(driver);
+
+    for (auto device : devices) {
+      auto subdevices = lzt::get_ze_sub_devices(device);
+
+      if (subdevices.empty()) {
+        continue;
+      }
+      device_ = subdevices[0];
+      module_ = create_module_vector(device_, "module_add");
+      break;
+    }
+  }
+};
+
+TEST_P(
+    zeKernelLaunchSubDeviceTests,
+    GivenValidFunctionWhenAppendLaunchKernelOnSubDeviceThenReturnSuccessfulAndVerifyExecution) {
+
+  if (!device_) {
+    LOG_WARNING << "No sub-device for kernel execution test";
+    return;
+  }
+  test_kernel_execution();
+}
+
+INSTANTIATE_TEST_CASE_P(
+    TestFunctionAndFunctionIndirectAndMultipleFunctionsIndirect,
+    zeKernelLaunchSubDeviceTests,
     testing::Values(FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT));
 
 class ModuleGetKernelNamesTests
