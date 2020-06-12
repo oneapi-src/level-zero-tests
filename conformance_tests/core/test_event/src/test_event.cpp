@@ -362,4 +362,70 @@ TEST_F(zeEventSignalingTests,
   ep.destroy_events(device_event);
 }
 
+static void
+multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
+  ze_event_pool_desc_t ep_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
+                                  ZE_EVENT_POOL_FLAG_HOST_VISIBLE, 10};
+  auto ep = lzt::create_event_pool(ep_desc, devices);
+  ze_event_scope_flag_t flag = (ze_event_scope_flag_t)(
+      ZE_EVENT_SCOPE_FLAG_DEVICE | ZE_EVENT_SCOPE_FLAG_SUBDEVICE);
+  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0, flag, flag};
+  auto event = lzt::create_event(ep, event_desc);
+
+  // dev0 signals
+  {
+    auto cmdlist = lzt::create_command_list(devices[0]);
+    auto cmdqueue = lzt::create_command_queue(devices[0]);
+
+    lzt::append_signal_event(cmdlist, event);
+    lzt::close_command_list(cmdlist);
+    lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+    lzt::synchronize(cmdqueue, UINT32_MAX);
+
+    // cleanup
+    lzt::destroy_command_list(cmdlist);
+    lzt::destroy_command_queue(cmdqueue);
+  }
+
+  // all devices can read it.
+  for (auto device : devices) {
+    auto cmdlist = lzt::create_command_list(device);
+    auto cmdqueue = lzt::create_command_queue(device);
+
+    lzt::append_wait_on_events(cmdlist, 1, &event);
+    lzt::close_command_list(cmdlist);
+    lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+    lzt::synchronize(cmdqueue, UINT32_MAX);
+
+    // cleanup
+    lzt::destroy_command_list(cmdlist);
+    lzt::destroy_command_queue(cmdqueue);
+  }
+
+  lzt::destroy_event(event);
+  lzt::destroy_event_pool(ep);
+}
+
+TEST(MultiDeviceEventTests,
+     GivenMultipleDeviceEventPoolwhenSignalledFromOneDeviceThenAllDevicesRead) {
+  auto devices = lzt::get_ze_devices();
+  if (devices.size() < 2) {
+    LOG_INFO << "Less than two devices, skipping test";
+  }
+  multi_device_event_signal_read(devices);
+}
+
+TEST(
+    MultiDeviceEventTests,
+    GivenMultipleSubDevicesEventPoolwhenSignalledFromOneSubDeviceThenAllSubDevicesRead) {
+  auto devices = lzt::get_ze_devices();
+  for (auto device : devices) {
+    auto sub_devices = lzt::get_ze_sub_devices(device);
+    if (sub_devices.size() < 2) {
+      continue;
+    }
+    multi_device_event_signal_read(sub_devices);
+  }
+}
+
 } // namespace
