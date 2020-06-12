@@ -607,6 +607,16 @@ std::string to_string(const ze_fp_capabilities_t capabilities) {
   return capabilities_str;
 }
 
+std::string to_string(const ze_driver_uuid_t uuid) {
+  std::ostringstream result;
+  result << "{";
+  for (int i = 0; i < ZE_MAX_DRIVER_UUID_SIZE; i++) {
+    result << "0x" << std::hex << uuid.id[i] << ",";
+  }
+  result << "\b}";
+  return result.str();
+}
+
 std::string to_string(const ze_native_kernel_uuid_t uuid) {
   std::ostringstream result;
   result << "{";
@@ -776,6 +786,10 @@ std::ostream &operator<<(std::ostream &os, const ze_image_type_t &x) {
 }
 
 std::ostream &operator<<(std::ostream &os, const ze_fp_capabilities_t &x) {
+  return os << level_zero_tests::to_string(x);
+}
+
+std::ostream &operator<<(std::ostream &os, const ze_driver_uuid_t &x) {
   return os << level_zero_tests::to_string(x);
 }
 
