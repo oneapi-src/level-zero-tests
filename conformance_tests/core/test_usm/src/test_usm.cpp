@@ -607,4 +607,76 @@ INSTANTIATE_TEST_CASE_P(VaryMemorySize, zeConcurrentAccessToMemoryTests,
                         ::testing::Values(8 * 1024, 16 * 1024, 32 * 1024,
                                           64 * 1024, 128 * 1024));
 
+static void
+test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
+
+  std::remove_if(devices.begin(), devices.end(), [](ze_device_handle_t device) {
+    auto device_props = lzt::get_memory_access_properties(device);
+    return !(device_props.sharedCrossDeviceAllocCapabilities &
+             ZE_MEMORY_ACCESS);
+  });
+
+  if (devices.size() < 2) {
+    LOG_WARNING << "Less than two devices, skipping test";
+    return;
+  }
+
+  const size_t memory_size = 1024;
+  auto memory = lzt::allocate_shared_memory(
+      memory_size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+      ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, devices[0]);
+
+  const int pattern_size = 1;
+  uint8_t *pattern = static_cast<uint8_t *>(lzt::allocate_shared_memory(
+      pattern_size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+      ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, devices[0]));
+
+  *pattern = 0x01;
+
+  for (int i = 0; i < devices.size(); i++) {
+    auto command_list = lzt::create_command_list(devices[i]);
+    auto command_queue = lzt::create_command_queue(devices[i]);
+
+    lzt::append_memory_fill(command_list, memory, pattern, pattern_size,
+                            memory_size, nullptr);
+    lzt::close_command_list(command_list);
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    lzt::synchronize(command_queue, UINT32_MAX);
+
+    *pattern++;
+
+    lzt::destroy_command_list(command_list);
+    lzt::destroy_command_queue(command_queue);
+  }
+
+  for (int i = 0; i < memory_size; i++) {
+    ASSERT_EQ(static_cast<uint8_t *>(memory)[i], devices.size());
+  }
+
+  lzt::free_memory(pattern);
+  lzt::free_memory(memory);
+}
+
+TEST(
+    MultiDeviceSharedMemoryTests,
+    GivenMultipleRootDevicesUsingSharedMemoryWhenExecutingMemoryFillThenCorrectDataWritten) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  test_multi_device_shared_memory(devices);
+}
+
+TEST(
+    MultiDeviceSharedMemoryTests,
+    GivenMultipleSubDevicesUsingSharedMemoryWhenExecutingMemoryFillThenCorrectDataWritten) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_ze_devices();
+  for (auto device : lzt::get_devices(driver)) {
+    auto subdevices = lzt::get_ze_sub_devices(device);
+
+    test_multi_device_shared_memory(subdevices);
+  }
+}
+
 } // namespace
