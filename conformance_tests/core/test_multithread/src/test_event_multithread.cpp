@@ -62,6 +62,19 @@ void ThreadEventCreate() {
     for (auto event : events) {
       lzt::destroy_event(event);
     }
+
+    // As per the spec, index could be re-used by an event after destroy
+    for (uint32_t j = 0; j < num_events; j++) {
+      events[j] = lzt::create_event(event_pool, eventDesc[j]);
+    }
+    for (auto event : events) {
+      EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
+    }
+
+    for (auto event : events) {
+      lzt::destroy_event(event);
+    }
+
     lzt::destroy_event_pool(event_pool);
   }
   LOG_INFO << "child thread done with ID ::" << std::this_thread::get_id();
@@ -93,13 +106,6 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
 
-    // As per the spec, multiple events cannot be created using the same
-    // location within the same pool, driver is expected to just return the
-    // handle already created.
-
-    for (uint32_t j = 0; j < num_events; j++) {
-      events[j] = lzt::create_event(event_pool, eventDesc[j]);
-    }
     for (auto event : events) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
@@ -119,6 +125,19 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
     for (auto event : events) {
       lzt::destroy_event(event);
     }
+
+    // As per the spec, index could be re-used by an event after destroy
+    for (uint32_t j = 0; j < num_events; j++) {
+      events[j] = lzt::create_event(event_pool, eventDesc[j]);
+    }
+    for (auto event : events) {
+      EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
+    }
+
+    for (auto event : events) {
+      lzt::destroy_event(event);
+    }
+
     for (auto cl : cmd_list) {
       lzt::destroy_command_list(cl);
     }
@@ -134,7 +153,6 @@ void ThreadSharedEventSync(const ze_command_queue_handle_t cmd_queue,
 
   // Threads use shared event handles to sync amongst themselves
 
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event[0]));
   ze_command_list_handle_t cmd_list = lzt::create_command_list();
 
   if (signal_device_event) {
@@ -162,9 +180,6 @@ void ThreadSharedEventSync(const ze_command_queue_handle_t cmd_queue,
   lzt::close_command_list(cmd_list);
   lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
   lzt::event_host_reset(event[1]);
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event[0]));
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event[1]));
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event[2]));
 
   lzt::destroy_command_list(cmd_list);
   LOG_INFO << "child thread done with ID ::" << std::this_thread::get_id();
@@ -225,7 +240,7 @@ TEST(
                                         ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
                                         num_events};
 
-  // As per the spec, the application may not call zeEventCreate() from
+  // As per the spec, the application must not call zeEventCreate() from
   // simultaneous threads having same pool handle.
   // Parent/ Root thread is expected to create all the events within the pool
   // and individual child threads then are expected to use the shared event
@@ -240,6 +255,10 @@ TEST(
     events[j] = lzt::create_event(event_pool, eventDesc[j]);
   }
 
+  for (auto event : events) {
+    EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
+  }
+
   LOG_INFO << "Total number of threads spawned ::" << num_threads;
 
   std::array<std::thread *, num_threads> threads;
@@ -249,6 +268,11 @@ TEST(
 
   for (uint32_t i = 0; i < num_threads; i++) {
     threads[i]->join();
+  }
+
+  for (auto event : events) {
+    lzt::event_host_reset(event);
+    EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
   }
 
   for (auto thread : threads) {
