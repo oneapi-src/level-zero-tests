@@ -10,4 +10,5 @@ add_subdirectory(ze_bandwidth)
 
 if(OPENCL_FOUND)
   add_subdirectory(cl_image_copy)
+  add_subdirectory(ze_cabe)
 endif()
