@@ -46,10 +46,9 @@ TEST_F(PciModuleTest,
     EXPECT_LT(pciProps.address.function, MAX_FUNCTIONS_PER_DEVICE);
     EXPECT_GE(pciProps.maxSpeed.gen, 0);
     EXPECT_LE(pciProps.maxSpeed.gen, PCI_SPEED_MAX_LINK_GEN);
-    EXPECT_GT(pciProps.maxSpeed.width, 0);
+    EXPECT_GE(pciProps.maxSpeed.width, 0);
     EXPECT_LE(pciProps.maxSpeed.width, PCI_SPEED_MAX_LANE_WIDTH);
-    EXPECT_GT(pciProps.maxSpeed.width, 0);
-    EXPECT_GT(pciProps.maxSpeed.maxBandwidth, 0);
+    EXPECT_GE(pciProps.maxSpeed.maxBandwidth, 0);
     EXPECT_LE(pciProps.maxSpeed.maxBandwidth, UINT64_MAX);
   };
 }
