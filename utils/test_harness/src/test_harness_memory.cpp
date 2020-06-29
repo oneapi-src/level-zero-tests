@@ -86,6 +86,10 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
 void *allocate_shared_memory(const size_t size) {
   return allocate_shared_memory(size, 1);
 }
+void *allocate_shared_memory(const size_t size, ze_device_handle_t device) {
+  return allocate_shared_memory(size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
+}
 void *allocate_shared_memory(const size_t size, const size_t alignment) {
   return allocate_shared_memory(size, alignment,
                                 ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,

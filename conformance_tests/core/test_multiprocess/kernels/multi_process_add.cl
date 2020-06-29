@@ -6,7 +6,7 @@
  *
  */
 
-kernel void module_add_constant(global int *values, int addval) {
+kernel void add_constant(global int *values, int addval) {
 
   const int xid = get_global_id(0);
   const int yid = get_global_id(1);
@@ -21,13 +21,13 @@ kernel void module_add_constant(global int *values, int addval) {
   }
 }
 
-kernel void module_add_two_arrays(global int *output, global int *input) {
+kernel void add_two_arrays(global int *output, global int *input) {
   const int tid = get_global_id(0);
   output[tid] = output[tid] + input[tid];
 }
 
 kernel __attribute__((work_group_size_hint(1, 1, 1))) void
-module_add_attr(global int *output, global int *input) {
+add_attr(global int *output, global int *input) {
   const int tid = get_global_id(0);
   output[tid] = output[tid] + input[tid];
 }

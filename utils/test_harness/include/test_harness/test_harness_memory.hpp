@@ -38,6 +38,7 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
                              ze_device_handle_t device_handle,
                              ze_driver_handle_t driver);
 void *allocate_shared_memory(const size_t size);
+void *allocate_shared_memory(const size_t size, ze_device_handle_t device);
 void *allocate_shared_memory(const size_t size, const size_t alignment);
 void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flag_t dev_flags,
