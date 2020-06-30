@@ -14,17 +14,18 @@ include(custom_functions)
 include(vs2019_missing_redist_workaround)
 
 find_package(PNG REQUIRED)
+find_package(Git)
 
 if(NOT TARGET GTest::GTest AND NOT TARGET GMock::GMock)
     if(NOT DEFINED GTEST_ROOT)
         set(GTEST_ROOT "${CMAKE_SOURCE_DIR}/third_party/googletest")
         if(NOT EXISTS "${GTEST_ROOT}/CMakeLists.txt")
-          if(GIT_EXE AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+          if(Git_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
             set(SUBMODULE_INIT_CMD submodule update --init --recursive)
             set(SUBMODULE_INIT_CMD_STRING "submodule update --init --recursive")
-            message(WARNING "Unable to locate third_party/googletest submodule in checkout - Trying to fetch with ${GIT_EXE} ${SUBMODULE_INIT_CMD_STRING}")
+            message(WARNING "Unable to locate third_party/googletest submodule in checkout - Trying to fetch with ${GIT_EXECUTABLE} ${SUBMODULE_INIT_CMD_STRING}")
             execute_process(
-              COMMAND ${GIT_EXE} ${SUBMODULE_INIT_CMD}
+              COMMAND ${GIT_EXECUTABLE} ${SUBMODULE_INIT_CMD}
               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
               RESULT_VARIABLE SUBMODULE_INIT_RESULT)
             if(NOT SUBMODULE_INIT_RESULT EQUAL "0")
