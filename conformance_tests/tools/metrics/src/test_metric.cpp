@@ -95,7 +95,10 @@ protected:
     EXPECT_NE(nullptr, metricQueryPoolHandle);
     metricQueryHandle = lzt::metric_query_create(metricQueryPoolHandle);
   }
-  ~zetMetricQueryTest() {}
+  ~zetMetricQueryTest() {
+    lzt::destroy_metric_query(metricQueryHandle);
+    lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+  }
 };
 
 TEST_F(
@@ -178,6 +181,7 @@ TEST_P(
                         lzt::metric_query_get_data_size(metricQueryHandle),
                         rawData);
   eventPool.destroy_event(eventHandle);
+  lzt::destroy_metric_query(metricQueryHandle);
   lzt::destroy_metric_query_pool(metricQueryPoolHandle);
 
   lzt::deactivate_metric_groups(device);
@@ -194,8 +198,8 @@ INSTANTIATE_TEST_CASE_P(parameterizedMetricQueryTests, zetMetricQueryLoadTest,
 
 class zetMetricTracerTest : public ::testing::Test {
 protected:
-  uint32_t notifyEveryNReports = 10;
-  uint32_t samplingPeriod = 4000;
+  uint32_t notifyEveryNReports = 1000;
+  uint32_t samplingPeriod = 40000;
   ze_event_handle_t eventHandle;
   lzt::zeEventPool eventPool;
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -227,8 +231,8 @@ class zetMetricTracerLoadTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::string> {
 protected:
-  uint32_t notifyEveryNReports = 10;
-  uint32_t samplingPeriod = 4000;
+  uint32_t notifyEveryNReports = 1000;
+  uint32_t samplingPeriod = 40000;
   ze_event_handle_t eventHandle;
   lzt::zeEventPool eventPool;
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();

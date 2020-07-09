@@ -136,6 +136,10 @@ metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle) {
   return metricQueryHandle;
 }
 
+void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryDestroy(metricQueryHandle));
+}
+
 size_t metric_query_get_data_size(zet_metric_query_handle_t metricQueryHandle) {
   size_t metricSize = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -162,8 +166,8 @@ metric_tracer_open(zet_metric_group_handle_t matchedGroupHandle,
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
   zet_metric_tracer_handle_t metricTracerHandle;
   zet_metric_tracer_desc_t metricTracerDesc = {
-      ZET_METRIC_TRACER_DESC_VERSION_CURRENT, samplingPeriod,
-      notifyEveryNReports};
+      ZET_METRIC_TRACER_DESC_VERSION_CURRENT, notifyEveryNReports,
+      samplingPeriod};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetMetricTracerOpen(device, matchedGroupHandle, &metricTracerDesc,
                                 eventHandle, &metricTracerHandle));
