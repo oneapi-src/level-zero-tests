@@ -19,7 +19,7 @@ uint32_t get_temp_handle_count(ze_device_handle_t device) {
   zet_sysman_handle_t hSysman = lzt::get_sysman_handle(device);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanTemperatureGet(hSysman, &count, nullptr));
-  EXPECT_GT(count, 0);
+  EXPECT_GE(count, 0);
   return count;
 }
 std::vector<zet_sysman_temp_handle_t>
@@ -35,7 +35,7 @@ get_temp_handles(ze_device_handle_t device, uint32_t &count) {
 }
 
 zet_temp_properties_t get_temp_properties(zet_sysman_temp_handle_t tempHandle) {
-  zet_temp_properties_t properties;
+  zet_temp_properties_t properties = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanTemperatureGetProperties(tempHandle, &properties));
   return properties;
@@ -48,7 +48,7 @@ double get_temp_state(zet_sysman_temp_handle_t tempHandle) {
 }
 
 zet_temp_config_t get_temp_config(zet_sysman_temp_handle_t tempHandle) {
-  zet_temp_config_t config;
+  zet_temp_config_t config = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetSysmanTemperatureGetConfig(tempHandle, &config));
   return config;
