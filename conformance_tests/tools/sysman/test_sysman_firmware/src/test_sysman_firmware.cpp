@@ -137,10 +137,12 @@ TEST_F(
 
 TEST_F(FirmwareTest,
        GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectUpdatedChecksum) {
-  ASSERT_EQ(nullptr, getenv("ZE_LZT_FIRMWARE_DIRECTORY"))
-      << "unable to find directory " << getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  char *fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (nullptr == fwDirEnv) {
+    FAIL() << "ZE_LZT_FIRMWARE_DIRECTORY is not set..";
+  }
   std::vector<char> testFwImage;
-  std::string fwDir = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  std::string fwDir(fwDirEnv);
   for (auto device : devices) {
     uint32_t count = 0;
     auto firmwareHandles = lzt::get_firmware_handles(device, count);
