@@ -19,12 +19,12 @@ ze_command_queue_handle_t create_command_queue() {
 
 ze_command_queue_handle_t create_command_queue(ze_command_queue_mode_t mode) {
   return create_command_queue(zeDevice::get_instance()->get_device(),
-                              ZE_COMMAND_QUEUE_FLAG_NONE, mode,
+                              static_cast<ze_command_queue_flag_t>(0), mode,
                               ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 }
 
 ze_command_queue_handle_t create_command_queue(ze_device_handle_t device) {
-  return create_command_queue(device, ZE_COMMAND_QUEUE_FLAG_NONE,
+  return create_command_queue(device, static_cast<ze_command_queue_flag_t>(0),
                               ZE_COMMAND_QUEUE_MODE_DEFAULT,
                               ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 }
@@ -41,13 +41,7 @@ create_command_queue(ze_device_handle_t device, ze_command_queue_flag_t flags,
   descriptor.priority = priority;
   ze_device_properties_t properties;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
-  if ((flags == ZE_COMMAND_QUEUE_FLAG_NONE) ||
-      (flags == ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY)) {
-    EXPECT_GE(static_cast<uint32_t>(properties.numAsyncComputeEngines),
-              ordinal);
-  } else if (flags == ZE_COMMAND_QUEUE_FLAG_COPY_ONLY) {
-    EXPECT_GE(static_cast<uint32_t>(properties.numAsyncCopyEngines), ordinal);
-  }
+
   descriptor.ordinal = ordinal;
   ze_command_queue_handle_t command_queue = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,

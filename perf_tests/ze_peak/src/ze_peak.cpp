@@ -100,10 +100,6 @@ void L0Context::print_ze_device_properties(
             << " * isSubdevice : " << (props.isSubdevice ? "TRUE" : "FALSE")
             << "\n"
             << " * coreClockRate : " << props.coreClockRate << "\n"
-            << " * numAsyncComputeEngines : " << props.numAsyncComputeEngines
-            << "\n"
-            << " * numAsyncCopyEngines  : " << props.numAsyncCopyEngines << "\n"
-            << " * maxCommandQueuePriority : " << props.maxCommandQueuePriority
             << std::endl;
 }
 

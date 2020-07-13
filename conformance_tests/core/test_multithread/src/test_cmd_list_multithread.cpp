@@ -84,15 +84,6 @@ TEST_P(
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
   ze_command_list_flag_t flags = GetParam(); // flags
-  if (flags == ZE_COMMAND_LIST_FLAG_COPY_ONLY) {
-    auto properties =
-        lzt::get_device_properties(lzt::zeDevice::get_instance()->get_device());
-    if (properties.numAsyncCopyEngines == 0) {
-      LOG_WARNING << "Not Enough Copy Engines to run test";
-      SUCCEED();
-      return;
-    }
-  }
 
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
@@ -109,8 +100,7 @@ TEST_P(
 INSTANTIATE_TEST_CASE_P(
     TestCasesforCommandListCreateCloseAndDestroyWithValidFlagValues,
     zeCommandListCreateDestroyValidFlagsMultithreadTest,
-    testing::Values(ZE_COMMAND_LIST_FLAG_NONE, ZE_COMMAND_LIST_FLAG_COPY_ONLY,
-                    ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+    testing::Values(ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
                     ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                     ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY));
 

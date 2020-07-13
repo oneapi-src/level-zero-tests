@@ -42,6 +42,11 @@ std::vector<ze_device_handle_t> get_ze_sub_devices(ze_device_handle_t device,
                                                    uint32_t count);
 
 ze_device_properties_t get_device_properties(ze_device_handle_t device);
+uint32_t get_command_queue_group_properties_count(ze_device_handle_t device);
+std::vector<ze_command_queue_group_properties_t>
+get_command_queue_group_properties(ze_device_handle_t device);
+std::vector<ze_command_queue_group_properties_t>
+get_command_queue_group_properties(ze_device_handle_t device, uint32_t count);
 ze_device_compute_properties_t
 get_compute_properties(ze_device_handle_t device);
 uint32_t get_memory_properties_count(ze_device_handle_t device);

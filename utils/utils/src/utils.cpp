@@ -259,14 +259,12 @@ std::string to_string(const ze_command_queue_desc_version_t version) {
 }
 
 std::string to_string(const ze_command_queue_flag_t flags) {
-  if (flags == ZE_COMMAND_QUEUE_FLAG_NONE) {
-    return "ZE_COMMAND_QUEUE_FLAG_NONE";
-  } else if (flags == ZE_COMMAND_QUEUE_FLAG_COPY_ONLY) {
-    return "ZE_COMMAND_QUEUE_FLAG_COPY_ONLY";
-  } else if (flags == ZE_COMMAND_QUEUE_FLAG_LOGICAL_ONLY) {
-    return "ZE_COMMAND_QUEUE_FLAG_LOGICAL_ONLY";
-  } else if (flags == ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY) {
-    return "ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY";
+  if (flags == 0) {
+    return "Default";
+  } else if (flags == ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY) {
+    return "ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY";
+  } else if (flags == ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32) {
+    return "ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32";
   } else {
     return "Unknown ze_command_queue_flag_t value: " +
            std::to_string(static_cast<int>(flags));

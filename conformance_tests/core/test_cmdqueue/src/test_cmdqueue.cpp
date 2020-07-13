@@ -54,41 +54,25 @@ TEST_P(zeCommandQueueCreateTests,
   properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
 
-  if ((descriptor.flags == ZE_COMMAND_QUEUE_FLAG_NONE) ||
-      (descriptor.flags == ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY)) {
-    if (properties.numAsyncComputeEngines == 0) {
-      LOG_WARNING << "Not Enough Async Compute Engines to run test";
-      SUCCEED();
-      return;
-    }
-    descriptor.ordinal =
-        static_cast<uint32_t>(properties.numAsyncComputeEngines - 1);
-  } else if (descriptor.flags == ZE_COMMAND_QUEUE_FLAG_COPY_ONLY) {
-    if (properties.numAsyncCopyEngines == 0) {
-      LOG_WARNING << "Not Enough Copy Engines to run test";
-      SUCCEED();
-      return;
-    }
-    descriptor.ordinal =
-        static_cast<uint32_t>(properties.numAsyncCopyEngines - 1);
+  auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
+
+  for (int i = 0; i < cmd_q_group_properties.size(); i++) {
+    descriptor.ordinal = i;
+    print_cmdqueue_descriptor(descriptor);
+
+    ze_command_queue_handle_t command_queue = nullptr;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandQueueCreate(device, &descriptor, &command_queue));
+    EXPECT_NE(nullptr, command_queue);
+
+    lzt::destroy_command_queue(command_queue);
   }
-  print_cmdqueue_descriptor(descriptor);
-
-  ze_command_queue_handle_t command_queue = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueCreate(device, &descriptor, &command_queue));
-  EXPECT_NE(nullptr, command_queue);
-
-  lzt::destroy_command_queue(command_queue);
 }
 
 INSTANTIATE_TEST_CASE_P(
     TestAllInputPermuations, zeCommandQueueCreateTests,
     ::testing::Combine(
-        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_NONE,
-                          ZE_COMMAND_QUEUE_FLAG_COPY_ONLY,
-                          ZE_COMMAND_QUEUE_FLAG_LOGICAL_ONLY,
-                          ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
         ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
                           ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
                           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
@@ -180,7 +164,7 @@ protected:
 
     ze_command_queue_desc_t queue_descriptor = {};
     queue_descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
-    queue_descriptor.flags = ZE_COMMAND_QUEUE_FLAG_NONE;
+    queue_descriptor.flags = 0;
     queue_descriptor.mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
     queue_descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
     queue_descriptor.ordinal = 0;
@@ -216,7 +200,6 @@ class zeCommandQueueExecuteCommandListTestsSynchronize
 TEST_P(
     zeCommandQueueExecuteCommandListTestsSynchronize,
     GivenCommandQueueSynchronizationWhenExecutingCommandListsThenSuccessIsReturned) {
-
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
                                    command_queue, params.num_command_lists,
                                    list_of_command_lists.data(), nullptr));
@@ -253,7 +236,6 @@ class zeCommandQueueExecuteCommandListTestsFence
 TEST_P(
     zeCommandQueueExecuteCommandListTestsFence,
     GivenFenceSynchronizationWhenExecutingCommandListsThenSuccessIsReturned) {
-
   ze_fence_desc_t fence_descriptor = {};
   fence_descriptor.version = ZE_FENCE_DESC_VERSION_CURRENT;
   ze_fence_handle_t hFence = nullptr;
@@ -341,7 +323,6 @@ INSTANTIATE_TEST_CASE_P(SynchronousAndAsynchronousCommandQueueTests,
                                         ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS));
 
 class CommandQueueFlagTest : public ::testing::Test {
-
 protected:
   const uint32_t buff_size_bytes = 16;
   ze_command_queue_handle_t command_queue = nullptr;
@@ -366,18 +347,11 @@ protected:
   }
 };
 
+
 TEST_F(
     CommandQueueFlagTest,
-    GivenCopyFlagInCommandListWhenCommandQueueFlagisCopyThenSucessIsReturned) {
-
-  if (properties.numAsyncCopyEngines == 0) {
-    LOG_WARNING << "Not Enough Copy Engines to run test";
-    SUCCEED();
-    return;
-  }
-
-  ze_command_list_handle_t command_list =
-      lzt::create_command_list(device, ZE_COMMAND_LIST_FLAG_COPY_ONLY);
+    GivenDefaultFlagInCommandListWhenCommandQueueFlagisExplicitOnlyThenSucessIsReturned) {
+  ze_command_list_handle_t command_list = lzt::create_command_list(device);
 
   lzt::append_memory_copy(command_list, device_buffer, host_buffer,
                           buff_size_bytes, nullptr);
@@ -385,50 +359,8 @@ TEST_F(
   lzt::close_command_list(command_list);
 
   command_queue = lzt::create_command_queue(
-      device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-      ((uint32_t)properties.numAsyncCopyEngines - 1));
-
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
-  EXPECT_EQ(0, memcmp(host_buffer, device_buffer, buff_size_bytes));
-  lzt::reset_command_list(command_list);
-  for (uint32_t i = 0; i < buff_size_bytes; i++) {
-    char_input[i] = lzt::generate_value<uint8_t>(0, 255, 0);
-  }
-  lzt::append_memory_copy(command_list, device_buffer, host_buffer,
-                          buff_size_bytes, nullptr);
-  lzt::append_barrier(command_list);
-  lzt::close_command_list(command_list);
-  ze_fence_handle_t hFence = lzt::create_fence(command_queue);
-  lzt::execute_command_lists(command_queue, 1, &command_list, hFence);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, lzt::sync_fence(hFence, UINT32_MAX));
-
-  EXPECT_EQ(0, memcmp(host_buffer, device_buffer, buff_size_bytes));
-
-  /*cleanup*/
-  lzt::destroy_fence(hFence);
-  lzt::synchronize(command_queue, UINT32_MAX);
-  lzt::destroy_command_queue(command_queue);
-  lzt::destroy_command_list(command_list);
-}
-
-TEST_F(
-    CommandQueueFlagTest,
-    GivenDefaultFlagInCommandListWhenCommandQueueFlagisSingleSliceOnlyThenSucessIsReturned) {
-  ze_command_list_handle_t command_list =
-      lzt::create_command_list(device, ZE_COMMAND_LIST_FLAG_NONE);
-
-  lzt::append_memory_copy(command_list, device_buffer, host_buffer,
-                          buff_size_bytes, nullptr);
-  lzt::append_barrier(command_list);
-  lzt::close_command_list(command_list);
-
-  EXPECT_GT((uint32_t)properties.numAsyncComputeEngines, 0);
-  command_queue = lzt::create_command_queue(
-      device, ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY,
-      ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-      ((uint32_t)properties.numAsyncComputeEngines - 1));
+      device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
+      ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
   lzt::synchronize(command_queue, UINT32_MAX);
@@ -457,7 +389,6 @@ TEST_F(
 TEST(
     CommandQueuePriorityTest,
     GivenConcurrentLogicalCommandQueuesWhenStartSynchronizedThenHighPriorityCompletesFirst) {
-
   const int buff_size_high = 1000;
   const int buff_size_low = 100000;
   const uint8_t value_high = 0x55;
@@ -481,25 +412,36 @@ TEST(
   event_desc.index = 3;
   auto event_copy_low = lzt::create_event(ep_time, event_desc);
 
-  auto properties = lzt::get_device_properties(device);
-  if (properties.numAsyncCopyEngines == 0) {
+  auto cmdq_group_properties = lzt::get_command_queue_group_properties(device);
+  int copy_ordinal = -1;
+  for (int i = 0; i < cmdq_group_properties.size(); i++) {
+    if (cmdq_group_properties[i].flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) {
+      copy_ordinal = i;
+      break;
+    }
+  }
+
+  if (copy_ordinal == -1) {
     LOG_WARNING << "Not Enough Copy Engines to run test";
     SUCCEED();
     return;
   }
 
   auto cmdqueue_compute_high = lzt::create_command_queue(
-      device, ZE_COMMAND_QUEUE_FLAG_NONE, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_HIGH, 0);
-  auto cmdqueue_compute_low = lzt::create_command_queue(
-      device, ZE_COMMAND_QUEUE_FLAG_NONE, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_LOW, 0);
-  auto cmdqueue_copy_high = lzt::create_command_queue(
-      device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY,
+      device, static_cast<ze_command_queue_flag_t>(0),
       ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_HIGH, 0);
-  auto cmdqueue_copy_low = lzt::create_command_queue(
-      device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY,
+  auto cmdqueue_compute_low = lzt::create_command_queue(
+      device, static_cast<ze_command_queue_flag_t>(0),
       ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_LOW, 0);
+  auto cmdqueue_copy_high =
+      lzt::create_command_queue(device, static_cast<ze_command_queue_flag_t>(0),
+                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+                                ZE_COMMAND_QUEUE_PRIORITY_HIGH, copy_ordinal);
+  auto cmdqueue_copy_low =
+      lzt::create_command_queue(device, static_cast<ze_command_queue_flag_t>(0),
+                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+                                ZE_COMMAND_QUEUE_PRIORITY_LOW, copy_ordinal);
 
   auto cmdlist_compute_high = lzt::create_command_list();
   auto cmdlist_copy_high = lzt::create_command_list();

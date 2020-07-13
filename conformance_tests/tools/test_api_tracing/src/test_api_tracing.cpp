@@ -207,7 +207,7 @@ protected:
 
   ze_command_queue_desc_t command_queue_desc = {
       ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT, // version
-      ZE_COMMAND_QUEUE_FLAG_NONE,            // flags
+      0,                                     // flags
       ZE_COMMAND_QUEUE_MODE_DEFAULT,         // mode
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL       // priority
   };
@@ -215,7 +215,8 @@ protected:
   ze_command_queue_handle_t command_queue = nullptr;
 
   ze_command_list_desc_t command_list_desc = {
-      ZE_COMMAND_LIST_DESC_VERSION_CURRENT, ZE_COMMAND_LIST_FLAG_NONE};
+      ZE_COMMAND_LIST_DESC_VERSION_CURRENT,
+      static_cast<ze_command_list_flag_t>(0)};
   ze_command_list_handle_t command_list = nullptr;
 
   ze_copy_region_t copy_region;

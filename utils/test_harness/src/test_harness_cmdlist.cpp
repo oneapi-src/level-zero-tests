@@ -18,7 +18,7 @@ ze_command_list_handle_t create_command_list() {
   return create_command_list(zeDevice::get_instance()->get_device());
 }
 ze_command_list_handle_t create_command_list(ze_device_handle_t device) {
-  return create_command_list(device, ZE_COMMAND_LIST_FLAG_NONE);
+  return create_command_list(device, static_cast<ze_command_list_flag_t>(0));
 }
 
 ze_command_list_handle_t create_command_list(ze_device_handle_t device,
@@ -40,9 +40,9 @@ ze_command_list_handle_t create_immediate_command_list() {
 
 ze_command_list_handle_t
 create_immediate_command_list(ze_device_handle_t device) {
-  return create_immediate_command_list(device, ZE_COMMAND_QUEUE_FLAG_NONE,
-                                       ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                                       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  return create_immediate_command_list(
+      device, static_cast<ze_command_queue_flag_t>(0),
+      ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 }
 
 ze_command_list_handle_t create_immediate_command_list(

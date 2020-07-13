@@ -336,9 +336,6 @@ TEST_F(DevicePropertiesTest,
     ze_device_properties_t firstDeviceProperties =
         lzt::get_device_properties(firstDeviceHandle);
     EXPECT_FALSE(firstDeviceProperties.isSubdevice);
-    EXPECT_GT(firstDeviceProperties.maxCommandQueues, 0);
-    EXPECT_GT(firstDeviceProperties.numAsyncComputeEngines, 0);
-    EXPECT_GT(firstDeviceProperties.numAsyncCopyEngines, 0);
 
     bool first_iteration = true;
     for (ze_device_handle_t iterDeviceHandle :
@@ -364,14 +361,7 @@ TEST_F(DevicePropertiesTest,
                 iterDeviceProperties.unifiedMemorySupported);
       EXPECT_EQ(firstDeviceProperties.onDemandPageFaultsSupported,
                 iterDeviceProperties.onDemandPageFaultsSupported);
-      EXPECT_EQ(firstDeviceProperties.maxCommandQueues,
-                iterDeviceProperties.maxCommandQueues);
-      EXPECT_EQ(firstDeviceProperties.numAsyncComputeEngines,
-                iterDeviceProperties.numAsyncComputeEngines);
-      EXPECT_EQ(firstDeviceProperties.numAsyncCopyEngines,
-                iterDeviceProperties.numAsyncCopyEngines);
-      EXPECT_EQ(firstDeviceProperties.maxCommandQueuePriority,
-                iterDeviceProperties.maxCommandQueuePriority);
+
       EXPECT_EQ(firstDeviceProperties.numThreadsPerEU,
                 iterDeviceProperties.numThreadsPerEU);
       EXPECT_EQ(firstDeviceProperties.physicalEUSimdWidth,

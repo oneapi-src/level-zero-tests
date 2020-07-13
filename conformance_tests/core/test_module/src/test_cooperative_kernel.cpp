@@ -28,10 +28,25 @@ TEST_P(
   ze_module_handle_t module = nullptr;
   ze_kernel_handle_t kernel = nullptr;
   auto device = lzt::zeDevice::get_instance()->get_device();
-  auto flags = ZE_COMMAND_QUEUE_FLAG_SUPPORTS_COOPERATIVE_KERNELS;
+  ze_command_queue_flag_t flags = 0;
   auto mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
   auto priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
-  auto ordinal = 0;
+  int ordinal = -1;
+
+  auto command_queue_group_properties =
+      lzt::get_command_queue_group_properties(device);
+  for (int i = 0; i < command_queue_group_properties.size(); i++) {
+    if (command_queue_group_properties[i].flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS) {
+      ordinal = i;
+      break;
+    }
+  }
+
+  if (ordinal < 0) {
+    LOG_WARNING << "No command queues that support cooperative kernels";
+    return;
+  }
   auto command_queue =
       lzt::create_command_queue(device, flags, mode, priority, ordinal);
   auto command_list = lzt::create_command_list();

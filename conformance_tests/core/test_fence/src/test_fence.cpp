@@ -167,12 +167,13 @@ TEST_P(
   ze_device_properties_t properties;
   properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
-  // maximum simultaneous command queues
-  const size_t num_async_compute =
-      static_cast<size_t>(properties.numAsyncComputeEngines);
-  const size_t num_async_copy =
-      static_cast<size_t>(properties.numAsyncCopyEngines);
-  const size_t num_cmdq = num_async_compute + num_async_copy;
+
+  auto cmdq_properties = lzt::get_command_queue_group_properties(device);
+
+  size_t num_cmdq = 0;
+  for (auto properties : cmdq_properties) {
+    num_cmdq += properties.numQueues;
+  }
   bool use_event = GetParam();
 
   const size_t size = 16;
@@ -185,16 +186,12 @@ TEST_P(
   std::vector<ze_command_list_handle_t> cmdlist(num_cmdq, nullptr);
   std::vector<void *> buffer(num_cmdq, nullptr);
   std::vector<uint8_t> val(num_cmdq, 0);
-  ze_command_list_flag_t cmdlist_flag = ZE_COMMAND_LIST_FLAG_NONE;
-  ze_command_queue_flag_t cmdq_flag = ZE_COMMAND_QUEUE_FLAG_NONE;
+  ze_command_list_flag_t cmdlist_flag = static_cast<ze_command_list_flag_t>(0);
+  ze_command_queue_flag_t cmdq_flag = static_cast<ze_command_queue_flag_t>(0);
   uint32_t ordinal = 0;
 
   for (size_t i = 0; i < num_cmdq; i++) {
-    if (i == num_async_compute) {
-      cmdlist_flag = ZE_COMMAND_LIST_FLAG_COPY_ONLY;
-      cmdq_flag = ZE_COMMAND_QUEUE_FLAG_COPY_ONLY;
-      ordinal = 0;
-    }
+
     cmdq[i] = lzt::create_command_queue(
         device, cmdq_flag, ZE_COMMAND_QUEUE_MODE_DEFAULT,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal);

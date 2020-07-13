@@ -29,15 +29,6 @@ TEST_P(
   descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   descriptor.flags = GetParam();
 
-  if (descriptor.flags == ZE_COMMAND_LIST_FLAG_COPY_ONLY) {
-    auto properties =
-        lzt::get_device_properties(lzt::zeDevice::get_instance()->get_device());
-    if (properties.numAsyncCopyEngines == 0) {
-      LOG_WARNING << "Not Enough Copy Engines to run test";
-      SUCCEED();
-      return;
-    }
-  }
   ze_command_list_handle_t command_list = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListCreate(lzt::zeDevice::get_instance()->get_device(),
@@ -49,8 +40,10 @@ TEST_P(
 
 INSTANTIATE_TEST_CASE_P(
     CreateFlagParameterizedTest, zeCommandListCreateTests,
-    ::testing::Values(ZE_COMMAND_LIST_FLAG_NONE, ZE_COMMAND_LIST_FLAG_COPY_ONLY,
-                      ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING));
+    ::testing::Values(0, ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY,
+                      ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                      ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                      ZE_COMMAND_LIST_FLAG_FORCE_UINT32));
 
 class zeCommandListDestroyTests : public ::testing::Test {};
 
@@ -85,15 +78,6 @@ TEST_P(zeCommandListCreateImmediateTests,
       std::get<2>(GetParam())                // priority
   };
 
-  if (descriptor.flags == ZE_COMMAND_QUEUE_FLAG_COPY_ONLY) {
-    auto properties =
-        lzt::get_device_properties(lzt::zeDevice::get_instance()->get_device());
-    if (properties.numAsyncCopyEngines == 0) {
-      LOG_WARNING << "Not Enough Copy Engines to run test";
-      SUCCEED();
-      return;
-    }
-  }
   ze_command_list_handle_t command_list = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListCreateImmediate(
                                    lzt::zeDevice::get_instance()->get_device(),
@@ -105,10 +89,8 @@ TEST_P(zeCommandListCreateImmediateTests,
 INSTANTIATE_TEST_CASE_P(
     ImplictCommandQueueParameterizedTest, zeCommandListCreateImmediateTests,
     ::testing::Combine(
-        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_NONE,
-                          ZE_COMMAND_QUEUE_FLAG_COPY_ONLY,
-                          ZE_COMMAND_QUEUE_FLAG_LOGICAL_ONLY,
-                          ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0),
+                          ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
         ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
                           ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
                           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
@@ -333,13 +315,9 @@ TEST_P(
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_command_list_handle_t cmdlist = lzt::create_command_list(device, flags);
   ze_command_queue_handle_t cmdq;
-  if (flags == ZE_COMMAND_LIST_FLAG_COPY_ONLY) {
-    cmdq = lzt::create_command_queue(device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY,
-                                     ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                                     ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  } else {
-    cmdq = lzt::create_command_queue(device);
-  }
+
+  cmdq = lzt::create_command_queue(device);
+
   const size_t size = 16;
   auto buffer = lzt::allocate_shared_memory(size);
   const uint8_t set_succeed_1 = 0x1;
@@ -387,19 +365,8 @@ TEST_P(zeCommandListCloseAndResetTests,
   ze_command_list_flag_t flags = GetParam();
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_command_queue_handle_t cmdq;
-  if (flags == ZE_COMMAND_LIST_FLAG_COPY_ONLY) {
-    auto properties = lzt::get_device_properties(device);
-    if (properties.numAsyncCopyEngines == 0) {
-      LOG_WARNING << "Not Enough Copy Engines to run test";
-      SUCCEED();
-      return;
-    }
-    cmdq = lzt::create_command_queue(device, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY,
-                                     ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                                     ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  } else {
-    cmdq = lzt::create_command_queue(device);
-  }
+
+  cmdq = lzt::create_command_queue(device);
   ze_command_list_handle_t cmdlist = lzt::create_command_list(device, flags);
   const size_t num_instr = 8;
   const size_t size = 16;
@@ -466,8 +433,7 @@ TEST_P(zeCommandListCloseAndResetTests,
 INSTANTIATE_TEST_CASE_P(
     TestCasesforCommandListCloseAndCommandListReset,
     zeCommandListCloseAndResetTests,
-    testing::Values(ZE_COMMAND_LIST_FLAG_NONE, ZE_COMMAND_LIST_FLAG_COPY_ONLY,
-                    ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+    testing::Values(0, ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
                     ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                     ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY));
 class zeCommandListFlagTests
@@ -505,8 +471,7 @@ TEST_P(zeCommandListFlagTests,
 }
 INSTANTIATE_TEST_CASE_P(
     CreateFlagParameterizedTest, zeCommandListFlagTests,
-    ::testing::Values(ZE_COMMAND_LIST_FLAG_NONE,
-                      ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+    ::testing::Values(0, ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                       ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY));
 
 } // namespace

@@ -106,15 +106,16 @@ TEST(XeCommandQueueDescVersionToString, NonCurrentDescVersion) {
             level_zero_tests::to_string(d));
 }
 
-TEST(XeCommandQueueDescFlagsToString, ZE_COMMAND_QUEUE_FLAG_COPY_ONLY) {
-  const ze_command_queue_flag_t d = ZE_COMMAND_QUEUE_FLAG_COPY_ONLY;
-  EXPECT_EQ("ZE_COMMAND_QUEUE_FLAG_COPY_ONLY", level_zero_tests::to_string(d));
+TEST(XeCommandQueueDescFlagsToString, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY) {
+  const ze_command_queue_flag_t d = ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY;
+  EXPECT_EQ("ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY",
+            level_zero_tests::to_string(d));
 }
 
 TEST(XeCommandQueueDescFlagsToString, InvalidValue) {
   const ze_command_queue_flag_t d = static_cast<ze_command_queue_flag_t>(
-      static_cast<uint32_t>(ZE_COMMAND_QUEUE_FLAG_COPY_ONLY +
-                            ZE_COMMAND_QUEUE_FLAG_LOGICAL_ONLY));
+      static_cast<uint32_t>(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY +
+                            ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32));
   EXPECT_EQ("Unknown ze_command_queue_flag_t value: " +
                 std::to_string(static_cast<int>(d)),
             level_zero_tests::to_string(d));

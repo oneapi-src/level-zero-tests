@@ -59,7 +59,7 @@ void L0Context::init() {
   print_ze_device_properties(device_property);
 
   command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
-  command_list_description.flags = ZE_COMMAND_LIST_FLAG_NONE;
+  command_list_description.flags = static_cast<ze_command_list_flag_t>(0);
 
   result =
       zeCommandListCreate(device, &command_list_description, &command_list);
@@ -69,7 +69,7 @@ void L0Context::init() {
   }
 
   command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
-  command_queue_description.flags = ZE_COMMAND_QUEUE_FLAG_NONE;
+  command_queue_description.flags = 0;
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
@@ -170,11 +170,6 @@ void L0Context::print_ze_device_properties(
             << " * isSubdevice             : "
             << (props.isSubdevice ? "TRUE" : "FALSE") << "\n"
             << " * coreClockRate           : " << props.coreClockRate << "\n"
-            << " * numAsyncComputeEngines  : " << props.numAsyncComputeEngines
-            << "\n"
-            << " * numAsyncCopyEngines     : " << props.numAsyncCopyEngines
-            << "\n"
-            << " * maxCommandQueuePriority : " << props.maxCommandQueuePriority
             << std::endl;
 }
 

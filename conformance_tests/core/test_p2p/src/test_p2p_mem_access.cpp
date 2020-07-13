@@ -249,7 +249,7 @@ protected:
         (int *)dev_access_[0].device_mem_remote, dev_access_[0].kernel_add_val);
     setup_cmd_list(0, num, sync, event_sync_start, type, events_sync_end);
     dev_access_[0].cmd_q = lzt::create_command_queue(
-        dev_access_[0].dev, ZE_COMMAND_QUEUE_FLAG_NONE,
+        dev_access_[0].dev, static_cast<ze_command_queue_flag_t>(0),
         ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
         0);
     for (uint32_t i = 1; i < num; i++) {
@@ -287,7 +287,7 @@ protected:
 
       setup_cmd_list(i, num, sync, event_sync_start, type, events_sync_end);
       dev_access_[i].cmd_q = lzt::create_command_queue(
-          dev_access_[i].dev, ZE_COMMAND_QUEUE_FLAG_NONE,
+          dev_access_[i].dev, static_cast<ze_command_queue_flag_t>(0),
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0);
     }

@@ -34,8 +34,8 @@ protected:
     ep.create_event(event0, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_HOST);
 
     cmdlist_immediate = lzt::create_immediate_command_list(
-        lzt::zeDevice::get_instance()->get_device(), ZE_COMMAND_QUEUE_FLAG_NONE,
-        mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+        lzt::zeDevice::get_instance()->get_device(), 0, mode,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   }
 
   void TearDown() override {
@@ -155,12 +155,14 @@ TEST_P(
   ze_device_properties_t properties;
   properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
-  // maximum logical command queues
-  const size_t num_async_compute =
-      static_cast<size_t>(properties.numAsyncComputeEngines);
-  const size_t num_async_copy =
-      static_cast<size_t>(properties.numAsyncCopyEngines);
-  const size_t num_cmdq = num_async_compute + num_async_copy;
+
+  auto command_queue_group_properties =
+      lzt::get_command_queue_group_properties(device);
+
+  const size_t num_cmdq = 0;
+  for (auto properties : command_queue_group_properties) {
+    num_cmdq += properties.numQueues;
+  }
 
   std::vector<ze_event_handle_t> host_to_dev_event(num_cmdq, nullptr);
   ep.InitEventPool(num_cmdq);
@@ -168,16 +170,12 @@ TEST_P(
   std::vector<ze_command_list_handle_t> mulcmdlist_immediate(num_cmdq, nullptr);
   std::vector<void *> buffer(num_cmdq, nullptr);
   std::vector<uint8_t> val(num_cmdq, 0);
-  ze_command_queue_flag_t cmdqueue_flag = ZE_COMMAND_QUEUE_FLAG_NONE;
   const size_t size = 16;
 
   for (size_t i = 0; i < num_cmdq; i++) {
-    if (i == num_async_compute) {
-      cmdqueue_flag = ZE_COMMAND_QUEUE_FLAG_COPY_ONLY;
-    }
-
     mulcmdlist_immediate[i] = lzt::create_immediate_command_list(
-        device, cmdqueue_flag, mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+        device, static_cast<ze_command_queue_flag_t>(0), mode,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
     buffer[i] = lzt::allocate_shared_memory(size);
     val[i] = static_cast<uint8_t>(i + 1);
@@ -364,17 +362,21 @@ TEST_P(
   ze_command_list_handle_t cmdlist_immediate_2 = nullptr;
   ze_command_list_handle_t cmdlist_immediate_3 = nullptr;
   cmdlist_immediate = lzt::create_immediate_command_list(
-      lzt::zeDevice::get_instance()->get_device(), ZE_COMMAND_QUEUE_FLAG_NONE,
-      mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      lzt::zeDevice::get_instance()->get_device(),
+      static_cast<ze_command_queue_flag_t>(0), mode,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   cmdlist_immediate_1 = lzt::create_immediate_command_list(
-      lzt::zeDevice::get_instance()->get_device(), ZE_COMMAND_QUEUE_FLAG_NONE,
-      mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      lzt::zeDevice::get_instance()->get_device(),
+      static_cast<ze_command_queue_flag_t>(0), mode,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   cmdlist_immediate_2 = lzt::create_immediate_command_list(
-      lzt::zeDevice::get_instance()->get_device(), ZE_COMMAND_QUEUE_FLAG_NONE,
-      mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      lzt::zeDevice::get_instance()->get_device(),
+      static_cast<ze_command_queue_flag_t>(0), mode,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   cmdlist_immediate_3 = lzt::create_immediate_command_list(
-      lzt::zeDevice::get_instance()->get_device(), ZE_COMMAND_QUEUE_FLAG_NONE,
-      mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      lzt::zeDevice::get_instance()->get_device(),
+      static_cast<ze_command_queue_flag_t>(0), mode,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
   ze_event_handle_t hEvent1, hEvent2, hEvent3, hEvent4;
   ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);

@@ -163,7 +163,7 @@ protected:
     command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
     command_queue_description.ordinal = command_queue_id;
     command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-    command_queue_description.flags = ZE_COMMAND_QUEUE_FLAG_NONE;
+    command_queue_description.flags = 0;
 
     ze_command_queue_handle_t command_queue = nullptr;
     EXPECT_EQ(ZE_RESULT_SUCCESS,

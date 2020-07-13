@@ -141,6 +141,33 @@ get_memory_access_properties(ze_device_handle_t device) {
   return properties;
 }
 
+uint32_t get_command_queue_group_properties_count(ze_device_handle_t device) {
+  uint32_t count = 0;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetCommandQueueGroupProperties(device, &count, nullptr));
+
+  return count;
+}
+
+std::vector<ze_command_queue_group_properties_t>
+get_command_queue_group_properties(ze_device_handle_t device, uint32_t count) {
+  std::vector<ze_command_queue_group_properties_t> properties(count);
+
+  for (auto properties_item : properties) {
+    properties_item.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES;
+  }
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCommandQueueGroupProperties(
+                                   device, &count, properties.data()));
+  return properties;
+}
+
+std::vector<ze_command_queue_group_properties_t>
+get_command_queue_group_properties(ze_device_handle_t device) {
+  return get_command_queue_group_properties(
+      device, get_command_queue_group_properties_count(device));
+}
+
 ze_device_cache_properties_t get_cache_properties(ze_device_handle_t device) {
   ze_device_cache_properties_t properties = {
       ZE_DEVICE_CACHE_PROPERTIES_VERSION_CURRENT};

@@ -120,21 +120,13 @@ TEST_P(
 
   uint32_t ordinal = 0;
 
-  if ((flags == ZE_COMMAND_QUEUE_FLAG_NONE) ||
-      (flags == ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY)) {
-    if (properties.numAsyncComputeEngines == 0) {
-      LOG_WARNING << "Not Enough Async Compute Engines to run test";
-      SUCCEED();
-      return;
-    }
-    ordinal = static_cast<uint32_t>(properties.numAsyncComputeEngines);
-  } else if (flags == ZE_COMMAND_QUEUE_FLAG_COPY_ONLY) {
-    if (properties.numAsyncCopyEngines == 0) {
-      LOG_WARNING << "Not Enough Copy Engines to run test";
-      SUCCEED();
-      return;
-    }
-    ordinal = static_cast<uint32_t>(properties.numAsyncCopyEngines);
+  auto command_queue_group_properties =
+      lzt::get_command_queue_group_properties(device);
+
+  if (command_queue_group_properties.size() == 0) {
+    LOG_WARNING << "Not enough command queues to run test";
+    SUCCEED();
+    return;
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {
@@ -151,10 +143,8 @@ TEST_P(
 INSTANTIATE_TEST_CASE_P(
     TestAllInputPermuations, zeCommandQueueCreateDestroyRandomMultithreadTest,
     ::testing::Combine(
-        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_NONE,
-                          ZE_COMMAND_QUEUE_FLAG_COPY_ONLY,
-                          ZE_COMMAND_QUEUE_FLAG_LOGICAL_ONLY,
-                          ZE_COMMAND_QUEUE_FLAG_SINGLE_SLICE_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0),
+                          ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
         ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
                           ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
                           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
@@ -172,9 +162,10 @@ TEST(
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_device_properties_t properties;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
-  size_t max_cmd_queues = static_cast<size_t>(properties.maxCommandQueues);
+  auto properties = lzt::get_command_queue_group_properties(device);
+  // TODO: adapt for different groups
+  ASSERT_GT(properties.size(), 0);
+  size_t max_cmd_queues = static_cast<size_t>(properties[0].maxCommandQueues);
 
   for (uint32_t i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(
