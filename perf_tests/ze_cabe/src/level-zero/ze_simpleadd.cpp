@@ -22,7 +22,9 @@ ZeSimpleAdd::~ZeSimpleAdd() {}
 
 void ZeSimpleAdd::build_program() {
   ze_module_desc_t module_description = {};
-  module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+
+  module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
   module_description.inputSize = kernel_length;
   module_description.pInputModule = kernel_spv.data();
@@ -31,7 +33,8 @@ void ZeSimpleAdd::build_program() {
       zeModuleCreate(device, &module_description, &module, nullptr));
 
   ze_kernel_desc_t function_description = {};
-  function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
+  function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
+  function_description.pNext = nullptr;
   function_description.flags = ZE_KERNEL_FLAG_NONE;
   function_description.pKernelName = "NaiveAdd";
   ZE_CHECK_RESULT(zeKernelCreate(module, &function_description, &function));
@@ -63,7 +66,8 @@ void ZeSimpleAdd::create_cmdlist() {
                                            &output_buffer));
 
   ze_command_list_desc_t command_list_description = {};
-  command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
+  command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+  command_list_description.pNext = nullptr;
   ZE_CHECK_RESULT(
       zeCommandListCreate(device, &command_list_description, &command_list));
   ZE_CHECK_RESULT(zeCommandListAppendMemoryCopy(
@@ -85,7 +89,8 @@ void ZeSimpleAdd::create_cmdlist() {
 
   const uint32_t command_queue_id = 0;
   ze_command_queue_desc_t command_queue_description = {};
-  command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
+  command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  command_queue_description.pNext = nullptr;
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
   ZE_CHECK_RESULT(

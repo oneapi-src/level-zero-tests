@@ -30,7 +30,9 @@ protected:
 
     LOG_INFO << "set up module description for path " << path;
     ze_module_desc_t module_description = {};
-    module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
+    module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+
+    module_description.pNext = nullptr;
     module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
     module_description.inputSize = static_cast<uint32_t>(binary_file.size());
     module_description.pInputModule = binary_file.data();
@@ -52,7 +54,9 @@ protected:
                      uint64_t *host_found_output_buffer,
                      uint64_t *gpu_found_output_buffer, size_t output_count) {
     ze_kernel_desc_t fill_function_description = {};
-    fill_function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
+    fill_function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
+
+    fill_function_description.pNext = nullptr;
     fill_function_description.flags = ZE_KERNEL_FLAG_NONE;
     fill_function_description.pKernelName = "fill_device_memory";
 
@@ -77,7 +81,9 @@ protected:
                                        &sub_pattern));
 
     ze_kernel_desc_t test_function_description = {};
-    test_function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
+    test_function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
+
+    test_function_description.pNext = nullptr;
     test_function_description.flags = ZE_KERNEL_FLAG_NONE;
     test_function_description.pKernelName = "test_device_memory";
 
@@ -113,7 +119,9 @@ protected:
                                        &output_count));
 
     ze_command_list_desc_t command_list_description = {};
-    command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
+    command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+
+    command_list_description.pNext = nullptr;
 
     ze_command_list_handle_t command_list = nullptr;
     EXPECT_EQ(
@@ -160,7 +168,9 @@ protected:
 
     const uint32_t command_queue_id = 0;
     ze_command_queue_desc_t command_queue_description = {};
-    command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
+    command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+
+    command_queue_description.pNext = nullptr;
     command_queue_description.ordinal = command_queue_id;
     command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
     command_queue_description.flags = 0;
@@ -218,8 +228,8 @@ protected:
       driver_info[i].device_properties =
           new ze_device_properties_t[device_count];
       for (uint32_t j = 0; j < device_count; j++) {
-        driver_info[i].device_properties[j].version =
-            ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
+        driver_info[i].device_properties[j].stype =
+            ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
       }
 
       for (uint32_t j = 0; j < device_count; j++) {
@@ -239,8 +249,8 @@ protected:
       driver_info[i].device_compute_properties =
           new ze_device_compute_properties_t[device_count];
       for (uint32_t j = 0; j < device_count; j++) {
-        driver_info[i].device_compute_properties[j].version =
-            ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
+        driver_info[i].device_compute_properties[j].stype =
+            ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
       }
 
       for (uint32_t j = 0; j < device_count; j++) {
@@ -258,8 +268,9 @@ protected:
       driver_info[i].device_memory_properties =
           new ze_device_memory_properties_t[device_memory_properties_count];
       for (uint32_t j = 0; j < device_memory_properties_count; j++) {
-        driver_info[i].device_memory_properties[j].version =
-            ZE_DEVICE_MEMORY_PROPERTIES_VERSION_CURRENT;
+        driver_info[i].device_memory_properties[j].stype =
+            ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
+
         EXPECT_EQ(ZE_RESULT_SUCCESS,
                   zeDeviceGetMemoryProperties(
                       driver_info[i].device_handles[j],

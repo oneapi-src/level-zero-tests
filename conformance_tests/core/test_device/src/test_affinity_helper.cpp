@@ -22,7 +22,8 @@ int main(int argc, char **argv) {
 
   for (auto driver : lzt::get_all_driver_handles()) {
     ze_driver_properties_t driver_properties = {};
-    driver_properties.version = ZE_DRIVER_PROPERTIES_VERSION_CURRENT;
+    driver_properties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
+    driver_properties.pNext = nullptr;
 
     result = zeDriverGetProperties(driver, &driver_properties);
     if (result != ZE_RESULT_SUCCESS) {

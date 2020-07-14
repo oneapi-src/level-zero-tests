@@ -34,7 +34,7 @@ void image_create_test_1d(ze_image_format_type_t format_type,
         }
 
         ze_image_handle_t image;
-        ze_image_format_desc_t format_descriptor = {
+        ze_image_format_t format_descriptor = {
             layout,                    // layout
             format_type,               // type
             ZE_IMAGE_FORMAT_SWIZZLE_R, // x
@@ -44,16 +44,16 @@ void image_create_test_1d(ze_image_format_type_t format_type,
         };
         ze_image_flag_t flags =
             (ze_image_flag_t)(image_rw_flag | image_cache_flag);
-        ze_image_desc_t image_descriptor = {
-            ZE_IMAGE_DESC_VERSION_CURRENT, // version
-            flags,                         // flags
-            image_type,                    // type
-            format_descriptor,             // format
-            image_width,                   // width
-            1,                             // height
-            1,                             // depth
-            array_levels,                  // arraylevels
-            0};                            // miplevels
+        ze_image_desc_t image_descriptor = {};
+        image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+        image_descriptor.flags = flags;
+        image_descriptor.type = image_type;
+        image_descriptor.format = format_descriptor;
+        image_descriptor.width = image_width;
+        image_descriptor.height = 1;
+        image_descriptor.depth = 1;
+        image_descriptor.arraylevels = array_levels;
+        image_descriptor.miplevels = 0;
 
         lzt::print_image_descriptor(image_descriptor);
         image = lzt::create_ze_image(image_descriptor);
@@ -83,7 +83,7 @@ void image_create_test_2d(ze_image_format_type_t format_type,
           }
 
           ze_image_handle_t image;
-          ze_image_format_desc_t format_descriptor = {
+          ze_image_format_t format_descriptor = {
               layout,                    // layout
               format_type,               // type
               ZE_IMAGE_FORMAT_SWIZZLE_R, // x
@@ -93,16 +93,16 @@ void image_create_test_2d(ze_image_format_type_t format_type,
           };
           ze_image_flag_t flags =
               (ze_image_flag_t)(image_rw_flag | image_cache_flag);
-          ze_image_desc_t image_descriptor = {
-              ZE_IMAGE_DESC_VERSION_CURRENT, // version
-              flags,                         // flags
-              image_type,                    // type
-              format_descriptor,             // format
-              image_width,                   // width
-              image_height,                  // height
-              1,                             // depth
-              array_levels,                  // arraylevels
-              0};                            // miplevels
+          ze_image_desc_t image_descriptor = {};
+          image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+          image_descriptor.flags = flags;
+          image_descriptor.type = image_type;
+          image_descriptor.format = format_descriptor;
+          image_descriptor.width = image_width;
+          image_descriptor.height = image_height;
+          image_descriptor.depth = 1;
+          image_descriptor.arraylevels = array_levels;
+          image_descriptor.miplevels = 0;
 
           lzt::print_image_descriptor(image_descriptor);
           image = lzt::create_ze_image(image_descriptor);
@@ -125,7 +125,7 @@ void image_create_test_3d(ze_image_format_type_t format_type,
 
             ze_image_type_t image_type = ZE_IMAGE_TYPE_3D;
             ze_image_handle_t image;
-            ze_image_format_desc_t format_descriptor = {
+            ze_image_format_t format_descriptor = {
                 layout,                    // layout
                 format_type,               // type
                 ZE_IMAGE_FORMAT_SWIZZLE_R, // x
@@ -135,16 +135,16 @@ void image_create_test_3d(ze_image_format_type_t format_type,
             };
             ze_image_flag_t flags =
                 (ze_image_flag_t)(image_rw_flag | image_cache_flag);
-            ze_image_desc_t image_descriptor = {
-                ZE_IMAGE_DESC_VERSION_CURRENT, // version
-                flags,                         // flags
-                image_type,                    // type
-                format_descriptor,             // format
-                image_width,                   // width
-                image_height,                  // height
-                image_depth,                   // depth
-                0,                             // arraylevels
-                0};                            // miplevels
+            ze_image_desc_t image_descriptor = {};
+            image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+            image_descriptor.flags = flags;
+            image_descriptor.type = image_type;
+            image_descriptor.format = format_descriptor;
+            image_descriptor.width = image_width;
+            image_descriptor.height = image_height;
+            image_descriptor.depth = image_depth;
+            image_descriptor.arraylevels = 0;
+            image_descriptor.miplevels = 0;
 
             lzt::print_image_descriptor(image_descriptor);
             image = lzt::create_ze_image(image_descriptor);

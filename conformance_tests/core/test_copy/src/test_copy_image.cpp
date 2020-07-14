@@ -33,23 +33,27 @@ public:
     image_size = image_width * image_height * sizeof(uint32_t);
     png_img_dest = ImagePNG32Bit(image_width, image_height);
 
-    ze_event_pool_desc_t desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                 ZE_EVENT_POOL_FLAG_DEFAULT, 10};
+    ze_event_pool_desc_t desc = {};
+    desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    desc.flags = ZE_EVENT_POOL_FLAG_DEFAULT;
+    desc.count = 10;
     ep = lzt::create_event_pool(desc);
     cl = lzt::create_command_list();
     cq = lzt::create_command_queue();
-    ze_image_desc_t img_desc = {
-        ZE_IMAGE_DESC_VERSION_CURRENT,
-        ZE_IMAGE_FLAG_PROGRAM_WRITE,
-        ZE_IMAGE_TYPE_2D,
-        {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_TYPE_UNORM,
-         ZE_IMAGE_FORMAT_SWIZZLE_R, ZE_IMAGE_FORMAT_SWIZZLE_G,
-         ZE_IMAGE_FORMAT_SWIZZLE_B, ZE_IMAGE_FORMAT_SWIZZLE_A},
-        image_width,
-        image_height,
-        1,
-        0,
-        0};
+
+    ze_image_desc_t img_desc = {};
+    img_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+    img_desc.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;
+    img_desc.type = ZE_IMAGE_TYPE_2D;
+    img_desc.format = {
+        ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_TYPE_UNORM,
+        ZE_IMAGE_FORMAT_SWIZZLE_R,      ZE_IMAGE_FORMAT_SWIZZLE_G,
+        ZE_IMAGE_FORMAT_SWIZZLE_B,      ZE_IMAGE_FORMAT_SWIZZLE_A};
+    img_desc.width = image_width;
+    img_desc.height = image_height;
+    img_desc.depth = 1;
+    img_desc.arraylevels = 0;
+    img_desc.miplevels = 0;
     ze_img_src = lzt::create_ze_image(img_desc);
     ze_img_dest = lzt::create_ze_image(img_desc);
   }
@@ -472,8 +476,11 @@ TEST_F(zeCommandListAppendImageCopyTests,
        GivenDeviceImageWhenAppendingImageCopyWithHEventThenSuccessIsReturned) {
   ze_event_handle_t hEvent = nullptr;
 
-  ze_event_desc_t desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0,
-                          ZE_EVENT_SCOPE_FLAG_NONE, ZE_EVENT_SCOPE_FLAG_NONE};
+  ze_event_desc_t desc = {};
+  desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  desc.index = 0;
+  desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;
+  desc.wait = ZE_EVENT_SCOPE_FLAG_NONE;
   auto event = lzt::create_event(ep, desc);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendImageCopy(cl, img.dflt_device_image_,

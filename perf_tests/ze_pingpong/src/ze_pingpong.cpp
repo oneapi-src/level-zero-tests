@@ -49,7 +49,7 @@ void L0Context::init() {
     throw std::runtime_error("zeDeviceGet failed: " + std::to_string(result));
   }
 
-  device_property.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
+  device_property.pNext = nullptr;
   result = zeDeviceGetProperties(device, &device_property);
   if (result) {
     throw std::runtime_error("zeDeviceGetProperties failed: " +
@@ -58,8 +58,9 @@ void L0Context::init() {
 
   print_ze_device_properties(device_property);
 
-  command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
+  command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.flags = static_cast<ze_command_list_flag_t>(0);
+  command_list_description.pNext = nullptr;
 
   result =
       zeCommandListCreate(device, &command_list_description, &command_list);
@@ -68,8 +69,9 @@ void L0Context::init() {
                              std::to_string(result));
   }
 
-  command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
+  command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
   command_queue_description.flags = 0;
+  command_queue_description.pNext = nullptr;
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
@@ -82,7 +84,9 @@ void L0Context::init() {
   }
 
   ze_device_mem_alloc_desc_t device_desc = {};
-  device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   result = zeDriverAllocDeviceMem(driver, &device_desc, sizeof(int), 1, device,
@@ -93,7 +97,9 @@ void L0Context::init() {
   }
 
   ze_host_mem_alloc_desc_t host_desc = {};
-  host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+
+  host_desc.pNext = nullptr;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
   result =
       zeDriverAllocHostMem(driver, &host_desc, sizeof(int), 1, &host_output);
@@ -103,11 +109,15 @@ void L0Context::init() {
   }
 
   ze_device_mem_alloc_desc_t shared_device_desc = {};
-  shared_device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  shared_device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  shared_device_desc.pNext = nullptr;
   shared_device_desc.ordinal = 0;
   shared_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   ze_host_mem_alloc_desc_t shared_host_desc = {};
-  shared_host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
+  shared_host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+
+  shared_host_desc.pNext = nullptr;
   shared_host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
   result =
       zeDriverAllocSharedMem(driver, &shared_device_desc, &shared_host_desc,
@@ -210,8 +220,9 @@ void ZePingPong::create_module(L0Context &context,
                                const char *build_flag) {
   ze_result_t result = ZE_RESULT_SUCCESS;
   ze_module_desc_t module_description = {};
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
 
-  module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
+  module_description.pNext = nullptr;
   module_description.format =
       format; // ZE_MODULE_FORMAT_IL_SPIRV or ZE_MODULE_FORMAT_NATIVE
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());
@@ -412,12 +423,13 @@ void ZePingPong::run_test(L0Context &context) {
   create_module(context, binary_file, ZE_MODULE_FORMAT_IL_SPIRV, nullptr);
 
   ze_kernel_desc_t function_description = {};
+  function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
 
   int *ping = static_cast<int *>(context.device_input);
   int *pong = static_cast<int *>(context.host_output);
   int *ping_shared = static_cast<int *>(context.shared_output);
 
-  function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
+  function_description.pNext = nullptr;
   function_description.flags = ZE_KERNEL_FLAG_NONE;
   function_description.pKernelName = "kPingPong";
 

@@ -93,7 +93,8 @@ std::vector<ze_device_handle_t> get_ze_sub_devices(ze_device_handle_t device,
 
 ze_device_properties_t get_device_properties(ze_device_handle_t device) {
   ze_device_properties_t properties;
-  properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
+
+  properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
   return properties;
 }
@@ -101,7 +102,7 @@ ze_device_properties_t get_device_properties(ze_device_handle_t device) {
 ze_device_compute_properties_t
 get_compute_properties(ze_device_handle_t device) {
   ze_device_compute_properties_t properties = {
-      ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT};
+      ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES};
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetComputeProperties(device, &properties));
@@ -124,7 +125,7 @@ get_memory_properties(ze_device_handle_t device) {
 std::vector<ze_device_memory_properties_t>
 get_memory_properties(ze_device_handle_t device, uint32_t count) {
   std::vector<ze_device_memory_properties_t> properties(
-      count, {ZE_DEVICE_MEMORY_PROPERTIES_VERSION_CURRENT});
+      count, {ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES});
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetMemoryProperties(device, &count, properties.data()));
@@ -134,7 +135,7 @@ get_memory_properties(ze_device_handle_t device, uint32_t count) {
 ze_device_memory_access_properties_t
 get_memory_access_properties(ze_device_handle_t device) {
   ze_device_memory_access_properties_t properties = {
-      ZE_DEVICE_MEMORY_ACCESS_PROPERTIES_VERSION_CURRENT};
+      ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES};
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetMemoryAccessProperties(device, &properties));
@@ -170,7 +171,7 @@ get_command_queue_group_properties(ze_device_handle_t device) {
 
 ze_device_cache_properties_t get_cache_properties(ze_device_handle_t device) {
   ze_device_cache_properties_t properties = {
-      ZE_DEVICE_CACHE_PROPERTIES_VERSION_CURRENT};
+      ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES};
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCacheProperties(device, &properties));
   return properties;
@@ -178,7 +179,7 @@ ze_device_cache_properties_t get_cache_properties(ze_device_handle_t device) {
 
 ze_device_image_properties_t get_image_properties(ze_device_handle_t device) {
   ze_device_image_properties_t properties = {
-      ZE_DEVICE_IMAGE_PROPERTIES_VERSION_CURRENT};
+      ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES};
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetImageProperties(device, &properties));
   return properties;
@@ -186,7 +187,7 @@ ze_device_image_properties_t get_image_properties(ze_device_handle_t device) {
 
 ze_device_kernel_properties_t get_kernel_properties(ze_device_handle_t device) {
   ze_device_kernel_properties_t properties = {
-      ZE_DEVICE_KERNEL_PROPERTIES_VERSION_CURRENT};
+      ZE_STRUCTURE_TYPE_DEVICE_KERNEL_PROPERTIES};
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetKernelProperties(device, &properties));
@@ -196,7 +197,7 @@ ze_device_kernel_properties_t get_kernel_properties(ze_device_handle_t device) {
 ze_device_p2p_properties_t get_p2p_properties(ze_device_handle_t dev1,
                                               ze_device_handle_t dev2) {
   ze_device_p2p_properties_t properties = {
-      ZE_DEVICE_P2P_PROPERTIES_VERSION_CURRENT};
+      ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES};
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetP2PProperties(dev1, dev2, &properties));

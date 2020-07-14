@@ -27,7 +27,9 @@ TEST_F(
     zeCommandQueueCreateFenceTests,
     GivenDefaultFenceDescriptorWhenCreatingFenceThenNotNullPointerIsReturned) {
   ze_fence_desc_t descriptor = {};
-  descriptor.version = ZE_FENCE_DESC_VERSION_CURRENT;
+
+  descriptor.pNext = nullptr;
+  descriptor.stype = ZE_STRUCTURE_TYPE_FENCE_DESC;
 
   ze_fence_handle_t fence = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -41,7 +43,9 @@ class zeFenceTests : public ::testing::Test {
 public:
   zeFenceTests() : cq(), cl() {
     ze_fence_desc_t descriptor = {};
-    descriptor.version = ZE_FENCE_DESC_VERSION_CURRENT;
+    descriptor.stype = ZE_STRUCTURE_TYPE_FENCE_DESC;
+
+    descriptor.pNext = nullptr;
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeFenceCreate(cq.command_queue_, &descriptor, &fence_));
@@ -165,7 +169,8 @@ TEST_P(
     GivenMultipleCommandQueuesWhenFenceAndEventSetThenVerifyAllSignaledSuccessful) {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_properties_t properties;
-  properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
+
+  properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
 
   auto cmdq_properties = lzt::get_command_queue_group_properties(device);

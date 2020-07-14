@@ -59,18 +59,21 @@ protected:
     img_height = input_png.height();
     output_png = lzt::ImagePNG32Bit(img_width, img_height);
 
-    ze_image_desc_t img_desc = {
-        ZE_IMAGE_DESC_VERSION_CURRENT,
-        ZE_IMAGE_FLAG_PROGRAM_READ,
-        ZE_IMAGE_TYPE_2D,
-        {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_TYPE_UNORM,
-         ZE_IMAGE_FORMAT_SWIZZLE_R, ZE_IMAGE_FORMAT_SWIZZLE_G,
-         ZE_IMAGE_FORMAT_SWIZZLE_B, ZE_IMAGE_FORMAT_SWIZZLE_A},
-        img_width,
-        img_height,
-        1,
-        0,
-        0};
+    ze_image_desc_t img_desc = {};
+    img_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+    img_desc.flags = ZE_IMAGE_FLAG_PROGRAM_READ;
+    img_desc.type = ZE_IMAGE_TYPE_2D;
+    img_desc.format = {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
+                       ZE_IMAGE_FORMAT_TYPE_UNORM,
+                       ZE_IMAGE_FORMAT_SWIZZLE_R,
+                       ZE_IMAGE_FORMAT_SWIZZLE_G,
+                       ZE_IMAGE_FORMAT_SWIZZLE_B,
+                       ZE_IMAGE_FORMAT_SWIZZLE_A},
+    img_desc.width = img_width;
+    img_desc.width = img_height;
+    img_desc.depth = 1;
+    img_desc.arraylevels = 0;
+    img_desc.miplevels = 0;
 
     img_dev0 = lzt::create_ze_image(dev0, img_desc);
     img_dev1 = lzt::create_ze_image(dev1, img_desc);
@@ -80,8 +83,10 @@ protected:
     command_q_dev0 = lzt::create_command_queue();
     command_q_dev1 = lzt::create_command_queue();
 
-    ze_event_pool_desc_t ep_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                    ZE_EVENT_POOL_FLAG_DEFAULT, 10};
+    ze_event_pool_desc_t ep_desc = {};
+    ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    ep_desc.flags = ZE_EVENT_POOL_FLAG_DEFAULT;
+    ep_desc.count = 10;
     ep = lzt::create_event_pool(ep_desc, devices);
   }
 
@@ -116,10 +121,14 @@ TEST_F(P2PImageCopy,
   if (skip)
     return;
 
-  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0,
-                                ZE_EVENT_SCOPE_FLAG_HOST};
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+
   auto event1 = lzt::create_event(ep, event_desc);
-  event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 1, ZE_EVENT_SCOPE_FLAG_HOST};
+  event_desc.index = 1;
   auto event2 = lzt::create_event(ep, event_desc);
 
   // Load image to dev0
@@ -153,12 +162,15 @@ TEST_F(P2PImageCopy,
   if (skip)
     return;
 
-  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0,
-                                ZE_EVENT_SCOPE_FLAG_HOST};
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   auto event1 = lzt::create_event(ep, event_desc);
-  event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 1, ZE_EVENT_SCOPE_FLAG_HOST};
+  event_desc.index = 1;
   auto event2 = lzt::create_event(ep, event_desc);
-  event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 2, ZE_EVENT_SCOPE_FLAG_HOST};
+  event_desc.index = 2;
   auto event3 = lzt::create_event(ep, event_desc);
 
   // Load image to dev0
@@ -204,10 +216,13 @@ TEST_P(P2PImageCopyMemory,
   if (skip)
     return;
 
-  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0,
-                                ZE_EVENT_SCOPE_FLAG_HOST};
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   auto event1 = lzt::create_event(ep, event_desc);
-  event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 1, ZE_EVENT_SCOPE_FLAG_HOST};
+  event_desc.index = 1;
   auto event2 = lzt::create_event(ep, event_desc);
 
   void *target_mem;
@@ -257,10 +272,13 @@ TEST_P(P2PImageCopyMemory,
   if (skip)
     return;
 
-  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0,
-                                ZE_EVENT_SCOPE_FLAG_HOST};
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   auto event1 = lzt::create_event(ep, event_desc);
-  event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 1, ZE_EVENT_SCOPE_FLAG_HOST};
+  event_desc.index = 1;
   auto event2 = lzt::create_event(ep, event_desc);
 
   void *target_mem;

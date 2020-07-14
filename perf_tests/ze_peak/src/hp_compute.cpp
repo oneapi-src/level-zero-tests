@@ -37,7 +37,9 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
 
   void *device_output_buffer;
   ze_device_mem_alloc_desc_t device_desc = {};
-  device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   result = zeDriverAllocDeviceMem(

@@ -23,8 +23,10 @@ protected:
     command_queue = lzt::create_command_queue();
     module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
                                 "image_media_layouts_tests.spv");
-    ze_event_pool_desc_t ep_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                    ZE_EVENT_POOL_FLAG_DEFAULT, 10};
+    ze_event_pool_desc_t ep_desc = {};
+    ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    ep_desc.flags = ZE_EVENT_POOL_FLAG_DEFAULT;
+    ep_desc.count = 10;
     ep = lzt::create_event_pool(ep_desc);
   }
 
@@ -49,8 +51,10 @@ protected:
 ze_image_handle_t ImageMediaLayoutTests::create_image_desc_layout(
     ze_image_format_layout_t layout) {
   ze_image_desc_t image_desc = {};
+  image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   ze_image_handle_t image;
-  image_desc.version = ZE_IMAGE_DESC_VERSION_CURRENT;
+
+  image_desc.pNext = nullptr;
   image_desc.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_WRITE |
                                        ZE_IMAGE_FLAG_PROGRAM_READ |
                                        ZE_IMAGE_FLAG_BIAS_UNCACHED);

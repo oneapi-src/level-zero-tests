@@ -62,7 +62,8 @@ protected:
     ready = false;
     signaling_thread = false;
     zet_tracer_desc_t tracer_desc = {};
-    tracer_desc.version = ZET_TRACER_DESC_VERSION_CURRENT;
+
+    tracer_desc.pNext = nullptr;
     tracer_desc.pUserData = nullptr;
     tracer = lzt::create_tracer_handle(tracer_desc);
 

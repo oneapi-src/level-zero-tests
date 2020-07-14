@@ -23,7 +23,8 @@ TEST(
   uint32_t user_data;
 
   zet_tracer_desc_t tracer_desc = {};
-  tracer_desc.version = ZET_TRACER_DESC_VERSION_CURRENT;
+
+  tracer_desc.pNext = nullptr;
   tracer_desc.pUserData = &user_data;
 
   zet_tracer_handle_t tracer_handle = lzt::create_tracer_handle(tracer_desc);
@@ -44,7 +45,8 @@ TEST_P(TracingCreateMultipleTests,
   uint32_t *user_data = new uint32_t[GetParam()];
 
   for (uint32_t i = 0; i < GetParam(); ++i) {
-    descs[i].version = ZET_TRACER_DESC_VERSION_CURRENT;
+
+    descs[i].pNext = nullptr;
     descs[i].pUserData = &user_data[i];
 
     tracers[i] = lzt::create_tracer_handle(descs[i]);
@@ -65,7 +67,8 @@ TEST(TracingDestroyTests,
   uint32_t user_data;
 
   zet_tracer_desc_t tracer_desc = {};
-  tracer_desc.version = ZET_TRACER_DESC_VERSION_CURRENT;
+
+  tracer_desc.pNext = nullptr;
   tracer_desc.pUserData = &user_data;
   zet_tracer_handle_t tracer_handle = lzt::create_tracer_handle(tracer_desc);
 
@@ -78,17 +81,24 @@ protected:
     driver = lzt::get_default_driver();
     device = lzt::zeDevice::get_instance()->get_device();
 
-    compute_properties.version = ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
-    memory_properties.version = ZE_DEVICE_MEMORY_PROPERTIES_VERSION_CURRENT;
-    memory_access_properties.version =
-        ZE_DEVICE_MEMORY_ACCESS_PROPERTIES_VERSION_CURRENT;
-    cache_properties.version = ZE_DEVICE_CACHE_PROPERTIES_VERSION_CURRENT;
-    device_image_properties.version =
-        ZE_DEVICE_IMAGE_PROPERTIES_VERSION_CURRENT;
-    p2p_properties.version = ZE_DEVICE_P2P_PROPERTIES_VERSION_CURRENT;
+    compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
+    compute_properties.pNext = nullptr;
+
+    memory_access_properties.stype =
+        ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES;
+    memory_properties.pNext = nullptr;
+
+    cache_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
+    cache_properties.pNext = nullptr;
+
+    device_image_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES;
+    device_image_properties.pNext = nullptr;
+
+    p2p_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
+    p2p_properties.pNext = nullptr;
 
     zet_tracer_desc_t tracer_desc = {};
-    tracer_desc.version = ZET_TRACER_DESC_VERSION_CURRENT;
+
     tracer_desc.pUserData = &user_data;
     tracer_handle = lzt::create_tracer_handle(tracer_desc);
   }
@@ -206,37 +216,39 @@ protected:
   ze_driver_ipc_properties_t ipc_properties;
 
   ze_command_queue_desc_t command_queue_desc = {
-      ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT, // version
-      0,                                     // flags
-      ZE_COMMAND_QUEUE_MODE_DEFAULT,         // mode
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL       // priority
-  };
+      .stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
+      .flags = 0,
+      .mode = ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      .priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
 
   ze_command_queue_handle_t command_queue = nullptr;
 
   ze_command_list_desc_t command_list_desc = {
-      ZE_COMMAND_LIST_DESC_VERSION_CURRENT,
-      static_cast<ze_command_list_flag_t>(0)};
+      .stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC,
+      .flags = static_cast<ze_command_list_flag_t>(0)};
   ze_command_list_handle_t command_list = nullptr;
 
   ze_copy_region_t copy_region;
   ze_image_region_t image_region;
 
   ze_event_pool_handle_t event_pool = nullptr;
-  ze_event_pool_desc_t event_pool_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                          ZE_EVENT_POOL_FLAG_HOST_VISIBLE, 1};
+  ze_event_pool_desc_t event_pool_desc = {
+      .stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
+      .flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
+      .count = 1};
   ze_event_handle_t event = nullptr;
-  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0,
-                                ZE_EVENT_SCOPE_FLAG_NONE,
-                                ZE_EVENT_SCOPE_FLAG_NONE};
+  ze_event_desc_t event_desc = {.stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
+                                .index = 0,
+                                .signal = ZE_EVENT_SCOPE_FLAG_NONE,
+                                .wait = ZE_EVENT_SCOPE_FLAG_NONE};
   ze_ipc_event_pool_handle_t ipc_event;
   ze_ipc_mem_handle_t ipc_handle;
 
   ze_fence_handle_t fence = nullptr;
-  ze_fence_desc_t fence_desc = {ZE_FENCE_DESC_VERSION_CURRENT,
-                                ZE_FENCE_FLAG_NONE};
+  ze_fence_desc_t fence_desc = {.stype = ZE_STRUCTURE_TYPE_FENCE_DESC,
+                                .flags = ZE_FENCE_FLAG_NONE};
 
-  ze_image_format_desc_t format_descriptor = {
+  ze_image_format_t format_descriptor = {
       ZE_IMAGE_FORMAT_LAYOUT_8,  // layout
       ZE_IMAGE_FORMAT_TYPE_UINT, // type
       ZE_IMAGE_FORMAT_SWIZZLE_X, // x
@@ -249,15 +261,15 @@ protected:
   const uint32_t image_width = 1920;
   const uint32_t image_height = 1;
   const uint32_t image_depth = 1;
-  ze_image_desc_t image_desc = {ZE_IMAGE_DESC_VERSION_CURRENT, // version
-                                ZE_IMAGE_FLAG_PROGRAM_WRITE,   // flags
-                                ZE_IMAGE_TYPE_1D,              // type
-                                format_descriptor,             // format
-                                image_width,                   // width
-                                image_height,                  // height
-                                image_depth,                   // depth
-                                0,                             // arraylevels
-                                0};                            // miplevels
+  ze_image_desc_t image_desc = {.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC,
+                                .flags = ZE_IMAGE_FLAG_PROGRAM_WRITE,
+                                .type = ZE_IMAGE_TYPE_1D,
+                                .format = format_descriptor,
+                                .width = image_width,
+                                .height = image_height,
+                                .depth = image_depth,
+                                .arraylevels = 0,
+                                .miplevels = 0};
   ze_image_handle_t image = nullptr;
   ze_image_properties_t image_properties;
 
@@ -267,28 +279,31 @@ protected:
 
   std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file("module_add.spv");
-  ze_module_desc_t module_desc = {ZE_MODULE_DESC_VERSION_CURRENT,
-                                  ZE_MODULE_FORMAT_IL_SPIRV,
-                                  static_cast<uint32_t>(binary_file.size()),
-                                  binary_file.data(),
-                                  "",
-                                  nullptr};
+  ze_module_desc_t module_desc = {.stype = ZE_STRUCTURE_TYPE_MODULE_DESC,
+                                  .format = ZE_MODULE_FORMAT_IL_SPIRV,
+                                  .inputSize =
+                                      static_cast<uint32_t>(binary_file.size()),
+                                  .pInputModule = binary_file.data(),
+                                  .pBuildFlags = "",
+                                  .pConstants = nullptr};
 
   ze_module_handle_t module = nullptr;
   ze_module_build_log_handle_t build_log = nullptr;
 
-  ze_kernel_desc_t kernel_desc = {ZE_KERNEL_DESC_VERSION_CURRENT,
-                                  ZE_KERNEL_FLAG_NONE, "module_add_constant"};
-  ;
+  ze_kernel_desc_t kernel_desc = {.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC,
+                                  .flags = ZE_KERNEL_FLAG_NONE,
+                                  .pKernelName = "module_add_constant"};
+
   ze_kernel_handle_t kernel = nullptr;
 
   ze_kernel_attribute_t set_attribute;
 
   ze_cache_config_t cache_config;
 
-  ze_sampler_desc_t sampler_desc = {ZE_SAMPLER_DESC_VERSION_CURRENT,
-                                    ZE_SAMPLER_ADDRESS_MODE_NONE,
-                                    ZE_SAMPLER_FILTER_MODE_NEAREST, true};
+  ze_sampler_desc_t sampler_desc = {.stype = ZE_STRUCTURE_TYPE_SAMPLER_DESC,
+                                    .filterMode =
+                                        ZE_SAMPLER_FILTER_MODE_NEAREST,
+                                    .isNormalized = true};
   ze_sampler_handle_t sampler = nullptr;
 
   uint32_t num = 0, version;
@@ -599,11 +614,15 @@ TEST_F(
   epilogues.Driver.pfnAllocSharedMemCb = lzt::epilogue_callback;
 
   ze_device_mem_alloc_desc_t device_desc = {};
-  device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  device_desc.pNext = nullptr;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   device_desc.ordinal = 0;
   ze_host_mem_alloc_desc_t host_desc = {};
-  host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+
+  host_desc.pNext = nullptr;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
 
   ze_result_t initial_result = zeDriverAllocSharedMem(
@@ -626,7 +645,9 @@ TEST_F(
   epilogues.Driver.pfnAllocDeviceMemCb = lzt::epilogue_callback;
 
   ze_device_mem_alloc_desc_t device_desc = {};
-  device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  device_desc.pNext = nullptr;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   device_desc.ordinal = 1;
 
@@ -649,7 +670,9 @@ TEST_F(
   epilogues.Driver.pfnAllocHostMemCb = lzt::epilogue_callback;
 
   ze_host_mem_alloc_desc_t host_desc = {};
-  host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+
+  host_desc.pNext = nullptr;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
 
   ze_result_t initial_result =
@@ -671,7 +694,9 @@ TEST_F(
   epilogues.Driver.pfnFreeMemCb = lzt::epilogue_callback;
 
   ze_host_mem_alloc_desc_t host_desc = {};
-  host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+
+  host_desc.pNext = nullptr;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
 
   zeDriverAllocHostMem(driver, &host_desc, 1, 0, &host_memory);
@@ -1693,8 +1718,9 @@ TEST_F(
   epilogues.Kernel.pfnCreateCb = lzt::epilogue_callback;
 
   init_module();
-  kernel_desc = {ZE_KERNEL_DESC_VERSION_CURRENT, ZE_KERNEL_FLAG_NONE,
-                 "module_add_constant"};
+  kernel_desc = {.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC,
+                 .flags = ZE_KERNEL_FLAG_NONE,
+                 .pKernelName = "module_add_constant"};
   ze_result_t initial_result = zeKernelCreate(module, &kernel_desc, &kernel);
 
   ready_tracer(tracer_handle, prologues, epilogues);

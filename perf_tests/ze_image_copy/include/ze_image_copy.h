@@ -74,7 +74,7 @@ private:
   ze_event_pool_handle_t event_pool;
 
   ze_image_region_t region;
-  ze_image_format_desc_t formatDesc = {};
+  ze_image_format_t formatDesc = {};
   ze_image_desc_t imageDesc = {};
   uint8_t *srcBuffer;
   uint8_t *dstBuffer;

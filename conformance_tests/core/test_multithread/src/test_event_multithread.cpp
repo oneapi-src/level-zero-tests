@@ -30,16 +30,20 @@ void ThreadEventCreate() {
 
   // Each thread creates event pool,events and later destroy events
 
-  ze_event_pool_desc_t eventPoolDesc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                        ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
-                                        num_events};
+  ze_event_pool_desc_t eventPoolDesc = {};
+  eventPoolDesc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+  eventPoolDesc.count = num_events;
+
   for (uint32_t i = 0; i < num_iterations; i++) {
     ze_event_pool_handle_t event_pool = lzt::create_event_pool(eventPoolDesc);
     std::array<ze_event_handle_t, num_events> events;
     std::array<ze_event_desc_t, num_events> eventDesc;
     for (uint32_t j = 0; j < num_events; j++) {
-      eventDesc[j] = {ZE_EVENT_DESC_VERSION_CURRENT, j,
-                      ZE_EVENT_SCOPE_FLAG_NONE, ZE_EVENT_SCOPE_FLAG_HOST};
+      eventDesc[j] = {.stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
+                      .index = j,
+                      .signal = ZE_EVENT_SCOPE_FLAG_NONE,
+                      .wait = ZE_EVENT_SCOPE_FLAG_HOST};
       events[j] = lzt::create_event(event_pool, eventDesc[j]);
     }
     for (auto event : events) {
@@ -87,9 +91,10 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
   // Each thread creates event pool,events and uses them to sync
   // and later destroy events
 
-  ze_event_pool_desc_t eventPoolDesc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                        ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
-                                        num_events};
+  ze_event_pool_desc_t eventPoolDesc = {};
+  eventPoolDesc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+  eventPoolDesc.count = num_events;
 
   for (uint32_t i = 0; i < num_iterations; i++) {
     ze_event_pool_handle_t event_pool = lzt::create_event_pool(eventPoolDesc);
@@ -97,8 +102,10 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
     std::array<ze_event_desc_t, num_events> eventDesc;
     std::array<ze_command_list_handle_t, num_events> cmd_list;
     for (uint32_t j = 0; j < num_events; j++) {
-      eventDesc[j] = {ZE_EVENT_DESC_VERSION_CURRENT, j,
-                      ZE_EVENT_SCOPE_FLAG_NONE, ZE_EVENT_SCOPE_FLAG_HOST};
+      eventDesc[j] = {.stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
+                      .index = j,
+                      .signal = ZE_EVENT_SCOPE_FLAG_NONE,
+                      .wait = ZE_EVENT_SCOPE_FLAG_HOST};
       events[j] = lzt::create_event(event_pool, eventDesc[j]);
       cmd_list[j] = lzt::create_command_list();
     }
@@ -236,9 +243,10 @@ TEST(
     GivenMultipleThreadsUsingSharedCommandQueueAndSharedEventPoolAndHavingTheirOwnCommandListThenSynchronizeProperlyAndSuccessIsReturned) {
 
   ze_command_queue_handle_t cmd_queue = lzt::create_command_queue();
-  ze_event_pool_desc_t eventPoolDesc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                        ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
-                                        num_events};
+  ze_event_pool_desc_t eventPoolDesc = {};
+  eventPoolDesc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+  eventPoolDesc.count = num_events;
 
   // As per the spec, the application must not call zeEventCreate() from
   // simultaneous threads having same pool handle.
@@ -250,8 +258,10 @@ TEST(
   std::array<ze_event_handle_t, num_events> events;
   std::array<ze_event_desc_t, num_events> eventDesc;
   for (uint32_t j = 0; j < num_events; j++) {
-    eventDesc[j] = {ZE_EVENT_DESC_VERSION_CURRENT, j, ZE_EVENT_SCOPE_FLAG_NONE,
-                    ZE_EVENT_SCOPE_FLAG_HOST};
+    eventDesc[j] = {.stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
+                    .index = j,
+                    .signal = ZE_EVENT_SCOPE_FLAG_NONE,
+                    .wait = ZE_EVENT_SCOPE_FLAG_HOST};
     events[j] = lzt::create_event(event_pool, eventDesc[j]);
   }
 

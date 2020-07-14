@@ -14,7 +14,9 @@ namespace level_zero_tests {
 ze_fence_handle_t create_fence(ze_command_queue_handle_t cmd_queue) {
   ze_fence_handle_t fence;
   ze_fence_desc_t desc = {};
-  desc.version = ZE_FENCE_DESC_VERSION_CURRENT;
+  desc.stype = ZE_STRUCTURE_TYPE_FENCE_DESC;
+
+  desc.pNext = nullptr;
   desc.flags = ZE_FENCE_FLAG_NONE;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceCreate(cmd_queue, &desc, &fence));
   return fence;

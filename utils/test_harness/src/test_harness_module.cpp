@@ -30,6 +30,7 @@ ze_module_handle_t create_module(ze_device_handle_t device,
                                  ze_module_build_log_handle_t *p_build_log) {
 
   ze_module_desc_t module_description = {};
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   ze_module_handle_t module;
   ze_module_constants_t module_constants = {};
   const std::vector<uint8_t> binary_file =
@@ -37,7 +38,8 @@ ze_module_handle_t create_module(ze_device_handle_t device,
 
   EXPECT_TRUE((format == ZE_MODULE_FORMAT_IL_SPIRV) ||
               (format == ZE_MODULE_FORMAT_NATIVE));
-  module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
+
+  module_description.pNext = nullptr;
   module_description.format = format;
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());
   module_description.pInputModule = binary_file.data();
@@ -134,9 +136,11 @@ ze_kernel_handle_t create_function(ze_module_handle_t module,
                                    std::string func_name) {
   ze_kernel_handle_t kernel;
   ze_kernel_desc_t kernel_description = {};
+  kernel_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
   EXPECT_TRUE((flag == ZE_KERNEL_FLAG_NONE) ||
               (flag == ZE_KERNEL_FLAG_FORCE_RESIDENCY));
-  kernel_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
+
+  kernel_description.pNext = nullptr;
   kernel_description.flags = flag;
   kernel_description.pKernelName = func_name.c_str();
 

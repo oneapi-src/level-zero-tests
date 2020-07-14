@@ -70,8 +70,9 @@ void L0Context::reset_commandlist() {
 void L0Context::create_module(std::vector<uint8_t> binary_file) {
   ze_result_t result = ZE_RESULT_SUCCESS;
   ze_module_desc_t module_description = {};
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
 
-  module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
+  module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());
   module_description.pInputModule =
@@ -150,7 +151,8 @@ void L0Context::init_xe() {
   if (verbose)
     std::cout << "Device retrieved\n";
 
-  device_property.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
+  device_property.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+  device_property.pNext = nullptr;
   result = zeDeviceGetProperties(device, &device_property);
   if (result) {
     throw std::runtime_error("zeDeviceGetProperties failed: " +
@@ -161,8 +163,7 @@ void L0Context::init_xe() {
 
   print_ze_device_properties(device_property);
 
-  device_compute_property.version =
-      ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
+  device_compute_property.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
   result = zeDeviceGetComputeProperties(device, &device_compute_property);
   if (result) {
     throw std::runtime_error("zeDeviceGetComputeProperties failed: " +
@@ -171,7 +172,8 @@ void L0Context::init_xe() {
   if (verbose)
     std::cout << "Device Compute Properties retrieved\n";
 
-  command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
+  command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+  command_list_description.pNext = nullptr;
 
   result =
       zeCommandListCreate(device, &command_list_description, &command_list);
@@ -182,7 +184,8 @@ void L0Context::init_xe() {
   if (verbose)
     std::cout << "command_list created\n";
 
-  command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
+  command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  command_queue_description.pNext = nullptr;
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
@@ -370,10 +373,12 @@ void single_event_pool_create(
     L0Context &context, ze_event_pool_handle_t *kernel_launch_event_pool) {
   ze_result_t result;
   ze_event_pool_desc_t kernel_launch_event_pool_desc = {};
+  kernel_launch_event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
 
   kernel_launch_event_pool_desc.count = 1;
   kernel_launch_event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-  kernel_launch_event_pool_desc.version = ZE_EVENT_POOL_DESC_VERSION_CURRENT;
+
+  kernel_launch_event_pool_desc.pNext = nullptr;
 
   result = zeEventPoolCreate(context.driver, &kernel_launch_event_pool_desc, 1,
                              &context.device, kernel_launch_event_pool);
@@ -387,11 +392,13 @@ void single_event_create(ze_event_pool_handle_t event_pool,
                          ze_event_handle_t *event) {
   ze_result_t result;
   ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
 
   event_desc.index = 0;
   event_desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;
   event_desc.wait = ZE_EVENT_SCOPE_FLAG_NONE;
-  event_desc.version = ZE_EVENT_DESC_VERSION_CURRENT;
+
+  event_desc.pNext = nullptr;
   result = zeEventCreate(event_pool, &event_desc, event);
   if (result) {
     throw std::runtime_error("zeEventCreate failed: " + std::to_string(result));
@@ -687,9 +694,10 @@ void ZePeak::setup_function(L0Context &context, ze_kernel_handle_t &function,
                             const char *name, void *input, void *output,
                             size_t outputSize) {
   ze_kernel_desc_t function_description = {};
+  function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
+  function_description.pNext = nullptr;
   function_description.flags = ZE_KERNEL_FLAG_NONE;
   function_description.pKernelName = name;
 
@@ -823,7 +831,7 @@ uint64_t max_device_object_size(L0Context &context) {
   ze_result_t result;
 
   ze_device_memory_properties_t device_memory_properties = {
-      ZE_DEVICE_MEMORY_PROPERTIES_VERSION_CURRENT};
+      ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES};
 
   uint32_t device_count = 1;
   result = zeDeviceGetMemoryProperties(context.device, &device_count,

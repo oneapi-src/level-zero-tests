@@ -24,7 +24,9 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
 
   void *inputBuf;
   ze_device_mem_alloc_desc_t in_device_desc = {};
-  in_device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  in_device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  in_device_desc.pNext = nullptr;
   in_device_desc.ordinal = 0;
   in_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   result =
@@ -40,7 +42,9 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
 
   void *outputBuf;
   ze_device_mem_alloc_desc_t out_device_desc = {};
-  out_device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  out_device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  out_device_desc.pNext = nullptr;
   out_device_desc.ordinal = 0;
   out_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   result =

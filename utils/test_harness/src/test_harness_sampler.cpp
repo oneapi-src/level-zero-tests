@@ -15,7 +15,8 @@ ze_sampler_handle_t create_sampler(ze_sampler_address_mode_t addrmode,
                                    ze_sampler_filter_mode_t filtmode,
                                    ze_bool_t normalized) {
   ze_sampler_desc_t descriptor = {};
-  descriptor.version = ZE_SAMPLER_DESC_VERSION_CURRENT;
+  descriptor.stype = ZE_STRUCTURE_TYPE_SAMPLER_DESC;
+  descriptor.pNext = nullptr;
   descriptor.addressMode = addrmode;
   descriptor.filterMode = filtmode;
   descriptor.isNormalized = normalized;

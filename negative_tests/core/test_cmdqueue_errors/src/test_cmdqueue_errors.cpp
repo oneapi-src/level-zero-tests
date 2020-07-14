@@ -25,8 +25,10 @@ TEST_F(
     GivenInValidDeviceHandleWhenCreatingCommandQueueThenErrorInvalidNullHandleIsReturned) {
 
   ze_command_queue_desc_t descriptor = {};
-  descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = 0;
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+
+  descriptor.pNext = nullptr;
   descriptor.mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
   descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
   ze_device_handle_t device = nullptr;
@@ -53,8 +55,10 @@ TEST_F(
     GivenInValidOutputCmdQueueWhenCreatingCommandQueueThenErrorInvalidNullHandleIsReturned) {
 
   ze_command_queue_desc_t descriptor = {};
-  descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = 0;
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+
+  descriptor.pNext = nullptr;
   descriptor.mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
   descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();

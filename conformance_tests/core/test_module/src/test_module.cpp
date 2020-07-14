@@ -218,12 +218,13 @@ TEST_F(
   ze_module_constants_t specConstants{specConstantsNum, specConstantsIDs,
                                       specConstantsValues};
   ze_module_desc_t module_description = {};
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   ze_module_handle_t module_spec;
   const std::string filename = "update_variable_with_spec_constant.spv";
   const std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file(filename);
 
-  module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
+  module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());
   module_description.pInputModule = binary_file.data();
@@ -308,13 +309,14 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_module_build_log_handle_t build_log_error;
   ze_module_desc_t module_description = {};
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   size_t build_log_size;
   std::string build_log_str;
   ze_module_handle_t module_error = nullptr;
   const std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file("module_build_error.spv");
 
-  module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
+  module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());
   module_description.pInputModule = binary_file.data();
@@ -590,8 +592,7 @@ TEST_F(zeKernelCreateTests,
   for (auto mod : module_) {
     function =
         lzt::create_function(mod, ZE_KERNEL_FLAG_NONE, "module_add_constant");
-    dev_compute_properties.version =
-        ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
+    dev_compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeDeviceGetComputeProperties(device_, &dev_compute_properties));
     for (uint32_t x = 1; x < dev_compute_properties.maxGroupSizeX; x++) {
@@ -635,8 +636,7 @@ TEST_F(zeKernelCreateTests,
   for (auto mod : module_) {
     function =
         lzt::create_function(mod, ZE_KERNEL_FLAG_NONE, "module_add_constant");
-    dev_compute_properties.version =
-        ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
+    dev_compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeDeviceGetComputeProperties(device_, &dev_compute_properties));
     group_size_x = group_size_y = group_size_z = 0;
@@ -710,7 +710,8 @@ TEST_F(
     zeKernelCreateTests,
     GivenValidFunctionWhenGettingPropertiesThenReturnSuccessfulAndPropertiesAreValid) {
   ze_device_compute_properties_t dev_compute_properties;
-  dev_compute_properties.version = ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
+
+  dev_compute_properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetComputeProperties(device_, &dev_compute_properties));
 
@@ -816,7 +817,8 @@ protected:
 
 void zeKernelLaunchTests::test_kernel_execution() {
   ze_device_compute_properties_t dev_compute_properties;
-  dev_compute_properties.version = ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
+
+  dev_compute_properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetComputeProperties(device_, &dev_compute_properties));
 

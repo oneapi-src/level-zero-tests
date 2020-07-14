@@ -90,7 +90,7 @@ TEST_F(
       }
       EXPECT_LT(get_prop_length(properties.name), ZET_STRING_PROPERTY_SIZE);
       EXPECT_GT(get_prop_length(properties.name), 0);
-      EXPECT_LT(get_prop_length(properties.version), ZET_STRING_PROPERTY_SIZE);
+      EXPECT_LT(get_prop_length(properties.stype), ZET_STRING_PROPERTY_SIZE);
     }
   }
 }
@@ -113,9 +113,9 @@ TEST_F(
       EXPECT_TRUE(0 ==
                   std::strcmp(reinterpret_cast<char *>(propertiesInitial.name),
                               reinterpret_cast<char *>(propertiesLater.name)));
-      EXPECT_TRUE(
-          0 == std::strcmp(reinterpret_cast<char *>(propertiesInitial.version),
-                           reinterpret_cast<char *>(propertiesLater.version)));
+      EXPECT_TRUE(0 ==
+                  std::strcmp(reinterpret_cast<char *>(propertiesInitial.stype),
+                              reinterpret_cast<char *>(propertiesLater.stype)));
       EXPECT_EQ(propertiesInitial.canControl, propertiesLater.canControl);
     }
   }

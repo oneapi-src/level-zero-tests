@@ -81,21 +81,21 @@ protected:
       instance.function = nullptr;
       instance.init_val = 0;
       instance.kernel_add_val = 0;
-      dev_compute_properties.version =
-          ZE_DEVICE_COMPUTE_PROPERTIES_VERSION_CURRENT;
+      dev_compute_properties.stype =
+          ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeDeviceGetComputeProperties(device, &dev_compute_properties));
       instance.group_size_x = std::min(
           static_cast<uint32_t>(128), dev_compute_properties.maxTotalGroupSize);
       instance.group_count_x = 1;
-      instance.dev_mem_properties.version =
-          ZE_DEVICE_MEMORY_PROPERTIES_VERSION_CURRENT;
+      instance.dev_mem_properties.stype =
+          ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
       uint32_t num_mem_properties = 1;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeDeviceGetMemoryProperties(device, &num_mem_properties,
                                             &instance.dev_mem_properties));
-      instance.dev_mem_access_properties.version =
-          ZE_DEVICE_MEMORY_ACCESS_PROPERTIES_VERSION_CURRENT;
+      instance.dev_mem_access_properties.stype =
+          ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES;
 
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeDeviceGetMemoryAccessProperties(
@@ -111,7 +111,9 @@ protected:
                                      int arg2) {
 
     ze_kernel_desc_t function_description = {};
-    function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
+    function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
+
+    function_description.pNext = nullptr;
     function_description.flags = ZE_KERNEL_FLAG_NONE;
     function_description.pKernelName = name.c_str();
     ze_kernel_handle_t function = nullptr;

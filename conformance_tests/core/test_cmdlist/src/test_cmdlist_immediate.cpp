@@ -153,7 +153,8 @@ TEST_P(
 
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_properties_t properties;
-  properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
+
+  properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
 
   auto command_queue_group_properties =
@@ -328,8 +329,10 @@ TEST_P(zeImmediateCommandListExecutionTests,
 }
 static ze_image_handle_t create_test_image(int height, int width) {
   ze_image_desc_t image_description = {};
+  image_description.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
-  image_description.version = ZE_IMAGE_DESC_VERSION_CURRENT;
+
+  image_description.pNext = nullptr;
   image_description.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;
   image_description.type = ZE_IMAGE_TYPE_2D;
   image_description.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;

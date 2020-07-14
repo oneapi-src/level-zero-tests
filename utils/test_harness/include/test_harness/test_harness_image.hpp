@@ -82,7 +82,7 @@ const std::vector<ze_image_format_swizzle_t> image_format_swizzles_all = {
     ZE_IMAGE_FORMAT_SWIZZLE_0, ZE_IMAGE_FORMAT_SWIZZLE_1,
     ZE_IMAGE_FORMAT_SWIZZLE_X};
 
-void print_image_format_descriptor(const ze_image_format_desc_t descriptor);
+void print_image_format_descriptor(const ze_image_format_t descriptor);
 void print_image_descriptor(const ze_image_desc_t descriptor);
 void generate_ze_image_creation_flags_list(
     std::vector<ze_image_flag_t> &image_creation_flags_list);
@@ -119,7 +119,7 @@ public:
 void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp);
 // The following uses arbitrary color order as defined in image_format:
 void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
-                              const ze_image_format_desc_t &image_format);
+                              const ze_image_format_t &image_format);
 
 // Returns number of errors found, assumes default color order:
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
@@ -129,11 +129,11 @@ int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
 // Returns number of errors found, color order for both images are
 // define in the image_format parameters:
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
-                         const ze_image_format_desc_t &image1_format,
+                         const ze_image_format_t &image1_format,
                          const lzt::ImagePNG32Bit &imagepng2,
-                         const ze_image_format_desc_t &image2_format,
-                         int origin1X, int origin1Y, int width1, int height1,
-                         int origin2X, int origin2Y, int width2, int height2);
+                         const ze_image_format_t &image2_format, int origin1X,
+                         int origin1Y, int width1, int height1, int origin2X,
+                         int origin2Y, int width2, int height2);
 
 // The following function, compares all of the pixels in image
 // against the pixels that are expected in the foreground and background of the

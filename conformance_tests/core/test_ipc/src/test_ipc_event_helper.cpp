@@ -21,16 +21,18 @@ namespace lzt = level_zero_tests;
 namespace bipc = boost::interprocess;
 
 static const ze_event_desc_t defaultEventDesc = {
-    ZE_EVENT_DESC_VERSION_CURRENT, 5, ZE_EVENT_SCOPE_FLAG_NONE,
-    ZE_EVENT_SCOPE_FLAG_HOST, // ensure memory coherency across device and Host
-                              // after event signalled
+    .stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
+    .index = 5,
+    .signal = ZE_EVENT_SCOPE_FLAG_NONE,
+    .wait = ZE_EVENT_SCOPE_FLAG_HOST, // ensure memory coherency across device
+                                      // and Host after event signalled
 };
 
 ze_event_pool_desc_t defaultEventPoolDesc = {
-    ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-    (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
-                           ZE_EVENT_POOL_FLAG_IPC),
-    10};
+    .stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
+    .flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                    ZE_EVENT_POOL_FLAG_IPC),
+    .count = 10};
 
 static void child_host_reads(ze_event_pool_handle_t hEventPool) {
   ze_event_handle_t hEvent;

@@ -22,12 +22,16 @@ protected:
   EventProfilingTests() {
 
     const int ep_size = 10;
-    ze_event_pool_desc_t ep_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                    ZE_EVENT_POOL_FLAG_TIMESTAMP, ep_size};
+    ze_event_pool_desc_t ep_desc = {};
+    ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    ep_desc.flags = ZE_EVENT_POOL_FLAG_TIMESTAMP;
+    ep_desc.count = ep_size;
     ep = lzt::create_event_pool(ep_desc);
-    ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0,
-                                  ZE_EVENT_SCOPE_FLAG_NONE,
-                                  ZE_EVENT_SCOPE_FLAG_NONE};
+    ze_event_desc_t event_desc = {};
+    event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    event_desc.index = 0;
+    event_desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;
+    event_desc.wait = ZE_EVENT_SCOPE_FLAG_NONE;
     event = lzt::create_event(ep, event_desc);
     EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
 
@@ -96,12 +100,15 @@ TEST_F(EventProfilingTests,
   const uint8_t value1 = 0x55;
   const uint8_t value2 = 0x22;
 
-  ze_event_pool_desc_t ep_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                  ZE_EVENT_POOL_FLAG_DEFAULT, 10};
+  ze_event_pool_desc_t ep_desc = {};
+  ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  ep_desc.flags = ZE_EVENT_POOL_FLAG_DEFAULT;
+  ep_desc.count = 10;
   auto ep_no_timestamps = lzt::create_event_pool(ep_desc);
-  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 1,
-                                ZE_EVENT_SCOPE_FLAG_HOST,
-                                ZE_EVENT_SCOPE_FLAG_HOST};
+  ze_event_desc_t event_desc = {};
+  event_desc.index = 1;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   auto regular_event = lzt::create_event(ep_no_timestamps, event_desc);
 
   lzt::append_memory_set(cmdlist, buffer, &value1, mem_size, regular_event);
@@ -142,8 +149,10 @@ TEST_P(EventProfilingCacheCoherencyTests,
   const uint32_t size = 10000;
   const uint8_t value = 0x55;
 
-  ze_event_pool_desc_t ep_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                  GetParam(), 10};
+  ze_event_pool_desc_t ep_desc = {};
+  ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  ep_desc.flags = GetParam();
+  ep_desc.count = 10;
   auto ep = lzt::create_event_pool(ep_desc);
 
   auto cmdlist = lzt::create_command_list();
@@ -157,9 +166,11 @@ TEST_P(EventProfilingCacheCoherencyTests,
   memset(buffer3, 0, size);
   memset(buffer5, 0, size);
 
-  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 1,
-                                ZE_EVENT_SCOPE_FLAG_HOST,
-                                ZE_EVENT_SCOPE_FLAG_HOST};
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 1;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   auto event1 = lzt::create_event(ep, event_desc);
   event_desc.index = 2;
   auto event2 = lzt::create_event(ep, event_desc);

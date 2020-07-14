@@ -64,7 +64,9 @@ ZeApp::ZeApp(std::string module_path) {
 void ZeApp::moduleCreate(ze_device_handle_t device,
                          ze_module_handle_t *module) {
   ze_module_desc_t module_description = {};
-  module_description.version = ZE_MODULE_DESC_VERSION_CURRENT;
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+
+  module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
   module_description.inputSize = binary_file.size();
   module_description.pInputModule = binary_file.data();
@@ -89,7 +91,9 @@ void ZeApp::memoryAlloc(size_t size, void **ptr) {
 void ZeApp::memoryAlloc(ze_driver_handle_t driver, ze_device_handle_t device,
                         size_t size, void **ptr) {
   ze_device_mem_alloc_desc_t device_desc = {};
-  device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   SUCCESS_OR_TERMINATE(
@@ -104,7 +108,9 @@ void ZeApp::memoryAllocHost(size_t size, void **ptr) {
 void ZeApp::memoryAllocHost(ze_driver_handle_t driver, size_t size,
                             void **ptr) {
   ze_host_mem_alloc_desc_t host_desc = {};
-  host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+
+  host_desc.pNext = nullptr;
   host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
   SUCCESS_OR_TERMINATE(zeDriverAllocHostMem(driver, &host_desc, size, 1, ptr));
 }
@@ -128,7 +134,9 @@ void ZeApp::functionCreate(ze_module_handle_t module,
                            ze_kernel_handle_t *function,
                            const char *pFunctionName) {
   ze_kernel_desc_t function_description = {};
-  function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
+  function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
+
+  function_description.pNext = nullptr;
   function_description.flags = ZE_KERNEL_FLAG_NONE;
   function_description.pKernelName = pFunctionName;
 
@@ -154,20 +162,21 @@ void ZeApp::imageCreate(ze_device_handle_t device,
 void ZeApp::imageCreate(ze_device_handle_t device, ze_image_handle_t *image,
                         uint32_t width, uint32_t height, uint32_t depth) {
 
-  ze_image_format_desc_t formatDesc = {
+  ze_image_format_t formatDesc = {
       ZE_IMAGE_FORMAT_LAYOUT_32, ZE_IMAGE_FORMAT_TYPE_FLOAT,
       ZE_IMAGE_FORMAT_SWIZZLE_R, ZE_IMAGE_FORMAT_SWIZZLE_0,
       ZE_IMAGE_FORMAT_SWIZZLE_0, ZE_IMAGE_FORMAT_SWIZZLE_1};
 
-  ze_image_desc_t imageDesc = {ZE_IMAGE_DESC_VERSION_CURRENT,
-                               ZE_IMAGE_FLAG_PROGRAM_READ,
-                               ZE_IMAGE_TYPE_2D,
-                               formatDesc,
-                               width,
-                               height,
-                               depth,
-                               0,
-                               0};
+  ze_image_desc_t imageDesc = {};
+  imageDesc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+  imageDesc.flags = ZE_IMAGE_FLAG_PROGRAM_READ;
+  imageDesc.type = ZE_IMAGE_TYPE_2D;
+  imageDesc.format = formatDesc;
+  imageDesc.width = width;
+  imageDesc.height = height;
+  imageDesc.depth = depth;
+  imageDesc.arraylevels = 0;
+  imageDesc.miplevels = 0;
 
   imageCreate(device, &imageDesc, image);
 }
@@ -190,7 +199,8 @@ void ZeApp::commandListCreate(ze_command_list_handle_t *phCommandList) {
 void ZeApp::commandListCreate(ze_device_handle_t device,
                               ze_command_list_handle_t *phCommandList) {
   ze_command_list_desc_t command_list_description{};
-  command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
+  command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+  command_list_description.pNext = nullptr;
 
   SUCCESS_OR_TERMINATE(
       zeCommandListCreate(device, &command_list_description, phCommandList));
@@ -291,7 +301,8 @@ void ZeApp::commandQueueCreate(ze_device_handle_t device,
                                const uint32_t command_queue_id,
                                ze_command_queue_handle_t *command_queue) {
   ze_command_queue_desc_t command_queue_description{};
-  command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
+  command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  command_queue_description.pNext = nullptr;
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
@@ -313,8 +324,9 @@ ze_event_pool_handle_t ZeApp::create_event_pool(uint32_t count,
                                                 ze_event_pool_flag_t flags) {
   ze_event_pool_handle_t event_pool;
   ze_event_pool_desc_t descriptor = {};
+  descriptor.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
 
-  descriptor.version = ZE_EVENT_POOL_DESC_VERSION_CURRENT;
+  descriptor.pNext = nullptr;
   descriptor.flags = flags;
   descriptor.count = count;
 
@@ -337,8 +349,10 @@ void ZeApp::destroy_event_pool(ze_event_pool_handle_t event_pool) {
 void ZeApp::create_event(ze_event_pool_handle_t event_pool,
                          ze_event_handle_t &event, uint32_t index) {
   ze_event_desc_t desc = {};
+  desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
   memset(&desc, 0, sizeof(desc));
-  desc.version = ZE_EVENT_DESC_VERSION_CURRENT;
+
+  desc.pNext = nullptr;
   desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;
   desc.wait = ZE_EVENT_SCOPE_FLAG_NONE;
   event = nullptr;

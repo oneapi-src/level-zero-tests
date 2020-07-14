@@ -250,14 +250,6 @@ std::string to_string(const ze_bool_t ze_bool) {
   }
 }
 
-std::string to_string(const ze_command_queue_desc_version_t version) {
-  if (version == ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT) {
-    return "ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT";
-  } else {
-    return "NON-CURRENT ZE_COMMAND_QUEUE_DESC_VERSION";
-  }
-}
-
 std::string to_string(const ze_command_queue_flag_t flags) {
   if (flags == 0) {
     return "Default";
@@ -294,14 +286,6 @@ std::string to_string(const ze_command_queue_priority_t priority) {
   } else {
     return "Unknown ze_command_queue_priority_t value: " +
            std::to_string(static_cast<int>(priority));
-  }
-}
-
-std::string to_string(const ze_image_desc_version_t version) {
-  if (version == ZE_IMAGE_DESC_VERSION_CURRENT) {
-    return "ZE_IMAGE_DESC_VERSION_CURRENT";
-  } else {
-    return "NON-CURRENT ZE_IMAGE_DESC_VERSION";
   }
 }
 
@@ -627,7 +611,9 @@ std::string to_string(const ze_native_kernel_uuid_t uuid) {
 
 void print_driver_version(ze_driver_handle_t driver) {
   ze_driver_properties_t properties;
-  properties.version = ZE_DRIVER_PROPERTIES_VERSION_CURRENT;
+
+  properties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
+  properties.pNext = nullptr;
   ze_result_t result = zeDriverGetProperties(driver, &properties);
   if (result) {
     std::runtime_error("zeDriverGetProperties failed: " + to_string(result));
@@ -640,7 +626,8 @@ void print_driver_overview(const ze_driver_handle_t driver) {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   ze_device_properties_t device_properties;
-  device_properties.version = ZE_DEVICE_PROPERTIES_VERSION_CURRENT;
+  device_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+  device_properties.pNext = nullptr;
   auto devices = get_devices(driver);
   int device_index = 0;
   LOG_INFO << "Device Count: " << devices.size();

@@ -65,23 +65,23 @@ TEST_P(
   ze_driver_handle_t driver = lzt::get_default_driver();
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_handle_t device_test = device;
-  memory_properties.version = ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT;
+
+  memory_properties.pNext = nullptr;
+  memory_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   lzt::get_mem_alloc_properties(driver, memory_, &memory_properties,
                                 &device_test);
-  EXPECT_EQ(ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT,
-            memory_properties.version);
   EXPECT_EQ(ZE_MEMORY_TYPE_DEVICE, memory_properties.type);
   EXPECT_EQ(device, device_test);
 
   if (size_ > 0) {
     uint8_t *char_mem = static_cast<uint8_t *>(memory_);
-    memory_properties.version = ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT;
+
+    memory_properties.pNext = nullptr;
+    memory_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
     device_test = device;
     lzt::get_mem_alloc_properties(driver,
                                   static_cast<void *>(char_mem + size_ - 1),
                                   &memory_properties, &device_test);
-    EXPECT_EQ(ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT,
-              memory_properties.version);
     EXPECT_EQ(ZE_MEMORY_TYPE_DEVICE, memory_properties.type);
     EXPECT_EQ(device, device_test);
   }
@@ -92,7 +92,9 @@ TEST_P(
 
   ze_driver_handle_t driver = lzt::get_default_driver();
   ze_memory_allocation_properties_t memory_properties;
-  memory_properties.version = ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT;
+
+  memory_properties.pNext = nullptr;
+  memory_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   lzt::get_mem_alloc_properties(driver, memory_, &memory_properties);
 }
 
@@ -170,11 +172,15 @@ TEST_P(
 
   void *memory = nullptr;
   ze_device_mem_alloc_desc_t device_desc = {};
-  device_desc.version = ZE_DEVICE_MEM_ALLOC_DESC_VERSION_CURRENT;
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+
+  device_desc.pNext = nullptr;
   device_desc.ordinal = 1;
   device_desc.flags = dev_flags;
   ze_host_mem_alloc_desc_t host_desc = {};
-  host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+
+  host_desc.pNext = nullptr;
   host_desc.flags = host_flags;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDriverAllocSharedMem(lzt::get_default_driver(), &device_desc,
@@ -210,6 +216,7 @@ TEST_P(zeSharedMemGetPropertiesTests,
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_handle_t device_test = device;
   ze_memory_allocation_properties_t mem_properties;
+  mem_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   void *memory = lzt::allocate_shared_memory(
       size, alignment, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
       ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
@@ -316,7 +323,9 @@ TEST_P(
 
   void *memory = nullptr;
   ze_host_mem_alloc_desc_t host_desc = {};
-  host_desc.version = ZE_HOST_MEM_ALLOC_DESC_VERSION_CURRENT;
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+
+  host_desc.pNext = nullptr;
   host_desc.flags = flags;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDriverAllocHostMem(lzt::get_default_driver(), &host_desc, size,
@@ -350,10 +359,11 @@ TEST_P(
   void *memory = lzt::allocate_host_memory(size, alignment);
   ze_memory_allocation_properties_t mem_properties;
   ze_driver_handle_t driver = lzt::get_default_driver();
-  mem_properties.version = ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT;
+
+  mem_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
+  mem_properties.pNext = nullptr;
   lzt::get_mem_alloc_properties(driver, memory, &mem_properties, nullptr);
-  EXPECT_EQ(ZE_MEMORY_ALLOCATION_PROPERTIES_VERSION_CURRENT,
-            mem_properties.version);
+  EXPECT_EQ(mem_properties.version);
   EXPECT_EQ(ZE_MEMORY_TYPE_HOST, mem_properties.type);
 
   lzt::free_memory(memory);

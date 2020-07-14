@@ -49,15 +49,16 @@ void ZeImageCopy::test_initialize(void) {
                 ZE_IMAGE_FORMAT_SWIZZLE_B,
                 ZE_IMAGE_FORMAT_SWIZZLE_A};
 
-  imageDesc = {ZE_IMAGE_DESC_VERSION_CURRENT,
-               Imageflags,
-               Imagetype,
-               formatDesc,
-               width,
-               height,
-               depth,
-               0,
-               0};
+  imageDesc = {};
+  imageDesc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+  imageDesc.flags = Imageflags;
+  imageDesc.type = Imagetype;
+  imageDesc.format = formatDesc;
+  imageDesc.width = width;
+  imageDesc.height = height;
+  imageDesc.depth = depth;
+  imageDesc.arraylevels = 0;
+  imageDesc.miplevels = 0;
 
   srcBuffer = new uint8_t[buffer_size];
   dstBuffer = new uint8_t[buffer_size];

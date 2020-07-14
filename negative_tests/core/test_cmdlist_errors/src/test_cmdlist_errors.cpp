@@ -21,8 +21,10 @@ TEST(
     CommandListCreateNegativeTests,
     GivenInvalidDeviceHandleWhileCreatingCommandListThenInvalidNullHandleIsReturned) {
   ze_command_list_desc_t descriptor = {};
-  descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   descriptor.flags = 0;
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+
+  descriptor.pNext = nullptr;
   ze_command_list_handle_t cmdlist = nullptr;
   EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
             uint64_t(zeCommandListCreate(nullptr, &descriptor, &cmdlist)));
@@ -40,8 +42,10 @@ TEST(
     GivenInvalidOutPointerToTheCommandListWhileCreatingCommandListThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_command_list_desc_t descriptor = {};
-  descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   descriptor.flags = 0;
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+
+  descriptor.pNext = nullptr;
   EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
             uint64_t(zeCommandListCreate(device, &descriptor, nullptr)));
 }
@@ -49,8 +53,9 @@ TEST(
     CommandListCreateImmediateNegativeTests,
     GivenInvalidDeviceHandleWhileCreatingCommandListImmediateThenInvalidNullHandleIsReturned) {
   ze_command_queue_desc_t descriptor = {};
-  descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = 0;
+
+  descriptor.pNext = nullptr;
   descriptor.ordinal = 0;
   descriptor.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
   descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
@@ -73,8 +78,10 @@ TEST(
     GivenInvalidOutPointerToTheCommandListWhileCreatingCommandListImmediateThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_command_queue_desc_t descriptor = {};
-  descriptor.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   descriptor.flags = 0;
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+
+  descriptor.pNext = nullptr;
   descriptor.ordinal = 0;
   descriptor.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
   descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;

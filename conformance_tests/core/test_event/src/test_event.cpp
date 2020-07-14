@@ -364,12 +364,19 @@ TEST_F(zeEventSignalingTests,
 
 static void
 multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
-  ze_event_pool_desc_t ep_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                  ZE_EVENT_POOL_FLAG_HOST_VISIBLE, 10};
+  ze_event_pool_desc_t ep_desc = {};
+  ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  ep_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+  ep_desc.count = 10;
   auto ep = lzt::create_event_pool(ep_desc, devices);
   ze_event_scope_flag_t flag = (ze_event_scope_flag_t)(
       ZE_EVENT_SCOPE_FLAG_DEVICE | ZE_EVENT_SCOPE_FLAG_SUBDEVICE);
-  ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0, flag, flag};
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = flag;
+  event_desc.wait = flag;
+
   auto event = lzt::create_event(ep, event_desc);
 
   // dev0 signals

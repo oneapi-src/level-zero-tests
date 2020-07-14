@@ -91,21 +91,6 @@ TEST(XeResultToString, InvalidValue) {
   EXPECT_THROW(level_zero_tests::to_string(r), std::runtime_error);
 }
 
-TEST(XeCommandQueueDescVersionToString, ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT) {
-  const ze_command_queue_desc_version_t d =
-      ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
-  EXPECT_EQ("ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT",
-            level_zero_tests::to_string(d));
-}
-
-TEST(XeCommandQueueDescVersionToString, NonCurrentDescVersion) {
-  const ze_command_queue_desc_version_t d =
-      static_cast<ze_command_queue_desc_version_t>(
-          static_cast<uint32_t>(ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT + 1));
-  EXPECT_EQ("NON-CURRENT ZE_COMMAND_QUEUE_DESC_VERSION",
-            level_zero_tests::to_string(d));
-}
-
 TEST(XeCommandQueueDescFlagsToString, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY) {
   const ze_command_queue_flag_t d = ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY;
   EXPECT_EQ("ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY",
@@ -147,18 +132,6 @@ TEST(XeCommandQueueDescPriorityToString, InvalidValue) {
           ZE_COMMAND_QUEUE_PRIORITY_LOW + ZE_COMMAND_QUEUE_PRIORITY_HIGH));
   EXPECT_EQ("Unknown ze_command_queue_priority_t value: " +
                 std::to_string(static_cast<int>(d)),
-            level_zero_tests::to_string(d));
-}
-
-TEST(XeImageDescVersionToString, ZE_IMAGE_DESC_VERSION_CURRENT) {
-  const ze_image_desc_version_t v = ZE_IMAGE_DESC_VERSION_CURRENT;
-  EXPECT_EQ("ZE_IMAGE_DESC_VERSION_CURRENT", level_zero_tests::to_string(v));
-}
-
-TEST(XeImageDescVersionToString, NonCurrentDescVersion) {
-  const ze_image_desc_version_t d = static_cast<ze_image_desc_version_t>(
-      static_cast<uint32_t>(ZE_IMAGE_DESC_VERSION_CURRENT + 1));
-  EXPECT_EQ("NON-CURRENT ZE_IMAGE_DESC_VERSION",
             level_zero_tests::to_string(d));
 }
 

@@ -26,7 +26,9 @@ TEST_P(
     zeCommandListCreateTests,
     GivenValidDeviceAndCommandListDescriptorWhenCreatingCommandListThenNotNullCommandListIsReturned) {
   ze_command_list_desc_t descriptor = {};
-  descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+
+  descriptor.pNext = nullptr;
   descriptor.flags = GetParam();
 
   ze_command_list_handle_t command_list = nullptr;
@@ -51,7 +53,9 @@ TEST_F(
     zeCommandListDestroyTests,
     GivenValidDeviceAndCommandListDescriptorWhenDestroyingCommandListThenSuccessIsReturned) {
   ze_command_list_desc_t descriptor = {};
-  descriptor.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+
+  descriptor.pNext = nullptr;
 
   ze_command_list_handle_t command_list = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -71,12 +75,11 @@ class zeCommandListCreateImmediateTests
 TEST_P(zeCommandListCreateImmediateTests,
        GivenImplicitCommandQueueWhenCreatingCommandListThenSuccessIsReturned) {
 
-  ze_command_queue_desc_t descriptor = {
-      ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT, // version
-      std::get<0>(GetParam()),               // flags
-      std::get<1>(GetParam()),               // mode
-      std::get<2>(GetParam())                // priority
-  };
+  ze_command_queue_desc_t descriptor = {};
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  descriptor.flags = std::get<0>(GetParam());
+  descriptor.mode = std::get<1>(GetParam());
+  descriptor.priority = std::get<2>(GetParam());
 
   ze_command_list_handle_t command_list = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListCreateImmediate(
@@ -167,11 +170,15 @@ protected:
                                 nullptr);
 
     ze_event_handle_t event = nullptr;
-    ze_event_pool_desc_t event_pool_desc = {ZE_EVENT_POOL_DESC_VERSION_CURRENT,
-                                            ZE_EVENT_POOL_FLAG_HOST_VISIBLE, 1};
-    ze_event_desc_t event_desc = {ZE_EVENT_DESC_VERSION_CURRENT, 0,
-                                  ZE_EVENT_SCOPE_FLAG_HOST,
-                                  ZE_EVENT_SCOPE_FLAG_HOST};
+    ze_event_pool_desc_t event_pool_desc = {};
+    event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+    event_pool_desc.count = 1;
+    ze_event_desc_t event_desc = {};
+    event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    event_desc.index = 0;
+    event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
     lzt::zeEventPool ep;
     ep.InitEventPool(event_pool_desc);
     ep.create_event(event, event_desc);
