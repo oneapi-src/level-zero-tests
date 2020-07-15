@@ -34,6 +34,18 @@ create_command_queue(ze_device_handle_t device, ze_command_queue_flag_t flags,
                      ze_command_queue_mode_t mode,
                      ze_command_queue_priority_t priority, uint32_t ordinal) {
 
+  return create_command_queue(lzt::get_default_context(), device,
+                              static_cast<ze_command_queue_flag_t>(0),
+                              ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                              ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+}
+
+ze_command_queue_handle_t
+create_command_queue(ze_context_handle_t context, ze_device_handle_t device,
+                     ze_command_queue_flag_t flags,
+                     ze_command_queue_mode_t mode,
+                     ze_command_queue_priority_t priority, uint32_t ordinal) {
+
   ze_command_queue_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
 
@@ -47,7 +59,7 @@ create_command_queue(ze_device_handle_t device, ze_command_queue_flag_t flags,
   descriptor.ordinal = ordinal;
   ze_command_queue_handle_t command_queue = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueCreate(device, &descriptor, &command_queue));
+            zeCommandQueueCreate(context, device, &descriptor, &command_queue));
   EXPECT_NE(nullptr, command_queue);
 
   return command_queue;

@@ -17,6 +17,7 @@
 
 namespace level_zero_tests {
 
+ze_context_handle_t get_default_context();
 ze_device_handle_t get_default_device(ze_driver_handle_t driver);
 ze_driver_handle_t get_default_driver();
 std::vector<ze_device_handle_t> get_devices(ze_driver_handle_t driver);

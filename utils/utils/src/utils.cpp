@@ -15,6 +15,26 @@
 
 namespace level_zero_tests {
 
+ze_context_handle_t get_default_context() {
+  ze_result_t result = ZE_RESULT_SUCCESS;
+
+  static ze_context_handle_t context = nullptr;
+
+  if (context) {
+    return context;
+  }
+
+  ze_context_desc_t context_desc = {};
+  context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+  result = zeContextCreate(get_default_driver(), context_desc, &context);
+
+  if (ZE_RESULT_SUCCESS != result) {
+    throw std::runtime_error("zeContextCreate failed: " + to_string(result));
+  }
+
+  return context;
+}
+
 ze_driver_handle_t get_default_driver() {
   ze_result_t result = ZE_RESULT_SUCCESS;
 

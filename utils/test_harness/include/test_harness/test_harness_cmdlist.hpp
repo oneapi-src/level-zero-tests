@@ -28,6 +28,9 @@ protected:
   zeCommandList cl;
 };
 
+ze_command_list_handle_t create_command_list(ze_context_handle_t context,
+                                             ze_device_handle_t device,
+                                             ze_command_list_flag_t flags);
 ze_command_list_handle_t create_command_list(ze_device_handle_t device,
                                              ze_command_list_flag_t flags);
 ze_command_list_handle_t create_command_list(ze_device_handle_t device);
