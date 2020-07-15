@@ -19,9 +19,9 @@ namespace level_zero_tests {
 void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output) {
 
   auto command_list = lzt::create_command_list();
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyFromMemory(
-                command_list, output, input.raw_data(), nullptr, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyFromMemory(
+                                   command_list, output, input.raw_data(),
+                                   nullptr, nullptr, 0, nullptr));
   lzt::append_barrier(command_list, nullptr, 0, nullptr);
   lzt::close_command_list(command_list);
   auto command_queue = lzt::create_command_queue();
@@ -34,9 +34,9 @@ void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output) {
 void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output) {
 
   auto command_list = lzt::create_command_list();
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyToMemory(
-                command_list, output.raw_data(), input, nullptr, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyToMemory(
+                                   command_list, output.raw_data(), input,
+                                   nullptr, nullptr, 0, nullptr));
   lzt::append_barrier(command_list, nullptr, 0, nullptr);
   lzt::close_command_list(command_list);
   auto command_queue = lzt::create_command_queue();
@@ -46,18 +46,26 @@ void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output) {
   lzt::destroy_command_list(command_list);
 }
 
-ze_image_handle_t create_ze_image(ze_device_handle_t dev,
+ze_image_handle_t create_ze_image(ze_context_handle_t context,
+                                  ze_device_handle_t dev,
                                   ze_image_desc_t image_descriptor) {
   ze_image_handle_t image;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(dev, &image_descriptor, &image));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeImageCreate(context, dev, &image_descriptor, &image));
   EXPECT_NE(nullptr, image);
   return image;
+}
+
+ze_image_handle_t create_ze_image(ze_device_handle_t dev,
+                                  ze_image_desc_t image_descriptor) {
+  return create_ze_image(lzt::get_default_context(), dev, image_descriptor);
 }
 
 ze_image_handle_t create_ze_image(ze_image_desc_t image_descriptor) {
   ze_image_handle_t image;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::zeDevice::get_instance()->get_device(),
+            zeImageCreate(lzt::get_default_context(),
+                          lzt::zeDevice::get_instance()->get_device(),
                           &image_descriptor, &image));
   EXPECT_NE(nullptr, image);
   return image;
@@ -81,7 +89,8 @@ void destroy_ze_image(ze_image_handle_t image) {
 
 const ze_image_desc_t zeImageCreateCommon::dflt_ze_image_desc = {
     ZE_STRUCTURE_TYPE_IMAGE_DESC,
-    ZE_IMAGE_FLAG_PROGRAM_READ,
+    nullptr,
+    ZE_IMAGE_FLAG_KERNEL_WRITE,
     ZE_IMAGE_TYPE_2D,
     {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_TYPE_UNORM,
      ZE_IMAGE_FORMAT_SWIZZLE_R, ZE_IMAGE_FORMAT_SWIZZLE_G,
@@ -130,14 +139,6 @@ get_ze_image_properties(ze_image_desc_t image_descriptor) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeImageGetProperties(lzt::zeDevice::get_instance()->get_device(),
                                  &image_descriptor, &image_properties));
-
-  auto samplerFilterFlagsValid = (image_properties.samplerFilterFlags ==
-                                  ZE_IMAGE_SAMPLER_FILTER_FLAGS_NONE) ||
-                                 (image_properties.samplerFilterFlags ==
-                                  ZE_IMAGE_SAMPLER_FILTER_FLAGS_POINT) ||
-                                 (image_properties.samplerFilterFlags ==
-                                  ZE_IMAGE_SAMPLER_FILTER_FLAGS_LINEAR);
-  EXPECT_TRUE(samplerFilterFlagsValid);
 
   return image_properties;
 }

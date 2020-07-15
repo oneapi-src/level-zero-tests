@@ -87,6 +87,9 @@ void print_image_descriptor(const ze_image_desc_t descriptor);
 void generate_ze_image_creation_flags_list(
     std::vector<ze_image_flag_t> &image_creation_flags_list);
 
+ze_image_handle_t create_ze_image(ze_context_handle_t context,
+                                  ze_device_handle_t dev,
+                                  ze_image_desc_t image_descriptor);
 ze_image_handle_t create_ze_image(ze_device_handle_t dev,
                                   ze_image_desc_t image_descriptor);
 ze_image_handle_t create_ze_image(ze_image_desc_t image_descriptor);
