@@ -46,14 +46,6 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost 1.65 REQUIRED COMPONENTS log program_options timer chrono system)
 
-option(REQUIRE_LEVELZERO_OPENCL_INTEROP
-  "Enables OpenCL interop testing with oneAPI Level Zero (requires OpenCL)"
-  NO
-)
-if(REQUIRE_LEVELZERO_OPENCL_INTEROP)
-    list(APPEND LevelZero_COMPONENTS "OpenCL")
-endif()
-
 find_package(LevelZero REQUIRED COMPONENTS ${LevelZero_COMPONENTS})
 
 option(REQUIRE_OPENCL_BENCHMARKS
@@ -214,7 +206,6 @@ set(MANIFEST_BUILD_PATH "${PROJECT_BINARY_DIR}/manifest.txt")
 install(FILES "${MANIFEST_BUILD_PATH}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 
 function(add_lzt_test)
-    set(options REQUIRES_OPENCL_INTEROP)
     set(oneValueArgs NAME GROUP)
     set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS MEDIA)
     cmake_parse_arguments(ADD_LZT_TEST
@@ -230,14 +221,6 @@ function(add_lzt_test)
         return()
     else()
         message(STATUS "Adding ${ADD_LZT_TEST_NAME}")
-    endif()
-
-    if(
-      ADD_LZT_TEST_REQUIRES_OPENCL_INTEROP AND
-      NOT LevelZero_OpenCL_INTEROP
-    )
-        message(STATUS "Disabling build of ${ADD_LZT_TEST_NAME} since oneAPI Level Zero OpenCL interop is not available")
-        return()
     endif()
 
     add_lzt_test_executable(

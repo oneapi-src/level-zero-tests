@@ -14,12 +14,6 @@ prefix with the `L0_ROOT` cmake flag during configuration.
 This `L0_ROOT` must point to the top-level install directory where level-zero was installed.
 for example: `-DL0_ROOT=/home/username/level-zero/build/output/`.
 
-Some tests depend on level-zero's OpenCL interop functionality in order to work.
-If OpenCL is available on the system (specify a non-standard path with
-`OPENCL_ROOT`), then the interop support will be enabled automatically. To
-require the interop support, set the `REQUIRE_LEVELZERO_OPENCL_INTEROP` cmake
-flag to `YES`.
-
 Some benchmarks written against OpenCL are included to enable easy performance
 comparisons. These benchmarks will be built automatically if OpenCL is available
 on the system. To require that these benchmarks also be built, set the
