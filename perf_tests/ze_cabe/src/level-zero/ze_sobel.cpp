@@ -43,7 +43,7 @@ void ZeSobel::build_program() {
   ZE_CHECK_RESULT(
       zeModuleCreate(device, &module_description, &module, nullptr));
 
-  ze_kernel_desc_t function_description;
+  ze_kernel_desc_t function_description = {};
   function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
   function_description.flags = ZE_KERNEL_FLAG_NONE;
   function_description.pKernelName = "sobel";
@@ -51,7 +51,7 @@ void ZeSobel::build_program() {
 }
 
 void ZeSobel::create_buffers() {
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   ZE_CHECK_RESULT(zeDriverAllocDeviceMem(driver_handle, &device_desc,
@@ -76,7 +76,7 @@ void ZeSobel::create_cmdlist() {
   ZE_CHECK_RESULT(zeKernelSetArgumentValue(function, 2, sizeof(int), &width));
   ZE_CHECK_RESULT(zeKernelSetArgumentValue(function, 3, sizeof(int), &height));
 
-  ze_command_list_desc_t command_list_description;
+  ze_command_list_desc_t command_list_description = {};
   command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   ZE_CHECK_RESULT(
       zeCommandListCreate(device, &command_list_description, &command_list));
@@ -101,7 +101,7 @@ void ZeSobel::create_cmdlist() {
                                     output_buffer, image_buffer_size, nullptr));
   ZE_CHECK_RESULT(zeCommandListClose(command_list));
 
-  ze_command_queue_desc_t command_queue_description;
+  ze_command_queue_desc_t command_queue_description = {};
   command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   command_queue_description.ordinal = 0;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;

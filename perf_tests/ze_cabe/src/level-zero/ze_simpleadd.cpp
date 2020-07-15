@@ -30,7 +30,7 @@ void ZeSimpleAdd::build_program() {
   ZE_CHECK_RESULT(
       zeModuleCreate(device, &module_description, &module, nullptr));
 
-  ze_kernel_desc_t function_description;
+  ze_kernel_desc_t function_description = {};
   function_description.version = ZE_KERNEL_DESC_VERSION_CURRENT;
   function_description.flags = ZE_KERNEL_FLAG_NONE;
   function_description.pKernelName = "NaiveAdd";
@@ -38,7 +38,7 @@ void ZeSimpleAdd::build_program() {
 }
 
 void ZeSimpleAdd::create_buffers() {
-  ze_device_mem_alloc_desc_t device_desc;
+  ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.ordinal = 0;
   device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
   ZE_CHECK_RESULT(zeDriverAllocDeviceMem(driver_handle, &device_desc,
@@ -62,7 +62,7 @@ void ZeSimpleAdd::create_cmdlist() {
   ZE_CHECK_RESULT(zeKernelSetArgumentValue(function, 2, sizeof(output_buffer),
                                            &output_buffer));
 
-  ze_command_list_desc_t command_list_description;
+  ze_command_list_desc_t command_list_description = {};
   command_list_description.version = ZE_COMMAND_LIST_DESC_VERSION_CURRENT;
   ZE_CHECK_RESULT(
       zeCommandListCreate(device, &command_list_description, &command_list));
@@ -84,7 +84,7 @@ void ZeSimpleAdd::create_cmdlist() {
   ZE_CHECK_RESULT(zeCommandListClose(command_list));
 
   const uint32_t command_queue_id = 0;
-  ze_command_queue_desc_t command_queue_description;
+  ze_command_queue_desc_t command_queue_description = {};
   command_queue_description.version = ZE_COMMAND_QUEUE_DESC_VERSION_CURRENT;
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
