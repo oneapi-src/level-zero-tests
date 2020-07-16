@@ -29,42 +29,47 @@ protected:
   void *memory_ = nullptr;
   void *ipc_memory_ = nullptr;
   ze_ipc_mem_handle_t ipc_mem_handle_;
+  ze_context_handle_t context_;
 };
 
 TEST_F(
     zeIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenGettingIpcMemHandleThenSuccessIsReturned) {
   memory_ = lzt::allocate_device_memory(1);
-
-  const ze_driver_handle_t driver = lzt::get_default_driver();
+  context_ = lzt::create_context();
+  
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemIpcHandle(driver, memory_, &ipc_mem_handle_));
-
+            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  lzt::destroy_context(context_);
   lzt::free_memory(memory_);
 }
 
 class zeIpcMemHandleCloseTests : public zeIpcMemHandleTests {
 protected:
   void SetUp() override {
-    lzt::allocate_mem_and_get_ipc_handle(&ipc_mem_handle_, &memory_,
+    context_ = lzt::create_context();
+    lzt::allocate_mem_and_get_ipc_handle(context_, &ipc_mem_handle_, &memory_,
                                          ZE_MEMORY_TYPE_DEVICE);
 
-    ze_ipc_memory_flag_t flags = ZE_IPC_MEMORY_FLAG_NONE;
+    ze_ipc_memory_flag_t flags = ZE_IPC_MEMORY_FLAG_TBD;
     EXPECT_EQ(
         ZE_RESULT_SUCCESS,
-        zeDriverOpenMemIpcHandle(lzt::get_default_driver(),
+        zeMemOpenIpcHandle(context_,
                                  lzt::zeDevice::get_instance()->get_device(),
                                  ipc_mem_handle_, flags, &ipc_memory_));
   }
 
-  void TearDown() { lzt::free_memory(memory_); }
+  void TearDown() { 
+     lzt::free_memory(memory_); 
+	 lzt::destroy_context(context_);
+  }
 };
 
 TEST_F(
     zeIpcMemHandleCloseTests,
     GivenValidPointerToDeviceMemoryAllocationWhenClosingIpcHandleThenSuccessIsReturned) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverCloseMemIpcHandle(lzt::get_default_driver(), ipc_memory_));
+            zeMemCloseIpcHandle(context_, ipc_memory_));
 }
 
 } // namespace

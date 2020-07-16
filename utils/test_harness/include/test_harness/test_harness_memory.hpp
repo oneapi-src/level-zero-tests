@@ -59,9 +59,10 @@ void free_memory(ze_driver_handle_t driver, const void *ptr);
 
 void allocate_mem_and_get_ipc_handle(ze_ipc_mem_handle_t *handle, void **memory,
                                      ze_memory_type_t mem_type);
-void allocate_mem_and_get_ipc_handle(ze_ipc_mem_handle_t *handle, void **memory,
+void allocate_mem_and_get_ipc_handle(ze_context_handle_t context, 
+                                     ze_ipc_mem_handle_t *handle, void **memory,
                                      ze_memory_type_t mem_type, size_t size);
-void get_ipc_handle(ze_ipc_mem_handle_t *handle, void *memory);
+void get_ipc_handle(ze_context_handle_t context, ze_ipc_mem_handle_t *handle, void *memory);
 void write_data_pattern(void *buff, size_t size, int8_t data_pattern);
 void validate_data_pattern(void *buff, size_t size, int8_t data_pattern);
 void get_mem_alloc_properties(
