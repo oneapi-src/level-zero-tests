@@ -23,12 +23,12 @@ using namespace level_zero_tests;
 
 namespace {
 
-class zeCommandListAppendMemoryFillTests : public zeEventPoolCommandListTests {
-};
+class zeCommandListAppendMemoryFillTests {};
 
 TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturned) {
+  lzt::zeCommandList cl;
   const size_t size = 4096;
   void *memory = allocate_device_memory(size);
   const uint8_t pattern = 0x00;
@@ -42,6 +42,8 @@ TEST_F(
 TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
   const size_t size = 4096;
   void *memory = allocate_device_memory(size);
   const uint8_t pattern = 0x00;
@@ -488,12 +490,12 @@ INSTANTIATE_TEST_CASE_P(
                        memory_types                 // Destination Memory Type
                        ));
 
-class zeCommandListAppendMemoryCopyTests : public zeEventPoolCommandListTests {
-};
+class zeCommandListAppendMemoryCopyTests {};
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturned) {
+  lzt::zeCommandList cl;
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
   void *memory = allocate_device_memory(size_in_bytes(host_memory));
@@ -507,6 +509,8 @@ TEST_F(
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
   void *memory = allocate_device_memory(size_in_bytes(host_memory));

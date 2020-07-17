@@ -20,7 +20,7 @@ std::once_flag zeDevice::instance;
 zeDevice *zeDevice::get_instance() {
   std::call_once(instance, []() {
     instance_ = new zeDevice;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(ZE_INIT_FLAG_NONE));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
 
     instance_->driver_ = lzt::get_default_driver();
     instance_->device_ = lzt::get_default_device(instance_->driver_);
@@ -169,11 +169,14 @@ get_command_queue_group_properties(ze_device_handle_t device) {
       device, get_command_queue_group_properties_count(device));
 }
 
-ze_device_cache_properties_t get_cache_properties(ze_device_handle_t device) {
-  ze_device_cache_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES};
+std::vector<ze_device_cache_properties_t> get_cache_properties(ze_device_handle_t device) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCacheProperties(device, &properties));
+  std::vector<ze_device_cache_properties_t> properties;
+  uint32_t count = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCacheProperties(device, &count, nullptr));
+  properties.resize(count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCacheProperties(device, &count, properties.data()));
+
   return properties;
 }
 
@@ -185,12 +188,12 @@ ze_device_image_properties_t get_image_properties(ze_device_handle_t device) {
   return properties;
 }
 
-ze_device_kernel_properties_t get_kernel_properties(ze_device_handle_t device) {
-  ze_device_kernel_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_KERNEL_PROPERTIES};
+ze_device_module_properties_t get_device_module_properties(ze_device_handle_t device) {
+  ze_device_module_properties_t properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES};
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetKernelProperties(device, &properties));
+            zeDeviceGetModuleProperties(device, &properties));
   return properties;
 }
 
@@ -211,26 +214,21 @@ ze_bool_t can_access_peer(ze_device_handle_t dev1, ze_device_handle_t dev2) {
   return can_access;
 }
 
-void set_intermediate_cache_config(ze_kernel_handle_t kernel,
-                                   ze_cache_config_t config) {
+void set_kernel_cache_config(ze_kernel_handle_t kernel,
+                                   ze_cache_config_flags_t config) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetIntermediateCacheConfig(kernel, config));
-}
-
-void set_last_level_cache_config(ze_device_handle_t device,
-                                 ze_cache_config_t config) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceSetLastLevelCacheConfig(device, config));
+            zeKernelSetCacheConfig(kernel, config));
 }
 
 void make_memory_resident(const ze_device_handle_t &device, void *memory,
                           const size_t size) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceMakeMemoryResident(device, memory, size));
+            zeContextMakeMemoryResident(get_default_context(), device, memory, size));
 }
 
 void evict_memory(const ze_device_handle_t &device, void *memory,
                   const size_t size) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceEvictMemory(device, memory, size));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextEvictMemory(get_default_context(), device, memory, size));
 }
 
 }; // namespace level_zero_tests

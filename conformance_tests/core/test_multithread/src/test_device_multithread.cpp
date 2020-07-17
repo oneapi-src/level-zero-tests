@@ -50,7 +50,7 @@ void device_thread_test(ze_driver_handle_t driver) {
   auto sub_device = lzt::get_ze_sub_devices(device);
   auto device_props = lzt::get_device_properties(device);
   auto device_compute_props = lzt::get_compute_properties(device);
-  auto device_kernel_props = lzt::get_kernel_properties(device);
+  auto device_module_props = lzt::get_device_module_properties(device);
   auto device_mem_prop_count = lzt::get_memory_properties_count(device);
   auto device_mem_props = lzt::get_memory_properties(device);
   auto device_mem_access_props = lzt::get_memory_access_properties(device);
@@ -66,9 +66,9 @@ void device_thread_test(ze_driver_handle_t driver) {
     auto new_compute_props = lzt::get_compute_properties(device);
     ASSERT_EQ(0, memcmp(&device_compute_props, &new_compute_props,
                         sizeof(device_compute_props)));
-    auto new_kernel_props = lzt::get_kernel_properties(device);
-    ASSERT_EQ(0, memcmp(&device_kernel_props, &new_kernel_props,
-                        sizeof(device_kernel_props)));
+    auto new_device_module_props = lzt::get_device_module_properties(device);
+    ASSERT_EQ(0, memcmp(&device_module_props, &new_device_module_props,
+                        sizeof(device_module_props)));
     ASSERT_EQ(device_mem_prop_count, lzt::get_memory_properties_count(device));
     auto new_mem_props = lzt::get_memory_properties(device);
     int j = 0;
@@ -79,8 +79,7 @@ void device_thread_test(ze_driver_handle_t driver) {
     ASSERT_EQ(0, memcmp(&device_mem_access_props, &new_mem_access_props,
                         sizeof(device_mem_access_props)));
     auto new_cache_props = lzt::get_cache_properties(device);
-    ASSERT_EQ(0, memcmp(&device_cache_props, &new_cache_props,
-                        sizeof(device_cache_props)));
+    ASSERT_EQ(device_cache_props.size(), &new_cache_props.size());
     auto new_image_props = lzt::get_image_properties(device);
     ASSERT_EQ(0, memcmp(&device_image_props, &new_image_props,
                         sizeof(device_image_props)));

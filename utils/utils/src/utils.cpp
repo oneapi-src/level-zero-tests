@@ -26,7 +26,7 @@ ze_context_handle_t get_default_context() {
 
   ze_context_desc_t context_desc = {};
   context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
-  result = zeContextCreate(get_default_driver(), context_desc, &context);
+  result = zeContextCreate(get_default_driver(), &context_desc, &context);
 
   if (ZE_RESULT_SUCCESS != result) {
     throw std::runtime_error("zeContextCreate failed: " + to_string(result));
@@ -83,7 +83,7 @@ ze_context_handle_t create_context() {
   return context;
 }
 
-void destroy_context(ze_context_handle context) {
+void destroy_context(ze_context_handle_t context) {
    EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeContextDestroy(context));
 }
@@ -316,9 +316,9 @@ std::string to_string(const ze_command_queue_mode_t mode) {
 std::string to_string(const ze_command_queue_priority_t priority) {
   if (priority == ZE_COMMAND_QUEUE_PRIORITY_NORMAL) {
     return "ZE_COMMAND_QUEUE_PRIORITY_NORMAL";
-  } else if (priority == ZE_COMMAND_QUEUE_PRIORITY_LOW) {
+  } else if (priority == ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW) {
     return "ZE_COMMAND_QUEUE_PRIORITY_LOW";
-  } else if (priority == ZE_COMMAND_QUEUE_PRIORITY_HIGH) {
+  } else if (priority == ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH) {
     return "ZE_COMMAND_QUEUE_PRIORITY_HIGH";
   } else {
     return "Unknown ze_command_queue_priority_t value: " +
@@ -369,8 +369,6 @@ std::string to_string(const ze_image_format_layout_t layout) {
     return "ZE_IMAGE_FORMAT_LAYOUT_UYVY";
   } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_AYUV) {
     return "ZE_IMAGE_FORMAT_LAYOUT_AYUV";
-  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_YUAV) {
-    return "ZE_IMAGE_FORMAT_LAYOUT_YUAV";
   } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_P010) {
     return "ZE_IMAGE_FORMAT_LAYOUT_P010";
   } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_Y410) {
@@ -385,8 +383,6 @@ std::string to_string(const ze_image_format_layout_t layout) {
     return "ZE_IMAGE_FORMAT_LAYOUT_Y216";
   } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_P216) {
     return "ZE_IMAGE_FORMAT_LAYOUT_P216";
-  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_P416) {
-    return "ZE_IMAGE_FORMAT_LAYOUT_P416";
   } else {
     return "Unknown ze_image_format_layout_t value: " +
            std::to_string(static_cast<int>(layout));
@@ -436,8 +432,6 @@ ze_image_format_layout_t to_layout(const std::string layout) {
     return ZE_IMAGE_FORMAT_LAYOUT_UYVY;
   } else if (layout == "AYUV") {
     return ZE_IMAGE_FORMAT_LAYOUT_AYUV;
-  } else if (layout == "YUAV") {
-    return ZE_IMAGE_FORMAT_LAYOUT_YUAV;
   } else if (layout == "P010") {
     return ZE_IMAGE_FORMAT_LAYOUT_P010;
   } else if (layout == "Y410") {
@@ -452,8 +446,6 @@ ze_image_format_layout_t to_layout(const std::string layout) {
     return ZE_IMAGE_FORMAT_LAYOUT_Y216;
   } else if (layout == "P216") {
     return ZE_IMAGE_FORMAT_LAYOUT_P216;
-  } else if (layout == "P416") {
-    return ZE_IMAGE_FORMAT_LAYOUT_P416;
   } else {
     std::cout << "Unknown ze_image_format_layout_t value: " << layout;
     return static_cast<ze_image_format_layout_t>(-1);
@@ -517,14 +509,8 @@ std::string to_string(const ze_image_format_swizzle_t swizzle) {
 
 std::string to_string(const ze_image_flag_t flag) {
   std::string flags = "";
-  if (flag & ZE_IMAGE_FLAG_PROGRAM_READ) {
-    flags.append("|ZE_IMAGE_FLAG_PROGRAM_READ|");
-  }
-  if (flag & ZE_IMAGE_FLAG_PROGRAM_WRITE) {
-    flags.append("|ZE_IMAGE_FLAG_PROGRAM_WRITE|");
-  }
-  if (flag & ZE_IMAGE_FLAG_BIAS_CACHED) {
-    flags.append("|ZE_IMAGE_FLAG_BIAS_CACHED|");
+  if (flag & ZE_IMAGE_FLAG_KERNEL_WRITE) {
+    flags.append("|ZE_IMAGE_FLAG_KERNEL_WRITE|");
   }
   if (flag & ZE_IMAGE_FLAG_BIAS_UNCACHED) {
     flags.append("|ZE_IMAGE_FLAG_BIAS_UNCACHED|");
@@ -536,20 +522,12 @@ std::string to_string(const ze_image_flag_t flag) {
 ze_image_flag_t to_flag(const std::string flag) {
 
   // by default setting to READ
-  ze_image_flag_t image_flags = ZE_IMAGE_FLAG_PROGRAM_READ;
+  ze_image_flag_t image_flags = {};
 
   // check if "READ" position is found in flag string
-  if (flag.find("READ") != std::string::npos) {
-    image_flags =
-        static_cast<ze_image_flag_t>(image_flags | ZE_IMAGE_FLAG_PROGRAM_READ);
-  }
   if (flag.find("WRITE") != std::string::npos) {
     image_flags =
-        static_cast<ze_image_flag_t>(image_flags | ZE_IMAGE_FLAG_PROGRAM_WRITE);
-  }
-  if (flag.find("CACHED") != std::string::npos) {
-    image_flags =
-        static_cast<ze_image_flag_t>(image_flags | ZE_IMAGE_FLAG_BIAS_CACHED);
+        static_cast<ze_image_flag_t>(image_flags | ZE_IMAGE_FLAG_KERNEL_WRITE);
   }
   if (flag.find("UNCACHED") != std::string::npos) {
     image_flags =
@@ -593,35 +571,35 @@ ze_image_type_t to_image_type(const std::string type) {
   }
 }
 
-std::string to_string(const ze_fp_capabilities_t capabilities) {
+std::string to_string(const ze_device_fp_flags_t capabilities) {
   std::string capabilities_str = "";
-  if (capabilities == ZE_FP_CAPS_NONE) {
-    capabilities_str.append("|ZE_FP_CAPS_NONE|");
+  if (capabilities == 0) {
+    capabilities_str.append("|NONE|");
     return capabilities_str;
   }
-  if (capabilities & ZE_FP_CAPS_DENORM) {
-    capabilities_str.append("|ZE_FP_CAPS_DENORM|");
+  if (capabilities & ZE_DEVICE_FP_FLAG_DENORM) {
+    capabilities_str.append("|ZE_DEVICE_FP_FLAG_DENORM|");
   }
-  if (capabilities & ZE_FP_CAPS_INF_NAN) {
-    capabilities_str.append("|ZE_CP_CAPS_INF_NAN|");
+  if (capabilities & ZE_DEVICE_FP_FLAG_INF_NAN) {
+    capabilities_str.append("|ZE_DEVICE_FP_FLAG_INF_NAN|");
   }
-  if (capabilities & ZE_FP_CAPS_ROUND_TO_NEAREST) {
-    capabilities_str.append("|ZE_CP_CAPS_ROUND_TO_NEAREST|");
+  if (capabilities & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST) {
+    capabilities_str.append("|ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST|");
   }
-  if (capabilities & ZE_FP_CAPS_ROUND_TO_ZERO) {
-    capabilities_str.append("|ZE_CP_CAPS_ROUND_TO_ZERO|");
+  if (capabilities & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO) {
+    capabilities_str.append("|ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO|");
   }
-  if (capabilities & ZE_FP_CAPS_ROUND_TO_INF) {
-    capabilities_str.append("|ZE_CP_CAPS_ROUND_TO_INF|");
+  if (capabilities & ZE_DEVICE_FP_FLAG_ROUND_TO_INF) {
+    capabilities_str.append("|ZE_DEVICE_FP_FLAG_ROUND_TO_INF|");
   }
-  if (capabilities & ZE_FP_CAPS_FMA) {
-    capabilities_str.append("|ZE_CP_CAPS_FMA|");
+  if (capabilities & ZE_DEVICE_FP_FLAG_FMA) {
+    capabilities_str.append("|ZE_DEVICE_FP_FLAG_FMA|");
   }
-  if (capabilities & ZE_FP_CAPS_ROUNDED_DIVIDE_SQRT) {
-    capabilities_str.append("|ZE_CP_CAPS_ROUNDED_DIVIDE_SQRT|");
+  if (capabilities & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT) {
+    capabilities_str.append("|ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT|");
   }
-  if (capabilities & ZE_FP_CAPS_SOFT_FLOAT) {
-    capabilities_str.append("|ZE_CP_CAPS_SOFT_FLOAT|");
+  if (capabilities & ZE_DEVICE_FP_FLAG_SOFT_FLOAT) {
+    capabilities_str.append("|ZE_DEVICE_FP_FLAG_SOFT_FLOAT|");
   }
   return capabilities_str;
 }
@@ -765,11 +743,6 @@ std::ostream &operator<<(std::ostream &os, const ze_bool_t &x) {
   return os << level_zero_tests::to_string(x);
 }
 
-std::ostream &operator<<(std::ostream &os,
-                         const ze_command_queue_desc_version_t &x) {
-  return os << level_zero_tests::to_string(x);
-}
-
 std::ostream &operator<<(std::ostream &os, const ze_command_queue_flag_t &x) {
   return os << level_zero_tests::to_string(x);
 }
@@ -780,10 +753,6 @@ std::ostream &operator<<(std::ostream &os, const ze_command_queue_mode_t &x) {
 
 std::ostream &operator<<(std::ostream &os,
                          const ze_command_queue_priority_t &x) {
-  return os << level_zero_tests::to_string(x);
-}
-
-std::ostream &operator<<(std::ostream &os, const ze_image_desc_version_t &x) {
   return os << level_zero_tests::to_string(x);
 }
 
@@ -807,7 +776,7 @@ std::ostream &operator<<(std::ostream &os, const ze_image_type_t &x) {
   return os << level_zero_tests::to_string(x);
 }
 
-std::ostream &operator<<(std::ostream &os, const ze_fp_capabilities_t &x) {
+std::ostream &operator<<(std::ostream &os, const ze_device_fp_flags_t &x) {
   return os << level_zero_tests::to_string(x);
 }
 

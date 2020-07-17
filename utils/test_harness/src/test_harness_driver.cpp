@@ -13,7 +13,7 @@
 
 namespace level_zero_tests {
 
-void ze_init() { ze_init(ZE_INIT_FLAG_NONE); }
+void ze_init() { ze_init(0); }
 
 void ze_init(ze_init_flag_t init_flag) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(init_flag));

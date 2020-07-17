@@ -958,8 +958,8 @@ TEST(
       device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
   ze_kernel_handle_t function =
       lzt::create_function(module, "module_add_constant");
-  lzt::set_intermediate_cache_config(function, ZE_CACHE_CONFIG_DEFAULT);
-  lzt::set_intermediate_cache_config(function, ZE_CACHE_CONFIG_LARGE_SLM);
-  lzt::set_intermediate_cache_config(function, ZE_CACHE_CONFIG_LARGE_DATA);
+  lzt::set_kernel_cache_config(function, 0);
+  lzt::set_kernel_cache_config(function, ZE_CACHE_CONFIG_FLAG_LARGE_SLM);
+  lzt::set_kernel_cache_config(function, ZE_CACHE_CONFIG_FLAG_LARGE_DATA);
 }
 } // namespace

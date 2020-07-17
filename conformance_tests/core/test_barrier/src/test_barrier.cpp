@@ -25,12 +25,13 @@ TEST_F(zeCommandListAppendBarrierTests,
             zeCommandListAppendBarrier(cl.command_list_, nullptr, 0, nullptr));
 }
 
-class zeEventPoolCommandListAppendBarrierTests
-    : public zeEventPoolCommandListTests {};
+class zeEventPoolCommandListAppendBarrierTests {};
 
 TEST_F(
     zeEventPoolCommandListAppendBarrierTests,
     GivenEmptyCommandListWhenAppendingBarrierWithEventThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
   ze_event_handle_t event = nullptr;
 
   ep.create_event(event);
@@ -43,6 +44,8 @@ TEST_F(
 TEST_F(
     zeEventPoolCommandListAppendBarrierTests,
     GivenEmptyCommandListWhenAppendingBarrierWithEventsThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
   const size_t event_count = 2;
   std::vector<ze_event_handle_t> events(event_count, nullptr);
 
@@ -56,6 +59,8 @@ TEST_F(
 TEST_F(
     zeEventPoolCommandListAppendBarrierTests,
     GivenEmptyCommandListWhenAppendingBarrierWithSignalEventAndWaitEventsThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
   ze_event_handle_t event = nullptr;
   const size_t event_count = 2;
   std::vector<ze_event_handle_t> events(event_count, nullptr);
@@ -97,12 +102,13 @@ TEST_F(
   AppendMemoryRangesBarrierTest(cl.command_list_, nullptr, waiting_events);
 }
 
-class zeEventPoolCommandListAppendMemoryRangesBarrierTests
-    : public zeEventPoolCommandListTests {};
+class zeEventPoolCommandListAppendMemoryRangesBarrierTests {};
 
 TEST_F(
     zeEventPoolCommandListAppendMemoryRangesBarrierTests,
     GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
   ze_event_handle_t signaling_event = nullptr;
   std::vector<ze_event_handle_t> waiting_events;
 
@@ -115,9 +121,11 @@ TEST_F(
 TEST_F(
     zeEventPoolCommandListAppendMemoryRangesBarrierTests,
     GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierWaitEventsThenSuccessIsReturned) {
+  
   const size_t event_count = 2;
   std::vector<ze_event_handle_t> waiting_events(event_count, nullptr);
-
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
   ep.create_events(waiting_events, event_count);
   AppendMemoryRangesBarrierTest(cl.command_list_, nullptr, waiting_events);
   ep.destroy_events(waiting_events);
@@ -126,6 +134,8 @@ TEST_F(
 TEST_F(
     zeEventPoolCommandListAppendMemoryRangesBarrierTests,
     GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventAndWaitEventsThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
   ze_event_handle_t signaling_event = nullptr;
   const size_t event_count = 2;
   std::vector<ze_event_handle_t> waiting_events(event_count, nullptr);

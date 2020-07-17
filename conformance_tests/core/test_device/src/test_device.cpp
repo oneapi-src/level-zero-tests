@@ -125,7 +125,7 @@ TEST(
 
   ASSERT_GT(devices.size(), 0);
   for (auto device : devices) {
-    ze_device_cache_properties_t properties = lzt::get_cache_properties(device);
+    auto properties = lzt::get_cache_properties(device);
   }
 }
 
@@ -196,53 +196,30 @@ TEST(zeDeviceCanAccessPeerTests,
 }
 
 TEST(
-    zeDeviceGetKernelPropertiesTests,
-    GivenValidDeviceWhenRetrievingKernelPropertiesThenValidPropertiesReturned) {
+    zeDeviceGetModulePropertiesTests,
+    GivenValidDeviceWhenRetrievingModulePropertiesThenValidPropertiesReturned) {
 
   auto devices = lzt::get_ze_devices();
   ASSERT_GT(devices.size(), 0);
 
   for (auto device : devices) {
-    auto properties = lzt::get_kernel_properties(device);
+    auto properties = lzt::get_device_module_properties(device);
 
     LOG_DEBUG << "SPIR-V version supported "
               << ZE_MAJOR_VERSION(properties.spirvVersionSupported) << "."
               << ZE_MINOR_VERSION(properties.spirvVersionSupported);
     LOG_DEBUG << "nativeKernelSupported: " << properties.nativeKernelSupported;
     LOG_DEBUG << "16-bit Floating Point Supported: "
-              << lzt::to_string(properties.fp16Supported);
+              << lzt::to_string(properties.fp16flags);
+    LOG_DEBUG << "32-bit Floating Point Supported: "
+              << lzt::to_string(properties.fp32flags);
     LOG_DEBUG << "64-bit Floating Point Supported: "
-              << lzt::to_string(properties.fp64Supported);
-    LOG_DEBUG << "64-bit Atomics Supported: "
-              << lzt::to_string(properties.int64AtomicsSupported);
-    LOG_DEBUG << "4 Component Dot Product Supported: "
-              << lzt::to_string(properties.dp4aSupported);
-    LOG_DEBUG << "Half-Precision FP Capabilities: ";
-    LOG_DEBUG << "\t" << properties.halfFpCapabilities;
-    LOG_DEBUG << "Single-Precision Capabilities: ";
-    LOG_DEBUG << "\t" << properties.singleFpCapabilities;
-    LOG_DEBUG << "Double-Precision FP Capabilities: ";
-    LOG_DEBUG << "\t" << properties.doubleFpCapabilities;
+              << lzt::to_string(properties.fp64flags);
     LOG_DEBUG << "Max Argument Size: " << properties.maxArgumentsSize;
     LOG_DEBUG << "Print Buffer Size: " << properties.printfBufferSize;
   }
 }
 
-class zeSetCacheConfigTests
-    : public ::testing::Test,
-      public ::testing::WithParamInterface<ze_cache_config_t> {};
-
-TEST_P(zeSetCacheConfigTests,
-       GivenConfigFlagWhenSettingIntermediateCacheConfigThenSuccessIsReturned) {
-  lzt::set_last_level_cache_config(lzt::zeDevice::get_instance()->get_device(),
-                                   GetParam());
-}
-
-INSTANTIATE_TEST_CASE_P(SetLastLevelCacheConfigParemeterizedTest,
-                        zeSetCacheConfigTests,
-                        ::testing::Values(ZE_CACHE_CONFIG_DEFAULT,
-                                          ZE_CACHE_CONFIG_LARGE_SLM,
-                                          ZE_CACHE_CONFIG_LARGE_DATA));
 
 typedef struct DeviceHandlesBySku_ {
   uint32_t vendorId;
@@ -528,26 +505,21 @@ TEST_F(DevicePropertiesTest,
 
     ze_device_handle_t firstDeviceHandle =
         iterSkuHandles->deviceHandlesForSku.front();
-    ze_device_cache_properties_t firstDeviceProperties =
+    auto firstDeviceProperties =
         lzt::get_cache_properties(firstDeviceHandle);
 
     for (ze_device_handle_t iterDeviceHandle :
          iterSkuHandles->deviceHandlesForSku) {
-      ze_device_cache_properties_t iterDeviceProperties =
+      auto iterDeviceProperties =
           lzt::get_cache_properties(iterDeviceHandle);
+      ASSERT_EQ(iterDeviceProperties.size(), firstDeviceProperties.size());
+      for(int i = 0; i< iterDeviceProperties.size(); i++) {}
+        EXPECT_EQ(iterDeviceProperties[i].flags,
+                  firstDeviceProperties[i].flags);
+        EXPECT_EQ(iterDeviceProperties[i].cacheSize,
+                  firstDeviceProperties[i].cacheSize);
 
-      EXPECT_EQ(iterDeviceProperties.intermediateCacheControlSupported,
-                firstDeviceProperties.intermediateCacheControlSupported);
-      EXPECT_EQ(iterDeviceProperties.intermediateCacheSize,
-                firstDeviceProperties.intermediateCacheSize);
-      EXPECT_EQ(iterDeviceProperties.intermediateCachelineSize,
-                firstDeviceProperties.intermediateCachelineSize);
-      EXPECT_EQ(iterDeviceProperties.lastLevelCacheSizeControlSupported,
-                firstDeviceProperties.lastLevelCacheSizeControlSupported);
-      EXPECT_EQ(iterDeviceProperties.lastLevelCacheSize,
-                firstDeviceProperties.lastLevelCacheSize);
-      EXPECT_EQ(iterDeviceProperties.lastLevelCachelineSize,
-                firstDeviceProperties.lastLevelCachelineSize);
+      }
     }
   }
 }
@@ -624,13 +596,13 @@ TEST_F(DevicePropertiesTest,
 
     ze_device_handle_t firstDeviceHandle =
         iterSkuHandles->deviceHandlesForSku.front();
-    ze_device_kernel_properties_t firstDeviceProperties =
-        lzt::get_kernel_properties(firstDeviceHandle);
+    auto firstDeviceProperties =
+        lzt::get_device_module_properties(firstDeviceHandle);
 
     for (ze_device_handle_t iterDeviceHandle :
          iterSkuHandles->deviceHandlesForSku) {
-      ze_device_kernel_properties_t iterDeviceProperties =
-          lzt::get_kernel_properties(iterDeviceHandle);
+      auto iterDeviceProperties =
+          lzt::get_device_module_properties(iterDeviceHandle);
 
       EXPECT_EQ(iterDeviceProperties.spirvVersionSupported,
                 firstDeviceProperties.spirvVersionSupported);
@@ -639,29 +611,14 @@ TEST_F(DevicePropertiesTest,
           &iterDeviceProperties.nativeKernelSupported,
           &firstDeviceProperties.nativeKernelSupported));
 
-      EXPECT_EQ(iterDeviceProperties.fp16Supported,
-                firstDeviceProperties.fp16Supported);
+      EXPECT_EQ(iterDeviceProperties.fp16flags,
+                firstDeviceProperties.fp16flags);
+  
+      EXPECT_EQ(iterDeviceProperties.fp32flags,
+                firstDeviceProperties.fp32flags);
 
-      EXPECT_EQ(iterDeviceProperties.fp64Supported,
-                firstDeviceProperties.fp64Supported);
-
-      EXPECT_EQ(iterDeviceProperties.int64AtomicsSupported,
-                firstDeviceProperties.int64AtomicsSupported);
-
-      EXPECT_EQ(iterDeviceProperties.int64AtomicsSupported,
-                firstDeviceProperties.int64AtomicsSupported);
-
-      EXPECT_EQ(iterDeviceProperties.dp4aSupported,
-                firstDeviceProperties.dp4aSupported);
-
-      EXPECT_EQ(iterDeviceProperties.halfFpCapabilities,
-                firstDeviceProperties.halfFpCapabilities);
-
-      EXPECT_EQ(iterDeviceProperties.singleFpCapabilities,
-                firstDeviceProperties.singleFpCapabilities);
-
-      EXPECT_EQ(iterDeviceProperties.doubleFpCapabilities,
-                firstDeviceProperties.doubleFpCapabilities);
+      EXPECT_EQ(iterDeviceProperties.fp64flags,
+                firstDeviceProperties.fp64flags);
 
       EXPECT_EQ(iterDeviceProperties.maxArgumentsSize,
                 firstDeviceProperties.maxArgumentsSize);

@@ -12,6 +12,7 @@
 
 #include "test_harness_driver.hpp"
 #include "test_harness_device.hpp"
+/*
 #include "test_harness_cmdqueue.hpp"
 #include "test_harness_cmdlist.hpp"
 #include "test_harness_fence.hpp"
@@ -25,11 +26,6 @@
 #include "../../tools/include/test_harness_api_tracing.hpp"
 #include "../../tools/include/test_harness_metric.hpp"
 #include "../../tools/sysman/include/test_harness_sysman.hpp"
-
-class zeEventPoolCommandListTests : public ::testing::Test {
-protected:
-  level_zero_tests::zeEventPool ep;
-  level_zero_tests::zeCommandList cl;
-};
+*/
 
 #endif
