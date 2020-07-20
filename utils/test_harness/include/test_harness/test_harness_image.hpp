@@ -15,12 +15,11 @@
 #include "utils/utils.hpp"
 #include "image/image.hpp"
 
+namespace lzt = level_zero_tests;
 namespace level_zero_tests {
 
-const ze_image_flag_t image_rw_flags[2] = {ZE_IMAGE_FLAG_PROGRAM_READ,
-                                           ZE_IMAGE_FLAG_PROGRAM_WRITE};
-const ze_image_flag_t image_cache_flags[2] = {ZE_IMAGE_FLAG_BIAS_CACHED,
-                                              ZE_IMAGE_FLAG_BIAS_UNCACHED};
+const ze_image_flags_t image_rw_flags[2] = {0, ZE_IMAGE_FLAG_KERNEL_WRITE};
+const ze_image_flags_t image_cache_flags[2] = {0, ZE_IMAGE_FLAG_BIAS_UNCACHED};
 
 const std::vector<uint64_t> image_widths = {1, 1920};
 

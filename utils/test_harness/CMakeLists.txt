@@ -13,7 +13,7 @@ add_core_library(test_harness
     "src/test_harness_cmdqueue.cpp"
     #"src/test_harness_event.cpp"
     #"src/test_harness_memory.cpp"
-    #"src/test_harness_image.cpp"
+    "src/test_harness_image.cpp"
     #"src/test_harness_fence.cpp"
     #"src/test_harness_module.cpp"
     #"src/test_harness_sampler.cpp"

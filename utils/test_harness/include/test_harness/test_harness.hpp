@@ -17,7 +17,7 @@
 //#include "test_harness_fence.hpp"
 //#include "test_harness_event.hpp"
 //#include "test_harness_memory.hpp"
-//#include "test_harness_image.hpp"
+#include "test_harness_image.hpp"
 //#include "test_harness_module.hpp"
 //#include "test_harness_sampler.hpp"
 //#include "test_harness_ocl_interop.hpp"
