@@ -35,6 +35,11 @@ ze_command_queue_handle_t
 create_command_queue(ze_device_handle_t device, ze_command_queue_flag_t flags,
                      ze_command_queue_mode_t mode,
                      ze_command_queue_priority_t priority, uint32_t ordinal);
+ze_command_queue_handle_t
+create_command_queue(ze_context_handle_t context, ze_device_handle_t device,
+                     ze_command_queue_flag_t flags,
+                     ze_command_queue_mode_t mode,
+                     ze_command_queue_priority_t priority, uint32_t ordinal);
 
 void execute_command_lists(ze_command_queue_handle_t cq,
                            uint32_t numCommandLists,

@@ -46,7 +46,7 @@ void run_parent(ze_context_handle_t context, int size) {
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemOpenIpcHandle(context, driver, device, ipc_handle,
-                                     ZE_IPC_MEMORY_FLAG_NONE, &memory));
+                               ZE_IPC_MEMORY_FLAG_NONE, &memory));
 
   void *buffer = lzt::allocate_host_memory(size);
   memset(buffer, 0, size);

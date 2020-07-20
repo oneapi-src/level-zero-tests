@@ -169,13 +169,16 @@ get_command_queue_group_properties(ze_device_handle_t device) {
       device, get_command_queue_group_properties_count(device));
 }
 
-std::vector<ze_device_cache_properties_t> get_cache_properties(ze_device_handle_t device) {
+std::vector<ze_device_cache_properties_t>
+get_cache_properties(ze_device_handle_t device) {
 
   std::vector<ze_device_cache_properties_t> properties;
   uint32_t count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCacheProperties(device, &count, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetCacheProperties(device, &count, nullptr));
   properties.resize(count);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCacheProperties(device, &count, properties.data()));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetCacheProperties(device, &count, properties.data()));
 
   return properties;
 }
@@ -188,7 +191,8 @@ ze_device_image_properties_t get_image_properties(ze_device_handle_t device) {
   return properties;
 }
 
-ze_device_module_properties_t get_device_module_properties(ze_device_handle_t device) {
+ze_device_module_properties_t
+get_device_module_properties(ze_device_handle_t device) {
   ze_device_module_properties_t properties = {
       ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES};
 
@@ -215,20 +219,21 @@ ze_bool_t can_access_peer(ze_device_handle_t dev1, ze_device_handle_t dev2) {
 }
 
 void set_kernel_cache_config(ze_kernel_handle_t kernel,
-                                   ze_cache_config_flags_t config) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetCacheConfig(kernel, config));
+                             ze_cache_config_flags_t config) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelSetCacheConfig(kernel, config));
 }
 
 void make_memory_resident(const ze_device_handle_t &device, void *memory,
                           const size_t size) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeContextMakeMemoryResident(get_default_context(), device, memory, size));
+  EXPECT_EQ(
+      ZE_RESULT_SUCCESS,
+      zeContextMakeMemoryResident(get_default_context(), device, memory, size));
 }
 
 void evict_memory(const ze_device_handle_t &device, void *memory,
                   const size_t size) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextEvictMemory(get_default_context(), device, memory, size));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeContextEvictMemory(get_default_context(), device, memory, size));
 }
 
 }; // namespace level_zero_tests

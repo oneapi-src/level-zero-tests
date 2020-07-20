@@ -10,9 +10,11 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
+namespace lzt = level_zero_tests;
+
 int main(int argc, char **argv) {
 
-  ze_result_t result = zeInit(ZE_INIT_FLAG_NONE);
+  ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
     exit(-1);
   }

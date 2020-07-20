@@ -121,7 +121,7 @@ TEST_F(
 TEST_F(
     zeEventPoolCommandListAppendMemoryRangesBarrierTests,
     GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierWaitEventsThenSuccessIsReturned) {
-  
+
   const size_t event_count = 2;
   std::vector<ze_event_handle_t> waiting_events(event_count, nullptr);
   lzt::zeEventPool ep;

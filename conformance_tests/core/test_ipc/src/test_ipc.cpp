@@ -37,7 +37,7 @@ TEST_F(
     GivenDeviceMemoryAllocationWhenGettingIpcMemHandleThenSuccessIsReturned) {
   memory_ = lzt::allocate_device_memory(1);
   context_ = lzt::create_context();
-  
+
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
   lzt::destroy_context(context_);
@@ -52,24 +52,22 @@ protected:
                                          ZE_MEMORY_TYPE_DEVICE);
 
     ze_ipc_memory_flag_t flags = ZE_IPC_MEMORY_FLAG_TBD;
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeMemOpenIpcHandle(context_,
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeMemOpenIpcHandle(context_,
                                  lzt::zeDevice::get_instance()->get_device(),
                                  ipc_mem_handle_, flags, &ipc_memory_));
   }
 
-  void TearDown() { 
-     lzt::free_memory(memory_); 
-	 lzt::destroy_context(context_);
+  void TearDown() {
+    lzt::free_memory(memory_);
+    lzt::destroy_context(context_);
   }
 };
 
 TEST_F(
     zeIpcMemHandleCloseTests,
     GivenValidPointerToDeviceMemoryAllocationWhenClosingIpcHandleThenSuccessIsReturned) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemCloseIpcHandle(context_, ipc_memory_));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context_, ipc_memory_));
 }
 
 } // namespace

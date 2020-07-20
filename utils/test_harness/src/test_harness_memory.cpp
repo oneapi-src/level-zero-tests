@@ -175,22 +175,23 @@ void free_memory(ze_driver_handle_t driver, const void *ptr) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverFreeMem(driver, (void *)ptr));
 }
 
-void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,                                     ze_ipc_mem_handle_t *mem_handle,
+void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
+                                     ze_ipc_mem_handle_t *mem_handle,
                                      void **memory, ze_memory_type_t mem_type) {
   allocate_mem_and_get_ipc_handle(context, mem_handle, memory, mem_type, 1);
 }
 
-void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,                                     ze_ipc_mem_handle_t *mem_handle,
+void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
+                                     ze_ipc_mem_handle_t *mem_handle,
                                      void **memory, ze_memory_type_t mem_type,
                                      size_t size) {
   allocate_mem(memory, mem_type, size);
   get_ipc_handle(context, mem_handle, *memory);
 }
 
-void get_ipc_handle(ze_context_handle_t context, ze_ipc_mem_handle_t *mem_handle, void *memory) {
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
-      zeMemGetIpcHandle(context, memory, mem_handle));
+void get_ipc_handle(ze_context_handle_t context,
+                    ze_ipc_mem_handle_t *mem_handle, void *memory) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, mem_handle));
 }
 
 void write_data_pattern(void *buff, size_t size, int8_t data_pattern) {

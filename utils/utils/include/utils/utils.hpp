@@ -77,7 +77,7 @@ std::ostream &operator<<(std::ostream &os, const ze_image_format_swizzle_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_image_flag_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_image_type_t &x);
 
-//std::ostream &operator<<(std::ostream &os, const ze_device_fp_flags_t &x);
+// std::ostream &operator<<(std::ostream &os, const ze_device_fp_flags_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_driver_uuid_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_native_kernel_uuid_t &x);
 

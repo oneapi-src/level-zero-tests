@@ -137,11 +137,6 @@ TEST(
   ASSERT_GT(devices.size(), 0);
   for (auto device : devices) {
     ze_device_image_properties_t properties = lzt::get_image_properties(device);
-    EXPECT_TRUE(properties.supported);
-    EXPECT_GT(properties.maxImageDims1D, 0);
-    EXPECT_GT(properties.maxImageDims2D, 0);
-    EXPECT_GT(properties.maxImageDims3D, 0);
-    EXPECT_GT(properties.maxImageArraySlices, 0);
   }
 }
 
@@ -219,7 +214,6 @@ TEST(
     LOG_DEBUG << "Print Buffer Size: " << properties.printfBufferSize;
   }
 }
-
 
 typedef struct DeviceHandlesBySku_ {
   uint32_t vendorId;
@@ -312,7 +306,8 @@ TEST_F(DevicePropertiesTest,
         iterSkuHandles->deviceHandlesForSku.front();
     ze_device_properties_t firstDeviceProperties =
         lzt::get_device_properties(firstDeviceHandle);
-    EXPECT_FALSE(firstDeviceProperties.isSubdevice);
+    EXPECT_FALSE(firstDeviceProperties.flags |
+                 ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE);
 
     bool first_iteration = true;
     for (ze_device_handle_t iterDeviceHandle :
@@ -331,13 +326,13 @@ TEST_F(DevicePropertiesTest,
         EXPECT_FALSE(areDeviceUuidsEqual(firstDeviceProperties.uuid,
                                          iterDeviceProperties.uuid));
       }
-      EXPECT_FALSE(iterDeviceProperties.isSubdevice);
+      EXPECT_FALSE(iterDeviceProperties.flags |
+                   ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE);
       EXPECT_EQ(firstDeviceProperties.coreClockRate,
                 iterDeviceProperties.coreClockRate);
-      EXPECT_EQ(firstDeviceProperties.unifiedMemorySupported,
-                iterDeviceProperties.unifiedMemorySupported);
-      EXPECT_EQ(firstDeviceProperties.onDemandPageFaultsSupported,
-                iterDeviceProperties.onDemandPageFaultsSupported);
+      EXPECT_EQ(
+          firstDeviceProperties.flags | ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING,
+          iterDeviceProperties.flags | ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING);
 
       EXPECT_EQ(firstDeviceProperties.numThreadsPerEU,
                 iterDeviceProperties.numThreadsPerEU);
@@ -505,20 +500,17 @@ TEST_F(DevicePropertiesTest,
 
     ze_device_handle_t firstDeviceHandle =
         iterSkuHandles->deviceHandlesForSku.front();
-    auto firstDeviceProperties =
-        lzt::get_cache_properties(firstDeviceHandle);
+    auto firstDeviceProperties = lzt::get_cache_properties(firstDeviceHandle);
 
     for (ze_device_handle_t iterDeviceHandle :
          iterSkuHandles->deviceHandlesForSku) {
-      auto iterDeviceProperties =
-          lzt::get_cache_properties(iterDeviceHandle);
+      auto iterDeviceProperties = lzt::get_cache_properties(iterDeviceHandle);
       ASSERT_EQ(iterDeviceProperties.size(), firstDeviceProperties.size());
-      for(int i = 0; i< iterDeviceProperties.size(); i++) {}
+      for (int i = 0; i < iterDeviceProperties.size(); i++) {
         EXPECT_EQ(iterDeviceProperties[i].flags,
                   firstDeviceProperties[i].flags);
         EXPECT_EQ(iterDeviceProperties[i].cacheSize,
                   firstDeviceProperties[i].cacheSize);
-
       }
     }
   }
@@ -613,7 +605,7 @@ TEST_F(DevicePropertiesTest,
 
       EXPECT_EQ(iterDeviceProperties.fp16flags,
                 firstDeviceProperties.fp16flags);
-  
+
       EXPECT_EQ(iterDeviceProperties.fp32flags,
                 firstDeviceProperties.fp32flags);
 

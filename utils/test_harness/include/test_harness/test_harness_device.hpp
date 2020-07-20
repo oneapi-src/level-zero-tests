@@ -56,16 +56,18 @@ std::vector<ze_device_memory_properties_t>
 get_memory_properties(ze_device_handle_t device, uint32_t count);
 ze_device_memory_access_properties_t
 get_memory_access_properties(ze_device_handle_t device);
-std::vector<ze_device_cache_properties_t> get_cache_properties(ze_device_handle_t device);
+std::vector<ze_device_cache_properties_t>
+get_cache_properties(ze_device_handle_t device);
 ze_device_image_properties_t get_image_properties(ze_device_handle_t device);
-ze_device_module_properties_t get_device_module_properties(ze_device_handle_t device);
+ze_device_module_properties_t
+get_device_module_properties(ze_device_handle_t device);
 
 ze_device_p2p_properties_t get_p2p_properties(ze_device_handle_t dev1,
                                               ze_device_handle_t dev2);
 ze_bool_t can_access_peer(ze_device_handle_t dev1, ze_device_handle_t dev2);
 
 void set_kernel_cache_config(ze_kernel_handle_t kernel,
-                                   ze_cache_config_flags_t config);
+                             ze_cache_config_flags_t config);
 
 void make_memory_resident(const ze_device_handle_t &device, void *memory,
                           const size_t size);

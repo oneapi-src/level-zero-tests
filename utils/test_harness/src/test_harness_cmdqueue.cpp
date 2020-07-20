@@ -8,6 +8,7 @@
 
 #include "test_harness/test_harness.hpp"
 #include "gtest/gtest.h"
+#include "utils/utils.hpp"
 
 namespace lzt = level_zero_tests;
 

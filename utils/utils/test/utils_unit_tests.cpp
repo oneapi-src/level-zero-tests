@@ -99,8 +99,7 @@ TEST(XeCommandQueueDescFlagsToString, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY) {
 
 TEST(XeCommandQueueDescFlagsToString, InvalidValue) {
   const ze_command_queue_flag_t d = static_cast<ze_command_queue_flag_t>(
-      static_cast<uint32_t>(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY +
-                            1));
+      static_cast<uint32_t>(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY + 1));
   EXPECT_EQ("Unknown ze_command_queue_flag_t value: " +
                 std::to_string(static_cast<int>(d)),
             level_zero_tests::to_string(d));
@@ -121,15 +120,17 @@ TEST(XeCommandQueueDescModeToString, InvalidValue) {
             level_zero_tests::to_string(d));
 }
 
-TEST(XeCommandQueueDescPriorityToString, ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW) {
+TEST(XeCommandQueueDescPriorityToString,
+     ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW) {
   const ze_command_queue_priority_t d = ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW;
   EXPECT_EQ("ZE_COMMAND_QUEUE_PRIORITY_LOW", level_zero_tests::to_string(d));
 }
 
 TEST(XeCommandQueueDescPriorityToString, InvalidValue) {
   const ze_command_queue_priority_t d =
-      static_cast<ze_command_queue_priority_t>(static_cast<uint32_t>(
-          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW + ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH));
+      static_cast<ze_command_queue_priority_t>(
+          static_cast<uint32_t>(ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW +
+                                ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH));
   EXPECT_EQ("Unknown ze_command_queue_priority_t value: " +
                 std::to_string(static_cast<int>(d)),
             level_zero_tests::to_string(d));
@@ -340,7 +341,6 @@ TEST(XeImageFlagToString, ZE_IMAGE_FLAG_KERNEL_WRITE) {
   const ze_image_flag_t f = ZE_IMAGE_FLAG_KERNEL_WRITE;
   EXPECT_EQ("|ZE_IMAGE_FLAG_KERNEL_WRITE|", level_zero_tests::to_string(f));
 }
-
 
 TEST(XeImageFlagToString, ZE_IMAGE_FLAG_BIAS_UNCACHED) {
   const ze_image_flag_t f = ZE_IMAGE_FLAG_BIAS_UNCACHED;
