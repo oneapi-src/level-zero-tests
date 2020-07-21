@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2020 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -14,8 +14,7 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 class StandbyModuleTest : public lzt::SysmanCtsClass {};
@@ -54,19 +53,19 @@ TEST_F(
 }
 TEST_F(
     StandbyModuleTest,
-    GivenValidDeviceWhenRequestingModeThenExpectzetSysmanStandbyGetModeToReturnValidStandbyMode) {
+    GivenValidDeviceWhenRequestingModeThenExpectzesSysmanStandbyGetModeToReturnValidStandbyMode) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pHandles = lzt::get_standby_handles(device, count);
     for (auto pHandle : pHandles) {
       EXPECT_NE(nullptr, pHandle);
-      zet_standby_promo_mode_t standByMode;
+      zes_standby_promo_mode_t standByMode = {};
       standByMode = lzt::get_standby_mode(pHandle);
       switch (standByMode) {
-      case ZET_STANDBY_PROMO_MODE_DEFAULT:
+      case ZES_STANDBY_PROMO_MODE_DEFAULT:
         SUCCEED();
         break;
-      case ZET_STANDBY_PROMO_MODE_NEVER:
+      case ZES_STANDBY_PROMO_MODE_NEVER:
         SUCCEED();
         break;
       default:
@@ -77,19 +76,19 @@ TEST_F(
 }
 TEST_F(
     StandbyModuleTest,
-    GivenValidDeviceWhenSettingModeThenExpectzetSysmanStandbySetModeFollowedByzetSysmanStandbyGetModeToMatch) {
+    GivenValidDeviceWhenSettingModeThenExpectzesSysmanStandbySetModeFollowedByzesSysmanStandbyGetModeToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pHandles = lzt::get_standby_handles(device, count);
     for (auto pHandle : pHandles) {
       EXPECT_NE(nullptr, pHandle);
-      zet_standby_promo_mode_t standByMode;
-      zet_standby_promo_mode_t standByMode1;
-      standByMode = ZET_STANDBY_PROMO_MODE_DEFAULT;
+      zes_standby_promo_mode_t standByMode = {};
+      zes_standby_promo_mode_t standByMode1 = {};
+      standByMode = ZES_STANDBY_PROMO_MODE_DEFAULT;
       lzt::set_standby_mode(pHandle, standByMode);
       standByMode1 = lzt::get_standby_mode(pHandle);
       EXPECT_EQ(standByMode, standByMode1);
-      standByMode = ZET_STANDBY_PROMO_MODE_NEVER;
+      standByMode = ZES_STANDBY_PROMO_MODE_NEVER;
       lzt::set_standby_mode(pHandle, standByMode);
       standByMode1 = lzt::get_standby_mode(pHandle);
       EXPECT_EQ(standByMode, standByMode1);
@@ -106,7 +105,7 @@ TEST_F(
     for (auto pStandbyHandle : pStandbyHandles) {
       EXPECT_NE(nullptr, pStandbyHandle);
       auto properties = lzt::get_standby_properties(pStandbyHandle);
-      EXPECT_EQ(properties.type, ZET_STANDBY_TYPE_GLOBAL);
+      EXPECT_EQ(properties.type, ZES_STANDBY_TYPE_GLOBAL);
     }
   }
 }
@@ -120,7 +119,7 @@ TEST_F(
       EXPECT_NE(nullptr, pStandbyHandle);
       auto propertiesInitial = lzt::get_standby_properties(pStandbyHandle);
       auto propertiesLater = lzt::get_standby_properties(pStandbyHandle);
-      ASSERT_EQ(propertiesInitial.type, ZET_STANDBY_TYPE_GLOBAL);
+      ASSERT_EQ(propertiesInitial.type, ZES_STANDBY_TYPE_GLOBAL);
       EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
       if (propertiesInitial.onSubdevice == true &&

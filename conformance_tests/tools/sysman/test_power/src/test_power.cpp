@@ -14,8 +14,7 @@
 #include <chrono>
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 class PowerModuleTest : public lzt::SysmanCtsClass {};
@@ -67,6 +66,10 @@ TEST_F(
       EXPECT_NE(nullptr, pPowerHandle);
       auto pProperties = lzt::get_power_properties(pPowerHandle);
       EXPECT_GT(pProperties.maxLimit, 0);
+      EXPECT_LT(pProperties.maxLimit, INT32_MAX);
+      EXPECT_GT(pProperties.minLimit, 0);
+      EXPECT_LT(pProperties.minLimit, INT32_MAX);
+      EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
     }
   }
 }
@@ -87,21 +90,23 @@ TEST_F(
       EXPECT_EQ(pPropertiesInitial.isEnergyThresholdSupported,
                 pPropertiesLater.isEnergyThresholdSupported);
       EXPECT_EQ(pPropertiesInitial.maxLimit, pPropertiesLater.maxLimit);
+      EXPECT_EQ(pPropertiesInitial.minLimit, pPropertiesLater.minLimit);
+      EXPECT_EQ(pPropertiesInitial.defaultLimit, pPropertiesLater.defaultLimit);
     }
   }
 }
 
 TEST_F(
     PowerModuleTest,
-    GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectzetSysmanPowerGetLimitsToReturnValidPowerLimits) {
+    GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectzesSysmanPowerGetLimitsToReturnValidPowerLimits) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
-      zet_power_sustained_limit_t pSustained;
-      zet_power_burst_limit_t pBurst;
-      zet_power_peak_limit_t pPeak;
+      zes_power_sustained_limit_t pSustained = {};
+      zes_power_burst_limit_t pBurst = {};
+      zes_power_peak_limit_t pPeak = {};
       lzt::get_power_limits(pPowerHandle, &pSustained, &pBurst, &pPeak);
       auto pProperties = lzt::get_power_properties(pPowerHandle);
       EXPECT_LE(pSustained.power, pBurst.power);
@@ -112,20 +117,20 @@ TEST_F(
 }
 TEST_F(
     PowerModuleTest,
-    GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectzetSysmanPowerGetLimitsToReturnSameValuesTwice) {
+    GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectzesSysmanPowerGetLimitsToReturnSameValuesTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
-      zet_power_sustained_limit_t pSustainedInitial;
-      zet_power_burst_limit_t pBurstInitial;
-      zet_power_peak_limit_t pPeakInitial;
+      zes_power_sustained_limit_t pSustainedInitial = {};
+      zes_power_burst_limit_t pBurstInitial = {};
+      zes_power_peak_limit_t pPeakInitial = {};
       lzt::get_power_limits(pPowerHandle, &pSustainedInitial, &pBurstInitial,
                             &pPeakInitial);
-      zet_power_sustained_limit_t pSustainedLater;
-      zet_power_burst_limit_t pBurstLater;
-      zet_power_peak_limit_t pPeakLater;
+      zes_power_sustained_limit_t pSustainedLater = {};
+      zes_power_burst_limit_t pBurstLater = {};
+      zes_power_peak_limit_t pPeakLater = {};
       lzt::get_power_limits(pPowerHandle, &pSustainedLater, &pBurstLater,
                             &pPeakLater);
 
@@ -141,21 +146,21 @@ TEST_F(
 }
 TEST_F(
     PowerModuleTest,
-    GivenValidPowerHandleWhenSettingPowerValuesThenExpectzetSysmanPowerSetLimitsFollowedByzetSysmanPowerGetLimitsToMatch) {
+    GivenValidPowerHandleWhenSettingPowerValuesThenExpectzesSysmanPowerSetLimitsFollowedByzesSysmanPowerGetLimitsToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
-      zet_power_sustained_limit_t pSustainedInitial;
-      zet_power_burst_limit_t pBurstInitial;
-      zet_power_peak_limit_t pPeakInitial;
+      zes_power_sustained_limit_t pSustainedInitial = {};
+      zes_power_burst_limit_t pBurstInitial = {};
+      zes_power_peak_limit_t pPeakInitial = {};
       lzt::get_power_limits(pPowerHandle, &pSustainedInitial, &pBurstInitial,
                             &pPeakInitial); // get default power values
       auto pProperties = lzt::get_power_properties(pPowerHandle);
-      zet_power_sustained_limit_t pSustainedSet;
-      zet_power_burst_limit_t pBurstSet;
-      zet_power_peak_limit_t pPeakSet;
+      zes_power_sustained_limit_t pSustainedSet = {};
+      zes_power_burst_limit_t pBurstSet = {};
+      zes_power_peak_limit_t pPeakSet = {};
       if (pSustainedInitial.enabled == true)
         pSustainedSet.enabled = false;
       else
@@ -171,9 +176,9 @@ TEST_F(
       pPeakSet.powerDC = pPeakInitial.powerDC;
       lzt::set_power_limits(pPowerHandle, &pSustainedSet, &pBurstSet,
                             &pPeakSet); // Set power values
-      zet_power_sustained_limit_t pSustainedGet;
-      zet_power_burst_limit_t pBurstGet;
-      zet_power_peak_limit_t pPeakGet;
+      zes_power_sustained_limit_t pSustainedGet = {};
+      zes_power_burst_limit_t pBurstGet = {};
+      zes_power_peak_limit_t pPeakGet = {};
       lzt::get_power_limits(pPowerHandle, &pSustainedGet, &pBurstGet,
                             &pPeakGet); // Get power values
       EXPECT_EQ(pSustainedGet.enabled, pSustainedSet.enabled);
@@ -191,13 +196,13 @@ TEST_F(
 }
 TEST_F(
     PowerModuleTest,
-    GivenValidPowerHandleThenExpectzetSysmanPowerGetEnergyCounterToReturnSuccess) {
+    GivenValidPowerHandleThenExpectzesSysmanPowerGetEnergyCounterToReturnSuccess) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
-      zet_power_energy_counter_t pEnergyCounter;
+      zes_power_energy_counter_t pEnergyCounter = {};
       lzt::get_power_energy_counter(pPowerHandle, &pEnergyCounter);
       uint64_t energy_initial = pEnergyCounter.energy;
       uint64_t timestamp_initial = pEnergyCounter.timestamp;
@@ -245,7 +250,7 @@ TEST_F(
 }
 TEST_F(
     PowerModuleTest,
-    GivenValidPowerHandleWhenSettingEnergyValuesThenExpectzetSysmanPowerSetEnergyThresholdFollowedByzetSysmanPowerGetEnergyThresholdToMatch) {
+    GivenValidPowerHandleWhenSettingEnergyValuesThenExpectzesSysmanPowerSetEnergyThresholdFollowedByzesSysmanPowerGetEnergyThresholdToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);

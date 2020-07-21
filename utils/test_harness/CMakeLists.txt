@@ -22,10 +22,10 @@ add_core_library(test_harness
     #"tools/src/test_harness_api_tracing.cpp"
     #"tools/src/test_harness_metric.cpp"
     #"tools/sysman/src/test_harness_sysman_frequency.cpp"
-    #"tools/sysman/src/test_harness_sysman_standby.cpp"
+    "tools/sysman/src/test_harness_sysman_standby.cpp"
     #"tools/sysman/src/test_harness_sysman_init.cpp"
-    #"tools/sysman/src/test_harness_sysman_pci.cpp"
-    #"tools/sysman/src/test_harness_sysman_power.cpp"
+    "tools/sysman/src/test_harness_sysman_pci.cpp"
+    "tools/sysman/src/test_harness_sysman_power.cpp"
     #"tools/sysman/src/test_harness_sysman_diagnostics.cpp"
     #"tools/sysman/src/test_harness_sysman_event.cpp"
     #"tools/sysman/src/test_harness_sysman_memory.cpp"
@@ -55,3 +55,4 @@ target_include_directories(test_harness
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
