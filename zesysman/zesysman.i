@@ -9,7 +9,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <zes_api.h>
+#include <level_zero/zes_api.h>
 
 #define _THROWS_ZET_ERROR __attribute__((noreturn))
 #define _CAN_THROW
@@ -76,7 +76,7 @@ static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s)
 // output parameters to convert to function outputs
 %apply int * OUTPUT { ze_api_version_t* version };
 
-%include <ze_api.h>
+%include <level_zero/ze_api.h>
 
 %clear ze_api_version_t* version;
 
@@ -89,7 +89,7 @@ static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s)
 %apply int * OUTPUT { zes_standby_promo_mode_t* pMode };
 %apply int * OUTPUT { zes_sched_mode_t* pMode };
 
-%include <zes_api.h>
+%include <level_zero/zes_api.h>
 
 %clear zes_sched_mode_t* pMode;
 %clear zes_standby_promo_mode_t* pMode;
