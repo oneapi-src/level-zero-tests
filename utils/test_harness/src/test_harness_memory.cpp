@@ -20,23 +20,23 @@ void *allocate_host_memory(const size_t size) {
 }
 
 void *allocate_host_memory(const size_t size, const size_t alignment) {
-  ze_driver_handle_t driver = lzt::get_default_driver();
+  auto context = lzt::get_default_context();
 
-  return allocate_host_memory(size, alignment, driver);
+  return allocate_host_memory(size, alignment, context);
 }
 
 void *allocate_host_memory(const size_t size, const size_t alignment,
-                           const ze_driver_handle_t driver) {
+                           const ze_context_handle_t context) {
 
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
-  host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
+  host_desc.flags = 0;
 
   host_desc.pNext = nullptr;
 
   void *memory = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverAllocHostMem(driver, &host_desc, size, alignment, &memory));
+            zeMemAllocHost(context, &host_desc, size, alignment, &memory));
   EXPECT_NE(nullptr, memory);
 
   return memory;
@@ -47,31 +47,30 @@ void *allocate_device_memory(const size_t size) {
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment) {
-  return (allocate_device_memory(size, alignment,
-                                 ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT));
+  return (allocate_device_memory(size, alignment, 0));
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
-                             const ze_device_mem_alloc_flag_t flags) {
+                             const ze_device_mem_alloc_flags_t flags) {
 
-  ze_driver_handle_t driver = lzt::get_default_driver();
-  ze_device_handle_t device = zeDevice::get_instance()->get_device();
-  return allocate_device_memory(size, alignment, flags, device, driver);
+  auto context = lzt::get_default_context();
+  auto device = zeDevice::get_instance()->get_device();
+  return allocate_device_memory(size, alignment, flags, device, context);
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
-                             const ze_device_mem_alloc_flag_t flags,
+                             const ze_device_mem_alloc_flags_t flags,
                              ze_device_handle_t device,
-                             ze_driver_handle_t driver) {
+                             ze_context_handle_t context) {
 
-  return allocate_device_memory(size, alignment, flags, 0, device, driver);
+  return allocate_device_memory(size, alignment, flags, 0, device, context);
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
-                             const ze_device_mem_alloc_flag_t flags,
+                             const ze_device_mem_alloc_flags_t flags,
                              const uint32_t ordinal,
                              ze_device_handle_t device_handle,
-                             ze_driver_handle_t driver) {
+                             ze_context_handle_t context) {
   void *memory = nullptr;
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
@@ -81,8 +80,8 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
   device_desc.pNext = nullptr;
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverAllocDeviceMem(driver, &device_desc, size, alignment,
-                                   device_handle, &memory));
+            zeMemAllocDevice(context, &device_desc, size, alignment,
+                             device_handle, &memory));
   EXPECT_NE(nullptr, memory);
 
   return memory;
@@ -91,42 +90,35 @@ void *allocate_shared_memory(const size_t size) {
   return allocate_shared_memory(size, 1);
 }
 void *allocate_shared_memory(const size_t size, ze_device_handle_t device) {
-  return allocate_shared_memory(size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
+  return allocate_shared_memory(size, 1, 0, 0, device);
 }
 void *allocate_shared_memory(const size_t size, const size_t alignment) {
-  return allocate_shared_memory(size, alignment,
-                                ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT);
+  return allocate_shared_memory(size, alignment, 0, 0);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
-                             const ze_device_mem_alloc_flag_t dev_flags,
-                             const ze_host_mem_alloc_flag_t host_flags) {
+                             const ze_device_mem_alloc_flags_t dev_flags,
+                             const ze_host_mem_alloc_flags_t host_flags) {
 
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
 
-  return allocate_shared_memory(size, alignment,
-                                ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
+  return allocate_shared_memory(size, alignment, 0, 0, device);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
-                             const ze_device_mem_alloc_flag_t dev_flags,
-                             const ze_host_mem_alloc_flag_t host_flags,
+                             const ze_device_mem_alloc_flags_t dev_flags,
+                             const ze_host_mem_alloc_flags_t host_flags,
                              ze_device_handle_t device) {
 
-  ze_driver_handle_t driver = lzt::get_default_driver();
-  return allocate_shared_memory(size, alignment,
-                                ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device, driver);
+  auto context = lzt::get_default_context();
+  return allocate_shared_memory(size, alignment, 0, 0, device, context);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
-                             const ze_device_mem_alloc_flag_t dev_flags,
-                             const ze_host_mem_alloc_flag_t host_flags,
+                             const ze_device_mem_alloc_flags_t dev_flags,
+                             const ze_host_mem_alloc_flags_t host_flags,
                              ze_device_handle_t device,
-                             ze_driver_handle_t driver) {
+                             ze_context_handle_t context) {
 
   uint32_t ordinal = 0;
 
@@ -143,8 +135,8 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
 
   host_desc.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverAllocSharedMem(driver, &device_desc, &host_desc, size,
-                                   alignment, device, &memory));
+            zeMemAllocShared(context, &device_desc, &host_desc, size, alignment,
+                             device, &memory));
   EXPECT_NE(nullptr, memory);
 
   return memory;
@@ -168,11 +160,11 @@ void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size) {
 }
 
 void free_memory(const void *ptr) {
-  free_memory(lzt::get_default_driver(), ptr);
+  free_memory(lzt::get_default_context(), ptr);
 }
 
-void free_memory(ze_driver_handle_t driver, const void *ptr) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverFreeMem(driver, (void *)ptr));
+void free_memory(ze_context_handle_t context, const void *ptr) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
 }
 
 void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
@@ -212,15 +204,15 @@ void validate_data_pattern(void *buff, size_t size, int8_t data_pattern) {
   }
 }
 void get_mem_alloc_properties(
-    ze_driver_handle_t driver, const void *memory,
+    ze_context_handle_t context, const void *memory,
     ze_memory_allocation_properties_t *memory_properties) {
-  get_mem_alloc_properties(driver, memory, memory_properties, nullptr);
+  get_mem_alloc_properties(context, memory, memory_properties, nullptr);
 }
 void get_mem_alloc_properties(
-    ze_driver_handle_t driver, const void *memory,
+    ze_context_handle_t context, const void *memory,
     ze_memory_allocation_properties_t *memory_properties,
     ze_device_handle_t *device) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetMemAllocProperties(
-                                   driver, memory, memory_properties, device));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAllocProperties(
+                                   context, memory, memory_properties, device));
 }
 }; // namespace level_zero_tests

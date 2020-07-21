@@ -23,7 +23,8 @@ ze_sampler_handle_t create_sampler(ze_sampler_address_mode_t addrmode,
 
   ze_sampler_handle_t sampler = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeSamplerCreate(zeDevice::get_instance()->get_device(), &descriptor,
+            zeSamplerCreate(lzt::get_default_context(),
+                            zeDevice::get_instance()->get_device(), &descriptor,
                             &sampler));
   EXPECT_NE(nullptr, sampler);
   return sampler;
