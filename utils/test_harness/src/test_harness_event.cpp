@@ -13,8 +13,9 @@ namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
-ze_event_pool_handle_t create_event_pool(uint32_t count,
-                                         ze_event_pool_flag_t flags) {
+ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
+                                         uint32_t count,
+                                         ze_event_pool_flags_t flags) {
   ze_event_pool_handle_t event_pool;
   ze_event_pool_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
@@ -23,28 +24,27 @@ ze_event_pool_handle_t create_event_pool(uint32_t count,
   descriptor.flags = flags;
   descriptor.count = count;
 
-  return create_event_pool(descriptor);
+  return create_event_pool(context, descriptor);
 }
 
-ze_event_pool_handle_t create_event_pool(ze_event_pool_desc_t desc) {
+ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
+                                         ze_event_pool_desc_t desc) {
   ze_event_pool_handle_t event_pool;
   ze_driver_handle_t driver = lzt::get_default_driver();
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeEventPoolCreate(driver, &desc, lzt::get_device_count(driver),
-                              &device, &event_pool));
+            zeEventPoolCreate(context, &desc, 0, nullptr, &event_pool));
   EXPECT_NE(nullptr, event_pool);
   return event_pool;
 }
 
 ze_event_pool_handle_t
-create_event_pool(ze_event_pool_desc_t desc,
+create_event_pool(ze_context_handle_t context, ze_event_pool_desc_t desc,
                   std::vector<ze_device_handle_t> devices) {
   ze_event_pool_handle_t event_pool;
-  ze_driver_handle_t driver = lzt::get_default_driver();
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCreate(driver, &desc, devices.size(),
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCreate(context, &desc, devices.size(),
                                                  devices.data(), &event_pool));
   EXPECT_NE(nullptr, event_pool);
   return event_pool;
@@ -66,28 +66,33 @@ void destroy_event_pool(ze_event_pool_handle_t event_pool) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventPoolDestroy(event_pool));
 }
 
-uint64_t get_event_timestamp(ze_event_handle_t event,
-                             ze_event_timestamp_type_t type) {
-  uint64_t value = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventGetTimestamp(event, type, &value));
+ze_kernel_timestamp_result_t
+get_event_kernel_timestamp(ze_event_handle_t event) {
+  // TBD
+  ze_kernel_timestamp_result_t value = {};
+  memset(&value, 0, sizeof(value));
   return value;
 }
 
 void zeEventPool::InitEventPool() { InitEventPool(32); }
 
-void zeEventPool::InitEventPool(uint32_t count) {
-  InitEventPool(count, ZE_EVENT_POOL_FLAG_DEFAULT);
-}
-void zeEventPool::InitEventPool(uint32_t count, ze_event_pool_flag_t flags) {
+void zeEventPool::InitEventPool(uint32_t count) { InitEventPool(count, 0); }
+void zeEventPool::InitEventPool(uint32_t count, ze_event_pool_flags_t flags) {
   if (event_pool_ == nullptr) {
-    event_pool_ = create_event_pool(count, flags);
+    if (context_ == nullptr) {
+      context_ = lzt::get_default_context();
+    }
+    event_pool_ = create_event_pool(context_, count, flags);
     pool_indexes_available_.resize(count, true);
   }
 }
 
 void zeEventPool::InitEventPool(ze_event_pool_desc_t desc) {
   if (event_pool_ == nullptr) {
-    event_pool_ = create_event_pool(desc);
+    if (context_ == nullptr) {
+      context_ = lzt::get_default_context();
+    }
+    event_pool_ = create_event_pool(context_, desc);
     pool_indexes_available_.resize(desc.count, true);
   }
 }
@@ -95,7 +100,10 @@ void zeEventPool::InitEventPool(ze_event_pool_desc_t desc) {
 void zeEventPool::InitEventPool(ze_event_pool_desc_t desc,
                                 std::vector<ze_device_handle_t> devices) {
   if (event_pool_ == nullptr) {
-    event_pool_ = create_event_pool(desc, devices);
+    if (context_ == nullptr) {
+      context_ = lzt::get_default_context();
+    }
+    event_pool_ = create_event_pool(context_, desc, devices);
     pool_indexes_available_.resize(desc.count, true);
   }
 }
@@ -105,8 +113,9 @@ zeEventPool::zeEventPool() {}
 zeEventPool::~zeEventPool() {
   // If the event pool was never created, do not attempt to destroy it
   // as that will needlessly cause a test failure.
-  if (event_pool_)
+  if (event_pool_) {
     destroy_event_pool(event_pool_);
+  }
 }
 
 uint32_t find_index(const std::vector<bool> &indexes_available) {
@@ -117,18 +126,17 @@ uint32_t find_index(const std::vector<bool> &indexes_available) {
 }
 
 void zeEventPool::create_event(ze_event_handle_t &event) {
-  create_event(event, ZE_EVENT_SCOPE_FLAG_NONE, ZE_EVENT_SCOPE_FLAG_NONE);
+  create_event(event, 0, 0);
 }
 
 void zeEventPool::create_event(ze_event_handle_t &event,
-                               ze_event_scope_flag_t signal,
-                               ze_event_scope_flag_t wait) {
+                               ze_event_scope_flags_t signal,
+                               ze_event_scope_flags_t wait) {
   // Make sure the event pool is initialized to at least defaults:
   InitEventPool();
   ze_event_desc_t desc = {};
-  desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
   memset(&desc, 0, sizeof(desc));
-
+  desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
   desc.pNext = nullptr;
   desc.signal = signal;
   desc.wait = wait;
@@ -149,14 +157,13 @@ void zeEventPool::create_event(ze_event_handle_t &event, ze_event_desc_t desc) {
 
 void zeEventPool::create_events(std::vector<ze_event_handle_t> &events,
                                 size_t event_count) {
-  create_events(events, event_count, ZE_EVENT_SCOPE_FLAG_NONE,
-                ZE_EVENT_SCOPE_FLAG_NONE);
+  create_events(events, event_count, 0, 0);
 }
 
 void zeEventPool::create_events(std::vector<ze_event_handle_t> &events,
                                 size_t event_count,
-                                ze_event_scope_flag_t signal,
-                                ze_event_scope_flag_t wait) {
+                                ze_event_scope_flags_t signal,
+                                ze_event_scope_flags_t wait) {
   events.resize(event_count);
   for (auto &event : events)
     create_event(event, signal, wait);
@@ -186,10 +193,11 @@ void close_ipc_event_handle(ze_event_pool_handle_t eventPool) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCloseIpcHandle(eventPool));
 }
 
-void open_ipc_event_handle(ze_ipc_event_pool_handle_t hIpc,
+void open_ipc_event_handle(ze_context_handle_t context,
+                           ze_ipc_event_pool_handle_t hIpc,
                            ze_event_pool_handle_t *eventPool) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventPoolOpenIpcHandle(
-                                   lzt::get_default_driver(), hIpc, eventPool));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventPoolOpenIpcHandle(context, hIpc, eventPool));
 }
 
 void signal_event_from_host(ze_event_handle_t hEvent) {

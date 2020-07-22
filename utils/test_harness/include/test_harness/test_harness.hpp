@@ -15,7 +15,7 @@
 #include "test_harness_cmdqueue.hpp"
 #include "test_harness_cmdlist.hpp"
 //#include "test_harness_fence.hpp"
-//#include "test_harness_event.hpp"
+#include "test_harness_event.hpp"
 #include "test_harness_memory.hpp"
 #include "test_harness_image.hpp"
 //#include "test_harness_module.hpp"
