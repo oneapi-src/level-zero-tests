@@ -15,7 +15,7 @@ add_core_library(test_harness
     "src/test_harness_memory.cpp"
     "src/test_harness_image.cpp"
     #"src/test_harness_fence.cpp"
-    #"src/test_harness_module.cpp"
+    "src/test_harness_module.cpp"
     "src/test_harness_sampler.cpp"
     #"src/test_harness_ocl_interop.cpp"
     #"src/test_harness_driver_info.cpp"

@@ -29,6 +29,17 @@ ze_module_handle_t create_module(ze_device_handle_t device,
                                  const char *build_flags,
                                  ze_module_build_log_handle_t *p_build_log) {
 
+  return create_module(lzt::get_default_context(), device, filename, format,
+                       build_flags, p_build_log);
+}
+
+ze_module_handle_t create_module(ze_context_handle_t context,
+                                 ze_device_handle_t device,
+                                 const std::string filename,
+                                 const ze_module_format_t format,
+                                 const char *build_flags,
+                                 ze_module_build_log_handle_t *p_build_log) {
+
   ze_module_desc_t module_description = {};
   module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   ze_module_handle_t module;
@@ -47,7 +58,8 @@ ze_module_handle_t create_module(ze_device_handle_t device,
   module_description.pConstants = &module_constants;
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleCreate(device, &module_description, &module, p_build_log));
+            zeModuleCreate(context, device, &module_description, &module,
+                           p_build_log));
 
   return module;
 }
@@ -128,17 +140,15 @@ void destroy_module(ze_module_handle_t module) {
 
 ze_kernel_handle_t create_function(ze_module_handle_t module,
                                    std::string func_name) {
-  return create_function(module, ZE_KERNEL_FLAG_NONE, func_name);
+  return create_function(module, 0, func_name);
 }
 
 ze_kernel_handle_t create_function(ze_module_handle_t module,
-                                   ze_kernel_flag_t flag,
+                                   ze_kernel_flags_t flag,
                                    std::string func_name) {
   ze_kernel_handle_t kernel;
   ze_kernel_desc_t kernel_description = {};
   kernel_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
-  EXPECT_TRUE((flag == ZE_KERNEL_FLAG_NONE) ||
-              (flag == ZE_KERNEL_FLAG_FORCE_RESIDENCY));
 
   kernel_description.pNext = nullptr;
   kernel_description.flags = flag;
@@ -218,24 +228,8 @@ void create_and_execute_function(ze_device_handle_t device,
 uint32_t get_kernel_source_attribute_size(ze_kernel_handle_t hKernel) {
   uint32_t size = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetAttribute(hKernel, ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE,
-                                 &size, nullptr));
+            zeKernelGetSourceAttributes(hKernel, &size, nullptr));
   return size;
-}
-
-void get_kernel_attribute(ze_kernel_handle_t hKernel,
-                          ze_kernel_attribute_t attr, uint32_t *size,
-                          void *pValue) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetAttribute(hKernel, attr, size, pValue));
-}
-
-void set_kernel_attribute(ze_kernel_handle_t hKernel,
-                          ze_kernel_attribute_t attr, uint32_t size,
-                          void *pValue) {
-  EXPECT_NE(attr, ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetAttribute(hKernel, attr, size, pValue));
 }
 
 } // namespace level_zero_tests

@@ -21,6 +21,12 @@ ze_module_handle_t create_module(ze_device_handle_t device,
                                  const ze_module_format_t format,
                                  const char *build_flags,
                                  ze_module_build_log_handle_t *phBuildLog);
+ze_module_handle_t create_module(ze_context_handle_t context,
+                                 ze_device_handle_t device,
+                                 const std::string filename,
+                                 const ze_module_format_t format,
+                                 const char *build_flags,
+                                 ze_module_build_log_handle_t *p_build_log);
 void destroy_module(ze_module_handle_t module);
 size_t get_build_log_size(const ze_module_build_log_handle_t build_log);
 std::string get_build_log_string(const ze_module_build_log_handle_t build_log);
@@ -39,7 +45,7 @@ void set_group_size(ze_kernel_handle_t hFunction, uint32_t groupSizeX,
 ze_kernel_handle_t create_function(ze_module_handle_t module,
                                    std::string func_name);
 ze_kernel_handle_t create_function(ze_module_handle_t module,
-                                   ze_kernel_flag_t flag,
+                                   ze_kernel_flags_t flag,
                                    std::string func_name);
 void destroy_function(ze_kernel_handle_t function);
 
@@ -62,12 +68,7 @@ void create_and_execute_function(ze_device_handle_t device,
                                  const std::vector<FunctionArg> &args);
 
 uint32_t get_kernel_source_attribute_size(ze_kernel_handle_t hKernel);
-void get_kernel_attribute(ze_kernel_handle_t hKernel,
-                          ze_kernel_attribute_t attr, uint32_t *size,
-                          void *pValue);
-void set_kernel_attribute(ze_kernel_handle_t hKernel,
-                          ze_kernel_attribute_t attr, uint32_t size,
-                          void *pValue);
+
 } // namespace level_zero_tests
 
 #endif
