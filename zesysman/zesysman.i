@@ -34,6 +34,14 @@ void _zes_exception(const char *format, ...)
 
 void _initialize_zesysman()
 {
+    /*
+     * Belts and suspenders: this should be set in the Python wrapper first:
+     */
+    if (setenv("ZES_ENABLE_SYSMAN", "1", 0) != 0)
+    {
+        _zes_exception("Error setting ZES_ENABLE_SYSMAN environment variable");
+    }
+
     if (zeInit(0) != ZE_RESULT_SUCCESS)
     {
         _zes_exception("Error initializing L0 libraries");
@@ -60,6 +68,14 @@ static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s)
     }
     *s = '\0';
 }
+%}
+
+/*
+ * By setting ZES_ENABLE_SYSMAN here, it's in the Python environment also:
+ */
+%pythonbegin %{
+import os
+os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %}
 
 %init %{
@@ -145,11 +161,11 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 %array_class(zes_mem_handle_t, zes_mem_handle_array);
 %array_class(zes_fabric_port_handle_t, zes_fabric_port_handle_array);
 %array_class(zes_ras_handle_t, zes_ras_handle_array);
+%array_class(zes_sched_handle_t, zes_sched_handle_array);
 %array_class(zes_standby_handle_t, zes_standby_handle_array);
 %array_class(double, double_array);
 %array_class(zes_pci_bar_properties_t, zes_pci_bar_properties_array);
 %array_class(zes_process_state_t, zes_process_state_array);
-%array_class(zes_sched_mode_t, zes_sched_mode_array);
 
 %pointer_cast(unsigned long, ze_driver_handle_t, ulong_to_driver_handle);
 %pointer_cast(unsigned long, ze_device_handle_t, ulong_to_device_handle);

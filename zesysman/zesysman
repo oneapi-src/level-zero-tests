@@ -496,23 +496,35 @@ def zes_typed_structure(stype):
     init = init_map.get(stype, default_structure_init)
     return init(stype, ctor())
 
+def zes_typed_array(stype, count):
+    ctor_map = { ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES : zes_pci_bar_properties_array,
+                 ZES_STRUCTURE_TYPE_PROCESS_STATE : zes_process_state_array }
+    init_map = { }
+
+    # no default array constructor, size must be known:
+    array_ctor = ctor_map[stype]
+    init = init_map.get(stype, default_structure_init)
+
+    array = array_ctor(count)
+    for i in range(count):
+        init(stype, array[i])
+
+    return array
+
 # TODO: These structures aren't being used yet:
 #
-# zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES)# : zes_pci_bar_properties_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_DIAG_PROPERTIES)# : zes_diag_properties_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)# : zes_fan_properties_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES)# : zes_firmware_properties_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_LED_PROPERTIES)# : zes_led_properties_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_PERF_PROPERTIES)# : zes_perf_properties_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_PSU_PROPERTIES)# : zes_psu_properties_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_PROPERTIES)# : zes_sched_properties_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_CONFIG)# : zes_fan_config_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)# : zes_oc_capabilities_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_LED_STATE)# : zes_led_state_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_PSU_STATE)# : zes_psu_state_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_CONFIG)# : zes_ras_config_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_STATE)# : zes_ras_state_t
-# zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)# : zes_temp_config_t
+# ZES_STRUCTURE_TYPE_DIAG_PROPERTIES
+# ZES_STRUCTURE_TYPE_FAN_PROPERTIES
+# ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES
+# ZES_STRUCTURE_TYPE_LED_PROPERTIES
+# ZES_STRUCTURE_TYPE_PERF_PROPERTIES
+# ZES_STRUCTURE_TYPE_PSU_PROPERTIES
+# ZES_STRUCTURE_TYPE_SCHED_PROPERTIES
+# ZES_STRUCTURE_TYPE_FAN_CONFIG
+# ZES_STRUCTURE_TYPE_OC_CAPABILITIES
+# ZES_STRUCTURE_TYPE_LED_STATE
+# ZES_STRUCTURE_TYPE_PSU_STATE
+# ZES_STRUCTURE_TYPE_TEMP_CONFIG
 
 # This is a special developer mode that forces all API functions for which a
 # replacement is available to return UNIMPLEMENTED. Normally, you would want
@@ -542,9 +554,13 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesEngineGetActivity(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDevicePciGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDevicePciGetState(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDevicePciGetStats(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDevicePciGetBars(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceEnumFabricPorts(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
@@ -573,7 +589,7 @@ def unimplementedFunctionCall(func, *args, **kwargs):
     if not replaceUnimplementedFunctions:
         raise NotImplementedError
 
-    def stubDeviceEnumTemperatureSensors(sysdev, count_ptr, handle_array):
+    def stubDeviceEnumTemperatureSensors(dev, count_ptr, handle_array):
         if handle_array is None:
             uint32_assign(count_ptr, 3)
         elif uint32_value(count_ptr) == 3:
@@ -593,7 +609,7 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         t = stubState.get("Temp", 50.0)
         stubState["Temp"] = t + 0.1
         return t
-    def stubDeviceEnumPowerDomains(sysdev, count_ptr, handle_array):
+    def stubDeviceEnumPowerDomains(dev, count_ptr, handle_array):
         global stubState
         if handle_array is None:
             uint32_assign(count_ptr, 1)
@@ -659,7 +675,7 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                 results[i] = freqs[i]
         else:
             raise ValueError(uint32_value(count_ptr))
-    def stubDeviceEnumEngineGroups(sysdev, count_ptr, handle_array):
+    def stubDeviceEnumEngineGroups(dev, count_ptr, handle_array):
         global stubState
         if handle_array is None:
             uint32_assign(count_ptr, 4)
@@ -693,16 +709,27 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         if eng == ZES_ENGINE_GROUP_COPY_ALL:
             stats["activeTime"] += 50000
         utilStats.activeTime = stats["activeTime"]
-    def stubDevicePciGetState(sysdev, pciState):
+    def stubDevicePciGetProperties(dev, pciProps):
+        pciProps.address.domain = 1
+        pciProps.address.bus = 2
+        pciProps.address.device = 3
+        pciProps.address.function = 4
+        pciProps.maxSpeed.gen = 4
+        pciProps.maxSpeed.width = 16
+        pciProps.maxSpeed.maxBandwidth = -1
+        pciProps.haveBandwidthCounters = True
+        pciProps.havePacketCounters = True
+        pciProps.haveReplayCounters = True
+    def stubDevicePciGetState(dev, pciState):
         pciState.status = ZES_PCI_LINK_STATUS_GOOD
         pciState.qualityIssues = 0
         pciState.stabilityIssues = 0
         pciState.speed.gen = 4
         pciState.speed.width = 4
         pciState.speed.maxBandwidth = 7880000000
-    def stubDevicePciGetStats(sysdev, pciCounter):
+    def stubDevicePciGetStats(dev, pciCounter):
         global stubState
-        d = stubState.setdefault(sysman_handle_to_ulong(sysdev), {})
+        d = stubState.setdefault(device_handle_to_ulong(dev), {})
         r = d.setdefault("PCIstats", [0,0,0,0,0])
         pciCounter.timestamp = r[0]
         pciCounter.replayCounter = r[1]
@@ -714,10 +741,37 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         r[2] += 1000
         r[3] += 788000000
         r[4] += 78800000
-        pciCounter.maxBandwidth = 7880000000
-    def stubDeviceEnumFabricPorts(sysdev, count_ptr, handle_array):
+        pciCounter.speed.gen = 4
+        pciCounter.speed.width = 4
+        pciCounter.speed.maxBandwidth = 7880000000
+    def stubDevicePciGetBars(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 3)
+        elif uint32_value(count_ptr) == 3:
+            items = zes_pci_bar_properties_array.frompointer(handle_array)
+            item = items[0]
+            item.type = ZES_PCI_BAR_TYPE_MMIO
+            item.index = 0
+            item.base = 0x0000400000000000
+            item.size = 0x0000000000010000
+            items[0] = item
+            item = items[1]
+            item.type = ZES_PCI_BAR_TYPE_ROM
+            item.index = 1
+            item.base = 0x0000400000080000
+            item.size = 0x0000000000080000
+            items[1] = item
+            item = items[2]
+            item.type = ZES_PCI_BAR_TYPE_MEM
+            item.index = 2
+            item.base = 0x0000400000100000
+            item.size = 0x0000000000300000
+            items[2] = item
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubDeviceEnumFabricPorts(dev, count_ptr, handle_array):
         raise NotImplementedError
-    def stubDeviceEnumRasErrorSets(sysdev, count_ptr, handle_array):
+    def stubDeviceEnumRasErrorSets(dev, count_ptr, handle_array):
         if handle_array is None:
             uint32_assign(count_ptr, 2)
         elif uint32_value(count_ptr) == 2:
@@ -729,37 +783,45 @@ def unimplementedFunctionCall(func, *args, **kwargs):
     def stubRasGetProperties(ras, rasProps):
         rasProps.type = ras_handle_to_ulong(ras)
         rasProps.onSubdevice = False
-    def stubRasGetState(ras, clearErrors, err_count_ptr, errDetails):
-        uint64_assign(err_count_ptr,0)
-        if errDetails is not None:
-            errDetails.numResets = 0
-            errDetails.numProgrammingErrors = 0
-            errDetails.numDriverErrors = 0
-            errDetails.numComputeErrors = 0
-            errDetails.numNonComputeErrors = 0
-            errDetails.numCacheErrors = 0
-            errDetails.numDisplayErrors = 0
-    def stubDeviceProcessesGetState(sysdev, count_ptr, proc_array):
+    def stubRasGetState(ras, clearErrors, rasState):
+        if rasState is not None:
+            rasState.category[ZES_RAS_ERROR_CAT_RESET] = 0
+            rasState.category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS] = 0
+            rasState.category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS] = 0
+            rasState.category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS] = 0
+            rasState.category[ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS] = 0
+            rasState.category[ZES_RAS_ERROR_CAT_CACHE_ERRORS] = 0
+            rasState.category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS] = 0
+    def stubDeviceProcessesGetState(dev, count_ptr, proc_array):
         if proc_array is None:
             uint32_assign(count_ptr, 4)
         elif uint32_value(count_ptr) == 4:
             procs = zes_process_state_array.frompointer(proc_array)
-            proc = zes_typed_structure(ZES_STRUCTURE_TYPE_PROCESS_STATE)
+            proc = procs[0]
             proc.processId = 32765
             proc.memSize = 0x10000
-            proc.engines = 1 << ZES_ENGINE_TYPE_OTHER | 1 << ZES_ENGINE_TYPE_COMPUTE
+            proc.sharedSize = 0x1000
+            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_OTHER | 1 << ZES_ENGINE_TYPE_FLAG_COMPUTE
             procs[0] = proc
+            proc = procs[1]
             proc.processId = 32766
             proc.memSize = 0x20000
-            proc.engines = 1 << ZES_ENGINE_TYPE_3D
+            proc.sharedSize = 0x1000
+            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_3D
             procs[1] = proc
+            proc = procs[2]
             proc.processId = 32767
             proc.memSize = 0x30000
-            proc.engines = 1 << ZES_ENGINE_TYPE_MEDIA | 1 << ZES_ENGINE_TYPE_DMA
+            proc.sharedSize = 0x1000
+            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_MEDIA | 1 << ZES_ENGINE_TYPE_FLAG_DMA
             procs[2] = proc
+            proc = procs[3]
             proc.processId = 32768
             proc.memSize = 0x40000
-            proc.engines = 1 << ZES_ENGINE_TYPE_OTHER | 1 << ZES_ENGINE_TYPE_COMPUTE | 1 << ZES_ENGINE_TYPE_3D | 1 << ZES_ENGINE_TYPE_MEDIA | 1 << ZES_ENGINE_TYPE_DMA
+            proc.sharedSize = 0x1000
+            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_OTHER | 1 << ZES_ENGINE_TYPE_FLAG_COMPUTE | \
+                           1 << ZES_ENGINE_TYPE_FLAG_3D | 1 << ZES_ENGINE_TYPE_FLAG_MEDIA | \
+                           1 << ZES_ENGINE_TYPE_FLAG_DMA
             procs[3] = proc
         else:
             raise ValueError(uint32_value(count_ptr))
@@ -778,8 +840,10 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesDeviceEnumEngineGroups : stubDeviceEnumEngineGroups,
                      zesEngineGetProperties : stubEngineGetProperties,
                      zesEngineGetActivity : stubEngineGetActivity,
+                     zesDevicePciGetProperties : stubDevicePciGetProperties,
                      zesDevicePciGetState : stubDevicePciGetState,
                      zesDevicePciGetStats : stubDevicePciGetStats,
+                     zesDevicePciGetBars : stubDevicePciGetBars,
                      zesDeviceEnumFabricPorts : stubDeviceEnumFabricPorts,
                      zesDeviceEnumRasErrorSets : stubDeviceEnumRasErrorSets,
                      zesRasGetProperties : stubRasGetProperties,
@@ -809,6 +873,12 @@ def zeCall(func, *args, **kwargs):
 #
 # ZE string conversions
 #
+
+def knownvalue(value):
+    if value < 0:
+        return "?"
+    else:
+        return value
 
 def versionString(version):
     return str(version >> 16) + "." + str(version & 0xffff)
@@ -870,15 +940,9 @@ def memTypeString(memType):
     return memTypes.get(memType, "Unknown")
 
 def barTypeString(barType):
-    barTypes = { ZES_PCI_BAR_TYPE_CONFIG : "CONFIG",
-                 ZES_PCI_BAR_TYPE_MMIO : "MMIO",
-                 ZES_PCI_BAR_TYPE_VRAM : "VRAM",
+    barTypes = { ZES_PCI_BAR_TYPE_MMIO : "MMIO",
                  ZES_PCI_BAR_TYPE_ROM : "ROM",
-                 ZES_PCI_BAR_TYPE_VGA_IO : "VGA_IO",
-                 ZES_PCI_BAR_TYPE_VGA_MEM : "VGA_MEM",
-                 ZES_PCI_BAR_TYPE_INDIRECT_IO : "INDIRECT_IO",
-                 ZES_PCI_BAR_TYPE_INDIRECT_MEM : "INDIRECT_MEM",
-                 ZES_PCI_BAR_TYPE_OTHER : "OTHER" }
+                 ZES_PCI_BAR_TYPE_MEM : "MEM" }
     return barTypes.get(barType, "Unknown")
 
 def memHealthString(memHealth):
@@ -1006,11 +1070,11 @@ def enginesUsedString(engines):
     if not engines:
         return "None"
 
-    engineTypes = [(1 << ZES_ENGINE_TYPE_OTHER, "Other"),
-                   (1 << ZES_ENGINE_TYPE_COMPUTE, "Compute"),
-                   (1 << ZES_ENGINE_TYPE_3D, "3D"),
-                   (1 << ZES_ENGINE_TYPE_MEDIA, "Media"),
-                   (1 << ZES_ENGINE_TYPE_DMA, "DMA")]
+    engineTypes = [(1 << ZES_ENGINE_TYPE_FLAG_OTHER, "Other"),
+                   (1 << ZES_ENGINE_TYPE_FLAG_COMPUTE, "Compute"),
+                   (1 << ZES_ENGINE_TYPE_FLAG_3D, "3D"),
+                   (1 << ZES_ENGINE_TYPE_FLAG_MEDIA, "Media"),
+                   (1 << ZES_ENGINE_TYPE_FLAG_DMA, "DMA")]
 
     engineStrings = []
     for t, s in engineTypes:
@@ -1244,9 +1308,6 @@ def getDevices(driverIndices, drivers, deviceSelection):
 
     sysmanDevices = [deviceLists[r][d] for r,d in indices]
 
-    # for r,d in indices:
-    #     sysmanDevices.append(deviceLists[r][d])
-
     return deviceIDs, deviceUUIDs, sysmanDevices
 
 #
@@ -1325,6 +1386,8 @@ def parseArgs():
                         help="set sleep state promotion mode")
     parser.add_argument("--reset", action='store_true',
                         help="reset specified device")
+    parser.add_argument("--force", action='store_true',
+                        help="forcibly kill processes on reset")
     parser.add_argument("-y", "--yes", action='store_true',
                         help="do not ask for reset confirmation")
     parser.add_argument("-f", "--format", metavar='FMT', choices=["list","xml","table","csv"],
@@ -1712,7 +1775,7 @@ def main():
                 pr("Would RESET device", deviceName)
             else:
                 pr("RESETTING device", deviceName)
-                zeCall(zesDeviceReset, devices[0])
+                zeCall(zesDeviceReset, devices[0], args.force)
         else:
             pr("NOT resetting device")
 
@@ -2120,29 +2183,42 @@ def main():
                     telemetryClosures.append(memTelemetry)
                     pollDelayRequired = True
 
-        # TODO: Update all of this to match HAS when available:
+        showPci = False
         if args.show_pci:
+            pciProps = zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_PROPERTIES)
+            try:
+                zeCall(zesDevicePciGetProperties, device, pciProps)
+            except NotImplementedError:
+                pass
+            except ValueError:
+                reportZeException()
+            else:
+                showPci = True
+
+        if showPci:
             pciTop = Node(devNode, "PCI", None)
             if args.show_inventory:
                 props = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES)
                 zeCall(zesDeviceGetProperties, device, props)
                 Node(pciTop, "DeviceId", hex(props.core.deviceId))
-                pciProps = zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_PROPERTIES)
-                zeCall(zesDevicePciGetProperties, device, pciProps)
                 pciAddr = pciProps.address
                 address = "%02x:%02x.%x" % (pciAddr.bus, pciAddr.device, pciAddr.function)
                 if pciAddr.domain != 0:
                     address = ("%04x:" % pciAddr.domain) + address
                 Node(pciTop, "Address", address)
-                Node(pciTop, "MaxGen", pciProps.maxSpeed.gen)
-                Node(pciTop, "MaxLanes", pciProps.maxSpeed.width)
-                Node(pciTop, "MaxBandwidth", pciProps.maxSpeed.maxBandwidth, ("Units", "Bytes/s"))
+                Node(pciTop, "MaxGen", knownvalue(pciProps.maxSpeed.gen))
+                Node(pciTop, "MaxLanes", knownvalue(pciProps.maxSpeed.width))
+                Node(pciTop, "MaxBandwidth", knownvalue(pciProps.maxSpeed.maxBandwidth),
+                     ("Units", "Bytes/s"))
+                Node(pciTop, "HaveBandwidthCounters", pciProps.haveBandwidthCounters)
+                Node(pciTop, "HavePacketCounters", pciProps.havePacketCounters)
+                Node(pciTop, "HaveReplayCounters", pciProps.haveReplayCounters)
 
                 if args.verbose:
                     barTop = Node(pciTop, "Bars", None)
                     barCount = uint32_ptr()
                     zeCall(zesDevicePciGetBars, device, barCount.cast(), None)
-                    bars = zes_pci_bar_properties_array(barCount.value())
+                    bars = zes_typed_array(ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES, barCount.value())
                     zeCall(zesDevicePciGetBars, device, barCount.cast(), bars.cast())
 
                     for i in range(barCount.value()):
@@ -2167,6 +2243,8 @@ def main():
                 del tmp
 
             if showPciTelemetry:
+                have = { 'bw': pciProps.haveBandwidthCounters, 'pkt' : pciProps.havePacketCounters,
+                         'replay' : pciProps.haveReplayCounters }
                 pciState = zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_STATE)
                 pciCounter = zes_pci_stats_t()
                 zeCall(zesDevicePciGetStats, device, pciCounter)
@@ -2178,21 +2256,28 @@ def main():
                 nodes.append(Node(pciTop, "CurrentGen", "?"))
                 nodes.append(Node(pciTop, "CurrentLanes", "?"))
                 nodes.append(Node(pciTop, "CurrentBandwidth", "?", ("Units", "Bytes/s")))
-                nodes.append(Node(pciTop, "RxThroughput", "?", ("Units", "Bytes/s")))
-                nodes.append(Node(pciTop, "TxThroughput", "?", ("Units", "Bytes/s")))
-                nodes.append(Node(pciTop, "Utilization", "?", ("Units", "%")))
-                nodes.append(Node(pciTop, "ReplayRate", "?", ("Units", "%")))
+                if have['bw']:
+                    nodes.append(Node(pciTop, "RxThroughput", "?", ("Units", "Bytes/s")))
+                    nodes.append(Node(pciTop, "TxThroughput", "?", ("Units", "Bytes/s")))
+                    nodes.append(Node(pciTop, "Utilization", "?", ("Units", "%")))
+                if have['pkt']:
+                    nodes.append(Node(pciTop, "PacketRate", "?"))
+                    if have['replay']:
+                        nodes.append(Node(pciTop, "ReplayRate", "?", ("Units", "%")))
+                elif have['replay']:
+                        nodes.append(Node(pciTop, "ReplayRate", "?"))
 
-                def pciTelemetry(device=device, pciState=pciState, pciCounter=pciCounter, node=nodes):
+                def pciTelemetry(device=device, have=have, pciState=pciState, pciCounter=pciCounter, node=nodes):
                     oldRx, oldTx = pciCounter.rxCounter, pciCounter.txCounter
-                    oldReplay, oldPacket = pciCounter.replayCounter, pciCounter.packetCounter
+                    oldPacket = pciCounter.packetCounter
+                    oldReplay = pciCounter.replayCounter
                     oldTimestamp = pciCounter.timestamp
                     zeCall(zesDevicePciGetState, device, pciState)
                     zeCall(zesDevicePciGetStats, device, pciCounter)
                     deltaRx = pciCounter.rxCounter - oldRx
                     deltaTx = pciCounter.txCounter - oldTx
-                    deltaReplay = pciCounter.replayCounter - oldReplay
                     deltaPacket = pciCounter.packetCounter - oldPacket
+                    deltaReplay = pciCounter.replayCounter - oldReplay
                     deltaT = pciCounter.timestamp - oldTimestamp
                     maxBandwidth = 1.0 * pciCounter.speed.maxBandwidth
                     if deltaT > 0:
@@ -2207,21 +2292,38 @@ def main():
                         txThroughput = "?"
                         pciUtilization = "?"
 
-                    if deltaPacket > 0 and deltaT > 0:
+                    if have['pkt'] and deltaPacket > 0 and deltaT > 0:
+                        packetRate = "%.1f" % (deltaPacket / deltaT)
                         replayRate = "%.1f" % (100.0 * deltaReplay / deltaPacket)
+                    elif have['replay'] and deltaReplay > 0 and deltaT > 0:
+                        packetRate = "?"
+                        replayRate = "%.1f" % (deltaReplay / deltaT)
                     else:
+                        packetRate = "?"
                         replayRate = "?"
+
+                    if pciState.speed.gen != pciCounter.speed.gen or \
+                            pciState.speed.width != pciCounter.speed.width or \
+                            pciState.speed.maxBandwidth != pciCounter.speed.maxBandwidth:
+                        pr.err("WARNING: speed mismatch between PCI state/stats")
 
                     node[0].setText(pciLinkStatusString(pciState.status))
                     node[1].setText(pciQualityIssuesString(pciState.qualityIssues))
                     node[2].setText(pciStabilityIssuesString(pciState.stabilityIssues))
-                    node[3].setText(pciState.speed.gen)
-                    node[4].setText(pciState.speed.width)
-                    node[5].setText(pciState.speed.maxBandwidth)
-                    node[6].setText(rxThroughput)
-                    node[7].setText(txThroughput)
-                    node[8].setText(pciUtilization)
-                    node[9].setText(replayRate)
+                    node[3].setText(knownvalue(pciCounter.speed.gen))
+                    node[4].setText(knownvalue(pciCounter.speed.width))
+                    node[5].setText(knownvalue(pciCounter.speed.maxBandwidth))
+                    i = 6
+                    if have['bw']:
+                        node[i].setText(rxThroughput)
+                        node[i+1].setText(txThroughput)
+                        node[i+2].setText(pciUtilization)
+                        i += 3
+                    if have['pkt']:
+                        node[i].setText(packetRate)
+                        i += 1
+                    if have['replay']:
+                        node[i].setText(replayRate)
 
                 telemetryClosures.append(pciTelemetry)
                 pollDelayRequired = True
@@ -2338,36 +2440,49 @@ def main():
 
                 showErrorTelemetry = False
                 if args.show_telemetry:
-                    tmp1, tmp2 = uint64_ptr(), zes_ras_details_t()
+                    tmp = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_STATE)
                     try:
-                        zeCall(zesRasGetState, ras, False, tmp1.cast(), tmp2)
+                        zeCall(zesRasGetState, ras, False, tmp)
                     except:
                         pass
                     else:
                         showErrorTelemetry = True
-                    del tmp1, tmp2
+                    del tmp
 
                 if showErrorTelemetry:
-                    errTotal = uint64_ptr()
-                    errDetails = zes_ras_details_t()
-                    zeCall(zesRasGetState, ras, args.clear_errors, errTotal.cast(), errDetails)
-                    Node(rasNode, "TotalErrors", errTotal.value())
-                    Node(rasNode, "Resets", errDetails.numResets)
-                    Node(rasNode, "ProgrammingErrors", errDetails.numProgrammingErrors)
-                    Node(rasNode, "DriverErrors", errDetails.numDriverErrors)
-                    Node(rasNode, "ComputeErrors", errDetails.numComputeErrors)
-                    Node(rasNode, "NonComputeErrors", errDetails.numNonComputeErrors)
-                    Node(rasNode, "CacheErrors", errDetails.numCacheErrors)
-                    Node(rasNode, "DisplayErrors", errDetails.numDisplayErrors)
+                    rasState = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_STATE)
+                    zeCall(zesRasGetState, ras, args.clear_errors, rasState)
+
+                    rasResets = rasState.category[ZES_RAS_ERROR_CAT_RESET]
+                    rasProgrammingErrors = rasState.category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS]
+                    rasDriverErrors = rasState.category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS]
+                    rasComputeErrors = rasState.category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS]
+                    rasNonComputeErrors = rasState.category[ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS]
+                    rasCacheErrors = rasState.category[ZES_RAS_ERROR_CAT_CACHE_ERRORS]
+                    rasDisplayErrors = rasState.category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS]
+
+                    Node(rasNode, "Resets", rasResets)
+                    Node(rasNode, "ProgrammingErrors", rasProgrammingErrors)
+                    Node(rasNode, "DriverErrors", rasDriverErrors)
+                    Node(rasNode, "ComputeErrors", rasComputeErrors)
+                    Node(rasNode, "NonComputeErrors", rasNonComputeErrors)
+                    Node(rasNode, "CacheErrors", rasCacheErrors)
+                    Node(rasNode, "DisplayErrors", rasDisplayErrors)
 
         if args.clear_errors and not args.show_telemetry:
             for i in range(edomCount.value()):
                 ras = edoms[i]
-                errTotal = uint64_ptr()
                 try:
-                    zeCall(zesRasGetState, ras, True, errTotal.cast(), None)
+                    zeCall(zesRasGetState, ras, True, None)
                 except ValueError as err:
                     pr.err("workaround... ERROR: zesRasGetState returned error, ignoring...", err)
+
+        # rasConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_CONFIG)
+        #     uint64_t totalThreshold;
+        #     zes_ras_state_t detailedThresholds;
+        #
+        # zesRasGetConfig(ras, rasConfig)
+        # zesRasSetConfig(ras, rasConfig)
 
         stbyCount = uint32_ptr()
         try:
@@ -2423,7 +2538,7 @@ def main():
         except ValueError:
             reportZeException()
         else:
-            procs = zes_process_state_array(procCount.value())
+            procs = zes_typed_array(ZES_STRUCTURE_TYPE_PROCESS_STATE, procCount.value())
             zeCall(zesDeviceProcessesGetState, device, procCount.cast(), procs.cast())
 
         if args.show_processes:
@@ -2444,6 +2559,7 @@ def main():
         except:
             pass
         else:
+            # %array_class(zes_sched_handle_t, zes_sched_handle_array);
             modes = zes_sched_mode_array(schedModeCount.value())
             call(zesSchedulerGetSupportedModes, device, schedModeCount, modes)
 
