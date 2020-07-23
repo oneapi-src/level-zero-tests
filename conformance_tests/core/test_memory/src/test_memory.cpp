@@ -50,25 +50,23 @@ INSTANTIATE_TEST_CASE_P(
     zeDriverAllocDeviceMemTestVaryFlagsAndSizeAndAlignment,
     zeDriverAllocDeviceMemParamsTests,
     ::testing::Combine(
-        ::testing::Values(ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                          ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_CACHED,
+        ::testing::Values(0, ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_CACHED,
                           ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED),
         lzt::memory_allocation_sizes, lzt::memory_allocation_alignments));
 
-class zeDriverGetMemAllocPropertiesTests : public zeDriverAllocDeviceMemTests {
-};
+class zeMemGetAllocPropertiesTests : public zeDriverAllocDeviceMemTests {};
 
 TEST_P(
-    zeDriverGetMemAllocPropertiesTests,
+    zeMemGetAllocPropertiesTests,
     GivenValidDeviceMemoryPointerWhenGettingPropertiesThenVersionAndTypeReturned) {
   ze_memory_allocation_properties_t memory_properties;
-  ze_driver_handle_t driver = lzt::get_default_driver();
+  ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_handle_t device_test = device;
 
   memory_properties.pNext = nullptr;
   memory_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
-  lzt::get_mem_alloc_properties(driver, memory_, &memory_properties,
+  lzt::get_mem_alloc_properties(context, memory_, &memory_properties,
                                 &device_test);
   EXPECT_EQ(ZE_MEMORY_TYPE_DEVICE, memory_properties.type);
   EXPECT_EQ(device, device_test);
@@ -79,7 +77,7 @@ TEST_P(
     memory_properties.pNext = nullptr;
     memory_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
     device_test = device;
-    lzt::get_mem_alloc_properties(driver,
+    lzt::get_mem_alloc_properties(context,
                                   static_cast<void *>(char_mem + size_ - 1),
                                   &memory_properties, &device_test);
     EXPECT_EQ(ZE_MEMORY_TYPE_DEVICE, memory_properties.type);
@@ -87,23 +85,22 @@ TEST_P(
   }
 }
 TEST_P(
-    zeDriverGetMemAllocPropertiesTests,
+    zeMemGetAllocPropertiesTests,
     GivenPointerToDeviceHandleIsSetToNullWhenGettingMemoryPropertiesThenSuccessIsReturned) {
 
-  ze_driver_handle_t driver = lzt::get_default_driver();
+  auto context = lzt::get_default_context();
   ze_memory_allocation_properties_t memory_properties;
 
   memory_properties.pNext = nullptr;
   memory_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
-  lzt::get_mem_alloc_properties(driver, memory_, &memory_properties);
+  lzt::get_mem_alloc_properties(context, memory_, &memory_properties);
 }
 
-INSTANTIATE_TEST_CASE_P(
-    zeDriverGetMemAllocPropertiesTestVaryFlagsAndSizeAndAlignment,
-    zeDriverGetMemAllocPropertiesTests,
-    ::testing::Combine(::testing::Values(ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT),
-                       lzt::memory_allocation_sizes,
-                       lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_CASE_P(zeMemGetAllocPropertiesTestVaryFlagsAndSizeAndAlignment,
+                        zeMemGetAllocPropertiesTests,
+                        ::testing::Combine(::testing::Values(0),
+                                           lzt::memory_allocation_sizes,
+                                           lzt::memory_allocation_alignments));
 
 class zeDriverMemGetAddressRangeTests : public zeDriverAllocDeviceMemTests {};
 
@@ -112,14 +109,13 @@ TEST_P(
     GivenValidDeviceMemoryPointerWhenGettingAddressRangeThenBaseAddressAndSizeReturned) {
 
   void *pBase = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemAddressRange(lzt::get_default_driver(), memory_,
-                                       &pBase, NULL));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
+                                                    memory_, &pBase, NULL));
   EXPECT_EQ(pBase, memory_);
   size_t addr_range_size = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemAddressRange(lzt::get_default_driver(), memory_, NULL,
-                                       &addr_range_size));
+            zeMemGetAddressRange(lzt::get_default_context(), memory_, NULL,
+                                 &addr_range_size));
 
   // Get device mem size rounds size up to nearest page size
   EXPECT_GE(addr_range_size, size_);
@@ -127,14 +123,14 @@ TEST_P(
   addr_range_size = 0;
   if (size_ > 0) {
     uint8_t *char_mem = static_cast<uint8_t *>(memory_);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetMemAddressRange(
-                                     lzt::get_default_driver(),
-                                     static_cast<void *>(char_mem + size_ - 1),
-                                     &pBase, &addr_range_size));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeMemGetAddressRange(lzt::get_default_context(),
+                                   static_cast<void *>(char_mem + size_ - 1),
+                                   &pBase, &addr_range_size));
   } else {
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDriverGetMemAddressRange(lzt::get_default_driver(), memory_,
-                                         &pBase, &addr_range_size));
+              zeMemGetAddressRange(lzt::get_default_context(), memory_, &pBase,
+                                   &addr_range_size));
   }
   EXPECT_EQ(pBase, memory_);
   // Get device mem size rounds size up to nearest page size
@@ -144,8 +140,7 @@ TEST_P(
 INSTANTIATE_TEST_CASE_P(
     zeDriverMemGetAddressRangeTestVaryFlagsAndSizeAndAlignment,
     zeDriverMemGetAddressRangeTests,
-    ::testing::Combine(::testing::Values(ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT),
-                       lzt::memory_allocation_sizes,
+    ::testing::Combine(::testing::Values(0), lzt::memory_allocation_sizes,
                        lzt::memory_allocation_alignments));
 
 class zeDriverMemFreeTests : public ::testing::Test {};
@@ -183,10 +178,10 @@ TEST_P(
   host_desc.pNext = nullptr;
   host_desc.flags = host_flags;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverAllocSharedMem(lzt::get_default_driver(), &device_desc,
-                                   &host_desc, size, alignment,
-                                   lzt::zeDevice::get_instance()->get_device(),
-                                   &memory));
+            zeMemAllocShared(lzt::get_default_context(), &device_desc,
+                             &host_desc, size, alignment,
+                             lzt::zeDevice::get_instance()->get_device(),
+                             &memory));
   EXPECT_NE(nullptr, memory);
 
   lzt::free_memory(memory);
@@ -195,11 +190,9 @@ TEST_P(
 INSTANTIATE_TEST_CASE_P(
     TestSharedMemFlagPermutations, zeDriverAllocSharedMemTests,
     ::testing::Combine(
-        ::testing::Values(ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                          ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_CACHED,
+        ::testing::Values(0, ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_CACHED,
                           ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED),
-        ::testing::Values(ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,
-                          ZE_HOST_MEM_ALLOC_FLAG_BIAS_CACHED,
+        ::testing::Values(0, ZE_HOST_MEM_ALLOC_FLAG_BIAS_CACHED,
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED,
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_WRITE_COMBINED),
         lzt::memory_allocation_sizes, lzt::memory_allocation_alignments));
@@ -212,15 +205,13 @@ TEST_P(zeSharedMemGetPropertiesTests,
        GivenSharedAllocationWhenGettingMemPropertiesThenSuccessIsReturned) {
   const size_t size = std::get<0>(GetParam());
   const size_t alignment = std::get<1>(GetParam());
-  ze_driver_handle_t driver = lzt::get_default_driver();
+  ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_handle_t device_test = device;
   ze_memory_allocation_properties_t mem_properties;
   mem_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
-  void *memory = lzt::allocate_shared_memory(
-      size, alignment, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-      ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
-  lzt::get_mem_alloc_properties(driver, memory, &mem_properties, &device_test);
+  void *memory = lzt::allocate_shared_memory(size, alignment, 0, 0, device);
+  lzt::get_mem_alloc_properties(context, memory, &mem_properties, &device_test);
   EXPECT_EQ(device_test, device);
   lzt::free_memory(memory);
 }
@@ -240,9 +231,8 @@ TEST_F(zeSharedMemGetAddressRangeTests,
   void *memory = lzt::allocate_shared_memory(size, alignment);
   size_t size_out;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemAddressRange(lzt::get_default_driver(), memory, NULL,
-                                       &size_out));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
+                                                    memory, NULL, &size_out));
   EXPECT_GE(size_out, size);
   lzt::free_memory(memory);
 }
@@ -255,9 +245,8 @@ TEST_F(zeSharedMemGetAddressRangeTests,
   void *memory = lzt::allocate_shared_memory(size, alignment);
   void *base = nullptr;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemAddressRange(lzt::get_default_driver(), memory, &base,
-                                       NULL));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
+                                                    memory, &base, NULL));
   EXPECT_EQ(base, memory);
   lzt::free_memory(memory);
 }
@@ -278,9 +267,8 @@ TEST_P(
 
   // Test getting address info from begining of memory range
   uint8_t *mem_target = static_cast<uint8_t *>(memory);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemAddressRange(lzt::get_default_driver(), memory, &base,
-                                       &size_out));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
+                                                    memory, &base, &size_out));
   EXPECT_GE(size_out, size);
   EXPECT_EQ(base, memory);
 
@@ -288,16 +276,16 @@ TEST_P(
     // Test getting address info from middle of memory range
     mem_target = static_cast<uint8_t *>(memory) + (size - 1) / 2;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDriverGetMemAddressRange(lzt::get_default_driver(), mem_target,
-                                         &base, &size_out));
+              zeMemGetAddressRange(lzt::get_default_context(), mem_target,
+                                   &base, &size_out));
     EXPECT_GE(size_out, size);
     EXPECT_EQ(memory, base);
 
     // Test getting address info from end of memory range
     mem_target = static_cast<uint8_t *>(memory) + (size - 1);
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDriverGetMemAddressRange(lzt::get_default_driver(), mem_target,
-                                         &base, &size_out));
+              zeMemGetAddressRange(lzt::get_default_context(), mem_target,
+                                   &base, &size_out));
     EXPECT_GE(size_out, size);
     EXPECT_EQ(memory, base);
   }
@@ -328,20 +316,18 @@ TEST_P(
   host_desc.pNext = nullptr;
   host_desc.flags = flags;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverAllocHostMem(lzt::get_default_driver(), &host_desc, size,
-                                 alignment, &memory));
+            zeMemAllocHost(lzt::get_default_context(), &host_desc, size,
+                           alignment, &memory));
 
   EXPECT_NE(nullptr, memory);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverFreeMem(lzt::get_default_driver(), memory));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(lzt::get_default_context(), memory));
 }
 
 INSTANTIATE_TEST_CASE_P(
     TestHostMemParameterCombinations, zeDriverAllocHostMemTests,
     ::testing::Combine(
-        ::testing::Values(ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,
-                          ZE_HOST_MEM_ALLOC_FLAG_BIAS_CACHED,
+        ::testing::Values(0, ZE_HOST_MEM_ALLOC_FLAG_BIAS_CACHED,
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED,
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_WRITE_COMBINED),
         lzt::memory_allocation_sizes, lzt::memory_allocation_alignments));
@@ -358,12 +344,11 @@ TEST_P(
   const size_t alignment = std::get<1>(GetParam());
   void *memory = lzt::allocate_host_memory(size, alignment);
   ze_memory_allocation_properties_t mem_properties;
-  ze_driver_handle_t driver = lzt::get_default_driver();
+  auto context = lzt::get_default_context();
 
   mem_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   mem_properties.pNext = nullptr;
-  lzt::get_mem_alloc_properties(driver, memory, &mem_properties, nullptr);
-  EXPECT_EQ(mem_properties.version);
+  lzt::get_mem_alloc_properties(context, memory, &mem_properties, nullptr);
   EXPECT_EQ(ZE_MEMORY_TYPE_HOST, mem_properties.type);
 
   lzt::free_memory(memory);
@@ -387,9 +372,8 @@ TEST_F(
 
   void *memory = lzt::allocate_host_memory(size, alignment);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemAddressRange(lzt::get_default_driver(), memory, &base,
-                                       nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
+                                                    memory, &base, nullptr));
   EXPECT_EQ(memory, base);
 
   lzt::free_memory(memory);
@@ -410,8 +394,8 @@ TEST_P(
   void *memory = lzt::allocate_host_memory(size, alignment);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemAddressRange(lzt::get_default_driver(), memory,
-                                       nullptr, &size_out));
+            zeMemGetAddressRange(lzt::get_default_context(), memory, nullptr,
+                                 &size_out));
   EXPECT_GE(size_out, size);
 
   lzt::free_memory(memory);
@@ -437,23 +421,22 @@ TEST_P(
   void *base = nullptr;
   size_t size_out;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemAddressRange(lzt::get_default_driver(), memory, &base,
-                                       &size_out));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
+                                                    memory, &base, &size_out));
   EXPECT_EQ(memory, base);
 
   if (size > 1) {
     uint8_t *mem_target = static_cast<uint8_t *>(memory) + (size - 1) / 2;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDriverGetMemAddressRange(lzt::get_default_driver(), mem_target,
-                                         &base, &size_out));
+              zeMemGetAddressRange(lzt::get_default_context(), mem_target,
+                                   &base, &size_out));
     EXPECT_EQ(memory, base);
     EXPECT_GE(size_out, size);
 
     mem_target = static_cast<uint8_t *>(memory) + (size - 1);
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDriverGetMemAddressRange(lzt::get_default_driver(), mem_target,
-                                         &base, &size_out));
+              zeMemGetAddressRange(lzt::get_default_context(), mem_target,
+                                   &base, &size_out));
     EXPECT_EQ(memory, base);
     EXPECT_GE(size_out, size);
   }

@@ -25,7 +25,7 @@ protected:
                                 "image_media_layouts_tests.spv");
     ze_event_pool_desc_t ep_desc = {};
     ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-    ep_desc.flags = ZE_EVENT_POOL_FLAG_DEFAULT;
+    ep_desc.flags = 0;
     ep_desc.count = 10;
     ep = lzt::create_event_pool(ep_desc);
   }
@@ -55,9 +55,7 @@ ze_image_handle_t ImageMediaLayoutTests::create_image_desc_layout(
   ze_image_handle_t image;
 
   image_desc.pNext = nullptr;
-  image_desc.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_WRITE |
-                                       ZE_IMAGE_FLAG_PROGRAM_READ |
-                                       ZE_IMAGE_FLAG_BIAS_UNCACHED);
+  image_desc.flags = ZE_IMAGE_FLAG_KERNEL_WRITE | ZE_IMAGE_FLAG_BIAS_UNCACHED;
   image_desc.type = ZE_IMAGE_TYPE_2D;
   image_desc.format.layout = layout;
 
@@ -70,7 +68,8 @@ ze_image_handle_t ImageMediaLayoutTests::create_image_desc_layout(
   image_desc.height = image_height;
   image_desc.depth = 1;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::zeDevice::get_instance()->get_device(),
+            zeImageCreate(lzt::get_default_context(),
+                          lzt::zeDevice::get_instance()->get_device(),
                           &image_desc, &image));
   EXPECT_NE(nullptr, image);
 

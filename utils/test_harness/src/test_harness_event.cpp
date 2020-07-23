@@ -27,6 +27,11 @@ ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
   return create_event_pool(context, descriptor);
 }
 
+ze_event_pool_handle_t create_event_pool(ze_event_pool_desc_t desc) {
+
+  return create_event_pool(lzt::get_default_context(), desc);
+}
+
 ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
                                          ze_event_pool_desc_t desc) {
   ze_event_pool_handle_t event_pool;

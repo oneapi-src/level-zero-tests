@@ -84,9 +84,7 @@ ImageFormatTests::create_image_desc_format(ze_image_format_type_t format_type,
   ze_image_handle_t image;
 
   image_desc.pNext = nullptr;
-  image_desc.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_WRITE |
-                                       ZE_IMAGE_FLAG_PROGRAM_READ |
-                                       ZE_IMAGE_FLAG_BIAS_UNCACHED);
+  image_desc.flags = (ZE_IMAGE_FLAG_KERNEL_WRITE | ZE_IMAGE_FLAG_BIAS_UNCACHED);
   image_desc.type = ZE_IMAGE_TYPE_2D;
   if (layout32)
     image_desc.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
@@ -102,7 +100,8 @@ ImageFormatTests::create_image_desc_format(ze_image_format_type_t format_type,
   image_desc.height = image_height;
   image_desc.depth = 1;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::zeDevice::get_instance()->get_device(),
+            zeImageCreate(lzt::get_default_context(),
+                          lzt::zeDevice::get_instance()->get_device(),
                           &image_desc, &image));
   EXPECT_NE(nullptr, image);
 
@@ -270,7 +269,8 @@ TEST_P(ImageFormatLayoutTests,
   for (auto device : lzt::get_devices(driver)) {
 
     auto device_image_properties = lzt::get_image_properties(device);
-    if (!device_image_properties.supported) {
+    if (!device_image_properties.maxReadImageArgs ||
+        !device_image_properties.maxWriteImageArgs) {
       LOG_WARNING << "Device does not support images";
       continue;
     }
@@ -278,11 +278,9 @@ TEST_P(ImageFormatLayoutTests,
     auto layout = GetParam();
     ze_image_desc_t image_descriptor = {};
     image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-    image_descriptor.version - ZE_IMAGE_DESC_VERSION_CURRENT;
     image_descriptor.type = ZE_IMAGE_TYPE_2D;
-    image_descriptor.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_READ |
-                                               ZE_IMAGE_FLAG_PROGRAM_WRITE |
-                                               ZE_IMAGE_FLAG_BIAS_UNCACHED);
+    image_descriptor.flags =
+        (ZE_IMAGE_FLAG_KERNEL_WRITE | ZE_IMAGE_FLAG_BIAS_UNCACHED);
     image_descriptor.format.layout = layout;
     image_descriptor.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
     image_descriptor.format.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
