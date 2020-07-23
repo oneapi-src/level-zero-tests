@@ -72,7 +72,8 @@ ze_event_handle_t create_event(ze_event_pool_handle_t event_pool,
                                ze_event_desc_t desc);
 void destroy_event(ze_event_handle_t event);
 void destroy_event_pool(ze_event_pool_handle_t event_pool);
-ze_kernel_timestamp_result_t get_event_timestamp(ze_event_handle_t event);
+ze_kernel_timestamp_result_t
+get_event_kernel_timestamp(ze_event_handle_t event);
 
 class zeEventPoolTests : public ::testing::Test {
 protected:

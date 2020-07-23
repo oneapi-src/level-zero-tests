@@ -22,7 +22,7 @@ namespace {
 class zeCommandListEventTests : public ::testing::Test {
 protected:
   zeCommandListEventTests() {
-    ep.create_event(hEvent, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
+    ep.create_event(hEvent, ZE_EVENT_SCOPE_FLAG_HOST, 0);
     cmdqueue = lzt::create_command_queue();
     cmdlist = lzt::create_command_list();
   }
@@ -141,7 +141,7 @@ static ze_image_handle_t create_test_image(int height, int width) {
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
 
   image_description.pNext = nullptr;
-  image_description.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;
+  image_description.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
   image_description.type = ZE_IMAGE_TYPE_2D;
   image_description.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
   image_description.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
@@ -170,10 +170,10 @@ TEST_F(
   auto input_xeimage = create_test_image(height, width);
   auto output_xeimage = create_test_image(height, width);
   ze_event_handle_t hEvent1, hEvent2, hEvent3, hEvent4;
-  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
-  ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
-  ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
-  ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
+  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   // Use ImageCopyFromMemory to upload ImageA
   lzt::append_image_copy_from_mem(cmdlist, input_xeimage, input.raw_data(),

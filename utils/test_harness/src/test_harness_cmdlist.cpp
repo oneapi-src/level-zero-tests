@@ -56,7 +56,7 @@ create_immediate_command_list(ze_device_handle_t device) {
 }
 
 ze_command_list_handle_t create_immediate_command_list(
-    ze_device_handle_t device, ze_command_queue_flag_t flags,
+    ze_device_handle_t device, ze_command_queue_flags_t flags,
     ze_command_queue_mode_t mode, ze_command_queue_priority_t priority,
     uint32_t ordinal) {
   return create_immediate_command_list(lzt::get_default_context(), device,
@@ -243,8 +243,8 @@ void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
 
 void append_image_copy_region(ze_command_list_handle_t hCommandList,
                               ze_image_handle_t dst, ze_image_handle_t src,
-                              ze_image_region_t *dst_region,
-                              ze_image_region_t *src_region,
+                              const ze_image_region_t *dst_region,
+                              const ze_image_region_t *src_region,
                               ze_event_handle_t hEvent) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyRegion(
                                    hCommandList, dst, src, dst_region,

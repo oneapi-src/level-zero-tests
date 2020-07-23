@@ -232,4 +232,9 @@ uint32_t get_kernel_source_attribute_size(ze_kernel_handle_t hKernel) {
   return size;
 }
 
+void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
+                                ze_kernel_indirect_access_flags_t flags) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelSetIndirectAccess(hKernel, flags));
+}
+
 } // namespace level_zero_tests

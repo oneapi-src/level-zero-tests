@@ -23,7 +23,7 @@ using namespace level_zero_tests;
 
 namespace {
 
-class zeCommandListAppendMemoryFillTests {};
+class zeCommandListAppendMemoryFillTests : public ::testing::Test {};
 
 TEST_F(
     zeCommandListAppendMemoryFillTests,
@@ -159,10 +159,11 @@ TEST_P(
 
   auto memory_type = GetParam();
   uint32_t test_count = 0;
+  auto context = lzt::get_default_context();
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
   const size_t size = 16;
-  void *host_memory = lzt::allocate_host_memory(size, 1, driver);
+  void *host_memory = lzt::allocate_host_memory(size, 1, context);
 
   for (auto device : devices) {
     auto subdevices = lzt::get_ze_sub_devices(device);
@@ -178,16 +179,13 @@ TEST_P(
       void *memory = nullptr;
       switch (memory_type) {
       case ZE_MEMORY_TYPE_DEVICE:
-        memory = lzt::allocate_device_memory(
-            size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, device, driver);
+        memory = lzt::allocate_device_memory(size, 1, 0, device, context);
         break;
       case ZE_MEMORY_TYPE_HOST:
-        memory = lzt::allocate_host_memory(size, 1, driver);
+        memory = lzt::allocate_host_memory(size, 1, context);
         break;
       case ZE_MEMORY_TYPE_SHARED:
-        memory = lzt::allocate_shared_memory(
-            size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device, driver);
+        memory = lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
         break;
       default:
         LOG_WARNING << "Unhandled memory type for memory fill subdevice test: "
@@ -489,8 +487,7 @@ INSTANTIATE_TEST_CASE_P(
                        memory_types,                // Source Memory Type
                        memory_types                 // Destination Memory Type
                        ));
-
-class zeCommandListAppendMemoryCopyTests {};
+class zeCommandListAppendMemoryCopyTests : public ::testing::Test {};
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
@@ -584,13 +581,13 @@ TEST_P(zeCommandListAppendMemAdviseTests,
 
 INSTANTIATE_TEST_CASE_P(
     MemAdviceFlags, zeCommandListAppendMemAdviseTests,
-    ::testing::Values(
-        ZE_MEMORY_ADVICE_SET_READ_MOSTLY, ZE_MEMORY_ADVICE_CLEAR_READ_MOSTLY,
-        ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION,
-        ZE_MEMORY_ADVICE_CLEAR_PREFERRED_LOCATION,
-        ZE_MEMORY_ADVICE_SET_ACCESSED_BY, ZE_MEMORY_ADVICE_CLEAR_ACCESSED_BY,
-        ZE_MEMORY_ADVICE_SET_NON_ATOMIC_MOSTLY,
-        ZE_MEMORY_ADVICE_CLEAR_NON_ATOMIC_MOSTLY, ZE_MEMORY_ADVICE_BIAS_CACHED,
-        ZE_MEMORY_ADVICE_BIAS_UNCACHED));
+    ::testing::Values(ZE_MEMORY_ADVICE_SET_READ_MOSTLY,
+                      ZE_MEMORY_ADVICE_CLEAR_READ_MOSTLY,
+                      ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION,
+                      ZE_MEMORY_ADVICE_CLEAR_PREFERRED_LOCATION,
+                      ZE_MEMORY_ADVICE_SET_NON_ATOMIC_MOSTLY,
+                      ZE_MEMORY_ADVICE_CLEAR_NON_ATOMIC_MOSTLY,
+                      ZE_MEMORY_ADVICE_BIAS_CACHED,
+                      ZE_MEMORY_ADVICE_BIAS_UNCACHED));
 
 } // namespace

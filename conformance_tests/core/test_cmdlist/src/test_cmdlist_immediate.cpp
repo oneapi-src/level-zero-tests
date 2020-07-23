@@ -155,12 +155,13 @@ TEST_P(
   ze_device_properties_t properties;
 
   properties.pNext = nullptr;
+  properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
 
   auto command_queue_group_properties =
       lzt::get_command_queue_group_properties(device);
 
-  const size_t num_cmdq = 0;
+  size_t num_cmdq = 0;
   for (auto properties : command_queue_group_properties) {
     num_cmdq += properties.numQueues;
   }
@@ -175,8 +176,7 @@ TEST_P(
 
   for (size_t i = 0; i < num_cmdq; i++) {
     mulcmdlist_immediate[i] = lzt::create_immediate_command_list(
-        device, static_cast<ze_command_queue_flag_t>(0), mode,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+        device, 0, mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
     buffer[i] = lzt::allocate_shared_memory(size);
     val[i] = static_cast<uint8_t>(i + 1);
@@ -222,18 +222,15 @@ TEST_P(zeImmediateCommandListExecutionTests,
   lzt::write_image_data_pattern(dest_host_image_upper, -1);
 
   // First, copy the image from the host to the device:
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyFromMemory(
-                cmdlist_immediate, img.dflt_device_image_2_,
-                img.dflt_host_image_.raw_data(), nullptr, event0));
+  lzt::append_image_copy_from_mem(cmdlist_immediate, img.dflt_device_image_2_,
+                                  img.dflt_host_image_.raw_data(), event0);
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
     zeEventHostSynchronize(event0, timeout);
     zeEventHostReset(event0);
   }
   // Now, copy the image from the device to the device:
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopy(
-                                   cmdlist_immediate, img.dflt_device_image_,
-                                   img.dflt_device_image_2_, event0));
+  lzt::append_image_copy(cmdlist_immediate, img.dflt_device_image_,
+                         img.dflt_device_image_2_, event0);
 
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
     zeEventHostSynchronize(event0, timeout);
@@ -241,10 +238,9 @@ TEST_P(zeImmediateCommandListExecutionTests,
   }
   // Finally copy the image from the device to the dest_host_image_upper for
   // validation:
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyToMemory(
-                cmdlist_immediate, dest_host_image_upper.raw_data(),
-                img.dflt_device_image_, nullptr, event0));
+  lzt::append_image_copy_to_mem(cmdlist_immediate,
+                                dest_host_image_upper.raw_data(),
+                                img.dflt_device_image_, event0);
 
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
     zeEventHostSynchronize(event0, timeout);
@@ -297,7 +293,7 @@ TEST_P(zeImmediateCommandListExecutionTests,
   if (mode == ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS)
     return;
   ze_event_handle_t event1 = nullptr;
-  ep.create_event(event1, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
+  ep.create_event(event1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event1));
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendWaitOnEvents(cmdlist_immediate, 1, &event0));
@@ -333,7 +329,7 @@ static ze_image_handle_t create_test_image(int height, int width) {
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
 
   image_description.pNext = nullptr;
-  image_description.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;
+  image_description.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
   image_description.type = ZE_IMAGE_TYPE_2D;
   image_description.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
   image_description.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
@@ -382,10 +378,10 @@ TEST_P(
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
   ze_event_handle_t hEvent1, hEvent2, hEvent3, hEvent4;
-  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
-  ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
-  ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
-  ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
+  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   // Use ImageCopyFromMemory to upload ImageA
   lzt::append_image_copy_from_mem(cmdlist_immediate, input_xeimage,

@@ -37,7 +37,7 @@ ze_command_list_handle_t create_command_list(ze_device_handle_t device);
 ze_command_list_handle_t create_command_list();
 
 ze_command_list_handle_t create_immediate_command_list(
-    ze_device_handle_t device, ze_command_queue_flag_t flags,
+    ze_device_handle_t device, ze_command_queue_flags_t flags,
     ze_command_queue_mode_t, ze_command_queue_priority_t priority,
     uint32_t ordinal);
 ze_command_list_handle_t
@@ -118,8 +118,8 @@ void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
                               ze_event_handle_t hEvent);
 void append_image_copy_region(ze_command_list_handle_t hCommandList,
                               ze_image_handle_t dst, ze_image_handle_t src,
-                              ze_image_region_t *dst_region,
-                              ze_image_region_t *src_region,
+                              const ze_image_region_t *dst_region,
+                              const ze_image_region_t *src_region,
                               ze_event_handle_t hEvent);
 
 void close_command_list(ze_command_list_handle_t cl);

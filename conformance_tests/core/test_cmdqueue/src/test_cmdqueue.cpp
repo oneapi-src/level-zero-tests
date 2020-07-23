@@ -49,10 +49,12 @@ TEST_P(zeCommandQueueCreateTests,
 
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   const ze_driver_handle_t driver = lzt::get_default_driver();
+  const ze_context_handle_t context = lzt::get_default_context();
 
   ze_device_properties_t properties;
 
   properties.pNext = nullptr;
+  properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
 
   auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
@@ -62,8 +64,9 @@ TEST_P(zeCommandQueueCreateTests,
     print_cmdqueue_descriptor(descriptor);
 
     ze_command_queue_handle_t command_queue = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueCreate(device, &descriptor, &command_queue));
+    EXPECT_EQ(
+        ZE_RESULT_SUCCESS,
+        zeCommandQueueCreate(context, device, &descriptor, &command_queue));
     EXPECT_NE(nullptr, command_queue);
 
     lzt::destroy_command_queue(command_queue);
@@ -73,13 +76,13 @@ TEST_P(zeCommandQueueCreateTests,
 INSTANTIATE_TEST_CASE_P(
     TestAllInputPermuations, zeCommandQueueCreateTests,
     ::testing::Combine(
-        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
         ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
                           ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
                           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
         ::testing::Values(ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-                          ZE_COMMAND_QUEUE_PRIORITY_LOW,
-                          ZE_COMMAND_QUEUE_PRIORITY_HIGH)));
+                          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW,
+                          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH)));
 
 class zeCommandQueueDestroyTests : public ::testing::Test {};
 
@@ -93,7 +96,8 @@ TEST_F(
 
   ze_command_queue_handle_t command_queue = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueCreate(lzt::zeDevice::get_instance()->get_device(),
+            zeCommandQueueCreate(lzt::get_default_context(),
+                                 lzt::zeDevice::get_instance()->get_device(),
                                  &descriptor, &command_queue));
   EXPECT_NE(nullptr, command_queue);
 
@@ -113,6 +117,7 @@ protected:
     const ze_device_handle_t device =
         lzt::zeDevice::get_instance()->get_device();
     const ze_driver_handle_t driver = lzt::get_default_driver();
+    const ze_context_handle_t context = lzt::get_default_context();
     EXPECT_GT(params.num_command_lists, 0);
 
     print_cmdqueue_exec(params.num_command_lists, params.sync_timeout);
@@ -131,9 +136,8 @@ protected:
       h_host_desc.pNext = nullptr;
       h_host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDriverAllocSharedMem(driver, &h_device_desc, &h_host_desc,
-                                       buff_size_bytes, 1, device,
-                                       &host_shared));
+                zeMemAllocShared(context, &h_device_desc, &h_host_desc,
+                                 buff_size_bytes, 1, device, &host_shared));
 
       EXPECT_NE(nullptr, host_shared);
       host_buffer.push_back(static_cast<uint8_t *>(host_shared));
@@ -150,9 +154,8 @@ protected:
       d_host_desc.pNext = nullptr;
       d_host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDriverAllocSharedMem(driver, &d_device_desc, &d_host_desc,
-                                       buff_size_bytes, 1, device,
-                                       &device_shared));
+                zeMemAllocShared(context, &d_device_desc, &d_host_desc,
+                                 buff_size_bytes, 1, device, &device_shared));
 
       EXPECT_NE(nullptr, device_shared);
       device_buffer.push_back(static_cast<uint8_t *>(device_shared));
@@ -162,7 +165,8 @@ protected:
 
       list_descriptor.pNext = nullptr;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListCreate(device, &list_descriptor, &command_list));
+                zeCommandListCreate(context, device, &list_descriptor,
+                                    &command_list));
       EXPECT_NE(nullptr, command_list);
 
       uint8_t *char_input = static_cast<uint8_t *>(host_shared);
@@ -184,7 +188,8 @@ protected:
     queue_descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
     queue_descriptor.ordinal = 0;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueCreate(device, &queue_descriptor, &command_queue));
+              zeCommandQueueCreate(context, device, &queue_descriptor,
+                                   &command_queue));
     EXPECT_NE(nullptr, command_queue);
   }
 
@@ -298,7 +303,7 @@ TEST_P(
   lzt::zeEventPool ep;
   ze_event_handle_t hEvent;
 
-  ep.create_event(hEvent, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_NONE);
+  ep.create_event(hEvent, ZE_EVENT_SCOPE_FLAG_HOST, 0);
   // Verify Host Reads Event as unset
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
 
@@ -364,7 +369,6 @@ protected:
   }
 };
 
-
 TEST_F(
     CommandQueueFlagTest,
     GivenDefaultFlagInCommandListWhenCommandQueueFlagisExplicitOnlyThenSucessIsReturned) {
@@ -411,21 +415,22 @@ TEST(
   const uint8_t value_high = 0x55;
   const uint8_t value_low = 0x22;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  const ze_context_handle_t context = lzt::get_default_context();
   ze_event_pool_desc_t ep_time_desc = {};
   ep_time_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-  ep_time_desc.flags = ZE_EVENT_POOL_FLAG_TIMESTAMP;
+  ep_time_desc.flags = ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP;
   ep_time_desc.count = 4;
-  auto ep_time = lzt::create_event_pool(ep_time_desc);
+  auto ep_time = lzt::create_event_pool(context, ep_time_desc);
   ze_event_pool_desc_t ep_sync_desc = {};
   ep_sync_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-  ep_sync_desc.flags = ZE_EVENT_POOL_FLAG_DEFAULT;
+  ep_sync_desc.flags = 0;
   ep_sync_desc.count = 1;
-  auto ep_sync = lzt::create_event_pool(ep_sync_desc);
+  auto ep_sync = lzt::create_event_pool(context, ep_sync_desc);
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
   event_desc.index = 0;
-  event_desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;
-  event_desc.wait = ZE_EVENT_SCOPE_FLAG_NONE;
+  event_desc.signal = 0;
+  event_desc.wait = 0;
   auto event_compute_high = lzt::create_event(ep_time, event_desc);
   auto event_sync = lzt::create_event(ep_sync, event_desc);
   event_desc.index = 1;
@@ -451,20 +456,22 @@ TEST(
     return;
   }
 
-  auto cmdqueue_compute_high = lzt::create_command_queue(
-      device, static_cast<ze_command_queue_flag_t>(0),
-      ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_HIGH, 0);
-  auto cmdqueue_compute_low = lzt::create_command_queue(
-      device, static_cast<ze_command_queue_flag_t>(0),
-      ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_LOW, 0);
-  auto cmdqueue_copy_high =
+  auto cmdqueue_compute_high =
       lzt::create_command_queue(device, static_cast<ze_command_queue_flag_t>(0),
                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                ZE_COMMAND_QUEUE_PRIORITY_HIGH, copy_ordinal);
-  auto cmdqueue_copy_low =
+                                ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH, 0);
+  auto cmdqueue_compute_low =
       lzt::create_command_queue(device, static_cast<ze_command_queue_flag_t>(0),
                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                ZE_COMMAND_QUEUE_PRIORITY_LOW, copy_ordinal);
+                                ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW, 0);
+  auto cmdqueue_copy_high = lzt::create_command_queue(
+      device, static_cast<ze_command_queue_flag_t>(0),
+      ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH, copy_ordinal);
+  auto cmdqueue_copy_low = lzt::create_command_queue(
+      device, static_cast<ze_command_queue_flag_t>(0),
+      ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW, copy_ordinal);
 
   auto cmdlist_compute_high = lzt::create_command_list();
   auto cmdlist_copy_high = lzt::create_command_list();
@@ -526,13 +533,19 @@ TEST(
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_copy_high));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_copy_low));
 
-  EXPECT_GT(lzt::get_event_timestamp(event_compute_low,
-                                     ZE_EVENT_TIMESTAMP_GLOBAL_END),
-            lzt::get_event_timestamp(event_compute_high,
-                                     ZE_EVENT_TIMESTAMP_GLOBAL_END));
-  EXPECT_GT(
-      lzt::get_event_timestamp(event_copy_low, ZE_EVENT_TIMESTAMP_GLOBAL_END),
-      lzt::get_event_timestamp(event_copy_high, ZE_EVENT_TIMESTAMP_GLOBAL_END));
+  ze_kernel_timestamp_result_t event_compute_low_timestamp =
+      lzt::get_event_kernel_timestamp(event_compute_low);
+  ze_kernel_timestamp_result_t event_compute_high_timestamp =
+      lzt::get_event_kernel_timestamp(event_compute_high);
+  ze_kernel_timestamp_result_t event_copy_low_timestamp =
+      lzt::get_event_kernel_timestamp(event_copy_low);
+  ze_kernel_timestamp_result_t event_copy_high_timestamp =
+      lzt::get_event_kernel_timestamp(event_copy_high);
+
+  EXPECT_GT(event_compute_low_timestamp.global.kernelEnd,
+            event_compute_high_timestamp.global.kernelEnd);
+  EXPECT_GT(event_copy_low_timestamp.global.kernelEnd,
+            event_copy_high_timestamp.global.kernelEnd);
   /*cleanup*/
   lzt::free_memory(buffer_compute_high);
   lzt::free_memory(buffer_compute_low);

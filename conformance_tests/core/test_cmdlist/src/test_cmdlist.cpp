@@ -25,16 +25,10 @@ class zeCommandListCreateTests
 TEST_P(
     zeCommandListCreateTests,
     GivenValidDeviceAndCommandListDescriptorWhenCreatingCommandListThenNotNullCommandListIsReturned) {
-  ze_command_list_desc_t descriptor = {};
-  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
-
-  descriptor.pNext = nullptr;
-  descriptor.flags = GetParam();
 
   ze_command_list_handle_t command_list = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListCreate(lzt::zeDevice::get_instance()->get_device(),
-                                &descriptor, &command_list));
+  command_list = lzt::create_command_list(
+      lzt::zeDevice::get_instance()->get_device(), GetParam());
   EXPECT_NE(nullptr, command_list);
 
   lzt::destroy_command_list(command_list);
@@ -52,15 +46,10 @@ class zeCommandListDestroyTests : public ::testing::Test {};
 TEST_F(
     zeCommandListDestroyTests,
     GivenValidDeviceAndCommandListDescriptorWhenDestroyingCommandListThenSuccessIsReturned) {
-  ze_command_list_desc_t descriptor = {};
-  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
-
-  descriptor.pNext = nullptr;
 
   ze_command_list_handle_t command_list = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListCreate(lzt::zeDevice::get_instance()->get_device(),
-                                &descriptor, &command_list));
+  command_list =
+      lzt::create_command_list(lzt::zeDevice::get_instance()->get_device());
   EXPECT_NE(nullptr, command_list);
 
   lzt::destroy_command_list(command_list);
@@ -82,10 +71,9 @@ TEST_P(zeCommandListCreateImmediateTests,
   descriptor.priority = std::get<2>(GetParam());
 
   ze_command_list_handle_t command_list = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListCreateImmediate(
-                                   lzt::zeDevice::get_instance()->get_device(),
-                                   &descriptor, &command_list));
-
+  command_list = lzt::create_immediate_command_list(
+      lzt::zeDevice::get_instance()->get_device(), std::get<0>(GetParam()),
+      std::get<1>(GetParam()), std::get<2>(GetParam()), 0);
   lzt::destroy_command_list(command_list);
 }
 
@@ -98,8 +86,8 @@ INSTANTIATE_TEST_CASE_P(
                           ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
                           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
         ::testing::Values(ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-                          ZE_COMMAND_QUEUE_PRIORITY_LOW,
-                          ZE_COMMAND_QUEUE_PRIORITY_HIGH)));
+                          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW,
+                          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH)));
 
 class zeCommandListCloseTests : public lzt::zeCommandListTests {};
 
@@ -172,7 +160,7 @@ protected:
     ze_event_handle_t event = nullptr;
     ze_event_pool_desc_t event_pool_desc = {};
     event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-    event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+    event_pool_desc.flags = 0;
     event_pool_desc.count = 1;
     ze_event_desc_t event_desc = {};
     event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;

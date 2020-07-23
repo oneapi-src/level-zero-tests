@@ -70,7 +70,7 @@ ze_kernel_timestamp_result_t
 get_event_kernel_timestamp(ze_event_handle_t event) {
   // TBD
   ze_kernel_timestamp_result_t value = {};
-  memset(&value, 0, sizeof(value));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryKernelTimestamp(event, &value));
   return value;
 }
 

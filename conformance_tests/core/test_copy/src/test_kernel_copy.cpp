@@ -149,13 +149,11 @@ TEST_P(KernelCopyTests,
       lzt::set_argument_value(kernel, 2, sizeof(int), &offset);
       lzt::set_argument_value(kernel, 3, sizeof(int), &size);
 
-      ze_bool_t indirect_access = true;
-      ze_kernel_attribute_t indirect_attribute =
+      ze_kernel_indirect_access_flags_t indirect_flags =
           (memory_type == ZE_MEMORY_TYPE_HOST)
-              ? ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS
-              : ZE_KERNEL_ATTR_INDIRECT_SHARED_ACCESS;
-      lzt::set_kernel_attribute(kernel, indirect_attribute,
-                                sizeof(indirect_access), &indirect_access);
+              ? ZE_KERNEL_INDIRECT_ACCESS_FLAG_HOST
+              : ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
+      lzt::kernel_set_indirect_access(kernel, indirect_flags);
 
       uint32_t group_size_x;
       uint32_t group_size_y;
