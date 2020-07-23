@@ -17,7 +17,7 @@ ze_fence_handle_t create_fence(ze_command_queue_handle_t cmd_queue) {
   desc.stype = ZE_STRUCTURE_TYPE_FENCE_DESC;
 
   desc.pNext = nullptr;
-  desc.flags = ZE_FENCE_FLAG_NONE;
+  desc.flags = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceCreate(cmd_queue, &desc, &fence));
   return fence;
 }
@@ -38,7 +38,7 @@ ze_result_t query_fence(ze_fence_handle_t fence) {
   return result;
 }
 
-ze_result_t sync_fence(ze_fence_handle_t fence, uint32_t timeout) {
+ze_result_t sync_fence(ze_fence_handle_t fence, uint64_t timeout) {
 
   ze_result_t result;
   EXPECT_EQ(ZE_RESULT_SUCCESS, result = zeFenceHostSynchronize(fence, timeout));
