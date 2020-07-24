@@ -19,7 +19,7 @@ void L0Context::init() {
   ze_command_queue_desc_t command_queue_description{};
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  result = zeInit(ZE_INIT_FLAG_NONE);
+  result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeDriverInit failed: " + std::to_string(result));
   }
@@ -35,6 +35,15 @@ void L0Context::init() {
   result = zeDriverGet(&driver_count, &driver);
   if (result) {
     throw std::runtime_error("zeDriverGet failed: " + std::to_string(result));
+  }
+
+  /* Create a context to manage resources */
+  ze_context_desc_t context_desc = {};
+  context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+  result = zeContextCreate(driver, &context_desc, &context);
+  if (ZE_RESULT_SUCCESS != result) {
+    throw std::runtime_error("zeContextCreate failed: " +
+                             std::to_string(result));
   }
 
   device_count = 0;
@@ -62,8 +71,8 @@ void L0Context::init() {
   command_list_description.flags = static_cast<ze_command_list_flag_t>(0);
   command_list_description.pNext = nullptr;
 
-  result =
-      zeCommandListCreate(device, &command_list_description, &command_list);
+  result = zeCommandListCreate(context, device, &command_list_description,
+                               &command_list);
   if (result) {
     throw std::runtime_error("zeDeviceCreateCommandList failed: " +
                              std::to_string(result));
@@ -76,8 +85,8 @@ void L0Context::init() {
   command_queue_description.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
 
-  result =
-      zeCommandQueueCreate(device, &command_queue_description, &command_queue);
+  result = zeCommandQueueCreate(context, device, &command_queue_description,
+                                &command_queue);
   if (result) {
     throw std::runtime_error("zeDeviceCreateCommandQueue failed: " +
                              std::to_string(result));
@@ -88,9 +97,9 @@ void L0Context::init() {
 
   device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
-  device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  result = zeDriverAllocDeviceMem(driver, &device_desc, sizeof(int), 1, device,
-                                  &device_input);
+  device_desc.flags = 0;
+  result = zeMemAllocDevice(context, &device_desc, sizeof(int), 1, device,
+                            &device_input);
   if (result) {
     throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
                              std::to_string(result));
@@ -100,9 +109,8 @@ void L0Context::init() {
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
 
   host_desc.pNext = nullptr;
-  host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
-  result =
-      zeDriverAllocHostMem(driver, &host_desc, sizeof(int), 1, &host_output);
+  host_desc.flags = 0;
+  result = zeMemAllocHost(context, &host_desc, sizeof(int), 1, &host_output);
   if (result) {
     throw std::runtime_error("zeDriverAllocHostMem failed: " +
                              std::to_string(result));
@@ -113,15 +121,14 @@ void L0Context::init() {
 
   shared_device_desc.pNext = nullptr;
   shared_device_desc.ordinal = 0;
-  shared_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
+  shared_device_desc.flags = 0;
   ze_host_mem_alloc_desc_t shared_host_desc = {};
   shared_host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
 
   shared_host_desc.pNext = nullptr;
-  shared_host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
-  result =
-      zeDriverAllocSharedMem(driver, &shared_device_desc, &shared_host_desc,
-                             sizeof(int), 1, device, &shared_output);
+  shared_host_desc.flags = 0;
+  result = zeMemAllocShared(context, &shared_device_desc, &shared_host_desc,
+                            sizeof(int), 1, device, &shared_output);
   if (result) {
     throw std::runtime_error("zeDriverAllocSharedMem failed: " +
                              std::to_string(result));
@@ -147,21 +154,27 @@ void L0Context::destroy() {
                              std::to_string(result));
   }
 
-  result = zeDriverFreeMem(driver, device_input);
+  result = zeMemFree(context, device_input);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));
   }
 
-  result = zeDriverFreeMem(driver, host_output);
+  result = zeMemFree(context, host_output);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));
   }
 
-  result = zeDriverFreeMem(driver, shared_output);
+  result = zeMemFree(context, shared_output);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
+                             std::to_string(result));
+  }
+
+  result = zeContextDestroy(context);
+  if (result) {
+    throw std::runtime_error("zeContextDestroy failed: " +
                              std::to_string(result));
   }
 }
@@ -178,7 +191,9 @@ void L0Context::print_ze_device_properties(
             << " * deviceId                : " << props.deviceId << "\n"
             << " * subdeviceId             : " << props.subdeviceId << "\n"
             << " * isSubdevice             : "
-            << (props.isSubdevice ? "TRUE" : "FALSE") << "\n"
+            << ((props.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) ? "TRUE"
+                                                                  : "FALSE")
+            << "\n"
             << " * coreClockRate           : " << props.coreClockRate << "\n"
             << std::endl;
 }
@@ -214,7 +229,7 @@ std::vector<uint8_t> L0Context::load_binary_file(const std::string &file_path) {
 // handle to a valid value for use in future calls.
 // On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
-void ZePingPong::create_module(L0Context &context,
+void ZePingPong::create_module(L0Context &l0_context,
                                std::vector<uint8_t> binary_file,
                                ze_module_format_t format,
                                const char *build_flag) {
@@ -231,8 +246,8 @@ void ZePingPong::create_module(L0Context &context,
       reinterpret_cast<const uint8_t *>(binary_file.data());
   module_description.pBuildFlags = build_flag;
 
-  result = zeModuleCreate(context.device, &module_description, &context.module,
-                          nullptr);
+  result = zeModuleCreate(l0_context.context, l0_context.device,
+                          &module_description, &l0_context.module, nullptr);
   if (result) {
     throw std::runtime_error("zeDeviceCreateModule failed: " +
                              std::to_string(result));
@@ -309,7 +324,7 @@ void ZePingPong::setup_commandlist(L0Context &context, enum TestType test) {
   if (test == DEVICE_MEM_XFER) {
     result = zeCommandListAppendMemoryCopy(
         context.command_list, context.device_input, context.host_output,
-        sizeof(int), nullptr);
+        sizeof(int), nullptr, 0, nullptr);
     if (result) {
       throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                                std::to_string(result));
@@ -339,7 +354,7 @@ void ZePingPong::setup_commandlist(L0Context &context, enum TestType test) {
 
     result = zeCommandListAppendMemoryCopy(
         context.command_list, context.host_output, context.device_input,
-        sizeof(int), nullptr);
+        sizeof(int), nullptr, 0, nullptr);
     if (result) {
       throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                                std::to_string(result));
@@ -430,7 +445,7 @@ void ZePingPong::run_test(L0Context &context) {
   int *ping_shared = static_cast<int *>(context.shared_output);
 
   function_description.pNext = nullptr;
-  function_description.flags = ZE_KERNEL_FLAG_NONE;
+  function_description.flags = 0;
   function_description.pKernelName = "kPingPong";
 
   result =

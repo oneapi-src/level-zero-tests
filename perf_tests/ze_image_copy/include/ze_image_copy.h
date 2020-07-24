@@ -43,7 +43,7 @@ public:
   long double latency;
   ptree param_array;
   ze_image_format_layout_t Imagelayout = ZE_IMAGE_FORMAT_LAYOUT_8;
-  ze_image_flag_t Imageflags = ZE_IMAGE_FLAG_PROGRAM_READ;
+  ze_image_flags_t Imageflags = 0;
   ze_image_type_t Imagetype = ZE_IMAGE_TYPE_2D;
   ze_image_format_type_t Imageformat = ZE_IMAGE_FORMAT_TYPE_UINT;
   std::string JsonFileName;

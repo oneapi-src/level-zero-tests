@@ -28,6 +28,11 @@ public:
     driver_count = 1;
     benchmark->driverGet(&driver_count, &driver);
 
+    /* Create a context for all resources*/
+    ze_context_desc_t context_desc = {};
+    context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+    benchmark->contextCreate(driver, context_desc, &context);
+
     /* Obtain device count */
     device_count = benchmark->deviceCount(driver);
     devices = new std::vector<ze_device_handle_t>(device_count);
@@ -61,7 +66,7 @@ public:
       benchmark->commandQueueDestroy(device_context->command_queue);
       benchmark->commandListDestroy(device_context->command_list);
     }
-
+    benchmark->contextDestroy(context);
     delete benchmark;
     delete device_contexts;
     delete devices;
@@ -72,6 +77,7 @@ public:
 
 private:
   ZeApp *benchmark;
+  ze_context_handle_t context;
   ze_driver_handle_t driver;
   uint32_t driver_count;
   uint32_t device_count;
@@ -122,7 +128,7 @@ void ZePeer::bandwidth(bool bidirectional, peer_transfer_t transfer_type) {
   for (uint32_t i = 0; i < device_count; i++) {
     device_context_t *device_context = &device_contexts->at(i);
 
-    benchmark->memoryAlloc(driver, device_context->device, buffer_size,
+    benchmark->memoryAlloc(context, device_context->device, buffer_size,
                            &buffers[i]);
   }
 
@@ -260,7 +266,7 @@ void ZePeer::bandwidth(bool bidirectional, peer_transfer_t transfer_type) {
   }
 
   for (void *buffer : buffers) {
-    benchmark->memoryFree(driver, buffer);
+    benchmark->memoryFree(context, buffer);
   }
 }
 
@@ -275,7 +281,7 @@ void ZePeer::latency(bool bidirectional, peer_transfer_t transfer_type) {
   for (uint32_t i = 0; i < device_count; i++) {
     device_context_t *device_context = &device_contexts->at(i);
 
-    benchmark->memoryAlloc(driver, device_context->device, buffer_size,
+    benchmark->memoryAlloc(context, device_context->device, buffer_size,
                            &buffers[i]);
   }
 
@@ -402,7 +408,7 @@ void ZePeer::latency(bool bidirectional, peer_transfer_t transfer_type) {
   }
 
   for (void *buffer : buffers) {
-    benchmark->memoryFree(driver, buffer);
+    benchmark->memoryFree(context, buffer);
   }
 }
 

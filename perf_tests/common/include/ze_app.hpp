@@ -24,12 +24,12 @@ public:
   ~ZeApp();
 
   void memoryAlloc(size_t size, void **ptr);
-  void memoryAlloc(ze_driver_handle_t driver, ze_device_handle_t device,
+  void memoryAlloc(ze_context_handle_t context, ze_device_handle_t device,
                    size_t size, void **ptr);
   void memoryAllocHost(size_t size, void **ptr);
-  void memoryAllocHost(ze_driver_handle_t driver, size_t size, void **ptr);
+  void memoryAllocHost(ze_context_handle_t context, size_t size, void **ptr);
   void memoryFree(const void *ptr);
-  void memoryFree(ze_driver_handle_t driver, const void *ptr);
+  void memoryFree(ze_context_handle_t context, const void *ptr);
   void functionCreate(ze_kernel_handle_t *function, const char *pFunctionName);
   void functionCreate(ze_module_handle_t module, ze_kernel_handle_t *function,
                       const char *pFunctionName);
@@ -92,7 +92,7 @@ public:
   void moduleCreate(ze_device_handle_t device, ze_module_handle_t *module);
   void moduleDestroy(ze_module_handle_t module);
   ze_event_pool_handle_t create_event_pool(uint32_t count,
-                                           ze_event_pool_flag_t flags);
+                                           ze_event_pool_flags_t flags);
 
   ze_event_pool_handle_t create_event_pool(ze_event_pool_desc_t desc);
 
@@ -108,10 +108,14 @@ public:
 
   uint32_t driverCount(void);
   void driverGet(uint32_t *driver_count, ze_driver_handle_t *driver);
+  void contextCreate(ze_driver_handle_t driver, ze_context_desc_t context_desc,
+                     ze_context_handle_t *context);
+  void contextDestroy(ze_context_handle_t context);
   void driverGetDevices(ze_driver_handle_t driver, uint32_t device_count,
                         ze_device_handle_t *devices);
   uint32_t deviceCount(ze_driver_handle_t driver);
 
+  ze_context_handle_t context;
   ze_driver_handle_t driver;
   ze_device_handle_t device;
   ze_module_handle_t module;

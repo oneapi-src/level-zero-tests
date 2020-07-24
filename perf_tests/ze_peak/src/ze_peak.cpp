@@ -79,7 +79,8 @@ void L0Context::create_module(std::vector<uint8_t> binary_file) {
       reinterpret_cast<const uint8_t *>(binary_file.data());
   module_description.pBuildFlags = nullptr;
 
-  result = zeModuleCreate(device, &module_description, &module, nullptr);
+  result =
+      zeModuleCreate(context, device, &module_description, &module, nullptr);
   if (result) {
     throw std::runtime_error("zeDeviceCreateModule failed: " +
                              std::to_string(result));
@@ -98,7 +99,9 @@ void L0Context::print_ze_device_properties(
             << " * vendorId : " << props.vendorId << "\n"
             << " * deviceId : " << props.deviceId << "\n"
             << " * subdeviceId : " << props.subdeviceId << "\n"
-            << " * isSubdevice : " << (props.isSubdevice ? "TRUE" : "FALSE")
+            << " * isSubdevice : "
+            << ((props.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) ? "TRUE"
+                                                                  : "FALSE")
             << "\n"
             << " * coreClockRate : " << props.coreClockRate << "\n"
             << std::endl;
@@ -114,7 +117,7 @@ void L0Context::init_xe() {
   ze_command_queue_desc_t command_queue_description{};
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  result = zeInit(ZE_INIT_FLAG_NONE);
+  result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeDriverInit failed: " + std::to_string(result));
   }
@@ -133,6 +136,15 @@ void L0Context::init_xe() {
   result = zeDriverGet(&driver_count, &driver);
   if (result) {
     throw std::runtime_error("zeDriverGet failed: " + std::to_string(result));
+  }
+
+  /* Create a context to manage resources */
+  ze_context_desc_t context_desc = {};
+  context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+  result = zeContextCreate(driver, &context_desc, &context);
+  if (ZE_RESULT_SUCCESS != result) {
+    throw std::runtime_error("zeContextCreate failed: " +
+                             std::to_string(result));
   }
 
   device_count = 0;
@@ -175,8 +187,8 @@ void L0Context::init_xe() {
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
 
-  result =
-      zeCommandListCreate(device, &command_list_description, &command_list);
+  result = zeCommandListCreate(context, device, &command_list_description,
+                               &command_list);
   if (result) {
     throw std::runtime_error("zeDeviceCreateCommandList failed: " +
                              std::to_string(result));
@@ -189,8 +201,8 @@ void L0Context::init_xe() {
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
-  result =
-      zeCommandQueueCreate(device, &command_queue_description, &command_queue);
+  result = zeCommandQueueCreate(context, device, &command_queue_description,
+                                &command_queue);
   if (result) {
     throw std::runtime_error("zeDeviceCreateCommandQueue failed: " +
                              std::to_string(result));
@@ -221,6 +233,14 @@ void L0Context::clean_xe() {
   }
   if (verbose)
     std::cout << "command_list destroyed\n";
+
+  result = zeContextDestroy(context);
+  if (result) {
+    throw std::runtime_error("zeContextDestroy failed: " +
+                             std::to_string(result));
+  }
+  if (verbose)
+    std::cout << "Context destroyed";
 }
 
 //---------------------------------------------------------------------
@@ -380,7 +400,7 @@ void single_event_pool_create(
 
   kernel_launch_event_pool_desc.pNext = nullptr;
 
-  result = zeEventPoolCreate(context.driver, &kernel_launch_event_pool_desc, 1,
+  result = zeEventPoolCreate(context.context, &kernel_launch_event_pool_desc, 1,
                              &context.device, kernel_launch_event_pool);
   if (result) {
     throw std::runtime_error("zeEventPoolCreate failed: " +
@@ -395,8 +415,8 @@ void single_event_create(ze_event_pool_handle_t event_pool,
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
 
   event_desc.index = 0;
-  event_desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;
-  event_desc.wait = ZE_EVENT_SCOPE_FLAG_NONE;
+  event_desc.signal = 0;
+  event_desc.wait = 0;
 
   event_desc.pNext = nullptr;
   result = zeEventCreate(event_pool, &event_desc, event);
@@ -698,7 +718,7 @@ void ZePeak::setup_function(L0Context &context, ze_kernel_handle_t &function,
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   function_description.pNext = nullptr;
-  function_description.flags = ZE_KERNEL_FLAG_NONE;
+  function_description.flags = 0;
   function_description.pKernelName = name;
 
   result = zeKernelCreate(context.module, &function_description, &function);

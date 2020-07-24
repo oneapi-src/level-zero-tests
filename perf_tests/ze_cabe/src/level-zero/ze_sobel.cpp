@@ -43,12 +43,12 @@ void ZeSobel::build_program() {
   module_description.pInputModule = kernel_spv.data();
   module_description.pBuildFlags = nullptr;
   ZE_CHECK_RESULT(
-      zeModuleCreate(device, &module_description, &module, nullptr));
+      zeModuleCreate(context, device, &module_description, &module, nullptr));
 
   ze_kernel_desc_t function_description = {};
   function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
   function_description.pNext = nullptr;
-  function_description.flags = ZE_KERNEL_FLAG_NONE;
+  function_description.flags = 0;
   function_description.pKernelName = "sobel";
   ZE_CHECK_RESULT(zeKernelCreate(module, &function_description, &function));
 }
@@ -56,13 +56,11 @@ void ZeSobel::build_program() {
 void ZeSobel::create_buffers() {
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.ordinal = 0;
-  device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  ZE_CHECK_RESULT(zeDriverAllocDeviceMem(driver_handle, &device_desc,
-                                         image_buffer_size, 1, device,
-                                         &input_buffer));
-  ZE_CHECK_RESULT(zeDriverAllocDeviceMem(driver_handle, &device_desc,
-                                         image_buffer_size, 1, device,
-                                         &output_buffer));
+  device_desc.flags = 0;
+  ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc, image_buffer_size, 1,
+                                   device, &input_buffer));
+  ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc, image_buffer_size, 1,
+                                   device, &output_buffer));
 }
 
 void ZeSobel::create_cmdlist() {
@@ -82,11 +80,11 @@ void ZeSobel::create_cmdlist() {
   ze_command_list_desc_t command_list_description = {};
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
-  ZE_CHECK_RESULT(
-      zeCommandListCreate(device, &command_list_description, &command_list));
-  ZE_CHECK_RESULT(zeCommandListAppendMemoryCopy(command_list, input_buffer,
-                                                lena_original.data(),
-                                                image_buffer_size, nullptr));
+  ZE_CHECK_RESULT(zeCommandListCreate(
+      context, device, &command_list_description, &command_list));
+  ZE_CHECK_RESULT(zeCommandListAppendMemoryCopy(
+      command_list, input_buffer, lena_original.data(), image_buffer_size,
+      nullptr, 0, nullptr));
   ZE_CHECK_RESULT(
       zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
 
@@ -100,9 +98,9 @@ void ZeSobel::create_cmdlist() {
   }
   ZE_CHECK_RESULT(
       zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
-  ZE_CHECK_RESULT(
-      zeCommandListAppendMemoryCopy(command_list, lena_filtered_GPU.data(),
-                                    output_buffer, image_buffer_size, nullptr));
+  ZE_CHECK_RESULT(zeCommandListAppendMemoryCopy(
+      command_list, lena_filtered_GPU.data(), output_buffer, image_buffer_size,
+      nullptr, 0, nullptr));
   ZE_CHECK_RESULT(zeCommandListClose(command_list));
 
   ze_command_queue_desc_t command_queue_description = {};
@@ -110,8 +108,8 @@ void ZeSobel::create_cmdlist() {
   command_queue_description.pNext = nullptr;
   command_queue_description.ordinal = 0;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-  ZE_CHECK_RESULT(
-      zeCommandQueueCreate(device, &command_queue_description, &command_queue));
+  ZE_CHECK_RESULT(zeCommandQueueCreate(
+      context, device, &command_queue_description, &command_queue));
 }
 
 void ZeSobel::execute_work() {
@@ -137,8 +135,9 @@ void ZeSobel::cleanup() {
   ZE_CHECK_RESULT(zeCommandListDestroy(command_list));
   ZE_CHECK_RESULT(zeKernelDestroy(function));
   ZE_CHECK_RESULT(zeModuleDestroy(module));
-  ZE_CHECK_RESULT(zeDriverFreeMem(driver_handle, output_buffer));
-  ZE_CHECK_RESULT(zeDriverFreeMem(driver_handle, input_buffer));
+  ZE_CHECK_RESULT(zeMemFree(context, output_buffer));
+  ZE_CHECK_RESULT(zeMemFree(context, input_buffer));
+  ZE_CHECK_RESULT(zeContextDestroy(context));
 }
 
 } // namespace compute_api_bench

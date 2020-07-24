@@ -47,6 +47,7 @@ protected:
   std::vector<uint8_t> kernel_spv;
   ze_device_handle_t device = nullptr;
   ze_driver_handle_t driver_handle = nullptr;
+  ze_context_handle_t context = nullptr;
 };
 
 } // namespace compute_api_bench

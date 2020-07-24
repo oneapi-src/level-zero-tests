@@ -40,6 +40,7 @@ struct L0Context {
   ze_command_queue_handle_t command_queue = nullptr;
   ze_command_list_handle_t command_list = nullptr;
   ze_module_handle_t module = nullptr;
+  ze_context_handle_t context = nullptr;
   ze_driver_handle_t driver = nullptr;
   ze_device_handle_t device = nullptr;
   ze_kernel_handle_t function = nullptr;

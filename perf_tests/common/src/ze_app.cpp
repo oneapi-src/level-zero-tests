@@ -41,21 +41,23 @@ std::vector<uint8_t> ZeApp::load_binary_file(const std::string &file_path) {
 }
 
 ZeApp::ZeApp(void) {
+  context = nullptr;
   device = nullptr;
   module = nullptr;
   driver = nullptr;
   this->module_path = "";
 
-  SUCCESS_OR_TERMINATE(zeInit(ZE_INIT_FLAG_NONE));
+  SUCCESS_OR_TERMINATE(zeInit(0));
 }
 
 ZeApp::ZeApp(std::string module_path) {
+  context = nullptr;
   device = nullptr;
   module = nullptr;
   driver = nullptr;
   this->module_path = module_path;
 
-  SUCCESS_OR_TERMINATE(zeInit(ZE_INIT_FLAG_NONE));
+  SUCCESS_OR_TERMINATE(zeInit(0));
 
   binary_file = load_binary_file(this->module_path);
   std::cout << std::endl;
@@ -72,8 +74,8 @@ void ZeApp::moduleCreate(ze_device_handle_t device,
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = nullptr;
 
-  SUCCESS_OR_TERMINATE(
-      zeModuleCreate(device, &module_description, module, nullptr));
+  SUCCESS_OR_TERMINATE(zeModuleCreate(this->context, device,
+                                      &module_description, module, nullptr));
 }
 
 void ZeApp::moduleDestroy(ze_module_handle_t module) {
@@ -85,43 +87,44 @@ ZeApp::~ZeApp(void) {}
 void ZeApp::memoryAlloc(size_t size, void **ptr) {
   assert(this->device != nullptr);
   assert(this->driver != nullptr);
-  memoryAlloc(this->driver, this->device, size, ptr);
+  assert(this->context != nullptr);
+  memoryAlloc(this->context, this->device, size, ptr);
 }
 
-void ZeApp::memoryAlloc(ze_driver_handle_t driver, ze_device_handle_t device,
+void ZeApp::memoryAlloc(ze_context_handle_t context, ze_device_handle_t device,
                         size_t size, void **ptr) {
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
 
   device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
-  device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
+  device_desc.flags = 0;
   SUCCESS_OR_TERMINATE(
-      zeDriverAllocDeviceMem(driver, &device_desc, size, 1, device, ptr));
+      zeMemAllocDevice(context, &device_desc, size, 1, device, ptr));
 }
 
 void ZeApp::memoryAllocHost(size_t size, void **ptr) {
   assert(this->driver != nullptr);
-  memoryAllocHost(this->driver, size, ptr);
+  memoryAllocHost(this->context, size, ptr);
 }
 
-void ZeApp::memoryAllocHost(ze_driver_handle_t driver, size_t size,
+void ZeApp::memoryAllocHost(ze_context_handle_t context, size_t size,
                             void **ptr) {
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
 
   host_desc.pNext = nullptr;
-  host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
-  SUCCESS_OR_TERMINATE(zeDriverAllocHostMem(driver, &host_desc, size, 1, ptr));
+  host_desc.flags = 0;
+  SUCCESS_OR_TERMINATE(zeMemAllocHost(context, &host_desc, size, 1, ptr));
 }
 
 void ZeApp::memoryFree(const void *ptr) {
   assert(this->driver != nullptr);
-  SUCCESS_OR_TERMINATE(zeDriverFreeMem(this->driver, const_cast<void *>(ptr)));
+  SUCCESS_OR_TERMINATE(zeMemFree(this->context, const_cast<void *>(ptr)));
 }
 
-void ZeApp::memoryFree(ze_driver_handle_t driver, const void *ptr) {
-  SUCCESS_OR_TERMINATE(zeDriverFreeMem(driver, const_cast<void *>(ptr)));
+void ZeApp::memoryFree(ze_context_handle_t context, const void *ptr) {
+  SUCCESS_OR_TERMINATE(zeMemFree(context, const_cast<void *>(ptr)));
 }
 
 void ZeApp::functionCreate(ze_kernel_handle_t *function,
@@ -137,7 +140,7 @@ void ZeApp::functionCreate(ze_module_handle_t module,
   function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
 
   function_description.pNext = nullptr;
-  function_description.flags = ZE_KERNEL_FLAG_NONE;
+  function_description.flags = 0;
   function_description.pKernelName = pFunctionName;
 
   SUCCESS_OR_TERMINATE(zeKernelCreate(module, &function_description, function));
@@ -156,7 +159,7 @@ void ZeApp::imageCreate(const ze_image_desc_t *imageDesc,
 void ZeApp::imageCreate(ze_device_handle_t device,
                         const ze_image_desc_t *imageDesc,
                         ze_image_handle_t *image) {
-  SUCCESS_OR_TERMINATE(zeImageCreate(device, imageDesc, image));
+  SUCCESS_OR_TERMINATE(zeImageCreate(this->context, device, imageDesc, image));
 }
 
 void ZeApp::imageCreate(ze_device_handle_t device, ze_image_handle_t *image,
@@ -169,7 +172,7 @@ void ZeApp::imageCreate(ze_device_handle_t device, ze_image_handle_t *image,
 
   ze_image_desc_t imageDesc = {};
   imageDesc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-  imageDesc.flags = ZE_IMAGE_FLAG_PROGRAM_READ;
+  imageDesc.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
   imageDesc.type = ZE_IMAGE_TYPE_2D;
   imageDesc.format = formatDesc;
   imageDesc.width = width;
@@ -202,8 +205,8 @@ void ZeApp::commandListCreate(ze_device_handle_t device,
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
 
-  SUCCESS_OR_TERMINATE(
-      zeCommandListCreate(device, &command_list_description, phCommandList));
+  SUCCESS_OR_TERMINATE(zeCommandListCreate(
+      this->context, device, &command_list_description, phCommandList));
 }
 
 void ZeApp::commandListDestroy(ze_command_list_handle_t command_list) {
@@ -222,14 +225,14 @@ void ZeApp::commandListAppendImageCopyFromMemory(
     ze_command_list_handle_t command_list, ze_image_handle_t image,
     uint8_t *srcBuffer, ze_image_region_t *Region) {
   SUCCESS_OR_TERMINATE(zeCommandListAppendImageCopyFromMemory(
-      command_list, image, srcBuffer, Region, nullptr));
+      command_list, image, srcBuffer, Region, nullptr, 0, nullptr));
 }
 
 void ZeApp::commandListAppendImageCopyFromMemory(
     ze_command_list_handle_t command_list, ze_image_handle_t image,
     uint8_t *srcBuffer, ze_image_region_t *Region, ze_event_handle_t hEvent) {
   SUCCESS_OR_TERMINATE(zeCommandListAppendImageCopyFromMemory(
-      command_list, image, srcBuffer, Region, hEvent));
+      command_list, image, srcBuffer, Region, hEvent, 0, nullptr));
 }
 
 void ZeApp::commandListAppendBarrier(ze_command_list_handle_t command_list) {
@@ -241,7 +244,7 @@ void ZeApp::commandListAppendImageCopyToMemory(
     ze_command_list_handle_t command_list, uint8_t *dstBuffer,
     ze_image_handle_t image, ze_image_region_t *Region) {
   SUCCESS_OR_TERMINATE(zeCommandListAppendImageCopyToMemory(
-      command_list, dstBuffer, image, Region, nullptr));
+      command_list, dstBuffer, image, Region, nullptr, 0, nullptr));
 }
 
 void ZeApp::commandListAppendImageCopyToMemory(
@@ -249,14 +252,14 @@ void ZeApp::commandListAppendImageCopyToMemory(
     ze_image_handle_t image, ze_image_region_t *Region,
     ze_event_handle_t hEvent) {
   SUCCESS_OR_TERMINATE(zeCommandListAppendImageCopyToMemory(
-      command_list, dstBuffer, image, Region, hEvent));
+      command_list, dstBuffer, image, Region, hEvent, 0, nullptr));
 }
 
 void ZeApp::commandListAppendMemoryCopy(ze_command_list_handle_t command_list,
                                         void *dstptr, void *srcptr,
                                         size_t size) {
-  SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(command_list, dstptr,
-                                                     srcptr, size, nullptr));
+  SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
+      command_list, dstptr, srcptr, size, nullptr, 0, nullptr));
 }
 
 void ZeApp::commandListAppendWaitOnEvents(ze_command_list_handle_t CommandList,
@@ -306,8 +309,8 @@ void ZeApp::commandQueueCreate(ze_device_handle_t device,
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
-  SUCCESS_OR_TERMINATE(
-      zeCommandQueueCreate(device, &command_queue_description, command_queue));
+  SUCCESS_OR_TERMINATE(zeCommandQueueCreate(
+      this->context, device, &command_queue_description, command_queue));
 }
 
 void ZeApp::commandQueueDestroy(ze_command_queue_handle_t command_queue) {
@@ -321,7 +324,7 @@ void ZeApp::commandQueueExecuteCommandList(
       command_queue, numCommandLists, command_lists, nullptr));
 }
 ze_event_pool_handle_t ZeApp::create_event_pool(uint32_t count,
-                                                ze_event_pool_flag_t flags) {
+                                                ze_event_pool_flags_t flags) {
   ze_event_pool_handle_t event_pool;
   ze_event_pool_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
@@ -337,7 +340,7 @@ ze_event_pool_handle_t ZeApp::create_event_pool(ze_event_pool_desc_t desc) {
   ze_event_pool_handle_t event_pool;
 
   SUCCESS_OR_TERMINATE(
-      zeEventPoolCreate(this->driver, &desc, 1, &this->device, &event_pool));
+      zeEventPoolCreate(this->context, &desc, 1, &this->device, &event_pool));
 
   return event_pool;
 }
@@ -353,8 +356,8 @@ void ZeApp::create_event(ze_event_pool_handle_t event_pool,
   memset(&desc, 0, sizeof(desc));
 
   desc.pNext = nullptr;
-  desc.signal = ZE_EVENT_SCOPE_FLAG_NONE;
-  desc.wait = ZE_EVENT_SCOPE_FLAG_NONE;
+  desc.signal = 0;
+  desc.wait = 0;
   event = nullptr;
   desc.index = index;
   SUCCESS_OR_TERMINATE(zeEventCreate(event_pool, &desc, &event));
@@ -376,6 +379,10 @@ void ZeApp::singleDeviceInit(void) {
   driver_count = 1;
   driverGet(&driver_count, &driver);
 
+  ze_context_desc_t context_desc = {};
+  context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+  contextCreate(driver, context_desc, &context);
+
   uint32_t device_count = deviceCount(driver);
   assert(device_count > 0);
   device_count = 1;
@@ -391,6 +398,8 @@ void ZeApp::singleDeviceCleanup(void) {
   /*  if module pathsstring size is not 0 then only call moduledestory */
   if (this->module_path.size() != 0)
     moduleDestroy(module);
+
+  zeContextDestroy(context);
 }
 
 uint32_t ZeApp::driverCount(void) {
@@ -409,6 +418,15 @@ uint32_t ZeApp::driverCount(void) {
 /* Retrieve "driver_count" */
 void ZeApp::driverGet(uint32_t *driver_count, ze_driver_handle_t *driver) {
   SUCCESS_OR_TERMINATE(zeDriverGet(driver_count, driver));
+}
+
+void ZeApp::contextCreate(ze_driver_handle_t driver,
+                          ze_context_desc_t context_desc,
+                          ze_context_handle_t *context) {
+  zeContextCreate(driver, &context_desc, context);
+}
+void ZeApp::contextDestroy(ze_context_handle_t context) {
+  zeContextDestroy(context);
 }
 
 /* Retrieve array of devices in driver */

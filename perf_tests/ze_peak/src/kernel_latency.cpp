@@ -28,11 +28,10 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
 
   in_device_desc.pNext = nullptr;
   in_device_desc.ordinal = 0;
-  in_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  result =
-      zeDriverAllocDeviceMem(context.driver, &in_device_desc,
-                             static_cast<size_t>((num_items * sizeof(float))),
-                             1, context.device, &inputBuf);
+  in_device_desc.flags = 0;
+  result = zeMemAllocDevice(context.context, &in_device_desc,
+                            static_cast<size_t>((num_items * sizeof(float))), 1,
+                            context.device, &inputBuf);
   if (result) {
     throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
                              std::to_string(result));
@@ -46,11 +45,10 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
 
   out_device_desc.pNext = nullptr;
   out_device_desc.ordinal = 0;
-  out_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  result =
-      zeDriverAllocDeviceMem(context.driver, &out_device_desc,
-                             static_cast<size_t>((num_items * sizeof(float))),
-                             1, context.device, &outputBuf);
+  out_device_desc.flags = 0;
+  result = zeMemAllocDevice(context.context, &out_device_desc,
+                            static_cast<size_t>((num_items * sizeof(float))), 1,
+                            context.device, &outputBuf);
   if (result) {
     throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
                              std::to_string(result));
@@ -82,7 +80,7 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
   if (verbose)
     std::cout << "local_offset_v1 Function Destroyed\n";
 
-  result = zeDriverFreeMem(context.driver, inputBuf);
+  result = zeMemFree(context.context, inputBuf);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));
@@ -90,7 +88,7 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
   if (verbose)
     std::cout << "Input Buffer freed\n";
 
-  result = zeDriverFreeMem(context.driver, outputBuf);
+  result = zeMemFree(context.context, outputBuf);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));

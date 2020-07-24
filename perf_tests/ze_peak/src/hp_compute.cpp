@@ -41,9 +41,9 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
 
   device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
-  device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  result = zeDriverAllocDeviceMem(
-      context.driver, &device_desc,
+  device_desc.flags = 0;
+  result = zeMemAllocDevice(
+      context.context, &device_desc,
       static_cast<size_t>((number_of_work_items * sizeof(cl_half))), 1,
       context.device, &device_output_buffer);
   if (result) {
@@ -159,7 +159,7 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
   if (verbose)
     std::cout << "compute_hp_v16 Function Destroyed\n";
 
-  result = zeDriverFreeMem(context.driver, device_output_buffer);
+  result = zeMemFree(context.context, device_output_buffer);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));

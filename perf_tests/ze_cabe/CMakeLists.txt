@@ -55,7 +55,6 @@ add_lzt_test(
    OpenCL::OpenCL
    level_zero_tests::logging
    level_zero_tests::image
-  REQUIRE_OPENCL_BENCHMARKS
   KERNELS
    ze_cabe_simpleadd
    ze_cabe_mandelbrot

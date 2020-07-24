@@ -37,9 +37,9 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
 
   in_device_desc.pNext = nullptr;
   in_device_desc.ordinal = 0;
-  in_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  result = zeDriverAllocDeviceMem(context.driver, &in_device_desc, sizeof(int),
-                                  1, context.device, &device_input_value);
+  in_device_desc.flags = 0;
+  result = zeMemAllocDevice(context.context, &in_device_desc, sizeof(int), 1,
+                            context.device, &device_input_value);
   if (result) {
     throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
                              std::to_string(result));
@@ -53,9 +53,9 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
 
   out_device_desc.pNext = nullptr;
   out_device_desc.ordinal = 0;
-  out_device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  result = zeDriverAllocDeviceMem(
-      context.driver, &out_device_desc,
+  out_device_desc.flags = 0;
+  result = zeMemAllocDevice(
+      context.context, &out_device_desc,
       static_cast<size_t>((number_of_work_items * sizeof(int))), 1U,
       context.device, &device_output_buffer);
   if (result) {
@@ -65,9 +65,9 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
   if (verbose)
     std::cout << "device output buffer allocated\n";
 
-  result =
-      zeCommandListAppendMemoryCopy(context.command_list, device_input_value,
-                                    &input_value, sizeof(int), nullptr);
+  result = zeCommandListAppendMemoryCopy(context.command_list,
+                                         device_input_value, &input_value,
+                                         sizeof(int), nullptr, 0, nullptr);
   if (result) {
     throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                              std::to_string(result));
@@ -181,7 +181,7 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
   if (verbose)
     std::cout << "compute_int_v16 Function Destroyed\n";
 
-  result = zeDriverFreeMem(context.driver, device_input_value);
+  result = zeMemFree(context.context, device_input_value);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));
@@ -189,7 +189,7 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
   if (verbose)
     std::cout << "Input Buffer freed\n";
 
-  result = zeDriverFreeMem(context.driver, device_output_buffer);
+  result = zeMemFree(context.context, device_output_buffer);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));

@@ -15,9 +15,9 @@ void ZePeak::_transfer_bw_gpu_copy(L0Context &context, void *destination_buffer,
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   for (uint32_t i = 0; i < warmup_iterations; i++) {
-    result =
-        zeCommandListAppendMemoryCopy(context.command_list, destination_buffer,
-                                      source_buffer, buffer_size, nullptr);
+    result = zeCommandListAppendMemoryCopy(context.command_list,
+                                           destination_buffer, source_buffer,
+                                           buffer_size, nullptr, 0, nullptr);
     if (result) {
       throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                                std::to_string(result));
@@ -27,9 +27,9 @@ void ZePeak::_transfer_bw_gpu_copy(L0Context &context, void *destination_buffer,
 
   timer.start();
   for (uint32_t i = 0; i < iters; i++) {
-    result =
-        zeCommandListAppendMemoryCopy(context.command_list, destination_buffer,
-                                      source_buffer, buffer_size, nullptr);
+    result = zeCommandListAppendMemoryCopy(context.command_list,
+                                           destination_buffer, source_buffer,
+                                           buffer_size, nullptr, 0, nullptr);
     if (result) {
       throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                                std::to_string(result));
@@ -79,15 +79,15 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
 
   device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
-  device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
+  device_desc.flags = 0;
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
 
   host_desc.pNext = nullptr;
-  host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
-  result = zeDriverAllocSharedMem(context.driver, &device_desc, &host_desc,
-                                  local_memory_size, 1, context.device,
-                                  &shared_memory_buffer);
+  host_desc.flags = 0;
+  result = zeMemAllocShared(context.context, &device_desc, &host_desc,
+                            local_memory_size, 1, context.device,
+                            &shared_memory_buffer);
   if (result) {
     throw std::runtime_error("zeDriverAllocSharedMem failed: " +
                              std::to_string(result));
@@ -107,7 +107,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
   _transfer_bw_host_copy(local_memory.data(), shared_memory_buffer,
                          local_memory_size);
 
-  result = zeDriverFreeMem(context.driver, shared_memory_buffer);
+  result = zeMemFree(context.context, shared_memory_buffer);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));
@@ -135,11 +135,11 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
 
   device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
-  device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-  result = zeDriverAllocDeviceMem(
-      context.driver, &device_desc,
-      static_cast<size_t>(sizeof(float) * number_of_items), 1, context.device,
-      &device_buffer);
+  device_desc.flags = 0;
+  result =
+      zeMemAllocDevice(context.context, &device_desc,
+                       static_cast<size_t>(sizeof(float) * number_of_items), 1,
+                       context.device, &device_buffer);
   if (result) {
     throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
                              std::to_string(result));
@@ -159,7 +159,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
 
   _transfer_bw_shared_memory(context, local_memory);
 
-  result = zeDriverFreeMem(context.driver, device_buffer);
+  result = zeMemFree(context.context, device_buffer);
   if (result) {
     throw std::runtime_error("zeDriverFreeMem failed: " +
                              std::to_string(result));

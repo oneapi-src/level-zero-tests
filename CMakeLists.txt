@@ -257,7 +257,7 @@ endif()
 
 
 add_subdirectory(utils)
-#add_subdirectory(perf_tests)
+add_subdirectory(perf_tests)
 add_subdirectory(conformance_tests)
 #add_subdirectory(negative_tests)
 
