@@ -104,9 +104,11 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %apply double * OUTPUT { double* pTemperature };
 %apply int * OUTPUT { zes_standby_promo_mode_t* pMode };
 %apply int * OUTPUT { zes_sched_mode_t* pMode };
+%apply int * OUTPUT { zes_diag_result_t* pResult }
 
 %include <level_zero/zes_api.h>
 
+%clear zes_diag_result_t* pResult;
 %clear zes_sched_mode_t* pMode;
 %clear zes_standby_promo_mode_t* pMode;
 %clear double* pTemperature;
@@ -163,9 +165,11 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 %array_class(zes_ras_handle_t, zes_ras_handle_array);
 %array_class(zes_sched_handle_t, zes_sched_handle_array);
 %array_class(zes_standby_handle_t, zes_standby_handle_array);
+%array_class(zes_diag_handle_t, zes_diag_handle_array);
 %array_class(double, double_array);
 %array_class(zes_pci_bar_properties_t, zes_pci_bar_properties_array);
 %array_class(zes_process_state_t, zes_process_state_array);
+%array_class(zes_diag_test_t, zes_diag_test_array);
 
 %pointer_cast(unsigned long, ze_driver_handle_t, ulong_to_driver_handle);
 %pointer_cast(unsigned long, ze_device_handle_t, ulong_to_device_handle);
@@ -177,6 +181,7 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 %pointer_cast(unsigned long, zes_fabric_port_handle_t, ulong_to_fabric_port_handle);
 %pointer_cast(unsigned long, zes_ras_handle_t, ulong_to_ras_handle);
 %pointer_cast(unsigned long, zes_standby_handle_t, ulong_to_standby_handle);
+%pointer_cast(unsigned long, zes_diag_handle_t, ulong_to_diag_handle);
 
 %pointer_cast(ze_driver_handle_t, unsigned long, driver_handle_to_ulong);
 %pointer_cast(ze_device_handle_t, unsigned long, device_handle_to_ulong);
@@ -188,3 +193,4 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 %pointer_cast(zes_fabric_port_handle_t, unsigned long, fabric_port_handle_to_ulong);
 %pointer_cast(zes_ras_handle_t, unsigned long, ras_handle_to_ulong);
 %pointer_cast(zes_standby_handle_t, unsigned long, standby_handle_to_ulong);
+%pointer_cast(zes_diag_handle_t, unsigned long, diag_handle_to_ulong);

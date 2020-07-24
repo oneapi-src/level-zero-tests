@@ -513,7 +513,6 @@ def zes_typed_array(stype, count):
 
 # TODO: These structures aren't being used yet:
 #
-# ZES_STRUCTURE_TYPE_DIAG_PROPERTIES
 # ZES_STRUCTURE_TYPE_FAN_PROPERTIES
 # ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES
 # ZES_STRUCTURE_TYPE_LED_PROPERTIES
@@ -1094,6 +1093,13 @@ def schedModeString(schedMode):
                    ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG : "Debug" }
     return schedModes.get(schedMode, "Unknown")
 
+def diagResultString(diagResult):
+    diagResults = { ZES_DIAG_RESULT_NO_ERRORS : "Pass",
+                    ZES_DIAG_RESULT_ABORT : "Abort",
+                    ZES_DIAG_RESULT_FAIL_CANT_REPAIR : "Fail/Irreparable",
+                    ZES_DIAG_RESULT_REBOOT_FOR_REPAIR : "Fail/Reboot" }
+    return diagResults.get(diagResult, "Unknown")
+
 def fullUUID(uuid):
     return uuid
 
@@ -1188,7 +1194,7 @@ def getDrivers(driverSelection):
                 i = uuids.index(sel)
             else:
                 try:
-                    i = int(sel)
+                    i = int(sel, 0)
                     if i < 0 or i >= numDrivers:
                         raise
                 except:
@@ -1364,6 +1370,8 @@ def parseArgs():
                         help="show process usage")
     parser.add_argument("--show-scheduler", action='store_true',
                         help="show scheduler mode")
+    parser.add_argument("--show-diag", action='store_true',
+                        help="show diagnostic test suites")
     parser.add_argument("--verbose", action='store_true',
                         help="show extra attributes")
     parser.add_argument("--poll", metavar='TIME', type=int,
@@ -1390,6 +1398,8 @@ def parseArgs():
                         help="forcibly kill processes on reset")
     parser.add_argument("-y", "--yes", action='store_true',
                         help="do not ask for reset confirmation")
+    parser.add_argument("--run-diag", nargs='+', metavar=('SUITE','N'),
+                        help="run diagnostic test suites")
     parser.add_argument("-f", "--format", metavar='FMT', choices=["list","xml","table","csv"],
                         help="specify output format (list/xml/table/csv)")
     parser.add_argument("--output", metavar='FILE',
@@ -1709,6 +1719,80 @@ def parseMicroseconds(opts):
 
     return int(value * multiplier), remainder
 
+def findTestSuite(diagCount, diags, name):
+    diagProps = zes_typed_structure(ZES_STRUCTURE_TYPE_DIAG_PROPERTIES)
+    match = None
+    for i in range(diagCount):
+        diag = diags[i]
+        zeCall(zesDiagnosticsGetProperties, diag, diagProps)
+        # TODO: should we allow regexp matching?
+        if name == diagProps.name:
+            if match is None:
+                match = i
+            else:
+                pr.err("ERROR:", name, "does not specify one test suite exactly, use index form")
+                raise ValueError(name)
+
+    if match is None:
+        pr.err("ERROR:", name, "does not match any test suite name")
+        raise ValueError(name)
+
+    return match
+
+def parseTestSuite(diagCount, diags, opts):
+    opt_string = " ".join(opts)
+    suite = opts.pop(0)
+    try:
+        i = int(suite, 0)
+        assert(i < diagCount)
+    except:
+        i = findTestSuite(diagCount, diags, suite)
+
+    diag = diags[i]
+
+    if opts:
+        try:
+            first = int(opts.pop(0), 0)
+            if opts:
+                last = int(opts.pop(0), 0)
+            else:
+                last = first
+            assert(not opts)
+        except:
+            pr.err("ERROR:", opt_string, "should be of form SUITE [N [N]]")
+            raise ValueError(opts)
+        else:
+            diagProps = zes_typed_structure(ZES_STRUCTURE_TYPE_DIAG_PROPERTIES)
+            zeCall(zesDiagnosticsGetProperties, diag, diagProps)
+            if diagProps.haveTests:
+                firstFound, lastFound = False, False
+                testCount = uint32_ptr()
+                try:
+                    zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), None)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+                else:
+                    tests = zes_diag_test_array(diagCount.value())
+                    zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests)
+                    for t in range(testCount.value()):
+                        test = tests[i]
+                        if test.index == first:
+                            firstFound = True
+                        if test.index == last:
+                            lastFound = True
+                if not firstFound:
+                    pr.err("WARNING:", first, "not found in test suite")
+                if not lastFound and last != first:
+                    pr.err("WARNING:", last, "not found in test suite")
+            else:
+                pr.err("WARNING: Test suite has no individual subtests")
+    else:
+        first, last = ZES_DIAG_FIRST_TEST_INDEX, ZES_DIAG_LAST_TEST_INDEX
+
+    return diag, first, last
+
 #
 # Main program
 #
@@ -1780,6 +1864,25 @@ def main():
             pr("NOT resetting device")
 
         sys.exit(0)
+
+    if args.run_diag:
+        diagCount = uint32_ptr()
+        try:
+            zeCall(zesDeviceEnumDiagnosticTestSuites, device, diagCount.cast(), None)
+        except NotImplementedError:
+            pass
+        except ValueError:
+            reportZeException()
+        else:
+            diags = zes_diag_handle_array(diagCount.value())
+            zeCall(zesDeviceEnumDiagnosticTestSuites, device, diagCount.cast(), diags.cast())
+
+        suite, first, last = parseTestSuite(diagCount.value(), diags, args.run_diag)
+
+        result = zeCall(zesDiagnosticsRunTests, diag, first, last)
+        pr("Diagnostic test result:", result)
+
+        sys.exit(result)
 
     topNode = Node(None, "Devices", None)
 
@@ -2642,6 +2745,47 @@ def main():
                     zeCall(zesSchedulerGetTimeoutModeProperties, device, False, schedProps)
                     Node(schedNode, "Interval", "%.3f" % schedProps.interval / 1000.0, ("Units", "msec"))
                     Node(schedNode, "YieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0, ("Units", "msec"))
+
+        diagCount = uint32_ptr()
+        try:
+            zeCall(zesDeviceEnumDiagnosticTestSuites, device, diagCount.cast(), None)
+        except NotImplementedError:
+            pass
+        except ValueError:
+            reportZeException()
+        else:
+            diags = zes_diag_handle_array(diagCount.value())
+            zeCall(zesDeviceEnumDiagnosticTestSuites, device, diagCount.cast(), diags.cast())
+
+        if args.show_diag:
+            diagTop = Node(devNode, "TestSuites", None)
+
+            for i in range(diagCount.value()):
+                diag = diags[i]
+                diagProps = zes_typed_structure(ZES_STRUCTURE_TYPE_DIAG_PROPERTIES)
+                zeCall(zesDiagnosticsGetProperties, diag, diagProps)
+                if diagProps.onSubdevice:
+                    diagNode = Node(diagTop, "TestSuite", None, ("Index", i), ("Name", diagProps.name),
+                                    ("SubdeviceId", diagProps.subdeviceId))
+                else:
+                    diagNode = Node(diagTop, "TestSuite", None, ("Index", i), ("Name", diagProps.name))
+
+                if args.show_inventory and diagProps.haveTests:
+                    testCount = uint32_ptr()
+                    try:
+                        zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), None)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+                    else:
+                        tests = zes_diag_test_array(diagCount.value())
+                        zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests)
+
+                    for t in range(testCount.value()):
+                        test = tests[i]
+                        diagNode = Node(diagNode, "Test", None, ("Index", test.index),
+                                        ("Name", test.name))
 
     currentIteration = 0
     while currentIteration < maxIterations:
