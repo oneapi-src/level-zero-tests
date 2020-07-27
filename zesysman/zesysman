@@ -360,7 +360,8 @@ class CSVFormatNode(FormatNode):
         super().setText(text)
         tableSetText(self.node, text, *self.attrs)
 
-formatArgClass = { "list" : ListFormatNode, "xml" : XMLFormatNode, "table" : TableFormatNode, "csv" : CSVFormatNode }
+formatArgClass = { "list" : ListFormatNode, "xml" : XMLFormatNode,
+                   "table" : TableFormatNode, "csv" : CSVFormatNode }
 formatExtClass = { ".xml" : XMLFormatNode, ".csv" : CSVFormatNode }
 
 # Currently-selected Node class
@@ -560,6 +561,14 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
     def zesDevicePciGetStats(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDevicePciGetBars(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDeviceEnumDiagnosticTestSuites(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDiagnosticsGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDiagnosticsGetTests(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDiagnosticsRunTests(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceEnumFabricPorts(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
@@ -768,6 +777,69 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             items[2] = item
         else:
             raise ValueError(uint32_value(count_ptr))
+    def stubDeviceEnumDiagnosticTestSuites(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            items = zes_diag_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_diag_handle(0)
+            items[1] = ulong_to_diag_handle(1)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubDiagnosticsGetProperties(diag, diagProps):
+        diagProps.onSubdevice = False
+        suite = diag_handle_to_ulong(diag)
+        if suite == 0:
+            diagProps.name = "ARRAY"
+            diagProps.haveTests = True
+        elif suite == 1:
+            diagProps.name = "SCAN"
+            diagProps.haveTests = False
+        else:
+            raise ValueError(suite)
+    def stubDiagnosticsGetTests(diag, count_ptr, tests_array):
+        suite = diag_handle_to_ulong(diag)
+        if suite == 0:
+            if tests_array is None:
+                uint32_assign(count_ptr, 3)
+            elif uint32_value(count_ptr) == 3:
+                tests = zes_diag_test_array.frompointer(tests_array)
+                test = tests[0]
+                test.index = 65
+                test.name = "A"
+                tests[0] = test
+                test = tests[1]
+                test.index = 77
+                test.name = "M"
+                tests[1] = test
+                test = tests[2]
+                test.index = 80
+                test.name = "P"
+                tests[2] = test
+            else:
+                raise ValueError(uint32_value(count_ptr))
+        elif suite == 1:
+            if tests_array is None:
+                uint32_assign(count_ptr, 0)
+            elif uint32_value(count_ptr) != 0:
+                raise ValueError(uint32_value(count_ptr))
+        else:
+            raise ValueError(suite)
+    def stubDiagnosticsRunTests(diag, first, last):
+        suite = diag_handle_to_ulong(diag)
+        if suite == 0:
+            result = ZES_DIAG_RESULT_ABORT
+            if first <= 65 and last >= 65:
+                result = ZES_DIAG_RESULT_NO_ERRORS
+            if first <= 77 and last >= 77:
+                result = ZES_DIAG_RESULT_REBOOT_FOR_REPAIR
+            if first <= 80 and last >= 80:
+                result = ZES_DIAG_RESULT_FAIL_CANT_REPAIR
+            return result
+        elif suite == 1:
+            return ZES_DIAG_RESULT_NO_ERRORS
+        else:
+            raise ValueError(suite)
     def stubDeviceEnumFabricPorts(dev, count_ptr, handle_array):
         raise NotImplementedError
     def stubDeviceEnumRasErrorSets(dev, count_ptr, handle_array):
@@ -843,6 +915,10 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesDevicePciGetState : stubDevicePciGetState,
                      zesDevicePciGetStats : stubDevicePciGetStats,
                      zesDevicePciGetBars : stubDevicePciGetBars,
+                     zesDeviceEnumDiagnosticTestSuites : stubDeviceEnumDiagnosticTestSuites,
+                     zesDiagnosticsGetProperties : stubDiagnosticsGetProperties,
+                     zesDiagnosticsGetTests : stubDiagnosticsGetTests,
+                     zesDiagnosticsRunTests : stubDiagnosticsRunTests,
                      zesDeviceEnumFabricPorts : stubDeviceEnumFabricPorts,
                      zesDeviceEnumRasErrorSets : stubDeviceEnumRasErrorSets,
                      zesRasGetProperties : stubRasGetProperties,
@@ -1095,9 +1171,9 @@ def schedModeString(schedMode):
 
 def diagResultString(diagResult):
     diagResults = { ZES_DIAG_RESULT_NO_ERRORS : "Pass",
-                    ZES_DIAG_RESULT_ABORT : "Abort",
-                    ZES_DIAG_RESULT_FAIL_CANT_REPAIR : "Fail/Irreparable",
-                    ZES_DIAG_RESULT_REBOOT_FOR_REPAIR : "Fail/Reboot" }
+                    ZES_DIAG_RESULT_ABORT : "Diagnostic aborted",
+                    ZES_DIAG_RESULT_FAIL_CANT_REPAIR : "Fail, irreparable",
+                    ZES_DIAG_RESULT_REBOOT_FOR_REPAIR : "Fail, reboot required" }
     return diagResults.get(diagResult, "Unknown")
 
 def fullUUID(uuid):
@@ -1774,17 +1850,18 @@ def parseTestSuite(diagCount, diags, opts):
                 except ValueError:
                     reportZeException()
                 else:
-                    tests = zes_diag_test_array(diagCount.value())
-                    zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests)
+                    tests = zes_diag_test_array(testCount.value())
+                    zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests.cast())
                     for t in range(testCount.value()):
-                        test = tests[i]
+                        test = tests[t]
                         if test.index == first:
                             firstFound = True
                         if test.index == last:
                             lastFound = True
-                if not firstFound:
+                if not firstFound and first != ZES_DIAG_FIRST_TEST_INDEX:
                     pr.err("WARNING:", first, "not found in test suite")
-                if not lastFound and last != first:
+                if not lastFound and last != first and (last & 0xffffffff) != \
+                                                       (ZES_DIAG_LAST_TEST_INDEX & 0xffffffff):
                     pr.err("WARNING:", last, "not found in test suite")
             else:
                 pr.err("WARNING: Test suite has no individual subtests")
@@ -1818,7 +1895,7 @@ def main():
     if args.show_device or args.show_processes or args.show_scheduler or \
        args.show_temp or args.show_power or args.show_freq or args.show_util or \
        args.show_mem or args.show_pci or args.show_fabric_ports or \
-       args.show_standby or args.show_errors:
+       args.show_standby or args.show_errors or args.show_diag:
 
         generatingDeviceReport = True
 
@@ -1866,21 +1943,24 @@ def main():
         sys.exit(0)
 
     if args.run_diag:
+        if len(devices) != 1:
+            pr.fail("Cannot test more than one GPU at a time")
+
         diagCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumDiagnosticTestSuites, device, diagCount.cast(), None)
+            zeCall(zesDeviceEnumDiagnosticTestSuites, devices[0], diagCount.cast(), None)
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             diags = zes_diag_handle_array(diagCount.value())
-            zeCall(zesDeviceEnumDiagnosticTestSuites, device, diagCount.cast(), diags.cast())
+            zeCall(zesDeviceEnumDiagnosticTestSuites, devices[0], diagCount.cast(), diags.cast())
 
         suite, first, last = parseTestSuite(diagCount.value(), diags, args.run_diag)
 
-        result = zeCall(zesDiagnosticsRunTests, diag, first, last)
-        pr("Diagnostic test result:", result)
+        result = zeCall(zesDiagnosticsRunTests, suite, first, last)
+        pr("Diagnostic test result:", diagResultString(result))
 
         sys.exit(result)
 
@@ -2780,12 +2860,11 @@ def main():
                         reportZeException()
                     else:
                         tests = zes_diag_test_array(diagCount.value())
-                        zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests)
+                        zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests.cast())
 
                     for t in range(testCount.value()):
-                        test = tests[i]
-                        diagNode = Node(diagNode, "Test", None, ("Index", test.index),
-                                        ("Name", test.name))
+                        test = tests[t]
+                        Node(diagNode, "Test", test.name, ("Id", test.index))
 
     currentIteration = 0
     while currentIteration < maxIterations:
