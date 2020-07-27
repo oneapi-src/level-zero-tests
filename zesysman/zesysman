@@ -82,7 +82,18 @@ TableRenameNodes = { "TemperatureSensor" : "Temp",
                      "MemoryModule" : "Mem",
                      "ErrorDomain" : "Err",
                      "FabricPort" : "Port",
-                     "StandbyDomain" : "Standby" }
+                     "StandbyDomain" : "Standby",
+                     "EngineGroup" : "",
+                     "Activity" : "" }
+TablePostRename = { "AllEngines" : "Util",
+                    "AllComputeEngines" : "AllComputeUtil",
+                    "AllMediaEngines" : "AllMediaUtil",
+                    "AllCopyEngines" : "AllCopyUtil",
+                    "ComputeEngine" : "ComputeUtil",
+                    "RenderEngine" : "RenderUtil",
+                    "MediaDecodeEngine" : "DecodeUtil",
+                    "MediaEncodeEngine" : "EncodeUtil",
+                    "CopyEngine" : "CopyUtil" }
 TableKeepNodes = [ "PCI" ]
 
 def tableNode(parent, node, text, *attrs):
@@ -110,10 +121,14 @@ def tableNode(parent, node, text, *attrs):
             return parent
         if any(a in RenameAttributes for a,v in attrs):
             attrs = [ (a,v) for a,v in attrs if a not in IndexAttributes ]
-        for attr,val in attrs:
-            node += "[" + str(val) + "]"
         columns, rows, index, column = parent
-        if column and node:
+        for attr,val in attrs:
+            if node or column:
+                node += "[" + str(val) + "]"
+            else:
+                node = str(val)
+        node = TablePostRename.get(node, str(node))
+        if column and node and node[0] != "[":
             column += "."
         column += node
         if text is not None:
@@ -686,18 +701,28 @@ def unimplementedFunctionCall(func, *args, **kwargs):
     def stubDeviceEnumEngineGroups(dev, count_ptr, handle_array):
         global stubState
         if handle_array is None:
-            uint32_assign(count_ptr, 4)
-        elif uint32_value(count_ptr) == 4:
+            uint32_assign(count_ptr, 9)
+        elif uint32_value(count_ptr) == 9:
             e = stubState.setdefault("Engine", {})
             e[ZES_ENGINE_GROUP_ALL] = { "activeTime" : 0, "timestamp" : 0 }
             e[ZES_ENGINE_GROUP_COMPUTE_ALL] = { "activeTime" : 0, "timestamp" : 0 }
             e[ZES_ENGINE_GROUP_MEDIA_ALL] = { "activeTime" : 0, "timestamp" : 0 }
             e[ZES_ENGINE_GROUP_COPY_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_COMPUTE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_RENDER_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_COPY_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
             items = zes_engine_handle_array.frompointer(handle_array)
             items[0] = ulong_to_engine_handle(ZES_ENGINE_GROUP_ALL)
             items[1] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COMPUTE_ALL)
             items[2] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_ALL)
             items[3] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COPY_ALL)
+            items[4] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COMPUTE_SINGLE)
+            items[5] = ulong_to_engine_handle(ZES_ENGINE_GROUP_RENDER_SINGLE)
+            items[6] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE)
+            items[7] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE)
+            items[8] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COPY_SINGLE)
         else:
             raise ValueError(uint32_value(count_ptr))
     def stubEngineGetProperties(eng, engProps):
@@ -705,17 +730,28 @@ def unimplementedFunctionCall(func, *args, **kwargs):
     def stubEngineGetActivity(eng, utilStats):
         global stubState
         e = stubState["Engine"]
-        stats = e[engine_handle_to_ulong(eng)]
+        etype = engine_handle_to_ulong(eng)
+        stats = e[etype]
         stats["timestamp"] += 1000000
-        utilStats.timestamp = stats["timestamp"]
-        if eng == ZES_ENGINE_GROUP_ALL:
+        if etype == ZES_ENGINE_GROUP_ALL:
             stats["activeTime"] += 700000
-        if eng == ZES_ENGINE_GROUP_COMPUTE_ALL:
+        if etype == ZES_ENGINE_GROUP_COMPUTE_ALL:
             stats["activeTime"] += 500000
-        if eng == ZES_ENGINE_GROUP_MEDIA_ALL:
+        if etype == ZES_ENGINE_GROUP_MEDIA_ALL:
             stats["activeTime"] += 150000
-        if eng == ZES_ENGINE_GROUP_COPY_ALL:
+        if etype == ZES_ENGINE_GROUP_COPY_ALL:
             stats["activeTime"] += 50000
+        if etype == ZES_ENGINE_GROUP_COMPUTE_SINGLE:
+            stats["activeTime"] += 300000
+        if etype == ZES_ENGINE_GROUP_RENDER_SINGLE:
+            stats["activeTime"] += 200000
+        if etype == ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE:
+            stats["activeTime"] += 30000
+        if etype == ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE:
+            stats["activeTime"] += 120000
+        if etype == ZES_ENGINE_GROUP_COPY_SINGLE:
+            stats["activeTime"] += 50000
+        utilStats.timestamp = stats["timestamp"]
         utilStats.activeTime = stats["activeTime"]
     def stubDevicePciGetProperties(dev, pciProps):
         pciProps.address.domain = 1
@@ -1001,7 +1037,12 @@ def engTypeString(engType):
     engTypes = { ZES_ENGINE_GROUP_ALL : "AllEngines",
                  ZES_ENGINE_GROUP_COMPUTE_ALL : "AllComputeEngines",
                  ZES_ENGINE_GROUP_MEDIA_ALL : "AllMediaEngines",
-                 ZES_ENGINE_GROUP_COPY_ALL : "AllCopyEngines" }
+                 ZES_ENGINE_GROUP_COPY_ALL : "AllCopyEngines",
+                 ZES_ENGINE_GROUP_COMPUTE_SINGLE : "ComputeEngine",
+                 ZES_ENGINE_GROUP_RENDER_SINGLE : "RenderEngine",
+                 ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE : "MediaDecodeEngine",
+                 ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE : "MediaEncodeEngine",
+                 ZES_ENGINE_GROUP_COPY_SINGLE : "CopyEngine" }
     return engTypes.get(engType, "Unknown")
 
 def memTypeString(memType):
