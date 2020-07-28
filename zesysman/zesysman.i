@@ -104,10 +104,12 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %apply double * OUTPUT { double* pTemperature };
 %apply int * OUTPUT { zes_standby_promo_mode_t* pMode };
 %apply int * OUTPUT { zes_sched_mode_t* pMode };
-%apply int * OUTPUT { zes_diag_result_t* pResult }
+%apply int * OUTPUT { zes_diag_result_t* pResult };
+%apply int * OUTPUT { uint32_t* pNumDeviceEvents };
 
 %include <level_zero/zes_api.h>
 
+%clear uint32_t* pNumDeviceEvents;
 %clear zes_diag_result_t* pResult;
 %clear zes_sched_mode_t* pMode;
 %clear zes_standby_promo_mode_t* pMode;
@@ -170,6 +172,7 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 %array_class(zes_pci_bar_properties_t, zes_pci_bar_properties_array);
 %array_class(zes_process_state_t, zes_process_state_array);
 %array_class(zes_diag_test_t, zes_diag_test_array);
+%array_class(zes_event_type_flags_t, zes_event_type_flags_array);
 
 %pointer_cast(unsigned long, ze_driver_handle_t, ulong_to_driver_handle);
 %pointer_cast(unsigned long, ze_device_handle_t, ulong_to_device_handle);

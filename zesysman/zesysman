@@ -585,6 +585,10 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDiagnosticsRunTests(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDeviceEventRegister(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDriverEventListen(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceEnumFabricPorts(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceEnumRasErrorSets(*args, **kwargs):
@@ -876,6 +880,22 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             return ZES_DIAG_RESULT_NO_ERRORS
         else:
             raise ValueError(suite)
+    def stubDeviceEventRegister(dev, events):
+        global stubState
+        d = stubState.setdefault(device_handle_to_ulong(dev), {})
+        d["EventEnables"] = events
+    def stubDriverEventListen(drv, timeout, count, device_array, event_array):
+        global stubState
+        devices = ze_device_handle_array.frompointer(device_array)
+        events = zes_event_type_flags_array.frompointer(event_array)
+        for i in range(count):
+            dev = devices[i]
+            d = stubState.setdefault(device_handle_to_ulong(dev), {})
+            enables = d.setdefault("EventEnables", 0)
+            events[i] = enables & (ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH | \
+                                   ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS |\
+                                   ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED)
+        return count
     def stubDeviceEnumFabricPorts(dev, count_ptr, handle_array):
         raise NotImplementedError
     def stubDeviceEnumRasErrorSets(dev, count_ptr, handle_array):
@@ -955,6 +975,8 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesDiagnosticsGetProperties : stubDiagnosticsGetProperties,
                      zesDiagnosticsGetTests : stubDiagnosticsGetTests,
                      zesDiagnosticsRunTests : stubDiagnosticsRunTests,
+                     zesDeviceEventRegister : stubDeviceEventRegister,
+                     zesDriverEventListen : stubDriverEventListen,
                      zesDeviceEnumFabricPorts : stubDeviceEnumFabricPorts,
                      zesDeviceEnumRasErrorSets : stubDeviceEnumRasErrorSets,
                      zesRasGetProperties : stubRasGetProperties,
@@ -1216,6 +1238,34 @@ def diagResultString(diagResult):
                     ZES_DIAG_RESULT_FAIL_CANT_REPAIR : "Fail, irreparable",
                     ZES_DIAG_RESULT_REBOOT_FOR_REPAIR : "Fail, reboot required" }
     return diagResults.get(diagResult, "Unknown")
+
+def eventsString(events):
+    eventCodes = [ (ZES_EVENT_TYPE_FLAG_DEVICE_DETACH, "Detach"),
+                   (ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH, "Reattach"),
+                   (ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER, "Sleeping"),
+                   (ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT, "Waking"),
+                   (ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED, "Frequency throttled"),
+                   (ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED, "Energy threshold"),
+                   (ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL, "Temperature critical"),
+                   (ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1, "Temperature threshold 1"),
+                   (ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2, "Temperature threshold 2"),
+                   (ZES_EVENT_TYPE_FLAG_MEM_HEALTH, "Memory health change"),
+                   (ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH, "Port health change"),
+                   (ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH, "PCI health change"),
+                   (ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS, "Correctable error threshold"),
+                   (ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS, "Uncorrectable error threshold"),
+                   (ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED, "Reset required") ]
+
+    eventStrings = []
+    for t, s in eventCodes:
+        if events & t:
+            events ^= t
+            eventStrings.append(s)
+
+    if events != 0:
+        eventStrings.append("Unknown event")
+
+    return ", ".join(eventStrings)
 
 def fullUUID(uuid):
     return uuid
@@ -1553,6 +1603,8 @@ def parseArgs():
                             help="provide stubs for some unimplemented functions (for development only)")
         parser.add_argument("--show-timestamp", action='store_true',
                             help="show timestamps when iterating")
+        parser.add_argument("--wait-events", nargs='*', metavar=('MSEC','MASK'),
+                            help="wait for events")
 
     args = parser.parse_args()
 
@@ -1566,6 +1618,7 @@ def parseArgs():
         args.debug = None
         args.stub_unimplemented = None
         args.reset_freq = None
+        args.wait_events = None
 
     Node = formatArgClass.get(args.format, Node)
 
@@ -2004,6 +2057,69 @@ def main():
         pr("Diagnostic test result:", diagResultString(result))
 
         sys.exit(result)
+
+    if args.wait_events is not None:
+        if len(driverIndices) != 1:
+            pr.err("ERROR: can only wait on events from one driver at a time")
+            sys.exit(1)
+
+        allEvents = ZES_EVENT_TYPE_FLAG_DEVICE_DETACH | ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH | \
+                    ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER | \
+                    ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT | ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED | \
+                    ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED | ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL | \
+                    ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1 | ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2 | \
+                    ZES_EVENT_TYPE_FLAG_MEM_HEALTH | ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH | \
+                    ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH | ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS | \
+                    ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS | ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED
+
+        if len(args.wait_events) > 1:
+            selectedEvents = int(args.wait_events[1],0) & allEvents
+        else:
+            selectedEvents = allEvents
+
+        for device in devices:
+            try:
+                zeCall(zesDeviceEventRegister, device, selectedEvents)
+            except NotImplementedError:
+                pass
+            except ValueError:
+                reportZeException()
+
+        driver = drivers[0]
+        if len(args.wait_events) > 0:
+            timeout = int(args.wait_events[0],0) & 0xffffffff
+        else:
+            timeout = 1000
+        count = len(devices)
+        phDevices = ze_device_handle_array(count)
+        for i, device in indexed(devices):
+            phDevices[i] = device
+        pEvents = zes_event_type_flags_array(count)
+
+        try:
+            numDeviceEvents = zeCall(zesDriverEventListen, driver, timeout, count, phDevices.cast(), pEvents.cast())
+        except NotImplementedError:
+            pass
+        except ValueError:
+            reportZeException()
+        else:
+            if numDeviceEvents:
+                pr(numDeviceEvents, "device(s) reported events:")
+                for i in range(count):
+                    events = eventsString(pEvents[i]) or "None"
+                    pr("   ", deviceIDs[i], ":", deviceUUIDs[i], events)
+            else:
+                pr("No events reported")
+
+        for device in devices:
+            try:
+                zeCall(zesDeviceEventRegister, device, 0)
+            except NotImplementedError:
+                pass
+            except ValueError:
+                reportZeException()
+
+        sys.exit(0)
 
     topNode = Node(None, "Devices", None)
 
