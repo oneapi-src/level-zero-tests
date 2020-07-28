@@ -32,18 +32,12 @@ get_metric_group_handles(ze_device_handle_t device) {
   return metricGroup;
 }
 
-std::vector<std::string>
-get_metric_group_name_list(ze_device_handle_t device,
-                           zet_metric_group_sampling_type_t samplingType) {
-  ze_result_t result = zeInit(ZE_INIT_FLAG_NONE);
+std::vector<std::string> get_metric_group_name_list(
+    ze_device_handle_t device,
+    zet_metric_group_sampling_type_flags_t samplingType) {
+  ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
-                             level_zero_tests::to_string(result));
-  }
-
-  result = zetInit(ZE_INIT_FLAG_NONE);
-  if (result) {
-    throw std::runtime_error("zetInit failed: " +
                              level_zero_tests::to_string(result));
   }
 
@@ -104,18 +98,19 @@ create_metric_query_pool(zet_metric_query_pool_desc_t metricQueryPoolDesc,
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricQueryPoolCreate(device, metricGroup, &metricQueryPoolDesc,
+            zetMetricQueryPoolCreate(lzt::get_default_context(), device,
+                                     metricGroup, &metricQueryPoolDesc,
                                      &metric_query_pool));
   EXPECT_NE(nullptr, metric_query_pool);
   return metric_query_pool;
 }
 
 zet_metric_query_pool_handle_t
-create_metric_query_pool(uint32_t count, zet_metric_query_pool_flag_t flags,
+create_metric_query_pool(uint32_t count, zet_metric_query_pool_type_t type,
                          zet_metric_group_handle_t metricGroup) {
   zet_metric_query_pool_desc_t metricQueryPoolDesc = {};
   metricQueryPoolDesc.count = count;
-  metricQueryPoolDesc.flags = flags;
+  metricQueryPoolDesc.type = type;
 
   metricQueryPoolDesc.pNext = nullptr;
   return create_metric_query_pool(metricQueryPoolDesc, metricGroup);
@@ -157,60 +152,63 @@ uint8_t *metric_query_get_data(zet_metric_query_handle_t metricQueryHandle) {
   return metricData.data();
 }
 
-void metric_tracer_close(zet_metric_tracer_handle_t metricTracerHandle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricTracerClose(metricTracerHandle));
+void metric_streamer_close(zet_metric_streamer_handle_t metricStreamerHandle) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricStreamerClose(metricStreamerHandle));
 }
-zet_metric_tracer_handle_t
-metric_tracer_open(zet_metric_group_handle_t matchedGroupHandle,
-                   ze_event_handle_t eventHandle, uint32_t notifyEveryNReports,
-                   uint32_t samplingPeriod) {
+zet_metric_streamer_handle_t
+metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
+                     ze_event_handle_t eventHandle,
+                     uint32_t notifyEveryNReports, uint32_t samplingPeriod) {
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
-  zet_metric_tracer_handle_t metricTracerHandle;
-  zet_metric_tracer_desc_t metricTracerDesc = {
-      ZET_METRIC_TRACER_DESC_VERSION_CURRENT, notifyEveryNReports,
+  zet_metric_streamer_handle_t metricStreamerHandle;
+  zet_metric_streamer_desc_t metricStreamerDesc = {
+      ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, notifyEveryNReports,
       samplingPeriod};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerOpen(device, matchedGroupHandle, &metricTracerDesc,
-                                eventHandle, &metricTracerHandle));
-  EXPECT_NE(nullptr, metricTracerHandle);
-  return metricTracerHandle;
+            zetMetricStreamerOpen(lzt::get_default_context(), device,
+                                  matchedGroupHandle, &metricStreamerDesc,
+                                  eventHandle, &metricStreamerHandle));
+  EXPECT_NE(nullptr, metricStreamerHandle);
+  return metricStreamerHandle;
 }
 
-void commandlist_append_tracer_marker(
+void commandlist_append_streamer_marker(
     zet_command_list_handle_t commandList,
-    zet_metric_tracer_handle_t metricTracerHandle, uint32_t tracerMarker) {
+    zet_metric_streamer_handle_t metricStreamerHandle, uint32_t tracerMarker) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetCommandListAppendMetricTracerMarker(
-                commandList, metricTracerHandle, tracerMarker));
+            zetCommandListAppendMetricStreamerMarker(
+                commandList, metricStreamerHandle, tracerMarker));
 }
 
-size_t
-metric_tracer_read_data_size(zet_metric_tracer_handle_t metricTracerHandle) {
+size_t metric_streamer_read_data_size(
+    zet_metric_streamer_handle_t metricStreamerHandle) {
   size_t metricSize = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerReadData(metricTracerHandle, UINT32_MAX, &metricSize,
-                                    nullptr));
+            zetMetricStreamerReadData(metricStreamerHandle, UINT32_MAX,
+                                      &metricSize, nullptr));
   return metricSize;
 }
 uint8_t *
-metric_tracer_read_data(zet_metric_tracer_handle_t metricTracerHandle) {
+metric_streamer_read_data(zet_metric_streamer_handle_t metricStreamerHandle) {
   std::vector<uint8_t> metricData;
-  size_t metricSize = metric_tracer_read_data_size(metricTracerHandle);
+  size_t metricSize = metric_streamer_read_data_size(metricStreamerHandle);
   metricData.resize(metricSize);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerReadData(metricTracerHandle, 0, &metricSize,
-                                    metricData.data()));
+            zetMetricStreamerReadData(metricStreamerHandle, 0, &metricSize,
+                                      metricData.data()));
   return metricData.data();
 }
 
 void activate_metric_groups(ze_device_handle_t device, uint32_t count,
                             zet_metric_group_handle_t matchedGroupHandle) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDeviceActivateMetricGroups(device, count, &matchedGroupHandle));
+            zetContextActivateMetricGroups(lzt::get_default_context(), device,
+                                           count, &matchedGroupHandle));
 }
 void deactivate_metric_groups(ze_device_handle_t device) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDeviceActivateMetricGroups(device, 0, nullptr));
+            zetContextActivateMetricGroups(lzt::get_default_context(), device,
+                                           0, nullptr));
 }
 
 void append_metric_query_begin(zet_command_list_handle_t commandList,
@@ -224,7 +222,7 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                              ze_event_handle_t eventHandle) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetCommandListAppendMetricQueryEnd(commandList, metricQueryHandle,
-                                               eventHandle));
+                                               eventHandle, 0, nullptr));
 }
 
 void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
@@ -234,13 +232,17 @@ void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
   std::vector<zet_metric_handle_t> metrics;
   zet_metric_group_properties_t properties;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupCalculateMetricValues(matchedGroupHandle, rawDataSize,
-                                                rawData, &count, nullptr));
+            zetMetricGroupCalculateMetricValues(
+                matchedGroupHandle,
+                ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES, rawDataSize,
+                rawData, &count, nullptr));
   EXPECT_GT(count, 0);
   results.resize(count);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupCalculateMetricValues(
-                                   matchedGroupHandle, rawDataSize, rawData,
-                                   &count, results.data()));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupCalculateMetricValues(
+                matchedGroupHandle,
+                ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES, rawDataSize,
+                rawData, &count, results.data()));
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetMetricGroupGetProperties(matchedGroupHandle, &properties));
   metrics.resize(properties.metricCount);

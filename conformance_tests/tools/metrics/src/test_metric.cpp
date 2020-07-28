@@ -59,13 +59,13 @@ class zetMetricEnumerationTest : public ::testing::Test {
 protected:
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<std::string> groupNameList = lzt::get_metric_group_name_list(
-      device, ZET_METRIC_GROUP_SAMPLING_TYPE_EVENT_BASED);
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED);
   zet_metric_group_handle_t matchedGroupHandle;
   std::string groupName = groupNameList[0];
 
   zetMetricEnumerationTest() {
     matchedGroupHandle = lzt::find_metric_group(
-        device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_EVENT_BASED);
+        device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED);
   }
 
   ~zetMetricEnumerationTest() {}
@@ -75,10 +75,10 @@ TEST_F(
     GivenValidMetricGroupWhenvalidGroupNameIsrequestedThenExpectMatchingMetricHandle) {
   for (auto testGroupName : groupNameList) {
     zet_metric_group_handle_t testMatchedGroupHandle = lzt::find_metric_group(
-        device, testGroupName, ZET_METRIC_GROUP_SAMPLING_TYPE_EVENT_BASED);
+        device, testGroupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED);
     EXPECT_NE(nullptr, testMatchedGroupHandle);
     testMatchedGroupHandle = lzt::find_metric_group(
-        device, testGroupName, ZET_METRIC_GROUP_SAMPLING_TYPE_TIME_BASED);
+        device, testGroupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
     EXPECT_NE(nullptr, testMatchedGroupHandle);
   }
 }
@@ -91,7 +91,7 @@ protected:
   zetMetricQueryTest() {
     EXPECT_NE(nullptr, matchedGroupHandle);
     metricQueryPoolHandle = lzt::create_metric_query_pool(
-        1000, ZET_METRIC_QUERY_POOL_FLAG_PERFORMANCE, matchedGroupHandle);
+        1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE, matchedGroupHandle);
     EXPECT_NE(nullptr, metricQueryPoolHandle);
     metricQueryHandle = lzt::metric_query_create(metricQueryPoolHandle);
   }
@@ -139,10 +139,11 @@ public:
     std::string metricGroupName = GetParam();
     commandList = lzt::create_command_list(device);
     commandQueue = lzt::create_command_queue(device);
-    matchedGroupHandle = lzt::find_metric_group(
-        device, metricGroupName, ZET_METRIC_GROUP_SAMPLING_TYPE_EVENT_BASED);
+    matchedGroupHandle =
+        lzt::find_metric_group(device, metricGroupName,
+                               ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED);
     metricQueryPoolHandle = lzt::create_metric_query_pool(
-        1000, ZET_METRIC_QUERY_POOL_FLAG_PERFORMANCE, matchedGroupHandle);
+        1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE, matchedGroupHandle);
     EXPECT_NE(nullptr, metricQueryPoolHandle);
     metricQueryHandle = lzt::metric_query_create(metricQueryPoolHandle);
   }
@@ -194,9 +195,9 @@ TEST_P(
 INSTANTIATE_TEST_CASE_P(parameterizedMetricQueryTests, zetMetricQueryLoadTest,
                         ::testing::ValuesIn(lzt::get_metric_group_name_list(
                             lzt::zeDevice::get_instance()->get_device(),
-                            ZET_METRIC_GROUP_SAMPLING_TYPE_EVENT_BASED)));
+                            ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED)));
 
-class zetMetricTracerTest : public ::testing::Test {
+class zetMetricStreamerTest : public ::testing::Test {
 protected:
   uint32_t notifyEveryNReports = 1000;
   uint32_t samplingPeriod = 40000;
@@ -204,30 +205,30 @@ protected:
   lzt::zeEventPool eventPool;
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<std::string> groupNameList = lzt::get_metric_group_name_list(
-      device, ZET_METRIC_GROUP_SAMPLING_TYPE_TIME_BASED);
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
   zet_metric_group_handle_t matchedGroupHandle;
   std::string groupName = groupNameList[0];
 
-  zetMetricTracerTest() {
+  zetMetricStreamerTest() {
     matchedGroupHandle = lzt::find_metric_group(
-        device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_TIME_BASED);
+        device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
     EXPECT_NE(nullptr, matchedGroupHandle);
     eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_DEVICE,
                            ZE_EVENT_SCOPE_FLAG_HOST);
   }
-  ~zetMetricTracerTest() { eventPool.destroy_event(eventHandle); }
+  ~zetMetricStreamerTest() { eventPool.destroy_event(eventHandle); }
 };
-TEST_F(zetMetricTracerTest,
-       GivenValidMetricGroupWhenTracerIsOpenedThenExpectTracerToSucceed) {
+TEST_F(zetMetricStreamerTest,
+       GivenValidMetricGroupWhenStreamerIsOpenedThenExpectStreamerToSucceed) {
   lzt::activate_metric_groups(device, 1, matchedGroupHandle);
-  zet_metric_tracer_handle_t metricTracerHandle = lzt::metric_tracer_open(
+  zet_metric_streamer_handle_t metricStreamerHandle = lzt::metric_streamer_open(
       matchedGroupHandle, nullptr, notifyEveryNReports, samplingPeriod);
-  EXPECT_NE(nullptr, metricTracerHandle);
-  lzt::metric_tracer_close(metricTracerHandle);
+  EXPECT_NE(nullptr, metricStreamerHandle);
+  lzt::metric_streamer_close(metricStreamerHandle);
   lzt::deactivate_metric_groups(device);
 }
 
-class zetMetricTracerLoadTest
+class zetMetricStreamerLoadTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::string> {
 protected:
@@ -240,28 +241,28 @@ protected:
   zet_command_list_handle_t commandList;
   ze_command_queue_handle_t commandQueue;
 
-  zetMetricTracerLoadTest() {
+  zetMetricStreamerLoadTest() {
     std::string groupName = GetParam();
     commandList = lzt::create_command_list(device);
     commandQueue = lzt::create_command_queue(device);
     matchedGroupHandle = lzt::find_metric_group(
-        device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_TIME_BASED);
+        device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
     EXPECT_NE(nullptr, matchedGroupHandle);
     eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_DEVICE,
                            ZE_EVENT_SCOPE_FLAG_HOST);
   }
-  ~zetMetricTracerLoadTest() {
+  ~zetMetricStreamerLoadTest() {
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
     eventPool.destroy_event(eventHandle);
   }
 };
 TEST_P(
-    zetMetricTracerLoadTest,
-    GivenValidMetricGroupWhenTimerBasedTracerIsCreatedThenExpectTracerToSucceed) {
+    zetMetricStreamerLoadTest,
+    GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
 
   lzt::activate_metric_groups(device, 1, matchedGroupHandle);
-  zet_metric_tracer_handle_t metricTracerHandle = lzt::metric_tracer_open(
+  zet_metric_streamer_handle_t metricStreamerHandle = lzt::metric_streamer_open(
       matchedGroupHandle, eventHandle, notifyEveryNReports, samplingPeriod);
 
   void *a_buffer, *b_buffer, *c_buffer;
@@ -270,34 +271,35 @@ TEST_P(
       load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
   zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                   nullptr);
-  uint32_t tracerMarker = 0;
-  lzt::commandlist_append_tracer_marker(commandList, metricTracerHandle,
-                                        ++tracerMarker);
+  uint32_t streamerMarker = 0;
+  lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
+                                          ++streamerMarker);
   lzt::append_barrier(commandList);
-  lzt::commandlist_append_tracer_marker(commandList, metricTracerHandle,
-                                        ++tracerMarker);
+  lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
+                                          ++streamerMarker);
   lzt::close_command_list(commandList);
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
   lzt::synchronize(commandQueue, std::numeric_limits<uint32_t>::max());
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
 
-  uint8_t *rawData = lzt::metric_tracer_read_data(metricTracerHandle);
+  uint8_t *rawData = lzt::metric_streamer_read_data(metricStreamerHandle);
   EXPECT_NE(nullptr, rawData);
-  lzt::validate_metrics(matchedGroupHandle,
-                        lzt::metric_tracer_read_data_size(metricTracerHandle),
-                        rawData);
+  lzt::validate_metrics(
+      matchedGroupHandle,
+      lzt::metric_streamer_read_data_size(metricStreamerHandle), rawData);
 
   lzt::deactivate_metric_groups(device);
-  lzt::metric_tracer_close(metricTracerHandle);
+  lzt::metric_streamer_close(metricStreamerHandle);
   lzt::destroy_function(function);
   lzt::free_memory(a_buffer);
   lzt::free_memory(b_buffer);
   lzt::free_memory(c_buffer);
 }
 
-INSTANTIATE_TEST_CASE_P(parameterizedMetricTracerTests, zetMetricQueryLoadTest,
+INSTANTIATE_TEST_CASE_P(parameterizedMetricStreamerTests,
+                        zetMetricQueryLoadTest,
                         ::testing::ValuesIn(lzt::get_metric_group_name_list(
                             lzt::zeDevice::get_instance()->get_device(),
-                            ZET_METRIC_GROUP_SAMPLING_TYPE_TIME_BASED)));
+                            ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED)));
 
 } // namespace
