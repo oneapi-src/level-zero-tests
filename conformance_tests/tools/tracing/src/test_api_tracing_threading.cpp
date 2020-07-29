@@ -25,29 +25,29 @@ std::atomic_bool signaling_thread(false);
 std::atomic_int callback_enter_invocations(0);
 std::atomic_int callback_exit_invocations(0);
 
-void OnEnterDriverAllocDeviceMem(
-    ze_driver_alloc_device_mem_params_t *tracer_params, ze_result_t result,
-    void *pTraceUserData, void **ppTracerInstanceUserData) {
+void OnEnterMemAllocDevice(ze_mem_alloc_device_params_t *tracer_params,
+                           ze_result_t result, void *pTraceUserData,
+                           void **ppTracerInstanceUserData) {
 
   callback_enter_invocations++;
   while (!signaling_thread && !ready) {
-  }
+  };
 }
 
-void OnExitDriverAllocDeviceMem(
-    ze_driver_alloc_device_mem_params_t *tracer_params, ze_result_t result,
-    void *pTraceUserData, void **ppTracerInstanceUserData) {
+void OnExitMemAllocDevice(ze_mem_alloc_device_params_t *tracer_params,
+                          ze_result_t result, void *pTraceUserData,
+                          void **ppTracerInstanceUserData) {
 
   callback_exit_invocations++;
 }
 
-void OnEnterDriverAllocHostMem(ze_driver_alloc_host_mem_params_t *tracer_params,
-                               ze_result_t result, void *pTraceUserData,
-                               void **ppTracerInstanceUserData) {}
+void OnEnterMemAllocHost(ze_mem_alloc_host_params_t *tracer_params,
+                         ze_result_t result, void *pTraceUserData,
+                         void **ppTracerInstanceUserData) {}
 
-void OnExitDriverAllocHostMem(ze_driver_alloc_host_mem_params_t *tracer_params,
-                              ze_result_t result, void *pTraceUserData,
-                              void **ppTracerInstanceUserData) {}
+void OnExitMemAllocHost(ze_mem_alloc_host_params_t *tracer_params,
+                        ze_result_t result, void *pTraceUserData,
+                        void **ppTracerInstanceUserData) {}
 
 void allocate_then_deallocate_device_memory() {
   void *memory = lzt::allocate_device_memory(1);
@@ -61,17 +61,17 @@ protected:
     callback_enter_invocations = 0;
     ready = false;
     signaling_thread = false;
-    zet_tracer_desc_t tracer_desc = {};
+    zet_tracer_exp_desc_t tracer_desc = {};
 
     tracer_desc.pNext = nullptr;
     tracer_desc.pUserData = nullptr;
     tracer = lzt::create_tracer_handle(tracer_desc);
 
-    prologues.Driver.pfnAllocDeviceMemCb = OnEnterDriverAllocDeviceMem;
-    epilogues.Driver.pfnAllocDeviceMemCb = OnExitDriverAllocDeviceMem;
+    prologues.Mem.pfnAllocDeviceCb = OnEnterMemAllocDevice;
+    epilogues.Mem.pfnAllocDeviceCb = OnExitMemAllocDevice;
 
-    prologues.Driver.pfnAllocHostMemCb = OnEnterDriverAllocHostMem;
-    epilogues.Driver.pfnAllocHostMemCb = OnExitDriverAllocHostMem;
+    prologues.Mem.pfnAllocHostCb = OnEnterMemAllocHost;
+    epilogues.Mem.pfnAllocHostCb = OnExitMemAllocHost;
 
     lzt::set_tracer_prologues(tracer, prologues);
     lzt::set_tracer_epilogues(tracer, epilogues);
@@ -83,7 +83,7 @@ protected:
     lzt::destroy_tracer_handle(tracer);
   }
 
-  zet_tracer_handle_t tracer;
+  zet_tracer_exp_handle_t tracer;
   ze_callbacks_t prologues = {};
   ze_callbacks_t epilogues = {};
 };

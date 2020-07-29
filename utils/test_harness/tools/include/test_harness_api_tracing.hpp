@@ -18,22 +18,24 @@ typedef struct _test_api_tracing_user_data {
   bool epilogue_called;
 } test_api_tracing_user_data;
 
-zet_tracer_handle_t create_tracer_handle(const zet_tracer_desc_t tracer_desc);
-zet_tracer_handle_t create_tracer_handle(const ze_driver_handle_t driver,
-                                         const zet_tracer_desc_t tracer_desc);
+zet_tracer_exp_handle_t
+create_tracer_handle(const zet_tracer_exp_desc_t tracer_desc);
+zet_tracer_exp_handle_t
+create_tracer_handle(const zet_context_handle_t context,
+                     const zet_tracer_exp_desc_t tracer_desc);
 
-void destroy_tracer_handle(zet_tracer_handle_t tracer_handle);
+void destroy_tracer_handle(zet_tracer_exp_handle_t tracer_handle);
 
-void set_tracer_prologues(const zet_tracer_handle_t tracer_handle);
-void set_tracer_prologues(zet_tracer_handle_t tracer_handle,
+void set_tracer_prologues(const zet_tracer_exp_handle_t tracer_handle);
+void set_tracer_prologues(zet_tracer_exp_handle_t tracer_handle,
                           zet_core_callbacks_t prologues);
 
-void set_tracer_epilogues(const zet_tracer_handle_t tracer_handle);
-void set_tracer_epilogues(zet_tracer_handle_t tracer_handle,
+void set_tracer_epilogues(const zet_tracer_exp_handle_t tracer_handle);
+void set_tracer_epilogues(zet_tracer_exp_handle_t tracer_handle,
                           zet_core_callbacks_t epilogues);
-void enable_tracer(const zet_tracer_handle_t tracer_handle);
+void enable_tracer(const zet_tracer_exp_handle_t tracer_handle);
 
-void disable_tracer(const zet_tracer_handle_t tracer_handle);
+void disable_tracer(const zet_tracer_exp_handle_t tracer_handle);
 
 template <typename params_type>
 void prologue_callback(params_type params, ze_result_t result,

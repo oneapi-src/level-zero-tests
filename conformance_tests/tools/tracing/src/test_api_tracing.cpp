@@ -22,12 +22,13 @@ TEST(
     GivenValidDeviceAndTracerDescriptionWhenCreatingTracerThenTracerIsNotNull) {
   uint32_t user_data;
 
-  zet_tracer_desc_t tracer_desc = {};
+  zet_tracer_exp_desc_t tracer_desc = {};
 
   tracer_desc.pNext = nullptr;
   tracer_desc.pUserData = &user_data;
 
-  zet_tracer_handle_t tracer_handle = lzt::create_tracer_handle(tracer_desc);
+  zet_tracer_exp_handle_t tracer_handle =
+      lzt::create_tracer_handle(tracer_desc);
   EXPECT_NE(tracer_handle, nullptr);
 
   lzt::destroy_tracer_handle(tracer_handle);
@@ -40,8 +41,8 @@ class TracingCreateMultipleTests
 TEST_P(TracingCreateMultipleTests,
        GivenExistingTracersWhenCreatingNewTracerThenSuccesIsReturned) {
 
-  std::vector<zet_tracer_handle_t> tracers(GetParam());
-  std::vector<zet_tracer_desc_t> descs(GetParam());
+  std::vector<zet_tracer_exp_handle_t> tracers(GetParam());
+  std::vector<zet_tracer_exp_desc_t> descs(GetParam());
   uint32_t *user_data = new uint32_t[GetParam()];
 
   for (uint32_t i = 0; i < GetParam(); ++i) {
@@ -66,11 +67,12 @@ TEST(TracingDestroyTests,
      GivenSingleDisabledTracerWhenDestroyingTracerThenSuccessIsReturned) {
   uint32_t user_data;
 
-  zet_tracer_desc_t tracer_desc = {};
+  zet_tracer_exp_desc_t tracer_desc = {};
 
   tracer_desc.pNext = nullptr;
   tracer_desc.pUserData = &user_data;
-  zet_tracer_handle_t tracer_handle = lzt::create_tracer_handle(tracer_desc);
+  zet_tracer_exp_handle_t tracer_handle =
+      lzt::create_tracer_handle(tracer_desc);
 
   lzt::destroy_tracer_handle(tracer_handle);
 }
@@ -80,6 +82,7 @@ protected:
   void SetUp() override {
     driver = lzt::get_default_driver();
     device = lzt::zeDevice::get_instance()->get_device();
+    context = lzt::get_default_context();
 
     compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
     compute_properties.pNext = nullptr;
@@ -97,21 +100,22 @@ protected:
     p2p_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
     p2p_properties.pNext = nullptr;
 
-    zet_tracer_desc_t tracer_desc = {};
+    zet_tracer_exp_desc_t tracer_desc = {};
 
     tracer_desc.pUserData = &user_data;
     tracer_handle = lzt::create_tracer_handle(tracer_desc);
   }
 
   void init_command_queue() {
-    ASSERT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeCommandQueueCreate(device, &command_queue_desc, &command_queue));
+    ASSERT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandQueueCreate(context, device, &command_queue_desc,
+                                   &command_queue));
   }
 
   void init_command_list() {
     ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListCreate(device, &command_list_desc, &command_list));
+              zeCommandListCreate(context, device, &command_list_desc,
+                                  &command_list));
   }
 
   void init_fence() {
@@ -122,7 +126,7 @@ protected:
   }
 
   void init_event_pool() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCreate(driver, &event_pool_desc, 1,
+    ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCreate(context, &event_pool_desc, 1,
                                                    &device, &event_pool));
   }
 
@@ -135,8 +139,8 @@ protected:
 
   void init_module() {
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeModuleCreate(device, &module_desc, &module, &build_log));
+    ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleCreate(context, device, &module_desc,
+                                                &module, &build_log));
   }
 
   void init_kernel() {
@@ -146,7 +150,8 @@ protected:
   }
 
   void init_image() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(device, &image_desc, &image));
+    ASSERT_EQ(ZE_RESULT_SUCCESS,
+              zeImageCreate(context, device, &image_desc, &image));
   }
 
   void init_memory() {
@@ -161,7 +166,7 @@ protected:
     init_memory();
 
     ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeDriverGetMemIpcHandle(driver, memory, &ipc_handle));
+              zeMemGetIpcHandle(context, memory, &ipc_handle));
   }
 
   void TearDown() override {
@@ -192,7 +197,8 @@ protected:
     lzt::destroy_tracer_handle(tracer_handle);
   }
 
-  zet_tracer_handle_t tracer_handle;
+  ze_context_handle_t context;
+  zet_tracer_exp_handle_t tracer_handle;
   lzt::test_api_tracing_user_data user_data = {};
   ze_callbacks_t prologues = {};
   ze_callbacks_t epilogues = {};
@@ -203,7 +209,7 @@ protected:
   ze_device_properties_t properties;
   ze_device_compute_properties_t compute_properties;
 
-  ze_device_kernel_properties_t device_kernel_properties;
+  ze_kernel_properties_t device_kernel_properties;
   ze_device_memory_properties_t memory_properties;
 
   ze_device_memory_access_properties_t memory_access_properties;
@@ -216,37 +222,29 @@ protected:
   ze_driver_ipc_properties_t ipc_properties;
 
   ze_command_queue_desc_t command_queue_desc = {
-      .stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
-      .flags = 0,
-      .mode = ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      .priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
+      ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC, nullptr};
 
   ze_command_queue_handle_t command_queue = nullptr;
 
   ze_command_list_desc_t command_list_desc = {
-      .stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC,
-      .flags = static_cast<ze_command_list_flag_t>(0)};
+      ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, nullptr};
   ze_command_list_handle_t command_list = nullptr;
 
   ze_copy_region_t copy_region;
   ze_image_region_t image_region;
 
   ze_event_pool_handle_t event_pool = nullptr;
-  ze_event_pool_desc_t event_pool_desc = {
-      .stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
-      .flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
-      .count = 1};
+  ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
+                                          nullptr,
+                                          ZE_EVENT_POOL_FLAG_HOST_VISIBLE, 1};
   ze_event_handle_t event = nullptr;
-  ze_event_desc_t event_desc = {.stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
-                                .index = 0,
-                                .signal = ZE_EVENT_SCOPE_FLAG_NONE,
-                                .wait = ZE_EVENT_SCOPE_FLAG_NONE};
+  ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr};
+
   ze_ipc_event_pool_handle_t ipc_event;
   ze_ipc_mem_handle_t ipc_handle;
 
   ze_fence_handle_t fence = nullptr;
-  ze_fence_desc_t fence_desc = {.stype = ZE_STRUCTURE_TYPE_FENCE_DESC,
-                                .flags = ZE_FENCE_FLAG_NONE};
+  ze_fence_desc_t fence_desc = {ZE_STRUCTURE_TYPE_FENCE_DESC, nullptr};
 
   ze_image_format_t format_descriptor = {
       ZE_IMAGE_FORMAT_LAYOUT_8,  // layout
@@ -261,15 +259,16 @@ protected:
   const uint32_t image_width = 1920;
   const uint32_t image_height = 1;
   const uint32_t image_depth = 1;
-  ze_image_desc_t image_desc = {.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC,
-                                .flags = ZE_IMAGE_FLAG_PROGRAM_WRITE,
-                                .type = ZE_IMAGE_TYPE_1D,
-                                .format = format_descriptor,
-                                .width = image_width,
-                                .height = image_height,
-                                .depth = image_depth,
-                                .arraylevels = 0,
-                                .miplevels = 0};
+  ze_image_desc_t image_desc = {ZE_STRUCTURE_TYPE_IMAGE_DESC,
+                                nullptr,
+                                ZE_IMAGE_FLAG_KERNEL_WRITE,
+                                ZE_IMAGE_TYPE_1D,
+                                format_descriptor,
+                                image_width,
+                                image_height,
+                                image_depth,
+                                0,
+                                0};
   ze_image_handle_t image = nullptr;
   ze_image_properties_t image_properties;
 
@@ -279,31 +278,23 @@ protected:
 
   std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file("module_add.spv");
-  ze_module_desc_t module_desc = {.stype = ZE_STRUCTURE_TYPE_MODULE_DESC,
-                                  .format = ZE_MODULE_FORMAT_IL_SPIRV,
-                                  .inputSize =
-                                      static_cast<uint32_t>(binary_file.size()),
-                                  .pInputModule = binary_file.data(),
-                                  .pBuildFlags = "",
-                                  .pConstants = nullptr};
+  ze_module_desc_t module_desc = {ZE_STRUCTURE_TYPE_MODULE_DESC,
+                                  nullptr,
+                                  ZE_MODULE_FORMAT_IL_SPIRV,
+                                  static_cast<uint32_t>(binary_file.size()),
+                                  binary_file.data(),
+                                  "",
+                                  nullptr};
 
   ze_module_handle_t module = nullptr;
   ze_module_build_log_handle_t build_log = nullptr;
 
-  ze_kernel_desc_t kernel_desc = {.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC,
-                                  .flags = ZE_KERNEL_FLAG_NONE,
-                                  .pKernelName = "module_add_constant"};
+  ze_kernel_desc_t kernel_desc = {ZE_STRUCTURE_TYPE_KERNEL_DESC, nullptr, 0,
+                                  "module_add_constant"};
 
   ze_kernel_handle_t kernel = nullptr;
 
-  ze_kernel_attribute_t set_attribute;
-
-  ze_cache_config_t cache_config;
-
-  ze_sampler_desc_t sampler_desc = {.stype = ZE_STRUCTURE_TYPE_SAMPLER_DESC,
-                                    .filterMode =
-                                        ZE_SAMPLER_FILTER_MODE_NEAREST,
-                                    .isNormalized = true};
+  ze_sampler_desc_t sampler_desc = {ZE_STRUCTURE_TYPE_SAMPLER_DESC, nullptr};
   ze_sampler_handle_t sampler = nullptr;
 
   uint32_t num = 0, version;
@@ -311,8 +302,8 @@ protected:
   ze_bool_t can_access;
 };
 
-static void ready_tracer(zet_tracer_handle_t tracer, ze_callbacks_t prologues,
-                         ze_callbacks_t epilogues) {
+static void ready_tracer(zet_tracer_exp_handle_t tracer,
+                         ze_callbacks_t prologues, ze_callbacks_t epilogues) {
   lzt::set_tracer_prologues(tracer, prologues);
   lzt::set_tracer_epilogues(tracer, epilogues);
   lzt::enable_tracer(tracer);
@@ -324,10 +315,10 @@ TEST_F(
   prologues.Global.pfnInitCb = lzt::prologue_callback;
   epilogues.Global.pfnInitCb = lzt::epilogue_callback;
 
-  ze_result_t initial_result = zeInit(ZE_INIT_FLAG_NONE);
+  ze_result_t initial_result = zeInit(0);
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeInit(ZE_INIT_FLAG_NONE));
+  ASSERT_EQ(initial_result, zeInit(0));
 }
 
 TEST_F(
@@ -396,15 +387,15 @@ TEST_F(
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceGetKernelPropertiesCallbacksWhenCallingzeDeviceGetKernelPropertiesThenUserDataIsSetAndResultUnchanged) {
-  prologues.Device.pfnGetKernelPropertiesCb = lzt::prologue_callback;
-  epilogues.Device.pfnGetKernelPropertiesCb = lzt::epilogue_callback;
+  prologues.Kernel.pfnGetPropertiesCb = lzt::prologue_callback;
+  epilogues.Kernel.pfnGetPropertiesCb = lzt::epilogue_callback;
 
   ze_result_t initial_result =
-      zeDeviceGetKernelProperties(device, &device_kernel_properties);
+      zeKernelGetProperties(kernel, &device_kernel_properties);
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result,
-            zeDeviceGetKernelProperties(device, &device_kernel_properties));
+            zeKernelGetProperties(kernel, &device_kernel_properties));
 }
 
 TEST_F(
@@ -426,13 +417,13 @@ TEST_F(
     GivenEnabledTracerWithzeDeviceGetCachePropertiesCallbacksWhenCallingzeDeviceGetCachePropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetCachePropertiesCb = lzt::prologue_callback;
   epilogues.Device.pfnGetCachePropertiesCb = lzt::epilogue_callback;
-
+  uint32_t count = 0;
   ze_result_t initial_result =
-      zeDeviceGetCacheProperties(device, &cache_properties);
+      zeDeviceGetCacheProperties(device, &count, &cache_properties);
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result,
-            zeDeviceGetCacheProperties(device, &cache_properties));
+            zeDeviceGetCacheProperties(device, &count, &cache_properties));
 }
 
 TEST_F(
@@ -479,82 +470,71 @@ TEST_F(
 
 TEST_F(
     TracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeDeviceSetLastLevelCacheConfigCallbacksWhenCallingzeDeviceSetLastLevelCacheConfigThenUserDataIsSetAndResultUnchanged) {
-  prologues.Device.pfnSetLastLevelCacheConfigCb = lzt::prologue_callback;
-  epilogues.Device.pfnSetLastLevelCacheConfigCb = lzt::epilogue_callback;
-
-  ze_result_t initial_result =
-      zeDeviceSetLastLevelCacheConfig(device, ZE_CACHE_CONFIG_DEFAULT);
-  ready_tracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(initial_result,
-            zeDeviceSetLastLevelCacheConfig(device, ZE_CACHE_CONFIG_DEFAULT));
-}
-
-TEST_F(
-    TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceSystemBarrierCallbacksWhenCallingzeDeviceSystemBarrierThenUserDataIsSetAndResultUnchanged) {
-  prologues.Device.pfnSystemBarrierCb = lzt::prologue_callback;
-  epilogues.Device.pfnSystemBarrierCb = lzt::epilogue_callback;
+  prologues.Context.pfnSystemBarrierCb = lzt::prologue_callback;
+  epilogues.Context.pfnSystemBarrierCb = lzt::epilogue_callback;
 
-  ze_result_t initial_result = zeDeviceSystemBarrier(device);
+  ze_result_t initial_result = zeContextSystemBarrier(context, device);
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeDeviceSystemBarrier(device));
+  ASSERT_EQ(initial_result, zeContextSystemBarrier(context, device));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceMakeMemoryResidentCallbacksWhenCallingzeDeviceMakeMemoryResidentThenUserDataIsSetAndResultUnchanged) {
-  prologues.Device.pfnMakeMemoryResidentCb = lzt::prologue_callback;
-  epilogues.Device.pfnMakeMemoryResidentCb = lzt::epilogue_callback;
+  prologues.Context.pfnMakeMemoryResidentCb = lzt::prologue_callback;
+  epilogues.Context.pfnMakeMemoryResidentCb = lzt::epilogue_callback;
 
-  ze_result_t initial_result = zeDeviceMakeMemoryResident(device, memory, 0);
+  ze_result_t initial_result =
+      zeContextMakeMemoryResident(context, device, memory, 0);
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeDeviceMakeMemoryResident(device, memory, 0));
+  ASSERT_EQ(initial_result,
+            zeContextMakeMemoryResident(context, device, memory, 0));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceEvictMemoryCallbacksWhenCallingzeDeviceEvictMemoryThenUserDataIsSetAndResultUnchanged) {
-  prologues.Device.pfnEvictMemoryCb = lzt::prologue_callback;
-  epilogues.Device.pfnEvictMemoryCb = lzt::epilogue_callback;
+  prologues.Context.pfnEvictMemoryCb = lzt::prologue_callback;
+  epilogues.Context.pfnEvictMemoryCb = lzt::epilogue_callback;
 
   init_memory();
 
-  ze_result_t initial_result = zeDeviceEvictMemory(device, memory, 0);
+  ze_result_t initial_result = zeContextEvictMemory(context, device, memory, 0);
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeDeviceEvictMemory(device, memory, 0));
+  ASSERT_EQ(initial_result, zeContextEvictMemory(context, device, memory, 0));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceMakeImageResidentCallbacksWhenCallingzeDeviceMakeImageResidentThenUserDataIsSetAndResultUnchangedAndResultUnchanged) {
-  prologues.Device.pfnMakeImageResidentCb = lzt::prologue_callback;
-  epilogues.Device.pfnMakeImageResidentCb = lzt::epilogue_callback;
+  prologues.Context.pfnMakeImageResidentCb = lzt::prologue_callback;
+  epilogues.Context.pfnMakeImageResidentCb = lzt::epilogue_callback;
 
   init_image();
 
-  ze_result_t initial_result = zeDeviceMakeImageResident(device, image);
+  ze_result_t initial_result =
+      zeContextMakeImageResident(context, device, image);
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeDeviceMakeImageResident(device, image));
+  ASSERT_EQ(initial_result, zeContextMakeImageResident(context, device, image));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceEvictImageCallbacksWhenCallingzeDeviceEvictImageThenUserDataIsSetAndResultUnchanged) {
-  prologues.Device.pfnEvictImageCb = lzt::prologue_callback;
-  epilogues.Device.pfnEvictImageCb = lzt::epilogue_callback;
+  prologues.Context.pfnEvictImageCb = lzt::prologue_callback;
+  epilogues.Context.pfnEvictImageCb = lzt::epilogue_callback;
 
   init_image();
 
-  ze_result_t initial_result = zeDeviceEvictImage(device, image);
+  ze_result_t initial_result = zeContextEvictImage(context, device, image);
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeDeviceEvictImage(device, image));
+  ASSERT_EQ(initial_result, zeContextEvictImage(context, device, image));
 }
 
 TEST_F(
@@ -597,215 +577,207 @@ TEST_F(
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverGetIPCPropertiesCallbacksWhenCallingzeDriverGetIPCPropertiesThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnGetIPCPropertiesCb = lzt::prologue_callback;
-  epilogues.Driver.pfnGetIPCPropertiesCb = lzt::epilogue_callback;
+  prologues.Driver.pfnGetIpcPropertiesCb = lzt::prologue_callback;
+  epilogues.Driver.pfnGetIpcPropertiesCb = lzt::epilogue_callback;
 
   ze_result_t initial_result =
-      zeDriverGetIPCProperties(driver, &ipc_properties);
+      zeDriverGetIpcProperties(driver, &ipc_properties);
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeDriverGetIPCProperties(driver, &ipc_properties));
+  ASSERT_EQ(initial_result, zeDriverGetIpcProperties(driver, &ipc_properties));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverAllocSharedMemCallbacksWhenCallingzeDriverAllocSharedMemThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnAllocSharedMemCb = lzt::prologue_callback;
-  epilogues.Driver.pfnAllocSharedMemCb = lzt::epilogue_callback;
+  prologues.Mem.pfnAllocSharedCb = lzt::prologue_callback;
+  epilogues.Mem.pfnAllocSharedCb = lzt::epilogue_callback;
 
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
 
   device_desc.pNext = nullptr;
-  device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
+  device_desc.flags = 0;
   device_desc.ordinal = 0;
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
 
   host_desc.pNext = nullptr;
-  host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
+  host_desc.flags = 0;
 
-  ze_result_t initial_result = zeDriverAllocSharedMem(
-      driver, &device_desc, &host_desc, 1, 0, device, &shared_memory);
+  ze_result_t initial_result = zeMemAllocShared(
+      context, &device_desc, &host_desc, 1, 0, device, &shared_memory);
   lzt::free_memory(shared_memory);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
-            zeDriverAllocSharedMem(driver, &device_desc, &host_desc, 1, 0,
-                                   device, &shared_memory));
+  ASSERT_EQ(initial_result, zeMemAllocShared(context, &device_desc, &host_desc,
+                                             1, 0, device, &shared_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverFreeMem(driver, shared_memory));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, shared_memory));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverAllocDeviceMemCallbacksWhenCallingzeDriverAllocDeviceMemThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnAllocDeviceMemCb = lzt::prologue_callback;
-  epilogues.Driver.pfnAllocDeviceMemCb = lzt::epilogue_callback;
+  prologues.Mem.pfnAllocDeviceCb = lzt::prologue_callback;
+  epilogues.Mem.pfnAllocDeviceCb = lzt::epilogue_callback;
 
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
 
   device_desc.pNext = nullptr;
-  device_desc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
+  device_desc.flags = 0;
   device_desc.ordinal = 1;
 
-  ze_result_t initial_result = zeDriverAllocDeviceMem(
-      driver, &device_desc, 1, 1, device, &device_memory);
+  ze_result_t initial_result =
+      zeMemAllocDevice(context, &device_desc, 1, 1, device, &device_memory);
   lzt::free_memory(device_memory);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeDriverAllocDeviceMem(driver, &device_desc, 1, 1,
-                                                   device, &device_memory));
+  ASSERT_EQ(initial_result, zeMemAllocDevice(context, &device_desc, 1, 1,
+                                             device, &device_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverFreeMem(driver, device_memory));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, device_memory));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverAllocHostMemCallbacksWhenCallingzeDriverAllocHostMemThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnAllocHostMemCb = lzt::prologue_callback;
-  epilogues.Driver.pfnAllocHostMemCb = lzt::epilogue_callback;
+  prologues.Mem.pfnAllocHostCb = lzt::prologue_callback;
+  epilogues.Mem.pfnAllocHostCb = lzt::epilogue_callback;
 
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
 
   host_desc.pNext = nullptr;
-  host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
+  host_desc.flags = 0;
 
   ze_result_t initial_result =
-      zeDriverAllocHostMem(driver, &host_desc, 1, 1, &host_memory);
-  zeDriverFreeMem(driver, host_memory);
+      zeMemAllocHost(context, &host_desc, 1, 1, &host_memory);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result,
-            zeDriverAllocHostMem(driver, &host_desc, 1, 1, &host_memory));
+            zeMemAllocHost(context, &host_desc, 1, 1, &host_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverFreeMem(driver, host_memory));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, host_memory));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverFreeMemCallbacksWhenCallingzeDriverFreeMemThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnFreeMemCb = lzt::prologue_callback;
-  epilogues.Driver.pfnFreeMemCb = lzt::epilogue_callback;
+  prologues.Mem.pfnFreeCb = lzt::prologue_callback;
+  epilogues.Mem.pfnFreeCb = lzt::epilogue_callback;
 
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
 
   host_desc.pNext = nullptr;
-  host_desc.flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
+  host_desc.flags = 0;
 
-  zeDriverAllocHostMem(driver, &host_desc, 1, 0, &host_memory);
-  ze_result_t initial_result = zeDriverFreeMem(driver, host_memory);
+  zeMemAllocHost(context, &host_desc, 1, 0, &host_memory);
+  ze_result_t initial_result = zeMemFree(context, host_memory);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverAllocHostMem(driver, &host_desc, 1, 0, &host_memory));
-  ASSERT_EQ(initial_result, zeDriverFreeMem(driver, host_memory));
+            zeMemAllocHost(context, &host_desc, 1, 0, &host_memory));
+  ASSERT_EQ(initial_result, zeMemFree(context, host_memory));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverGetMemAllocPropertiesCallbacksWhenCallingzeDriverGetMemAllocPropertiesThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnGetMemAllocPropertiesCb = lzt::prologue_callback;
-  epilogues.Driver.pfnGetMemAllocPropertiesCb = lzt::epilogue_callback;
+  prologues.Mem.pfnGetAllocPropertiesCb = lzt::prologue_callback;
+  epilogues.Mem.pfnGetAllocPropertiesCb = lzt::epilogue_callback;
 
   init_memory();
 
-  ze_result_t initial_result = zeDriverGetMemAllocProperties(
-      driver, memory, &mem_alloc_properties, nullptr);
+  ze_result_t initial_result =
+      zeMemGetAllocProperties(context, memory, &mem_alloc_properties, nullptr);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
-            zeDriverGetMemAllocProperties(driver, memory, &mem_alloc_properties,
-                                          nullptr));
+  ASSERT_EQ(
+      initial_result,
+      zeMemGetAllocProperties(context, memory, &mem_alloc_properties, nullptr));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverGetMemAddressRangeCallbacksWhenCallingzeDriverGetMemAddressRangeThenUserDataIsSetAndResultUnchanged) {
 
-  prologues.Driver.pfnGetMemAddressRangeCb = lzt::prologue_callback;
-  epilogues.Driver.pfnGetMemAddressRangeCb = lzt::epilogue_callback;
+  prologues.Mem.pfnGetAddressRangeCb = lzt::prologue_callback;
+  epilogues.Mem.pfnGetAddressRangeCb = lzt::epilogue_callback;
 
   init_memory();
 
   ze_result_t initial_result =
-      zeDriverGetMemAddressRange(driver, memory, nullptr, nullptr);
+      zeMemGetAddressRange(context, memory, nullptr, nullptr);
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result,
-            zeDriverGetMemAddressRange(driver, memory, nullptr, nullptr));
+            zeMemGetAddressRange(context, memory, nullptr, nullptr));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverGetMemIpcHandleCallbacksWhenCallingzeDriverGetMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnGetMemIpcHandleCb = lzt::prologue_callback;
-  epilogues.Driver.pfnGetMemIpcHandleCb = lzt::epilogue_callback;
+  prologues.Mem.pfnGetIpcHandleCb = lzt::prologue_callback;
+  epilogues.Mem.pfnGetIpcHandleCb = lzt::epilogue_callback;
 
   init_memory();
 
-  ze_result_t initial_result =
-      zeDriverGetMemIpcHandle(driver, memory, &ipc_handle);
+  ze_result_t initial_result = zeMemGetIpcHandle(context, memory, &ipc_handle);
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
-            zeDriverGetMemIpcHandle(driver, memory, &ipc_handle));
+  ASSERT_EQ(initial_result, zeMemGetIpcHandle(context, memory, &ipc_handle));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverOpenMemIpcHandleCallbacksWhenCallingzeDriverOpenMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnOpenMemIpcHandleCb = lzt::prologue_callback;
-  epilogues.Driver.pfnOpenMemIpcHandleCb = lzt::epilogue_callback;
+  prologues.Mem.pfnOpenIpcHandleCb = lzt::prologue_callback;
+  epilogues.Mem.pfnOpenIpcHandleCb = lzt::epilogue_callback;
 
   init_ipc();
 
   void *mem = nullptr;
 
-  ze_result_t initial_result = zeDriverOpenMemIpcHandle(
-      driver, device, ipc_handle, ZE_IPC_MEMORY_FLAG_NONE, &mem);
-  zeDriverCloseMemIpcHandle(driver, mem);
+  ze_result_t initial_result =
+      zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem);
+  zeMemCloseIpcHandle(context, mem);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result,
-            zeDriverOpenMemIpcHandle(driver, device, ipc_handle,
-                                     ZE_IPC_MEMORY_FLAG_NONE, &mem));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverCloseMemIpcHandle(driver, mem));
+            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, mem));
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverCloseMemIpcHandleCallbacksWhenCallingzeDriverCloseMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
-  prologues.Driver.pfnCloseMemIpcHandleCb = lzt::prologue_callback;
-  epilogues.Driver.pfnCloseMemIpcHandleCb = lzt::epilogue_callback;
+  prologues.Mem.pfnCloseIpcHandleCb = lzt::prologue_callback;
+  epilogues.Mem.pfnCloseIpcHandleCb = lzt::epilogue_callback;
 
   init_ipc();
 
   void *mem = nullptr;
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverGetMemIpcHandle(driver, memory, &ipc_handle));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
 
   ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverOpenMemIpcHandle(driver, device, ipc_handle,
-                                     ZE_IPC_MEMORY_FLAG_NONE, &mem));
+            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
 
-  ze_result_t initial_result = zeDriverCloseMemIpcHandle(driver, memory);
+  ze_result_t initial_result = zeMemCloseIpcHandle(context, memory);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeDriverOpenMemIpcHandle(driver, device, ipc_handle,
-                                     ZE_IPC_MEMORY_FLAG_NONE, &mem));
-  ASSERT_EQ(initial_result, zeDriverCloseMemIpcHandle(driver, memory));
+            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
+  ASSERT_EQ(initial_result, zeMemCloseIpcHandle(context, memory));
 }
 
 TEST_F(
@@ -814,14 +786,15 @@ TEST_F(
   prologues.CommandQueue.pfnCreateCb = lzt::prologue_callback;
   epilogues.CommandQueue.pfnCreateCb = lzt::epilogue_callback;
 
-  ze_result_t initial_result =
-      zeCommandQueueCreate(device, &command_queue_desc, &command_queue);
+  ze_result_t initial_result = zeCommandQueueCreate(
+      context, device, &command_queue_desc, &command_queue);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(command_queue));
   ASSERT_EQ(initial_result,
-            zeCommandQueueCreate(device, &command_queue_desc, &command_queue));
+            zeCommandQueueCreate(context, device, &command_queue_desc,
+                                 &command_queue));
 }
 
 TEST_F(
@@ -836,7 +809,8 @@ TEST_F(
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueCreate(device, &command_queue_desc, &command_queue));
+            zeCommandQueueCreate(context, device, &command_queue_desc,
+                                 &command_queue));
   ASSERT_EQ(initial_result, zeCommandQueueDestroy(command_queue));
   command_queue = nullptr;
 }
@@ -882,13 +856,14 @@ TEST_F(
   epilogues.CommandList.pfnCreateCb = lzt::epilogue_callback;
 
   ze_result_t initial_result =
-      zeCommandListCreate(device, &command_list_desc, &command_list);
+      zeCommandListCreate(context, device, &command_list_desc, &command_list);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list));
-  ASSERT_EQ(initial_result,
-            zeCommandListCreate(device, &command_list_desc, &command_list));
+  ASSERT_EQ(
+      initial_result,
+      zeCommandListCreate(context, device, &command_list_desc, &command_list));
 }
 
 TEST_F(
@@ -942,14 +917,15 @@ TEST_F(
   prologues.CommandList.pfnCreateImmediateCb = lzt::prologue_callback;
   epilogues.CommandList.pfnCreateImmediateCb = lzt::epilogue_callback;
 
-  ze_result_t initial_result =
-      zeCommandListCreateImmediate(device, &command_queue_desc, &command_list);
+  ze_result_t initial_result = zeCommandListCreateImmediate(
+      context, device, &command_queue_desc, &command_list);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list));
-  ASSERT_EQ(initial_result, zeCommandListCreateImmediate(
-                                device, &command_queue_desc, &command_list));
+  ASSERT_EQ(initial_result,
+            zeCommandListCreateImmediate(context, device, &command_queue_desc,
+                                         &command_list));
 }
 
 TEST_F(
@@ -1007,13 +983,14 @@ TEST_F(
   void *src = lzt::allocate_device_memory(10);
   void *dst = lzt::allocate_device_memory(10);
 
-  ze_result_t initial_result =
-      zeCommandListAppendMemoryCopy(command_list, dst, src, 10, nullptr);
+  ze_result_t initial_result = zeCommandListAppendMemoryCopy(
+      command_list, dst, src, 10, nullptr, 0, nullptr);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result,
-            zeCommandListAppendMemoryCopy(command_list, dst, src, 10, nullptr));
+            zeCommandListAppendMemoryCopy(command_list, dst, src, 10, nullptr,
+                                          0, nullptr));
   lzt::free_memory(src);
   lzt::free_memory(dst);
 }
@@ -1029,15 +1006,15 @@ TEST_F(
 
   uint32_t val = 1;
   ze_result_t initial_result = zeCommandListAppendMemoryFill(
-      command_list, memory, &val, sizeof(uint32_t), 1, nullptr);
+      command_list, memory, &val, sizeof(uint32_t), 1, nullptr, 0, nullptr);
 
   zeCommandListReset(command_list);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
-            zeCommandListAppendMemoryFill(command_list, memory, &val,
-                                          sizeof(uint32_t), 1, nullptr));
+  ASSERT_EQ(initial_result, zeCommandListAppendMemoryFill(
+                                command_list, memory, &val, sizeof(uint32_t), 1,
+                                nullptr, 0, nullptr));
 }
 
 TEST_F(
@@ -1055,14 +1032,15 @@ TEST_F(
   void *dst = lzt::allocate_device_memory(10);
 
   ze_result_t initial_result = zeCommandListAppendMemoryCopyRegion(
-      command_list, dst, &dst_region, 0, 0, src, &src_region, 0, 0, nullptr);
+      command_list, dst, &dst_region, 0, 0, src, &src_region, 0, 0, nullptr, 0,
+      nullptr);
   zeCommandListReset(command_list);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result, zeCommandListAppendMemoryCopyRegion(
                                 command_list, dst, &dst_region, 0, 0, src,
-                                &src_region, 0, 0, nullptr));
+                                &src_region, 0, 0, nullptr, 0, nullptr));
   lzt::free_memory(src);
   lzt::free_memory(dst);
 }
@@ -1077,16 +1055,19 @@ TEST_F(
 
   ze_image_handle_t src_image;
   ze_image_handle_t dst_image;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(device, &image_desc, &src_image));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(device, &image_desc, &dst_image));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeImageCreate(context, device, &image_desc, &src_image));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeImageCreate(context, device, &image_desc, &dst_image));
 
-  ze_result_t initial_result =
-      zeCommandListAppendImageCopy(command_list, dst_image, src_image, nullptr);
+  ze_result_t initial_result = zeCommandListAppendImageCopy(
+      command_list, dst_image, src_image, nullptr, 0, nullptr);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeCommandListAppendImageCopy(
-                                command_list, dst_image, src_image, nullptr));
+  ASSERT_EQ(initial_result,
+            zeCommandListAppendImageCopy(command_list, dst_image, src_image,
+                                         nullptr, 0, nullptr));
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(src_image));
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(dst_image));
@@ -1102,18 +1083,21 @@ TEST_F(
 
   ze_image_handle_t src_image;
   ze_image_handle_t dst_image;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(device, &image_desc, &src_image));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageCreate(device, &image_desc, &dst_image));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeImageCreate(context, device, &image_desc, &src_image));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeImageCreate(context, device, &image_desc, &dst_image));
 
-  ze_result_t initial_result = zeCommandListAppendImageCopyRegion(
-      command_list, dst_image, src_image, nullptr, nullptr, nullptr);
+  ze_result_t initial_result =
+      zeCommandListAppendImageCopyRegion(command_list, dst_image, src_image,
+                                         nullptr, nullptr, nullptr, 0, nullptr);
   zeCommandListReset(command_list);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
-            zeCommandListAppendImageCopyRegion(
-                command_list, dst_image, src_image, nullptr, nullptr, nullptr));
+  ASSERT_EQ(initial_result, zeCommandListAppendImageCopyRegion(
+                                command_list, dst_image, src_image, nullptr,
+                                nullptr, nullptr, 0, nullptr));
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(src_image));
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(dst_image));
@@ -1130,13 +1114,14 @@ TEST_F(
   init_image();
 
   ze_result_t initial_result = zeCommandListAppendImageCopyFromMemory(
-      command_list, image, memory, nullptr, nullptr);
+      command_list, image, memory, nullptr, nullptr, 0, nullptr);
   zeCommandListReset(command_list);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeCommandListAppendImageCopyFromMemory(
-                                command_list, image, memory, nullptr, nullptr));
+  ASSERT_EQ(initial_result,
+            zeCommandListAppendImageCopyFromMemory(
+                command_list, image, memory, nullptr, nullptr, 0, nullptr));
 }
 
 TEST_F(
@@ -1150,13 +1135,14 @@ TEST_F(
   init_image();
 
   ze_result_t initial_result = zeCommandListAppendImageCopyToMemory(
-      command_list, memory, image, nullptr, nullptr);
+      command_list, memory, image, nullptr, nullptr, 0, nullptr);
   zeCommandListReset(command_list);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeCommandListAppendImageCopyToMemory(
-                                command_list, memory, image, nullptr, nullptr));
+  ASSERT_EQ(initial_result,
+            zeCommandListAppendImageCopyToMemory(command_list, memory, image,
+                                                 nullptr, nullptr, 0, nullptr));
 }
 
 TEST_F(
@@ -1287,17 +1273,21 @@ TEST_F(
   init_command_list();
   init_kernel();
 
-  uint32_t count = 1;
-  ze_group_count_t args = {1, 0, 0};
-
+  uint32_t *count =
+      static_cast<uint32_t *>(lzt::allocate_device_memory(sizeof(uint32_t)));
+  ze_group_count_t *args = static_cast<ze_group_count_t *>(
+      lzt::allocate_device_memory(sizeof(ze_group_count_t)));
   ze_result_t initial_result = zeCommandListAppendLaunchMultipleKernelsIndirect(
-      command_list, 1, &kernel, &count, &args, nullptr, 0, nullptr);
+      command_list, 1, &kernel, count, args, nullptr, 0, nullptr);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result,
             zeCommandListAppendLaunchMultipleKernelsIndirect(
-                command_list, 1, &kernel, &count, &args, nullptr, 0, nullptr));
+                command_list, 1, &kernel, count, args, nullptr, 0, nullptr));
+
+  lzt::free_memory(count);
+  lzt::free_memory(args);
 }
 
 TEST_F(
@@ -1383,12 +1373,12 @@ TEST_F(
   epilogues.EventPool.pfnCreateCb = lzt::epilogue_callback;
 
   ze_result_t initial_result =
-      zeEventPoolCreate(driver, &event_pool_desc, 1, &device, &event_pool);
+      zeEventPoolCreate(context, &event_pool_desc, 1, &device, &event_pool);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolDestroy(event_pool));
-  ASSERT_EQ(initial_result, zeEventPoolCreate(driver, &event_pool_desc, 1,
+  ASSERT_EQ(initial_result, zeEventPoolCreate(context, &event_pool_desc, 1,
                                               &device, &event_pool));
 }
 
@@ -1465,7 +1455,7 @@ TEST_F(
   ze_event_pool_handle_t event_pool2;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
   ze_result_t initial_result =
-      zeEventPoolOpenIpcHandle(driver, ipc_event, &event_pool2);
+      zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2);
 
   zeEventPoolCloseIpcHandle(event_pool2);
 
@@ -1473,7 +1463,7 @@ TEST_F(
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
   ASSERT_EQ(initial_result,
-            zeEventPoolOpenIpcHandle(driver, ipc_event, &event_pool2));
+            zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
 }
 
 TEST_F(
@@ -1552,12 +1542,14 @@ TEST_F(
   prologues.Image.pfnCreateCb = lzt::prologue_callback;
   epilogues.Image.pfnCreateCb = lzt::epilogue_callback;
 
-  ze_result_t initial_result = zeImageCreate(device, &image_desc, &image);
+  ze_result_t initial_result =
+      zeImageCreate(context, device, &image_desc, &image);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(image));
-  ASSERT_EQ(initial_result, zeImageCreate(device, &image_desc, &image));
+  ASSERT_EQ(initial_result,
+            zeImageCreate(context, device, &image_desc, &image));
 }
 
 TEST_F(
@@ -1595,13 +1587,13 @@ TEST_F(
   epilogues.Module.pfnCreateCb = lzt::epilogue_callback;
 
   ze_result_t initial_result =
-      zeModuleCreate(device, &module_desc, &module, nullptr);
+      zeModuleCreate(context, device, &module_desc, &module, nullptr);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module));
   ASSERT_EQ(initial_result,
-            zeModuleCreate(device, &module_desc, &module, nullptr));
+            zeModuleCreate(context, device, &module_desc, &module, nullptr));
 }
 
 TEST_F(
@@ -1649,11 +1641,12 @@ TEST_F(
   void *pointer;
 
   ze_result_t initial_result =
-      zeModuleGetGlobalPointer(module, "xid", &pointer);
+      zeModuleGetGlobalPointer(module, "xid", nullptr, &pointer);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeModuleGetGlobalPointer(module, "xid", &pointer));
+  ASSERT_EQ(initial_result,
+            zeModuleGetGlobalPointer(module, "xid", nullptr, &pointer));
 }
 
 TEST_F(
@@ -1686,8 +1679,8 @@ TEST_F(
   ze_result_t initial_result = zeModuleBuildLogDestroy(build_log);
   ze_module_handle_t module2;
   ready_tracer(tracer_handle, prologues, epilogues);
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleCreate(device, &module_desc, &module2, &build_log));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleCreate(context, device, &module_desc,
+                                              &module2, &build_log));
   ASSERT_EQ(initial_result, zeModuleBuildLogDestroy(build_log));
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module2));
   build_log = nullptr;
@@ -1718,9 +1711,8 @@ TEST_F(
   epilogues.Kernel.pfnCreateCb = lzt::epilogue_callback;
 
   init_module();
-  kernel_desc = {.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC,
-                 .flags = ZE_KERNEL_FLAG_NONE,
-                 .pKernelName = "module_add_constant"};
+  kernel_desc = {ZE_STRUCTURE_TYPE_KERNEL_DESC, nullptr, 0,
+                 "module_add_constant"};
   ze_result_t initial_result = zeKernelCreate(module, &kernel_desc, &kernel);
 
   ready_tracer(tracer_handle, prologues, epilogues);
@@ -1766,23 +1758,6 @@ TEST_F(
   ASSERT_EQ(initial_result,
             zeCommandListAppendLaunchKernelIndirect(command_list, kernel, &args,
                                                     nullptr, 0, nullptr));
-}
-
-TEST_F(
-    TracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeKernelSetIntermediateCacheConfigCallbacksWhenCallingzeKernelSetIntermediateCacheConfigThenUserDataIsSetAndResultUnchanged) {
-  prologues.Kernel.pfnSetIntermediateCacheConfigCb = lzt::prologue_callback;
-  epilogues.Kernel.pfnSetIntermediateCacheConfigCb = lzt::epilogue_callback;
-
-  init_kernel();
-
-  ze_result_t initial_result =
-      zeKernelSetIntermediateCacheConfig(kernel, ZE_CACHE_CONFIG_DEFAULT);
-
-  ready_tracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(initial_result, zeKernelSetIntermediateCacheConfig(
-                                kernel, ZE_CACHE_CONFIG_DEFAULT));
 }
 
 TEST_F(
@@ -1836,26 +1811,6 @@ TEST_F(
 
 TEST_F(
     TracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeKernelSetAttributeCallbacksWhenCallingzeKernelSetAttributeThenUserDataIsSetAndResultUnchanged) {
-  prologues.Kernel.pfnSetAttributeCb = lzt::prologue_callback;
-  epilogues.Kernel.pfnSetAttributeCb = lzt::epilogue_callback;
-
-  init_kernel();
-
-  bool value = false;
-
-  ze_result_t initial_result = zeKernelSetAttribute(
-      kernel, ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS, sizeof(bool), &value);
-
-  ready_tracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(initial_result,
-            zeKernelSetAttribute(kernel, ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS,
-                                 sizeof(bool), &value));
-}
-
-TEST_F(
-    TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeKernelGetPropertiesCallbacksWhenCallingzeKernelGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnGetPropertiesCb = lzt::prologue_callback;
   epilogues.Kernel.pfnGetPropertiesCb = lzt::epilogue_callback;
@@ -1876,13 +1831,15 @@ TEST_F(
   prologues.Sampler.pfnCreateCb = lzt::prologue_callback;
   epilogues.Sampler.pfnCreateCb = lzt::epilogue_callback;
 
-  ze_result_t initial_result = zeSamplerCreate(device, &sampler_desc, &sampler);
+  ze_result_t initial_result =
+      zeSamplerCreate(context, device, &sampler_desc, &sampler);
   if (initial_result == ZE_RESULT_SUCCESS) {
     zeSamplerDestroy(sampler);
   }
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeSamplerCreate(device, &sampler_desc, &sampler));
+  ASSERT_EQ(initial_result,
+            zeSamplerCreate(context, device, &sampler_desc, &sampler));
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
 }
 
@@ -1893,14 +1850,14 @@ TEST_F(
   epilogues.Sampler.pfnDestroyCb = lzt::epilogue_callback;
 
   ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeSamplerCreate(device, &sampler_desc, &sampler));
+            zeSamplerCreate(context, device, &sampler_desc, &sampler));
 
   ze_result_t initial_result = zeSamplerDestroy(sampler);
 
   ready_tracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeSamplerCreate(device, &sampler_desc, &sampler));
+            zeSamplerCreate(context, device, &sampler_desc, &sampler));
   ASSERT_EQ(initial_result, zeSamplerDestroy(sampler));
 }
 
