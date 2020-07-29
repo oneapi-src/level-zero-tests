@@ -14,7 +14,7 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 
@@ -117,8 +117,8 @@ TEST_F(PsuModuleTest,
     for (auto psuHandle : psuHandles) {
       ASSERT_NE(nullptr, psuHandle);
       auto state = lzt::get_psu_state(psuHandle);
-      EXPECT_GE(state.voltStatus, ZET_PSU_VOLTAGE_STATUS_NORMAL);
-      EXPECT_LE(state.voltStatus, ZET_PSU_VOLTAGE_STATUS_UNDER);
+      EXPECT_GE(state.voltStatus, ZES_PSU_VOLTAGE_STATUS_NORMAL);
+      EXPECT_LE(state.voltStatus, ZES_PSU_VOLTAGE_STATUS_UNDER);
       EXPECT_LE(state.temperature, UINT32_MAX);
       EXPECT_LE(state.current, UINT32_MAX);
       auto properties = lzt::get_psu_properties(psuHandle);

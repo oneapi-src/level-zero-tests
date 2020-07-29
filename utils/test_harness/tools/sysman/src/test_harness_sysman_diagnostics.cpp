@@ -8,59 +8,58 @@
 
 #include "test_harness/test_harness.hpp"
 
-#include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 #include "utils/utils.hpp"
 
 namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
-uint32_t get_diag_handle_count(ze_device_handle_t device) {
+uint32_t get_diag_handle_count(zes_device_handle_t device) {
   uint32_t count = 0;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(device);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanDiagnosticsGet(hSysman, &count, nullptr));
-  EXPECT_GT(count, 0);
+            zesDeviceEnumDiagnosticTestSuites(device, &count, nullptr));
+  EXPECT_GE(count, 0);
   return count;
 }
 
-std::vector<zet_sysman_diag_handle_t>
-get_diag_handles(ze_device_handle_t device, uint32_t &count) {
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(device);
+std::vector<zes_diag_handle_t> get_diag_handles(zes_device_handle_t device,
+                                                uint32_t &count) {
   if (count == 0)
     count = get_diag_handle_count(device);
-  std::vector<zet_sysman_diag_handle_t> diagHandles(count);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanDiagnosticsGet(hSysman, &count, diagHandles.data()));
+  std::vector<zes_diag_handle_t> diagHandles(count, nullptr);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumDiagnosticTestSuites(
+                                   device, &count, diagHandles.data()));
   return diagHandles;
 }
 
-zet_diag_properties_t get_diag_properties(zet_sysman_diag_handle_t diagHandle) {
-  zet_diag_properties_t properties;
+zes_diag_properties_t get_diag_properties(zes_diag_handle_t diagHandle) {
+  zes_diag_properties_t properties = {ZES_STRUCTURE_TYPE_DIAG_PROPERTIES,
+                                      nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanDiagnosticsGetProperties(diagHandle, &properties));
+            zesDiagnosticsGetProperties(diagHandle, &properties));
   return properties;
 }
 
-std::vector<zet_diag_test_t> get_diag_tests(zet_sysman_diag_handle_t diagHandle,
+std::vector<zes_diag_test_t> get_diag_tests(zes_diag_handle_t diagHandle,
                                             uint32_t &count) {
   if (count == 0) {
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetSysmanDiagnosticsGetTests(diagHandle, &count, nullptr));
+              zesDiagnosticsGetTests(diagHandle, &count, nullptr));
     EXPECT_GT(count, 0);
   }
-  std::vector<zet_diag_test_t> diagTests(count);
+  std::vector<zes_diag_test_t> diagTests(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanDiagnosticsGetTests(diagHandle, &count, diagTests.data()));
+            zesDiagnosticsGetTests(diagHandle, &count, diagTests.data()));
   EXPECT_EQ(diagTests.size(), count);
   return diagTests;
 }
 
-zet_diag_result_t run_diag_tests(zet_sysman_diag_handle_t diagHandle,
-                                 uint32_t start, uint32_t end) {
-  zet_diag_result_t result;
+zes_diag_result_t run_diag_tests(zes_diag_handle_t diagHandle, uint32_t start,
+                                 uint32_t end) {
+  zes_diag_result_t result = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanDiagnosticsRunTests(diagHandle, start, end, &result));
+            zesDiagnosticsRunTests(diagHandle, start, end, &result));
   return result;
 }
 

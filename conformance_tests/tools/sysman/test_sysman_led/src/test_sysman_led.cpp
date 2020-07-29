@@ -14,6 +14,7 @@
 
 namespace lzt = level_zero_tests;
 
+#include <level_zero/zes_api.h>
 #include <level_zero/ze_api.h>
 
 namespace {
@@ -117,11 +118,12 @@ TEST_F(LedModuleTest,
       auto properties = lzt::get_led_properties(ledHandle);
       auto state = lzt::get_led_state(ledHandle);
       if (state.isOn == false) {
-        ASSERT_EQ(state.red, 0);
-        ASSERT_EQ(state.green, 0);
-        ASSERT_EQ(state.blue, 0);
+        ASSERT_DOUBLE_EQ(state.color.red, 0.0);
+        ASSERT_DOUBLE_EQ(state.color.green, 0.0);
+        ASSERT_DOUBLE_EQ(state.color.blue, 0.0);
       } else {
-        if ((state.red == 0) && (state.green == 0) && (state.blue == 0))
+        if ((state.color.red == 0.0) && (state.color.green == 0.0) &&
+            (state.color.blue == 0.0))
           FAIL();
         else
           SUCCEED();
@@ -129,49 +131,48 @@ TEST_F(LedModuleTest,
     }
   }
 }
-TEST_F(
-    LedModuleTest,
-    GivenValidLedHandleWhenSettingLedStateThenExpectzetSysmanLedSetStateFollowedByzetSysmanLedGetStateToMatch) {
+TEST_F(LedModuleTest,
+       GivenValidLedHandleWhenSettingLedColorTheSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
       auto initial_state = lzt::get_led_state(ledHandle);
-      zet_led_state_t set_state;
-      set_state.isOn = true;
-      set_state.red = 255;
-      set_state.blue = 255;
-      set_state.green = 255;
-      lzt::set_led_state(ledHandle, set_state);
-      zet_led_state_t get_state = lzt::get_led_state(ledHandle);
-      EXPECT_EQ(get_state.isOn, set_state.isOn);
-      EXPECT_EQ(get_state.red, set_state.red);
-      EXPECT_EQ(get_state.blue, set_state.blue);
-      EXPECT_EQ(get_state.green, set_state.green);
-      lzt::set_led_state(ledHandle, initial_state);
+      if (initial_state.isOn == false) {
+        lzt::set_led_state(ledHandle, true);
+      }
+      zes_led_color_t color = {};
+      color.red = 1.0;
+      color.blue = 1.0;
+      color.green = 1.0;
+      lzt::set_led_color(ledHandle, color);
+      zes_led_state_t get_state = lzt::get_led_state(ledHandle);
+      EXPECT_EQ(get_state.isOn, true);
+      EXPECT_DOUBLE_EQ(get_state.color.red, 1.0);
+      EXPECT_DOUBLE_EQ(get_state.color.blue, 1.0);
+      EXPECT_DOUBLE_EQ(get_state.color.green, 1.0);
+      color.red = initial_state.color.red;
+      color.blue = initial_state.color.blue;
+      color.green = initial_state.color.green;
+      lzt::set_led_color(ledHandle, color);
     }
   }
 }
-TEST_F(
-    LedModuleTest,
-    GivenValidLedHandleWhenSettingLedStateToOffThenExpectzetSysmanLedSetStateFollowedByzetSysmanLedGetStateToMatch) {
+TEST_F(LedModuleTest,
+       GivenValidLedHandleWhenSettingLedStateToOffThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
-      auto properties = lzt::get_led_properties(ledHandle);
-      auto initial_state = lzt::get_led_state(ledHandle);
-      zet_led_state_t set_state;
-      set_state.isOn = false;
-      lzt::set_led_state(ledHandle, set_state);
+      lzt::set_led_state(ledHandle, false);
       auto get_state = lzt::get_led_state(ledHandle);
-      EXPECT_EQ(get_state.isOn, set_state.isOn);
-      EXPECT_EQ(get_state.red, 0);
-      EXPECT_EQ(get_state.blue, 0);
-      EXPECT_EQ(get_state.green, 0);
-      lzt::set_led_state(ledHandle, initial_state);
+      EXPECT_EQ(get_state.isOn, false);
+      EXPECT_DOUBLE_EQ(get_state.color.red, 0.0);
+      EXPECT_DOUBLE_EQ(get_state.color.blue, 0.0);
+      EXPECT_DOUBLE_EQ(get_state.color.green, 0.0);
+      lzt::set_led_state(ledHandle, true);
     }
   }
 }

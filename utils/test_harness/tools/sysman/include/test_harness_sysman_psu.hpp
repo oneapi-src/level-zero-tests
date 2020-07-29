@@ -10,19 +10,19 @@
 #define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_PSU_HPP
 
 #include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
-#include "test_harness_sysman_init.hpp"
 
 namespace level_zero_tests {
 
-uint32_t get_psu_handles_count(ze_device_handle_t device);
+uint32_t get_psu_handles_count(zes_device_handle_t device);
 
-std::vector<zet_sysman_psu_handle_t> get_psu_handles(ze_device_handle_t device,
-                                                     uint32_t &count);
+std::vector<zes_psu_handle_t> get_psu_handles(zes_device_handle_t device,
+                                              uint32_t &count);
 
-zet_psu_properties_t get_psu_properties(zet_sysman_psu_handle_t psuHandle);
+zes_psu_properties_t get_psu_properties(zes_psu_handle_t psuHandle);
 
-zet_psu_state_t get_psu_state(zet_sysman_psu_handle_t psuHandle);
+zes_psu_state_t get_psu_state(zes_psu_handle_t psuHandle);
 } // namespace level_zero_tests
 
 #endif
