@@ -28,8 +28,9 @@ protected:
                      uint64_t *host_expected_output_buffer,
                      uint64_t *gpu_expected_output_buffer,
                      uint64_t *host_found_output_buffer,
-                     uint64_t *gpu_found_output_buffer, size_t output_count) {
-    ze_kernel_flag_t flag = ZE_KERNEL_FLAG_NONE;
+                     uint64_t *gpu_found_output_buffer, size_t output_count,
+                     ze_context_handle_t context) {
+    ze_kernel_flags_t flag = 0;
     /* Prepare the fill function */
     ze_kernel_handle_t fill_function =
         lzt::create_function(module, flag, "fill_device_memory");
@@ -81,7 +82,8 @@ protected:
     lzt::set_argument_value(test_function, 5, sizeof(output_count),
                             &output_count);
 
-    ze_command_list_handle_t command_list = lzt::create_command_list(device);
+    ze_command_list_handle_t command_list =
+        lzt::create_command_list(context, device, 0);
 
     // if groupSize is greater then memory count, then at least one thread group
     // should be dispatched
@@ -122,7 +124,9 @@ protected:
 
     lzt::close_command_list(command_list);
 
-    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
 
@@ -176,6 +180,7 @@ TEST_P(
       level_zero_tests::collect_driver_info(driver_count);
 
   ze_driver_handle_t driver_handle = driver_info->driver_handle;
+  ze_context_handle_t context = lzt::create_context(driver_handle);
 
   // For each combination of memory, iterate through all the valid devices
 
@@ -199,20 +204,19 @@ TEST_P(
 
     uint64_t *gpu_pattern_buffer;
     gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
-        pattern_memory_size, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_handle);
+        pattern_memory_size, 8, 0, 0, device_handle, context);
 
     uint64_t *gpu_expected_output_buffer;
     gpu_expected_output_buffer =
         (uint64_t *)level_zero_tests::allocate_device_memory(
-            output_size_, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            use_this_ordinal_on_device_, device_handle, driver_handle);
+            output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+            context);
 
     uint64_t *gpu_found_output_buffer;
     gpu_found_output_buffer =
         (uint64_t *)level_zero_tests::allocate_device_memory(
-            output_size_, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            use_this_ordinal_on_device_, device_handle, driver_handle);
+            output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+            context);
 
     uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
     std::fill(host_expected_output_buffer,
@@ -240,8 +244,9 @@ TEST_P(
     LOG_DEBUG << "PREPARE TO RUN END for device";
 
     LOG_DEBUG << "call create module for device " << i;
-    ze_module_handle_t module_handle =
-        lzt::create_module(device_handle, "test_fill_device_memory.spv");
+    ze_module_handle_t module_handle = lzt::create_module(
+        context, device_handle, "test_fill_device_memory.spv",
+        ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
 
     LOG_DEBUG << "host access pattern buffer created on device " << i;
     // Access to pattern buffer from host.
@@ -249,10 +254,11 @@ TEST_P(
               0x0);
 
     LOG_DEBUG << "call run_functions for device " << i;
-    run_functions(
-        device_handle, module_handle, gpu_pattern_buffer, pattern_memory_count,
-        pattern_base, host_expected_output_buffer, gpu_expected_output_buffer,
-        host_found_output_buffer, gpu_found_output_buffer, output_count_);
+    run_functions(device_handle, module_handle, gpu_pattern_buffer,
+                  pattern_memory_count, pattern_base,
+                  host_expected_output_buffer, gpu_expected_output_buffer,
+                  host_found_output_buffer, gpu_found_output_buffer,
+                  output_count_, context);
 
     LOG_DEBUG << "check output buffer copied from device";
     bool memory_test_failure = false;
@@ -285,15 +291,16 @@ TEST_P(
     EXPECT_EQ(false, host_test_failure);
 
     LOG_DEBUG << "call free memory for device";
-    level_zero_tests::free_memory(driver_handle, gpu_pattern_buffer);
-    level_zero_tests::free_memory(driver_handle, gpu_expected_output_buffer);
-    level_zero_tests::free_memory(driver_handle, gpu_found_output_buffer);
+    level_zero_tests::free_memory(context, gpu_pattern_buffer);
+    level_zero_tests::free_memory(context, gpu_expected_output_buffer);
+    level_zero_tests::free_memory(context, gpu_found_output_buffer);
     LOG_DEBUG << "call destroy module for device";
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
     delete host_expected_output_buffer;
     delete host_found_output_buffer;
   }
   level_zero_tests::free_driver_info(driver_info, driver_count);
+  level_zero_tests::destroy_context(context);
 }
 
 INSTANTIATE_TEST_CASE_P(TestAllInputPermuntationsForSingleDevice,
@@ -329,6 +336,7 @@ TEST_P(
       level_zero_tests::collect_driver_info(driver_count);
 
   ze_driver_handle_t driver_handle = driver_info->driver_handle;
+  ze_context_handle_t context = lzt::create_context(driver_handle);
 
   if (p2p_access_enabled && (driver_info->number_device_handles < 2)) {
     LOG_DEBUG << "Only one device is active, so just return without performing "
@@ -357,20 +365,19 @@ TEST_P(
 
     uint64_t *gpu_pattern_buffer;
     gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
-        pattern_memory_size, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_handle);
+        pattern_memory_size, 8, 0, 0, device_handle, context);
 
     uint64_t *gpu_expected_output_buffer;
     gpu_expected_output_buffer =
         (uint64_t *)level_zero_tests::allocate_device_memory(
-            output_size_, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            use_this_ordinal_on_device_, device_handle, driver_handle);
+            output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+            context);
 
     uint64_t *gpu_found_output_buffer;
     gpu_found_output_buffer =
         (uint64_t *)level_zero_tests::allocate_device_memory(
-            output_size_, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            use_this_ordinal_on_device_, device_handle, driver_handle);
+            output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+            context);
 
     uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
     std::fill(host_expected_output_buffer,
@@ -398,8 +405,9 @@ TEST_P(
     LOG_DEBUG << "PREPARE TO RUN END for device";
 
     LOG_DEBUG << "call create module for device " << i;
-    ze_module_handle_t module_handle =
-        lzt::create_module(device_handle, "test_fill_device_memory.spv");
+    ze_module_handle_t module_handle = lzt::create_module(
+        context, device_handle, "test_fill_device_memory.spv",
+        ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
 
     LOG_DEBUG << "host access pattern buffer created on device " << i;
     // Access to pattern buffer from host.
@@ -407,10 +415,11 @@ TEST_P(
               0x0);
 
     LOG_DEBUG << "call run_functions for device " << i;
-    run_functions(
-        device_handle, module_handle, gpu_pattern_buffer, pattern_memory_count,
-        pattern_base, host_expected_output_buffer, gpu_expected_output_buffer,
-        host_found_output_buffer, gpu_found_output_buffer, output_count_);
+    run_functions(device_handle, module_handle, gpu_pattern_buffer,
+                  pattern_memory_count, pattern_base,
+                  host_expected_output_buffer, gpu_expected_output_buffer,
+                  host_found_output_buffer, gpu_found_output_buffer,
+                  output_count_, context);
 
     LOG_DEBUG << "check output buffer copied from device";
     bool memory_test_failure = false;
@@ -450,20 +459,21 @@ TEST_P(
                 << " from peer :" << index;
 
       LOG_DEBUG << "call create module for device :" << index;
-      ze_module_handle_t module_handle_1 =
-          lzt::create_module(device_handle_1, "test_fill_device_memory.spv");
+      ze_module_handle_t module_handle_1 = lzt::create_module(
+          context, device_handle_1, "test_fill_device_memory.spv",
+          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
 
       uint64_t *gpu_expected_output_buffer_1;
       gpu_expected_output_buffer_1 =
           (uint64_t *)level_zero_tests::allocate_device_memory(
-              output_size_, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-              use_this_ordinal_on_device_, device_handle_1, driver_handle);
+              output_size_, 8, 0, use_this_ordinal_on_device_, device_handle_1,
+              context);
 
       uint64_t *gpu_found_output_buffer_1;
       gpu_found_output_buffer_1 =
           (uint64_t *)level_zero_tests::allocate_device_memory(
-              output_size_, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-              use_this_ordinal_on_device_, device_handle_1, driver_handle);
+              output_size_, 8, 0, use_this_ordinal_on_device_, device_handle_1,
+              context);
 
       uint64_t *host_expected_output_buffer_1 = new uint64_t[output_count_];
       std::fill(host_expected_output_buffer_1,
@@ -478,7 +488,7 @@ TEST_P(
                     pattern_memory_count, pattern_base_1,
                     host_expected_output_buffer_1, gpu_expected_output_buffer_1,
                     host_found_output_buffer_1, gpu_found_output_buffer_1,
-                    output_count_);
+                    output_count_, context);
 
       LOG_DEBUG << "End of p2p access by device :" << index;
 
@@ -513,9 +523,8 @@ TEST_P(
       EXPECT_EQ(false, host_test_failure);
 
       LOG_DEBUG << "call free memory for device :" << index;
-      level_zero_tests::free_memory(driver_handle,
-                                    gpu_expected_output_buffer_1);
-      level_zero_tests::free_memory(driver_handle, gpu_found_output_buffer_1);
+      level_zero_tests::free_memory(context, gpu_expected_output_buffer_1);
+      level_zero_tests::free_memory(context, gpu_found_output_buffer_1);
 
       LOG_DEBUG << "call destroy module for device :" << index;
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle_1));
@@ -549,15 +558,16 @@ TEST_P(
     EXPECT_EQ(false, host_test_failure);
 
     LOG_DEBUG << "call free memory for device";
-    level_zero_tests::free_memory(driver_handle, gpu_pattern_buffer);
-    level_zero_tests::free_memory(driver_handle, gpu_expected_output_buffer);
-    level_zero_tests::free_memory(driver_handle, gpu_found_output_buffer);
+    level_zero_tests::free_memory(context, gpu_pattern_buffer);
+    level_zero_tests::free_memory(context, gpu_expected_output_buffer);
+    level_zero_tests::free_memory(context, gpu_found_output_buffer);
     LOG_DEBUG << "call destroy module for device";
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
     delete host_expected_output_buffer;
     delete host_found_output_buffer;
   }
   level_zero_tests::free_driver_info(driver_info, driver_count);
+  level_zero_tests::destroy_context(context);
 }
 
 INSTANTIATE_TEST_CASE_P(TestAllInputPermuntationsForMultiDevice,
@@ -577,15 +587,23 @@ TEST_P(
 
   size_t size_shared_memory = GetParam();
   size_t size_of_chunk = size_shared_memory / 2;
-  auto memory_shared = lzt::allocate_shared_memory(size_shared_memory);
+  ze_context_handle_t context = lzt::get_default_context();
+  ze_device_handle_t device =
+      lzt::get_default_device(lzt::get_default_driver());
+  auto memory_shared =
+      lzt::allocate_shared_memory(size_shared_memory, 1, 0, 0, device, context);
+
   uint8_t pattern = 0xAB;
   const int pattern_size = 1;
   uint8_t *host_mem = static_cast<uint8_t *>(memory_shared);
   uint8_t *device_mem = static_cast<uint8_t *>(memory_shared) + size_of_chunk;
   ze_command_list_handle_t command_list;
   ze_command_queue_handle_t command_queue;
-  command_list = lzt::create_command_list();
-  command_queue = lzt::create_command_queue();
+  command_list = lzt::create_command_list(context, device, 0);
+  command_queue = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  ;
 
   lzt::append_memory_fill(command_list, static_cast<uint8_t *>(device_mem),
                           &pattern, pattern_size, size_of_chunk, nullptr);
@@ -600,7 +618,8 @@ TEST_P(
   }
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
-  lzt::free_memory(memory_shared);
+  lzt::free_memory(context, memory_shared);
+  lzt::destroy_context(context);
 }
 
 INSTANTIATE_TEST_CASE_P(VaryMemorySize, zeConcurrentAccessToMemoryTests,

@@ -24,7 +24,8 @@ class zeDriverMemoryOvercommitTests
       public ::testing::WithParamInterface<
           std::tuple<uint32_t, uint32_t, uint32_t>> {
 protected:
-  ze_module_handle_t create_module(const ze_device_handle_t device,
+  ze_module_handle_t create_module(ze_context_handle_t context,
+                                   const ze_device_handle_t device,
                                    const std::string path) {
     const std::vector<uint8_t> binary_file = lzt::load_binary_file(path);
 
@@ -39,8 +40,9 @@ protected:
     module_description.pBuildFlags = nullptr;
 
     ze_module_handle_t module = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeModuleCreate(device, &module_description, &module, nullptr));
+    EXPECT_EQ(
+        ZE_RESULT_SUCCESS,
+        zeModuleCreate(context, device, &module_description, &module, nullptr));
 
     LOG_INFO << "return module";
     return module;
@@ -52,12 +54,13 @@ protected:
                      uint64_t *host_expected_output_buffer,
                      uint64_t *gpu_expected_output_buffer,
                      uint64_t *host_found_output_buffer,
-                     uint64_t *gpu_found_output_buffer, size_t output_count) {
+                     uint64_t *gpu_found_output_buffer, size_t output_count,
+                     ze_context_handle_t context) {
     ze_kernel_desc_t fill_function_description = {};
     fill_function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
 
     fill_function_description.pNext = nullptr;
-    fill_function_description.flags = ZE_KERNEL_FLAG_NONE;
+    fill_function_description.flags = 0;
     fill_function_description.pKernelName = "fill_device_memory";
 
     /* Prepare the fill function */
@@ -84,7 +87,7 @@ protected:
     test_function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
 
     test_function_description.pNext = nullptr;
-    test_function_description.flags = ZE_KERNEL_FLAG_NONE;
+    test_function_description.flags = 0;
     test_function_description.pKernelName = "test_device_memory";
 
     /* Prepare the test function */
@@ -124,9 +127,9 @@ protected:
     command_list_description.pNext = nullptr;
 
     ze_command_list_handle_t command_list = nullptr;
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeCommandListCreate(device, &command_list_description, &command_list));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListCreate(context, device, &command_list_description,
+                                  &command_list));
 
     ze_group_count_t thread_group_dimensions = {1, 1, 1};
 
@@ -177,7 +180,7 @@ protected:
 
     ze_command_queue_handle_t command_queue = nullptr;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueCreate(device, &command_queue_description,
+              zeCommandQueueCreate(context, device, &command_queue_description,
                                    &command_queue));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
@@ -377,6 +380,7 @@ TEST_P(
   DriverInfo_t *driver_info = &DriverInfo_[driver_index];
 
   ze_driver_handle_t driver_handle = driver_info->driver_handle;
+  ze_context_handle_t context = lzt::create_context(driver_handle);
 
   ze_device_handle_t device_handle =
       driver_info->device_handles[device_in_driver_index];
@@ -390,14 +394,14 @@ TEST_P(
 
   uint64_t *gpu_pattern_buffer;
   gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_device_memory(
-      pattern_memory_size, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-      use_this_ordinal_on_device_, device_handle, driver_handle);
+      pattern_memory_size, 8, 0, use_this_ordinal_on_device_, device_handle,
+      context);
 
   uint64_t *gpu_expected_output_buffer;
   gpu_expected_output_buffer =
       (uint64_t *)level_zero_tests::allocate_device_memory(
-          output_size_, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-          use_this_ordinal_on_device_, device_handle, driver_handle);
+          output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+          context);
   uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
   std::fill(host_expected_output_buffer,
             host_expected_output_buffer + output_count_, 0);
@@ -405,8 +409,8 @@ TEST_P(
   uint64_t *gpu_found_output_buffer;
   gpu_found_output_buffer =
       (uint64_t *)level_zero_tests::allocate_device_memory(
-          output_size_, 8, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-          use_this_ordinal_on_device_, device_handle, driver_handle);
+          output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+          context);
   uint64_t *host_found_output_buffer = new uint64_t[output_size_];
   std::fill(host_found_output_buffer, host_found_output_buffer + output_count_,
             0);
@@ -430,18 +434,19 @@ TEST_P(
 
   LOG_INFO << "call create module";
   ze_module_handle_t module_handle =
-      create_module(device_handle, "test_fill_device_memory.spv");
+      create_module(context, device_handle, "test_fill_device_memory.spv");
 
   LOG_INFO << "call run_functions";
   run_functions(device_handle, module_handle, gpu_pattern_buffer,
                 pattern_memory_count, pattern_base, host_expected_output_buffer,
                 gpu_expected_output_buffer, host_found_output_buffer,
-                gpu_found_output_buffer, output_count_);
+                gpu_found_output_buffer, output_count_, context);
 
   LOG_INFO << "call free memory";
-  level_zero_tests::free_memory(driver_handle, gpu_pattern_buffer);
-  level_zero_tests::free_memory(driver_handle, gpu_expected_output_buffer);
-  level_zero_tests::free_memory(driver_handle, gpu_found_output_buffer);
+  level_zero_tests::free_memory(context, gpu_pattern_buffer);
+  level_zero_tests::free_memory(context, gpu_expected_output_buffer);
+  level_zero_tests::free_memory(context, gpu_found_output_buffer);
+  level_zero_tests::destroy_context(context);
 
   LOG_INFO << "call destroy module";
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));

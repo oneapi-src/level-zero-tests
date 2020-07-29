@@ -19,31 +19,28 @@ ze_command_queue_handle_t create_command_queue() {
 }
 
 ze_command_queue_handle_t create_command_queue(ze_command_queue_mode_t mode) {
-  return create_command_queue(zeDevice::get_instance()->get_device(),
-                              static_cast<ze_command_queue_flag_t>(0), mode,
+  return create_command_queue(zeDevice::get_instance()->get_device(), 0, mode,
                               ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 }
 
 ze_command_queue_handle_t create_command_queue(ze_device_handle_t device) {
-  return create_command_queue(device, static_cast<ze_command_queue_flag_t>(0),
-                              ZE_COMMAND_QUEUE_MODE_DEFAULT,
+  return create_command_queue(device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
                               ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 }
 
 ze_command_queue_handle_t
-create_command_queue(ze_device_handle_t device, ze_command_queue_flag_t flags,
+create_command_queue(ze_device_handle_t device, ze_command_queue_flags_t flags,
                      ze_command_queue_mode_t mode,
                      ze_command_queue_priority_t priority, uint32_t ordinal) {
 
-  return create_command_queue(lzt::get_default_context(), device,
-                              static_cast<ze_command_queue_flag_t>(0),
+  return create_command_queue(lzt::get_default_context(), device, 0,
                               ZE_COMMAND_QUEUE_MODE_DEFAULT,
                               ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 }
 
 ze_command_queue_handle_t
 create_command_queue(ze_context_handle_t context, ze_device_handle_t device,
-                     ze_command_queue_flag_t flags,
+                     ze_command_queue_flags_t flags,
                      ze_command_queue_mode_t mode,
                      ze_command_queue_priority_t priority, uint32_t ordinal) {
 
