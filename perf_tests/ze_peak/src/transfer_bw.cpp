@@ -22,8 +22,18 @@ void ZePeak::_transfer_bw_gpu_copy(L0Context &context, void *destination_buffer,
       throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                                std::to_string(result));
     }
+    if (context.copy_command_list) {
+      result = zeCommandListAppendMemoryCopy(context.copy_command_list,
+                                             destination_buffer, source_buffer,
+                                             buffer_size, nullptr, 0, nullptr);
+      if (result) {
+        std::cout << "Error appending to copy command list";
+      }
+    }
   }
   context.execute_commandlist_and_sync();
+  if (context.copy_command_queue)
+    context.execute_commandlist_and_sync(true);
 
   timer.start();
   for (uint32_t i = 0; i < iters; i++) {
@@ -43,22 +53,73 @@ void ZePeak::_transfer_bw_gpu_copy(L0Context &context, void *destination_buffer,
   gbps = calculate_gbps(timed, static_cast<long double>(buffer_size));
 
   std::cout << gbps << " GBPS\n";
+
+  if (context.copy_command_queue) {
+    timer.start();
+    for (uint32_t i = 0; i < iters; i++) {
+      result = zeCommandListAppendMemoryCopy(context.copy_command_list,
+                                             destination_buffer, source_buffer,
+                                             buffer_size, nullptr, 0, nullptr);
+      if (result) {
+        throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
+                                 std::to_string(result));
+      }
+    }
+
+    context.execute_commandlist_and_sync(true);
+    timed = timer.stopAndTime();
+    timed /= static_cast<long double>(iters);
+
+    gbps = calculate_gbps(timed, static_cast<long double>(buffer_size));
+  }
+
+  std::cout << "COPY\n";
+  std::cout << gbps << " GBPS\n";
 }
 
-void ZePeak::_transfer_bw_host_copy(void *destination_buffer,
-                                    void *source_buffer, size_t buffer_size) {
+void ZePeak::_transfer_bw_host_copy(L0Context &context,
+                                    void *destination_buffer,
+                                    void *source_buffer, size_t buffer_size,
+                                    bool shared_is_dest) {
   Timer timer;
   long double gbps, timed;
 
+  ze_command_list_handle_t temp_cmd_list = nullptr;
+  ze_command_queue_desc_t cmd_q_desc = {};
+  cmd_q_desc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  cmd_q_desc.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
+  zeCommandListCreateImmediate(context.context, context.device, &cmd_q_desc,
+                               &temp_cmd_list);
+
   for (uint32_t i = 0; i < warmup_iterations; i++) {
+    /*
+
+    This test uses a shared memory buffer to measure transfer bandwidth
+    between a host and device. The following helps to insure that the buffer is
+    located on the device.
+
+    */
+
+    uint8_t pattern = 0x0;
+    size_t pattern_size = 1;
+    zeCommandListAppendMemoryFill(
+        temp_cmd_list, (shared_is_dest ? destination_buffer : source_buffer),
+        &pattern, pattern_size, buffer_size, nullptr, 0, nullptr);
+
     memcpy(destination_buffer, source_buffer, buffer_size);
   }
 
-  timer.start();
   for (uint32_t i = 0; i < iters; i++) {
+    uint8_t pattern = 0x0;
+    size_t pattern_size = 1;
+    zeCommandListAppendMemoryFill(
+        temp_cmd_list, (shared_is_dest ? destination_buffer : source_buffer),
+        &pattern, pattern_size, buffer_size, nullptr, 0, nullptr);
+
+    timer.start();
     memcpy(destination_buffer, source_buffer, buffer_size);
+    timed += timer.stopAndTime();
   }
-  timed = timer.stopAndTime();
 
   timed /= static_cast<long double>(iters);
   gbps = calculate_gbps(timed, static_cast<long double>(buffer_size));
@@ -101,11 +162,11 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
   _transfer_bw_gpu_copy(context, local_memory.data(), shared_memory_buffer,
                         local_memory_size);
   std::cout << "System Memory Copy to Shared Memory : ";
-  _transfer_bw_host_copy(shared_memory_buffer, local_memory.data(),
-                         local_memory_size);
+  _transfer_bw_host_copy(context, shared_memory_buffer, local_memory.data(),
+                         local_memory_size, true);
   std::cout << "System Memory Copy from Shared Memory : ";
-  _transfer_bw_host_copy(local_memory.data(), shared_memory_buffer,
-                         local_memory_size);
+  _transfer_bw_host_copy(context, local_memory.data(), shared_memory_buffer,
+                         local_memory_size, false);
 
   result = zeMemFree(context.context, shared_memory_buffer);
   if (result) {

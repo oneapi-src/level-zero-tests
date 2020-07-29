@@ -42,7 +42,9 @@ enum class TimingMeasurement {
 
 struct L0Context {
   ze_command_queue_handle_t command_queue = nullptr;
+  ze_command_queue_handle_t copy_command_queue = nullptr;
   ze_command_list_handle_t command_list = nullptr;
+  ze_command_list_handle_t copy_command_list = nullptr;
   ze_module_handle_t module = nullptr;
   ze_context_handle_t context = nullptr;
   ze_driver_handle_t driver = nullptr;
@@ -57,8 +59,8 @@ struct L0Context {
   void init_xe();
   void clean_xe();
   void print_ze_device_properties(const ze_device_properties_t &props);
-  void reset_commandlist();
-  void execute_commandlist_and_sync();
+  void reset_commandlist(ze_command_list_handle_t cmd_list);
+  void execute_commandlist_and_sync(bool use_copy_only_queue = false);
   std::vector<uint8_t> load_binary_file(const std::string &file_path);
   void create_module(std::vector<uint8_t> binary_file);
 };
@@ -116,8 +118,9 @@ public:
 private:
   void _transfer_bw_gpu_copy(L0Context &context, void *destination_buffer,
                              void *source_buffer, size_t buffer_size);
-  void _transfer_bw_host_copy(void *destination_buffer, void *source_buffer,
-                              size_t buffer_size);
+  void _transfer_bw_host_copy(L0Context &context, void *destination_buffer,
+                              void *source_buffer, size_t buffer_size,
+                              bool shared_is_dest);
   void _transfer_bw_shared_memory(L0Context &context,
                                   std::vector<float> local_memory);
   TimingMeasurement is_bandwidth_with_event_timer(void);

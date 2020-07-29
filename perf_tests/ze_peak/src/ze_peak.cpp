@@ -49,10 +49,10 @@ std::vector<uint8_t> L0Context::load_binary_file(const std::string &file_path) {
 //---------------------------------------------------------------------
 // Utility function to reset the Command List.
 //---------------------------------------------------------------------
-void L0Context::reset_commandlist() {
+void L0Context::reset_commandlist(ze_command_list_handle_t cmd_list) {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  result = zeCommandListReset(command_list);
+  result = zeCommandListReset(cmd_list);
   if (result) {
     throw std::runtime_error("zeCommandListReset failed: " +
                              std::to_string(result));
@@ -209,6 +209,55 @@ void L0Context::init_xe() {
   }
   if (verbose)
     std::cout << "Command queue created\n";
+
+  /* If device has copy engine, create corresponding resources */
+  uint32_t command_queue_group_count = 0;
+  zeDeviceGetCommandQueueGroupProperties(device, &command_queue_group_count,
+                                         nullptr);
+
+  std::vector<ze_command_queue_group_properties_t>
+      command_queue_group_properties(command_queue_group_count);
+
+  zeDeviceGetCommandQueueGroupProperties(device, &command_queue_group_count,
+                                         command_queue_group_properties.data());
+
+  uint32_t copy_ordinal = command_queue_group_count;
+  for (uint32_t i = 0; i < command_queue_group_count; ++i) {
+    if ((command_queue_group_properties[i].flags &
+         ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
+        (command_queue_group_properties[i].numQueues > 0)) {
+
+      copy_ordinal = i;
+      break;
+    }
+  }
+
+  if (copy_ordinal == command_queue_group_count) {
+    std::cout << "No async copy engines detected, disabling blitter benchmark";
+  } else {
+    std::cout << "Async copy engine detected, enabling blitter benchmark";
+
+    command_list_description.commandQueueGroupOrdinal = copy_ordinal;
+
+    result = zeCommandListCreate(context, device, &command_list_description,
+                                 &copy_command_list);
+    if (result) {
+      throw std::runtime_error("zeCommandListCreate failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "copy command_list created\n";
+
+    command_queue_description.ordinal = copy_ordinal;
+
+    result = zeCommandQueueCreate(context, device, &command_queue_description,
+                                  &copy_command_queue);
+    if (result) {
+      if (verbose) {
+        std::cout << "Could not create copy-only command queue";
+      }
+    }
+  }
 }
 
 //---------------------------------------------------------------------
@@ -234,6 +283,27 @@ void L0Context::clean_xe() {
   if (verbose)
     std::cout << "command_list destroyed\n";
 
+  /* Destroy Copy Resources */
+  if (copy_command_queue) {
+    result = zeCommandQueueDestroy(copy_command_queue);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueDestroy failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "Copy command queue destroyed\n";
+  }
+
+  if (copy_command_list) {
+    result = zeCommandListDestroy(copy_command_list);
+    if (result) {
+      throw std::runtime_error("zeCommandListDestroy failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "Copy command_list destroyed\n";
+  }
+
   result = zeContextDestroy(context);
   if (result) {
     throw std::runtime_error("zeContextDestroy failed: " +
@@ -250,10 +320,13 @@ void L0Context::clean_xe() {
 // list have been completed.
 // On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
-void L0Context::execute_commandlist_and_sync() {
+void L0Context::execute_commandlist_and_sync(bool use_copy_only_queue) {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  result = zeCommandListClose(command_list);
+  auto cmd_list = use_copy_only_queue ? copy_command_list : command_list;
+  auto cmd_q = use_copy_only_queue ? copy_command_queue : command_queue;
+
+  result = zeCommandListClose(cmd_list);
   if (result) {
     throw std::runtime_error("zeCommandListClose failed: " +
                              std::to_string(result));
@@ -261,8 +334,7 @@ void L0Context::execute_commandlist_and_sync() {
   if (verbose)
     std::cout << "Command list closed\n";
 
-  result = zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list,
-                                             nullptr);
+  result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &command_list, nullptr);
   if (result) {
     throw std::runtime_error("zeCommandQueueExecuteCommandLists failed: " +
                              std::to_string(result));
@@ -270,7 +342,7 @@ void L0Context::execute_commandlist_and_sync() {
   if (verbose)
     std::cout << "Command list enqueued\n";
 
-  result = zeCommandQueueSynchronize(command_queue, UINT32_MAX);
+  result = zeCommandQueueSynchronize(cmd_q, UINT32_MAX);
   if (result) {
     throw std::runtime_error("zeCommandQueueSynchronize failed: " +
                              std::to_string(result));
@@ -278,7 +350,7 @@ void L0Context::execute_commandlist_and_sync() {
   if (verbose)
     std::cout << "Command queue synchronized\n";
 
-  reset_commandlist();
+  reset_commandlist(cmd_list);
 }
 
 //---------------------------------------------------------------------
@@ -701,7 +773,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
   }
 
   if (reset_command_list)
-    context.reset_commandlist();
+    context.reset_commandlist(context.command_list);
 
   return (timed / static_cast<long double>(iters));
 }

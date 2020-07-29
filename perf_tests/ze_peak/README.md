@@ -3,7 +3,10 @@ ze_peak is a performance benchmark suite ported from clpeak which profiles Ze de
 
 This Benchmark is based off the clpeak here licensed with the "unlicense": https://github.com/krrishnarraj/clpeak.
 
-`NOTE: Due to differences in API semantics between oneAPI Level Zero and OpenCL, this benchmark does not provide a 1:1 comparison to clpeak`
+`NOTE: Due to differences in API semantics between oneAPI Level Zero and OpenCL, this benchmark does not provide a 1:1 comparison to clpeak.`
+`In particular, Level Zero uses shared memory allocations in order to provide flexibility and ease of use in moving memory allocations between`
+`a host and device. Therefore, the transfer bandwidth measurements for shared memory taken below may not be directly comparable as a driver`
+`might decide to migrate an allocation between host/device based on its own heuristics such as when accessed by either entity.`
 
 ze_peak measures the following:
 * Global Memory Bandwidth in GigaBytes Per Second
@@ -53,5 +56,5 @@ To run all benchmarks, use the following command. Additional Options and filteri
 
 * Example: Run only the global_bw benchmark:
 ```
-      $ ./ze_peak -global_bw
+      $ ./ze_peak -t global_bw
 ```
