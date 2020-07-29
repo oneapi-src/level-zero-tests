@@ -591,6 +591,18 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceEnumFabricPorts(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFabricPortGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFabricPortGetLinkType(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFabricPortGetConfig(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFabricPortSetConfig(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFabricPortGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFabricPortGetThroughput(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceEnumRasErrorSets(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesRasGetProperties(*args, **kwargs):
@@ -777,7 +789,8 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         pciState.speed.maxBandwidth = 7880000000
     def stubDevicePciGetStats(dev, pciCounter):
         global stubState
-        d = stubState.setdefault(device_handle_to_ulong(dev), {})
+        devs = stubState.setdefault("Devices", {})
+        d = devs.setdefault(device_handle_to_ulong(dev), {})
         r = d.setdefault("PCIstats", [0,0,0,0,0])
         pciCounter.timestamp = r[0]
         pciCounter.replayCounter = r[1]
@@ -882,22 +895,126 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             raise ValueError(suite)
     def stubDeviceEventRegister(dev, events):
         global stubState
-        d = stubState.setdefault(device_handle_to_ulong(dev), {})
+        devs = stubState.setdefault("Devices", {})
+        d = devs.setdefault(device_handle_to_ulong(dev), {})
         d["EventEnables"] = events
     def stubDriverEventListen(drv, timeout, count, device_array, event_array):
         global stubState
+        devs = stubState.setdefault("Devices", {})
         devices = ze_device_handle_array.frompointer(device_array)
         events = zes_event_type_flags_array.frompointer(event_array)
         for i in range(count):
             dev = devices[i]
-            d = stubState.setdefault(device_handle_to_ulong(dev), {})
+            d = devs.setdefault(device_handle_to_ulong(dev), {})
             enables = d.setdefault("EventEnables", 0)
             events[i] = enables & (ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH | \
                                    ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS |\
                                    ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED)
         return count
     def stubDeviceEnumFabricPorts(dev, count_ptr, handle_array):
-        raise NotImplementedError
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 10)
+        elif uint32_value(count_ptr) == 10:
+            nextFabricId = stubState.setdefault("NextFabricId", 0)
+            devs = stubState.setdefault("Devices", {})
+            d = devs.setdefault(device_handle_to_ulong(dev), {})
+            fabricId = d.setdefault("FabricId", nextFabricId)
+            if fabricId == nextFabricId:
+                stubState["NextFabricId"] += 1
+            items = zes_fabric_port_handle_array.frompointer(handle_array)
+            for i in range(10):
+                items[i] = ulong_to_fabric_port_handle(fabricId * 10 + i)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubFabricPortGetProperties(port, portProps):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        fabricId = p // 10
+        localIdx = p % 10
+        portProps.model = "ANR"
+        portProps.onSubDevice = True
+        portProps.subdeviceId = localIdx // 5
+        portProps.portId.fabricId = fabricId
+        portProps.portId.attachId = localIdx // 5
+        portProps.portId.portNumber = localIdx % 5
+        portProps.maxRxSpeed.bitRate = 1000000000
+        portProps.maxRxSpeed.width = 8
+        portProps.maxTxSpeed.bitRate = 1000000000
+        portProps.maxTxSpeed.width = 8
+    def stubFabricPortGetLinkType(port, linkType):
+        linkType.desc = "ANR"
+    def stubFabricPortGetConfig(port, portConfig):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        ports = stubState.setdefault("FabricPortConfig", {})
+        portConfig.enabled, portConfig.beaconing = ports.setdefault(p, (True, False))
+    def stubFabricPortSetConfig(port, portConfig):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        ports = stubState.setdefault("FabricPortConfig", {})
+        ports[p] = (portConfig.enabled, portConfig.beaconing)
+    def stubFabricPortGetState(port, portState):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        ports = stubState.setdefault("FabricPortConfig", {})
+        enabled, _ = ports.setdefault(p, (True, False))
+        fabricId = p // 10
+        localIdx = p % 10
+        portState.qualityIssues = 0
+        portState.failureReasons = 0
+        if enabled:
+            if localIdx == 0:
+                portState.status = ZES_FABRIC_PORT_STATUS_UNKNOWN
+            elif localIdx == 1:
+                portState.status = ZES_FABRIC_PORT_STATUS_HEALTHY
+            elif localIdx == 2:
+                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
+                portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS
+            elif localIdx == 3:
+                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
+                portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED
+            elif localIdx == 4:
+                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
+                portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS | \
+                        ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED
+            elif localIdx == 5:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT | \
+                        ZES_FABRIC_PORT_FAILURE_FLAG_FAILED
+            elif localIdx == 6:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING | \
+                        ZES_FABRIC_PORT_FAILURE_FLAG_FAILED
+            elif localIdx == 7:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT
+            elif localIdx == 8:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING
+            else:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FAILED
+        else:
+            portState.status = ZES_FABRIC_PORT_STATUS_DISABLED
+        portState.remotePortId.fabricId = fabricId ^ 1
+        portState.remotePortId.attachId = localIdx // 5
+        portState.remotePortId.portNumber = localIdx % 5
+        portState.rxSpeed.bitRate = 1000000000
+        portState.rxSpeed.width = 8
+        portState.txSpeed.bitRate = 1000000000
+        portState.txSpeed.width = 8
+    def stubFabricPortGetThroughput(port, portThroughput):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        ports = stubState.setdefault("FabricPortThroughput", {})
+        r = ports.setdefault(p, [0,0,0])
+        portThroughput.timestamp = r[0]
+        portThroughput.rxCounter = r[1]
+        portThroughput.txCounter = r[2]
+        r[0] += 1000000
+        r[1] += 1000000000
+        r[2] += 900000000
     def stubDeviceEnumRasErrorSets(dev, count_ptr, handle_array):
         if handle_array is None:
             uint32_assign(count_ptr, 2)
@@ -978,6 +1095,12 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesDeviceEventRegister : stubDeviceEventRegister,
                      zesDriverEventListen : stubDriverEventListen,
                      zesDeviceEnumFabricPorts : stubDeviceEnumFabricPorts,
+                     zesFabricPortGetProperties : stubFabricPortGetProperties,
+                     zesFabricPortGetLinkType : stubFabricPortGetLinkType,
+                     zesFabricPortGetConfig : stubFabricPortGetConfig,
+                     zesFabricPortSetConfig : stubFabricPortSetConfig,
+                     zesFabricPortGetState : stubFabricPortGetState,
+                     zesFabricPortGetThroughput : stubFabricPortGetThroughput,
                      zesDeviceEnumRasErrorSets : stubDeviceEnumRasErrorSets,
                      zesRasGetProperties : stubRasGetProperties,
                      zesRasGetState : stubRasGetState,
@@ -1173,20 +1296,20 @@ def portQualityIssuesString(reasons):
 
     return ", ".join(reasonStrings)
 
-def portStabilityIssuesString(reasons):
-    if reasons == ZES_FABRIC_PORT_STAB_ISSUES_NONE:
+def portFailureReasonsString(reasons):
+    if not reasons:
         return "None"
 
-    stabilityIssues = [(ZES_FABRIC_PORT_STAB_ISSUES_TOO_MANY_REPLAYS, "Excessive packet replays"),
-                       (ZES_FABRIC_PORT_STAB_ISSUES_NO_CONNECT, "Can't connect"),
-                       (ZES_FABRIC_PORT_STAB_ISSUES_FLAPPING, "Flapping")]
+    failureReasons = [(ZES_FABRIC_PORT_FAILURE_FLAG_FAILED, "Port failure"),
+                      (ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT, "Training timeout"),
+                      (ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING, "Flapping")]
     reasonStrings = []
-    for r, s in stabilityIssues:
+    for r, s in failureReasons:
         if reasons & r:
             reasons ^= r
             reasonStrings.append(s)
     if reasons != 0:
-        reasonStrings.append("Unknown stability issue")
+        reasonStrings.append("Unknown failure")
 
     return ", ".join(reasonStrings)
 
@@ -1240,6 +1363,9 @@ def diagResultString(diagResult):
     return diagResults.get(diagResult, "Unknown")
 
 def eventsString(events):
+    if not events:
+        return "None"
+
     eventCodes = [ (ZES_EVENT_TYPE_FLAG_DEVICE_DETACH, "Detach"),
                    (ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH, "Reattach"),
                    (ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER, "Sleeping"),
@@ -1605,6 +1731,14 @@ def parseArgs():
                             help="show timestamps when iterating")
         parser.add_argument("--wait-events", nargs='*', metavar=('MSEC','MASK'),
                             help="wait for events")
+        parser.add_argument("--enable-fabric-ports", nargs='*', type=int, metavar='IDX',
+                            help="enable fabric ports")
+        parser.add_argument("--disable-fabric-ports", nargs='*', type=int, metavar='IDX',
+                            help="disable fabric ports")
+        parser.add_argument("--enable-beaconing", nargs='*', type=int, metavar='IDX',
+                            help="enable port beaconing")
+        parser.add_argument("--disable-beaconing", nargs='*', type=int, metavar='IDX',
+                            help="disable port beaconing")
 
     args = parser.parse_args()
 
@@ -1619,6 +1753,10 @@ def parseArgs():
         args.stub_unimplemented = None
         args.reset_freq = None
         args.wait_events = None
+        args.enable_fabric_ports = None
+        args.disable_fabric_ports = None
+        args.enable_beaconing = None
+        args.disable_beaconing = None
 
     Node = formatArgClass.get(args.format, Node)
 
@@ -2106,7 +2244,7 @@ def main():
             if numDeviceEvents:
                 pr(numDeviceEvents, "device(s) reported events:")
                 for i in range(count):
-                    events = eventsString(pEvents[i]) or "None"
+                    events = eventsString(pEvents[i])
                     pr("   ", deviceIDs[i], ":", deviceUUIDs[i], events)
             else:
                 pr("No events reported")
@@ -2679,6 +2817,54 @@ def main():
             ports = zes_fabric_port_handle_array(portCount.value())
             zeCall(zesDeviceEnumFabricPorts, device, portCount.cast(), ports.cast())
 
+        if (args.enable_fabric_ports is not None or args.disable_fabric_ports is not None or
+                args.enable_beaconing is not None or args.disable_beaconing is not None):
+
+            if args.enable_fabric_ports is None:
+                enable_ports = []
+            elif args.enable_fabric_ports == []:
+                enable_ports = list(range(portCount.value()))
+            else:
+                enable_ports = args.enable_fabric_ports
+
+            if args.disable_fabric_ports is None:
+                disable_ports = []
+            elif args.disable_fabric_ports == []:
+                disable_ports = list(range(portCount.value()))
+            else:
+                disable_ports = args.disable_fabric_ports
+
+            if args.enable_beaconing is None:
+                enable_beacon = []
+            elif args.enable_beaconing == []:
+                enable_beacon = list(range(portCount.value()))
+            else:
+                enable_beacon = args.enable_beaconing
+
+            if args.disable_beaconing is None:
+                disable_beacon = []
+            elif args.disable_beaconing == []:
+                disable_beacon = list(range(portCount.value()))
+            else:
+                disable_beacon = args.disable_beaconing
+
+            affected_ports = enable_ports + disable_ports + enable_beacon + disable_beacon
+
+            for i in range(portCount.value()):
+                if i in affected_ports:
+                    port = ports[i]
+                    portConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_CONFIG)
+                    zeCall(zesFabricPortGetConfig, port, portConfig)
+                    if i in enable_ports:
+                        portConfig.enabled = True
+                    if i in disable_ports:
+                        portConfig.enabled = False
+                    if i in enable_beacon:
+                        portConfig.beaconing = True
+                    if i in disable_beacon:
+                        portConfig.beaconing = False
+                    zeCall(zesFabricPortSetConfig,port, portConfig)
+
         if args.show_fabric_ports:
             portTop = Node(devNode, "FabricPorts", None)
 
@@ -2688,8 +2874,7 @@ def main():
                 zeCall(zesFabricPortGetProperties, port, portProps)
 
                 if portProps.onSubdevice:
-                    portNode = Node(portTop, "FabricPort", None, ("Index", i),
-                                       ("SubdeviceId", portProps.subdeviceId))
+                    portNode = Node(portTop, "FabricPort", None, ("Index", i), ("SubdeviceId", portProps.subdeviceId))
                 else:
                     portNode = Node(portTop, "FabricPort", None, ("Index", i))
 
@@ -2697,27 +2882,36 @@ def main():
                     portLinkType = zes_fabric_link_type_t()
                     portConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_CONFIG)
 
-                    zeCall(zesFabricPortGetLinkType, port, False, portLinkType)
+                    zeCall(zesFabricPortGetLinkType, port, portLinkType)
                     zeCall(zesFabricPortGetConfig, port, portConfig)
 
                     Node(portNode, "Model", portProps.model)
                     Node(portNode, "PhysicalAttachmentType", portLinkType.desc)
-                    Node(portNode, "FabricId", "?")
+                    Node(portNode, "FabricId", portProps.portId.fabricId)
+                    Node(portNode, "AttachId", portProps.portId.attachId)
+                    Node(portNode, "PortNumber", portProps.portId.portNumber)
                     Node(portNode, "MaxRxBitrate", portProps.maxRxSpeed.bitRate, ("Units", "Bits/sec"))
                     Node(portNode, "MaxRxWidth", portProps.maxRxSpeed.width)
                     Node(portNode, "MaxTxBitrate", portProps.maxTxSpeed.bitRate, ("Units", "Bits/sec"))
                     Node(portNode, "MaxTxWidth", portProps.maxTxSpeed.width)
-                    Node(portNode, "Enabled", bool(portConfig.width))
+                    Node(portNode, "Enabled", bool(portConfig.enabled))
                     Node(portNode, "Beaconing", bool(portConfig.beaconing))
 
                 if args.show_telemetry:
                     portState = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_STATE)
-                    portCounter = zes_fabric_throughput_t()
+                    portCounter = zes_fabric_port_throughput_t()
                     zeCall(zesFabricPortGetThroughput, port, portCounter)
                     nodes = []
                     nodes.append(Node(portNode, "Status", "?"))
                     nodes.append(Node(portNode, "QualityIssues", "?"))
-                    nodes.append(Node(portNode, "StabilityIssues", "?"))
+                    nodes.append(Node(portNode, "FailureReasons", "?"))
+                    nodes.append(Node(portNode, "RemoteFabricId", "?"))
+                    nodes.append(Node(portNode, "RemoteAttachId", "?"))
+                    nodes.append(Node(portNode, "RemotePortNumber", "?"))
+                    nodes.append(Node(portNode, "CurrentRxBitrate", "?", ("Units", "Bits/sec")))
+                    nodes.append(Node(portNode, "CurrentRxWidth", "?"))
+                    nodes.append(Node(portNode, "CurrentTxBitrate", "?", ("Units", "Bits/sec")))
+                    nodes.append(Node(portNode, "CurrentTxWidth", "?"))
                     nodes.append(Node(portNode, "RxThroughput", "?", ("Units", "Bytes/s")))
                     nodes.append(Node(portNode, "TxThroughput", "?", ("Units", "Bytes/s")))
 
@@ -2729,19 +2923,25 @@ def main():
                         deltaRx = portCounter.rxCounter - oldRx
                         deltaTx = portCounter.txCounter - oldTx
                         deltaT = portCounter.timestamp - oldTimestamp
-                        maxBandwidth = 1.0 * portCounter.maxBandwidth
                         if deltaT > 0:
                             rxThroughput = "%.1f" % (1e6 * deltaRx / deltaT)
-                            txThroughput = "%.1f" % (1e6 * deltaWx / deltaT)
+                            txThroughput = "%.1f" % (1e6 * deltaTx / deltaT)
                         else:
                             rxThroughput = "?"
                             txThroughput = "?"
 
                         node[0].setText(portStatusString(portState.status))
                         node[1].setText(portQualityIssuesString(portState.qualityIssues))
-                        node[2].setText(portStabilityIssuesString(portState.stabilityIssues))
-                        node[3].setText(rxThroughput)
-                        node[4].setText(txThroughput)
+                        node[2].setText(portFailureReasonsString(portState.failureReasons))
+                        node[3].setText(portState.remotePortId.fabricId)
+                        node[4].setText(portState.remotePortId.attachId)
+                        node[5].setText(portState.remotePortId.portNumber)
+                        node[6].setText(portState.rxSpeed.bitRate)
+                        node[7].setText(portState.rxSpeed.width)
+                        node[8].setText(portState.txSpeed.bitRate)
+                        node[9].setText(portState.txSpeed.width)
+                        node[10].setText(rxThroughput)
+                        node[11].setText(txThroughput)
 
                     telemetryClosures.append(portTelemetry)
                     pollDelayRequired = True
