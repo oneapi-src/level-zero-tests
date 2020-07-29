@@ -22,9 +22,9 @@
 #include "test_harness_sysman_device.hpp"
 #include "test_harness_sysman_psu.hpp"
 #include "test_harness_sysman_fan.hpp"
-#include "test_harness_sysman_led.hpp"
+#include "test_harness_sysman_led.hpp"*/
 #include "test_harness_sysman_ras.hpp"
-#include "test_harness_sysman_engine.hpp"
+/*#include "test_harness_sysman_engine.hpp"
 #include "test_harness_sysman_firmware.hpp"
 #include "test_harness_sysman_temp.hpp"
 #include "test_harness_sysman_overclocking.hpp"

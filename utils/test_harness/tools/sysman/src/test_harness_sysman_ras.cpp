@@ -8,63 +8,61 @@
 
 #include "test_harness/test_harness.hpp"
 
-#include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 #include "utils/utils.hpp"
 
 namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
-uint32_t get_ras_handles_count(zet_sysman_handle_t hSysman) {
+uint32_t get_ras_handles_count(zes_device_handle_t device) {
   uint32_t count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanRasGet(hSysman, &count, nullptr));
-  EXPECT_GE(count, 0);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceEnumRasErrorSets(device, &count, nullptr));
+  EXPECT_GT(count, 0);
   return count;
 }
 
-std::vector<zet_sysman_ras_handle_t> get_ras_handles(ze_device_handle_t device,
-                                                     uint32_t &count) {
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(device);
+std::vector<zes_ras_handle_t> get_ras_handles(zes_device_handle_t device,
+                                              uint32_t &count) {
   if (count == 0) {
-    count = get_ras_handles_count(hSysman);
+    count = get_ras_handles_count(device);
   }
-  std::vector<zet_sysman_ras_handle_t> rasHandles(count);
+  std::vector<zes_ras_handle_t> rasHandles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanRasGet(hSysman, &count, rasHandles.data()));
+            zesDeviceEnumRasErrorSets(device, &count, rasHandles.data()));
   return rasHandles;
 }
 
-zet_ras_properties_t get_ras_properties(zet_sysman_ras_handle_t rasHandle) {
-  zet_ras_properties_t properties;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanRasGetProperties(rasHandle, &properties));
+zes_ras_properties_t get_ras_properties(zes_ras_handle_t rasHandle) {
+  zes_ras_properties_t properties = {ZES_STRUCTURE_TYPE_RAS_PROPERTIES,
+                                     nullptr};
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesRasGetProperties(rasHandle, &properties));
   return properties;
 }
 
-zet_ras_config_t get_ras_config(zet_sysman_ras_handle_t rasHandle) {
-  zet_ras_config_t rasConfig;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanRasGetConfig(rasHandle, &rasConfig));
+zes_ras_config_t get_ras_config(zes_ras_handle_t rasHandle) {
+  zes_ras_config_t rasConfig = {ZES_STRUCTURE_TYPE_RAS_CONFIG, nullptr};
+  zes_ras_state_t state = {ZES_STRUCTURE_TYPE_RAS_STATE, nullptr};
+  rasConfig.detailedThresholds = state;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesRasGetConfig(rasHandle, &rasConfig));
   return rasConfig;
 }
 
-void set_ras_config(zet_sysman_ras_handle_t rasHandle,
-                    zet_ras_config_t rasConfig) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanRasSetConfig(rasHandle, &rasConfig));
+void set_ras_config(zes_ras_handle_t rasHandle, zes_ras_config_t rasConfig) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesRasSetConfig(rasHandle, &rasConfig));
 }
 
-uint64_t sum_of_ras_errors(zet_ras_details_t rasDetails) {
-  return (rasDetails.numCacheErrors + rasDetails.numComputeErrors +
-          rasDetails.numDisplayErrors + rasDetails.numDriverErrors +
-          rasDetails.numNonComputeErrors + rasDetails.numProgrammingErrors +
-          rasDetails.numResets);
+uint64_t sum_of_ras_errors(zes_ras_state_t rasState) {
+  uint64_t sum = 0;
+  for (uint32_t i = 0; i < ZES_MAX_RAS_ERROR_CATEGORY_COUNT; i++) {
+    sum += rasState.category[i];
+  }
+  return sum;
 }
-zet_ras_details_t get_ras_state(zet_sysman_ras_handle_t rasHandle,
-                                ze_bool_t clear) {
-  uint64_t tErrors = 0;
-  zet_ras_details_t rasDetails;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanRasGetState(rasHandle, clear, &tErrors, &rasDetails));
-  EXPECT_EQ(tErrors, sum_of_ras_errors(rasDetails));
-  return rasDetails;
+zes_ras_state_t get_ras_state(zes_ras_handle_t rasHandle, ze_bool_t clear) {
+  zes_ras_state_t state = {ZES_STRUCTURE_TYPE_RAS_STATE, nullptr};
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesRasGetState(rasHandle, clear, &state));
+  return state;
 }
 } // namespace level_zero_tests

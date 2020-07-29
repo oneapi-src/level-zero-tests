@@ -9,20 +9,17 @@
 #ifndef TEST_HARNESS_SYSMAN_RAS_HPP
 #define TEST_HARNESS_SYSMAN_RAS_HPP
 
-#include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
-#include "test_harness_sysman_init.hpp"
 namespace level_zero_tests {
 
-std::vector<zet_sysman_ras_handle_t> get_ras_handles(ze_device_handle_t device,
-                                                     uint32_t &count);
-zet_ras_properties_t get_ras_properties(zet_sysman_ras_handle_t rasHandle);
-zet_ras_config_t get_ras_config(zet_sysman_ras_handle_t rasHandle);
-void set_ras_config(zet_sysman_ras_handle_t rasHandle,
-                    zet_ras_config_t rasConfig);
-zet_ras_details_t get_ras_state(zet_sysman_ras_handle_t rasHandle,
-                                ze_bool_t clear);
-uint64_t sum_of_ras_errors(zet_ras_details_t rasDetails);
+std::vector<zes_ras_handle_t> get_ras_handles(zes_device_handle_t device,
+                                              uint32_t &count);
+zes_ras_properties_t get_ras_properties(zes_ras_handle_t rasHandle);
+zes_ras_config_t get_ras_config(zes_ras_handle_t rasHandle);
+void set_ras_config(zes_ras_handle_t rasHandle, zes_ras_config_t rasConfig);
+zes_ras_state_t get_ras_state(zes_ras_handle_t rasHandle, ze_bool_t clear);
+uint64_t sum_of_ras_errors(zes_ras_state_t state);
 } // namespace level_zero_tests
 
-#endif /* TEST_HARNESS_SYSMAN_RAS_HPP */
+#endif

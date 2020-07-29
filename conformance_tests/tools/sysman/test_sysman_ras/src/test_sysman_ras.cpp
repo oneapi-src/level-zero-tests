@@ -14,37 +14,42 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
-void validate_ras_details(zet_ras_details_t detailedThresholds) {
-  EXPECT_LT(detailedThresholds.numCacheErrors, UINT64_MAX);
-  EXPECT_LT(detailedThresholds.numComputeErrors, UINT64_MAX);
-  EXPECT_LT(detailedThresholds.numDisplayErrors, UINT64_MAX);
-  EXPECT_LT(detailedThresholds.numDriverErrors, UINT64_MAX);
-  EXPECT_LT(detailedThresholds.numNonComputeErrors, UINT64_MAX);
-  EXPECT_LT(detailedThresholds.numProgrammingErrors, UINT64_MAX);
-  EXPECT_LT(detailedThresholds.numResets, UINT64_MAX);
-  EXPECT_GE(detailedThresholds.numCacheErrors, 0);
-  EXPECT_GE(detailedThresholds.numComputeErrors, 0);
-  EXPECT_GE(detailedThresholds.numDisplayErrors, 0);
-  EXPECT_GE(detailedThresholds.numDriverErrors, 0);
-  EXPECT_GE(detailedThresholds.numNonComputeErrors, 0);
-  EXPECT_GE(detailedThresholds.numProgrammingErrors, 0);
-  EXPECT_GE(detailedThresholds.numResets, 0);
+void validate_ras_state(zes_ras_state_t detailedThresholds) {
+  EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_RESET], UINT64_MAX);
+  EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS],
+            UINT64_MAX);
+  EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS],
+            UINT64_MAX);
+  EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS],
+            UINT64_MAX);
+  EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS],
+            UINT64_MAX);
+  EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_CACHE_ERRORS],
+            UINT64_MAX);
+  EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS],
+            UINT64_MAX);
+  EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_RESET], 0);
+  EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS],
+            0);
+  EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS], 0);
+  EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS], 0);
+  EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_CACHE_ERRORS], 0);
+  EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS], 0);
+  EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_RESET], 0);
 }
 
-void validate_ras_config(zet_ras_config_t rasConfig) {
+void validate_ras_config(zes_ras_config_t rasConfig) {
   EXPECT_LT(rasConfig.totalThreshold, UINT64_MAX);
   EXPECT_GT(rasConfig.totalThreshold, 0);
-  EXPECT_GT(rasConfig.processId, 0);
-  validate_ras_details(rasConfig.detailedThresholds);
+  validate_ras_state(rasConfig.detailedThresholds);
 }
 
-void validate_ras_properties(zet_ras_properties_t rasProperties) {
-  EXPECT_LE(rasProperties.type, ZET_RAS_ERROR_TYPE_UNCORRECTABLE);
-  EXPECT_GE(rasProperties.type, ZET_RAS_ERROR_TYPE_CORRECTABLE);
+void validate_ras_properties(zes_ras_properties_t rasProperties) {
+  EXPECT_LE(rasProperties.type, ZES_RAS_ERROR_TYPE_UNCORRECTABLE);
+  EXPECT_GE(rasProperties.type, ZES_RAS_ERROR_TYPE_CORRECTABLE);
   if (rasProperties.onSubdevice == true) {
     EXPECT_LT(rasProperties.subdeviceId, UINT32_MAX);
     EXPECT_GE(rasProperties.subdeviceId, 0);
@@ -59,7 +64,7 @@ TEST_F(RASOperationsTest,
     auto rasHandles = lzt::get_ras_handles(device, count);
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
-      zet_ras_config_t rasConfig = lzt::get_ras_config(rasHandle);
+      zes_ras_config_t rasConfig = lzt::get_ras_config(rasHandle);
       validate_ras_config(rasConfig);
     }
   }
@@ -73,35 +78,57 @@ TEST_F(
     auto rasHandles = lzt::get_ras_handles(device, count);
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
-      zet_ras_config_t rasConfigSet;
-      zet_ras_config_t rasConfigOriginal = lzt::get_ras_config(rasHandle);
+      zes_ras_config_t rasConfigSet = {ZES_STRUCTURE_TYPE_RAS_CONFIG, nullptr};
+      rasConfigSet.detailedThresholds = {ZES_STRUCTURE_TYPE_RAS_STATE, nullptr};
+      zes_ras_config_t rasConfigOriginal = lzt::get_ras_config(rasHandle);
       validate_ras_config(rasConfigOriginal);
       rasConfigSet.totalThreshold = (UINT64_MAX - 1);
-      rasConfigSet.detailedThresholds.numCacheErrors = (UINT64_MAX - 1);
-      rasConfigSet.detailedThresholds.numComputeErrors = (UINT64_MAX - 1);
-      rasConfigSet.detailedThresholds.numDisplayErrors = (UINT64_MAX - 1);
-      rasConfigSet.detailedThresholds.numDriverErrors = (UINT64_MAX - 1);
-      rasConfigSet.detailedThresholds.numNonComputeErrors = (UINT64_MAX - 1);
-      rasConfigSet.detailedThresholds.numProgrammingErrors = (UINT64_MAX - 1);
-      rasConfigSet.detailedThresholds.numResets = (UINT64_MAX - 1);
+      rasConfigSet.detailedThresholds.category[ZES_RAS_ERROR_CAT_RESET] =
+          (UINT64_MAX - 1);
+      rasConfigSet.detailedThresholds
+          .category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS] = (UINT64_MAX - 1);
+      rasConfigSet.detailedThresholds
+          .category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS] = (UINT64_MAX - 1);
+      rasConfigSet.detailedThresholds
+          .category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS] = (UINT64_MAX - 1);
+      rasConfigSet.detailedThresholds
+          .category[ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS] = (UINT64_MAX - 1);
+      rasConfigSet.detailedThresholds.category[ZES_RAS_ERROR_CAT_CACHE_ERRORS] =
+          (UINT64_MAX - 1);
+      rasConfigSet.detailedThresholds
+          .category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS] = (UINT64_MAX - 1);
       lzt::set_ras_config(rasHandle, rasConfigSet);
-      zet_ras_config_t rasConfigUpdated = lzt::get_ras_config(rasHandle);
+      zes_ras_config_t rasConfigUpdated = lzt::get_ras_config(rasHandle);
       validate_ras_config(rasConfigUpdated);
       EXPECT_EQ(rasConfigSet.totalThreshold, rasConfigUpdated.totalThreshold);
-      EXPECT_EQ(rasConfigSet.detailedThresholds.numCacheErrors,
-                rasConfigUpdated.detailedThresholds.numCacheErrors);
-      EXPECT_EQ(rasConfigSet.detailedThresholds.numComputeErrors,
-                rasConfigUpdated.detailedThresholds.numComputeErrors);
-      EXPECT_EQ(rasConfigSet.detailedThresholds.numDisplayErrors,
-                rasConfigUpdated.detailedThresholds.numDisplayErrors);
-      EXPECT_EQ(rasConfigSet.detailedThresholds.numDriverErrors,
-                rasConfigUpdated.detailedThresholds.numDriverErrors);
-      EXPECT_EQ(rasConfigSet.detailedThresholds.numNonComputeErrors,
-                rasConfigUpdated.detailedThresholds.numNonComputeErrors);
-      EXPECT_EQ(rasConfigSet.detailedThresholds.numProgrammingErrors,
-                rasConfigUpdated.detailedThresholds.numProgrammingErrors);
-      EXPECT_EQ(rasConfigSet.detailedThresholds.numResets,
-                rasConfigUpdated.detailedThresholds.numResets);
+      EXPECT_EQ(
+          rasConfigSet.detailedThresholds.category[ZES_RAS_ERROR_CAT_RESET],
+          rasConfigUpdated.detailedThresholds
+              .category[ZES_RAS_ERROR_CAT_RESET]);
+      EXPECT_EQ(rasConfigSet.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS],
+                rasConfigUpdated.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS]);
+      EXPECT_EQ(rasConfigSet.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS],
+                rasConfigUpdated.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS]);
+      EXPECT_EQ(rasConfigSet.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS],
+                rasConfigUpdated.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS]);
+      EXPECT_EQ(rasConfigSet.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS],
+                rasConfigUpdated.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS]);
+      EXPECT_EQ(rasConfigSet.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_CACHE_ERRORS],
+                rasConfigUpdated.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_CACHE_ERRORS]);
+      EXPECT_EQ(rasConfigSet.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS],
+                rasConfigUpdated.detailedThresholds
+                    .category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS]);
       lzt::set_ras_config(rasHandle, rasConfigOriginal);
     }
   }
@@ -115,8 +142,8 @@ TEST_F(RASOperationsTest,
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
       ze_bool_t clear = 0;
-      zet_ras_details_t rasDetails = lzt::get_ras_state(rasHandle, clear);
-      validate_ras_details(rasDetails);
+      zes_ras_state_t rasState = lzt::get_ras_state(rasHandle, clear);
+      validate_ras_state(rasState);
     }
   }
 }
@@ -130,14 +157,13 @@ TEST_F(
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
       ze_bool_t clear = 0;
-      zet_ras_details_t rasDetails = lzt::get_ras_state(rasHandle, clear);
-      validate_ras_details(rasDetails);
-      uint64_t tErrorsinitial = lzt::sum_of_ras_errors(rasDetails);
+      zes_ras_state_t rasState = lzt::get_ras_state(rasHandle, clear);
+      validate_ras_state(rasState);
+      uint64_t tErrorsinitial = lzt::sum_of_ras_errors(rasState);
       clear = 1;
-      zet_ras_details_t rasDetailsAfterClear =
-          lzt::get_ras_state(rasHandle, clear);
-      validate_ras_details(rasDetailsAfterClear);
-      uint64_t tErrorsAfterClear = lzt::sum_of_ras_errors(rasDetailsAfterClear);
+      zes_ras_state_t rasStateAfterClear = lzt::get_ras_state(rasHandle, clear);
+      validate_ras_state(rasStateAfterClear);
+      uint64_t tErrorsAfterClear = lzt::sum_of_ras_errors(rasStateAfterClear);
       EXPECT_NE(tErrorsinitial, tErrorsAfterClear);
     }
   }

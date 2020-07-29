@@ -34,7 +34,7 @@ add_core_library(test_harness
     #"tools/sysman/src/test_harness_sysman_psu.cpp"
     #"tools/sysman/src/test_harness_sysman_fan.cpp"
     #"tools/sysman/src/test_harness_sysman_led.cpp"
-    #"tools/sysman/src/test_harness_sysman_ras.cpp"
+    "tools/sysman/src/test_harness_sysman_ras.cpp"
     #"tools/sysman/src/test_harness_sysman_engine.cpp"
     #"tools/sysman/src/test_harness_sysman_firmware.cpp"
     #"tools/sysman/src/test_harness_sysman_temp.cpp"
