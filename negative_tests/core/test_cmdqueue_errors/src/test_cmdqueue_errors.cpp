@@ -34,9 +34,9 @@ TEST_F(
   ze_device_handle_t device = nullptr;
 
   ze_command_queue_handle_t command_queue = nullptr;
-  EXPECT_EQ(
-      uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-      uint64_t(zeCommandQueueCreate(device, &descriptor, &command_queue)));
+  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
+            uint64_t(zeCommandQueueCreate(lzt::get_default_context(), device,
+                                          &descriptor, &command_queue)));
 }
 
 TEST_F(
@@ -47,7 +47,8 @@ TEST_F(
   ze_command_queue_handle_t command_queue = nullptr;
 
   EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-            uint64_t(zeCommandQueueCreate(device, nullptr, &command_queue)));
+            uint64_t(zeCommandQueueCreate(lzt::get_default_context(), device,
+                                          nullptr, &command_queue)));
 }
 
 TEST_F(
@@ -64,7 +65,8 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
   EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-            uint64_t(zeCommandQueueCreate(device, &descriptor, nullptr)));
+            uint64_t(zeCommandQueueCreate(lzt::get_default_context(), device,
+                                          &descriptor, nullptr)));
 }
 
 class CommandQueueDestroyNegativeTests : public ::testing::Test {};
