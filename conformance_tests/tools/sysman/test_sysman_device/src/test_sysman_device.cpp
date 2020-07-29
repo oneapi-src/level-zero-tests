@@ -14,14 +14,13 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 
-uint32_t get_prop_length(int8_t prop[ZET_STRING_PROPERTY_SIZE]) {
+uint32_t get_prop_length(char prop[ZES_STRING_PROPERTY_SIZE]) {
   uint32_t length = 0;
-  for (int i = 0; i < ZET_STRING_PROPERTY_SIZE; i++) {
+  for (int i = 0; i < ZES_STRING_PROPERTY_SIZE; i++) {
     if (prop[i] == '\0') {
       break;
     } else {
@@ -59,21 +58,28 @@ TEST_F(
   for (auto device : devices) {
     auto properties = lzt::get_sysman_device_properties(device);
 
-    EXPECT_EQ(ZE_DEVICE_TYPE_GPU, properties.core.type);
-    if (properties.core.isSubdevice == true) {
-      EXPECT_LT(properties.core.subdeviceId, UINT32_MAX);
+    EXPECT_GE(ZE_DEVICE_TYPE_GPU, properties.core.type);
+    EXPECT_LE(ZE_DEVICE_TYPE_MCA, properties.core.type);
+    if (properties.core.flags <= ZE_DEVICE_PROPERTY_FLAG_INTEGRATED |
+        ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE | ZE_DEVICE_PROPERTY_FLAG_ECC |
+        ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
+      if (properties.core.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+        EXPECT_LT(properties.core.subdeviceId, UINT32_MAX);
+      } else {
+        EXPECT_EQ(0, properties.core.subdeviceId);
+      }
     } else {
-      EXPECT_EQ(0, properties.core.subdeviceId);
+      FAIL();
     }
     EXPECT_LE(get_prop_length(properties.serialNumber),
-              ZET_STRING_PROPERTY_SIZE);
+              ZES_STRING_PROPERTY_SIZE);
     EXPECT_LE(get_prop_length(properties.boardNumber),
-              ZET_STRING_PROPERTY_SIZE);
-    EXPECT_LE(get_prop_length(properties.brandName), ZET_STRING_PROPERTY_SIZE);
-    EXPECT_LE(get_prop_length(properties.modelName), ZET_STRING_PROPERTY_SIZE);
-    EXPECT_LE(get_prop_length(properties.vendorName), ZET_STRING_PROPERTY_SIZE);
+              ZES_STRING_PROPERTY_SIZE);
+    EXPECT_LE(get_prop_length(properties.brandName), ZES_STRING_PROPERTY_SIZE);
+    EXPECT_LE(get_prop_length(properties.modelName), ZES_STRING_PROPERTY_SIZE);
+    EXPECT_LE(get_prop_length(properties.vendorName), ZES_STRING_PROPERTY_SIZE);
     EXPECT_LE(get_prop_length(properties.driverVersion),
-              ZET_STRING_PROPERTY_SIZE);
+              ZES_STRING_PROPERTY_SIZE);
   }
 }
 
@@ -84,12 +90,20 @@ TEST_F(
     auto propertiesInitial = lzt::get_sysman_device_properties(device);
     auto propertiesLater = lzt::get_sysman_device_properties(device);
     EXPECT_EQ(propertiesInitial.core.type, propertiesLater.core.type);
-    EXPECT_EQ(propertiesInitial.core.isSubdevice,
-              propertiesLater.core.isSubdevice);
-    if (propertiesInitial.core.isSubdevice == true &&
-        propertiesLater.core.isSubdevice == true) {
-      EXPECT_EQ(propertiesInitial.core.subdeviceId,
-                propertiesLater.core.subdeviceId);
+    if (propertiesInitial.core.flags <= ZE_DEVICE_PROPERTY_FLAG_INTEGRATED |
+            ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE | ZE_DEVICE_PROPERTY_FLAG_ECC |
+            ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING &&
+        propertiesInitial.core.flags <= ZE_DEVICE_PROPERTY_FLAG_INTEGRATED |
+            ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE | ZE_DEVICE_PROPERTY_FLAG_ECC |
+            ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
+      EXPECT_EQ(propertiesInitial.core.flags, propertiesLater.core.flags);
+      if (propertiesInitial.core.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE &&
+          propertiesLater.core.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+        EXPECT_EQ(propertiesInitial.core.subdeviceId,
+                  propertiesLater.core.subdeviceId);
+      }
+    } else {
+      FAIL();
     }
     EXPECT_TRUE(0 ==
                 std::memcmp(propertiesInitial.serialNumber,
@@ -137,9 +151,10 @@ TEST_F(
     if (processes.size() > 0) {
       for (auto process : processes) {
         EXPECT_GT(process.processId, 0u);
-        EXPECT_GE(process.memSize, 0u);
-        EXPECT_GE(process.engines, 0);
-        EXPECT_LE(process.engines, (1 << ZET_ENGINE_TYPE_DMA));
+        EXPECT_GT(process.memSize, 0u);
+        EXPECT_LT(process.sharedSize, UINT64_MAX);
+        EXPECT_GE(process.engines, 1);
+        EXPECT_LE(process.engines, (1 << ZES_ENGINE_TYPE_FLAG_DMA));
       }
     }
   }
@@ -154,6 +169,19 @@ TEST_F(
     uint32_t testCount = actualCount + 1;
     lzt::get_processes_state(device, testCount);
     EXPECT_EQ(testCount, actualCount);
+  }
+}
+
+TEST_F(
+    SysmanDeviceTest,
+    GivenValidDeviceWhenRetrievingSysmanDeviceStateThenValidStateIsReturned) {
+  for (auto device : devices) {
+    auto state = lzt::get_device_state(device);
+    EXPECT_GE(state.reset, 0);
+    EXPECT_LE(state.reset,
+              ZES_RESET_REASON_FLAG_WEDGED | ZES_RESET_REASON_FLAG_REPAIR);
+    EXPECT_GE(state.repaired, ZES_REPAIR_STATUS_UNSUPPORTED);
+    EXPECT_LE(state.repaired, ZES_REPAIR_STATUS_PERFORMED);
   }
 }
 

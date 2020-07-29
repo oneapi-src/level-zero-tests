@@ -18,29 +18,11 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 
-uint32_t get_prop_length(int8_t *prop) {
-  return std::strlen(reinterpret_cast<char *>(prop));
-}
-
-uint32_t read_cksum_file(std::string &cksumFile) {
-  std::ifstream fs;
-  uint32_t val = 0;
-  fs.open(cksumFile.c_str());
-  if (fs.fail()) {
-    return -1;
-  }
-  fs >> val;
-  if (fs.fail()) {
-    fs.close();
-    return -1;
-  }
-  fs.close();
-  return val;
-}
+uint32_t get_prop_length(char *prop) { return std::strlen(prop); }
 
 class FirmwareTest : public lzt::SysmanCtsClass {};
 
@@ -88,9 +70,9 @@ TEST_F(
       if (properties.onSubdevice == true) {
         EXPECT_LT(properties.subdeviceId, UINT32_MAX);
       }
-      EXPECT_LT(get_prop_length(properties.name), ZET_STRING_PROPERTY_SIZE);
+      EXPECT_LT(get_prop_length(properties.name), ZES_STRING_PROPERTY_SIZE);
       EXPECT_GT(get_prop_length(properties.name), 0);
-      EXPECT_LT(get_prop_length(properties.stype), ZET_STRING_PROPERTY_SIZE);
+      EXPECT_LT(get_prop_length(properties.version), ZES_STRING_PROPERTY_SIZE);
     }
   }
 }
@@ -113,24 +95,10 @@ TEST_F(
       EXPECT_TRUE(0 ==
                   std::strcmp(reinterpret_cast<char *>(propertiesInitial.name),
                               reinterpret_cast<char *>(propertiesLater.name)));
-      EXPECT_TRUE(0 ==
-                  std::strcmp(reinterpret_cast<char *>(propertiesInitial.stype),
-                              reinterpret_cast<char *>(propertiesLater.stype)));
+      EXPECT_TRUE(
+          0 == std::strcmp(reinterpret_cast<char *>(propertiesInitial.version),
+                           reinterpret_cast<char *>(propertiesLater.version)));
       EXPECT_EQ(propertiesInitial.canControl, propertiesLater.canControl);
-    }
-  }
-}
-TEST_F(
-    FirmwareTest,
-    GivenValidFirmwareHandleWhenRetrievingFirmwareChecksumThenExpectValidIntegerType) {
-  for (auto device : devices) {
-    uint32_t count = 0;
-    auto firmwareHandles = lzt::get_firmware_handles(device, count);
-    for (auto firmwareHandle : firmwareHandles) {
-      ASSERT_NE(nullptr, firmwareHandle);
-      uint32_t cksum = lzt::get_firmware_checksum(firmwareHandle);
-      EXPECT_GE(cksum, 0);
-      EXPECT_LE(cksum, UINT32_MAX);
     }
   }
 }
@@ -154,19 +122,13 @@ TEST_F(FirmwareTest,
         std::string fwToLoad = fwDir + "/" + fwName;
         std::ifstream inFileStream(fwToLoad, std::ios::binary | std::ios::ate);
         ASSERT_EQ(true, inFileStream.is_open())
-            << "unable to find firnware image " << fwName;
+            << "unable to find firmware image " << fwName;
         testFwImage.resize(inFileStream.tellg());
         inFileStream.read(testFwImage.data(), testFwImage.size());
-        std::string fwToLoadCkSumFile = fwDir + "/" + fwName + ".cksum";
-        uint32_t fwToLoadCkSum = read_cksum_file(fwToLoadCkSumFile);
-        uint32_t originalFwImageCkSum =
-            lzt::get_firmware_checksum(firmwareHandle);
         EXPECT_TRUE(false) << "flashing firmware: " << fwName;
         lzt::flash_firmware(firmwareHandle,
                             static_cast<void *>(testFwImage.data()),
                             testFwImage.size());
-
-        EXPECT_EQ(fwToLoadCkSum, lzt::get_firmware_checksum(firmwareHandle));
       }
     }
   }

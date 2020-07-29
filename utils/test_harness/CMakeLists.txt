@@ -30,16 +30,16 @@ add_core_library(test_harness
     #"tools/sysman/src/test_harness_sysman_event.cpp"
     #"tools/sysman/src/test_harness_sysman_memory.cpp"
     #"tools/sysman/src/test_harness_sysman_fabric.cpp"
-    #"tools/sysman/src/test_harness_sysman_device.cpp"
+    "tools/sysman/src/test_harness_sysman_device.cpp"
     "tools/sysman/src/test_harness_sysman_psu.cpp"
     #"tools/sysman/src/test_harness_sysman_fan.cpp"
     "tools/sysman/src/test_harness_sysman_led.cpp"
     "tools/sysman/src/test_harness_sysman_ras.cpp"
     #"tools/sysman/src/test_harness_sysman_engine.cpp"
-    #"tools/sysman/src/test_harness_sysman_firmware.cpp"
+    "tools/sysman/src/test_harness_sysman_firmware.cpp"
     #"tools/sysman/src/test_harness_sysman_temp.cpp"
     #"tools/sysman/src/test_harness_sysman_overclocking.cpp"
-    #"tools/sysman/src/test_harness_sysman_scheduler.cpp"
+    "tools/sysman/src/test_harness_sysman_scheduler.cpp"
 
 )
 target_link_libraries(test_harness

@@ -8,66 +8,87 @@
 
 #include "test_harness/test_harness.hpp"
 
-#include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 #include "utils/utils.hpp"
 
 namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
-zet_sched_mode_t get_scheduler_current_mode(ze_device_handle_t hDevice) {
-  zet_sched_mode_t cur_mode;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(hDevice);
+uint32_t get_scheduler_handle_count(zes_device_handle_t device) {
+  uint32_t pCount = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanSchedulerGetCurrentMode(hSysman, &cur_mode));
+            zesDeviceEnumSchedulers(device, &pCount, nullptr));
+  EXPECT_GT(pCount, 0);
+  return pCount;
+}
+
+std::vector<zes_sched_handle_t>
+get_scheduler_handles(zes_device_handle_t device, uint32_t &pCount) {
+  if (pCount == 0)
+    pCount = get_scheduler_handle_count(device);
+  std::vector<zes_sched_handle_t> pSchedHandles(pCount, nullptr);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceEnumSchedulers(device, &pCount, pSchedHandles.data()));
+  return pSchedHandles;
+}
+
+zes_sched_mode_t get_scheduler_current_mode(zes_sched_handle_t hScheduler) {
+  zes_sched_mode_t cur_mode = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesSchedulerGetCurrentMode(hScheduler, &cur_mode));
   return cur_mode;
 }
 
-zet_sched_timeout_properties_t
-get_timeout_properties(ze_device_handle_t hDevice, ze_bool_t pDefault) {
-  zet_sched_timeout_properties_t properties;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(hDevice);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanSchedulerGetTimeoutModeProperties(
-                                   hSysman, pDefault, &properties));
+zes_sched_timeout_properties_t
+get_timeout_properties(zes_sched_handle_t hScheduler, ze_bool_t pDefault) {
+  zes_sched_timeout_properties_t properties = {
+      ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES, nullptr};
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesSchedulerGetTimeoutModeProperties(
+                                   hScheduler, pDefault, &properties));
   return properties;
 }
 
-zet_sched_timeslice_properties_t
-get_timeslice_properties(ze_device_handle_t hDevice, ze_bool_t pDefault) {
-  zet_sched_timeslice_properties_t properties;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(hDevice);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanSchedulerGetTimesliceModeProperties(
-                                   hSysman, pDefault, &properties));
+zes_sched_timeslice_properties_t
+get_timeslice_properties(zes_sched_handle_t hScheduler, ze_bool_t pDefault) {
+  zes_sched_timeslice_properties_t properties = {
+      ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES, nullptr};
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesSchedulerGetTimesliceModeProperties(
+                                   hScheduler, pDefault, &properties));
   return properties;
 }
 
-void set_timeout_mode(ze_device_handle_t hDevice,
-                      zet_sched_timeout_properties_t &properties) {
-  ze_bool_t reboot;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(hDevice);
+void set_timeout_mode(zes_sched_handle_t hScheduler,
+                      zes_sched_timeout_properties_t &properties) {
+  ze_bool_t reload = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanSchedulerSetTimeoutMode(hSysman, &properties, &reboot));
+            zesSchedulerSetTimeoutMode(hScheduler, &properties, &reload));
 }
 
-void set_timeslice_mode(ze_device_handle_t hDevice,
-                        zet_sched_timeslice_properties_t &properties) {
-  ze_bool_t reboot;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(hDevice);
+void set_timeslice_mode(zes_sched_handle_t hScheduler,
+                        zes_sched_timeslice_properties_t &properties) {
+  ze_bool_t reload = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanSchedulerSetTimesliceMode(hSysman, &properties, &reboot));
+            zesSchedulerSetTimesliceMode(hScheduler, &properties, &reload));
 }
 
-void set_exclusive_mode(ze_device_handle_t hDevice) {
-  ze_bool_t reboot;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(hDevice);
+void set_exclusive_mode(zes_sched_handle_t hScheduler) {
+  ze_bool_t reload = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanSchedulerSetExclusiveMode(hSysman, &reboot));
+            zesSchedulerSetExclusiveMode(hScheduler, &reload));
 }
 
-void set_compute_unit_debug_mode(ze_device_handle_t hDevice) {
-  ze_bool_t reboot;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(hDevice);
+void set_compute_unit_debug_mode(zes_sched_handle_t hScheduler) {
+  ze_bool_t reload = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanSchedulerSetComputeUnitDebugMode(hSysman, &reboot));
+            zesSchedulerSetComputeUnitDebugMode(hScheduler, &reload));
+}
+
+zes_sched_properties_t get_scheduler_properties(zes_sched_handle_t hScheduler) {
+  zes_sched_properties_t properties = {ZES_STRUCTURE_TYPE_SCHED_PROPERTIES,
+                                       nullptr};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesSchedulerGetProperties(hScheduler, &properties));
+  return properties;
 }
 } // namespace level_zero_tests

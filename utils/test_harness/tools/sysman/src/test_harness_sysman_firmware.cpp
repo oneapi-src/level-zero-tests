@@ -8,53 +8,42 @@
 
 #include "test_harness/test_harness.hpp"
 
-#include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 #include "utils/utils.hpp"
 
 namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
-uint32_t get_firmware_handle_count(ze_device_handle_t device) {
+uint32_t get_firmware_handle_count(zes_device_handle_t device) {
   uint32_t count = 0;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(device);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetSysmanFirmwareGet(hSysman, &count, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumFirmwares(device, &count, nullptr));
   return count;
 }
 
-std::vector<zet_sysman_firmware_handle_t>
-get_firmware_handles(ze_device_handle_t device, uint32_t &count) {
-  std::vector<zet_sysman_firmware_handle_t> firmwareHandles;
-  zet_sysman_handle_t hSysman = lzt::get_sysman_handle(device);
+std::vector<zes_firmware_handle_t>
+get_firmware_handles(zes_device_handle_t device, uint32_t &count) {
   if (count == 0) {
     count = get_firmware_handle_count(device);
   }
-  firmwareHandles.resize(count);
+  std::vector<zes_firmware_handle_t> firmwareHandles(count, nullptr);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanFirmwareGet(hSysman, &count, firmwareHandles.data()));
+            zesDeviceEnumFirmwares(device, &count, firmwareHandles.data()));
   EXPECT_EQ(firmwareHandles.size(), count);
   return firmwareHandles;
 }
 
-zet_firmware_properties_t
-get_firmware_properties(zet_sysman_firmware_handle_t firmwareHandle) {
-  zet_firmware_properties_t properties;
+zes_firmware_properties_t
+get_firmware_properties(zes_firmware_handle_t firmwareHandle) {
+  zes_firmware_properties_t properties = {
+      ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanFirmwareGetProperties(firmwareHandle, &properties));
+            zesFirmwareGetProperties(firmwareHandle, &properties));
   return properties;
 }
 
-uint32_t get_firmware_checksum(zet_sysman_firmware_handle_t firmwareHandle) {
-  uint32_t cksum;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanFirmwareGetChecksum(firmwareHandle, &cksum));
-  EXPECT_GE(cksum, 0);
-  EXPECT_LE(cksum, UINT32_MAX);
-  return cksum;
-}
-void flash_firmware(zet_sysman_firmware_handle_t firmwareHandle, void *fwImage,
+void flash_firmware(zes_firmware_handle_t firmwareHandle, void *fwImage,
                     uint32_t size) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetSysmanFirmwareFlash(firmwareHandle, fwImage, size));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesFirmwareFlash(firmwareHandle, fwImage, size));
 }
 } // namespace level_zero_tests
