@@ -41,22 +41,34 @@ TEST_F(
 
 class zeFenceTests : public ::testing::Test {
 public:
-  zeFenceTests() : cq(), cl() {
+  zeFenceTests() {
+    context_ = lzt::get_default_context();
+    device_ = lzt::zeDevice::get_instance()->get_device();
+    cmd_list_ = lzt::create_command_list(context_, device_, 0);
+    cmd_q_ = lzt::create_command_queue(context_, device_, 0,
+                                       ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                                       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
     ze_fence_desc_t descriptor = {};
     descriptor.stype = ZE_STRUCTURE_TYPE_FENCE_DESC;
 
     descriptor.pNext = nullptr;
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeFenceCreate(cq.command_queue_, &descriptor, &fence_));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceCreate(cmd_q_, &descriptor, &fence_));
     EXPECT_NE(nullptr, fence_);
   }
-  ~zeFenceTests() { EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceDestroy(fence_)); }
+  ~zeFenceTests() {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceDestroy(fence_));
+    lzt::destroy_command_queue(cmd_q_);
+    lzt::destroy_command_list(cmd_list_);
+    lzt::destroy_context(context_);
+  }
 
 protected:
   ze_fence_handle_t fence_ = nullptr;
-  lzt::zeCommandQueue cq;
-  lzt::zeCommandList cl;
+  ze_context_handle_t context_ = nullptr;
+  ze_device_handle_t device_ = nullptr;
+  ze_command_list_handle_t cmd_list_ = nullptr;
+  ze_command_queue_handle_t cmd_q_ = nullptr;
 };
 
 class zeFenceSynchronizeTests : public zeFenceTests,
@@ -69,22 +81,15 @@ TEST_P(zeFenceSynchronizeTests,
   const std::vector<int8_t> input = {72, 101, 108, 108, 111, 32,
                                      87, 111, 114, 108, 100, 33};
 
-  void *output_buffer = lzt::allocate_device_memory(input.size());
+  void *output_buffer =
+      lzt::allocate_device_memory(input.size(), 1, 0, 0, device_, context_);
 
-  lzt::append_memory_copy(cl.command_list_, output_buffer, input.data(),
-                          input.size(), nullptr);
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cl.command_list_));
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueExecuteCommandLists(cq.command_queue_, 1,
-                                              &cl.command_list_, fence_));
-
-  lzt::sync_fence(fence_, UINT32_MAX);
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceHostSynchronize(fence_, GetParam()));
-
-  lzt::free_memory(output_buffer);
+  lzt::append_memory_copy(cmd_list_, output_buffer, input.data(), input.size(),
+                          nullptr);
+  lzt::close_command_list(cmd_list_);
+  lzt::execute_command_lists(cmd_q_, 1, &cmd_list_, fence_);
+  lzt::sync_fence(fence_, GetParam());
+  lzt::free_memory(context_, output_buffer);
 }
 
 INSTANTIATE_TEST_CASE_P(FenceSyncParameterizedTest, zeFenceSynchronizeTests,
@@ -96,21 +101,16 @@ TEST_F(zeFenceSynchronizeTests,
   const std::vector<int8_t> input = {72, 101, 108, 108, 111, 32,
                                      87, 111, 114, 108, 100, 33};
 
-  void *output_buffer = lzt::allocate_device_memory(input.size());
+  void *output_buffer =
+      lzt::allocate_device_memory(input.size(), 1, 0, 0, device_, context_);
 
-  lzt::append_memory_copy(cl.command_list_, output_buffer, input.data(),
-                          input.size(), nullptr);
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cl.command_list_));
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueExecuteCommandLists(cq.command_queue_, 1,
-                                              &cl.command_list_, fence_));
-
+  lzt::append_memory_copy(cmd_list_, output_buffer, input.data(), input.size(),
+                          nullptr);
+  lzt::close_command_list(cmd_list_);
+  lzt::execute_command_lists(cmd_q_, 1, &cmd_list_, fence_);
   lzt::sync_fence(fence_, UINT32_MAX);
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceQueryStatus(fence_));
-  lzt::free_memory(output_buffer);
+  lzt::query_fence(fence_);
+  lzt::free_memory(context_, output_buffer);
 }
 
 TEST_F(zeFenceSynchronizeTests,
@@ -119,22 +119,17 @@ TEST_F(zeFenceSynchronizeTests,
   const std::vector<int8_t> input = {72, 101, 108, 108, 111, 32,
                                      87, 111, 114, 108, 100, 33};
 
-  void *output_buffer = lzt::allocate_device_memory(input.size());
+  void *output_buffer =
+      lzt::allocate_device_memory(input.size(), 1, 0, 0, device_, context_);
 
-  lzt::append_memory_copy(cl.command_list_, output_buffer, input.data(),
-                          input.size(), nullptr);
+  lzt::append_memory_copy(cmd_list_, output_buffer, input.data(), input.size(),
+                          nullptr);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cl.command_list_));
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueExecuteCommandLists(cq.command_queue_, 1,
-                                              &cl.command_list_, fence_));
-
+  lzt::close_command_list(cmd_list_);
+  lzt::execute_command_lists(cmd_q_, 1, &cmd_list_, fence_);
   lzt::sync_fence(fence_, UINT32_MAX);
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceReset(fence_));
-
-  lzt::free_memory(output_buffer);
+  lzt::reset_fence(fence_);
+  lzt::free_memory(context_, output_buffer);
 }
 
 TEST_F(zeFenceSynchronizeTests,
@@ -143,22 +138,18 @@ TEST_F(zeFenceSynchronizeTests,
   const std::vector<int8_t> input = {72, 101, 108, 108, 111, 32,
                                      87, 111, 114, 108, 100, 33};
 
-  void *output_buffer = lzt::allocate_device_memory(input.size());
+  void *output_buffer =
+      lzt::allocate_device_memory(input.size(), 1, 0, 0, device_, context_);
 
-  lzt::append_memory_copy(cl.command_list_, output_buffer, input.data(),
-                          input.size(), nullptr);
+  lzt::append_memory_copy(cmd_list_, output_buffer, input.data(), input.size(),
+                          nullptr);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cl.command_list_));
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueExecuteCommandLists(cq.command_queue_, 1,
-                                              &cl.command_list_, fence_));
-
+  lzt::close_command_list(cmd_list_);
+  lzt::execute_command_lists(cmd_q_, 1, &cmd_list_, fence_);
   lzt::sync_fence(fence_, UINT32_MAX);
   lzt::reset_fence(fence_);
-
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));
-  lzt::free_memory(output_buffer);
+  lzt::free_memory(context_, output_buffer);
 }
 
 class zeMultipleFenceTests : public lzt::zeEventPoolTests,
@@ -168,6 +159,7 @@ TEST_P(
     zeMultipleFenceTests,
     GivenMultipleCommandQueuesWhenFenceAndEventSetThenVerifyAllSignaledSuccessful) {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  ze_context_handle_t context = lzt::get_default_context();
   ze_device_properties_t properties;
 
   properties.pNext = nullptr;
@@ -184,25 +176,25 @@ TEST_P(
   const size_t size = 16;
   std::vector<ze_event_handle_t> host_to_dev_event(num_cmdq, nullptr);
   if (use_event) {
-    ep.InitEventPool(num_cmdq);
+    ep.InitEventPool(context, num_cmdq);
   }
   std::vector<ze_fence_handle_t> fence(num_cmdq, nullptr);
   std::vector<ze_command_queue_handle_t> cmdq(num_cmdq, nullptr);
   std::vector<ze_command_list_handle_t> cmdlist(num_cmdq, nullptr);
   std::vector<void *> buffer(num_cmdq, nullptr);
   std::vector<uint8_t> val(num_cmdq, 0);
-  ze_command_list_flag_t cmdlist_flag = static_cast<ze_command_list_flag_t>(0);
-  ze_command_queue_flag_t cmdq_flag = static_cast<ze_command_queue_flag_t>(0);
+  ze_command_list_flags_t cmdlist_flag = 0;
+  ze_command_queue_flags_t cmdq_flag = 0;
   uint32_t ordinal = 0;
 
   for (size_t i = 0; i < num_cmdq; i++) {
 
     cmdq[i] = lzt::create_command_queue(
-        device, cmdq_flag, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        context, device, cmdq_flag, ZE_COMMAND_QUEUE_MODE_DEFAULT,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal);
-    cmdlist[i] = lzt::create_command_list(device, cmdlist_flag);
+    cmdlist[i] = lzt::create_command_list(context, device, cmdlist_flag);
     fence[i] = lzt::create_fence(cmdq[i]);
-    buffer[i] = lzt::allocate_shared_memory(size);
+    buffer[i] = lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
     val[i] = static_cast<uint8_t>(i + 1);
 
     if (use_event) {
@@ -243,7 +235,8 @@ TEST_P(
     lzt::destroy_fence(fence[i]);
     lzt::destroy_command_queue(cmdq[i]);
     lzt::destroy_command_list(cmdlist[i]);
-    lzt::free_memory(buffer[i]);
+    lzt::free_memory(context, buffer[i]);
+    lzt::destroy_context(context);
   }
 }
 
