@@ -12,7 +12,7 @@
 
 int main(int argc, char **argv) {
 
-  ze_result_t result = zeInit(ZE_INIT_FLAG_NONE);
+  ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
     exit(1);
   }

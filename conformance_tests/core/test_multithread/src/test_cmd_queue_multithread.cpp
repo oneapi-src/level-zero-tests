@@ -149,8 +149,8 @@ INSTANTIATE_TEST_CASE_P(
                           ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
                           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
         ::testing::Values(ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-                          ZE_COMMAND_QUEUE_PRIORITY_LOW,
-                          ZE_COMMAND_QUEUE_PRIORITY_HIGH)));
+                          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW,
+                          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH)));
 
 class zeCreateDestroyMaxCommandQueueMultithreadTest : public ::testing::Test {};
 
@@ -165,7 +165,7 @@ TEST(
   auto properties = lzt::get_command_queue_group_properties(device);
   // TODO: adapt for different groups
   ASSERT_GT(properties.size(), 0);
-  size_t max_cmd_queues = static_cast<size_t>(properties[0].maxCommandQueues);
+  size_t max_cmd_queues = static_cast<size_t>(properties[0].numQueues);
 
   for (uint32_t i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(

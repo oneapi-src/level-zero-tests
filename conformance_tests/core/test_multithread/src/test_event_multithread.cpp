@@ -40,10 +40,11 @@ void ThreadEventCreate() {
     std::array<ze_event_handle_t, num_events> events;
     std::array<ze_event_desc_t, num_events> eventDesc;
     for (uint32_t j = 0; j < num_events; j++) {
-      eventDesc[j] = {.stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
-                      .index = j,
-                      .signal = ZE_EVENT_SCOPE_FLAG_NONE,
-                      .wait = ZE_EVENT_SCOPE_FLAG_HOST};
+      eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+      eventDesc[j].pNext = nullptr;
+      eventDesc[j].index = j;
+      eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
+      eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
       events[j] = lzt::create_event(event_pool, eventDesc[j]);
     }
     for (auto event : events) {
@@ -102,10 +103,11 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
     std::array<ze_event_desc_t, num_events> eventDesc;
     std::array<ze_command_list_handle_t, num_events> cmd_list;
     for (uint32_t j = 0; j < num_events; j++) {
-      eventDesc[j] = {.stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
-                      .index = j,
-                      .signal = ZE_EVENT_SCOPE_FLAG_NONE,
-                      .wait = ZE_EVENT_SCOPE_FLAG_HOST};
+      eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+      eventDesc[j].pNext = nullptr;
+      eventDesc[j].index = j;
+      eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
+      eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
       events[j] = lzt::create_event(event_pool, eventDesc[j]);
       cmd_list[j] = lzt::create_command_list();
     }
@@ -258,10 +260,11 @@ TEST(
   std::array<ze_event_handle_t, num_events> events;
   std::array<ze_event_desc_t, num_events> eventDesc;
   for (uint32_t j = 0; j < num_events; j++) {
-    eventDesc[j] = {.stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
-                    .index = j,
-                    .signal = ZE_EVENT_SCOPE_FLAG_NONE,
-                    .wait = ZE_EVENT_SCOPE_FLAG_HOST};
+    eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    eventDesc[j].pNext = nullptr;
+    eventDesc[j].index = j;
+    eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
     events[j] = lzt::create_event(event_pool, eventDesc[j]);
   }
 

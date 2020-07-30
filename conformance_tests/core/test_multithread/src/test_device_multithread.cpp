@@ -79,7 +79,7 @@ void device_thread_test(ze_driver_handle_t driver) {
     ASSERT_EQ(0, memcmp(&device_mem_access_props, &new_mem_access_props,
                         sizeof(device_mem_access_props)));
     auto new_cache_props = lzt::get_cache_properties(device);
-    ASSERT_EQ(device_cache_props.size(), &new_cache_props.size());
+    ASSERT_EQ(device_cache_props.size(), new_cache_props.size());
     auto new_image_props = lzt::get_image_properties(device);
     ASSERT_EQ(0, memcmp(&device_image_props, &new_image_props,
                         sizeof(device_image_props)));
