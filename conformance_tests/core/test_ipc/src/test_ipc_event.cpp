@@ -23,18 +23,14 @@ namespace bipc = boost::interprocess;
 namespace {
 
 static const ze_event_desc_t defaultEventDesc = {
-    .stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
-    .index = 5,
-    .signal = ZE_EVENT_SCOPE_FLAG_NONE,
-    .wait = ZE_EVENT_SCOPE_FLAG_HOST, // ensure memory coherency across device
-                                      // and Host after event signalled
+    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
+    ZE_EVENT_SCOPE_FLAG_HOST, // ensure memory coherency across device
+                              // and Host after event signalled
 };
 
 ze_event_pool_desc_t defaultEventPoolDesc = {
-    .stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
-    .flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
-                                    ZE_EVENT_POOL_FLAG_IPC),
-    .count = 10};
+    ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
+    (ZE_EVENT_POOL_FLAG_HOST_VISIBLE | ZE_EVENT_POOL_FLAG_IPC), 10};
 
 static lzt::zeEventPool get_event_pool(bool multi_device) {
   lzt::zeEventPool ep;

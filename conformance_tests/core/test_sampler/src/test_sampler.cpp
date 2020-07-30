@@ -43,7 +43,8 @@ TEST_P(zeDeviceCreateSamplerTests,
 
   ze_sampler_handle_t sampler = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeSamplerCreate(lzt::zeDevice::get_instance()->get_device(),
+            zeSamplerCreate(lzt::get_default_context(),
+                            lzt::zeDevice::get_instance()->get_device(),
                             &descriptor, &sampler));
   EXPECT_NE(nullptr, sampler);
 
@@ -85,7 +86,7 @@ static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image,
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
 
   image_description.pNext = nullptr;
-  image_description.flags = ZE_IMAGE_FLAG_PROGRAM_WRITE;
+  image_description.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
   image_description.type = ZE_IMAGE_TYPE_2D;
   image_description.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
   image_description.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;

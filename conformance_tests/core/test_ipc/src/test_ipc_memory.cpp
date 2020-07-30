@@ -26,7 +26,7 @@ namespace {
 #ifdef __linux__
 
 void run_parent(ze_context_handle_t context, int size) {
-  ze_result_t result = zeInit(ZE_INIT_FLAG_NONE);
+  ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -45,8 +45,7 @@ void run_parent(ze_context_handle_t context, int size) {
          sizeof(ipc_descriptor));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context, driver, device, ipc_handle,
-                               ZE_IPC_MEMORY_FLAG_NONE, &memory));
+            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &memory));
 
   void *buffer = lzt::allocate_host_memory(size);
   memset(buffer, 0, size);
@@ -58,7 +57,7 @@ void run_parent(ze_context_handle_t context, int size) {
   LOG_DEBUG << "[Server] Validating buffer received correctly";
   lzt::validate_data_pattern(buffer, size, 1);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverCloseMemIpcHandle(driver, memory));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
   lzt::free_memory(buffer);
   lzt::free_memory(memory);
   lzt::destroy_command_list(cl);
@@ -66,7 +65,7 @@ void run_parent(ze_context_handle_t context, int size) {
 }
 
 void run_child(ze_context_handle_t context, int size) {
-  ze_result_t result = zeInit(ZE_INIT_FLAG_NONE);
+  ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -88,8 +87,7 @@ void run_child(ze_context_handle_t context, int size) {
   lzt::execute_command_lists(cq, 1, &cl, nullptr);
   lzt::synchronize(cq, UINT32_MAX);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context, driver, memory, &ipc_handle));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
   lzt::send_ipc_handle(ipc_handle);
 
   lzt::free_memory(buffer);
@@ -102,7 +100,7 @@ TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   const auto size = 4096;
-  context = lzt::create_context();
+  auto context = lzt::create_context();
   pid_t pid = fork();
   if (pid < 0) {
     throw std::runtime_error("Failed to fork child process");
@@ -111,8 +109,7 @@ TEST(
   } else {
     run_child(context, size);
   }
-  wait();
-  lzt::destroy_context(context_);
+  lzt::destroy_context(context);
 }
 #endif
 

@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: MIT
  *
  */
+#include "gtest/gtest.h"
 
 #include <boost/asio.hpp>
 #include <boost/process.hpp>
@@ -12,7 +13,6 @@
 namespace fs = boost::filesystem;
 namespace bp = boost::process;
 
-#include "gtest/gtest.h"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
@@ -51,7 +51,7 @@ protected:
     lzt::allocate_mem_and_get_ipc_handle(context_, &ipc_mem_handle_, &memory_,
                                          ZE_MEMORY_TYPE_DEVICE);
 
-    ze_ipc_memory_flag_t flags = ZE_IPC_MEMORY_FLAG_TBD;
+    ze_ipc_memory_flags_t flags = 0;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeMemOpenIpcHandle(context_,
                                  lzt::zeDevice::get_instance()->get_device(),

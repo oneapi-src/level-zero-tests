@@ -21,18 +21,14 @@ namespace lzt = level_zero_tests;
 namespace bipc = boost::interprocess;
 
 static const ze_event_desc_t defaultEventDesc = {
-    .stype = ZE_STRUCTURE_TYPE_EVENT_DESC,
-    .index = 5,
-    .signal = ZE_EVENT_SCOPE_FLAG_NONE,
-    .wait = ZE_EVENT_SCOPE_FLAG_HOST, // ensure memory coherency across device
-                                      // and Host after event signalled
+    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
+    ZE_EVENT_SCOPE_FLAG_HOST, // ensure memory coherency across device
+                              // and Host after event signalled
 };
 
 ze_event_pool_desc_t defaultEventPoolDesc = {
-    .stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
-    .flags = (ze_event_pool_flag_t)(ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
-                                    ZE_EVENT_POOL_FLAG_IPC),
-    .count = 10};
+    ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
+    (ZE_EVENT_POOL_FLAG_HOST_VISIBLE | ZE_EVENT_POOL_FLAG_IPC), 10};
 
 static void child_host_reads(ze_event_pool_handle_t hEventPool) {
   ze_event_handle_t hEvent;
@@ -99,7 +95,7 @@ static void child_multi_device_reads(ze_event_pool_handle_t hEventPool) {
 int main() {
 
   ze_result_t result;
-  if (zeInit(ZE_INIT_FLAG_NONE) != ZE_RESULT_SUCCESS)
+  if (zeInit(0) != ZE_RESULT_SUCCESS)
     exit(1);
 
   shared_data_t shared_data;
@@ -109,7 +105,8 @@ int main() {
   bipc::mapped_region region(shm, bipc::read_only);
   std::memcpy(&shared_data, region.get_address(), sizeof(shared_data_t));
   ze_event_pool_handle_t hEventPool = 0;
-  lzt::open_ipc_event_handle(shared_data.hIpcEventPool, &hEventPool);
+  lzt::open_ipc_event_handle(lzt::get_default_context(),
+                             shared_data.hIpcEventPool, &hEventPool);
 
   if (!hEventPool)
     exit(1);
