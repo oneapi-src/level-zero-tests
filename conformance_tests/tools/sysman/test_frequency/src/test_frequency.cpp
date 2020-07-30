@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2020 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -14,8 +14,7 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 class FrequencyModuleTest : public lzt::SysmanCtsClass {};
@@ -76,7 +75,7 @@ TEST_F(FrequencyModuleTest,
     auto pFreqHandles = lzt::get_freq_handles(device, count);
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
-      zet_freq_state_t pState = lzt::get_freq_state(pFreqHandle);
+      zes_freq_state_t pState = lzt::get_freq_state(pFreqHandle);
       lzt::validate_freq_state(pFreqHandle, pState);
     }
   }
@@ -90,7 +89,7 @@ TEST_F(
     auto pFreqHandles = lzt::get_freq_handles(device, pCount);
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
-      zet_freq_range_t limits;
+      zes_freq_range_t limits = {};
       uint32_t count = 0;
       auto frequency = lzt::get_available_clocks(pFreqHandle, count);
       ASSERT_GT(frequency.size(), 0);
@@ -98,7 +97,7 @@ TEST_F(
       limits.max = frequency[1];
       lzt::set_freq_range(pFreqHandle, limits);
       lzt::idle_check(pFreqHandle);
-      zet_freq_state_t state = lzt::get_freq_state(pFreqHandle);
+      zes_freq_state_t state = lzt::get_freq_state(pFreqHandle);
       lzt::validate_freq_state(pFreqHandle, state);
       EXPECT_LE(state.actual, limits.max);
       EXPECT_GE(state.actual, limits.min);
@@ -170,11 +169,11 @@ TEST_F(
     auto pFreqHandles = lzt::get_freq_handles(device, count);
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
-      zet_freq_properties_t properties;
+      zes_freq_properties_t properties = {};
       properties = lzt::get_freq_properties(pFreqHandle);
-      if (properties.type == ZET_FREQ_DOMAIN_GPU)
+      if (properties.type == ZES_FREQ_DOMAIN_GPU)
         EXPECT_TRUE(properties.canControl);
-      else if (properties.type == ZET_FREQ_DOMAIN_MEMORY)
+      else if (properties.type == ZES_FREQ_DOMAIN_MEMORY)
         EXPECT_FALSE(properties.canControl);
       else
         FAIL();
@@ -184,17 +183,16 @@ TEST_F(
 
 TEST_F(
     FrequencyModuleTest,
-    GivenValidFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectPositiveFrequencyRangeAndSteps) {
+    GivenValidFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectPositiveFrequencyRange) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
-      zet_freq_properties_t properties;
+      zes_freq_properties_t properties = {};
       properties = lzt::get_freq_properties(pFreqHandle);
       EXPECT_GT(properties.max, 0);
       EXPECT_GT(properties.min, 0);
-      EXPECT_GT(properties.step, 0);
     }
   }
 }
@@ -208,7 +206,7 @@ TEST_F(
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
     }
-    std::vector<zet_freq_properties_t> properties(3);
+    std::vector<zes_freq_properties_t> properties(3);
 
     for (uint32_t i = 0; i < 3; i++)
       properties[i] = lzt::get_freq_properties(pFreqHandles[0]);
@@ -225,20 +223,19 @@ TEST_F(
                 properties[i].isThrottleEventSupported);
       EXPECT_EQ(properties[0].max, properties[i].max);
       EXPECT_EQ(properties[0].min, properties[i].min);
-      EXPECT_EQ(properties[0].step, properties[i].step);
     }
   }
 }
 
 TEST_F(
     FrequencyModuleTest,
-    GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzetSysmanFrequencyGetRangeToReturnSuccessOnMultipleCalls) {
+    GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnSuccessOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
-      zet_freq_range_t freqRange;
+      zes_freq_range_t freqRange = {};
       for (uint32_t i = 0; i < 3; i++)
         freqRange = lzt::get_freq_range(pFreqHandle);
     }
@@ -253,7 +250,7 @@ TEST_F(
     auto pFreqHandles = lzt::get_freq_handles(device, count);
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
-      std::vector<zet_freq_range_t> freqRangeToCompare;
+      std::vector<zes_freq_range_t> freqRangeToCompare;
       for (uint32_t i = 0; i < 3; i++)
         freqRangeToCompare.push_back(lzt::get_freq_range(pFreqHandle));
 
@@ -267,11 +264,11 @@ TEST_F(
 
 TEST_F(
     FrequencyModuleTest,
-    GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzetSysmanFrequencyGetRangeToReturnValidFrequencyRanges) {
+    GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnValidFrequencyRanges) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
-    zet_freq_range_t freqRange;
+    zes_freq_range_t freqRange = {};
     for (auto pFreqHandle : pFreqHandles)
       freqRange = lzt::get_and_validate_freq_range(pFreqHandle);
   }
@@ -286,7 +283,8 @@ TEST_F(
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
 
-      zet_freq_range_t freqRange, freqRangeReset;
+      zes_freq_range_t freqRange = {};
+      zes_freq_range_t freqRangeReset = {};
       uint32_t count = 0;
       auto frequency = lzt::get_available_clocks(*pFreqHandles.data(), count);
       ASSERT_GT(frequency.size(), 0);
@@ -310,7 +308,7 @@ TEST_F(
     }
   }
 }
-void load_for_gpu() {
+/*void load_for_gpu() {
   int m, k, n;
   m = k = n = 5000;
   std::vector<float> a(m * k, 1);
@@ -357,8 +355,8 @@ void load_for_gpu() {
   lzt::free_memory(c_buffer);
   lzt::destroy_module(module);
 }
-void get_throttle_time_init(zet_sysman_freq_handle_t pFreqHandle,
-                            zet_freq_throttle_time_t &throttletime) {
+void get_throttle_time_init(zes_sysman_freq_handle_t pFreqHandle,
+                            zes_freq_throttle_time_t &throttletime) {
   EXPECT_EQ(lzt::check_for_throttling(pFreqHandle), true);
   throttletime = lzt::get_throttle_time(pFreqHandle);
   EXPECT_GT(throttletime.throttleTime, 0);
@@ -376,15 +374,15 @@ TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
         auto pPowerHandles = lzt::get_power_handles(device, pcount);
         for (auto pPowerHandle : pPowerHandles) {
           EXPECT_NE(nullptr, pPowerHandle);
-          zet_power_sustained_limit_t power_sustained_limit_Initial;
+          zes_power_sustained_limit_t power_sustained_limit_Initial;
           lzt::get_power_limits(pPowerHandle, &power_sustained_limit_Initial,
                                 nullptr, nullptr);
-          zet_power_sustained_limit_t power_sustained_limit_set;
+          zes_power_sustained_limit_t power_sustained_limit_set;
           power_sustained_limit_set.power = 0;
           lzt::set_power_limits(pPowerHandle, &power_sustained_limit_set,
                                 nullptr, nullptr);
           auto before_throttletime = lzt::get_throttle_time(pFreqHandle);
-          zet_freq_throttle_time_t throttletime;
+          zes_freq_throttle_time_t throttletime;
           std::thread first(load_for_gpu);
           std::thread second(get_throttle_time_init, pFreqHandle,
                              std::ref(throttletime));
@@ -401,6 +399,6 @@ TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
       }
     }
   }
-}
+}*/
 
 } // namespace

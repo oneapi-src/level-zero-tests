@@ -14,8 +14,7 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 
@@ -82,14 +81,20 @@ TEST_F(
     for (auto memHandle : memHandles) {
       ASSERT_NE(nullptr, memHandle);
       auto properties = lzt::get_mem_properties(memHandle);
-      EXPECT_GE(properties.type, ZET_MEM_TYPE_HBM);
-      EXPECT_LE(properties.type, ZET_MEM_TYPE_SLM);
       if (properties.onSubdevice == true) {
         EXPECT_LT(properties.subdeviceId, UINT32_MAX);
       } else {
         EXPECT_EQ(0, properties.subdeviceId);
       }
       EXPECT_LT(properties.physicalSize, UINT64_MAX);
+      EXPECT_GE(properties.location, ZES_MEM_LOC_SYSTEM);
+      EXPECT_LE(properties.location, ZES_MEM_LOC_DEVICE);
+      EXPECT_LE(properties.busWidth, INT32_MAX);
+      EXPECT_GE(properties.busWidth, -1);
+      EXPECT_NE(properties.busWidth, 0);
+      EXPECT_LE(properties.numChannels, INT32_MAX);
+      EXPECT_GE(properties.numChannels, -1);
+      EXPECT_NE(properties.numChannels, 0);
     }
   }
 }
@@ -111,6 +116,9 @@ TEST_F(
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
       EXPECT_EQ(propertiesInitial.physicalSize, propertiesLater.physicalSize);
+      EXPECT_EQ(propertiesInitial.location, propertiesLater.location);
+      EXPECT_EQ(propertiesInitial.busWidth, propertiesLater.busWidth);
+      EXPECT_EQ(propertiesInitial.numChannels, propertiesLater.numChannels);
     }
   }
 }
@@ -140,11 +148,11 @@ TEST_F(MemoryModuleTest,
     for (auto memHandle : memHandles) {
       ASSERT_NE(nullptr, memHandle);
       auto state = lzt::get_mem_state(memHandle);
-      EXPECT_GE(state.health, ZET_MEM_HEALTH_OK);
-      EXPECT_LE(state.health, ZET_MEM_HEALTH_REPLACE);
+      EXPECT_GE(state.health, ZES_MEM_HEALTH_UNKNOWN);
+      EXPECT_LE(state.health, ZES_MEM_HEALTH_REPLACE);
       auto properties = lzt::get_mem_properties(memHandle);
-      EXPECT_LE(state.maxSize, properties.physicalSize);
-      EXPECT_LT(state.allocatedSize, state.maxSize);
+      EXPECT_LE(state.size, properties.physicalSize);
+      EXPECT_LE(state.free, state.size);
     }
   }
 }

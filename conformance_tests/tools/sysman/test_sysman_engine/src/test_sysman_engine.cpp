@@ -14,8 +14,7 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 
@@ -82,8 +81,8 @@ TEST_F(
     for (auto engineHandle : engineHandles) {
       ASSERT_NE(nullptr, engineHandle);
       auto properties = lzt::get_engine_properties(engineHandle);
-      EXPECT_GE(properties.type, ZET_ENGINE_GROUP_ALL);
-      EXPECT_LE(properties.type, ZET_ENGINE_GROUP_COPY_ALL);
+      EXPECT_GE(properties.type, ZES_ENGINE_GROUP_ALL);
+      EXPECT_LE(properties.type, ZES_ENGINE_GROUP_COPY_SINGLE);
       if (properties.onSubdevice == true) {
         EXPECT_LT(properties.subdeviceId, UINT32_MAX);
       } else {
