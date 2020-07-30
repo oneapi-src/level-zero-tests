@@ -39,7 +39,7 @@ protected:
     dev0 = devices[0];
     dev1 = devices[1];
     auto img_prop = lzt::get_image_properties(dev0);
-    if (img_prop.supported == false) {
+    if (!img_prop.maxReadImageArgs || !img_prop.maxWriteImageArgs) {
       LOG_INFO << "device does not support images, cannot run test";
       SUCCEED();
       skip = true;
@@ -47,7 +47,7 @@ protected:
     }
 
     img_prop = lzt::get_image_properties(dev1);
-    if (img_prop.supported == false) {
+    if (!img_prop.maxReadImageArgs || !img_prop.maxWriteImageArgs) {
       LOG_INFO << "device does not support images, cannot run test";
       SUCCEED();
       skip = true;
@@ -61,7 +61,7 @@ protected:
 
     ze_image_desc_t img_desc = {};
     img_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-    img_desc.flags = ZE_IMAGE_FLAG_PROGRAM_READ;
+    img_desc.flags = 0;
     img_desc.type = ZE_IMAGE_TYPE_2D;
     img_desc.format = {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
                        ZE_IMAGE_FORMAT_TYPE_UNORM,
@@ -85,9 +85,9 @@ protected:
 
     ze_event_pool_desc_t ep_desc = {};
     ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-    ep_desc.flags = ZE_EVENT_POOL_FLAG_DEFAULT;
+    ep_desc.flags = 0;
     ep_desc.count = 10;
-    ep = lzt::create_event_pool(ep_desc, devices);
+    ep = lzt::create_event_pool(lzt::get_default_context(), ep_desc, devices);
   }
 
   void TearDown() override {
@@ -228,13 +228,13 @@ TEST_P(P2PImageCopyMemory,
   void *target_mem;
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
   if (GetParam() == ZE_MEMORY_TYPE_DEVICE) {
-    ze_device_mem_alloc_flag_t d_flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-    ze_host_mem_alloc_flag_t h_flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
+    ze_device_mem_alloc_flags_t d_flags = 0;
+    ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
-                                             lzt::get_default_driver());
+                                             lzt::get_default_context());
   } else {
-    ze_device_mem_alloc_flag_t d_flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-    ze_host_mem_alloc_flag_t h_flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
+    ze_device_mem_alloc_flags_t d_flags = 0;
+    ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem =
         lzt::allocate_shared_memory(mem_size, 1, d_flags, h_flags, dev1);
   }
@@ -284,13 +284,13 @@ TEST_P(P2PImageCopyMemory,
   void *target_mem;
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
   if (GetParam() == ZE_MEMORY_TYPE_DEVICE) {
-    ze_device_mem_alloc_flag_t d_flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-    ze_host_mem_alloc_flag_t h_flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
+    ze_device_mem_alloc_flags_t d_flags = 0;
+    ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
-                                             lzt::get_default_driver());
+                                             lzt::get_default_context());
   } else {
-    ze_device_mem_alloc_flag_t d_flags = ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT;
-    ze_host_mem_alloc_flag_t h_flags = ZE_HOST_MEM_ALLOC_FLAG_DEFAULT;
+    ze_device_mem_alloc_flags_t d_flags = 0;
+    ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem =
         lzt::allocate_shared_memory(mem_size, 1, d_flags, h_flags, dev1);
   }

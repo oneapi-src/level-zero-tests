@@ -114,7 +114,7 @@ protected:
     function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
 
     function_description.pNext = nullptr;
-    function_description.flags = ZE_KERNEL_FLAG_NONE;
+    function_description.flags = 0;
     function_description.pKernelName = name.c_str();
     ze_kernel_handle_t function = nullptr;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -226,20 +226,18 @@ protected:
     dev_access_[0].kernel_add_val = 10;
     if (memory_type_ == ZE_MEMORY_TYPE_DEVICE) {
       dev_access_[0].device_mem_remote = lzt::allocate_device_memory(
-          (num * sizeof(int)), 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
+          (num * sizeof(int)), 1, 0,
           dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev,
-          dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev_grp);
+          lzt::get_default_context());
     } else if (memory_type_ == ZE_MEMORY_TYPE_SHARED) {
       dev_access_[0].device_mem_remote = lzt::allocate_shared_memory(
-          (num * sizeof(int)), 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-          ZE_HOST_MEM_ALLOC_FLAG_DEFAULT,
+          (num * sizeof(int)), 1, 0, 0,
           dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev);
     } else {
       FAIL() << "Unexpected memory type";
     }
     dev_access_[0].shared_mem = lzt::allocate_shared_memory(
-        (num * sizeof(int)), 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, dev_access_[0].dev);
+        (num * sizeof(int)), 1, 0, 0, dev_access_[0].dev);
     memset(dev_access_[0].shared_mem, 0xff, num * sizeof(int));
     dev_access_[0].module = lzt::create_module(dev_access_[0].dev, module_path);
     if (type == CONCURRENT) {
@@ -361,16 +359,16 @@ TEST_P(zeP2PMemAccessTestsAtomicAccess,
     for (uint32_t j = i + 1; j < dev_access_scan_.size(); j++) {
       dev_p2p_properties = lzt::get_p2p_properties(dev_access_scan_[i].dev,
                                                    dev_access_scan_[j].dev);
-      if ((dev_p2p_properties.accessSupported == true) &&
-          (dev_p2p_properties.atomicsSupported == true)) {
+      if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
+          (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS)) {
         dev_access_.push_back(dev_access_scan_[i]);
         dev_access_.push_back(dev_access_scan_[j]);
         break;
       }
       dev_p2p_properties = lzt::get_p2p_properties(dev_access_scan_[j].dev,
                                                    dev_access_scan_[i].dev);
-      if ((dev_p2p_properties.accessSupported == true) &&
-          (dev_p2p_properties.atomicsSupported == true)) {
+      if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
+          (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS)) {
         dev_access_.push_back(dev_access_scan_[j]);
         dev_access_.push_back(dev_access_scan_[i]);
         break;
@@ -429,7 +427,7 @@ TEST_P(zeP2PMemAccessTestsConcurrentAccess,
                                 dev_access_scan_[i].dev) &&
            (dev_access_scan_[i]
                 .dev_mem_access_properties.deviceAllocCapabilities &
-            ZE_MEMORY_CONCURRENT_ACCESS == ZE_MEMORY_CONCURRENT_ACCESS))) {
+            ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT))) {
         dev_access_.push_back(dev_access_scan_[j]);
         dev_access_.push_back(dev_access_scan_[i]);
         concurrent_index = i;
@@ -502,12 +500,11 @@ TEST_P(
     for (uint32_t j = i + 1; j < dev_access_scan_.size(); j++) {
       dev_p2p_properties = lzt::get_p2p_properties(dev_access_scan_[j].dev,
                                                    dev_access_scan_[i].dev);
-      if ((dev_p2p_properties.accessSupported == true) &&
-          (dev_p2p_properties.atomicsSupported == true) &&
+      if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
+          (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS) &&
           (dev_access_scan_[i]
                .dev_mem_access_properties.deviceAllocCapabilities &
-           ZE_MEMORY_CONCURRENT_ATOMIC_ACCESS ==
-               ZE_MEMORY_CONCURRENT_ATOMIC_ACCESS)) {
+           ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC)) {
         dev_access_.push_back(dev_access_scan_[j]);
         dev_access_.push_back(dev_access_scan_[i]);
         concurrent_index = i;
@@ -533,8 +530,8 @@ TEST_P(
     }
     dev_p2p_properties = lzt::get_p2p_properties(
         dev_access_scan_[i].dev, dev_access_scan_[concurrent_index].dev);
-    if ((dev_p2p_properties.accessSupported == true) &&
-        (dev_p2p_properties.atomicsSupported == true)) {
+    if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
+        (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS)) {
       dev_access_.insert(dev_access_.begin(), dev_access_scan_[i]);
     }
   }

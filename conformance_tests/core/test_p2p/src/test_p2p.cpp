@@ -27,27 +27,25 @@ protected:
   void SetUp() override {
     ze_memory_type_t memory_type = GetParam();
     ze_bool_t can_access;
-    auto drivers = lzt::get_all_driver_handles();
-    ASSERT_GT(drivers.size(), 0);
-    auto devices = lzt::get_ze_devices(drivers[0]);
+    auto driver = lzt::get_default_driver();
+    auto context = lzt::get_default_context();
+    auto devices = lzt::get_ze_devices(driver);
 
     for (auto device : devices) {
       DevInstance instance;
 
       instance.dev = device;
-      instance.dev_grp = drivers[0];
+      instance.dev_grp = driver;
       if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
-        instance.src_region = lzt::allocate_device_memory(
-            mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, device, drivers[0]);
-        instance.dst_region = lzt::allocate_device_memory(
-            mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, device, drivers[0]);
+        instance.src_region =
+            lzt::allocate_device_memory(mem_size_, 1, 0, device, context);
+        instance.dst_region =
+            lzt::allocate_device_memory(mem_size_, 1, 0, device, context);
       } else if (memory_type == ZE_MEMORY_TYPE_SHARED) {
-        instance.src_region = lzt::allocate_shared_memory(
-            mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
-        instance.dst_region = lzt::allocate_shared_memory(
-            mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-            ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device);
+        instance.src_region =
+            lzt::allocate_shared_memory(mem_size_, 1, 0, 0, device);
+        instance.dst_region =
+            lzt::allocate_shared_memory(mem_size_, 1, 0, 0, device);
       } else {
         FAIL() << "Unexpected memory type";
       }
@@ -62,20 +60,16 @@ protected:
         sub_device_instance.dev = sub_device;
         sub_device_instance.dev_grp = instance.dev_grp;
         if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
-          sub_device_instance.src_region = lzt::allocate_device_memory(
-              mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, sub_device,
-              instance.dev_grp);
-          sub_device_instance.dst_region = lzt::allocate_device_memory(
-              mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT, sub_device,
-              instance.dev_grp);
+          sub_device_instance.src_region =
+              lzt::allocate_device_memory(mem_size_, 1, 0, sub_device, context);
+          sub_device_instance.dst_region =
+              lzt::allocate_device_memory(mem_size_, 1, 0, sub_device, context);
 
         } else if (memory_type == ZE_MEMORY_TYPE_SHARED) {
-          sub_device_instance.src_region = lzt::allocate_shared_memory(
-              mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-              ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, sub_device);
-          sub_device_instance.dst_region = lzt::allocate_shared_memory(
-              mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-              ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, sub_device);
+          sub_device_instance.src_region =
+              lzt::allocate_shared_memory(mem_size_, 1, 0, 0, sub_device);
+          sub_device_instance.dst_region =
+              lzt::allocate_shared_memory(mem_size_, 1, 0, 0, sub_device);
 
         } else {
           FAIL() << "Unexpected memory type";
@@ -167,9 +161,8 @@ TEST_P(
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
       continue;
     }
-    uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
-        mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, dev_instance_[i].dev));
+    uint8_t *shr_mem = static_cast<uint8_t *>(
+        lzt::allocate_shared_memory(mem_size_, 1, 0, 0, dev_instance_[i].dev));
     uint8_t value = rand() & 0xff;
 
     // Set memory region on device i - 1 and copy to device i
@@ -560,9 +553,8 @@ TEST_P(zeP2PTests,
     }
     ze_module_handle_t module =
         lzt::create_module(dev_instance_[i - 1].dev, module_name);
-    uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
-        mem_size_, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, dev_instance_[i].dev));
+    uint8_t *shr_mem = static_cast<uint8_t *>(
+        lzt::allocate_shared_memory(mem_size_, 1, 0, 0, dev_instance_[i].dev));
 
     // random memory region on device i. Allow "space" for increment.
     uint8_t value = rand() & 0x7f;

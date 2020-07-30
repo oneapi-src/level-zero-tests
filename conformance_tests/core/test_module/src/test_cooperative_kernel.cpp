@@ -28,7 +28,7 @@ TEST_P(
   ze_module_handle_t module = nullptr;
   ze_kernel_handle_t kernel = nullptr;
   auto device = lzt::zeDevice::get_instance()->get_device();
-  ze_command_queue_flag_t flags = 0;
+  ze_command_queue_flags_t flags = 0;
   auto mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
   auto priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
   int ordinal = -1;

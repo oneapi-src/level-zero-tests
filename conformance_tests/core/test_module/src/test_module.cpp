@@ -89,6 +89,7 @@ create_module_vector(ze_device_handle_t device,
 }
 class zeModuleCreateTests : public ::testing::Test {};
 
+// TODO: Dynamically Link module for these tests to be valid
 TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerThenPointerPointsToValidGlobalVariable) {
@@ -103,9 +104,9 @@ TEST_F(
 
   for (auto mod : module) {
     global_pointer = nullptr;
-    ASSERT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeModuleGetGlobalPointer(mod, global_name.c_str(), &global_pointer));
+    ASSERT_EQ(ZE_RESULT_SUCCESS,
+              zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
+                                       &global_pointer));
     EXPECT_NE(nullptr, global_pointer);
     typed_global_pointer = static_cast<int *>(global_pointer);
     EXPECT_EQ(expected_value, *typed_global_pointer);
@@ -129,9 +130,9 @@ TEST_F(
 
     for (int i = 0; i < 5; ++i) {
       current_pointer = nullptr;
-      ASSERT_EQ(
-          ZE_RESULT_SUCCESS,
-          zeModuleGetGlobalPointer(mod, global_name.c_str(), &current_pointer));
+      ASSERT_EQ(ZE_RESULT_SUCCESS,
+                zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
+                                         &current_pointer));
       EXPECT_NE(nullptr, current_pointer);
 
       if (i > 0) {
@@ -159,9 +160,9 @@ TEST_F(
     for (int i = 0; i < global_count; ++i) {
       std::string global_name = "global_" + std::to_string(i);
       global_pointer = nullptr;
-      ASSERT_EQ(
-          ZE_RESULT_SUCCESS,
-          zeModuleGetGlobalPointer(mod, global_name.c_str(), &global_pointer));
+      ASSERT_EQ(ZE_RESULT_SUCCESS,
+                zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
+                                         &global_pointer));
       EXPECT_NE(nullptr, global_pointer);
 
       typed_global_pointer = static_cast<int *>(global_pointer);
@@ -186,9 +187,9 @@ TEST_F(
 
   for (auto mod : module) {
     global_pointer = nullptr;
-    ASSERT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeModuleGetGlobalPointer(mod, global_name.c_str(), &global_pointer));
+    ASSERT_EQ(ZE_RESULT_SUCCESS,
+              zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
+                                       &global_pointer));
     EXPECT_NE(nullptr, global_pointer);
     typed_global_pointer = static_cast<int *>(global_pointer);
     EXPECT_EQ(expected_initial_value, *typed_global_pointer);
@@ -213,10 +214,11 @@ TEST_F(
   lzt::free_memory(buff);
   lzt::destroy_module(module);
   uint32_t specConstantsNum = 3;
-  uint64_t specConstantsValues[] = {20, 40, 80};
+  const uint64_t val_1 = 20, val_2 = 40, val_3 = 80;
+  const uint64_t *specConstantsValues[] = {&val_1, &val_2, &val_3};
   uint32_t specConstantsIDs[] = {0, 1, 3};
   ze_module_constants_t specConstants{specConstantsNum, specConstantsIDs,
-                                      specConstantsValues};
+                                      (const void **)specConstantsValues};
   ze_module_desc_t module_description = {};
   module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   ze_module_handle_t module_spec;
@@ -232,7 +234,8 @@ TEST_F(
   module_description.pConstants = &specConstants;
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleCreate(device, &module_description, &module_spec, nullptr));
+            zeModuleCreate(lzt::get_default_context(), device,
+                           &module_description, &module_spec, nullptr));
   kernel_name = "test";
   void *buff_spec = lzt::allocate_host_memory(sizeof(uint64_t));
   lzt::create_and_execute_function(device, module_spec, kernel_name, 1,
@@ -322,7 +325,8 @@ TEST_F(
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = nullptr;
   EXPECT_EQ(ZE_RESULT_ERROR_MODULE_BUILD_FAILURE,
-            zeModuleCreate(device, &module_description, &module_error,
+            zeModuleCreate(lzt::get_default_context(), device,
+                           &module_description, &module_error,
                            &build_log_error));
   EXPECT_EQ(nullptr, module_error);
   build_log_size = lzt::get_build_log_size(build_log_error);
@@ -386,22 +390,16 @@ protected:
                              8, 9, 10, 11, 12, 13, 14, 15};
     std::vector<int> inpb = {1, 2,  3,  4,  5,  6,  7,  8,
                              9, 10, 11, 12, 13, 14, 15, 16};
-    void *args_buff =
-        lzt::allocate_shared_memory(2 * sizeof(ze_group_count_t), sizeof(int),
-                                    ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                    ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_);
+    void *args_buff = lzt::allocate_shared_memory(2 * sizeof(ze_group_count_t),
+                                                  sizeof(int), 0, 0, device_);
     void *actual_launch = lzt::allocate_shared_memory(
-        sizeof(uint32_t), sizeof(uint32_t), ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_);
-    void *input_a = lzt::allocate_shared_memory(
-        16 * sizeof(int), 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_);
-    void *mult_out = lzt::allocate_shared_memory(
-        16 * sizeof(int), 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_);
-    void *mult_in = lzt::allocate_shared_memory(
-        16 * sizeof(int), 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-        ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_);
+        sizeof(uint32_t), sizeof(uint32_t), 0, 0, device_);
+    void *input_a =
+        lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
+    void *mult_out =
+        lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
+    void *mult_in =
+        lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
     void *host_buff = lzt::allocate_host_memory(sizeof(int));
     int *host_addval_offset = static_cast<int *>(host_buff);
 
@@ -439,7 +437,6 @@ protected:
     EXPECT_EQ(kernel_properties.requiredGroupSizeY, group_size_y);
     EXPECT_EQ(kernel_properties.requiredGroupSizeZ, group_size_z);
     EXPECT_EQ(kernel_properties.numKernelArgs, 2);
-    EXPECT_STREQ(kernel_properties.name, "module_add_constant");
 
     ze_event_handle_t signal_event = nullptr;
     uint32_t num_wait = 0;
@@ -572,8 +569,7 @@ TEST_F(zeKernelCreateTests,
   ze_kernel_handle_t function;
 
   for (auto mod : module_) {
-    function =
-        lzt::create_function(mod, ZE_KERNEL_FLAG_NONE, "module_add_constant");
+    function = lzt::create_function(mod, 0, "module_add_constant");
     lzt::destroy_function(function);
     function = lzt::create_function(mod, ZE_KERNEL_FLAG_FORCE_RESIDENCY,
                                     "module_add_two_arrays");
@@ -590,8 +586,7 @@ TEST_F(zeKernelCreateTests,
   uint32_t z;
 
   for (auto mod : module_) {
-    function =
-        lzt::create_function(mod, ZE_KERNEL_FLAG_NONE, "module_add_constant");
+    function = lzt::create_function(mod, 0, "module_add_constant");
     dev_compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeDeviceGetComputeProperties(device_, &dev_compute_properties));
@@ -634,8 +629,7 @@ TEST_F(zeKernelCreateTests,
   uint32_t group_size_z;
 
   for (auto mod : module_) {
-    function =
-        lzt::create_function(mod, ZE_KERNEL_FLAG_NONE, "module_add_constant");
+    function = lzt::create_function(mod, 0, "module_add_constant");
     dev_compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeDeviceGetComputeProperties(device_, &dev_compute_properties));
@@ -673,12 +667,8 @@ TEST_F(zeKernelCreateTests,
 TEST_F(zeKernelCreateTests,
        GivenValidFunctionWhenSettingArgumentsThenReturnSuccessful) {
 
-  void *input_a =
-      lzt::allocate_shared_memory(16, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                  ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_);
-  void *input_b =
-      lzt::allocate_shared_memory(16, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-                                  ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, device_);
+  void *input_a = lzt::allocate_shared_memory(16, 1, 0, 0, device_);
+  void *input_b = lzt::allocate_shared_memory(16, 1, 0, 0, device_);
   const int addval = 10;
   int *input_a_int = static_cast<int *>(input_a);
   int *input_b_int = static_cast<int *>(input_b);
@@ -730,7 +720,6 @@ TEST_F(
     EXPECT_LE(kernel_properties.requiredGroupSizeZ,
               dev_compute_properties.maxGroupCountZ);
 
-    LOG_INFO << "Kernel Name = " << kernel_properties.name;
     LOG_INFO << "Num of Arguments = " << kernel_properties.numKernelArgs;
     LOG_INFO << "Group Size in X dim = "
              << kernel_properties.requiredGroupSizeX;
@@ -743,68 +732,17 @@ TEST_F(
 }
 
 TEST_F(zeKernelCreateTests,
-       GivenValidFunctionWhenGettingAttributeThenReturnDefaultAttribute) {
-  ze_kernel_handle_t function;
-  std::vector<ze_kernel_attribute_t> boolean_attribute = {
-      ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS,
-      ZE_KERNEL_ATTR_INDIRECT_DEVICE_ACCESS,
-      ZE_KERNEL_ATTR_INDIRECT_SHARED_ACCESS};
-
-  for (auto mod : module_) {
-    function = lzt::create_function(mod, "module_add_attr");
-    uint32_t size = sizeof(bool);
-    for (auto attr : boolean_attribute) {
-      bool attrValue = true;
-      lzt::get_kernel_attribute(function, attr, &size, &attrValue);
-      EXPECT_EQ(attrValue, false);
-    }
-    lzt::destroy_function(function);
-  }
-}
-
-TEST_F(zeKernelCreateTests,
        GivenValidFunctionWhenGettingSourceAttributeThenReturnAttributeString) {
   ze_kernel_handle_t function;
   std::string kernel_source_attr = "work_group_size_hint(1,1,1)";
   kernel_source_attr.push_back('\0');
   for (auto mod : module_) {
     function = lzt::create_function(mod, "module_add_attr");
-    uint32_t size = lzt::get_kernel_source_attribute_size(function);
-    std::vector<char> get_kernel_attr(size);
-    lzt::get_kernel_attribute(function, ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE, &size,
-                              get_kernel_attr.data());
-    std::string get_source_attr =
-        std::string(get_kernel_attr.begin(), get_kernel_attr.end());
+    char *get_source_attr_char = lzt::get_kernel_source_attribute(function);
+    auto get_source_attr = std::string(get_source_attr_char);
     EXPECT_EQ(0, get_source_attr.compare(kernel_source_attr));
     lzt::destroy_function(function);
-  }
-}
-
-TEST_F(zeKernelCreateTests,
-       GivenValidFunctionWhenSettingAttributeThenGetSameAttributeValue) {
-
-  ze_kernel_handle_t function;
-
-  for (auto mod : module_) {
-    function = lzt::create_function(mod, "module_add_attr");
-    bool trueValue = true;
-    bool falseValue = false;
-    uint32_t size = sizeof(bool);
-    std::vector<ze_kernel_attribute_t> boolean_attribute = {
-        ZE_KERNEL_ATTR_INDIRECT_HOST_ACCESS,
-        ZE_KERNEL_ATTR_INDIRECT_DEVICE_ACCESS,
-        ZE_KERNEL_ATTR_INDIRECT_SHARED_ACCESS};
-    // zeKernelSetAttribute does not apply to ZE_KERNEL_ATTR_SOURCE_ATTRIBUTE
-    for (auto attr : boolean_attribute) {
-      bool attrValue;
-      lzt::set_kernel_attribute(function, attr, size, &trueValue);
-      lzt::get_kernel_attribute(function, attr, &size, &attrValue);
-      EXPECT_EQ(attrValue, trueValue);
-      lzt::set_kernel_attribute(function, attr, size, &falseValue);
-      lzt::get_kernel_attribute(function, attr, &size, &attrValue);
-      EXPECT_EQ(attrValue, falseValue);
-    }
-    lzt::destroy_function(function);
+    free(get_source_attr_char);
   }
 }
 

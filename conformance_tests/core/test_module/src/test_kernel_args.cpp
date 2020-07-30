@@ -53,8 +53,7 @@ static ze_image_handle_t create_2d_uint_test_image(int width, int height) {
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8;
 
   image_description.pNext = nullptr;
-  image_description.flags = (ze_image_flag_t)(ZE_IMAGE_FLAG_PROGRAM_WRITE |
-                                              ZE_IMAGE_FLAG_PROGRAM_READ);
+  image_description.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
   image_description.type = ZE_IMAGE_TYPE_2D;
   image_description.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
   image_description.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
@@ -68,7 +67,8 @@ static ze_image_handle_t create_2d_uint_test_image(int width, int height) {
   ze_image_handle_t image = nullptr;
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::zeDevice::get_instance()->get_device(),
+            zeImageCreate(lzt::get_default_context(),
+                          lzt::zeDevice::get_instance()->get_device(),
                           &image_description, &image));
 
   return image;

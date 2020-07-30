@@ -69,7 +69,7 @@ void create_and_execute_function(ze_device_handle_t device,
                                  std::string func_name, int group_size,
                                  const std::vector<FunctionArg> &args);
 
-uint32_t get_kernel_source_attribute_size(ze_kernel_handle_t hKernel);
+char *get_kernel_source_attribute(ze_kernel_handle_t hKernel);
 
 } // namespace level_zero_tests
 
