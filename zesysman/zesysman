@@ -658,6 +658,8 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             p["burst"] = { "enabled" : True, "power" : 150000 }
             p["peak"] = { "powerAC" : 120000, "powerDC" : 90000 }
             p["counter"] = { "energy" : 0, "timestamp" : 0 }
+            items = zes_pwr_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_pwr_handle(0)
         else:
             raise ValueError(uint32_value(count_ptr))
     def stubPowerGetProperties(pwr, pwrProps):
@@ -2507,7 +2509,7 @@ def main():
                             pass
                         else:
                             clockFreqs = double_array(clockCount.value())
-                            zeCall(zesFrequencyGetAvailableClocks, freq, clockCount.cast(), clockFreqs)
+                            zeCall(zesFrequencyGetAvailableClocks, freq, clockCount.cast(), clockFreqs.cast())
                         for clk in range(clockCount.value()):
                             clockFreq = clockFreqs[clk]
                             Node(availFreqsNode, "AvailableFrequency", "%.1f" % clockFreq, ("Units", "MHz"))
@@ -3095,13 +3097,13 @@ def main():
 
         schedModeCount = uint32_ptr()
         try:
-            call(zesSchedulerGetSupportedModes, device, schedModeCount, None)
+            call(zesSchedulerGetSupportedModes, device, schedModeCount.cast(), None)
         except:
             pass
         else:
             # %array_class(zes_sched_handle_t, zes_sched_handle_array);
             modes = zes_sched_mode_array(schedModeCount.value())
-            call(zesSchedulerGetSupportedModes, device, schedModeCount, modes)
+            call(zesSchedulerGetSupportedModes, device, schedModeCount.cast(), modes.cast())
 
         schedModes = []
         for i in range(schedModeCount.value()):
@@ -3216,7 +3218,7 @@ def main():
                     except ValueError:
                         reportZeException()
                     else:
-                        tests = zes_diag_test_array(diagCount.value())
+                        tests = zes_diag_test_array(testCount.value())
                         zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests.cast())
 
                     for t in range(testCount.value()):
