@@ -18,7 +18,7 @@ uint32_t get_temp_handle_count(ze_device_handle_t device) {
   uint32_t count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zesDeviceEnumTemperatureSensors(device, &count, nullptr));
-  EXPECT_GT(count, 0);
+  EXPECT_GE(count, 0);
   return count;
 }
 std::vector<zes_temp_handle_t> get_temp_handles(ze_device_handle_t device,

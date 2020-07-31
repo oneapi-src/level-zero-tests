@@ -19,7 +19,7 @@ uint32_t get_ras_handles_count(zes_device_handle_t device) {
   uint32_t count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zesDeviceEnumRasErrorSets(device, &count, nullptr));
-  EXPECT_GT(count, 0);
+  EXPECT_GE(count, 0);
   return count;
 }
 

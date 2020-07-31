@@ -151,7 +151,7 @@ TEST_F(
     if (processes.size() > 0) {
       for (auto process : processes) {
         EXPECT_GT(process.processId, 0u);
-        EXPECT_GT(process.memSize, 0u);
+        EXPECT_GE(process.memSize, 0u);
         EXPECT_LT(process.sharedSize, UINT64_MAX);
         EXPECT_GE(process.engines, 1);
         EXPECT_LE(process.engines, (1 << ZES_ENGINE_TYPE_FLAG_DMA));

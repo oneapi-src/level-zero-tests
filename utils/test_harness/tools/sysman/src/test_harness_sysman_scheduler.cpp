@@ -19,7 +19,7 @@ uint32_t get_scheduler_handle_count(zes_device_handle_t device) {
   uint32_t pCount = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zesDeviceEnumSchedulers(device, &pCount, nullptr));
-  EXPECT_GT(pCount, 0);
+  EXPECT_GE(pCount, 0);
   return pCount;
 }
 
