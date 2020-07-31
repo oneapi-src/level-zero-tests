@@ -39,6 +39,7 @@ Option                               | Feature Group
 `--show-device`                      | [Device attributes][11]
 `--show-processes`                   | [Process usage][12]
 `--show-scheduler`                   | [Scheduler mode][13]
+`--show-diag`                        | [Diagnostic Tests][14]
 
 By default, *telemetry* data is reported (as applicable) for the specified component. This is variable/dynamic data such as current temperature or actual frequency. To report *inventory* data instead, specify `--show-inventory`. This is fixed/configured data such as vendor information or current frequency limits. To show both, specify both `--show-inventory` and `--show-telemetry`:
 
@@ -149,26 +150,28 @@ MODE                    | Specifies
 
 Values specified to `--set` operations can be specified with units (e.g., `ms`, `MHz`) and values are scaled to match the units used by the fields.
 
-The tool includes some reset support support as well, if supported by the underlying device and driver:
+The tool supports additional actions when supported by the underlying device and driver:
 
-Option           | Resets
------------------|-----------------------
-`--clear-errors` | [error counters][10]
-`--reset`        | [specified device][14]
+Option                                    | Action
+------------------------------------------|-----------------------------
+`--run-diag SUITE [FIRST_IDX [LAST_IDX]]` | [run diagnostic tests][14]
+`--clear-errors`                          | [clear error counters][10]
+`--reset`                                 | [reset specified device][15]
 
-If `--reset` is used and there is more than one supported device in the system, `--device` must be used to limit operation to a single device. The tool will ask for confirmation unless you also specify `-y` or `--yes` on the command line.
+If `--reset` or `--run-diag` is used and there is more than one supported device in the system, `--device` must be used to limit operation to a single device. Before resetting a device, the tool will ask for confirmation unless you also specify `-y` or `--yes` on the command line. To forcibly reset even if the device is in use, specify `--force` also.
 
-[1]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html
-[2]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#querying-temperature
-[3]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#operations-on-power-domains
-[4]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#operations-on-frequency-domains
-[5]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#operations-on-engine-groups
-[6]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#querying-memory-modules
-[7]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#pci-link-operations
-[8]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#operations-on-fabric-ports
-[9]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#operations-on-standby-domains
-[10]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#querying-ras-errors
-[11]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#device-properties
-[12]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#host-processes
-[13]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#scheduler-operations
-[14]: https://spec.oneapi.com/versions/0.7/oneL0/tools/SYSMAN.html#device-reset
+[1]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html
+[2]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#querying-temperature
+[3]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-power-domains
+[4]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-frequency-domains
+[5]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-engine-groups
+[6]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#querying-memory-modules
+[7]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#pci-link-operations
+[8]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-fabric-ports
+[9]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-standby-domains
+[10]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#querying-ras-errors
+[11]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#device-properties
+[12]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#host-processes
+[13]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#scheduler-operations
+[14]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#performing-diagnostics
+[15]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#device-reset
