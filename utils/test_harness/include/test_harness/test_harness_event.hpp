@@ -57,6 +57,9 @@ public:
 
 void signal_event_from_host(ze_event_handle_t hEvent);
 
+ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
+                                         uint32_t count,
+                                         ze_event_pool_flags_t flags);
 ze_event_pool_handle_t create_event_pool(ze_event_pool_desc_t desc);
 ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
                                          ze_event_pool_desc_t desc);

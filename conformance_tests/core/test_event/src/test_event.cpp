@@ -54,12 +54,10 @@ TEST_P(
 
 INSTANTIATE_TEST_CASE_P(
     ImplictEventCreateParameterizedTest, zeDeviceCreateEventPermuteEventsTests,
-    ::testing::Combine(::testing::Values(ZE_EVENT_SCOPE_FLAG_NONE,
-                                         ZE_EVENT_SCOPE_FLAG_SUBDEVICE,
+    ::testing::Combine(::testing::Values(0, ZE_EVENT_SCOPE_FLAG_SUBDEVICE,
                                          ZE_EVENT_SCOPE_FLAG_DEVICE,
                                          ZE_EVENT_SCOPE_FLAG_HOST),
-                       ::testing::Values(ZE_EVENT_SCOPE_FLAG_NONE,
-                                         ZE_EVENT_SCOPE_FLAG_SUBDEVICE,
+                       ::testing::Values(0, ZE_EVENT_SCOPE_FLAG_SUBDEVICE,
                                          ZE_EVENT_SCOPE_FLAG_DEVICE,
                                          ZE_EVENT_SCOPE_FLAG_HOST)));
 
@@ -75,40 +73,55 @@ TEST_F(
     zeDeviceCreateEventPoolTests,
     GivenDefaultDeviceWhenGettingIpcEventHandleAndOpeningAndClosingThenSuccessIsReturned) {
   ze_ipc_event_pool_handle_t hIpc;
-  ep.InitEventPool();
+  ze_context_handle_t context = lzt::get_default_context();
+  ep.InitEventPool(context, 32);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(ep.event_pool_, &hIpc));
 
   ze_event_pool_handle_t eventPool;
-  lzt::open_ipc_event_handle(hIpc, &eventPool);
+  lzt::open_ipc_event_handle(context, hIpc, &eventPool);
   EXPECT_NE(nullptr, eventPool);
   lzt::close_ipc_event_handle(eventPool);
 }
 
-class zeDeviceCreateEventAndCommandListTests : public lzt::zeCommandList,
-                                               public lzt::zeEventPoolTests {};
+class zeDeviceCreateEventAndCommandListTests : public ::testing::Test {};
 
 TEST_F(
     zeDeviceCreateEventAndCommandListTests,
     GivenDefaultDeviceWhenAppendingSignalEventToComandListThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  ze_context_handle_t context = lzt::get_default_context();
+  ep.InitEventPool(context, 1);
+  ze_command_list_handle_t cmd_list =
+      lzt::create_command_list(context, device, 0);
   ze_event_handle_t event = nullptr;
 
   ep.create_event(event);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendSignalEvent(command_list_, event));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendSignalEvent(cmd_list, event));
   ep.destroy_event(event);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_context(context);
 }
 
 TEST_F(
     zeDeviceCreateEventAndCommandListTests,
     GivenDefaultDeviceWhenAppendingWaitEventsToComandListThenSuccessIsReturned) {
   const size_t event_count = 2;
+  lzt::zeEventPool ep;
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  ze_context_handle_t context = lzt::get_default_context();
+  ep.InitEventPool(context, 2);
+  ze_command_list_handle_t cmd_list =
+      lzt::create_command_list(context, device, 0);
   std::vector<ze_event_handle_t> events(event_count, nullptr);
 
   ep.create_events(events, event_count);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendWaitOnEvents(
-                                   command_list_, event_count, events.data()));
+                                   cmd_list, event_count, events.data()));
   ep.destroy_events(events);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_context(context);
 }
 
 class zeDeviceCreateEventTests : public lzt::zeEventPoolTests {};
@@ -160,12 +173,19 @@ TEST_F(
 TEST_F(
     zeDeviceCreateEventAndCommandListTests,
     GivenDefaultDeviceAndEventPoolWhenAppendingEventResetThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  ze_context_handle_t context = lzt::get_default_context();
+  ep.InitEventPool(context, 1);
+  ze_command_list_handle_t cmd_list =
+      lzt::create_command_list(context, device, 0);
   ze_event_handle_t event = nullptr;
 
   ep.create_event(event);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendEventReset(command_list_, event));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendEventReset(cmd_list, event));
   ep.destroy_event(event);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_context(context);
 }
 
 TEST_F(zeDeviceCreateEventTests,
@@ -207,13 +227,18 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   size_t num_event = 10;
   ASSERT_GE(num_event, 3);
+  ze_context_handle_t context = lzt::get_default_context();
+  ep.InitEventPool(context, 10);
   std::vector<ze_event_handle_t> device_event(num_event, nullptr);
-  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+  ze_command_list_handle_t cmd_list =
+      lzt::create_command_list(context, device, 0);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   size_t copy_size = 4096;
-  void *src_buff = lzt::allocate_host_memory(copy_size);
-  void *dst_buff = lzt::allocate_shared_memory(copy_size);
-  ep.InitEventPool(num_event);
+  void *src_buff = lzt::allocate_host_memory(copy_size, 1, context);
+  void *dst_buff =
+      lzt::allocate_shared_memory(copy_size, 1, 0, 0, device, context);
   ep.create_events(device_event, num_event);
 
   lzt::write_data_pattern(src_buff, copy_size, 1);
@@ -247,9 +272,10 @@ TEST_F(
 
   lzt::destroy_command_queue(cmd_q);
   lzt::destroy_command_list(cmd_list);
-  lzt::free_memory(src_buff);
-  lzt::free_memory(dst_buff);
+  lzt::free_memory(context, src_buff);
+  lzt::free_memory(context, dst_buff);
   ep.destroy_events(device_event);
+  lzt::destroy_context(context);
 }
 
 TEST_F(
@@ -258,14 +284,21 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   size_t num_event = 10;
   ASSERT_GE(num_event, 3);
+  ze_context_handle_t context = lzt::get_default_context();
+  ep.InitEventPool(context, 10);
   std::vector<ze_event_handle_t> device_event(num_event, nullptr);
-  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+  ze_command_list_handle_t cmd_list =
+      lzt::create_command_list(context, device, 0);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   size_t copy_size = 4096;
-  void *src_buff = lzt::allocate_host_memory(copy_size);
-  void *dev_buff = lzt::allocate_device_memory(copy_size);
-  void *dst_buff = lzt::allocate_shared_memory(copy_size);
-  ep.InitEventPool(num_event);
+  void *src_buff = lzt::allocate_host_memory(copy_size, 1, context);
+  void *dev_buff =
+      lzt::allocate_device_memory(copy_size, 1, 0, 0, device, context);
+  void *dst_buff =
+      lzt::allocate_shared_memory(copy_size, 1, 0, 0, device, context);
+
   ep.create_events(device_event, num_event);
 
   lzt::write_data_pattern(src_buff, copy_size, 1);
@@ -292,10 +325,11 @@ TEST_F(
 
   lzt::destroy_command_queue(cmd_q);
   lzt::destroy_command_list(cmd_list);
-  lzt::free_memory(src_buff);
-  lzt::free_memory(dev_buff);
-  lzt::free_memory(dst_buff);
+  lzt::free_memory(context, src_buff);
+  lzt::free_memory(context, dev_buff);
+  lzt::free_memory(context, dst_buff);
   ep.destroy_events(device_event);
+  lzt::destroy_context(context);
 }
 
 TEST_F(zeEventSignalingTests,
@@ -305,10 +339,14 @@ TEST_F(zeEventSignalingTests,
   ASSERT_GE(num_event, 4);
   size_t num_loop = 4;
   ASSERT_GE(num_loop, 4);
-
+  ze_context_handle_t context = lzt::get_default_context();
+  ep.InitEventPool(context, 10);
   std::vector<ze_event_handle_t> device_event(num_event, nullptr);
-  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+  ze_command_list_handle_t cmd_list =
+      lzt::create_command_list(context, device, 0);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   size_t loop_data_size = 300; // do not make this N*256
   ASSERT_TRUE(loop_data_size % 256);
   size_t copy_size = num_loop * loop_data_size;
@@ -316,7 +354,6 @@ TEST_F(zeEventSignalingTests,
   void *dst_buff = lzt::allocate_shared_memory(copy_size);
   uint8_t *src_char = static_cast<uint8_t *>(src_buff);
   uint8_t *dst_char = static_cast<uint8_t *>(dst_buff);
-  ep.InitEventPool(num_event);
   ep.create_events(device_event, num_event);
 
   lzt::write_data_pattern(src_buff, copy_size, 1);
@@ -357,9 +394,10 @@ TEST_F(zeEventSignalingTests,
 
   lzt::destroy_command_queue(cmd_q);
   lzt::destroy_command_list(cmd_list);
-  lzt::free_memory(src_buff);
-  lzt::free_memory(dst_buff);
+  lzt::free_memory(context, src_buff);
+  lzt::free_memory(context, dst_buff);
   ep.destroy_events(device_event);
+  lzt::destroy_context(context);
 }
 
 static void
@@ -368,7 +406,8 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
   ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
   ep_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   ep_desc.count = 10;
-  auto ep = lzt::create_event_pool(ep_desc, devices);
+  ze_context_handle_t context = lzt::get_default_context();
+  auto ep = lzt::create_event_pool(context, ep_desc, devices);
   ze_event_scope_flag_t flag = (ze_event_scope_flag_t)(
       ZE_EVENT_SCOPE_FLAG_DEVICE | ZE_EVENT_SCOPE_FLAG_SUBDEVICE);
   ze_event_desc_t event_desc = {};
@@ -381,8 +420,10 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
 
   // dev0 signals
   {
-    auto cmdlist = lzt::create_command_list(devices[0]);
-    auto cmdqueue = lzt::create_command_queue(devices[0]);
+    auto cmdlist = lzt::create_command_list(context, devices[0], 0);
+    auto cmdqueue = lzt::create_command_queue(
+        context, devices[0], 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
     lzt::append_signal_event(cmdlist, event);
     lzt::close_command_list(cmdlist);
@@ -396,8 +437,10 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
 
   // all devices can read it.
   for (auto device : devices) {
-    auto cmdlist = lzt::create_command_list(device);
-    auto cmdqueue = lzt::create_command_queue(device);
+    auto cmdlist = lzt::create_command_list(context, device, 0);
+    auto cmdqueue = lzt::create_command_queue(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
     lzt::append_wait_on_events(cmdlist, 1, &event);
     lzt::close_command_list(cmdlist);
@@ -411,6 +454,7 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
 
   lzt::destroy_event(event);
   lzt::destroy_event_pool(ep);
+  lzt::destroy_context(context);
 }
 
 TEST(MultiDeviceEventTests,
