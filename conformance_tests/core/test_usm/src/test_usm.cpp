@@ -632,7 +632,7 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
   std::remove_if(devices.begin(), devices.end(), [](ze_device_handle_t device) {
     auto device_props = lzt::get_memory_access_properties(device);
     return !(device_props.sharedCrossDeviceAllocCapabilities &
-             ZE_MEMORY_ACCESS);
+             ZE_MEMORY_ACCESS_CAP_FLAG_RW);
   });
 
   if (devices.size() < 2) {
@@ -641,14 +641,11 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
   }
 
   const size_t memory_size = 1024;
-  auto memory = lzt::allocate_shared_memory(
-      memory_size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-      ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, devices[0]);
+  auto memory = lzt::allocate_shared_memory(memory_size, 1, 0, 0, devices[0]);
 
   const int pattern_size = 1;
-  uint8_t *pattern = static_cast<uint8_t *>(lzt::allocate_shared_memory(
-      pattern_size, 1, ZE_DEVICE_MEM_ALLOC_FLAG_DEFAULT,
-      ZE_HOST_MEM_ALLOC_FLAG_DEFAULT, devices[0]));
+  uint8_t *pattern = static_cast<uint8_t *>(
+      lzt::allocate_shared_memory(pattern_size, 1, 0, 0, devices[0]));
 
   *pattern = 0x01;
 
