@@ -42,7 +42,7 @@ TEST_F(
 class zeFenceTests : public ::testing::Test {
 public:
   zeFenceTests() {
-    context_ = lzt::get_default_context();
+    context_ = lzt::create_context();
     device_ = lzt::zeDevice::get_instance()->get_device();
     cmd_list_ = lzt::create_command_list(context_, device_, 0);
     cmd_q_ = lzt::create_command_queue(context_, device_, 0,
@@ -93,7 +93,7 @@ TEST_P(zeFenceSynchronizeTests,
 }
 
 INSTANTIATE_TEST_CASE_P(FenceSyncParameterizedTest, zeFenceSynchronizeTests,
-                        ::testing::Values(0, 3, UINT32_MAX));
+                        ::testing::Values(UINT32_MAX - 1, UINT32_MAX));
 
 TEST_F(zeFenceSynchronizeTests,
        GivenSignaledFenceWhenQueryingThenSuccessIsReturned) {
@@ -159,7 +159,7 @@ TEST_P(
     zeMultipleFenceTests,
     GivenMultipleCommandQueuesWhenFenceAndEventSetThenVerifyAllSignaledSuccessful) {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ze_device_properties_t properties;
 
   properties.pNext = nullptr;
@@ -232,12 +232,14 @@ TEST_P(
     if (use_event) {
       ep.destroy_event(host_to_dev_event[i]);
     }
-    lzt::destroy_fence(fence[i]);
-    lzt::destroy_command_queue(cmdq[i]);
-    lzt::destroy_command_list(cmdlist[i]);
     lzt::free_memory(context, buffer[i]);
-    lzt::destroy_context(context);
+    lzt::destroy_fence(fence[i]);
+    lzt::destroy_command_list(cmdlist[i]);
+    lzt::destroy_command_queue(cmdq[i]);
   }
+
+  lzt::destroy_context(context);
+  context = nullptr;
 }
 
 INSTANTIATE_TEST_CASE_P(TestMultipleFenceWithAndWithoutEvent,
