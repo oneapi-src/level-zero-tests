@@ -308,7 +308,7 @@ TEST_F(
     }
   }
 }
-/*void load_for_gpu() {
+void load_for_gpu() {
   int m, k, n;
   m = k = n = 5000;
   std::vector<float> a(m * k, 1);
@@ -355,7 +355,7 @@ TEST_F(
   lzt::free_memory(c_buffer);
   lzt::destroy_module(module);
 }
-void get_throttle_time_init(zes_sysman_freq_handle_t pFreqHandle,
+void get_throttle_time_init(zes_freq_handle_t pFreqHandle,
                             zes_freq_throttle_time_t &throttletime) {
   EXPECT_EQ(lzt::check_for_throttling(pFreqHandle), true);
   throttletime = lzt::get_throttle_time(pFreqHandle);
@@ -399,6 +399,6 @@ TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
       }
     }
   }
-}*/
+}
 
 } // namespace
