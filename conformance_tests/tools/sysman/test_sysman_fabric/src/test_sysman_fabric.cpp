@@ -14,49 +14,15 @@
 
 namespace lzt = level_zero_tests;
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 namespace {
 
 class FabricPortsOperationsTest : public lzt::SysmanCtsClass {};
 
-void validate_fabric_port_qual_stab_issues(int val) {
-  switch (val) {
-  case 0:
-    SUCCEED();
-    break;
-  case ZE_BIT(0):
-    SUCCEED();
-    break;
-  case ZE_BIT(1):
-    SUCCEED();
-    break;
-  case ZE_BIT(2):
-    SUCCEED();
-    break;
-  default:
-    FAIL();
-  }
-}
-
-void validate_fabric_port_speed(zet_fabric_port_speed_t speed) {
+void validate_fabric_port_speed(zes_fabric_port_speed_t speed) {
   EXPECT_LT(speed.bitRate, UINT64_MAX);
   EXPECT_LT(speed.width, UINT32_MAX);
-  EXPECT_LT(speed.maxBandwidth, UINT64_MAX);
-}
-
-uint32_t get_model_length(int8_t model[ZET_MAX_FABRIC_PORT_MODEL_SIZE]) {
-  uint32_t length = 0;
-  for (int i = 0; i < ZET_MAX_FABRIC_PORT_MODEL_SIZE; i++) {
-    if (model[i] == '\0') {
-      break;
-    } else {
-      length += 1;
-    }
-  }
-
-  return length;
 }
 
 TEST_F(
@@ -132,20 +98,9 @@ TEST_F(
       } else {
         SUCCEED();
       }
-      int8_t val;
-      int32_t i;
-      for (i = 0; i < ZET_MAX_FABRIC_PORT_UUID_SIZE; i++) {
-        val = properties.portUuid.id[i];
-        if (val != 0) {
-          // Check for at least one non-zero byte in uuid
-          SUCCEED();
-          break;
-        }
-      }
-      if (i == ZET_MAX_FABRIC_PORT_UUID_SIZE) {
-        // All bytes in uuid are zero. Fail
-        FAIL();
-      }
+      EXPECT_LT(properties.portId.fabricId, UINT32_MAX);
+      EXPECT_LT(properties.portId.attachId, UINT32_MAX);
+      EXPECT_LT(properties.portId.portNumber, UINT8_MAX);
     }
   }
 }
@@ -166,31 +121,26 @@ TEST_F(
           propertiesLater.onSubdevice == true) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
-      EXPECT_EQ(get_model_length(propertiesInitial.model),
-                get_model_length(propertiesLater.model));
+      if (strcmp(propertiesInitial.model, propertiesLater.model) == 0) {
+        SUCCEED();
+      } else {
+        FAIL();
+      }
+      EXPECT_EQ(strlen(propertiesInitial.model), strlen(propertiesLater.model));
       EXPECT_EQ(propertiesInitial.maxRxSpeed.bitRate,
                 propertiesLater.maxRxSpeed.bitRate);
       EXPECT_EQ(propertiesInitial.maxRxSpeed.width,
                 propertiesLater.maxRxSpeed.width);
-      EXPECT_EQ(propertiesInitial.maxRxSpeed.maxBandwidth,
-                propertiesLater.maxRxSpeed.maxBandwidth);
       EXPECT_EQ(propertiesInitial.maxTxSpeed.bitRate,
                 propertiesLater.maxTxSpeed.bitRate);
       EXPECT_EQ(propertiesInitial.maxTxSpeed.width,
                 propertiesLater.maxTxSpeed.width);
-      EXPECT_EQ(propertiesInitial.maxTxSpeed.maxBandwidth,
-                propertiesLater.maxTxSpeed.maxBandwidth);
-      int i;
-      for (i = 0; i < ZE_MAX_DEVICE_UUID_SIZE; i++) {
-        if (propertiesInitial.portUuid.id[i] !=
-            propertiesLater.portUuid.id[i]) {
-          FAIL();
-          break;
-        }
-      }
-      if (i == ZE_MAX_DEVICE_UUID_SIZE) {
-        SUCCEED();
-      }
+      EXPECT_EQ(propertiesInitial.portId.fabricId,
+                propertiesLater.portId.fabricId);
+      EXPECT_EQ(propertiesInitial.portId.attachId,
+                propertiesLater.portId.attachId);
+      EXPECT_EQ(propertiesInitial.portId.portNumber,
+                propertiesLater.portId.portNumber);
     }
   }
 }
@@ -203,7 +153,7 @@ TEST_F(FabricPortsOperationsTest,
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto defaultConfig = lzt::get_fabric_port_config(fabricPortHandle);
-      zet_fabric_port_config_t setConfig;
+      zes_fabric_port_config_t setConfig = {};
       // To validate if set_fabric_port_config API is really working, try to
       // toggle config as compared to defaultConfig
       setConfig.beaconing = (defaultConfig.beaconing == true) ? false : true;
@@ -225,10 +175,35 @@ TEST_F(
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto state = lzt::get_fabric_port_state(fabricPortHandle);
-      EXPECT_GE(state.status, ZET_FABRIC_PORT_STATUS_GREEN);
-      EXPECT_LE(state.status, ZET_FABRIC_PORT_STATUS_BLACK);
-      validate_fabric_port_qual_stab_issues(state.qualityIssues);
-      validate_fabric_port_qual_stab_issues(state.stabilityIssues);
+      EXPECT_GE(state.status, ZES_FABRIC_PORT_STATUS_UNKNOWN);
+      EXPECT_LE(state.status, ZES_FABRIC_PORT_STATUS_DISABLED);
+      if (state.status == ZES_FABRIC_PORT_STATUS_DEGRADED) {
+        EXPECT_GE(state.qualityIssues,
+                  ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS);
+        EXPECT_LE(state.qualityIssues,
+                  ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS |
+                      ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED);
+      } else {
+        EXPECT_EQ(state.qualityIssues, 0);
+      }
+      if (state.status == ZES_FABRIC_PORT_STATUS_FAILED) {
+        EXPECT_GE(state.failureReasons,
+                  ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS);
+        EXPECT_LE(state.failureReasons,
+                  ZES_FABRIC_PORT_FAILURE_FLAG_FAILED |
+                      ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT |
+                      ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING);
+      } else {
+        EXPECT_EQ(state.failureReasons, 0);
+      }
+      if (state.status == ZES_FABRIC_PORT_STATUS_HEALTHY ||
+          state.status == ZES_FABRIC_PORT_STATUS_DEGRADED ||
+          state.status == ZES_FABRIC_PORT_STATUS_FAILED) {
+        auto properties = lzt::get_fabric_port_properties(fabricPortHandle);
+        EXPECT_EQ(state.remotePortId.fabricId, properties.portId.fabricId);
+        EXPECT_EQ(state.remotePortId.attachId, properties.portId.attachId);
+        EXPECT_EQ(state.remotePortId.portNumber, properties.portId.portNumber);
+      }
       validate_fabric_port_speed(state.rxSpeed);
       validate_fabric_port_speed(state.txSpeed);
     }
@@ -246,8 +221,49 @@ TEST_F(
       auto throughput = lzt::get_fabric_port_throughput(fabricPortHandle);
       EXPECT_LT(throughput.rxCounter, UINT64_MAX);
       EXPECT_LT(throughput.txCounter, UINT64_MAX);
-      EXPECT_LT(throughput.rxMaxBandwidth, UINT64_MAX);
-      EXPECT_LT(throughput.txMaxBandwidth, UINT64_MAX);
+      EXPECT_LT(throughput.timestamp, UINT64_MAX);
+    }
+  }
+}
+
+TEST_F(FabricPortsOperationsTest,
+       GivenValidFabricPortHandleWhenGettingPortLinkThenSuccessIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    for (auto fabricPortHandle : fabricPortHandles) {
+      ASSERT_NE(nullptr, fabricPortHandle);
+      auto fabricPortLinkType = lzt::get_fabric_port_link(fabricPortHandle);
+      if (fabricPortLinkType.desc[0] == '\0') {
+        FAIL();
+      } else {
+        SUCCEED();
+      }
+      EXPECT_LE(strlen(fabricPortLinkType.desc), ZES_MAX_FABRIC_LINK_TYPE_SIZE);
+    }
+  }
+}
+
+TEST_F(
+    FabricPortsOperationsTest,
+    GivenValidFabricPortHandleWhenGettingPortLinkTwiceThenSameValueIsReturnedTwice) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    for (auto fabricPortHandle : fabricPortHandles) {
+      ASSERT_NE(nullptr, fabricPortHandle);
+      auto fabricPortLinkTypeInitial =
+          lzt::get_fabric_port_link(fabricPortHandle);
+      auto fabricPortLinkTypeLater =
+          lzt::get_fabric_port_link(fabricPortHandle);
+      if (strcmp(fabricPortLinkTypeInitial.desc,
+                 fabricPortLinkTypeLater.desc) == 0) {
+        SUCCEED();
+      } else {
+        FAIL();
+      }
+      EXPECT_EQ(strlen(fabricPortLinkTypeInitial.desc),
+                strlen(fabricPortLinkTypeLater.desc));
     }
   }
 }
