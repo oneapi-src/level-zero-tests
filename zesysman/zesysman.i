@@ -106,9 +106,11 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %apply int * OUTPUT { zes_sched_mode_t* pMode };
 %apply int * OUTPUT { zes_diag_result_t* pResult };
 %apply int * OUTPUT { uint32_t* pNumDeviceEvents };
+%apply int * OUTPUT { int32_t* pSpeed };
 
 %include <level_zero/zes_api.h>
 
+%clear int32_t* pSpeed;
 %clear uint32_t* pNumDeviceEvents;
 %clear zes_diag_result_t* pResult;
 %clear zes_sched_mode_t* pMode;
@@ -149,10 +151,33 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 {
     generic_uuid_to_string(uuid_struct->id, ZE_MAX_DEVICE_UUID_SIZE, uuid_string->id);
 }
+
+void fan_speed_table_set(zes_fan_speed_table_t *t, int32_t numPoints, zes_fan_temp_speed_t *temp_speeds)
+{
+    int i;
+    t->numPoints = numPoints;
+
+    if (numPoints > 0 && numPoints <= ZES_FAN_TEMP_SPEED_PAIR_COUNT)
+        for (i=0; i < numPoints; ++i)
+            t->table[i] = temp_speeds[i];
+}
+
+void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_speed_t *temp_speeds)
+{
+    int i;
+
+    if (limit > t->numPoints)
+        limit = t->numPoints;
+
+    for (i=0; i < limit; ++i)
+        temp_speeds[i] = t->table[i];
+}
 %}
 
+%pointer_class(int32_t, int32_ptr)
 %pointer_class(uint32_t, uint32_ptr)
 %pointer_class(uint64_t, uint64_ptr)
+%pointer_functions(int32_t, int32)
 %pointer_functions(uint32_t, uint32)
 %pointer_functions(uint64_t, uint64)
 
@@ -173,6 +198,8 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 %array_class(zes_process_state_t, zes_process_state_array);
 %array_class(zes_diag_test_t, zes_diag_test_array);
 %array_class(zes_event_type_flags_t, zes_event_type_flags_array);
+%array_class(zes_fan_handle_t, zes_fan_handle_array);
+%array_class(zes_fan_temp_speed_t, zes_fan_temp_speed_array);
 
 %pointer_cast(unsigned long, ze_driver_handle_t, ulong_to_driver_handle);
 %pointer_cast(unsigned long, ze_device_handle_t, ulong_to_device_handle);
@@ -185,6 +212,7 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 %pointer_cast(unsigned long, zes_ras_handle_t, ulong_to_ras_handle);
 %pointer_cast(unsigned long, zes_standby_handle_t, ulong_to_standby_handle);
 %pointer_cast(unsigned long, zes_diag_handle_t, ulong_to_diag_handle);
+%pointer_cast(unsigned long, zes_fan_handle_t, ulong_to_fan_handle);
 
 %pointer_cast(ze_driver_handle_t, unsigned long, driver_handle_to_ulong);
 %pointer_cast(ze_device_handle_t, unsigned long, device_handle_to_ulong);
@@ -197,3 +225,4 @@ void device_uuid_to_string(ze_device_uuid_t *uuid_struct, uuid_string_t *uuid_st
 %pointer_cast(zes_ras_handle_t, unsigned long, ras_handle_to_ulong);
 %pointer_cast(zes_standby_handle_t, unsigned long, standby_handle_to_ulong);
 %pointer_cast(zes_diag_handle_t, unsigned long, diag_handle_to_ulong);
+%pointer_cast(zes_fan_handle_t, unsigned long, fan_handle_to_ulong);

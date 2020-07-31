@@ -529,13 +529,11 @@ def zes_typed_array(stype, count):
 
 # TODO: These structures aren't being used yet:
 #
-# ZES_STRUCTURE_TYPE_FAN_PROPERTIES
 # ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES
 # ZES_STRUCTURE_TYPE_LED_PROPERTIES
 # ZES_STRUCTURE_TYPE_PERF_PROPERTIES
 # ZES_STRUCTURE_TYPE_PSU_PROPERTIES
 # ZES_STRUCTURE_TYPE_SCHED_PROPERTIES
-# ZES_STRUCTURE_TYPE_FAN_CONFIG
 # ZES_STRUCTURE_TYPE_OC_CAPABILITIES
 # ZES_STRUCTURE_TYPE_LED_STATE
 # ZES_STRUCTURE_TYPE_PSU_STATE
@@ -610,6 +608,20 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
     def zesRasGetState(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceProcessesGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDeviceEnumFans(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFanSetDefaultMode(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFanSetFixedSpeedMode(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFanSetSpeedTableMode(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFanGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFanGetConfig(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFanGetState(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
 
 #
@@ -1071,6 +1083,113 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             procs[3] = proc
         else:
             raise ValueError(uint32_value(count_ptr))
+    def stubDeviceEnumFans(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            items = zes_fan_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_fan_handle(0)
+            items[1] = ulong_to_fan_handle(1)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubFanSetDefaultMode(fan):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        fanModes[f] = ZES_FAN_SPEED_MODE_DEFAULT
+    def stubFanSetFixedSpeedMode(fan, speed):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        fanModes[f] = ZES_FAN_SPEED_MODE_FIXED
+        fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
+        fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
+        fanSpeeds[f] = speed.speed
+        fanUnits[f] = speed.units
+    def stubFanSetSpeedTableMode(fan, speedTable):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        fanModes[f] = ZES_FAN_SPEED_MODE_TABLE
+        fanTables = stubState.setdefault("FanTable", {})
+        fanTablePoints = stubState.setdefault("FanTablePoints", {})
+        fanTablePoints[f] = speedTable.numPoints
+        table = []
+        tableSize = speedTable.numPoints
+        tempSpeed = zes_fan_temp_speed_array(tableSize)
+        fan_speed_table_get(speedTable, tableSize, tempSpeed.cast())
+        for t in range(tableSize):
+            item = tempSpeed[t]
+            entry = (item.temperature, item.speed.speed, item.speed.units)
+            table.append(entry)
+        fanTables[f] = table
+    def stubFanGetProperties(fan, fanProps):
+        f = fan_handle_to_ulong(fan)
+        fanProps.onSubdevice = f > 0
+        fanProps.subdeviceId = f
+        fanProps.canControl = True
+        fanProps.supportedModes = 7
+        fanProps.supportedUnits = 3
+        fanProps.maxRPM = 10000
+        fanProps.maxPoints = 10
+    def stubFanGetConfig(fan, fanConfig):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        fanConfig.mode = fanModes.setdefault(f, ZES_FAN_SPEED_MODE_DEFAULT)
+        if fanConfig.mode == ZES_FAN_SPEED_MODE_FIXED:
+            fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
+            fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
+            fanConfig.speedFixed.speed = fanSpeeds.setdefault(f, 1000)
+            fanConfig.speedFixed.units = fanUnits.setdefault(f, ZES_FAN_SPEED_UNITS_RPM)
+        elif fanConfig.mode == ZES_FAN_SPEED_MODE_TABLE:
+            fanTables = stubState.setdefault("FanTable", {})
+            fanTablePoints = stubState.setdefault("FanTablePoints", {})
+            tableSize = fanTablePoints.setdefault(f, 3)
+            table = fanTables.setdefault(f, [(50, 1000, ZES_FAN_SPEED_UNITS_RPM),
+                                             (100, 5000, ZES_FAN_SPEED_UNITS_RPM),
+                                             (150, 10000, ZES_FAN_SPEED_UNITS_RPM)])
+            tempSpeed = zes_fan_temp_speed_array(tableSize)
+            for t, entry in indexed(table):
+                item = tempSpeed[t]
+                item.temperature = entry[0]
+                item.speed.speed = entry[1]
+                item.speed.units = entry[2]
+                tempSpeed[t] = item
+            # fan_config_speed_table_set(fanConfig, tableSize, tempSpeed)
+    def stubFanGetState(fan, units):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        mode = fanModes.setdefault(f, ZES_FAN_SPEED_MODE_DEFAULT)
+        if mode == ZES_FAN_SPEED_MODE_FIXED:
+            fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
+            fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
+            current_speed = fanSpeeds.setdefault(f, 1000)
+            current_units = fanUnits.setdefault(f, ZES_FAN_SPEED_UNITS_RPM)
+        elif mode == ZES_FAN_SPEED_MODE_TABLE:
+            fanTables = stubState.setdefault("FanTable", {})
+            fanTablePoints = stubState.setdefault("FanTablePoints", {})
+            fanTableIndices = stubState.setdefault("FanTableIndices", {})
+            numPoints = fanTablePoints.setdefault(f, 3)
+            table = fanTables.setdefault(f, [(50, 1000, ZES_FAN_SPEED_UNITS_RPM),
+                                             (100, 5000, ZES_FAN_SPEED_UNITS_RPM),
+                                             (150, 10000, ZES_FAN_SPEED_UNITS_RPM)])
+            idx = fanTableIndices.setdefault(f, 0)
+            current_speed = table[idx][1]
+            current_units = table[idx][2]
+            if units == ZES_FAN_SPEED_UNITS_PERCENT:
+                fanTableIndices[f] = (idx + 1) % len(table)
+        else:
+            current_speed = 2000
+            current_units = ZES_FAN_SPEED_UNITS_RPM
+        if current_units == units:
+            return current_speed
+        elif units == ZES_FAN_SPEED_UNITS_RPM:
+            return current_speed * 100
+        else:
+            return current_speed // 100
+
     def stillUnimplemented(*args, **kwargs):
         raise NotImplementedError
 
@@ -1106,7 +1225,14 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesDeviceEnumRasErrorSets : stubDeviceEnumRasErrorSets,
                      zesRasGetProperties : stubRasGetProperties,
                      zesRasGetState : stubRasGetState,
-                     zesDeviceProcessesGetState : stubDeviceProcessesGetState }
+                     zesDeviceProcessesGetState : stubDeviceProcessesGetState,
+                     zesDeviceEnumFans : stubDeviceEnumFans,
+                     zesFanSetDefaultMode : stubFanSetDefaultMode,
+                     zesFanSetFixedSpeedMode : stubFanSetFixedSpeedMode,
+                     zesFanSetSpeedTableMode : stubFanSetSpeedTableMode,
+                     zesFanGetProperties : stubFanGetProperties,
+                     zesFanGetConfig : stubFanGetConfig,
+                     zesFanGetState : stubFanGetState }
 
     replacementFunction = replacements.get(func, stillUnimplemented)
 
@@ -1132,9 +1258,9 @@ def zeCall(func, *args, **kwargs):
 # ZE string conversions
 #
 
-def knownvalue(value):
+def knownvalue(value, unknown="?"):
     if value < 0:
-        return "?"
+        return unknown
     else:
         return value
 
@@ -1395,6 +1521,51 @@ def eventsString(events):
 
     return ", ".join(eventStrings)
 
+def fanModeString(mode):
+    fanModes = { ZES_FAN_SPEED_MODE_DEFAULT:  "Default",
+                 ZES_FAN_SPEED_MODE_FIXED : "Fixed",
+                 ZES_FAN_SPEED_MODE_TABLE : "Table" }
+    return fanModes.get(mode, "Unknown")
+
+def supportedFanModesString(modes):
+    if not modes:
+        return "None"
+
+    allModes = [ ZES_FAN_SPEED_MODE_DEFAULT, ZES_FAN_SPEED_MODE_FIXED, ZES_FAN_SPEED_MODE_TABLE ]
+
+    modeStrings = []
+    for m in allModes:
+        if modes & (1 << m):
+            modes ^= (1 << m)
+            modeStrings.append(fanModeString(m))
+
+    if modes != 0:
+        modeStrings.append("Unknown")
+
+    return ", ".join(modeStrings)
+
+def fanUnitString(unit):
+    fanUnits = { ZES_FAN_SPEED_UNITS_RPM : "RPM",
+                 ZES_FAN_SPEED_UNITS_PERCENT : "%" }
+    return fanUnits.get(unit, "Unknown")
+
+def supportedFanUnitsString(units):
+    if not units:
+        return "None"
+
+    allUnits = [ ZES_FAN_SPEED_UNITS_RPM, ZES_FAN_SPEED_UNITS_PERCENT ]
+
+    unitStrings = []
+    for u in allUnits:
+        if units & (1 << u):
+            units ^= (1 << u)
+            unitStrings.append(fanUnitString(u))
+
+    if units != 0:
+        unitStrings.append("Unknown")
+
+    return ", ".join(unitStrings)
+
 def fullUUID(uuid):
     return uuid
 
@@ -1430,7 +1601,7 @@ def listDrivers(count, drivers):
         zeCall(zeDriverGetProperties, driver, driver_props)
         uuid_string = uuid_string_t()
         driver_uuid_to_string(driver_props.uuid, uuid_string)
-        pr.err("  uuid:", uuid_string.id);
+        pr.err("  uuid:", uuid_string.id)
         pr.err("  driver version:", driver_props.driverVersion)
         ipc_props = ze_typed_structure(ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES)
         zeCall(zeDriverGetIpcProperties, driver, ipc_props)
@@ -1459,7 +1630,7 @@ def listDevices(driverIndices, deviceCounts, deviceLists):
             pr.err("  deviceId:", hex(device_properties.deviceId))
             uuid_string = uuid_string_t()
             device_uuid_to_string(device_properties.uuid, uuid_string)
-            pr.err("  uuid:", uuid_string.id);
+            pr.err("  uuid:", uuid_string.id)
 
 def listDevicesAndFail(driverIndices, deviceCounts, deviceLists):
     listDevices(driverIndices, deviceCounts, deviceLists)
@@ -1540,7 +1711,7 @@ def listDevices(driverIndices, deviceCounts, deviceLists):
             pr.err("  deviceId:", hex(device_properties.deviceId))
             uuid_string = uuid_string_t()
             device_uuid_to_string(device_properties.uuid, uuid_string)
-            pr.err("  uuid:", uuid_string.id);
+            pr.err("  uuid:", uuid_string.id)
 
 def firstMatch(sel, *places):
     for place in places:
@@ -1741,6 +1912,18 @@ def parseArgs():
                             help="enable port beaconing")
         parser.add_argument("--disable-beaconing", nargs='*', type=int, metavar='IDX',
                             help="disable port beaconing")
+        parser.add_argument("--show-fans", action='store_true',
+                            help="show fans")
+        parser.add_argument("--set-fan-speed-default", nargs=1, type=int, metavar='IDX',
+                            help="set fan to default speed")
+        parser.add_argument("--set-fan-speed-rpm", nargs=2, type=int, metavar=('IDX','RPM'),
+                            help="set fan to fixed speed in RPM")
+        parser.add_argument("--set-fan-speed-percent", nargs=2, type=int, metavar=('IDX','%'),
+                            help="set fan to fixed speed in percent of max")
+        parser.add_argument("--set-fan-speed-table-rpm", nargs='+', type=int, metavar=('IDX','N'),
+                            help="set fan to temperature table in RPM")
+        parser.add_argument("--set-fan-speed-table-percent", nargs='+', type=int, metavar=('IDX','N'),
+                            help="set fan to temperature table in percent of max")
 
     args = parser.parse_args()
 
@@ -1759,6 +1942,12 @@ def parseArgs():
         args.disable_fabric_ports = None
         args.enable_beaconing = None
         args.disable_beaconing = None
+        args.show_fans = None
+        args.set_fan_speed_default = None
+        args.set_fan_speed_rpm = None
+        args.set_fan_speed_percent = None
+        args.set_fan_speed_table_rpm = None
+        args.set_fan_speed_table_percent = None
 
     Node = formatArgClass.get(args.format, Node)
 
@@ -2129,7 +2318,7 @@ def main():
     if args.show_device or args.show_processes or args.show_scheduler or \
        args.show_temp or args.show_power or args.show_freq or args.show_util or \
        args.show_mem or args.show_pci or args.show_fabric_ports or \
-       args.show_standby or args.show_errors or args.show_diag:
+       args.show_standby or args.show_errors or args.show_diag or args.show_fans:
 
         generatingDeviceReport = True
 
@@ -2261,6 +2450,11 @@ def main():
 
         sys.exit(0)
 
+    if args.ascii:
+        degC = "degC"
+    else:
+        degC = "°C"
+
     topNode = Node(None, "Devices", None)
 
     for devID, devUUID, device in zip(deviceIDs, deviceUUIDs, devices):
@@ -2295,15 +2489,23 @@ def main():
                     Node(devNode, "numSlices", props.core.numSlices)
                     Node(devNode, "timerResolution", props.core.timerResolution)
             if args.show_telemetry:
-                state = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_STATE)
-                try:
-                    zeCall(zesDeviceGetState, device, state)
-                except NotImplementedError:
-                    pass
-                except ValueError:
-                    reportZeException()
-                Node(devNode, "ResetReasons", resetReasonsString(state.reset))
-                Node(devNode, "RepairStatus", repairStatusString(state.repaired))
+                nodes = []
+                nodes.append(Node(devNode, "ResetReasons", "?"))
+                nodes.append(Node(devNode, "RepairStatus", "?"))
+
+                def deviceTelemetry(device=device, nodes=nodes):
+                    state = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_STATE)
+                    try:
+                        zeCall(zesDeviceGetState, device, state)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+                    else:
+                        nodes[0].setText(resetReasonsString(state.reset))
+                        nodes[1].setText(repairStatusString(state.repaired))
+
+                telemetryClosures.append(deviceTelemetry)
 
         tempCount = uint32_ptr()
         try:
@@ -2336,15 +2538,17 @@ def main():
                     Node(tempNode, "Threshold2Supported", bool(tempProps.isThreshold2Supported))
 
                 if args.show_telemetry:
-                    if args.ascii:
-                        degC = "degC"
-                    else:
-                        degC = "°C"
                     node = Node(tempNode, "Current", "?", ("Units", degC))
 
                     def tempTelemetry(temp=temp, node=node, degC=degC):
-                        tempCurrent = zeCall(zesTemperatureGetState, temp)
-                        node.setText("%.1f" % tempCurrent)
+                        try:
+                            tempCurrent = zeCall(zesTemperatureGetState, temp)
+                        except NotImplementedError:
+                            pass
+                        except ValueError:
+                            reportZeException()
+                        else:
+                            node.setText("%.1f" % tempCurrent)
 
                     telemetryClosures.append(tempTelemetry)
 
@@ -3224,6 +3428,220 @@ def main():
                     for t in range(testCount.value()):
                         test = tests[t]
                         Node(diagNode, "Test", test.name, ("Id", test.index))
+
+        fanCount = uint32_ptr()
+        try:
+            zeCall(zesDeviceEnumFans, device, fanCount.cast(), None)
+        except NotImplementedError:
+            pass
+        except ValueError:
+            reportZeException()
+        else:
+            fans = zes_fan_handle_array(fanCount.value())
+            zeCall(zesDeviceEnumFans, device, fanCount.cast(), fans.cast())
+
+        if args.set_fan_speed_default:
+            (i,) = args.set_fan_speed_default
+            if 0 <= i < fanCount.value():
+                try:
+                    fan = fans[i]
+                    zeCall(zesFanSetDefaultMode, fan)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.err("ERROR: must specify a valid fan index")
+
+        if args.set_fan_speed_rpm:
+            try:
+                fanProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)
+                zeCall(zesFanGetProperties, fan, fanProps)
+                maxRPM = fanProps.maxRPM
+            except:
+                maxRPM = 1000000
+            i, rpm = args.set_fan_speed_rpm
+            if 0 <= i < fanCount.value() and 0 <= rpm <= maxRPM:
+                try:
+                    fan = fans[i]
+                    speed = zes_fan_speed_t()
+                    speed.speed = rpm
+                    speed.units = ZES_FAN_SPEED_UNITS_RPM
+                    zeCall(zesFanSetFixedSpeedMode, fan, speed)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.err("ERROR: must specify a valid fan index")
+
+        if args.set_fan_speed_percent:
+            i, pct = args.set_fan_speed_percent
+            if 0 <= i < fanCount.value() and 0 <= pct <= 100:
+                try:
+                    fan = fans[i]
+                    speed = zes_fan_speed_t()
+                    speed.speed = pct
+                    speed.units = ZES_FAN_SPEED_UNITS_PERCENT
+                    zeCall(zesFanSetFixedSpeedMode, fan, speed)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.err("ERROR: must specify a valid fan index and fan percent")
+
+        if args.set_fan_speed_table_rpm:
+            try:
+                fanProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)
+                zeCall(zesFanGetProperties, fan, fanProps)
+                maxRPM = fanProps.maxRPM
+                maxPoints = fanProps.maxPoints
+            except:
+                maxRPM = 1000000
+                maxPoints = ZES_FAN_TEMP_SPEED_PAIR_COUNT
+            i = args.set_fan_speed_table_rpm[0]
+            table = []
+            try:
+                assert 0 <= i < fanCount.value()
+                assert len(args.set_fan_speed_table_rpm) % 2
+                temp = -274
+                for s in range(1, len(args.set_fan_speed_table_rpm), 2):
+                    entry = (args.set_fan_speed_table_rpm[s], args.set_fan_speed_table_rpm[s+1])
+                    assert entry[0] > temp
+                    temp = entry[0]
+                    assert 0 <= entry[1] <= maxRPM
+                    table.append(entry)
+                assert len(table) <= ZES_FAN_TEMP_SPEED_PAIR_COUNT
+                assert len(table) <= maxPoints
+            except:
+                table = []
+
+            if table:
+                try:
+                    fan = fans[i]
+                    fanTable = zes_fan_speed_table_t()
+                    tempSpeed = zes_fan_temp_speed_array(len(table))
+                    for t,entry in indexed(table):
+                        item = tempSpeed[t]
+                        item.temperature = entry[0]
+                        item.speed.speed = entry[1]
+                        item.speed.units = ZES_FAN_SPEED_UNITS_RPM
+                        tempSpeed[t] = item
+                    fan_speed_table_set(fanTable, len(table), tempSpeed.cast())
+                    zeCall(zesFanSetSpeedTableMode, fan, fanTable)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.err("ERROR: must specify a valid fan index and rpm table")
+
+        if args.set_fan_speed_table_percent:
+            try:
+                fanProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)
+                zeCall(zesFanGetProperties, fan, fanProps)
+                maxPoints = fanProps.maxPoints
+            except:
+                maxPoints = ZES_FAN_TEMP_SPEED_PAIR_COUNT
+            i = args.set_fan_speed_table_percent[0]
+            table = []
+            try:
+                assert 0 <= i < fanCount.value()
+                assert len(args.set_fan_speed_table_percent) % 2
+                temp = -274
+                for s in range(1, len(args.set_fan_speed_table_percent), 2):
+                    entry = (args.set_fan_speed_table_percent[s], args.set_fan_speed_table_percent[s+1])
+                    assert entry[0] > temp
+                    temp = entry[0]
+                    assert 0 <= entry[1] <= 100
+                    table.append(entry)
+                assert len(table) <= ZES_FAN_TEMP_SPEED_PAIR_COUNT
+                assert len(table) <= maxPoints
+            except:
+                table = []
+
+            if table:
+                try:
+                    fan = fans[i]
+                    fanTable = zes_fan_speed_table_t()
+                    tempSpeed = zes_fan_temp_speed_array(len(table))
+                    for t,entry in indexed(table):
+                        item = tempSpeed[t]
+                        item.temperature = entry[0]
+                        item.speed.speed = entry[1]
+                        item.speed.units = ZES_FAN_SPEED_UNITS_PERCENT
+                        tempSpeed[t] = item
+                    fan_speed_table_set(fanTable, len(table), tempSpeed.cast())
+                    zeCall(zesFanSetSpeedTableMode, fan, fanTable)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.err("ERROR: must specify a valid fan index and fan percent table")
+
+
+        if args.show_fans:
+            fanTop = Node(devNode, "Fans", None)
+
+            for i in range(fanCount.value()):
+                fan = fans[i]
+
+                fanProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)
+                zeCall(zesFanGetProperties, fan, fanProps)
+
+                if fanProps.onSubdevice:
+                    fanNode = Node(fanTop, "Fan", None, ("Index", i),
+                                   ("SubdeviceId", fanProps.subdeviceId))
+                else:
+                    fanNode = Node(fanTop, "Fan", None, ("Index", i))
+
+                fanConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_CONFIG)
+                zeCall(zesFanGetConfig, fan, fanConfig)
+
+                if args.show_inventory:
+                    Node(fanNode, "CanControl", fanProps.canControl)
+                    Node(fanNode, "SupportedModes", supportedFanModesString(fanProps.supportedModes))
+                    Node(fanNode, "SupportedUnits", supportedFanUnitsString(fanProps.supportedUnits))
+                    Node(fanNode, "MaxRPM", knownvalue(fanProps.maxRPM))
+                    Node(fanNode, "MaxPoints", knownvalue(fanProps.maxPoints, "Unsupported"))
+                    Node(fanNode, "Mode", fanModeString(fanConfig.mode))
+                    if fanConfig.mode == ZES_FAN_SPEED_MODE_FIXED:
+                        Node(fanNode, "FixedSpeed", fanConfig.speedFixed.speed,
+                             ("Units", fanUnitString(fanConfig.speedFixed.units)))
+                    # if fanConfig.mode == ZES_FAN_SPEED_MODE_TABLE:
+                        # tableSize = fanConfig.speedTable.numPoints
+                        # tempSpeed = zes_fan_temp_speed_array(tableSize)
+                        # fan_config_speed_table_get(fanConfig, tableSize, tempSpeed.cast())
+                        # numPoints = min(tableSize, ZES_FAN_TEMP_SPEED_PAIR_COUNT)
+                        # for s in range(numPoints):
+                        #     fanTemp = Node(fanNode, "TempSpeed", None)
+                        #     item = tempSpeed[s]
+                        #     Node(fanTemp, "Temp", item.temperature, ("Units", degC))
+                        #     Node(fanTemp, "Speed", item.speed.speed, ("Index", s),
+                        #          ("Units", fanUnitString(item.speed.units)))
+
+                if args.show_telemetry:
+                    nodes = []
+                    nodes.append(Node(fanNode, "Speed", "?",
+                                 ("Units", fanUnitString(ZES_FAN_SPEED_UNITS_RPM))))
+                    nodes.append(Node(fanNode, "Speed", "?",
+                                 ("Units", fanUnitString(ZES_FAN_SPEED_UNITS_PERCENT))))
+
+                    def fanTelemetry(fan=fan, node=nodes):
+                        try:
+                            rpm = zeCall(zesFanGetState, fan, ZES_FAN_SPEED_UNITS_RPM)
+                            pct = zeCall(zesFanGetState, fan, ZES_FAN_SPEED_UNITS_PERCENT)
+                        except NotImplementedError:
+                            pass
+                        except ValueError:
+                            reportZeException()
+                        else:
+                            node[0].setText(rpm)
+                            node[1].setText(pct)
+
+                    telemetryClosures.append(fanTelemetry)
 
     currentIteration = 0
     while currentIteration < maxIterations:
