@@ -11,7 +11,7 @@
 void ZePeak::_transfer_bw_gpu_copy(L0Context &context, void *destination_buffer,
                                    void *source_buffer, size_t buffer_size) {
   Timer timer;
-  long double gbps, timed;
+  long double gbps = 0, timed = 0;
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   for (uint32_t i = 0; i < warmup_iterations; i++) {
@@ -71,10 +71,9 @@ void ZePeak::_transfer_bw_gpu_copy(L0Context &context, void *destination_buffer,
     timed /= static_cast<long double>(iters);
 
     gbps = calculate_gbps(timed, static_cast<long double>(buffer_size));
-  }
 
-  std::cout << "COPY\n";
-  std::cout << gbps << " GBPS\n";
+    std::cout << "\t With Blitter Engine: " << gbps << " GBPS\n";
+  }
 }
 
 void ZePeak::_transfer_bw_host_copy(L0Context &context,
@@ -82,7 +81,7 @@ void ZePeak::_transfer_bw_host_copy(L0Context &context,
                                     void *source_buffer, size_t buffer_size,
                                     bool shared_is_dest) {
   Timer timer;
-  long double gbps, timed;
+  long double gbps = 0, timed = 0;
 
   ze_command_list_handle_t temp_cmd_list = nullptr;
   ze_command_queue_desc_t cmd_q_desc = {};
@@ -125,6 +124,8 @@ void ZePeak::_transfer_bw_host_copy(L0Context &context,
   gbps = calculate_gbps(timed, static_cast<long double>(buffer_size));
 
   std::cout << gbps << " GBPS\n";
+
+  zeCommandListDestroy(temp_cmd_list);
 }
 
 void ZePeak::_transfer_bw_shared_memory(L0Context &context,

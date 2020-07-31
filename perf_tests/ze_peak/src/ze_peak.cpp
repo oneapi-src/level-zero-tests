@@ -225,6 +225,8 @@ void L0Context::init_xe() {
   for (uint32_t i = 0; i < command_queue_group_count; ++i) {
     if ((command_queue_group_properties[i].flags &
          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
+        !(command_queue_group_properties[i].flags &
+          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
         (command_queue_group_properties[i].numQueues > 0)) {
 
       copy_ordinal = i;
@@ -233,9 +235,10 @@ void L0Context::init_xe() {
   }
 
   if (copy_ordinal == command_queue_group_count) {
-    std::cout << "No async copy engines detected, disabling blitter benchmark";
+    std::cout
+        << "No async copy engines detected, disabling blitter benchmark\n";
   } else {
-    std::cout << "Async copy engine detected, enabling blitter benchmark";
+    std::cout << "Async copy engine detected, enabling blitter benchmark\n";
 
     command_list_description.commandQueueGroupOrdinal = copy_ordinal;
 
