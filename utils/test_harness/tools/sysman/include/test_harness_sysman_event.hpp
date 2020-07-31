@@ -15,19 +15,12 @@
 
 namespace level_zero_tests {
 
-zet_sysman_event_handle_t get_event_handle(zet_device_handle_t device);
-
-zet_event_config_t get_event_config(zet_sysman_event_handle_t hEvent);
-
-void set_event_config(zet_sysman_event_handle_t hEvent,
-                      zet_event_config_t config);
-
-ze_result_t get_event_state(zet_sysman_event_handle_t hEvent, ze_bool_t clear,
-                            uint32_t &events);
+void register_event(zes_device_handle_t device, zes_event_type_flags_t events);
 
 ze_result_t listen_event(ze_driver_handle_t hDriver, uint32_t timeout,
-                         uint32_t count, zet_sysman_event_handle_t *phEvents,
-                         uint32_t *pEvents);
+                         uint32_t count, zes_device_handle_t *devices,
+                         uint32_t *numDeviceEvents,
+                         zes_event_type_flags_t *events);
 
 } // namespace level_zero_tests
 
