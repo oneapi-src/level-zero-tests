@@ -98,7 +98,7 @@ TEST_F(
     }
   }
 }
-/*TEST_F(PciModuleTest,
+TEST_F(PciModuleTest,
        GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
   for (auto device : devices) {
     auto pciProps = lzt::get_pci_properties(device);
@@ -106,9 +106,9 @@ TEST_F(
     EXPECT_LE(pciStatsInitial.txCounter, UINT64_MAX);
     EXPECT_LE(pciStatsInitial.rxCounter, UINT64_MAX);
     if (pciProps.haveReplayCounters == true)
-    EXPECT_LE(pciStatsInitial.replayCounter, UINT64_MAX);
+      EXPECT_LE(pciStatsInitial.replayCounter, UINT64_MAX);
     if (pciProps.havePacketCounters == true)
-    EXPECT_LE(pciStatsInitial.packetCounter, UINT64_MAX);
+      EXPECT_LE(pciStatsInitial.packetCounter, UINT64_MAX);
     EXPECT_LE(pciStatsInitial.timestamp, UINT64_MAX);
     ze_command_list_handle_t command_list = lzt::create_command_list();
     ze_command_queue_handle_t cq = lzt::create_command_queue();
@@ -138,16 +138,16 @@ TEST_F(
     EXPECT_LE(pciStatsLater.packetCounter, UINT64_MAX);
     EXPECT_LE(pciStatsLater.timestamp, UINT64_MAX);
     if (pciProps.haveBandwidthCounters == true) {
-    EXPECT_GT(pciStatsLater.txCounter, pciStatsInitial.txCounter);
-    EXPECT_GT(pciStatsLater.rxCounter, pciStatsInitial.rxCounter);
+      EXPECT_GT(pciStatsLater.txCounter, pciStatsInitial.txCounter);
+      EXPECT_GT(pciStatsLater.rxCounter, pciStatsInitial.rxCounter);
     }
     if (pciProps.havePacketCounters == true) {
-    EXPECT_GT(pciStatsLater.packetCounter, pciStatsInitial.packetCounter);
+      EXPECT_GT(pciStatsLater.packetCounter, pciStatsInitial.packetCounter);
     }
     if (pciProps.haveReplayCounters == true) {
-    EXPECT_GE(pciStatsLater.replayCounter, pciStatsInitial.replayCounter);
+      EXPECT_GE(pciStatsLater.replayCounter, pciStatsInitial.replayCounter);
     }
     EXPECT_NE(pciStatsLater.timestamp, pciStatsInitial.timestamp);
   }
-}*/
+}
 } // namespace
