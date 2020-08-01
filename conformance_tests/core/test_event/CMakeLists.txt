@@ -11,4 +11,6 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
+  KERNELS
+    profile_add
 )
