@@ -25,7 +25,7 @@
 namespace {
 #ifdef __linux__
 
-void run_parent(ze_context_handle_t context, int size) {
+void run_parent(int size) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -34,6 +34,7 @@ void run_parent(ze_context_handle_t context, int size) {
   LOG_DEBUG << "[Server] Driver initialized\n";
 
   auto driver = lzt::get_default_driver();
+  auto context = lzt::get_default_context();
   auto device = lzt::zeDevice::get_instance()->get_device();
   auto cl = lzt::create_command_list();
   auto cq = lzt::create_command_queue();
@@ -62,9 +63,10 @@ void run_parent(ze_context_handle_t context, int size) {
   lzt::free_memory(memory);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
+  lzt::destroy_context(context);
 }
 
-void run_child(ze_context_handle_t context, int size) {
+void run_child(int size) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -73,6 +75,7 @@ void run_child(ze_context_handle_t context, int size) {
   LOG_DEBUG << "[Client] Driver initialized\n";
 
   auto driver = lzt::get_default_driver();
+  auto context = lzt::get_default_context();
   auto device = lzt::zeDevice::get_instance()->get_device();
   auto cl = lzt::create_command_list();
   auto cq = lzt::create_command_queue();
@@ -93,6 +96,7 @@ void run_child(ze_context_handle_t context, int size) {
   lzt::free_memory(buffer);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
+  lzt::destroy_context(context);
   exit(0);
 }
 
@@ -100,16 +104,14 @@ TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   const auto size = 4096;
-  auto context = lzt::create_context();
   pid_t pid = fork();
   if (pid < 0) {
     throw std::runtime_error("Failed to fork child process");
   } else if (pid > 0) {
-    run_parent(context, size);
+    run_parent(size);
   } else {
-    run_child(context, size);
+    run_child(size);
   }
-  lzt::destroy_context(context);
 }
 #endif
 
