@@ -529,7 +529,6 @@ def zes_typed_array(stype, count):
 
 # TODO: These structures aren't being used yet:
 #
-# ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES
 # ZES_STRUCTURE_TYPE_LED_PROPERTIES
 # ZES_STRUCTURE_TYPE_PERF_PROPERTIES
 # ZES_STRUCTURE_TYPE_PSU_PROPERTIES
@@ -622,6 +621,12 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
     def zesFanGetConfig(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesFanGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDeviceEnumFirmwares(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFirmwareGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFirmwareFlash(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
 
 #
@@ -1189,7 +1194,31 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             return current_speed * 100
         else:
             return current_speed // 100
-
+    def stubDeviceEnumFirmwares(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 1)
+        elif uint32_value(count_ptr) == 1:
+            items = zes_firmware_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_firmware_handle(0)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubFirmwareGetProperties(fw, fwProps):
+        fwProps.onSubdevice = False
+        fwProps.subdeviceId = 0
+        fwProps.canControl = True
+        fwProps.name = "FIRMWARE"
+        fwProps.version = "1.0.0"
+    def stubFirmwareFlash(handle, image):
+        fw = firmware_handle_to_ulong(handle)
+        pr("Flashing firmware image", fw, "of size", len(image), ":")
+        if image.isascii():
+            lines = str(image, 'utf-8').splitlines()
+            if len(lines) < 100:
+                pr(" " + "\n ".join(lines))
+            else:
+                pr(" [ascii data, greater than 100 lines]")
+        else:
+            pr(" [binary data]")
     def stillUnimplemented(*args, **kwargs):
         raise NotImplementedError
 
@@ -1232,7 +1261,10 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesFanSetSpeedTableMode : stubFanSetSpeedTableMode,
                      zesFanGetProperties : stubFanGetProperties,
                      zesFanGetConfig : stubFanGetConfig,
-                     zesFanGetState : stubFanGetState }
+                     zesFanGetState : stubFanGetState,
+                     zesDeviceEnumFirmwares : stubDeviceEnumFirmwares,
+                     zesFirmwareGetProperties : stubFirmwareGetProperties,
+                     zesFirmwareFlash : stubFirmwareFlash }
 
     replacementFunction = replacements.get(func, stillUnimplemented)
 
@@ -1856,6 +1888,14 @@ def parseArgs():
                         help="set scheduler mode")
     parser.add_argument("--clear-errors", action='store_true',
                         help="clear error counters")
+    parser.add_argument("--enable-fabric-ports", nargs='*', type=int, metavar='IDX',
+                        help="enable fabric ports")
+    parser.add_argument("--disable-fabric-ports", nargs='*', type=int, metavar='IDX',
+                        help="disable fabric ports")
+    parser.add_argument("--enable-beaconing", nargs='*', type=int, metavar='IDX',
+                        help="enable port beaconing")
+    parser.add_argument("--disable-beaconing", nargs='*', type=int, metavar='IDX',
+                        help="disable port beaconing")
     parser.add_argument("--set-standby", metavar='MODE',
                         help="set sleep state promotion mode")
     parser.add_argument("--reset", action='store_true',
@@ -1904,14 +1944,6 @@ def parseArgs():
                             help="show timestamps when iterating")
         parser.add_argument("--wait-events", nargs='*', metavar=('MSEC','MASK'),
                             help="wait for events")
-        parser.add_argument("--enable-fabric-ports", nargs='*', type=int, metavar='IDX',
-                            help="enable fabric ports")
-        parser.add_argument("--disable-fabric-ports", nargs='*', type=int, metavar='IDX',
-                            help="disable fabric ports")
-        parser.add_argument("--enable-beaconing", nargs='*', type=int, metavar='IDX',
-                            help="enable port beaconing")
-        parser.add_argument("--disable-beaconing", nargs='*', type=int, metavar='IDX',
-                            help="disable port beaconing")
         parser.add_argument("--show-fans", action='store_true',
                             help="show fans")
         parser.add_argument("--set-fan-speed-default", nargs=1, type=int, metavar='IDX',
@@ -1924,6 +1956,10 @@ def parseArgs():
                             help="set fan to temperature table in RPM")
         parser.add_argument("--set-fan-speed-table-percent", nargs='+', type=int, metavar=('IDX','N'),
                             help="set fan to temperature table in percent of max")
+        parser.add_argument("--show-firmware", action='store_true',
+                            help="show fans")
+        parser.add_argument("--flash-firmware", nargs=1, metavar='FILE',
+                            help="flash firmware from FILE")
 
     args = parser.parse_args()
 
@@ -1938,16 +1974,14 @@ def parseArgs():
         args.stub_unimplemented = None
         args.reset_freq = None
         args.wait_events = None
-        args.enable_fabric_ports = None
-        args.disable_fabric_ports = None
-        args.enable_beaconing = None
-        args.disable_beaconing = None
         args.show_fans = None
         args.set_fan_speed_default = None
         args.set_fan_speed_rpm = None
         args.set_fan_speed_percent = None
         args.set_fan_speed_table_rpm = None
         args.set_fan_speed_table_percent = None
+        args.show_firmware = None
+        args.flash_firmware = None
 
     Node = formatArgClass.get(args.format, Node)
 
@@ -2382,8 +2416,12 @@ def main():
 
         suite, first, last = parseTestSuite(diagCount.value(), diags, args.run_diag)
 
-        result = zeCall(zesDiagnosticsRunTests, suite, first, last)
-        pr("Diagnostic test result:", diagResultString(result))
+        if args.dry_run:
+            deviceName = "%s [%s]" % (deviceIDs[0], deviceUUID(deviceUUIDs[0]))
+            pr("Would run diagnostics on device", deviceName)
+        else:
+            result = zeCall(zesDiagnosticsRunTests, suite, first, last)
+            pr("Diagnostic test result:", diagResultString(result))
 
         sys.exit(result)
 
@@ -3581,7 +3619,6 @@ def main():
             else:
                 pr.err("ERROR: must specify a valid fan index and fan percent table")
 
-
         if args.show_fans:
             fanTop = Node(devNode, "Fans", None)
 
@@ -3642,6 +3679,67 @@ def main():
                             node[1].setText(pct)
 
                     telemetryClosures.append(fanTelemetry)
+
+                fwProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES)
+
+        fwCount = uint32_ptr()
+        try:
+            zeCall(zesDeviceEnumFirmwares, device, fwCount.cast(), None)
+        except NotImplementedError:
+            pass
+        except ValueError:
+            reportZeException()
+        else:
+            fws = zes_firmware_handle_array(fwCount.value())
+            zeCall(zesDeviceEnumFirmwares, device, fwCount.cast(), fws.cast())
+
+        if args.flash_firmware:
+            (filename,) = args.flash_firmware
+            names = ["%s [%s]" % (d,deviceUUID(u)) for d,u in zip(deviceIDs,deviceUUIDs)]
+            pr("Requesting flash of", filename, "to the following devices:")
+            pr(" " + "\n ".join(names))
+
+            if not args.yes:
+                answer = input("Do you really want to flash? ")
+                args.yes = answer.lower() in ("y", "yes")
+
+            if args.yes:
+                if args.dry_run:
+                    pr("Would flash device(s) now")
+                else:
+                    pr("Preparing to flash devices")
+                    zeCall(zesDeviceReset, devices[0], args.force)
+                    size = uint32_ptr()
+                    with open(filename, "rb") as f:
+                        image = f.read()
+                    for i in range(fwCount.value()):
+                        fw = fws[i]
+                        pr("Flashing device", names[i])
+                        zeCall(zesFirmwareFlash, fw, image)
+            else:
+                pr("NOT flashing device(s)")
+
+            sys.exit(0)
+
+        if args.show_firmware:
+            fwTop = Node(devNode, "Firmwares", None)
+
+            for i in range(fwCount.value()):
+                fw = fws[i]
+
+                fwProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES)
+                zeCall(zesFirmwareGetProperties, fw, fwProps)
+
+                if fwProps.onSubdevice:
+                    fwNode = Node(fwTop, "Firmware", None, ("Index", i),
+                                   ("SubdeviceId", fwProps.subdeviceId))
+                else:
+                    fwNode = Node(fwTop, "Firmware", None, ("Index", i))
+
+                if args.show_inventory:
+                    Node(fwNode, "CanControl", fwProps.canControl)
+                    Node(fwNode, "Name", fwProps.name)
+                    Node(fwNode, "Version", fwProps.version)
 
     currentIteration = 0
     while currentIteration < maxIterations:

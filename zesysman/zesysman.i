@@ -6,6 +6,7 @@
 %module zesysman
 
 %{
+#include <sys/stat.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -83,6 +84,7 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %}
 
 %include <typemaps.i>
+%include <pybuffer.i>
 
 // Suppress "const char *" field warnings:
 %warnfilter(314) global;
@@ -107,6 +109,7 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %apply int * OUTPUT { zes_diag_result_t* pResult };
 %apply int * OUTPUT { uint32_t* pNumDeviceEvents };
 %apply int * OUTPUT { int32_t* pSpeed };
+%pybuffer_binary(void* pImage, uint32_t size);
 
 %include <level_zero/zes_api.h>
 
@@ -122,13 +125,13 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 // Standard C constructs
 //
 
-%include "carrays.i"
-// %include "cdata.i"
-// %include "cmalloc.i"
-%include "cpointer.i"
-// %include "cstring.i"
+%include <carrays.i>
+%include <cdata.i>
+// %include <cmalloc.i>
+%include <cpointer.i>
+// %include <cstring.i>
 
-%include "stdint.i"
+%include <stdint.i>
 
 //
 // Helpers
@@ -200,6 +203,7 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %array_class(zes_event_type_flags_t, zes_event_type_flags_array);
 %array_class(zes_fan_handle_t, zes_fan_handle_array);
 %array_class(zes_fan_temp_speed_t, zes_fan_temp_speed_array);
+%array_class(zes_firmware_handle_t, zes_firmware_handle_array);
 
 %pointer_cast(unsigned long, ze_driver_handle_t, ulong_to_driver_handle);
 %pointer_cast(unsigned long, ze_device_handle_t, ulong_to_device_handle);
@@ -213,6 +217,7 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %pointer_cast(unsigned long, zes_standby_handle_t, ulong_to_standby_handle);
 %pointer_cast(unsigned long, zes_diag_handle_t, ulong_to_diag_handle);
 %pointer_cast(unsigned long, zes_fan_handle_t, ulong_to_fan_handle);
+%pointer_cast(unsigned long, zes_firmware_handle_t, ulong_to_firmware_handle);
 
 %pointer_cast(ze_driver_handle_t, unsigned long, driver_handle_to_ulong);
 %pointer_cast(ze_device_handle_t, unsigned long, device_handle_to_ulong);
@@ -226,3 +231,4 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %pointer_cast(zes_standby_handle_t, unsigned long, standby_handle_to_ulong);
 %pointer_cast(zes_diag_handle_t, unsigned long, diag_handle_to_ulong);
 %pointer_cast(zes_fan_handle_t, unsigned long, fan_handle_to_ulong);
+%pointer_cast(zes_firmware_handle_t, unsigned long, firmware_handle_to_ulong);
