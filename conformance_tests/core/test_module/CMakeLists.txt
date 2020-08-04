@@ -13,6 +13,11 @@ add_lzt_test(
     level_zero_tests::logging
     level_zero_tests::utils
   KERNELS
+    0kernels
+    1kernel
+    10kernels
+    100kernels
+    1000kernels
     cooperative_kernel
     multi_argument_kernel_test
     single_global_variable
