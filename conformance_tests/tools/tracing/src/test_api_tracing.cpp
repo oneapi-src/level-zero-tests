@@ -209,7 +209,6 @@ protected:
   ze_device_properties_t properties;
   ze_device_compute_properties_t compute_properties;
 
-  ze_kernel_properties_t device_kernel_properties;
   ze_device_memory_properties_t memory_properties;
 
   ze_device_memory_access_properties_t memory_access_properties;
@@ -382,20 +381,6 @@ TEST_F(
   ready_tracer(tracer_handle, prologues, epilogues);
   num = 0;
   ASSERT_EQ(initial_result, zeDeviceGetMemoryProperties(device, &num, nullptr));
-}
-
-TEST_F(
-    TracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeDeviceGetKernelPropertiesCallbacksWhenCallingzeDeviceGetKernelPropertiesThenUserDataIsSetAndResultUnchanged) {
-  prologues.Kernel.pfnGetPropertiesCb = lzt::prologue_callback;
-  epilogues.Kernel.pfnGetPropertiesCb = lzt::epilogue_callback;
-
-  ze_result_t initial_result =
-      zeKernelGetProperties(kernel, &device_kernel_properties);
-  ready_tracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(initial_result,
-            zeKernelGetProperties(kernel, &device_kernel_properties));
 }
 
 TEST_F(
