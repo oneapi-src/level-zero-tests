@@ -731,8 +731,9 @@ TEST_F(
   }
 }
 
-TEST_F(zeKernelCreateTests,
-       GivenValidFunctionWhenGettingSourceAttributeThenReturnAttributeString) {
+TEST_F(
+    zeKernelCreateTests,
+    DISABLED_GivenValidFunctionWhenGettingSourceAttributeThenReturnAttributeString) {
   ze_kernel_handle_t function;
   std::string kernel_source_attr = "work_group_size_hint(1,1,1)";
   kernel_source_attr.push_back('\0');
