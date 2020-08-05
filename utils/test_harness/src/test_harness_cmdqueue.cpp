@@ -33,9 +33,8 @@ create_command_queue(ze_device_handle_t device, ze_command_queue_flags_t flags,
                      ze_command_queue_mode_t mode,
                      ze_command_queue_priority_t priority, uint32_t ordinal) {
 
-  return create_command_queue(lzt::get_default_context(), device, 0,
-                              ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                              ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  return create_command_queue(lzt::get_default_context(), device, flags, mode,
+                              priority, ordinal);
 }
 
 ze_command_queue_handle_t
