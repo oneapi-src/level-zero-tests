@@ -31,21 +31,23 @@ void _zes_exception(const char *format, ...)
     exit(1);
 }
 
-/* TODO: Should there be a way to disable this (call from Python instead)? */
-
 void _initialize_zesysman()
 {
+    unsigned int result;
+
     /*
-     * Belts and suspenders: this should be set in the Python wrapper first:
+     * Belts and suspenders: this should have been set by the Python wrapper
      */
     if (setenv("ZES_ENABLE_SYSMAN", "1", 0) != 0)
     {
         _zes_exception("Error setting ZES_ENABLE_SYSMAN environment variable");
     }
 
-    if (zeInit(0) != ZE_RESULT_SUCCESS)
+    result = zeInit(0);
+
+    if (result != ZE_RESULT_SUCCESS)
     {
-        _zes_exception("Error initializing L0 libraries");
+        _zes_exception("Error 0x%x while initializing L0 libraries", result);
     }
 }
 
@@ -109,17 +111,32 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %apply int * OUTPUT { zes_diag_result_t* pResult };
 %apply int * OUTPUT { uint32_t* pNumDeviceEvents };
 %apply int * OUTPUT { int32_t* pSpeed };
-%pybuffer_binary(void* pImage, uint32_t size);
+%apply double * OUTPUT { double* pCurrentOcFrequency };
+%apply double * OUTPUT { double* pCurrentVoltageTarget };
+%apply double * OUTPUT { double* pCurrentVoltageOffset };
+%apply int * OUTPUT { zes_oc_mode_t* pCurrentOcMode };
+%apply double * OUTPUT { double* pOcIccMax };
+%apply double * OUTPUT { double* pOcTjMax };
+
+// Fails in Ubuntu 19.10 (and presumably SWIG 3):
+// %pybuffer_binary(void* pImage, uint32_t size);
 
 %include <level_zero/zes_api.h>
 
+// %clear (void* pImage, uint32_t size);
+
+%clear double* pOcTjMax;
+%clear double* pOcIccMax;
+%clear zes_oc_mode_t* pCurrentOcMode;
+%clear double* pCurrentVoltageOffset;
+%clear double* pCurrentVoltageTarget;
+%clear double* pCurrentOcFrequency;
 %clear int32_t* pSpeed;
 %clear uint32_t* pNumDeviceEvents;
 %clear zes_diag_result_t* pResult;
 %clear zes_sched_mode_t* pMode;
 %clear zes_standby_promo_mode_t* pMode;
 %clear double* pTemperature;
-
 
 //
 // Standard C constructs

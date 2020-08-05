@@ -558,7 +558,41 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesPowerGetEnergyCounter(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDeviceEnumFrequencyDomains(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesFrequencyGetAvailableClocks(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyGetRange(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencySetRange(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyGetThrottleTime(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcGetCapabilities(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcGetFrequencyTarget(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcSetFrequencyTarget(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcGetVoltageTarget(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcSetVoltageTarget(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcSetMode(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcGetMode(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcGetIccMax(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcSetIccMax(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcGetTjMax(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesFrequencyOcSetTjMax(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceEnumEngineGroups(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
@@ -633,6 +667,12 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
 # For development purposes, to replace unimplemented functions
 #
 replaceUnimplementedFunctions = False
+
+#
+# Helper
+#
+def saturate(value, minLimit, maxLimit):
+    return min(max(value, minLimit), maxLimit)
 
 # For stubs to retain state:
 stubState = {}
@@ -717,6 +757,27 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         p["counter"]["timestamp"] += 1000000
         pwrCounter.energy = p["counter"]["energy"]
         pwrCounter.timestamp = p["counter"]["timestamp"]
+    def stubDeviceEnumFrequencyDomains(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            p = stubState.setdefault("Freq", {})
+            p[ZES_FREQ_DOMAIN_GPU] = {"Range" : (200.0, 1200.0), "State" : 300.0}
+            p[ZES_FREQ_DOMAIN_MEMORY] = {"Range" : (200.0, 1200.0), "State" : 300.0}
+            items = zes_freq_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_freq_handle(ZES_FREQ_DOMAIN_GPU)
+            items[1] = ulong_to_freq_handle(ZES_FREQ_DOMAIN_MEMORY)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubFrequencyGetProperties(freq, freqProp):
+        freqProp.type = freq_handle_to_ulong(freq)
+        freqProp.onSubdevice = False
+        freqProp.subdeviceId = 0
+        freqProp.canControl = True
+        freqProp.isThrottleEventSupported = False
+        freqProp.min = 200.0
+        freqProp.max = 1200.0
     def stubFrequencyGetAvailableClocks(freq, count_ptr, freq_array):
         freqProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_PROPERTIES)
         zeCall(zesFrequencyGetProperties, freq, freqProps)
@@ -724,7 +785,7 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         freq = freqProps.min
         while freq <= freqProps.max:
             freqs.append(freq)
-            freq += freqProps.step
+            freq += 50.0
         if freq_array is None:
             uint32_assign(count_ptr, len(freqs))
         elif uint32_value(count_ptr) == len(freqs):
@@ -733,6 +794,61 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                 results[i] = freqs[i]
         else:
             raise ValueError(uint32_value(count_ptr))
+    def stubFrequencyGetRange(freq, freqLimits):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        freqLimits.min, freqLimits.max = stubState["Freq"][f]["Range"]
+    def stubFrequencySetRange(freq, freqLimits):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        minLimit = saturate(freqLimits.min, 200.0, 1200.0)
+        maxLimit = saturate(freqLimits.max, 200.0, 1200.0)
+        stubState["Freq"][f]["Range"] = minLimit, maxLimit
+    def stubFrequencyGetState(freq, freqState):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        freqState.currentVoltage = 3.0
+        freqState.request = stubState["Freq"][f]["State"]
+        freqState.tdp = 1200.0
+        freqState.efficient = 1000.0
+        freqState.actual = stubState["Freq"][f]["State"]
+        freqState.throttleReasons = 0
+    def stubFrequencyGetThrottleTime(freq, freqThrottleTime):
+        raise NotImplementedError
+    def stubFrequencyOcGetCapabilities(freq, ocCapabilities):
+        ocCapabilities.isOcSupported = False
+        ocCapabilities.maxFactoryDefaultFrequency = 300.0
+        ocCapabilities.maxFactoryDefaultVoltage = 3.0
+        ocCapabilities.maxOcFrequency = 1200
+        ocCapabilities.minOcVoltageOffset = 0.0
+        ocCapabilities.maxOcVoltageOffset = 0.0
+        ocCapabilities.maxOcVoltage = 3.0
+        ocCapabilities.isTjMaxSupported = False
+        ocCapabilities.isIccMaxSupported = False
+        ocCapabilities.isHighVoltModeCapable = False
+        ocCapabilities.isHighVoltModeEnabled = False
+        ocCapabilities.isExtendedModeSupported = False
+        ocCapabilities.isFixedModeSupported = False
+    def stubFrequencyOcGetFrequencyTarget(freq):
+        raise NotImplementedError
+    def stubFrequencyOcSetFrequencyTarget(freq, ocFTarget):
+        raise NotImplementedError
+    def stubFrequencyOcGetVoltageTarget(freq):
+        raise NotImplementedError
+    def stubFrequencyOcSetVoltageTarget(freq, ocVTarget, ocVOffset):
+        raise NotImplementedError
+    def stubFrequencyOcSetMode(freq, ocMode):
+        raise NotImplementedError
+    def stubFrequencyOcGetMode(freq):
+        return ZES_OC_MODE_OFF
+    def stubFrequencyOcGetIccMax(freq):
+        raise NotImplementedError
+    def stubFrequencyOcSetIccMax(freq, ocIccMax):
+        raise NotImplementedError
+    def stubFrequencyOcGetTjMax(freq):
+        raise NotImplementedError
+    def stubFrequencyOcSetTjMax(freq, ocTjMax):
+        raise NotImplementedError
     def stubDeviceEnumEngineGroups(dev, count_ptr, handle_array):
         global stubState
         if handle_array is None:
@@ -1208,9 +1324,9 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         fwProps.canControl = True
         fwProps.name = "FIRMWARE"
         fwProps.version = "1.0.0"
-    def stubFirmwareFlash(handle, image):
+    def stubFirmwareFlash(handle, image, length):
         fw = firmware_handle_to_ulong(handle)
-        pr("Flashing firmware image", fw, "of size", len(image), ":")
+        pr("Flashing firmware image", fw, "of size", length, ":")
         if image.isascii():
             lines = str(image, 'utf-8').splitlines()
             if len(lines) < 100:
@@ -1230,7 +1346,24 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesPowerSetLimits : stubPowerSetLimits,
                      zesPowerGetLimits : stubPowerGetLimits,
                      zesPowerGetEnergyCounter : stubPowerGetEnergyCounter,
+                     zesDeviceEnumFrequencyDomains : stubDeviceEnumFrequencyDomains,
+                     zesFrequencyGetProperties : stubFrequencyGetProperties,
                      zesFrequencyGetAvailableClocks : stubFrequencyGetAvailableClocks,
+                     zesFrequencyGetRange : stubFrequencyGetRange,
+                     zesFrequencySetRange : stubFrequencySetRange,
+                     zesFrequencyGetState : stubFrequencyGetState,
+                     zesFrequencyGetThrottleTime : stubFrequencyGetThrottleTime,
+                     zesFrequencyOcGetCapabilities : stubFrequencyOcGetCapabilities,
+                     zesFrequencyOcGetFrequencyTarget : stubFrequencyOcGetFrequencyTarget,
+                     zesFrequencyOcSetFrequencyTarget : stubFrequencyOcSetFrequencyTarget,
+                     zesFrequencyOcGetVoltageTarget : stubFrequencyOcGetVoltageTarget,
+                     zesFrequencyOcSetVoltageTarget : stubFrequencyOcSetVoltageTarget,
+                     zesFrequencyOcSetMode : stubFrequencyOcSetMode,
+                     zesFrequencyOcGetMode : stubFrequencyOcGetMode,
+                     zesFrequencyOcGetIccMax : stubFrequencyOcGetIccMax,
+                     zesFrequencyOcSetIccMax : stubFrequencyOcSetIccMax,
+                     zesFrequencyOcGetTjMax : stubFrequencyOcGetTjMax,
+                     zesFrequencyOcSetTjMax : stubFrequencyOcSetTjMax,
                      zesDeviceEnumEngineGroups : stubDeviceEnumEngineGroups,
                      zesEngineGetProperties : stubEngineGetProperties,
                      zesEngineGetActivity : stubEngineGetActivity,
@@ -1289,6 +1422,12 @@ def zeCall(func, *args, **kwargs):
 #
 # ZE string conversions
 #
+
+def fmtknown(value, fmt="%.1f", unknown="?"):
+    if value < 0:
+        return unknown
+    else:
+        return value
 
 def knownvalue(value, unknown="?"):
     if value < 0:
@@ -2742,7 +2881,6 @@ def main():
                     availFreqsNode = Node(freqNode, "AvailableFrequencies", None)
                     Node(availFreqsNode, "Min", "%.1f" % freqProps.min, ("Units", "MHz"))
                     Node(availFreqsNode, "Max", "%.1f" % freqProps.max, ("Units", "MHz"))
-                    Node(availFreqsNode, "Step", "%.1f" % freqProps.step, ("Units", "MHz"))
                     if args.verbose:
                         clockCount = uint32_ptr()
                         try:
@@ -2769,17 +2907,19 @@ def main():
                     nodes.append(Node(freqNode, "ActualFrequency", "?", ("Units", "MHz")))
                     nodes.append(Node(freqNode, "ThrottleReasons", "?"))
                     if args.verbose:
+                        nodes.append(Node(freqNode, "CurrentVoltage", "?", ("Units", "Volts")))
                         nodes.append(Node(freqNode, "Efficient", "?", ("Units", "MHz")))
                         nodes.append(Node(freqNode, "MaximumTDP", "?", ("Units", "MHz")))
 
                     def freqTelemetry(freq=freq, freqState=freqState, node=nodes, verbose=args.verbose):
                         zeCall(zesFrequencyGetState, freq, freqState)
-                        node[0].setText(freqState.request)
-                        node[1].setText(freqState.actual)
+                        node[0].setText(fmtknown(freqState.request))
+                        node[1].setText(fmtknown(freqState.actual))
                         node[2].setText(throttleReasonsString(freqState.throttleReasons))
                         if verbose:
-                            node[3].setText(freqState.efficient)
-                            node[4].setText(freqState.tdp)
+                            node[3].setText(fmtknown(freqState.currentVoltage))
+                            node[4].setText(fmtknown(freqState.efficient))
+                            node[5].setText(fmtknown(freqState.tdp))
 
                     telemetryClosures.append(freqTelemetry)
 
@@ -2930,7 +3070,7 @@ def main():
                 Node(pciTop, "Address", address)
                 Node(pciTop, "MaxGen", knownvalue(pciProps.maxSpeed.gen))
                 Node(pciTop, "MaxLanes", knownvalue(pciProps.maxSpeed.width))
-                Node(pciTop, "MaxBandwidth", knownvalue(pciProps.maxSpeed.maxBandwidth),
+                Node(pciTop, "MaxBandwidth", fmtknown(pciProps.maxSpeed.maxBandwidth),
                      ("Units", "Bytes/s"))
                 Node(pciTop, "HaveBandwidthCounters", pciProps.haveBandwidthCounters)
                 Node(pciTop, "HavePacketCounters", pciProps.havePacketCounters)
@@ -3034,7 +3174,7 @@ def main():
                     node[2].setText(pciStabilityIssuesString(pciState.stabilityIssues))
                     node[3].setText(knownvalue(pciCounter.speed.gen))
                     node[4].setText(knownvalue(pciCounter.speed.width))
-                    node[5].setText(knownvalue(pciCounter.speed.maxBandwidth))
+                    node[5].setText(fmtknown(pciCounter.speed.maxBandwidth))
                     i = 6
                     if have['bw']:
                         node[i].setText(rxThroughput)
@@ -3715,7 +3855,7 @@ def main():
                     for i in range(fwCount.value()):
                         fw = fws[i]
                         pr("Flashing device", names[i])
-                        zeCall(zesFirmwareFlash, fw, image)
+                        zeCall(zesFirmwareFlash, fw, image, len(image))
             else:
                 pr("NOT flashing device(s)")
 
