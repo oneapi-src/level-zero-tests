@@ -1435,6 +1435,23 @@ def knownvalue(value, unknown="?"):
     else:
         return value
 
+def ipcPropertiesString(ipcProps):
+    if not ipcProps:
+        return "None"
+
+    ipcProperties = [(ZE_IPC_PROPERTY_FLAG_MEMORY, "Memory allocations"),
+                     (ZE_IPC_PROPERTY_FLAG_EVENT_POOL, "Events")]
+
+    propStrings = []
+    for p, s in ipcProperties:
+        if ipcProps & p:
+            ipcProps ^= p
+            propStrings.append(s)
+    if ipcProps != 0:
+        propStrings.append("Unknown property")
+
+    return ", ".join(propStrings)
+
 def versionString(version):
     return str(version >> 16) + "." + str(version & 0xffff)
 
@@ -1458,7 +1475,6 @@ def resetReasonsString(reasons):
         reasonStrings.append("Unknown reset reason")
 
     return ", ".join(reasonStrings)
-
 
 def repairStatusString(repairStatus):
     repairStatuses = { ZES_REPAIR_STATUS_UNSUPPORTED : "Unsupported",
@@ -1774,10 +1790,9 @@ def listDrivers(count, drivers):
         driver_uuid_to_string(driver_props.uuid, uuid_string)
         pr.err("  uuid:", uuid_string.id)
         pr.err("  driver version:", driver_props.driverVersion)
-        ipc_props = ze_typed_structure(ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES)
-        zeCall(zeDriverGetIpcProperties, driver, ipc_props)
-        pr.err("  memsSupported:", bool(ipc_props.memsSupported))
-        pr.err("  eventsSupported:", bool(ipc_props.eventsSupported))
+        ipcProps = ze_typed_structure(ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES)
+        zeCall(zeDriverGetIpcProperties, driver, ipcProps)
+        pr.err("  IPC passing:", ipcPropertiesString(ipcProps.flags))
 
 def listDriversAndFail(count, drivers):
     listDrivers(count, drivers)
@@ -1857,11 +1872,6 @@ def getDeviceUUIDs(deviceCounts, deviceLists):
             uuid_string = uuid_string_t()
             device_uuid_to_string(device_properties.uuid, uuid_string)
             uuids.append(str(uuid_string.id))
-
-            sysman_properties = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-            zeCall(zesDeviceGetProperties, device, sysman_properties)
-            uuid_string_sysman = uuid_string_t()
-            device_uuid_to_string(sysman_properties.core.uuid, uuid_string_sysman)
     return uuids
 
 def listDevices(driverIndices, deviceCounts, deviceLists):
@@ -2491,7 +2501,8 @@ def main():
     if args.show_device or args.show_processes or args.show_scheduler or \
        args.show_temp or args.show_power or args.show_freq or args.show_util or \
        args.show_mem or args.show_pci or args.show_fabric_ports or \
-       args.show_standby or args.show_errors or args.show_diag or args.show_fans:
+       args.show_standby or args.show_errors or args.show_diag or args.show_fans or \
+       args.show_firmware:
 
         generatingDeviceReport = True
 
@@ -2637,34 +2648,42 @@ def main():
     for devID, devUUID, device in zip(deviceIDs, deviceUUIDs, devices):
         devNode = Node(topNode, "Device", None, ("Index", devID), ("UUID", deviceUUID(devUUID)))
         if args.show_device:
-            props = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-            zeCall(zesDeviceGetProperties, device, props)
-            Node(devNode, "Name", props.core.name)
-            devType = deviceTypeString(props.core.type)
-            Node(devNode, "Type", devType)
-            Node(devNode, "VendorId", hex(props.core.vendorId))
-            Node(devNode, "DeviceId", hex(props.core.deviceId))
+            coreProps = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
+            zeCall(zeDeviceGetProperties, device, coreProps)
+            Node(devNode, "Name", coreProps.name)
+            Node(devNode, "Type", deviceTypeString(coreProps.type))
+            Node(devNode, "VendorId", hex(coreProps.vendorId))
+            Node(devNode, "DeviceId", hex(coreProps.deviceId))
             if args.show_inventory:
-                Node(devNode, "NumSubdevices", props.numSubdevices)
-                Node(devNode, "serialNumber", props.serialNumber)
-                Node(devNode, "boardNumber", props.boardNumber)
-                Node(devNode, "brandName", props.brandName)
-                Node(devNode, "modelName", props.modelName)
-                Node(devNode, "vendorName", props.vendorName)
-                Node(devNode, "driverVersion", props.driverVersion)
-                if args.verbose:
-                    Node(devNode, "coreClockRate", props.core.coreClockRate, ("Units", "MHz"))
-                    Node(devNode, "maxMemAllocSize", props.core.maxMemAllocSize)
-                    Node(devNode, "maxHardwareContexts", props.core.maxHardwareContexts)
-                    Node(devNode, "timestampValidBits", props.core.timestampValidBits)
-                    Node(devNode, "kernelTimestampValidBits", props.core.kernelTimestampValidBits)
-                    Node(devNode, "maxCommandQueuePriority", props.core.maxCommandQueuePriority)
-                    Node(devNode, "numThreadsPerEU", props.core.numThreadsPerEU)
-                    Node(devNode, "physicalEUSimdWidth", props.core.physicalEUSimdWidth)
-                    Node(devNode, "numEUsPerSubslice", props.core.numEUsPerSubslice)
-                    Node(devNode, "numSubslicesPerSlice", props.core.numSubslicesPerSlice)
-                    Node(devNode, "numSlices", props.core.numSlices)
-                    Node(devNode, "timerResolution", props.core.timerResolution)
+                try:
+                    props = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES)
+                    zeCall(zesDeviceGetProperties, device, props)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+                else:
+                    Node(devNode, "NumSubdevices", props.numSubdevices)
+                    Node(devNode, "serialNumber", props.serialNumber)
+                    Node(devNode, "boardNumber", props.boardNumber)
+                    Node(devNode, "brandName", props.brandName)
+                    Node(devNode, "modelName", props.modelName)
+                    Node(devNode, "vendorName", props.vendorName)
+                    Node(devNode, "driverVersion", props.driverVersion)
+                    if args.verbose:
+                        Node(devNode, "coreClockRate", props.core.coreClockRate, ("Units", "MHz"))
+                        Node(devNode, "maxMemAllocSize", props.core.maxMemAllocSize)
+                        Node(devNode, "maxHardwareContexts", props.core.maxHardwareContexts)
+                        Node(devNode, "timestampValidBits", props.core.timestampValidBits)
+                        Node(devNode, "kernelTimestampValidBits", props.core.kernelTimestampValidBits)
+                        Node(devNode, "maxCommandQueuePriority", props.core.maxCommandQueuePriority)
+                        Node(devNode, "numThreadsPerEU", props.core.numThreadsPerEU)
+                        Node(devNode, "physicalEUSimdWidth", props.core.physicalEUSimdWidth)
+                        Node(devNode, "numEUsPerSubslice", props.core.numEUsPerSubslice)
+                        Node(devNode, "numSubslicesPerSlice", props.core.numSubslicesPerSlice)
+                        Node(devNode, "numSlices", props.core.numSlices)
+                        Node(devNode, "timerResolution", props.core.timerResolution)
+
             if args.show_telemetry:
                 nodes = []
                 nodes.append(Node(devNode, "ResetReasons", "?"))
@@ -3547,8 +3566,10 @@ def main():
                     if mode == ZES_SCHED_MODE_TIMESLICE:
                         schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
                         zeCall(zesSchedulerGetTimeoutModeProperties, device, True, schedProps)
-                        Node(schedModesNode, "DefaultInterval", "%.3f" % schedProps.interval / 1000.0, ("Units", "msec"))
-                        Node(schedModesNode, "DefaultYieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0, ("Units", "msec"))
+                        Node(schedModesNode, "DefaultInterval", "%.3f" % schedProps.interval / 1000.0,
+                             ("Units", "msec"))
+                        Node(schedModesNode, "DefaultYieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0,
+                             ("Units", "msec"))
 
             if args.show_telemetry and schedModes:
                 mode = zeCall(zesSchedulerGetCurrentMode,device)
