@@ -10,9 +10,9 @@ to be installed.
 ### Dependencies
 For building against level-zero, you can either build against the version you
 have installed on your system (automatic, Linux only), or specify an install
-prefix with the `L0_ROOT` cmake flag during configuration.
-This `L0_ROOT` must point to the top-level install directory where level-zero was installed.
-for example: `-DL0_ROOT=/home/username/level-zero/build/output/`.
+prefix with the `CMAKE_PREFIX_PATH` cmake flag during configuration.
+This `CMAKE_PREFIX_PATH` must point to the top-level install directory where level-zero was installed.
+for example: `-DCMAKE_PREFIX_PATH=/home/username/level-zero/build/output/`.
 
 Some benchmarks written against OpenCL are included to enable easy performance
 comparisons. These benchmarks will be built automatically if OpenCL is available

@@ -4,16 +4,10 @@ include(FindPackageHandleStandardArgs)
 
 find_path(LevelZero_INCLUDE_DIR
   NAMES level_zero/ze_api.h
-  PATHS
-    ${L0_ROOT}
-  PATH_SUFFIXES "include"
 )
 
 find_library(LevelZero_LIBRARY
   NAMES ze_loader ze_loader32 ze_loader64
-  PATHS
-    ${L0_ROOT}
-  PATH_SUFFIXES "lib" "lib/level_zero/"
 )
 
 find_package_handle_standard_args(LevelZero
