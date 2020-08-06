@@ -587,7 +587,7 @@ TEST_P(
 
   size_t size_shared_memory = GetParam();
   size_t size_of_chunk = size_shared_memory / 2;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
   auto memory_shared =

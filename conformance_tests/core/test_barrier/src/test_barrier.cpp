@@ -32,7 +32,7 @@ TEST_F(
     GivenEmptyCommandListWhenAppendingBarrierWithEventThenSuccessIsReturned) {
   lzt::zeEventPool ep;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 1);
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
@@ -52,7 +52,7 @@ TEST_F(
   lzt::zeEventPool ep;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   const size_t event_count = 2;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 2);
   std::vector<ze_event_handle_t> events(event_count, nullptr);
   ep.create_events(events, event_count);
@@ -74,7 +74,7 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_event_handle_t event = nullptr;
   const size_t event_count = 2;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 3);
   std::vector<ze_event_handle_t> events(event_count, nullptr);
 
@@ -118,7 +118,7 @@ TEST_F(
     GivenEmptyCommandListWhenAppendingMemoryRangesBarrierThenSuccessIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<ze_event_handle_t> waiting_events;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
   AppendMemoryRangesBarrierTest(context, device, cmd_list, nullptr,
@@ -135,7 +135,7 @@ TEST_F(
     GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventThenSuccessIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   lzt::zeEventPool ep;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 1);
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
@@ -157,7 +157,7 @@ TEST_F(
   const size_t event_count = 2;
   std::vector<ze_event_handle_t> waiting_events(event_count, nullptr);
   lzt::zeEventPool ep;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 2);
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
@@ -174,7 +174,7 @@ TEST_F(
     GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventAndWaitEventsThenSuccessIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   lzt::zeEventPool ep;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 3);
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
@@ -210,7 +210,7 @@ TEST_F(
     GivenEventSignaledWhenCommandListAppendingBarrierThenHostDetectsEventSuccessfully) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_event_handle_t event_barrier_to_host = nullptr;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 1);
   std::vector<int> inpa = {0, 1, 2,  3,  4,  5,  6,  7,
                            8, 9, 10, 11, 12, 13, 14, 15};
@@ -249,7 +249,7 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   uint32_t num_events = 6;
   ASSERT_GE(num_events, 3);
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 6);
   std::vector<ze_event_handle_t> events_to_barrier(num_events, nullptr);
   std::vector<int> inpa = {0, 1, 2,  3,  4,  5,  6,  7,
@@ -294,7 +294,7 @@ TEST_F(
     GivenEventSignaledWhenCommandListAppendingMemoryRangesBarrierThenHostDetectsEventSuccessfully) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_event_handle_t event_barrier_to_host = nullptr;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 1);
   std::vector<int> inpa = {0, 1, 2,  3,  4,  5,  6,  7,
                            8, 9, 10, 11, 12, 13, 14, 15};
@@ -337,7 +337,7 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   uint32_t num_events = 6;
   ASSERT_GE(num_events, 3);
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 6);
   std::vector<ze_event_handle_t> events_to_barrier(num_events, nullptr);
   std::vector<int> inpa = {0, 1, 2,  3,  4,  5,  6,  7,
@@ -396,7 +396,7 @@ TEST_P(
     zeBarrierKernelTests,
     GivenKernelFunctionsAndMemoryCopyWhenBarrierInsertedThenExecutionCompletesSuccesfully) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
 
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
