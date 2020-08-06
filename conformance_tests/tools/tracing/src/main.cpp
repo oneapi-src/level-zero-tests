@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 
 int main(int argc, char **argv) {
+  putenv("ZET_ENABLE_API_TRACING_EXP=1");
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
