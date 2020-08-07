@@ -118,12 +118,7 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %apply double * OUTPUT { double* pOcIccMax };
 %apply double * OUTPUT { double* pOcTjMax };
 
-// Fails in Ubuntu 19.10 (and presumably SWIG 3):
-// %pybuffer_binary(void* pImage, uint32_t size);
-
 %include <level_zero/zes_api.h>
-
-// %clear (void* pImage, uint32_t size);
 
 %clear double* pOcTjMax;
 %clear double* pOcIccMax;
@@ -137,6 +132,20 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %clear zes_sched_mode_t* pMode;
 %clear zes_standby_promo_mode_t* pMode;
 %clear double* pTemperature;
+
+// This fails in Ubuntu 19.10 (and presumably SWIG 3):
+// %pybuffer_binary(void* pImage, uint32_t size);
+
+// So use a char-based wrapper instead:
+%pybuffer_binary(char* pImage, uint32_t size);
+%inline %{
+ze_result_t
+zesFirmwareFlashData(zes_firmware_handle_t hFirmware, char* pImage, uint32_t size)
+{
+    return zesFirmwareFlash(hFirmware, pImage, size);
+}
+%}
+%clear (char* pImage, uint32_t size);
 
 //
 // Standard C constructs

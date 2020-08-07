@@ -533,7 +533,6 @@ def zes_typed_array(stype, count):
 # ZES_STRUCTURE_TYPE_PERF_PROPERTIES
 # ZES_STRUCTURE_TYPE_PSU_PROPERTIES
 # ZES_STRUCTURE_TYPE_SCHED_PROPERTIES
-# ZES_STRUCTURE_TYPE_OC_CAPABILITIES
 # ZES_STRUCTURE_TYPE_LED_STATE
 # ZES_STRUCTURE_TYPE_PSU_STATE
 # ZES_STRUCTURE_TYPE_TEMP_CONFIG
@@ -660,7 +659,7 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesFirmwareGetProperties(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFirmwareFlash(*args, **kwargs):
+    def zesFirmwareFlashData(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
 
 #
@@ -763,8 +762,17 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             uint32_assign(count_ptr, 2)
         elif uint32_value(count_ptr) == 2:
             p = stubState.setdefault("Freq", {})
-            p[ZES_FREQ_DOMAIN_GPU] = {"Range" : (200.0, 1200.0), "State" : 300.0}
-            p[ZES_FREQ_DOMAIN_MEMORY] = {"Range" : (200.0, 1200.0), "State" : 300.0}
+            p[ZES_FREQ_DOMAIN_GPU] = { "Range" : (200.0, 1200.0),
+                                       "State" : 300.0,
+                                       "Throttled" : [0, 0],
+                                       "ocFreq" : 1200.0,
+                                       "ocVolt" : (3.0, 0.0),
+                                       "ocMode" : ZES_OC_MODE_OFF,
+                                       "iccMax" : 15.0,
+                                       "tjMax" : 150.0 }
+            p[ZES_FREQ_DOMAIN_MEMORY] = { "Range" : (200.0, 1200.0),
+                                          "State" : 300.0,
+                                          "Throttled" : [0, 0] }
             items = zes_freq_handle_array.frompointer(handle_array)
             items[0] = ulong_to_freq_handle(ZES_FREQ_DOMAIN_GPU)
             items[1] = ulong_to_freq_handle(ZES_FREQ_DOMAIN_MEMORY)
@@ -813,42 +821,115 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         freqState.efficient = 1000.0
         freqState.actual = stubState["Freq"][f]["State"]
         freqState.throttleReasons = 0
-    def stubFrequencyGetThrottleTime(freq, freqThrottleTime):
-        raise NotImplementedError
+    def stubFrequencyGetThrottleTime(freq, freqThrottle):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        freqThrottle.throttleTime, freqThrottle.timestamp = stubState["Freq"][f]["Throttled"]
+        stubState["Freq"][f]["Throttled"][0] += 100000
+        stubState["Freq"][f]["Throttled"][1] += 1000000
     def stubFrequencyOcGetCapabilities(freq, ocCapabilities):
-        ocCapabilities.isOcSupported = False
-        ocCapabilities.maxFactoryDefaultFrequency = 300.0
-        ocCapabilities.maxFactoryDefaultVoltage = 3.0
-        ocCapabilities.maxOcFrequency = 1200
-        ocCapabilities.minOcVoltageOffset = 0.0
-        ocCapabilities.maxOcVoltageOffset = 0.0
-        ocCapabilities.maxOcVoltage = 3.0
-        ocCapabilities.isTjMaxSupported = False
-        ocCapabilities.isIccMaxSupported = False
-        ocCapabilities.isHighVoltModeCapable = False
-        ocCapabilities.isHighVoltModeEnabled = False
-        ocCapabilities.isExtendedModeSupported = False
-        ocCapabilities.isFixedModeSupported = False
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            ocCapabilities.isOcSupported = True
+            ocCapabilities.maxFactoryDefaultFrequency = 300.0
+            ocCapabilities.maxFactoryDefaultVoltage = 3.0
+            ocCapabilities.maxOcFrequency = 2000
+            ocCapabilities.minOcVoltageOffset = 0.5
+            ocCapabilities.maxOcVoltageOffset = 1.5
+            ocCapabilities.maxOcVoltage = 5.0
+            ocCapabilities.isTjMaxSupported = True
+            ocCapabilities.isIccMaxSupported = True
+            ocCapabilities.isHighVoltModeCapable = True
+            ocCapabilities.isHighVoltModeEnabled = False
+            ocCapabilities.isExtendedModeSupported = True
+            ocCapabilities.isFixedModeSupported = True
+        elif f == 1:
+            ocCapabilities.isOcSupported = False
+            ocCapabilities.maxFactoryDefaultFrequency = 300.0
+            ocCapabilities.maxFactoryDefaultVoltage = 3.0
+            ocCapabilities.maxOcFrequency = 1200
+            ocCapabilities.minOcVoltageOffset = 0.0
+            ocCapabilities.maxOcVoltageOffset = 0.0
+            ocCapabilities.maxOcVoltage = 3.0
+            ocCapabilities.isTjMaxSupported = False
+            ocCapabilities.isIccMaxSupported = False
+            ocCapabilities.isHighVoltModeCapable = False
+            ocCapabilities.isHighVoltModeEnabled = False
+            ocCapabilities.isExtendedModeSupported = False
+            ocCapabilities.isFixedModeSupported = False
+        else:
+            raise ValueError(f)
     def stubFrequencyOcGetFrequencyTarget(freq):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["ocFreq"]
+        else:
+            raise ValueError(f)
     def stubFrequencyOcSetFrequencyTarget(freq, ocFTarget):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["ocFreq"] = ocFTarget
+        else:
+            raise ValueError(f)
     def stubFrequencyOcGetVoltageTarget(freq):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["ocVolt"]
+        else:
+            raise ValueError(f)
     def stubFrequencyOcSetVoltageTarget(freq, ocVTarget, ocVOffset):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["ocVolt"] = (ocVTarget, ocVOffset)
+        else:
+            raise ValueError(f)
     def stubFrequencyOcSetMode(freq, ocMode):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["ocMode"] = ocMode
+        else:
+            raise ValueError(f)
     def stubFrequencyOcGetMode(freq):
-        return ZES_OC_MODE_OFF
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["ocMode"]
+        else:
+            return ZES_OC_MODE_OFF
     def stubFrequencyOcGetIccMax(freq):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["iccMax"]
+        else:
+            raise ValueError(f)
     def stubFrequencyOcSetIccMax(freq, ocIccMax):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["iccMax"] = ocIccMax
+        else:
+            raise ValueError(f)
     def stubFrequencyOcGetTjMax(freq):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["tjMax"]
+        else:
+            raise ValueError(f)
     def stubFrequencyOcSetTjMax(freq, ocTjMax):
-        raise NotImplementedError
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["tjMax"] = ocTjMax
+        else:
+            raise ValueError(f)
     def stubDeviceEnumEngineGroups(dev, count_ptr, handle_array):
         global stubState
         if handle_array is None:
@@ -1042,8 +1123,8 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             dev = devices[i]
             d = devs.setdefault(device_handle_to_ulong(dev), {})
             enables = d.setdefault("EventEnables", 0)
-            events[i] = enables & (ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH | \
-                                   ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS |\
+            events[i] = enables & (ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH |
+                                   ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS |
                                    ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED)
         return count
     def stubDeviceEnumFabricPorts(dev, count_ptr, handle_array):
@@ -1111,16 +1192,16 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                 portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED
             elif localIdx == 4:
                 portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
-                portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS | \
-                        ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED
+                portState.qualityIssues = (ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS |
+                                           ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED)
             elif localIdx == 5:
                 portState.status = ZES_FABRIC_PORT_STATUS_FAILED
-                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT | \
-                        ZES_FABRIC_PORT_FAILURE_FLAG_FAILED
+                portState.failureReasons = (ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT |
+                                            ZES_FABRIC_PORT_FAILURE_FLAG_FAILED)
             elif localIdx == 6:
                 portState.status = ZES_FABRIC_PORT_STATUS_FAILED
-                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING | \
-                        ZES_FABRIC_PORT_FAILURE_FLAG_FAILED
+                portState.failureReasons = (ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING |
+                                            ZES_FABRIC_PORT_FAILURE_FLAG_FAILED)
             elif localIdx == 7:
                 portState.status = ZES_FABRIC_PORT_STATUS_FAILED
                 portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT
@@ -1198,9 +1279,9 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             proc.processId = 32768
             proc.memSize = 0x40000
             proc.sharedSize = 0x1000
-            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_OTHER | 1 << ZES_ENGINE_TYPE_FLAG_COMPUTE | \
-                           1 << ZES_ENGINE_TYPE_FLAG_3D | 1 << ZES_ENGINE_TYPE_FLAG_MEDIA | \
-                           1 << ZES_ENGINE_TYPE_FLAG_DMA
+            proc.engines = (1 << ZES_ENGINE_TYPE_FLAG_OTHER | 1 << ZES_ENGINE_TYPE_FLAG_COMPUTE |
+                            1 << ZES_ENGINE_TYPE_FLAG_3D | 1 << ZES_ENGINE_TYPE_FLAG_MEDIA |
+                            1 << ZES_ENGINE_TYPE_FLAG_DMA)
             procs[3] = proc
         else:
             raise ValueError(uint32_value(count_ptr))
@@ -1324,9 +1405,10 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         fwProps.canControl = True
         fwProps.name = "FIRMWARE"
         fwProps.version = "1.0.0"
-    def stubFirmwareFlash(handle, image, length):
+    # def stubFirmwareFlash(handle, image, length):
+    def stubFirmwareFlashData(handle, image):
         fw = firmware_handle_to_ulong(handle)
-        pr("Flashing firmware image", fw, "of size", length, ":")
+        pr("Flashing firmware image", fw, "of size", len(image), ":")
         if image.isascii():
             lines = str(image, 'utf-8').splitlines()
             if len(lines) < 100:
@@ -1397,7 +1479,7 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesFanGetState : stubFanGetState,
                      zesDeviceEnumFirmwares : stubDeviceEnumFirmwares,
                      zesFirmwareGetProperties : stubFirmwareGetProperties,
-                     zesFirmwareFlash : stubFirmwareFlash }
+                     zesFirmwareFlashData : stubFirmwareFlashData }
 
     replacementFunction = replacements.get(func, stillUnimplemented)
 
@@ -1492,6 +1574,13 @@ def freqTypeString(freqType):
     freqTypes = { ZES_FREQ_DOMAIN_GPU : "GPU",
                   ZES_FREQ_DOMAIN_MEMORY : "Memory" }
     return freqTypes.get(freqType, "Unknown")
+
+def ocModeString(mode):
+    ocModes = { ZES_OC_MODE_OFF : "Off",
+                ZES_OC_MODE_OVERRIDE : "Override",
+                ZES_OC_MODE_INTERPOLATIVE : "Interpolative",
+                ZES_OC_MODE_FIXED : "Fixed" }
+    return ocModes.get(mode, "Unknown")
 
 def engTypeString(engType):
     engTypes = { ZES_ENGINE_GROUP_ALL : "AllEngines",
@@ -1976,51 +2065,32 @@ def parseArgs():
     global IndexAttributes, SecondaryIndexAttributes
     global replaceUnimplementedFunctions
 
-    helpFormatter=lambda prog: argparse.HelpFormatter(prog, max_help_position=36)
+    helpFormatter=lambda prog: argparse.HelpFormatter(prog, max_help_position=48)
 
     parser = argparse.ArgumentParser(description="Access SYSMAN services",
                                      formatter_class=helpFormatter)
 
     parser.add_argument("-v","--version", action='version', version="%(prog)s " + ZESYSMAN_PROG_VERSION,
                         help="report version information")
-    parser.add_argument("--driver", metavar='DRV', nargs='+',
-                        help="specify driver (index/UUID)")
-    parser.add_argument("-d", "--device", metavar='D', nargs='+',
-                        help="specify device (index/UUID)")
-    parser.add_argument("-i", "--show-inventory", action='store_true',
-                        help="show inventory data")
-    parser.add_argument("-l", "--show-telemetry", action='store_true',
-                        help="show telemetry data")
-    parser.add_argument("-t", "--show-temp", action='store_true',
-                        help="show temperature")
-    parser.add_argument("-p", "--show-power", action='store_true',
-                        help="show power")
-    parser.add_argument("-c", "--show-freq", "--show-clocks", action='store_true',
-                        help="show frequency")
-    parser.add_argument("-u", "--show-util", action='store_true',
-                        help="show utilization")
-    parser.add_argument("-m", "--show-mem", action='store_true',
-                        help="show memory stats")
-    parser.add_argument("-x", "--show-pci", action='store_true',
-                        help="show PCI bandwidth")
-    parser.add_argument("--show-fabric-ports", action='store_true',
-                        help="show fabric ports")
-    parser.add_argument("-b", "--show-standby", action='store_true',
-                        help="show standby promotion")
-    parser.add_argument("-e", "--show-errors", action='store_true',
-                        help="show errors")
-    parser.add_argument("-a", "--show-all", action='store_true',
-                        help="show all sysman attributes")
-    parser.add_argument("--show-device", action='store_true',
-                        help="show device attributes")
-    parser.add_argument("--show-processes", action='store_true',
-                        help="show process usage")
-    parser.add_argument("--show-scheduler", action='store_true',
-                        help="show scheduler mode")
-    parser.add_argument("--show-diag", action='store_true',
-                        help="show diagnostic test suites")
-    parser.add_argument("--verbose", action='store_true',
-                        help="show extra attributes")
+    parser.add_argument("--driver", metavar='DRV', nargs='+', help="specify driver (index/UUID)")
+    parser.add_argument("-d", "--device", metavar='D', nargs='+', help="specify device (index/UUID)")
+    parser.add_argument("-i", "--show-inventory", action='store_true', help="show inventory data")
+    parser.add_argument("-l", "--show-telemetry", action='store_true', help="show telemetry data")
+    parser.add_argument("-t", "--show-temp", action='store_true', help="show temperature")
+    parser.add_argument("-p", "--show-power", action='store_true', help="show power")
+    parser.add_argument("-c", "--show-freq", "--show-clocks", action='store_true', help="show frequency")
+    parser.add_argument("-u", "--show-util", action='store_true', help="show utilization")
+    parser.add_argument("-m", "--show-mem", action='store_true', help="show memory stats")
+    parser.add_argument("-x", "--show-pci", action='store_true', help="show PCI bandwidth")
+    parser.add_argument("--show-fabric-ports", action='store_true', help="show fabric ports")
+    parser.add_argument("-b", "--show-standby", action='store_true', help="show standby promotion")
+    parser.add_argument("-e", "--show-errors", action='store_true', help="show errors")
+    parser.add_argument("-a", "--show-all", action='store_true', help="show all sysman attributes")
+    parser.add_argument("--show-device", action='store_true', help="show device attributes")
+    parser.add_argument("--show-processes", action='store_true', help="show process usage")
+    parser.add_argument("--show-scheduler", action='store_true', help="show scheduler mode")
+    parser.add_argument("--show-diag", action='store_true', help="show diagnostic test suites")
+    parser.add_argument("--verbose", action='store_true', help="show extra attributes")
     parser.add_argument("--poll", metavar='TIME', type=int,
                         help="set sampling interval (in s by default)")
     parser.add_argument("--iterations", metavar='NUM', type=int,
@@ -2031,12 +2101,9 @@ def parseArgs():
                         help="set burst power limit")
     parser.add_argument("--set-peak-power", nargs='+', metavar=('POW',''),
                         help="set peak power limit")
-    parser.add_argument("--set-freq", nargs='+', metavar=('MIN','MAX'),
-                        help="set frequency limits")
-    parser.add_argument("--set-scheduler", nargs='+', metavar=('MODE',''),
-                        help="set scheduler mode")
-    parser.add_argument("--clear-errors", action='store_true',
-                        help="clear error counters")
+    parser.add_argument("--set-freq", nargs='+', metavar=('MIN','MAX'), help="set frequency limits")
+    parser.add_argument("--set-scheduler", nargs='+', metavar=('MODE',''), help="set scheduler mode")
+    parser.add_argument("--clear-errors", action='store_true', help="clear error counters")
     parser.add_argument("--enable-fabric-ports", nargs='*', type=int, metavar='IDX',
                         help="enable fabric ports")
     parser.add_argument("--disable-fabric-ports", nargs='*', type=int, metavar='IDX',
@@ -2045,56 +2112,37 @@ def parseArgs():
                         help="enable port beaconing")
     parser.add_argument("--disable-beaconing", nargs='*', type=int, metavar='IDX',
                         help="disable port beaconing")
-    parser.add_argument("--set-standby", metavar='MODE',
-                        help="set sleep state promotion mode")
-    parser.add_argument("--reset", action='store_true',
-                        help="reset specified device")
-    parser.add_argument("--force", action='store_true',
-                        help="forcibly kill processes on reset")
-    parser.add_argument("-y", "--yes", action='store_true',
-                        help="do not ask for reset confirmation")
+    parser.add_argument("--set-standby", metavar='MODE', help="set sleep state promotion mode")
+    parser.add_argument("--reset", action='store_true', help="reset specified device")
+    parser.add_argument("--force", action='store_true', help="forcibly kill processes on reset")
+    parser.add_argument("-y", "--yes", action='store_true', help="do not ask for reset confirmation")
     parser.add_argument("--run-diag", nargs='+', metavar=('SUITE','N'),
                         help="run diagnostic test suites")
     parser.add_argument("-f", "--format", metavar='FMT', choices=["list","xml","table","csv"],
                         help="specify output format (list/xml/table/csv)")
-    parser.add_argument("--output", metavar='FILE',
-                        help="output to FILE")
-    parser.add_argument("--tee", action='store_true',
-                        help="print to standard output also")
+    parser.add_argument("--output", metavar='FILE', help="output to FILE")
+    parser.add_argument("--tee", action='store_true', help="print to standard output also")
     parser.add_argument("--indent", metavar='COUNT', type=int,
                         help="use COUNT space (or -COUNT tab) indents")
-    parser.add_argument("--style", choices=["condensed","aligned"],
-                        help="change output style")
-    parser.add_argument("--uuid-index", action='store_true',
-                        help="use UUID as index")
-    parser.add_argument("--ascii", action='store_true',
-                        help="use only 7-bit ascii characters")
+    parser.add_argument("--style", choices=["condensed","aligned"], help="change output style")
+    parser.add_argument("--uuid-index", action='store_true', help="use UUID as index")
+    parser.add_argument("--ascii", action='store_true', help="use only 7-bit ascii characters")
     # Only support development features and in-development options in developer mode
     if os.environ.get("ZESYSMAN_DEVELOPER_MODE"):
-        parser.add_argument("-n", "--dry-run", action='store_true',
-                            help="do not make any state changes")
-        parser.add_argument("--save-profile", metavar='PROF',
-                            help="save device configuration")
-        parser.add_argument("--restore-profile", metavar='PROF',
-                            help="restore device configuration")
-        parser.add_argument("--topo-matrix", action='store_true',
-                            help="show topology matrix")
-        parser.add_argument("--subdevice", action='store_true',
-                            help="report by subdevice")
-        parser.add_argument("--tiny-uuid", action='store_true',
-                            help="print tiny device UUIDs")
-        parser.add_argument("--debug", action='store_true',
-                            help="debug (for development only)")
-        parser.add_argument("--reset-freq", action='store_true',
-                            help="reset frequency limits")
+        parser.add_argument("-n", "--dry-run", action='store_true', help="do not make any state changes")
+        parser.add_argument("--save-profile", metavar='PROF', help="save device configuration")
+        parser.add_argument("--restore-profile", metavar='PROF', help="restore device configuration")
+        parser.add_argument("--topo-matrix", action='store_true', help="show topology matrix")
+        parser.add_argument("--subdevice", action='store_true', help="report by subdevice")
+        parser.add_argument("--tiny-uuid", action='store_true', help="print tiny device UUIDs")
+        parser.add_argument("--debug", action='store_true', help="debug (for development only)")
+        parser.add_argument("--reset-freq", action='store_true', help="reset frequency limits")
         parser.add_argument("--stub-unimplemented", action='store_true',
                             help="provide stubs for some unimplemented functions (for development only)")
         parser.add_argument("--show-timestamp", action='store_true',
                             help="show timestamps when iterating")
-        parser.add_argument("--wait-events", nargs='*', metavar=('MSEC','MASK'),
-                            help="wait for events")
-        parser.add_argument("--show-fans", action='store_true',
-                            help="show fans")
+        parser.add_argument("--wait-events", nargs='*', metavar=('MSEC','MASK'), help="wait for events")
+        parser.add_argument("--show-fans", action='store_true', help="show fans")
         parser.add_argument("--set-fan-speed-default", nargs=1, type=int, metavar='IDX',
                             help="set fan to default speed")
         parser.add_argument("--set-fan-speed-rpm", nargs=2, type=int, metavar=('IDX','RPM'),
@@ -2105,10 +2153,25 @@ def parseArgs():
                             help="set fan to temperature table in RPM")
         parser.add_argument("--set-fan-speed-table-percent", nargs='+', type=int, metavar=('IDX','N'),
                             help="set fan to temperature table in percent of max")
-        parser.add_argument("--show-firmware", action='store_true',
-                            help="show fans")
-        parser.add_argument("--flash-firmware", nargs=1, metavar='FILE',
-                            help="flash firmware from FILE")
+        parser.add_argument("--show-firmware", action='store_true', help="show firmware")
+        parser.add_argument("--flash-firmware", nargs=1, metavar='FILE', help="flash firmware from FILE")
+        parser.add_argument("--set-oc-freq", nargs=2, metavar=('IDX','FRQ'),
+                            help="Set overclock frequency target")
+        parser.add_argument("--set-oc-volts", nargs=3, metavar=('IDX','V','V'),
+                            help="Set overclock voltage/offset targets")
+        parser.add_argument("--set-oc-off", nargs=1, type=int, metavar='IDX',
+                            help="Set overclock mode to OFF")
+        parser.add_argument("--set-oc-override", nargs=1, type=int, metavar='IDX',
+                            help="Set overclock mode to OVERRIDE")
+        parser.add_argument("--set-oc-interpolate", nargs=1, type=int, metavar='IDX',
+                            help="Set overclock mode to INTERPOLATING")
+        parser.add_argument("--set-oc-fixed", nargs=1, type=int, metavar='IDX',
+                            help="Set overclock mode to FIXED")
+        parser.add_argument("--set-oc-max-current", nargs=2, metavar=('IDX','A'),
+                            help="Set max overclock current")
+        parser.add_argument("--set-oc-max-temp", nargs=2, metavar=('IDX','C'),
+                            help="Set max overclock temperature")
+        parser.add_argument("--show-oc", action='store_true', help="show overclocking")
 
     args = parser.parse_args()
 
@@ -2131,6 +2194,15 @@ def parseArgs():
         args.set_fan_speed_table_percent = None
         args.show_firmware = None
         args.flash_firmware = None
+        args.set_oc_freq = None
+        args.set_oc_volts = None
+        args.set_oc_off = None
+        args.set_oc_override = None
+        args.set_oc_interpolate = None
+        args.set_oc_fixed = None
+        args.set_oc_max_current = None
+        args.set_oc_max_temp = None
+        args.show_oc = None
 
     Node = formatArgClass.get(args.format, Node)
 
@@ -2466,8 +2538,8 @@ def parseTestSuite(diagCount, diags, opts):
                             lastFound = True
                 if not firstFound and first != ZES_DIAG_FIRST_TEST_INDEX:
                     pr.err("WARNING:", first, "not found in test suite")
-                if not lastFound and last != first and (last & 0xffffffff) != \
-                                                       (ZES_DIAG_LAST_TEST_INDEX & 0xffffffff):
+                if not lastFound and last != first and ((last & 0xffffffff) !=
+                                                        (ZES_DIAG_LAST_TEST_INDEX & 0xffffffff)):
                     pr.err("WARNING:", last, "not found in test suite")
             else:
                 pr.err("WARNING: Test suite has no individual subtests")
@@ -2498,11 +2570,10 @@ def main():
         args.show_mem, args.show_pci, args.show_fabric_ports = True, True, True
         args.show_standby, args.show_errors = True, True
 
-    if args.show_device or args.show_processes or args.show_scheduler or \
-       args.show_temp or args.show_power or args.show_freq or args.show_util or \
-       args.show_mem or args.show_pci or args.show_fabric_ports or \
-       args.show_standby or args.show_errors or args.show_diag or args.show_fans or \
-       args.show_firmware:
+    if (args.show_device or args.show_processes or args.show_scheduler or args.show_temp or
+        args.show_power or args.show_freq or args.show_util or args.show_mem or args.show_pci or
+        args.show_fabric_ports or args.show_standby or args.show_errors or args.show_diag or
+        args.show_fans or args.show_firmware or args.show_oc):
 
         generatingDeviceReport = True
 
@@ -2580,14 +2651,15 @@ def main():
             pr.err("ERROR: can only wait on events from one driver at a time")
             sys.exit(1)
 
-        allEvents = ZES_EVENT_TYPE_FLAG_DEVICE_DETACH | ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH | \
-                    ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER | \
-                    ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT | ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED | \
-                    ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED | ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL | \
-                    ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1 | ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2 | \
-                    ZES_EVENT_TYPE_FLAG_MEM_HEALTH | ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH | \
-                    ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH | ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS | \
-                    ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS | ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED
+        allEvents = (ZES_EVENT_TYPE_FLAG_DEVICE_DETACH | ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH |
+                     ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER |
+                     ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT | ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED |
+                     ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED | ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL |
+                     ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1 | ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2 |
+                     ZES_EVENT_TYPE_FLAG_MEM_HEALTH | ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH |
+                     ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH | ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS |
+                     ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS |
+                     ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED)
 
         if len(args.wait_events) > 1:
             selectedEvents = int(args.wait_events[1],0) & allEvents
@@ -2614,7 +2686,8 @@ def main():
         pEvents = zes_event_type_flags_array(count)
 
         try:
-            numDeviceEvents = zeCall(zesDriverEventListen, driver, timeout, count, phDevices.cast(), pEvents.cast())
+            numDeviceEvents = zeCall(zesDriverEventListen, driver, timeout, count, phDevices.cast(),
+                                     pEvents.cast())
         except NotImplementedError:
             pass
         except ValueError:
@@ -2724,7 +2797,7 @@ def main():
                 tempType = tempTypeString(tempProps.type)
                 if tempProps.onSubdevice:
                     tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType),
-                                       ("SubdeviceId", tempProps.subdeviceId))
+                                    ("SubdeviceId", tempProps.subdeviceId))
                 else:
                     tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType))
 
@@ -2786,11 +2859,13 @@ def main():
                 pwr = powers[i]
                 if args.dry_run:
                     if sustainedLimit:
-                        pr("Would set sustained limit to", sustainedLimit.power, "mW,", sustainedLimit.interval, "ms")
+                        pr("Would set sustained limit to", sustainedLimit.power, "mW,",
+                           sustainedLimit.interval, "ms")
                     if burstLimit:
                         pr("Would set burst limit to", burstLimit.power, "mW")
                     if peakLimit:
-                        pr("Would set peak AC, DC limits to", peakLimit.powerAC, "mW,", peakLimit.powerDC, "mW")
+                        pr("Would set peak AC, DC limits to", peakLimit.powerAC, "mW,",
+                           peakLimit.powerDC, "mW")
                 else:
                     zeCall(zesPowerSetLimits, pwr, sustainedLimit, burstLimit, peakLimit)
 
@@ -2811,7 +2886,8 @@ def main():
                     if args.verbose:
                         Node(pwrNode, "CanControl", bool(pwrProps.canControl))
                         Node(pwrNode, "ThresholdSupported", bool(pwrProps.isEnergyThresholdSupported))
-                        Node(pwrNode, "MaxLimit", "%.3f" % (pwrProps.maxLimit / 1000), ("Units", "Watts"))
+                        Node(pwrNode, "MaxLimit", "%.3f" % (pwrProps.maxLimit / 1000),
+                             ("Units", "Watts"))
 
                     sustainedLimit = zes_power_sustained_limit_t()
                     burstLimit = zes_power_burst_limit_t()
@@ -2819,15 +2895,18 @@ def main():
                     zeCall(zesPowerGetLimits, pwr, sustainedLimit, burstLimit, peakLimit)
                     sustainedNode = Node(pwrNode, "SustainedLimit", None)
                     Node(sustainedNode, "Enabled", bool(sustainedLimit.enabled))
-                    Node(sustainedNode, "Power", "%.3f" % (sustainedLimit.power / 1000), ("Units", "Watts"))
-                    Node(sustainedNode, "Interval", "%.3f" % (sustainedLimit.interval / 1000), ("Units", "sec"))
+                    Node(sustainedNode, "Power", "%.3f" % (sustainedLimit.power / 1000),
+                         ("Units", "Watts"))
+                    Node(sustainedNode, "Interval", "%.3f" % (sustainedLimit.interval / 1000),
+                         ("Units", "sec"))
                     burstNode = Node(pwrNode, "BurstLimit", None)
                     Node(burstNode, "Enabled", bool(burstLimit.enabled))
                     Node(burstNode, "Power", "%.3f" % (burstLimit.power / 1000), ("Units", "Watts"))
                     peakNode = Node(pwrNode, "PeakLimit", None)
                     Node(peakNode, "Power", "%.3f" % (peakLimit.powerAC / 1000), ("Units", "Watts"))
                     if peakLimit.powerDC > 0:
-                        Node(peakNode, "PowerOnDC", "%.3f" % (peakLimit.powerDC / 1000), ("Units", "Watts"))
+                        Node(peakNode, "PowerOnDC", "%.3f" % (peakLimit.powerDC / 1000),
+                             ("Units", "Watts"))
 
                 if args.show_telemetry:
                     pwrCounter = zes_power_energy_counter_t()
@@ -2896,7 +2975,8 @@ def main():
                 if args.show_inventory:
                     if args.verbose:
                         Node(freqNode, "CanControl", bool(freqProps.canControl))
-                        Node(freqNode, "ThrottleEventSupported", bool(freqProps.isThrottleEventSupported))
+                        Node(freqNode, "ThrottleEventSupported",
+                             bool(freqProps.isThrottleEventSupported))
                     availFreqsNode = Node(freqNode, "AvailableFrequencies", None)
                     Node(availFreqsNode, "Min", "%.1f" % freqProps.min, ("Units", "MHz"))
                     Node(availFreqsNode, "Max", "%.1f" % freqProps.max, ("Units", "MHz"))
@@ -2908,10 +2988,12 @@ def main():
                             pass
                         else:
                             clockFreqs = double_array(clockCount.value())
-                            zeCall(zesFrequencyGetAvailableClocks, freq, clockCount.cast(), clockFreqs.cast())
+                            zeCall(zesFrequencyGetAvailableClocks, freq, clockCount.cast(),
+                                   clockFreqs.cast())
                         for clk in range(clockCount.value()):
                             clockFreq = clockFreqs[clk]
-                            Node(availFreqsNode, "AvailableFrequency", "%.1f" % clockFreq, ("Units", "MHz"))
+                            Node(availFreqsNode, "AvailableFrequency", "%.1f" % clockFreq,
+                                 ("Units", "MHz"))
 
                     freqRange = zes_freq_range_t()
                     zeCall(zesFrequencyGetRange, freq, freqRange)
@@ -2921,26 +3003,286 @@ def main():
 
                 if args.show_telemetry:
                     freqState = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_STATE)
+                    freqThrottle = zes_freq_throttle_time_t()
+                    try:
+                        zeCall(zesFrequencyGetThrottleTime, freq, freqThrottle)
+                    except NotImplementedError:
+                        freqThrottle = None
+                    except ValueError:
+                        reportZeException()
                     nodes = []
                     nodes.append(Node(freqNode, "RequestedFrequency", "?", ("Units", "MHz")))
                     nodes.append(Node(freqNode, "ActualFrequency", "?", ("Units", "MHz")))
                     nodes.append(Node(freqNode, "ThrottleReasons", "?"))
+                    nodes.append(Node(freqNode, "ThrottleTime", "?", ("Units", "%")))
                     if args.verbose:
                         nodes.append(Node(freqNode, "CurrentVoltage", "?", ("Units", "Volts")))
                         nodes.append(Node(freqNode, "Efficient", "?", ("Units", "MHz")))
                         nodes.append(Node(freqNode, "MaximumTDP", "?", ("Units", "MHz")))
 
-                    def freqTelemetry(freq=freq, freqState=freqState, node=nodes, verbose=args.verbose):
+                    def freqTelemetry(freq=freq, freqState=freqState, freqThrottle=freqThrottle,
+                                      node=nodes, verbose=args.verbose):
+                        throttlePercent = "?"
+                        if freqThrottle:
+                            oldActive, oldTimestamp = utilStats.activeTime, utilStats.timestamp
+                            oldHeld, oldTimestamp = freqThrottle.throttleTime, freqThrottle.timestamp
+                            try:
+                                zeCall(zesFrequencyGetThrottleTime, freq, freqThrottle)
+                            except:
+                                reportZeException()
+                            else:
+                                deltaH = freqThrottle.throttleTime - oldHeld
+                                deltaT = freqThrottle.timestamp - oldTimestamp
+                                if deltaT > 0:
+                                    throttlePercent = "%.0f" % (100.0 * deltaH / deltaT)
+                                else:
+                                    throttlePercent = "?"
                         zeCall(zesFrequencyGetState, freq, freqState)
                         node[0].setText(fmtknown(freqState.request))
                         node[1].setText(fmtknown(freqState.actual))
                         node[2].setText(throttleReasonsString(freqState.throttleReasons))
+                        node[3].setText(throttlePercent)
                         if verbose:
-                            node[3].setText(fmtknown(freqState.currentVoltage))
-                            node[4].setText(fmtknown(freqState.efficient))
-                            node[5].setText(fmtknown(freqState.tdp))
+                            node[4].setText(fmtknown(freqState.currentVoltage))
+                            node[5].setText(fmtknown(freqState.efficient))
+                            node[6].setText(fmtknown(freqState.tdp))
 
                     telemetryClosures.append(freqTelemetry)
+                    pollDelayRequired = True
+
+        # TODO: Use generalized parsing methods that support units
+
+        if args.set_oc_freq:
+            idxStr, frqStr = args.set_oc_freq
+            try:
+                i = int(idxStr)
+                assert 0 <= i < freqCount.value()
+                frqMHz = float(frqStr)
+            except:
+                pr.fail("Usage: --set-oc-freq IDX FREQ")
+            if args.dry_run:
+                pr("Would set oc", i, "frequency target to", frqMHz, "MHz")
+            else:
+                try:
+                    freq = frequencies[i]
+                    ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
+                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    assert ocCaps.isOcSupported
+                    frqMHz = saturate(frqMHz, 0.0, ocCaps.maxOcFrequency)
+                    zeCall(zesFrequencyOcSetFrequencyTarget, freq, frqMHz)
+                except:
+                    pr.fail("--set-oc-freq not supported")
+
+        if args.set_oc_volts:
+            idxStr, vTargetStr, vOffsetStr = args.set_oc_volts
+            try:
+                i = int(idxStr)
+                assert 0 <= i < freqCount.value()
+                vTarget = float(vTargetStr)
+                vOffset = float(vOffsetStr)
+            except:
+                pr.fail("Usage: --set-oc-volts IDX VOLTAGE_TARGET VOLTAGE_OFFSET")
+            if args.dry_run:
+                pr("Would set oc", i, "voltage target to", vTarget, "V, offset", vOffset, "V")
+            else:
+                try:
+                    freq = frequencies[i]
+                    ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
+                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    assert ocCaps.isOcSupported
+                    vTarget = saturate(vTarget, 0.0, ocCaps.maxOcVoltage)
+                    vOffset = saturate(vOffset, ocCaps.minOcVoltageOffset, ocCaps.maxOcVoltageOffset)
+                    zeCall(zesFrequencyOcSetVoltageTarget, freq, vTarget, vOffset)
+                except:
+                    pr.fail("--set-oc-volts not supported")
+
+        if args.set_oc_off:
+            idxStr, = args.set_oc_off
+            try:
+                i = int(idxStr)
+                assert 0 <= i < freqCount.value()
+            except:
+                pr.fail("Usage: --set-oc-off IDX")
+            if args.dry_run:
+                pr("Would set oc", i, "mode to OFF")
+            else:
+                try:
+                    freq = frequencies[i]
+                    zeCall(zesFrequencyOcSetMode, freq, ZES_OC_MODE_OFF)
+                except:
+                    pr.fail("--set-oc-off not supported")
+
+        if args.set_oc_override:
+            idxStr, = args.set_oc_override
+            try:
+                i = int(idxStr)
+                assert 0 <= i < freqCount.value()
+            except:
+                pr.fail("Usage: --set-oc-override IDX")
+            if args.dry_run:
+                pr("Would set oc", i, "mode to OVERRIDE")
+            else:
+                try:
+                    freq = frequencies[i]
+                    ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
+                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    assert ocCaps.isOcSupported
+                    zeCall(zesFrequencyOcSetMode, freq, ZES_OC_MODE_OVERRIDE)
+                except:
+                    pr.fail("--set-oc-override not supported")
+
+        if args.set_oc_interpolate:
+            idxStr, = args.set_oc_interpolate
+            try:
+                i = int(idxStr)
+                assert 0 <= i < freqCount.value()
+            except:
+                pr.fail("Usage: --set-oc-interpolate IDX")
+            if args.dry_run:
+                pr("Would set oc", i, "mode to INTERPOLATIVE")
+            else:
+                try:
+                    freq = frequencies[i]
+                    ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
+                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    assert ocCaps.isOcSupported
+                    zeCall(zesFrequencyOcSetMode, freq, ZES_OC_MODE_INTERPOLATIVE)
+                except:
+                    pr.fail("--set-oc-interpolate not supported")
+
+        if args.set_oc_fixed:
+            idxStr, = args.set_oc_fixed
+            try:
+                i = int(idxStr)
+                assert 0 <= i < freqCount.value()
+            except:
+                pr.fail("Usage: --set-oc-interpolate IDX")
+            if args.dry_run:
+                pr("Would set oc", i, "mode to FIXED")
+            else:
+                try:
+                    freq = frequencies[i]
+                    ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
+                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    assert ocCaps.isOcSupported and ocCaps.isFixedModeSupported
+                    zeCall(zesFrequencyOcSetMode, freq, ZES_OC_MODE_FIXED)
+                except:
+                    pr.fail("--set-oc-interpolate not supported")
+
+        if args.set_oc_max_current:
+            idxStr, iccStr = args.set_oc_max_current
+            try:
+                i = int(idxStr)
+                assert 0 <= i < freqCount.value()
+                iccAmps = float(iccStr)
+            except:
+                pr.fail("Usage: --set-oc-max-current IDX MAX_AMPS")
+            if args.dry_run:
+                pr("Would set oc", i, "maximum current to", iccAmps, "MHz")
+            else:
+                try:
+                    freq = frequencies[i]
+                    ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
+                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    assert ocCaps.isOcSupported and ocCaps.isIccMaxSupported
+                    zeCall(zesFrequencyOcSetIccMax, freq, iccAmps)
+                except:
+                    pr.fail("--set-oc-max-current not supported")
+
+        if args.set_oc_max_temp:
+            idxStr, tempStr = args.set_oc_max_temp
+            try:
+                i = int(idxStr)
+                assert 0 <= i < freqCount.value()
+                tempC = float(tempStr)
+            except:
+                pr.fail("Usage: --set-oc-max-temp IDX MAX_DEG_C")
+            if args.dry_run:
+                pr("Would set oc", i, "maximum temperature to", tempC, "MHz")
+            else:
+                try:
+                    freq = frequencies[i]
+                    ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
+                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    assert ocCaps.isOcSupported and ocCaps.isTjMaxSupported
+                    zeCall(zesFrequencyOcSetTjMax, freq, tempC)
+                except:
+                    pr.fail("--set-oc-max-temp not supported")
+
+        if args.show_oc:
+            ocTop = Node(devNode, "OverclockDomains", None)
+
+            for i in range(freqCount.value()):
+                freq = frequencies[i]
+                try:
+                    freqProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_PROPERTIES)
+                    zeCall(zesFrequencyGetProperties, freq, freqProps)
+                    ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
+                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+                else:
+                    freqType = freqTypeString(freqProps.type)
+                    if freqProps.onSubdevice:
+                        ocNode = Node(ocTop, "OverclockDomain", None, ("Index", i), ("Name", freqType),
+                                           ("SubdeviceId", freqProps.subdeviceId))
+                    else:
+                        ocNode = Node(ocTop, "OverclockDomain", None, ("Index", i), ("Name", freqType))
+
+                if args.show_inventory:
+                    try:
+                        mode = zeCall(zesFrequencyOcGetMode, freq)
+                    except:
+                        mode = ZES_OC_MODE_OFF
+                    Node(ocNode, "OverclockingMode", ocModeString(mode))
+                    Node(ocNode, "isOcSupported", bool(ocCaps.isOcSupported))
+                    Node(ocNode, "maxFactoryDefaultFrequency", "%.1f" % ocCaps.maxFactoryDefaultFrequency,
+                         ("Units", "MHz"))
+                    Node(ocNode, "maxFactoryDefaultVoltage", "%.1f" % ocCaps.maxFactoryDefaultVoltage,
+                         ("Units", "V"))
+                    Node(ocNode, "maxOcFrequency", "%.1f" % ocCaps.maxOcFrequency, ("Units", "MHz"))
+                    Node(ocNode, "minOcVoltageOffset", "%.1f" % ocCaps.minOcVoltageOffset, ("Units", "V"))
+                    Node(ocNode, "maxOcVoltageOffset", "%.1f" % ocCaps.maxOcVoltageOffset, ("Units", "V"))
+                    Node(ocNode, "maxOcVoltage", "%.1f" % ocCaps.maxOcVoltage, ("Units", "V"))
+                    Node(ocNode, "isTjMaxSupported", bool(ocCaps.isTjMaxSupported))
+                    Node(ocNode, "isIccMaxSupported", bool(ocCaps.isIccMaxSupported))
+                    Node(ocNode, "isHighVoltModeCapable", bool(ocCaps.isHighVoltModeCapable))
+                    Node(ocNode, "isHighVoltModeEnabled", bool(ocCaps.isHighVoltModeEnabled))
+                    Node(ocNode, "isExtendedModeSupported", bool(ocCaps.isExtendedModeSupported))
+                    Node(ocNode, "isFixedModeSupported", bool(ocCaps.isFixedModeSupported))
+
+                    if ocCaps.isOcSupported:
+                        try:
+                            frq = zeCall(zesFrequencyOcGetFrequencyTarget, freq)
+                            ocFreq = "%.1f" % frq
+                        except:
+                            ocFreq = "?"
+                        Node(ocNode, "CurrentOcFrequencyTarget", ocFreq, ("Units", "MHz"))
+                        try:
+                            tgt, off = zeCall(zesFrequencyOcGetVoltageTarget, freq)
+                            vTarget, vOffset = "%.1f" % tgt, "%.1f" % off
+                        except:
+                            vTarget, vOffset = "?", "?"
+                        Node(ocNode, "CurrentOcVoltageTarget", vTarget, ("Units", "V"))
+                        Node(ocNode, "CurrentOcVoltageOffset", vOffset, ("Units", "V"))
+
+                    if ocCaps.isIccMaxSupported:
+                        try:
+                            icc = zeCall(zesFrequencyOcGetIccMax, freq)
+                            iccMax = "%.1f" % icc
+                        except:
+                            iccMax = "?"
+                        Node(ocNode, "OcCurrentLimit", iccMax, ("Units", "A"))
+
+                    if ocCaps.isTjMaxSupported:
+                        try:
+                            tj = zeCall(zesFrequencyOcGetTjMax, freq)
+                            tjMax = "%.1f" % tj
+                        except:
+                            tjMax = "?"
+                        Node(ocNode, "OcTemperatureLimit", tjMax, ("Units", degC))
 
         engCount = uint32_ptr()
         try:
@@ -3040,12 +3382,12 @@ def main():
                         deltaR = memCounter.readCounter - oldRead
                         deltaW = memCounter.writeCounter - oldWrite
                         deltaT = memCounter.timestamp - oldTimestamp
-                        maxBandwidth = 1.0 * memCounter.maxBandwidth
+                        maxBW = 1.0 * memCounter.maxBandwidth
                         if deltaT > 0:
                             readThroughput = "%.1f" % (1e6 * deltaR / deltaT)
                             writeThroughput = "%.1f" % (1e6 * deltaW / deltaT)
-                            if maxBandwidth > 0:
-                                memBandwidth = "%.1f" % (1e8 * (deltaR + deltaW) / (maxBandwidth * deltaT))
+                            if maxBW > 0:
+                                memBandwidth = "%.1f" % (1e8 * (deltaR + deltaW) / (maxBW * deltaT))
                             else:
                                 memBandwidth = "?"
                         else:
@@ -3148,7 +3490,8 @@ def main():
                 elif have['replay']:
                         nodes.append(Node(pciTop, "ReplayRate", "?"))
 
-                def pciTelemetry(device=device, have=have, pciState=pciState, pciCounter=pciCounter, node=nodes):
+                def pciTelemetry(device=device, have=have, pciState=pciState, pciCounter=pciCounter,
+                                 node=nodes):
                     oldRx, oldTx = pciCounter.rxCounter, pciCounter.txCounter
                     oldPacket = pciCounter.packetCounter
                     oldReplay = pciCounter.replayCounter
@@ -3160,12 +3503,12 @@ def main():
                     deltaPacket = pciCounter.packetCounter - oldPacket
                     deltaReplay = pciCounter.replayCounter - oldReplay
                     deltaT = pciCounter.timestamp - oldTimestamp
-                    maxBandwidth = 1.0 * pciCounter.speed.maxBandwidth
+                    maxBW = 1.0 * pciCounter.speed.maxBandwidth
                     if deltaT > 0:
                         rxThroughput = "%.1f" % (1e6 * deltaRx / deltaT)
                         txThroughput = "%.1f" % (1e6 * deltaTx / deltaT)
-                        if maxBandwidth > 0:
-                            pciUtilization = "%.1f" % (1e8 * (deltaRx + deltaTx) / (maxBandwidth * deltaT))
+                        if maxBW > 0:
+                            pciUtilization = "%.1f" % (1e8 * (deltaRx + deltaTx) / (maxBW * deltaT))
                         else:
                             pciUtilization = "?"
                     else:
@@ -3183,9 +3526,10 @@ def main():
                         packetRate = "?"
                         replayRate = "?"
 
-                    if pciState.speed.gen != pciCounter.speed.gen or \
-                            pciState.speed.width != pciCounter.speed.width or \
-                            pciState.speed.maxBandwidth != pciCounter.speed.maxBandwidth:
+                    if (pciState.speed.gen != pciCounter.speed.gen or
+                        pciState.speed.width != pciCounter.speed.width or
+                        pciState.speed.maxBandwidth != pciCounter.speed.maxBandwidth):
+
                         pr.err("WARNING: speed mismatch between PCI state/stats")
 
                     node[0].setText(pciLinkStatusString(pciState.status))
@@ -3221,7 +3565,7 @@ def main():
             zeCall(zesDeviceEnumFabricPorts, device, portCount.cast(), ports.cast())
 
         if (args.enable_fabric_ports is not None or args.disable_fabric_ports is not None or
-                args.enable_beaconing is not None or args.disable_beaconing is not None):
+            args.enable_beaconing is not None or args.disable_beaconing is not None):
 
             if args.enable_fabric_ports is None:
                 enable_ports = []
@@ -3277,7 +3621,8 @@ def main():
                 zeCall(zesFabricPortGetProperties, port, portProps)
 
                 if portProps.onSubdevice:
-                    portNode = Node(portTop, "FabricPort", None, ("Index", i), ("SubdeviceId", portProps.subdeviceId))
+                    portNode = Node(portTop, "FabricPort", None, ("Index", i),
+                                    ("SubdeviceId", portProps.subdeviceId))
                 else:
                     portNode = Node(portTop, "FabricPort", None, ("Index", i))
 
@@ -3318,8 +3663,10 @@ def main():
                     nodes.append(Node(portNode, "RxThroughput", "?", ("Units", "Bytes/s")))
                     nodes.append(Node(portNode, "TxThroughput", "?", ("Units", "Bytes/s")))
 
-                    def portTelemetry(port=port, portState=portState, portCounter=portCounter, node=nodes):
-                        oldRx, oldTx, oldTimestamp = portCounter.rxCounter, portCounter.txCounter, portCounter.timestamp
+                    def portTelemetry(port=port, portState=portState, portCounter=portCounter,
+                                      node=nodes):
+                        oldRx, oldTx = portCounter.rxCounter, portCounter.txCounter
+                        oldTimestamp = portCounter.timestamp
                         zeCall(zesFabricPortGetState, port, portState)
                         zeCall(zesFabricPortGetThroughput, port, portCounter)
 
@@ -3465,7 +3812,7 @@ def main():
 
                 if stbyProps.onSubdevice:
                     stbyNode = Node(stbyTop, "StandbyDomain", None, ("Index", i), ("Name", stbyType),
-                                       ("SubdeviceId", stbyProps.subdeviceId))
+                                    ("SubdeviceId", stbyProps.subdeviceId))
                 else:
                     stbyNode = Node(stbyTop, "StandbyDomain", None, ("Index", i), ("Name", stbyType))
 
@@ -3568,8 +3915,8 @@ def main():
                         zeCall(zesSchedulerGetTimeoutModeProperties, device, True, schedProps)
                         Node(schedModesNode, "DefaultInterval", "%.3f" % schedProps.interval / 1000.0,
                              ("Units", "msec"))
-                        Node(schedModesNode, "DefaultYieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0,
-                             ("Units", "msec"))
+                        Node(schedModesNode, "DefaultYieldTimeout",
+                             "%.3f" % schedProps.yieldTimeout / 1000.0, ("Units", "msec"))
 
             if args.show_telemetry and schedModes:
                 mode = zeCall(zesSchedulerGetCurrentMode,device)
@@ -3586,7 +3933,8 @@ def main():
                     schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
                     zeCall(zesSchedulerGetTimeoutModeProperties, device, False, schedProps)
                     Node(schedNode, "Interval", "%.3f" % schedProps.interval / 1000.0, ("Units", "msec"))
-                    Node(schedNode, "YieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0, ("Units", "msec"))
+                    Node(schedNode, "YieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0,
+                         ("Units", "msec"))
 
         diagCount = uint32_ptr()
         try:
@@ -3640,7 +3988,7 @@ def main():
             zeCall(zesDeviceEnumFans, device, fanCount.cast(), fans.cast())
 
         if args.set_fan_speed_default:
-            (i,) = args.set_fan_speed_default
+            i, = args.set_fan_speed_default
             if 0 <= i < fanCount.value():
                 try:
                     fan = fans[i]
@@ -3855,7 +4203,7 @@ def main():
             zeCall(zesDeviceEnumFirmwares, device, fwCount.cast(), fws.cast())
 
         if args.flash_firmware:
-            (filename,) = args.flash_firmware
+            filename, = args.flash_firmware
             names = ["%s [%s]" % (d,deviceUUID(u)) for d,u in zip(deviceIDs,deviceUUIDs)]
             pr("Requesting flash of", filename, "to the following devices:")
             pr(" " + "\n ".join(names))
@@ -3876,7 +4224,8 @@ def main():
                     for i in range(fwCount.value()):
                         fw = fws[i]
                         pr("Flashing device", names[i])
-                        zeCall(zesFirmwareFlash, fw, image, len(image))
+                        # zeCall(zesFirmwareFlash, fw, image, len(image))
+                        zeCall(zesFirmwareFlashData, fw, image)
             else:
                 pr("NOT flashing device(s)")
 
