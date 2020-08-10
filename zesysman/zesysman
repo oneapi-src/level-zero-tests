@@ -669,7 +669,14 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesLedSetColor(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-
+    def zesDeviceEnumMemoryModules(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesMemoryGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesMemoryGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesMemoryGetBandwidth(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
 
 #
 # For development purposes, to replace unimplemented functions
@@ -1466,7 +1473,79 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         if l > 1:
             raise ValueError(l)
         stubState["Led"][l]["color"] = color.red,color.green,color.blue
-
+    def stubDeviceEnumMemoryModules(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 14)
+        elif uint32_value(count_ptr) == 14:
+            m = stubState.setdefault("Mem", {})
+            m[ZES_MEM_TYPE_HBM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_DDR] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_DDR3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_DDR4] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_DDR5] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_LPDDR] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_LPDDR3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_LPDDR4] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_LPDDR5] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_SRAM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_L1] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_L3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_GRF] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_SLM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            items = zes_mem_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_mem_handle(ZES_MEM_TYPE_HBM)
+            items[1] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR)
+            items[2] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR3)
+            items[3] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR4)
+            items[4] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR5)
+            items[5] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR)
+            items[6] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR3)
+            items[7] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR4)
+            items[8] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR5)
+            items[9] = ulong_to_mem_handle(ZES_MEM_TYPE_SRAM)
+            items[10] = ulong_to_mem_handle(ZES_MEM_TYPE_L1)
+            items[11] = ulong_to_mem_handle(ZES_MEM_TYPE_L3)
+            items[12] = ulong_to_mem_handle(ZES_MEM_TYPE_GRF)
+            items[13] = ulong_to_mem_handle(ZES_MEM_TYPE_SLM)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubMemoryGetProperties(mem, memProps):
+        m = mem_handle_to_ulong(mem)
+        if m > ZES_MEM_TYPE_SLM:
+            raise ValueError(m)
+        memProps.type = m
+        if m < ZES_MEM_TYPE_LPDDR:
+            memProps.onSubdevice = False
+        else:
+            memProps.onSubdevice = True
+        memProps.subdeviceId = 0
+        if m < ZES_MEM_TYPE_SRAM:
+            memProps.location = ZES_MEM_LOC_SYSTEM
+        else:
+            memProps.location = ZES_MEM_LOC_DEVICE
+        memProps.physicalSize = 2000000000
+        memProps.busWidth = 64
+        memProps.numChannels = 2
+    def stubMemoryGetState(mem, memState):
+        global stubState
+        m = mem_handle_to_ulong(mem)
+        memState.health = m % 5
+        f, s = stubState["Mem"][m]["usage"]
+        memState.free, memState.size = f, s
+        f -= 100000000 + m * 10000000
+        while f < 0:
+            f += s
+        stubState["Mem"][m]["usage"] = f, s
+    def stubMemoryGetBandwidth(mem, memBw):
+        global stubState
+        m = mem_handle_to_ulong(mem)
+        r, w, x, t = stubState["Mem"][m]["bw"]
+        memBw.readCounter, memBw.writeCounter, memBw.maxBandwidth, memBw.timestamp = r, w, x, t
+        r += 200000000 + m * 10000000
+        w += 100000000 + m * 20000000
+        t += 1000000
+        stubState["Mem"][m]["bw"] = r, w, x, t
     def stillUnimplemented(*args, **kwargs):
         raise NotImplementedError
 
@@ -1534,7 +1613,11 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesLedGetProperties : stubLedGetProperties,
                      zesLedGetState : stubLedGetState,
                      zesLedSetState : stubLedSetState,
-                     zesLedSetColor : stubLedSetColor }
+                     zesLedSetColor : stubLedSetColor,
+                     zesDeviceEnumMemoryModules : stubDeviceEnumMemoryModules,
+                     zesMemoryGetProperties : stubMemoryGetProperties,
+                     zesMemoryGetState : stubMemoryGetState,
+                     zesMemoryGetBandwidth : stubMemoryGetBandwidth }
 
     replacementFunction = replacements.get(func, stillUnimplemented)
 
@@ -1652,12 +1735,24 @@ def engTypeString(engType):
 def memTypeString(memType):
     memTypes = { ZES_MEM_TYPE_HBM : "HBM",
                  ZES_MEM_TYPE_DDR : "DDR",
+                 ZES_MEM_TYPE_DDR3 : "DDR3",
+                 ZES_MEM_TYPE_DDR4 : "DDR4",
+                 ZES_MEM_TYPE_DDR5 : "DDR5",
+                 ZES_MEM_TYPE_LPDDR : "LPDDR",
+                 ZES_MEM_TYPE_LPDDR3 : "LPDDR3",
+                 ZES_MEM_TYPE_LPDDR4 : "LPDDR4",
+                 ZES_MEM_TYPE_LPDDR5 : "LPDDR5",
                  ZES_MEM_TYPE_SRAM : "SRAM",
                  ZES_MEM_TYPE_L1 : "L1",
                  ZES_MEM_TYPE_L3 : "L3",
                  ZES_MEM_TYPE_GRF : "GRF",
                  ZES_MEM_TYPE_SLM : "SLM" }
     return memTypes.get(memType, "Unknown")
+
+def memLocString(memLoc):
+    memLocs = { ZES_MEM_LOC_SYSTEM : "System",
+                ZES_MEM_LOC_DEVICE : "Device" }
+    return memLocs.get(memLoc, "Unknown")
 
 def barTypeString(barType):
     barTypes = { ZES_PCI_BAR_TYPE_MMIO : "MMIO",
@@ -3453,15 +3548,17 @@ def main():
                 zeCall(zesMemoryGetState, mem, memState)
 
                 if args.show_inventory:
+                    Node(memNode, "Location", memLocString(memProps.location))
                     Node(memNode, "PhysicalSize", memProps.physicalSize, ("Units", "Bytes"))
-                    Node(memNode, "AllocatableSize", memState.maxSize, ("Units", "Bytes"))
+                    Node(memNode, "AllocatableSize", memState.size, ("Units", "Bytes"))
+                    Node(memNode, "BusWidth", knownvalue(memProps.busWidth))
+                    Node(memNode, "NumChannels", knownvalue(memProps.numChannels))
 
                 if args.show_telemetry:
                     memCounter = zes_mem_bandwidth_t()
                     zeCall(zesMemoryGetBandwidth, mem, memCounter)
                     nodes = []
                     nodes.append(Node(memNode, "Health", "?"))
-                    nodes.append(Node(memNode, "Allocated", "?", ("Units", "Bytes")))
                     nodes.append(Node(memNode, "Free", "?", ("Units", "Bytes")))
                     nodes.append(Node(memNode, "Utilized", "?", ("Units", "%")))
                     nodes.append(Node(memNode, "ReadThroughput", "?", ("Units", "Bytes/s")))
@@ -3490,12 +3587,11 @@ def main():
                             memBandwidth = "?"
 
                         node[0].setText(memHealthString(memState.health))
-                        node[1].setText(memState.allocatedSize)
-                        node[2].setText(memState.maxSize - memState.allocatedSize)
-                        node[3].setText("%.1f" % (100.0 * memState.allocatedSize / memState.maxSize))
-                        node[4].setText(readThroughput)
-                        node[5].setText(writeThroughput)
-                        node[6].setText(memBandwidth)
+                        node[1].setText(memState.free)
+                        node[2].setText("%.1f" % (100.0 * (memState.size - memState.free / memState.size)))
+                        node[3].setText(readThroughput)
+                        node[4].setText(writeThroughput)
+                        node[5].setText(memBandwidth)
 
                     telemetryClosures.append(memTelemetry)
                     pollDelayRequired = True
