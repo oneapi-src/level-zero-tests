@@ -117,9 +117,11 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %apply int * OUTPUT { zes_oc_mode_t* pCurrentOcMode };
 %apply double * OUTPUT { double* pOcIccMax };
 %apply double * OUTPUT { double* pOcTjMax };
+%apply double * OUTPUT { double* pFactor };
 
 %include <level_zero/zes_api.h>
 
+%clear double* pFactor;
 %clear double* pOcTjMax;
 %clear double* pOcIccMax;
 %clear zes_oc_mode_t* pCurrentOcMode;
@@ -231,6 +233,7 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %array_class(zes_fan_temp_speed_t, zes_fan_temp_speed_array);
 %array_class(zes_firmware_handle_t, zes_firmware_handle_array);
 %array_class(zes_led_handle_t, zes_led_handle_array);
+%array_class(zes_perf_handle_t, zes_perf_handle_array);
 
 %pointer_cast(unsigned long, ze_driver_handle_t, ulong_to_driver_handle);
 %pointer_cast(unsigned long, ze_device_handle_t, ulong_to_device_handle);
@@ -246,6 +249,7 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %pointer_cast(unsigned long, zes_fan_handle_t, ulong_to_fan_handle);
 %pointer_cast(unsigned long, zes_firmware_handle_t, ulong_to_firmware_handle);
 %pointer_cast(unsigned long, zes_led_handle_t, ulong_to_led_handle);
+%pointer_cast(unsigned long, zes_perf_handle_t, ulong_to_perf_handle);
 
 %pointer_cast(ze_driver_handle_t, unsigned long, driver_handle_to_ulong);
 %pointer_cast(ze_device_handle_t, unsigned long, device_handle_to_ulong);
@@ -261,3 +265,4 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %pointer_cast(zes_fan_handle_t, unsigned long, fan_handle_to_ulong);
 %pointer_cast(zes_firmware_handle_t, unsigned long, firmware_handle_to_ulong);
 %pointer_cast(zes_led_handle_t, unsigned long, led_handle_to_ulong);
+%pointer_cast(zes_perf_handle_t, unsigned long, perf_handle_to_ulong);

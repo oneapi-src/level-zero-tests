@@ -529,7 +529,6 @@ def zes_typed_array(stype, count):
 
 # TODO: These structures aren't being used yet:
 #
-# ZES_STRUCTURE_TYPE_PERF_PROPERTIES
 # ZES_STRUCTURE_TYPE_PSU_PROPERTIES
 # ZES_STRUCTURE_TYPE_SCHED_PROPERTIES
 # ZES_STRUCTURE_TYPE_PSU_STATE
@@ -676,6 +675,14 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
     def zesMemoryGetState(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesMemoryGetBandwidth(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDeviceEnumPerformanceFactorDomains(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesPerformanceFactorGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesPerformanceFactorGetConfig(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesPerformanceFactorSetConfig(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
 
 #
@@ -1546,6 +1553,33 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         w += 100000000 + m * 20000000
         t += 1000000
         stubState["Mem"][m]["bw"] = r, w, x, t
+    def stubDeviceEnumPerformanceFactorDomains(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 5)
+        elif uint32_value(count_ptr) == 5:
+            items = zes_perf_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE)
+            items[1] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE | ZES_ENGINE_TYPE_FLAG_3D)
+            items[2] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_OTHER | ZES_ENGINE_TYPE_FLAG_MEDIA)
+            items[3] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_OTHER | ZES_ENGINE_TYPE_FLAG_DMA)
+            items[4] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_DMA)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubPerformanceFactorGetProperties(perf, perfProps):
+        p = perf_handle_to_ulong(perf)
+        perfProps.onSubdevice = False
+        perfProps.subdeviceId = 0
+        perfProps.engines = p
+    def stubPerformanceFactorGetConfig(perf):
+        global stubState
+        p = perf_handle_to_ulong(perf)
+        pds = stubState.setdefault("Perf", {})
+        return pds.setdefault(p, 50.0)
+    def stubPerformanceFactorSetConfig(perf, val):
+        global stubState
+        p = perf_handle_to_ulong(perf)
+        pds = stubState.setdefault("Perf", {})
+        pds[p] = val
     def stillUnimplemented(*args, **kwargs):
         raise NotImplementedError
 
@@ -1617,7 +1651,11 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesDeviceEnumMemoryModules : stubDeviceEnumMemoryModules,
                      zesMemoryGetProperties : stubMemoryGetProperties,
                      zesMemoryGetState : stubMemoryGetState,
-                     zesMemoryGetBandwidth : stubMemoryGetBandwidth }
+                     zesMemoryGetBandwidth : stubMemoryGetBandwidth,
+                     zesDeviceEnumPerformanceFactorDomains : stubDeviceEnumPerformanceFactorDomains,
+                     zesPerformanceFactorGetProperties : stubPerformanceFactorGetProperties,
+                     zesPerformanceFactorGetConfig : stubPerformanceFactorGetConfig,
+                     zesPerformanceFactorSetConfig : stubPerformanceFactorSetConfig }
 
     replacementFunction = replacements.get(func, stillUnimplemented)
 
@@ -2353,6 +2391,8 @@ def parseArgs():
         parser.add_argument("--disable-led", nargs=1, type=int, metavar='IDX', help="disable LED")
         parser.add_argument("--set-led-color", nargs='+', metavar=('IDX','COLOR'), help="set LED color")
         parser.add_argument("--ansi-256", action='store_true', help="use ANSI-256 colors")
+        parser.add_argument("--show-perf", action='store_true', help="show performance factors")
+        parser.add_argument("--set-perf", nargs=2, metavar=('IDX','VAL'), help="set performance factor")
 
     args = parser.parse_args()
 
@@ -2389,6 +2429,8 @@ def parseArgs():
         args.disable_led = None
         args.set_led_color = None
         args.ansi_256 = None
+        args.set_perf = None
+        args.show_perf = None
 
     Node = formatArgClass.get(args.format, Node)
 
@@ -2762,7 +2804,7 @@ def main():
     if (args.show_device or args.show_processes or args.show_scheduler or args.show_temp or
         args.show_power or args.show_freq or args.show_util or args.show_mem or args.show_pci or
         args.show_fabric_ports or args.show_standby or args.show_errors or args.show_diag or
-        args.show_fans or args.show_firmware or args.show_oc or args.show_leds):
+        args.show_fans or args.show_firmware or args.show_oc or args.show_leds or args.show_perf):
 
         generatingDeviceReport = True
 
@@ -4188,7 +4230,7 @@ def main():
                 except ValueError:
                     reportZeException()
             else:
-                pr.err("ERROR: must specify a valid fan index")
+                pr.fail("ERROR: must specify a valid fan index")
 
         if args.set_fan_speed_rpm:
             try:
@@ -4210,7 +4252,7 @@ def main():
                 except ValueError:
                     reportZeException()
             else:
-                pr.err("ERROR: must specify a valid fan index")
+                pr.fail("ERROR: must specify a valid fan index")
 
         if args.set_fan_speed_percent:
             i, pct = args.set_fan_speed_percent
@@ -4226,7 +4268,7 @@ def main():
                 except ValueError:
                     reportZeException()
             else:
-                pr.err("ERROR: must specify a valid fan index and fan percent")
+                pr.fail("ERROR: must specify a valid fan index and fan percent")
 
         if args.set_fan_speed_table_rpm:
             try:
@@ -4272,7 +4314,7 @@ def main():
                 except ValueError:
                     reportZeException()
             else:
-                pr.err("ERROR: must specify a valid fan index and rpm table")
+                pr.fail("ERROR: must specify a valid fan index and rpm table")
 
         if args.set_fan_speed_table_percent:
             try:
@@ -4316,7 +4358,7 @@ def main():
                 except ValueError:
                     reportZeException()
             else:
-                pr.err("ERROR: must specify a valid fan index and fan percent table")
+                pr.fail("ERROR: must specify a valid fan index and fan percent table")
 
         if args.show_fans:
             fanTop = Node(devNode, "Fans", None)
@@ -4464,7 +4506,7 @@ def main():
                     except ValueError:
                         reportZeException()
             else:
-                pr.err("ERROR: must specify a valid led index")
+                pr.fail("ERROR: must specify a valid led index")
 
         if args.disable_led:
             i, = args.disable_led
@@ -4480,7 +4522,7 @@ def main():
                     except ValueError:
                         reportZeException()
             else:
-                pr.err("ERROR: must specify a valid led index")
+                pr.fail("ERROR: must specify a valid led index")
 
         if args.set_led_color:
             idx,colors = args.set_led_color[0], args.set_led_color[1:]
@@ -4507,7 +4549,7 @@ def main():
                 assert 0.0 <= green <= 1.0
                 assert 0.0 <= blue <= 1.0
             except:
-                pr.err("ERROR: must specify a valid led index and color name or triplet 0-1 0-1 0-1")
+                pr.fail("ERROR: must specify a valid led index and color name or triplet 0-1 0-1 0-1")
             else:
                 color = zes_led_color_t()
                 color.red, color.green, color.blue = red, green, blue
@@ -4561,6 +4603,72 @@ def main():
                                 node[1].setText(colorString(ledState.color))
 
                     telemetryClosures.append(ledTelemetry)
+
+        perfCount = uint32_ptr()
+        try:
+            zeCall(zesDeviceEnumPerformanceFactorDomains, device, perfCount.cast(), None)
+        except NotImplementedError:
+            pass
+        except ValueError:
+            reportZeException()
+        else:
+            perfs = zes_perf_handle_array(perfCount.value())
+            zeCall(zesDeviceEnumPerformanceFactorDomains, device, perfCount.cast(), perfs.cast())
+
+        if args.set_perf:
+            idx,valStr = args.set_perf
+            try:
+                i = int(idx)
+                assert 0 <= i < perfCount.value()
+                val = float(valStr)
+                assert 0.0 <= val <= 100.0
+            except:
+                pr.fail("ERROR: must specify a valid performance factor index and value (0 - 100)")
+            else:
+                if args.dry_run:
+                    pr("Would set performance factor", i, "to", val)
+                else:
+                    try:
+                        perf = perfs[i]
+                        zeCall(zesPerformanceFactorSetConfig, perf, val)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+
+        if args.show_perf:
+            perfTop = Node(devNode, "PerformanceFactors", None)
+
+            for i in range(perfCount.value()):
+                perf = perfs[i]
+
+                perfProps = zes_typed_structure(ZES_STRUCTURE_TYPE_PERF_PROPERTIES)
+                zeCall(zesPerformanceFactorGetProperties, perf, perfProps)
+
+                if perfProps.onSubdevice:
+                    perfNode = Node(perfTop, "PerformanceFactor", None, ("Index", i),
+                                   ("SubdeviceId", perfProps.subdeviceId))
+                else:
+                    perfNode = Node(perfTop, "PerformanceFactor", None, ("Index", i))
+
+                if args.show_inventory:
+                    Node(perfNode, "Engines", enginesUsedString(perfProps.engines))
+
+                if args.show_telemetry:
+                    nodes = []
+                    nodes.append(Node(perfNode, "Value", "?", ("Units", "%")))
+
+                    def perfTelemetry(perf=perf, node=nodes):
+                        try:
+                            val = zeCall(zesPerformanceFactorGetConfig, perf)
+                        except NotImplementedError:
+                            pass
+                        except ValueError:
+                            reportZeException()
+                        else:
+                            node[0].setText(val)
+
+                    telemetryClosures.append(perfTelemetry)
 
     currentIteration = 0
     while currentIteration < maxIterations:
