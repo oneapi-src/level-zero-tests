@@ -529,11 +529,9 @@ def zes_typed_array(stype, count):
 
 # TODO: These structures aren't being used yet:
 #
-# ZES_STRUCTURE_TYPE_LED_PROPERTIES
 # ZES_STRUCTURE_TYPE_PERF_PROPERTIES
 # ZES_STRUCTURE_TYPE_PSU_PROPERTIES
 # ZES_STRUCTURE_TYPE_SCHED_PROPERTIES
-# ZES_STRUCTURE_TYPE_LED_STATE
 # ZES_STRUCTURE_TYPE_PSU_STATE
 # ZES_STRUCTURE_TYPE_TEMP_CONFIG
 
@@ -661,6 +659,17 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesFirmwareFlashData(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDeviceEnumLeds(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesLedGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesLedGetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesLedSetState(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesLedSetColor(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+
 
 #
 # For development purposes, to replace unimplemented functions
@@ -1405,7 +1414,6 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         fwProps.canControl = True
         fwProps.name = "FIRMWARE"
         fwProps.version = "1.0.0"
-    # def stubFirmwareFlash(handle, image, length):
     def stubFirmwareFlashData(handle, image):
         fw = firmware_handle_to_ulong(handle)
         pr("Flashing firmware image", fw, "of size", len(image), ":")
@@ -1417,6 +1425,48 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                 pr(" [ascii data, greater than 100 lines]")
         else:
             pr(" [binary data]")
+    def stubDeviceEnumLeds(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            l = stubState.setdefault("Led", {})
+            l[0] = { "on" : False, "color" : (1.0, 0.0, 0.0) }
+            l[1] = { "on" : False, "color" : (1.0, 0.0, 0.0) }
+            items = zes_led_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_led_handle(0)
+            items[1] = ulong_to_led_handle(1)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubLedGetProperties(led, ledProps):
+        global stubState
+        l = led_handle_to_ulong(led)
+        if l > 1:
+            raise ValueError(l)
+        ledProps.canControl = True
+        ledProps.haveRGB = l==0
+    def stubLedGetState(led, ledState):
+        global stubState
+        l = led_handle_to_ulong(led)
+        if l > 1:
+            raise ValueError(l)
+        ledState.isOn = stubState["Led"][l]["on"]
+        color = zes_led_color_t()
+        color.red,color.green,color.blue = stubState["Led"][l]["color"]
+        ledState.color = color
+    def stubLedSetState(led, enable):
+        global stubState
+        l = led_handle_to_ulong(led)
+        if l > 1:
+            raise ValueError(l)
+        stubState["Led"][l]["on"] = enable
+    def stubLedSetColor(led, color):
+        global stubState
+        l = led_handle_to_ulong(led)
+        if l > 1:
+            raise ValueError(l)
+        stubState["Led"][l]["color"] = color.red,color.green,color.blue
+
     def stillUnimplemented(*args, **kwargs):
         raise NotImplementedError
 
@@ -1479,7 +1529,12 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesFanGetState : stubFanGetState,
                      zesDeviceEnumFirmwares : stubDeviceEnumFirmwares,
                      zesFirmwareGetProperties : stubFirmwareGetProperties,
-                     zesFirmwareFlashData : stubFirmwareFlashData }
+                     zesFirmwareFlashData : stubFirmwareFlashData,
+                     zesDeviceEnumLeds : stubDeviceEnumLeds,
+                     zesLedGetProperties : stubLedGetProperties,
+                     zesLedGetState : stubLedGetState,
+                     zesLedSetState : stubLedSetState,
+                     zesLedSetColor : stubLedSetColor }
 
     replacementFunction = replacements.get(func, stillUnimplemented)
 
@@ -1842,6 +1897,31 @@ def supportedFanUnitsString(units):
 
     return ", ".join(unitStrings)
 
+def c6(fraction):
+    colorTable = (0, 11, 16, 21, 26, 31)
+    refVal = fraction * 32
+    return min(range(6), key=lambda x:abs(colorTable[x] - refVal))
+
+def colorCodeAnsi256(red, green, blue):
+    return 16 + 36 * c6(red) + 6 * c6(green) + c6(blue)
+
+def colorBlockAnsi256(color):
+    return "\x1b[0m[\x1b[48;5;%dm \x1b[0m]" % color
+
+def onOffString(on):
+    if on:
+        return "On"
+    else:
+        return "Off"
+
+addAnsi256ColorBlock = False
+
+def colorString(colors):
+    s = "%.2f / %.2f / %.2f" % (colors.red, colors.green, colors.blue)
+    if addAnsi256ColorBlock:
+        s += " " + colorBlockAnsi256(colorCodeAnsi256(colors.red, colors.green, colors.blue))
+    return s
+
 def fullUUID(uuid):
     return uuid
 
@@ -2064,6 +2144,7 @@ def parseArgs():
     global condensedList
     global IndexAttributes, SecondaryIndexAttributes
     global replaceUnimplementedFunctions
+    global addAnsi256ColorBlock
 
     helpFormatter=lambda prog: argparse.HelpFormatter(prog, max_help_position=48)
 
@@ -2172,6 +2253,11 @@ def parseArgs():
         parser.add_argument("--set-oc-max-temp", nargs=2, metavar=('IDX','C'),
                             help="Set max overclock temperature")
         parser.add_argument("--show-oc", action='store_true', help="show overclocking")
+        parser.add_argument("--show-leds", action='store_true', help="show leds")
+        parser.add_argument("--enable-led", nargs=1, type=int, metavar='IDX', help="enable LED")
+        parser.add_argument("--disable-led", nargs=1, type=int, metavar='IDX', help="disable LED")
+        parser.add_argument("--set-led-color", nargs='+', metavar=('IDX','COLOR'), help="set LED color")
+        parser.add_argument("--ansi-256", action='store_true', help="use ANSI-256 colors")
 
     args = parser.parse_args()
 
@@ -2203,6 +2289,11 @@ def parseArgs():
         args.set_oc_max_current = None
         args.set_oc_max_temp = None
         args.show_oc = None
+        args.show_leds = None
+        args.enable_led = None
+        args.disable_led = None
+        args.set_led_color = None
+        args.ansi_256 = None
 
     Node = formatArgClass.get(args.format, Node)
 
@@ -2217,7 +2308,7 @@ def parseArgs():
         if args.__dict__.get(field):
             pr.fail(field.upper(), "option is not supported yet")
 
-    if args.poll and args.iterations is not None:
+    if args.poll is not None and args.iterations is not None:
         args.iterations = 0
 
     if args.iterations is not None:
@@ -2260,6 +2351,9 @@ def parseArgs():
 
     if args.stub_unimplemented:
         replaceUnimplementedFunctions = True
+
+    if args.ansi_256:
+        addAnsi256ColorBlock = True
 
     return args
 
@@ -2573,7 +2667,7 @@ def main():
     if (args.show_device or args.show_processes or args.show_scheduler or args.show_temp or
         args.show_power or args.show_freq or args.show_util or args.show_mem or args.show_pci or
         args.show_fabric_ports or args.show_standby or args.show_errors or args.show_diag or
-        args.show_fans or args.show_firmware or args.show_oc):
+        args.show_fans or args.show_firmware or args.show_oc or args.show_leds):
 
         generatingDeviceReport = True
 
@@ -4147,7 +4241,7 @@ def main():
                 zeCall(zesFanGetConfig, fan, fanConfig)
 
                 if args.show_inventory:
-                    Node(fanNode, "CanControl", fanProps.canControl)
+                    Node(fanNode, "CanControl", bool(fanProps.canControl))
                     Node(fanNode, "SupportedModes", supportedFanModesString(fanProps.supportedModes))
                     Node(fanNode, "SupportedUnits", supportedFanUnitsString(fanProps.supportedUnits))
                     Node(fanNode, "MaxRPM", knownvalue(fanProps.maxRPM))
@@ -4188,8 +4282,6 @@ def main():
                             node[1].setText(pct)
 
                     telemetryClosures.append(fanTelemetry)
-
-                fwProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES)
 
         fwCount = uint32_ptr()
         try:
@@ -4247,9 +4339,132 @@ def main():
                     fwNode = Node(fwTop, "Firmware", None, ("Index", i))
 
                 if args.show_inventory:
-                    Node(fwNode, "CanControl", fwProps.canControl)
+                    Node(fwNode, "CanControl", bool(fwProps.canControl))
                     Node(fwNode, "Name", fwProps.name)
                     Node(fwNode, "Version", fwProps.version)
+
+        ledCount = uint32_ptr()
+        try:
+            zeCall(zesDeviceEnumLeds, device, ledCount.cast(), None)
+        except NotImplementedError:
+            pass
+        except ValueError:
+            reportZeException()
+        else:
+            leds = zes_led_handle_array(ledCount.value())
+            zeCall(zesDeviceEnumLeds, device, ledCount.cast(), leds.cast())
+
+        if args.enable_led:
+            i, = args.enable_led
+            if 0 <= i < ledCount.value():
+                if args.dry_run:
+                    pr("Would enable led", i)
+                else:
+                    try:
+                        led = leds[i]
+                        zeCall(zesLedSetState, led, True)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+            else:
+                pr.err("ERROR: must specify a valid led index")
+
+        if args.disable_led:
+            i, = args.disable_led
+            if 0 <= i < ledCount.value():
+                if args.dry_run:
+                    pr("Would disable led", i)
+                else:
+                    try:
+                        led = leds[i]
+                        zeCall(zesLedSetState, led, False)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+            else:
+                pr.err("ERROR: must specify a valid led index")
+
+        if args.set_led_color:
+            idx,colors = args.set_led_color[0], args.set_led_color[1:]
+            if len(colors) == 1:
+                ledColors = {
+                    "white" : (1.0, 1.0, 1.0),
+                    "yellow" : (1.0, 1.0, 0.0),
+                    "magenta" : (1.0, 0.0, 1.0),
+                    "red" : (1.0, 0.0, 0.0),
+                    "gray" : (0.5, 0.5, 0.5),
+                    "grey" : (0.5, 0.5, 0.5),
+                    "cyan" : (0.0, 1.0, 1.0),
+                    "green" : (0.0, 1.0, 0.0),
+                    "blue" : (0.0, 0.0, 1.0),
+                    "black" : (0.0, 0.0, 0.0) }
+                colorStr, = colors
+                colors = ledColors.get(colorStr.lower())
+            try:
+                i = int(idx)
+                assert 0 <= i < ledCount.value()
+                redStr, greenStr, blueStr = colors
+                red, green, blue = float(redStr), float(greenStr), float(blueStr)
+                assert 0.0 <= red <= 1.0
+                assert 0.0 <= green <= 1.0
+                assert 0.0 <= blue <= 1.0
+            except:
+                pr.err("ERROR: must specify a valid led index and color name or triplet 0-1 0-1 0-1")
+            else:
+                color = zes_led_color_t()
+                color.red, color.green, color.blue = red, green, blue
+                if args.dry_run:
+                    pr("Would set led", i, "color to", colorString(color))
+                else:
+                    try:
+                        led = leds[i]
+                        zeCall(zesLedSetColor, led, color)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+
+        if args.show_leds:
+            ledTop = Node(devNode, "Leds", None)
+
+            for i in range(ledCount.value()):
+                led = leds[i]
+
+                ledProps = zes_typed_structure(ZES_STRUCTURE_TYPE_LED_PROPERTIES)
+                zeCall(zesLedGetProperties, led, ledProps)
+
+                if ledProps.onSubdevice:
+                    ledNode = Node(ledTop, "Led", None, ("Index", i),
+                                   ("SubdeviceId", ledProps.subdeviceId))
+                else:
+                    ledNode = Node(ledTop, "Led", None, ("Index", i))
+
+                if args.show_inventory:
+                    Node(ledNode, "CanControl", bool(ledProps.canControl))
+                    Node(ledNode, "HaveRGB", bool(ledProps.haveRGB))
+
+                if args.show_telemetry:
+                    ledState = zes_typed_structure(ZES_STRUCTURE_TYPE_LED_STATE)
+                    nodes = []
+                    nodes.append(Node(ledNode, "State", "?"))
+                    if ledProps.haveRGB:
+                        nodes.append(Node(ledNode, "Color", "?"))
+
+                    def ledTelemetry(led=led, node=nodes, ledState=ledState):
+                        try:
+                            zeCall(zesLedGetState, led, ledState)
+                        except NotImplementedError:
+                            pass
+                        except ValueError:
+                            reportZeException()
+                        else:
+                            node[0].setText(onOffString(ledState.isOn))
+                            if len(node) > 1:
+                                node[1].setText(colorString(ledState.color))
+
+                    telemetryClosures.append(ledTelemetry)
 
     currentIteration = 0
     while currentIteration < maxIterations:
