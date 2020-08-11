@@ -13,6 +13,7 @@
 
 int main(int argc, char **argv) {
   putenv("ZES_ENABLE_SYSMAN=1");
+  putenv("ZE_LZT_FIRMWARE_DIRECTORY=$PWD");
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
