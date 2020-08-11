@@ -72,6 +72,7 @@ void ThreadEventCreate() {
     for (uint32_t j = 0; j < num_events; j++) {
       events[j] = lzt::create_event(event_pool, eventDesc[j]);
     }
+
     for (auto event : events) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
@@ -116,6 +117,15 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
     }
 
     for (auto event : events) {
+      lzt::destroy_event(event);
+    }
+
+    // As per the spec, index could be re-used after destroy
+    for (uint32_t j = 0; j < num_events; j++) {
+      events[j] = lzt::create_event(event_pool, eventDesc[j]);
+    }
+
+    for (auto event : events) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
 
@@ -135,13 +145,21 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
       lzt::destroy_event(event);
     }
 
-    // As per the spec, index could be re-used by an event after destroy
+    // As per the spec, index could be re-used after destroy
     for (uint32_t j = 0; j < num_events; j++) {
       events[j] = lzt::create_event(event_pool, eventDesc[j]);
     }
+
     for (auto event : events) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
+
+    lzt::reset_command_list(cmd_list[1]);
+    lzt::append_wait_on_events(cmd_list[1], 1, &events[1]);
+    lzt::close_command_list(cmd_list[1]);
+    lzt::execute_command_lists(cmd_queue, 1, &cmd_list[1], nullptr);
+    lzt::signal_event_from_host(events[1]);
+    lzt::query_event(events[1]);
 
     for (auto event : events) {
       lzt::destroy_event(event);
@@ -162,35 +180,34 @@ void ThreadSharedEventSync(const ze_command_queue_handle_t cmd_queue,
 
   // Threads use shared event handles to sync amongst themselves
 
-  ze_command_list_handle_t cmd_list = lzt::create_command_list();
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    ze_command_list_handle_t cmd_list = lzt::create_command_list();
 
-  if (signal_device_event) {
-    lzt::append_signal_event(cmd_list, event[0]);
-    signal_device_event = false;
+    if (signal_device_event) {
+      lzt::append_signal_event(cmd_list, event[0]);
+      signal_device_event = false;
+    }
+
+    lzt::close_command_list(cmd_list);
+    lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
+    lzt::event_host_synchronize(event[0], UINT32_MAX);
+    lzt::query_event(event[0]);
+
+    lzt::reset_command_list(cmd_list);
+    lzt::append_wait_on_events(cmd_list, 1, &event[1]);
+    lzt::close_command_list(cmd_list);
+    lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
+
+    if (signal_host_event) {
+      lzt::signal_event_from_host(event[1]);
+      signal_host_event = false;
+    }
+
+    lzt::event_host_synchronize(event[1], UINT32_MAX);
+    lzt::query_event(event[1]);
+
+    lzt::destroy_command_list(cmd_list);
   }
-  lzt::close_command_list(cmd_list);
-  lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
-  lzt::event_host_synchronize(event[0], UINT32_MAX);
-  lzt::query_event(event[0]);
-
-  lzt::reset_command_list(cmd_list);
-  lzt::append_wait_on_events(cmd_list, 1, &event[1]);
-  lzt::close_command_list(cmd_list);
-  lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
-  if (signal_host_event) {
-    lzt::signal_event_from_host(event[1]);
-    signal_host_event = false;
-  }
-  lzt::event_host_synchronize(event[1], UINT32_MAX);
-  lzt::query_event(event[1]);
-
-  lzt::reset_command_list(cmd_list);
-  lzt::append_reset_event(cmd_list, event[0]);
-  lzt::close_command_list(cmd_list);
-  lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
-  lzt::event_host_reset(event[1]);
-
-  lzt::destroy_command_list(cmd_list);
   LOG_INFO << "child thread done with ID ::" << std::this_thread::get_id();
 }
 
@@ -293,8 +310,13 @@ TEST(
   }
 
   for (auto event : events) {
+    lzt::event_host_reset(event);
+  }
+
+  for (auto event : events) {
     lzt::destroy_event(event);
   }
+
   lzt::destroy_event_pool(event_pool);
   lzt::destroy_command_queue(cmd_queue);
 }
