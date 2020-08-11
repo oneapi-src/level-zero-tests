@@ -554,6 +554,10 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesPowerGetEnergyCounter(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesPowerGetEnergyThreshold(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesPowerSetEnergyThreshold(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceEnumFrequencyDomains(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesFrequencyGetProperties(*args, **kwargs):
@@ -737,6 +741,7 @@ def unimplementedFunctionCall(func, *args, **kwargs):
             p["burst"] = { "enabled" : True, "power" : 150000 }
             p["peak"] = { "powerAC" : 120000, "powerDC" : 90000 }
             p["counter"] = { "energy" : 0, "timestamp" : 0 }
+            p["threshold"] = { "threshold" : 0.0, "process" : 0xffffffff }
             items = zes_pwr_handle_array.frompointer(handle_array)
             items[0] = ulong_to_pwr_handle(0)
         else:
@@ -745,6 +750,8 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         pwrProps.onSubdevice = False
         pwrProps.canControl = True
         pwrProps.isEnergyThresholdSupported = True
+        pwrProps.defaultLimit = -1
+        pwrProps.minLimit = 20
         pwrProps.maxLimit = 200000
     def stubPowerSetLimits(pwr, sustainedLimit, burstLimit, peakLimit):
         global stubState
@@ -779,6 +786,17 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         p["counter"]["timestamp"] += 1000000
         pwrCounter.energy = p["counter"]["energy"]
         pwrCounter.timestamp = p["counter"]["timestamp"]
+    def stubPowerGetEnergyThreshold(pwr, pwrThreshold):
+        global stubState
+        p = stubState["Pwr"]
+        pwrThreshold.enable = p["threshold"]["threshold"] != 0.0
+        pwrThreshold.threshold = p["threshold"]["threshold"]
+        pwrThreshold.processId = p["threshold"]["process"]
+    def stubPowerSetEnergyThreshold(pwr, threshold):
+        global stubState
+        p = stubState["Pwr"]
+        p["threshold"]["threshold"] = threshold
+        p["threshold"]["process"] = os.getpid()
     def stubDeviceEnumFrequencyDomains(dev, count_ptr, handle_array):
         global stubState
         if handle_array is None:
@@ -1591,6 +1609,8 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesPowerSetLimits : stubPowerSetLimits,
                      zesPowerGetLimits : stubPowerGetLimits,
                      zesPowerGetEnergyCounter : stubPowerGetEnergyCounter,
+                     zesPowerGetEnergyThreshold : stubPowerGetEnergyThreshold,
+                     zesPowerSetEnergyThreshold : stubPowerSetEnergyThreshold,
                      zesDeviceEnumFrequencyDomains : stubDeviceEnumFrequencyDomains,
                      zesFrequencyGetProperties : stubFrequencyGetProperties,
                      zesFrequencyGetAvailableClocks : stubFrequencyGetAvailableClocks,
@@ -2315,6 +2335,8 @@ def parseArgs():
                         help="set burst power limit")
     parser.add_argument("--set-peak-power", nargs='+', metavar=('POW',''),
                         help="set peak power limit")
+    parser.add_argument("--set-energy-threshold", nargs='+', metavar=('J',''),
+                        help="set energy threshold")
     parser.add_argument("--set-freq", nargs='+', metavar=('MIN','MAX'), help="set frequency limits")
     parser.add_argument("--set-scheduler", nargs='+', metavar=('MODE',''), help="set scheduler mode")
     parser.add_argument("--clear-errors", action='store_true', help="clear error counters")
@@ -2583,6 +2605,55 @@ def parseMilliseconds(opts):
         pr.err("WARNING: No time value specified, using default/0")
 
     return int(value * multiplier), remainder
+
+def parseJoules(opts):
+    value = 0.0
+    multiplier = 1.0
+    remainder = []
+    if opts:
+        opt = opts.pop(0).lower()
+        split = None
+        if "m" in opt:
+            split = opt.index("m")
+        if "k" in opt:
+            if split is None:
+                split = opt.index("k")
+            else:
+                split = min(split, opt.index("k"))
+        if "j" in opt:
+            if split is None:
+                split = opt.index("j")
+            else:
+                split = min(split, opt.index("j"))
+        if split is None:
+            rest = opts
+        else:
+            opt, rest = opt[:split], [opt[split:]] + opts
+
+        try:
+            value = float(opt)
+        except:
+            hitRemainder = True
+            pr.err("WARNING: Illegal energy value (" + opt + "), using 0.0 J")
+        else:
+            hitRemainder = False
+
+        for opt in rest:
+            opt = opt.lower()
+            if hitRemainder:
+                remainder.append(opt)
+            else:
+                hitRemainder = True
+                if opt in ["m", "mj", "mjoule", "mjoules", "millijoule", "millijoules"]:
+                    multiplier = 0.001
+                if opt in ["k", "kj", "kjoule", "kjoules", "kilojoule", "kilojoules"]:
+                    multiplier = 1000.0
+                elif opt in ["j", "joule", "joules"]:
+                    remainder.append(opt)
+    else:
+        pr.err("WARNING: No energy value specified, using 0.0 J")
+
+    return value * multiplier, remainder
 
 def parseMHz(opts):
     value = 0.0
@@ -3064,29 +3135,29 @@ def main():
             zeCall(zesDeviceEnumPowerDomains, device, pwrCount.cast(), powers.cast())
 
         if args.set_power or args.set_burst_power or args.set_peak_power:
+            sustainedLimit = None
+            burstLimit = None
+            peakLimit = None
+            if args.set_power:
+                sustainedLimit = zes_power_sustained_limit_t()
+                sustainedLimit.enabled = True
+                sustainedLimit.power, remainder = parseMilliwatts(args.set_power)
+                sustainedLimit.interval, remainder = parseMilliseconds(remainder)
+                if remainder:
+                    pr.err("WARNING: Extra set-power arguments ignored")
+            if args.set_burst_power:
+                burstLimit = zes_power_burst_limit_t()
+                burstLimit.enabled = True
+                burstLimit.power, remainder = parseMilliwatts(args.set_burst_power)
+                if remainder:
+                    pr.err("WARNING: Extra set-burst-power arguments ignored")
+            if args.set_peak_power:
+                peakLimit = zes_power_peak_limit_t()
+                peakLimit.powerAC, remainder = parseMilliwatts(args.set_peak_power)
+                peakLimit.powerDC, remainder = parseMilliwatts(remainder)
+                if remainder:
+                    pr.err("WARNING: Extra set-peak-power arguments ignored")
             for i in range(pwrCount.value()):
-                sustainedLimit = None
-                burstLimit = None
-                peakLimit = None
-                if args.set_power:
-                    sustainedLimit = zes_power_sustained_limit_t()
-                    sustainedLimit.enabled = True
-                    sustainedLimit.power, remainder = parseMilliwatts(args.set_power)
-                    sustainedLimit.interval, remainder = parseMilliseconds(remainder)
-                    if remainder:
-                        pr.err("WARNING: Extra set-power arguments ignored")
-                if args.set_burst_power:
-                    burstLimit = zes_power_burst_limit_t()
-                    burstLimit.enabled = True
-                    burstLimit.power, remainder = parseMilliwatts(args.set_burst_power)
-                    if remainder:
-                        pr.err("WARNING: Extra set-burst-power arguments ignored")
-                if args.set_peak_power:
-                    peakLimit = zes_power_peak_limit_t()
-                    peakLimit.powerAC, remainder = parseMilliwatts(args.set_peak_power)
-                    peakLimit.powerDC, remainder = parseMilliwatts(remainder)
-                    if remainder:
-                        pr.err("WARNING: Extra set-peak-power arguments ignored")
                 pwr = powers[i]
                 if args.dry_run:
                     if sustainedLimit:
@@ -3099,6 +3170,15 @@ def main():
                            peakLimit.powerDC, "mW")
                 else:
                     zeCall(zesPowerSetLimits, pwr, sustainedLimit, burstLimit, peakLimit)
+
+        if args.set_energy_threshold:
+            threshold, remainder = parseJoules(args.set_energy_threshold)
+            for i in range(pwrCount.value()):
+                pwr = powers[i]
+                if args.dry_run:
+                    pr("Would set energy threshold to", threshold, "J")
+                else:
+                    zeCall(zesPowerSetEnergyThreshold, pwr, threshold)
 
         if args.show_power:
             pwrTop = Node(devNode, "PowerDomains", None)
@@ -3117,7 +3197,11 @@ def main():
                     if args.verbose:
                         Node(pwrNode, "CanControl", bool(pwrProps.canControl))
                         Node(pwrNode, "ThresholdSupported", bool(pwrProps.isEnergyThresholdSupported))
-                        Node(pwrNode, "MaxLimit", "%.3f" % (pwrProps.maxLimit / 1000),
+                        Node(pwrNode, "DefaultLimit", fmtknown(pwrProps.defaultLimit / 1000, "%.3f"),
+                             ("Units", "Watts"))
+                        Node(pwrNode, "MinLimit", fmtknown(pwrProps.minLimit / 1000, "%.3f"),
+                             ("Units", "Watts"))
+                        Node(pwrNode, "MaxLimit", fmtknown(pwrProps.maxLimit / 1000, "%.3f"),
                              ("Units", "Watts"))
 
                     sustainedLimit = zes_power_sustained_limit_t()
@@ -3141,10 +3225,14 @@ def main():
 
                 if args.show_telemetry:
                     pwrCounter = zes_power_energy_counter_t()
+                    pwrThreshold = zes_energy_threshold_t()
                     zeCall(zesPowerGetEnergyCounter, pwr, pwrCounter)
-                    node = Node(pwrNode, "CurrentPower", "?", ("Units", "Watts"))
+                    nodes = []
+                    nodes.append(Node(pwrNode, "CurrentPower", "?", ("Units", "Watts")))
+                    nodes.append(Node(pwrNode, "MonitorProcess", "?"))
+                    nodes.append(Node(pwrNode, "EnergyThreshold", "?", ("Units", "Joules")))
 
-                    def pwrTelemetry(pwr=pwr, pwrCounter=pwrCounter, node=node):
+                    def pwrTelemetry(pwr=pwr, pwrCounter=pwrCounter, pwrThreshold=pwrThreshold, node=nodes):
                         oldEnergy, oldTimestamp = pwrCounter.energy, pwrCounter.timestamp
                         zeCall(zesPowerGetEnergyCounter, pwr, pwrCounter)
                         deltaE = pwrCounter.energy - oldEnergy
@@ -3153,7 +3241,16 @@ def main():
                             watts = "%.3f" % (float(deltaE) / deltaT)
                         else:
                             watts = "?"
-                        node.setText(watts)
+                        node[0].setText(watts)
+                        zeCall(zesPowerGetEnergyThreshold, pwr, pwrThreshold)
+                        if pwrThreshold.enable:
+                            if pwrThreshold.processId != 0xffffffff:
+                                node[1].setText(pwrThreshold.processId)
+                            else:
+                                node[1].setText("Unknown")
+                        else:
+                            node[1].setText("None")
+                        node[2].setText("%.3f" % pwrThreshold.threshold)
 
                     telemetryClosures.append(pwrTelemetry)
                     pollDelayRequired = True
