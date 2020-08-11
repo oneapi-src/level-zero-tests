@@ -147,7 +147,7 @@ TEST_F(
         auto timeslice_properties =
             lzt::get_timeslice_properties(pSchedHandle, false);
         EXPECT_GT(timeslice_properties.interval, 0);
-        EXPECT_GT(timeslice_properties.yieldTimeout, 0);
+        EXPECT_GE(timeslice_properties.yieldTimeout, 0);
       }
     }
   }
