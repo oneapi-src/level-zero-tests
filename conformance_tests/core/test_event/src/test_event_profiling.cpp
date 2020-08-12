@@ -20,7 +20,7 @@ namespace {
 class EventProfilingTests : public ::testing::Test {
 protected:
   EventProfilingTests() {
-    context = lzt::get_default_context();
+    context = lzt::create_context();
     const ze_device_handle_t device =
         lzt::zeDevice::get_instance()->get_device();
     auto ep = lzt::create_event_pool(context, 10,
