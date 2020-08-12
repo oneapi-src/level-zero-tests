@@ -529,9 +529,7 @@ def zes_typed_array(stype, count):
 
 # TODO: These structures aren't being used yet:
 #
-# ZES_STRUCTURE_TYPE_PSU_PROPERTIES
 # ZES_STRUCTURE_TYPE_SCHED_PROPERTIES
-# ZES_STRUCTURE_TYPE_PSU_STATE
 # ZES_STRUCTURE_TYPE_TEMP_CONFIG
 
 # This is a special developer mode that forces all API functions for which a
@@ -638,6 +636,10 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesRasGetProperties(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesRasGetConfig(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesRasSetConfig(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesRasGetState(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesDeviceProcessesGetState(*args, **kwargs):
@@ -687,6 +689,12 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
     def zesPerformanceFactorGetConfig(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
     def zesPerformanceFactorSetConfig(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesDeviceEnumPsus(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesPsuGetProperties(*args, **kwargs):
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    def zesPsuGetState(*args, **kwargs):
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
 
 #
@@ -1273,6 +1281,11 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         r[1] += 1000000000
         r[2] += 900000000
     def stubDeviceEnumRasErrorSets(dev, count_ptr, handle_array):
+        global stubState
+        stubState.setdefault("RasErrors", {ZES_RAS_ERROR_TYPE_CORRECTABLE : [2, 0, 0, 0, 0, 0, 3],
+                                           ZES_RAS_ERROR_TYPE_UNCORRECTABLE : [1, 0, 0, 0, 0, 0, 1]})
+        stubState.setdefault("RasThresh", {ZES_RAS_ERROR_TYPE_CORRECTABLE : [2, 3, 1, 0, 0, 0, 0, 9],
+                                           ZES_RAS_ERROR_TYPE_UNCORRECTABLE : [1, 0, 1, 2, 3, 1, 0, 5]})
         if handle_array is None:
             uint32_assign(count_ptr, 2)
         elif uint32_value(count_ptr) == 2:
@@ -1284,15 +1297,31 @@ def unimplementedFunctionCall(func, *args, **kwargs):
     def stubRasGetProperties(ras, rasProps):
         rasProps.type = ras_handle_to_ulong(ras)
         rasProps.onSubdevice = False
+        rasProps.subdeviceId = 0
+    def stubRasGetConfig(ras, rasConfig):
+        global stubState
+        r = ras_handle_to_ulong(ras)
+        thresholds = stubState["RasThresh"][r]
+        rasConfig.totalThreshold = thresholds[ZES_MAX_RAS_ERROR_CATEGORY_COUNT]
+        for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
+            ras_category_set(rasConfig.detailedThresholds, i, thresholds[i])
+    def stubRasSetConfig(ras, rasConfig):
+        global stubState
+        r = ras_handle_to_ulong(ras)
+        thresholds = stubState["RasThresh"][r]
+        thresholds[ZES_MAX_RAS_ERROR_CATEGORY_COUNT] = rasConfig.totalThreshold
+        for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
+            thresholds[i] = ras_category(rasConfig.detailedThresholds, i)
     def stubRasGetState(ras, clearErrors, rasState):
+        global stubState
+        r = ras_handle_to_ulong(ras)
+        if clearErrors:
+            stubState["RasErrors"][r] = [0, 0, 0, 0, 0, 0, 0]
         if rasState is not None:
-            rasState.category[ZES_RAS_ERROR_CAT_RESET] = 0
-            rasState.category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS] = 0
-            rasState.category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS] = 0
-            rasState.category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS] = 0
-            rasState.category[ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS] = 0
-            rasState.category[ZES_RAS_ERROR_CAT_CACHE_ERRORS] = 0
-            rasState.category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS] = 0
+            errors = stubState["RasErrors"][r]
+            for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
+                ras_category_set(rasState, i, errors[i])
+                errors[i] += (i + 1)
     def stubDeviceProcessesGetState(dev, count_ptr, proc_array):
         if proc_array is None:
             uint32_assign(count_ptr, 4)
@@ -1598,6 +1627,31 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         p = perf_handle_to_ulong(perf)
         pds = stubState.setdefault("Perf", {})
         pds[p] = val
+    def stubDeviceEnumPsus(dev, count_ptr, handle_array):
+        global stubState
+        stubState.setdefault("PsuState", ZES_PSU_VOLTAGE_STATUS_NORMAL)
+        stubState.setdefault("PsuTable", { ZES_PSU_VOLTAGE_STATUS_UNKNOWN : (True, 250, 100),
+                                           ZES_PSU_VOLTAGE_STATUS_NORMAL : (False, 50, 200),
+                                           ZES_PSU_VOLTAGE_STATUS_OVER : (True, 150, 750),
+                                           ZES_PSU_VOLTAGE_STATUS_UNDER : (False, 75, 150) })
+        if handle_array is None:
+            uint32_assign(count_ptr, 1)
+        elif uint32_value(count_ptr) == 1:
+            items = zes_psu_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_psu_handle(0)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubPsuGetProperties(psu, psuProps):
+        psuProps.onSubdevice = False
+        psuProps.subdeviceId = 0
+        psuProps.haveFan = True
+        psuProps.ampLimit = 750
+    def stubPsuGetState(psu, psuState):
+        global stubState
+        voltStatus = stubState["PsuState"]
+        psuState.voltStatus = voltStatus
+        psuState.fanFailed, psuState.temperature, psuState.current = stubState["PsuTable"][voltStatus]
+        stubState["PsuState"] = (voltStatus + 1) % 4
     def stillUnimplemented(*args, **kwargs):
         raise NotImplementedError
 
@@ -1651,6 +1705,8 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesFabricPortGetThroughput : stubFabricPortGetThroughput,
                      zesDeviceEnumRasErrorSets : stubDeviceEnumRasErrorSets,
                      zesRasGetProperties : stubRasGetProperties,
+                     zesRasGetConfig : stubRasGetConfig,
+                     zesRasSetConfig : stubRasSetConfig,
                      zesRasGetState : stubRasGetState,
                      zesDeviceProcessesGetState : stubDeviceProcessesGetState,
                      zesDeviceEnumFans : stubDeviceEnumFans,
@@ -1675,7 +1731,10 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesDeviceEnumPerformanceFactorDomains : stubDeviceEnumPerformanceFactorDomains,
                      zesPerformanceFactorGetProperties : stubPerformanceFactorGetProperties,
                      zesPerformanceFactorGetConfig : stubPerformanceFactorGetConfig,
-                     zesPerformanceFactorSetConfig : stubPerformanceFactorSetConfig }
+                     zesPerformanceFactorSetConfig : stubPerformanceFactorSetConfig,
+                     zesDeviceEnumPsus : stubDeviceEnumPsus,
+                     zesPsuGetProperties : stubPsuGetProperties,
+                     zesPsuGetState : stubPsuGetState }
 
     replacementFunction = replacements.get(func, stillUnimplemented)
 
@@ -2050,6 +2109,12 @@ def supportedFanUnitsString(units):
 
     return ", ".join(unitStrings)
 
+def psuVoltageStatusString(status):
+    psuVoltageStatuses = { ZES_PSU_VOLTAGE_STATUS_NORMAL : "Normal",
+                           ZES_PSU_VOLTAGE_STATUS_OVER : "Overvoltage",
+                           ZES_PSU_VOLTAGE_STATUS_UNDER : "Undervoltage" }
+    return psuVoltageStatuses.get(status, "Unknown")
+
 def c6(fraction):
     colorTable = (0, 11, 16, 21, 26, 31)
     refVal = fraction * 32
@@ -2340,6 +2405,8 @@ def parseArgs():
     parser.add_argument("--set-freq", nargs='+', metavar=('MIN','MAX'), help="set frequency limits")
     parser.add_argument("--set-scheduler", nargs='+', metavar=('MODE',''), help="set scheduler mode")
     parser.add_argument("--clear-errors", action='store_true', help="clear error counters")
+    parser.add_argument("--set-error-thresholds", nargs='+', type=int, metavar=('TYPE','N'),
+                        help="set error thresholds")
     parser.add_argument("--enable-fabric-ports", nargs='*', type=int, metavar='IDX',
                         help="enable fabric ports")
     parser.add_argument("--disable-fabric-ports", nargs='*', type=int, metavar='IDX',
@@ -2415,6 +2482,7 @@ def parseArgs():
         parser.add_argument("--ansi-256", action='store_true', help="use ANSI-256 colors")
         parser.add_argument("--show-perf", action='store_true', help="show performance factors")
         parser.add_argument("--set-perf", nargs=2, metavar=('IDX','VAL'), help="set performance factor")
+        parser.add_argument("--show-psu", action='store_true', help="show power supplies")
 
     args = parser.parse_args()
 
@@ -2453,6 +2521,7 @@ def parseArgs():
         args.ansi_256 = None
         args.set_perf = None
         args.show_perf = None
+        args.show_psu = None
 
     Node = formatArgClass.get(args.format, Node)
 
@@ -2875,7 +2944,8 @@ def main():
     if (args.show_device or args.show_processes or args.show_scheduler or args.show_temp or
         args.show_power or args.show_freq or args.show_util or args.show_mem or args.show_pci or
         args.show_fabric_ports or args.show_standby or args.show_errors or args.show_diag or
-        args.show_fans or args.show_firmware or args.show_oc or args.show_leds or args.show_perf):
+        args.show_fans or args.show_firmware or args.show_oc or args.show_leds or args.show_perf or
+        args.show_psu):
 
         generatingDeviceReport = True
 
@@ -4036,6 +4106,33 @@ def main():
             edoms = zes_ras_handle_array(edomCount.value())
             zeCall(zesDeviceEnumRasErrorSets, device, edomCount.cast(), edoms.cast())
 
+        if args.set_error_thresholds:
+            i,thresholds = args.set_error_thresholds[0], args.set_error_thresholds[1:]
+            try:
+                assert 0 <= i < edomCount.value()
+                assert 0 < len(thresholds) <= ZES_MAX_RAS_ERROR_CATEGORY_COUNT + 1
+            except:
+                pr.fail("ERROR: must specify a valid error domain index and 1 to",
+                        ZES_MAX_RAS_ERROR_CATEGORY_COUNT + 1,"thresholds")
+            else:
+                if args.dry_run:
+                    pr("Would set error domain", i, "thresholds to", thresholds)
+                else:
+                    try:
+                        ras = edoms[i]
+                        rasConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_CONFIG)
+                        if len(thresholds) < ZES_MAX_RAS_ERROR_CATEGORY_COUNT + 1:
+                            zeCall(zesRasGetConfig, ras, rasConfig)
+                        else:
+                            rasConfig.totalThreshold = thresholds.pop()
+                        for t in range(len(thresholds)):
+                            ras_category_set(rasConfig.detailedThresholds, t, thresholds[t])
+                        zeCall(zesRasSetConfig, ras, rasConfig)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+
         if args.show_errors:
             rasTop = Node(devNode, "ErrorDomains", None)
 
@@ -4057,36 +4154,62 @@ def main():
                 else:
                     rasNode = Node(rasTop, "ErrorDomain", None, ("Index", i), ("Name", rasType))
 
-                showErrorTelemetry = False
-                if args.show_telemetry:
-                    tmp = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_STATE)
+                if args.show_inventory:
                     try:
-                        zeCall(zesRasGetState, ras, False, tmp)
-                    except:
+                        rasConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_CONFIG)
+                        zeCall(zesRasGetConfig, ras, rasConfig)
+                    except NotImplementedError:
                         pass
+                    except ValueError:
+                        reportZeException()
                     else:
-                        showErrorTelemetry = True
-                    del tmp
+                        thresholdNode = Node(rasNode, "Thresholds", None)
+                        thresholds = rasConfig.detailedThresholds
 
-                if showErrorTelemetry:
+                        Node(thresholdNode, "Resets", ras_category(thresholds, ZES_RAS_ERROR_CAT_RESET))
+                        Node(thresholdNode, "ProgrammingErrors",
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS))
+                        Node(thresholdNode, "DriverErrors",
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_DRIVER_ERRORS))
+                        Node(thresholdNode, "ComputeErrors",
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_COMPUTE_ERRORS))
+                        Node(thresholdNode, "NonComputeErrors",
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS))
+                        Node(thresholdNode, "CacheErrors",
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_CACHE_ERRORS))
+                        Node(thresholdNode, "DisplayErrors",
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_DISPLAY_ERRORS))
+                        Node(thresholdNode, "TotalErrors", rasConfig.totalThreshold)
+
+                if args.show_telemetry:
                     rasState = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_STATE)
-                    zeCall(zesRasGetState, ras, args.clear_errors, rasState)
 
-                    rasResets = rasState.category[ZES_RAS_ERROR_CAT_RESET]
-                    rasProgrammingErrors = rasState.category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS]
-                    rasDriverErrors = rasState.category[ZES_RAS_ERROR_CAT_DRIVER_ERRORS]
-                    rasComputeErrors = rasState.category[ZES_RAS_ERROR_CAT_COMPUTE_ERRORS]
-                    rasNonComputeErrors = rasState.category[ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS]
-                    rasCacheErrors = rasState.category[ZES_RAS_ERROR_CAT_CACHE_ERRORS]
-                    rasDisplayErrors = rasState.category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS]
+                    nodes = []
+                    nodes.append(Node(rasNode, "Resets", "?"))
+                    nodes.append(Node(rasNode, "ProgrammingErrors", "?"))
+                    nodes.append(Node(rasNode, "DriverErrors", "?"))
+                    nodes.append(Node(rasNode, "ComputeErrors", "?"))
+                    nodes.append(Node(rasNode, "NonComputeErrors", "?"))
+                    nodes.append(Node(rasNode, "CacheErrors", "?"))
+                    nodes.append(Node(rasNode, "DisplayErrors", "?"))
 
-                    Node(rasNode, "Resets", rasResets)
-                    Node(rasNode, "ProgrammingErrors", rasProgrammingErrors)
-                    Node(rasNode, "DriverErrors", rasDriverErrors)
-                    Node(rasNode, "ComputeErrors", rasComputeErrors)
-                    Node(rasNode, "NonComputeErrors", rasNonComputeErrors)
-                    Node(rasNode, "CacheErrors", rasCacheErrors)
-                    Node(rasNode, "DisplayErrors", rasDisplayErrors)
+                    def rasTelemetry(ras=ras, node=nodes, rasState=rasState):
+                        try:
+                            zeCall(zesRasGetState, ras, args.clear_errors, rasState)
+                        except NotImplementedError:
+                            pass
+                        except ValueError:
+                            reportZeException()
+                        else:
+                            node[0].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_RESET))
+                            node[1].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS))
+                            node[2].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_DRIVER_ERRORS))
+                            node[3].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_COMPUTE_ERRORS))
+                            node[4].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS))
+                            node[5].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_CACHE_ERRORS))
+                            node[6].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_DISPLAY_ERRORS))
+
+                    telemetryClosures.append(rasTelemetry)
 
         if args.clear_errors and not args.show_telemetry:
             for i in range(edomCount.value()):
@@ -4095,13 +4218,6 @@ def main():
                     zeCall(zesRasGetState, ras, True, None)
                 except ValueError as err:
                     pr.err("workaround... ERROR: zesRasGetState returned error, ignoring...", err)
-
-        # rasConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_CONFIG)
-        #     uint64_t totalThreshold;
-        #     zes_ras_state_t detailedThresholds;
-        #
-        # zesRasGetConfig(ras, rasConfig)
-        # zesRasSetConfig(ras, rasConfig)
 
         stbyCount = uint32_ptr()
         try:
@@ -4766,6 +4882,81 @@ def main():
                             node[0].setText(val)
 
                     telemetryClosures.append(perfTelemetry)
+
+        psuCount = uint32_ptr()
+        try:
+            zeCall(zesDeviceEnumPsus, device, psuCount.cast(), None)
+        except NotImplementedError:
+            pass
+        except ValueError:
+            reportZeException()
+        else:
+            psus = zes_psu_handle_array(psuCount.value())
+            zeCall(zesDeviceEnumPsus, device, psuCount.cast(), psus.cast())
+
+        if args.set_perf:
+            idx,valStr = args.set_perf
+            try:
+                i = int(idx)
+                assert 0 <= i < perfCount.value()
+                val = float(valStr)
+                assert 0.0 <= val <= 100.0
+            except:
+                pr.fail("ERROR: must specify a valid performance factor index and value (0 - 100)")
+            else:
+                if args.dry_run:
+                    pr("Would set performance factor", i, "to", val)
+                else:
+                    try:
+                        perf = perfs[i]
+                        zeCall(zesPerformanceFactorSetConfig, perf, val)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+
+        if args.show_psu:
+            psuTop = Node(devNode, "PowerSupplies", None)
+
+            for i in range(psuCount.value()):
+                psu = psus[i]
+
+                psuProps = zes_typed_structure(ZES_STRUCTURE_TYPE_PSU_PROPERTIES)
+                zeCall(zesPsuGetProperties, psu, psuProps)
+
+                if psuProps.onSubdevice:
+                    psuNode = Node(psuTop, "PowerSupply", None, ("Index", i),
+                                   ("SubdeviceId", psuProps.subdeviceId))
+                else:
+                    psuNode = Node(psuTop, "PowerSupply", None, ("Index", i))
+
+                if args.show_inventory:
+                    Node(psuNode, "HaveFan", bool(psuProps.haveFan))
+                    Node(psuNode, "CurrentLimit", fmtknown(psuProps.ampLimit / 1000, "%.3f"),
+                         ('Units', 'Amps'))
+
+                if args.show_telemetry:
+                    psuState = zes_typed_structure(ZES_STRUCTURE_TYPE_PSU_STATE)
+                    nodes = []
+                    nodes.append(Node(psuNode, "VoltageStatus", "?"))
+                    nodes.append(Node(psuNode, "FanFailed", "?"))
+                    nodes.append(Node(psuNode, "Temperature", "?"))
+                    nodes.append(Node(psuNode, "Current", "?", ('Units', 'Amps')))
+
+                    def psuTelemetry(psu=psu, node=nodes, psuState=psuState):
+                        try:
+                            zeCall(zesPsuGetState, psu, psuState)
+                        except NotImplementedError:
+                            pass
+                        except ValueError:
+                            reportZeException()
+                        else:
+                            node[0].setText(psuVoltageStatusString(psuState.voltStatus))
+                            node[1].setText(bool(psuState.fanFailed))
+                            node[2].setText(fmtknown(psuState.temperature))
+                            node[3].setText(fmtknown(psuState.current / 1000, "%.3f"))
+
+                    telemetryClosures.append(psuTelemetry)
 
     currentIteration = 0
     while currentIteration < maxIterations:

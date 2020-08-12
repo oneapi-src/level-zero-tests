@@ -203,6 +203,20 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
     for (i=0; i < limit; ++i)
         temp_speeds[i] = t->table[i];
 }
+
+void ras_category_set(zes_ras_state_t *state, unsigned int idx, uint64_t val)
+{
+    if (idx < ZES_MAX_RAS_ERROR_CATEGORY_COUNT)
+        state->category[idx] = val;
+}
+
+uint64_t ras_category(zes_ras_state_t *state, unsigned int idx)
+{
+    if (idx < ZES_MAX_RAS_ERROR_CATEGORY_COUNT)
+        return state->category[idx];
+    else
+        return ~0UL;
+}
 %}
 
 %pointer_class(int32_t, int32_ptr)
@@ -234,6 +248,7 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %array_class(zes_firmware_handle_t, zes_firmware_handle_array);
 %array_class(zes_led_handle_t, zes_led_handle_array);
 %array_class(zes_perf_handle_t, zes_perf_handle_array);
+%array_class(zes_psu_handle_t, zes_psu_handle_array);
 
 %pointer_cast(unsigned long, ze_driver_handle_t, ulong_to_driver_handle);
 %pointer_cast(unsigned long, ze_device_handle_t, ulong_to_device_handle);
@@ -250,6 +265,7 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %pointer_cast(unsigned long, zes_firmware_handle_t, ulong_to_firmware_handle);
 %pointer_cast(unsigned long, zes_led_handle_t, ulong_to_led_handle);
 %pointer_cast(unsigned long, zes_perf_handle_t, ulong_to_perf_handle);
+%pointer_cast(unsigned long, zes_psu_handle_t, ulong_to_psu_handle);
 
 %pointer_cast(ze_driver_handle_t, unsigned long, driver_handle_to_ulong);
 %pointer_cast(ze_device_handle_t, unsigned long, device_handle_to_ulong);
@@ -266,3 +282,4 @@ void fan_speed_table_get(zes_fan_speed_table_t *t, int16_t limit, zes_fan_temp_s
 %pointer_cast(zes_firmware_handle_t, unsigned long, firmware_handle_to_ulong);
 %pointer_cast(zes_led_handle_t, unsigned long, led_handle_to_ulong);
 %pointer_cast(zes_perf_handle_t, unsigned long, perf_handle_to_ulong);
+%pointer_cast(zes_psu_handle_t, unsigned long, psu_handle_to_ulong);
