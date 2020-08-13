@@ -527,17 +527,14 @@ def zes_typed_array(stype, count):
 
     return array
 
-# TODO: These structures aren't being used yet:
-#
-# ZES_STRUCTURE_TYPE_TEMP_CONFIG
-
 # This is a special developer mode that forces all API functions for which a
 # replacement is available to return UNIMPLEMENTED. Normally, you would want
 # to specify --stub-unimplemented when using this mode
 if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED":
     fntemplate = "def %s(*args, **kwargs):\n    return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE\n"
     allFnsToReplace = """
-    zesDeviceEnumTemperatureSensors zesTemperatureGetProperties zesTemperatureGetState
+    zesDeviceEnumTemperatureSensors zesTemperatureGetProperties zesTemperatureGetConfig
+    zesTemperatureSetConfig         zesTemperatureGetState
 
     zesDeviceEnumPowerDomains zesPowerGetProperties      zesPowerSetLimits          zesPowerGetLimits
     zesPowerGetEnergyCounter  zesPowerGetEnergyThreshold zesPowerSetEnergyThreshold
@@ -613,19 +610,47 @@ def unimplementedFunctionCall(func, *args, **kwargs):
 
     def stubDeviceEnumTemperatureSensors(dev, count_ptr, handle_array):
         if handle_array is None:
-            uint32_assign(count_ptr, 3)
-        elif uint32_value(count_ptr) == 3:
+            uint32_assign(count_ptr, 6)
+        elif uint32_value(count_ptr) == 6:
             items = zes_temp_handle_array.frompointer(handle_array)
             items[0] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GLOBAL)
             items[1] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GPU)
             items[2] = ulong_to_temp_handle(ZES_TEMP_SENSORS_MEMORY)
+            items[3] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GLOBAL_MIN)
+            items[4] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GPU_MIN)
+            items[5] = ulong_to_temp_handle(ZES_TEMP_SENSORS_MEMORY_MIN)
         else:
             raise ValueError(uint32_value(count_ptr))
     def stubTemperatureGetProperties(temp, tempProps):
-        tempProps.type = temp_handle_to_ulong(temp)
-        tempProps.isCriticalTempSupported = False
-        tempProps.isThreshold1Supported = False
-        tempProps.isThreshold2Supported = False
+        t = temp_handle_to_ulong(temp)
+        tempProps.type = t
+        tempProps.onSubdevice = False
+        tempProps.subdeviceId = 0
+        tempProps.maxTemperature = 90.0 - 20.0 * t
+        tempProps.isCriticalTempSupported = t < ZES_TEMP_SENSORS_GLOBAL_MIN
+        tempProps.isThreshold1Supported = t != ZES_TEMP_SENSORS_MEMORY
+        tempProps.isThreshold2Supported = t not in [ZES_TEMP_SENSORS_MEMORY, ZES_TEMP_SENSORS_MEMORY_MIN]
+    def stubTemperatureGetConfig(temp, tempCfg):
+        global stubState
+        t = temp_handle_to_ulong(temp)
+        temps = stubState.setdefault("TempConfig", {})
+        cfg = temps.get(t, ( False, ( False, False, 50.0 ), ( False, False, 50.0 ) ))
+        tempCfg.enableCritical, t1cfg, t2cfg = cfg
+        t1 = tempCfg.threshold1
+        t1.enableLowToHigh, t1.enableHighToLow, t1.threshold = t1cfg
+        tempCfg.threshold1 = t1
+        t2 = tempCfg.threshold2
+        t2.enableLowToHigh, t2.enableHighToLow, t2.threshold = t2cfg
+        tempCfg.threshold2 = t2
+    def stubTemperatureSetConfig(temp, tempCfg):
+        global stubState
+        t = temp_handle_to_ulong(temp)
+        temps = stubState.setdefault("TempConfig", {})
+        temps[t] = ( tempCfg.enableCritical,
+                     ( tempCfg.threshold1.enableLowToHigh, tempCfg.threshold1.enableHighToLow,
+                       tempCfg.threshold1.threshold),
+                     ( tempCfg.threshold2.enableLowToHigh, tempCfg.threshold2.enableHighToLow,
+                       tempCfg.threshold2.threshold) )
     def stubTemperatureGetState(temp):
         global stubState
         t = stubState.get("Temp", 50.0)
@@ -1668,6 +1693,8 @@ def unimplementedFunctionCall(func, *args, **kwargs):
 
     replacements = { zesDeviceEnumTemperatureSensors : stubDeviceEnumTemperatureSensors,
                      zesTemperatureGetProperties : stubTemperatureGetProperties,
+                     zesTemperatureGetConfig : stubTemperatureGetConfig,
+                     zesTemperatureSetConfig : stubTemperatureSetConfig,
                      zesTemperatureGetState : stubTemperatureGetState,
                      zesDeviceEnumPowerDomains : stubDeviceEnumPowerDomains,
                      zesPowerGetProperties : stubPowerGetProperties,
@@ -1846,7 +1873,10 @@ def repairStatusString(repairStatus):
 def tempTypeString(tempType):
     tempTypes = { ZES_TEMP_SENSORS_GLOBAL : "Overall",
                   ZES_TEMP_SENSORS_GPU : "GPU",
-                  ZES_TEMP_SENSORS_MEMORY : "Memory" }
+                  ZES_TEMP_SENSORS_MEMORY : "Memory",
+                  ZES_TEMP_SENSORS_GLOBAL_MIN : "Overall_Min",
+                  ZES_TEMP_SENSORS_GPU_MIN : "GPU_Min",
+                  ZES_TEMP_SENSORS_MEMORY_MIN : "Memory_Min" }
     return tempTypes.get(tempType, "Unknown")
 
 def freqTypeString(freqType):
@@ -2433,6 +2463,30 @@ def parseArgs():
                         help="set sampling interval (in s by default)")
     parser.add_argument("--iterations", metavar='NUM', type=int,
                         help="samples to collect (0 = until stopped)")
+    parser.add_argument("--enable-critical-temp", nargs=1, metavar='IDX', type=int,
+                        help="enable critical temperature sensor")
+    parser.add_argument("--disable-critical-temp", nargs=1, metavar='IDX', type=int,
+                        help="disable critical temperature sensor")
+    parser.add_argument("--enable-t1-low-to-high", nargs=1, metavar='IDX', type=int,
+                        help="enable low-to-high temperature threshold 1")
+    parser.add_argument("--disable-t1-low-to-high", nargs=1, metavar='IDX', type=int,
+                        help="disable low-to-high temperature threshold 1")
+    parser.add_argument("--enable-t1-high-to-low", nargs=1, metavar='IDX', type=int,
+                        help="enable high-to-low temperature threshold 1")
+    parser.add_argument("--disable-t1-high-to-low", nargs=1, metavar='IDX', type=int,
+                        help="disable high-to-low temperature threshold 1")
+    parser.add_argument("--set-t1-threshold", nargs=2, metavar=('IDX','C'), type=int,
+                        help="set temperature threshold 1")
+    parser.add_argument("--enable-t2-low-to-high", nargs=1, metavar='IDX', type=int,
+                        help="enable low-to-high temperature threshold 2")
+    parser.add_argument("--disable-t2-low-to-high", nargs=1, metavar='IDX', type=int,
+                        help="disable low-to-high temperature threshold 2")
+    parser.add_argument("--enable-t2-high-to-low", nargs=1, metavar='IDX', type=int,
+                        help="enable high-to-low temperature threshold 2")
+    parser.add_argument("--disable-t2-high-to-low", nargs=1, metavar='IDX', type=int,
+                        help="disable high-to-low temperature threshold 2")
+    parser.add_argument("--set-t2-threshold", nargs=2, metavar=('IDX','C'), type=int,
+                        help="set temperature threshold 2")
     parser.add_argument("--set-power", nargs='+', metavar=('POW','TAU'),
                         help="set sustained power limit")
     parser.add_argument("--set-burst-power", nargs='+', metavar=('POW',''),
@@ -3200,13 +3254,207 @@ def main():
             temperatures = zes_temp_handle_array(tempCount.value())
             zeCall(zesDeviceEnumTemperatureSensors, device,tempCount.cast(), temperatures.cast())
 
+        if args.enable_critical_temp:
+            t, = args.enable_critical_temp
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.enableCritical = True
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.disable_critical_temp:
+            t, = args.disable_critical_temp
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.enableCritical = False
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.enable_t1_low_to_high:
+            t, = args.enable_t1_low_to_high
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold1.enableLowToHigh = True
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.disable_t1_low_to_high:
+            t, = args.disable_t1_low_to_high
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold1.enableLowToHigh = False
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.enable_t1_high_to_low:
+            t, = args.enable_t1_high_to_low
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold1.enableHighToLow = True
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.disable_t1_high_to_low:
+            t, = args.disable_t1_high_to_low
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold1.enableHighToLow = False
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.set_t1_threshold:
+            t,v = args.set_t1_threshold
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold1.threshold = v
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.enable_t2_low_to_high:
+            t, = args.enable_t2_low_to_high
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold2.enableLowToHigh = True
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.disable_t2_low_to_high:
+            t, = args.disable_t2_low_to_high
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold2.enableLowToHigh = False
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.enable_t2_high_to_low:
+            t, = args.enable_t2_high_to_low
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold2.enableHighToLow = True
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.disable_t2_high_to_low:
+            t, = args.disable_t2_high_to_low
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold2.enableHighToLow = False
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+        if args.set_t2_threshold:
+            t,v = args.set_t2_threshold
+            if 0 <= t < tempCount.value():
+                temp = temperatures[t]
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    tempConfig.threshold2.threshold = v
+                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
+            else:
+                pr.fail("ERROR: must provide a valid temperature index")
+
         if args.show_temp:
             tempTop = Node(devNode, "TemperatureSensors", None)
 
             for i in range(tempCount.value()):
                 temp = temperatures[i]
                 tempProps = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_PROPERTIES)
-                zeCall(zesTemperatureGetProperties, temp, tempProps)
+                tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
+                try:
+                    zeCall(zesTemperatureGetProperties, temp, tempProps)
+                except NotImplementedError:
+                    continue
+                except ValueError:
+                    reportZeException()
+                    continue
+                try:
+                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    reportZeException()
                 tempType = tempTypeString(tempProps.type)
                 if tempProps.onSubdevice:
                     tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType),
@@ -3215,9 +3463,21 @@ def main():
                     tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType))
 
                 if args.show_inventory:
-                    Node(tempNode, "CriticalTempSupported", bool(tempProps.isCriticalTempSupported))
-                    Node(tempNode, "Threshold1Supported", bool(tempProps.isThreshold1Supported))
-                    Node(tempNode, "Threshold2Supported", bool(tempProps.isThreshold2Supported))
+                    Node(tempNode, "MaxTemperature", "%.1f" % tempProps.maxTemperature, ("Units", degC))
+                    if tempProps.isCriticalTempSupported:
+                        Node(tempNode, "CriticalTempEnabled", bool(tempConfig.enableCritical))
+                    if tempProps.isThreshold1Supported:
+                        t1Node = Node(tempNode, "Threshold1", None)
+                        Node(t1Node, "EnabledLowToHigh", bool(tempConfig.threshold1.enableLowToHigh))
+                        Node(t1Node, "EnabledHighToLow", bool(tempConfig.threshold1.enableHighToLow))
+                        Node(t1Node, "Threshold", "%.1f" % tempConfig.threshold1.threshold,
+                             ("Units", degC))
+                    if tempProps.isThreshold2Supported:
+                        t2Node = Node(tempNode, "Threshold2", None)
+                        Node(t2Node, "EnabledLowToHigh", bool(tempConfig.threshold2.enableLowToHigh))
+                        Node(t2Node, "EnabledHighToLow", bool(tempConfig.threshold2.enableHighToLow))
+                        Node(t2Node, "Threshold", "%.1f" % tempConfig.threshold2.threshold,
+                             ("Units", degC))
 
                 if args.show_telemetry:
                     node = Node(tempNode, "Current", "?", ("Units", degC))
