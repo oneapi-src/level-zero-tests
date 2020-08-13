@@ -50,9 +50,15 @@ ze_image_handle_t create_ze_image(ze_context_handle_t context,
                                   ze_device_handle_t dev,
                                   ze_image_desc_t image_descriptor) {
   ze_image_handle_t image;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, dev, &image_descriptor, &image));
-  EXPECT_NE(nullptr, image);
+  ze_result_t result = zeImageCreate(context, dev, &image_descriptor, &image);
+  EXPECT_TRUE((result == ZE_RESULT_SUCCESS) ||
+              (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT));
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT) {
+    print_image_descriptor_unsupported(image_descriptor);
+  }
+  if (result == ZE_RESULT_SUCCESS) {
+    EXPECT_NE(nullptr, image);
+  }
   return image;
 }
 
@@ -62,13 +68,9 @@ ze_image_handle_t create_ze_image(ze_device_handle_t dev,
 }
 
 ze_image_handle_t create_ze_image(ze_image_desc_t image_descriptor) {
-  ze_image_handle_t image;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::get_default_context(),
-                          lzt::zeDevice::get_instance()->get_device(),
-                          &image_descriptor, &image));
-  EXPECT_NE(nullptr, image);
-  return image;
+  return create_ze_image(lzt::get_default_context(),
+                         lzt::zeDevice::get_instance()->get_device(),
+                         image_descriptor);
 }
 
 ze_image_handle_t create_ze_image() {
@@ -111,6 +113,13 @@ zeImageCreateCommon::zeImageCreateCommon()
 zeImageCreateCommon::~zeImageCreateCommon() {
   destroy_ze_image(dflt_device_image_);
   destroy_ze_image(dflt_device_image_2_);
+}
+
+void print_image_descriptor_unsupported(const ze_image_desc_t descriptor) {
+  LOG_WARNING << "Unsupported Image Format";
+  LOG_WARNING << "   TYPE = " << descriptor.type;
+  LOG_WARNING << "   LAYOUT = " << descriptor.format.layout
+              << "  FORMAT_TYPE = " << descriptor.format.type;
 }
 
 void print_image_format_descriptor(const ze_image_format_t descriptor) {

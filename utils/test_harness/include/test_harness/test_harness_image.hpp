@@ -83,6 +83,7 @@ const std::vector<ze_image_format_swizzle_t> image_format_swizzles_all = {
 
 void print_image_format_descriptor(const ze_image_format_t descriptor);
 void print_image_descriptor(const ze_image_desc_t descriptor);
+void print_image_descriptor_unsupported(const ze_image_desc_t descriptor);
 void generate_ze_image_creation_flags_list(
     std::vector<ze_image_flag_t> &image_creation_flags_list);
 
