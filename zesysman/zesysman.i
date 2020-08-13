@@ -215,7 +215,7 @@ uint64_t ras_category(zes_ras_state_t *state, unsigned int idx)
     if (idx < ZES_MAX_RAS_ERROR_CATEGORY_COUNT)
         return state->category[idx];
     else
-        return ~0UL;
+        return ~0ULL;
 }
 %}
 
@@ -259,6 +259,7 @@ uint64_t ras_category(zes_ras_state_t *state, unsigned int idx)
 %pointer_cast(unsigned long, zes_mem_handle_t, ulong_to_mem_handle);
 %pointer_cast(unsigned long, zes_fabric_port_handle_t, ulong_to_fabric_port_handle);
 %pointer_cast(unsigned long, zes_ras_handle_t, ulong_to_ras_handle);
+%pointer_cast(unsigned long, zes_sched_handle_t, ulong_to_sched_handle);
 %pointer_cast(unsigned long, zes_standby_handle_t, ulong_to_standby_handle);
 %pointer_cast(unsigned long, zes_diag_handle_t, ulong_to_diag_handle);
 %pointer_cast(unsigned long, zes_fan_handle_t, ulong_to_fan_handle);
@@ -276,6 +277,7 @@ uint64_t ras_category(zes_ras_state_t *state, unsigned int idx)
 %pointer_cast(zes_mem_handle_t, unsigned long, mem_handle_to_ulong);
 %pointer_cast(zes_fabric_port_handle_t, unsigned long, fabric_port_handle_to_ulong);
 %pointer_cast(zes_ras_handle_t, unsigned long, ras_handle_to_ulong);
+%pointer_cast(zes_sched_handle_t, unsigned long, sched_handle_to_ulong);
 %pointer_cast(zes_standby_handle_t, unsigned long, standby_handle_to_ulong);
 %pointer_cast(zes_diag_handle_t, unsigned long, diag_handle_to_ulong);
 %pointer_cast(zes_fan_handle_t, unsigned long, fan_handle_to_ulong);

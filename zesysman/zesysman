@@ -529,173 +529,65 @@ def zes_typed_array(stype, count):
 
 # TODO: These structures aren't being used yet:
 #
-# ZES_STRUCTURE_TYPE_SCHED_PROPERTIES
 # ZES_STRUCTURE_TYPE_TEMP_CONFIG
 
 # This is a special developer mode that forces all API functions for which a
 # replacement is available to return UNIMPLEMENTED. Normally, you would want
 # to specify --stub-unimplemented when using this mode
 if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED":
-    def zesDeviceEnumTemperatureSensors(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesTemperatureGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesTemperatureGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumPowerDomains(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPowerGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPowerSetLimits(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPowerGetLimits(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPowerGetEnergyCounter(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPowerGetEnergyThreshold(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPowerSetEnergyThreshold(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumFrequencyDomains(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyGetAvailableClocks(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyGetRange(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencySetRange(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyGetThrottleTime(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcGetCapabilities(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcGetFrequencyTarget(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcSetFrequencyTarget(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcGetVoltageTarget(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcSetVoltageTarget(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcSetMode(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcGetMode(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcGetIccMax(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcSetIccMax(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcGetTjMax(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFrequencyOcSetTjMax(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumEngineGroups(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesEngineGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesEngineGetActivity(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDevicePciGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDevicePciGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDevicePciGetStats(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDevicePciGetBars(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumDiagnosticTestSuites(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDiagnosticsGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDiagnosticsGetTests(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDiagnosticsRunTests(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEventRegister(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDriverEventListen(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumFabricPorts(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFabricPortGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFabricPortGetLinkType(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFabricPortGetConfig(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFabricPortSetConfig(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFabricPortGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFabricPortGetThroughput(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumRasErrorSets(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesRasGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesRasGetConfig(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesRasSetConfig(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesRasGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceProcessesGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumFans(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFanSetDefaultMode(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFanSetFixedSpeedMode(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFanSetSpeedTableMode(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFanGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFanGetConfig(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFanGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumFirmwares(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFirmwareGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesFirmwareFlashData(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumLeds(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesLedGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesLedGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesLedSetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesLedSetColor(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumMemoryModules(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesMemoryGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesMemoryGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesMemoryGetBandwidth(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumPerformanceFactorDomains(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPerformanceFactorGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPerformanceFactorGetConfig(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPerformanceFactorSetConfig(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesDeviceEnumPsus(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPsuGetProperties(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
-    def zesPsuGetState(*args, **kwargs):
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE
+    fntemplate = "def %s(*args, **kwargs):\n    return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE\n"
+    allFnsToReplace = """
+    zesDeviceEnumTemperatureSensors zesTemperatureGetProperties zesTemperatureGetState
+
+    zesDeviceEnumPowerDomains zesPowerGetProperties      zesPowerSetLimits          zesPowerGetLimits
+    zesPowerGetEnergyCounter  zesPowerGetEnergyThreshold zesPowerSetEnergyThreshold
+
+    zesDeviceEnumFrequencyDomains    zesFrequencyGetProperties      zesFrequencyGetAvailableClocks
+    zesFrequencyGetRange             zesFrequencySetRange           zesFrequencyGetState
+    zesFrequencyGetThrottleTime      zesFrequencyOcGetCapabilities  zesFrequencyOcGetFrequencyTarget
+    zesFrequencyOcSetFrequencyTarget zesFrequencyOcGetVoltageTarget zesFrequencyOcSetVoltageTarget
+    zesFrequencyOcSetMode            zesFrequencyOcGetMode          zesFrequencyOcGetIccMax
+    zesFrequencyOcSetIccMax          zesFrequencyOcGetTjMax         zesFrequencyOcSetTjMax
+
+    zesDeviceEnumEngineGroups zesEngineGetProperties zesEngineGetActivity
+
+    zesDevicePciGetProperties zesDevicePciGetState zesDevicePciGetStats zesDevicePciGetBars
+
+    zesDeviceEnumDiagnosticTestSuites zesDiagnosticsGetProperties zesDiagnosticsGetTests
+    zesDiagnosticsRunTests
+
+    zesDeviceEventRegister zesDriverEventListen
+
+    zesDeviceEnumFabricPorts zesFabricPortGetProperties zesFabricPortGetLinkType zesFabricPortGetConfig
+    zesFabricPortSetConfig   zesFabricPortGetState      zesFabricPortGetThroughput
+
+    zesDeviceEnumRasErrorSets zesRasGetProperties zesRasGetConfig zesRasSetConfig zesRasGetState
+
+    zesDeviceProcessesGetState
+
+    zesDeviceEnumFans   zesFanSetDefaultMode zesFanSetFixedSpeedMode zesFanSetSpeedTableMode
+    zesFanGetProperties zesFanGetConfig      zesFanGetState
+
+    zesDeviceEnumFirmwares zesFirmwareGetProperties zesFirmwareFlashData
+
+    zesDeviceEnumLeds zesLedGetProperties zesLedGetState zesLedSetState zesLedSetColor
+
+    zesDeviceEnumMemoryModules zesMemoryGetProperties zesMemoryGetState zesMemoryGetBandwidth
+
+    zesDeviceEnumPerformanceFactorDomains zesPerformanceFactorGetProperties zesPerformanceFactorGetConfig
+    zesPerformanceFactorSetConfig
+
+    zesDeviceEnumPsus zesPsuGetProperties zesPsuGetState
+
+    zesDeviceEnumSchedulers              zesSchedulerGetProperties              zesSchedulerGetCurrentMode
+    zesSchedulerGetTimeoutModeProperties zesSchedulerGetTimesliceModeProperties zesSchedulerSetTimeoutMode
+    zesSchedulerSetTimesliceMode         zesSchedulerSetExclusiveMode
+    zesSchedulerSetComputeUnitDebugMode
+
+    zesDeviceEnumStandbyDomains zesStandbyGetProperties zesStandbyGetMode zesStandbySetMode
+    """
+    for f in allFnsToReplace.split():
+        exec(fntemplate % f)
 
 #
 # For development purposes, to replace unimplemented functions
@@ -1652,6 +1544,125 @@ def unimplementedFunctionCall(func, *args, **kwargs):
         psuState.voltStatus = voltStatus
         psuState.fanFailed, psuState.temperature, psuState.current = stubState["PsuTable"][voltStatus]
         stubState["PsuState"] = (voltStatus + 1) % 4
+    def stubDeviceEnumSchedulers(dev, count_ptr, handle_array):
+        global stubState
+        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
+        stubState.setdefault("SchedMode", { ZES_ENGINE_TYPE_FLAG_COMPUTE : ZES_SCHED_MODE_TIMESLICE,
+                                            ZES_ENGINE_TYPE_FLAG_3D : ZES_SCHED_MODE_TIMEOUT,
+                                            ZES_ENGINE_TYPE_FLAG_MEDIA : ZES_SCHED_MODE_TIMEOUT,
+                                            DMA_ENGINE_TYPES : ZES_SCHED_MODE_EXCLUSIVE })
+        stubState.setdefault("Timeout", { ZES_ENGINE_TYPE_FLAG_COMPUTE : 5000000,
+                                          ZES_ENGINE_TYPE_FLAG_3D : 25000000,
+                                          ZES_ENGINE_TYPE_FLAG_MEDIA : 15000000,
+                                          DMA_ENGINE_TYPES : 1000000 })
+        stubState.setdefault("Timeslice", { ZES_ENGINE_TYPE_FLAG_COMPUTE : (500000, 5000000),
+                                            ZES_ENGINE_TYPE_FLAG_3D : (1000000, 25000000),
+                                            ZES_ENGINE_TYPE_FLAG_MEDIA : (750000, 15000000),
+                                            DMA_ENGINE_TYPES : (500000, 1000000) })
+        if handle_array is None:
+            uint32_assign(count_ptr, 4)
+        elif uint32_value(count_ptr) == 4:
+            items = zes_sched_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE)
+            items[1] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_3D)
+            items[2] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_MEDIA)
+            items[3] = ulong_to_sched_handle(DMA_ENGINE_TYPES)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubSchedulerGetProperties(sched, schedProps):
+        s = sched_handle_to_ulong(sched)
+        schedProps.onSubdevice = False
+        schedProps.subdeviceId = 0
+        schedProps.canControl = not (s & ZES_ENGINE_TYPE_FLAG_DMA)
+        schedProps.engines = s
+        supportedModes = 0
+        if s & ZES_ENGINE_TYPE_FLAG_DMA:
+            supportedModes = 1 << ZES_SCHED_MODE_EXCLUSIVE
+        if s & ZES_ENGINE_TYPE_FLAG_COMPUTE:
+            supportedModes |= 1 << ZES_SCHED_MODE_TIMEOUT
+            supportedModes |= 1 << ZES_SCHED_MODE_TIMESLICE
+            supportedModes |= 1 << ZES_SCHED_MODE_EXCLUSIVE
+            supportedModes |= 1 << ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
+        if s & ZES_ENGINE_TYPE_FLAG_3D:
+            supportedModes |= 1 << ZES_SCHED_MODE_TIMESLICE
+        if s & ZES_ENGINE_TYPE_FLAG_MEDIA:
+            supportedModes |= 1 << ZES_SCHED_MODE_TIMEOUT
+            supportedModes |= 1 << ZES_SCHED_MODE_EXCLUSIVE
+        schedProps.supportedModes = supportedModes
+    def stubSchedulerGetCurrentMode(sched):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        return stubState["SchedMode"][s]
+    def stubSchedulerGetTimeoutModeProperties(sched, getDefaults, schedConfig):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
+        if getDefaults:
+            timeoutProperties = { ZES_ENGINE_TYPE_FLAG_COMPUTE : 5000000,
+                                  ZES_ENGINE_TYPE_FLAG_3D : 25000000,
+                                  ZES_ENGINE_TYPE_FLAG_MEDIA : 15000000,
+                                  DMA_ENGINE_TYPES : 1000000 }
+        else:
+            timeoutProperties = stubState["Timeout"]
+        schedConfig.watchdogTimeout = timeoutProperties[s]
+    def stubSchedulerGetTimesliceModeProperties(sched, getDefaults, schedConfig):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
+        if getDefaults:
+            timesliceProperties = { ZES_ENGINE_TYPE_FLAG_COMPUTE : (500000, 5000000),
+                                    ZES_ENGINE_TYPE_FLAG_3D : (1000000, 25000000),
+                                    ZES_ENGINE_TYPE_FLAG_MEDIA : (750000, 15000000),
+                                    DMA_ENGINE_TYPES : (500000, 1000000) }
+        else:
+            timesliceProperties = stubState["Timeslice"]
+        schedConfig.interval, schedConfig.yieldTimeout = timesliceProperties[s]
+    def stubSchedulerSetTimeoutMode(sched, schedConfig):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_TIMEOUT
+        stubState["SchedMode"][s] = ZES_SCHED_MODE_TIMEOUT
+        if schedConfig:
+            stubState["Timeout"][s] = schedConfig.watchdogTimeout
+        return needReload
+    def stubSchedulerSetTimesliceMode(sched, schedConfig):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_TIMESLICE
+        stubState["SchedMode"][s] = ZES_SCHED_MODE_TIMESLICE
+        if schedConfig:
+            stubState["Timeslice"][s] = schedConfig.interval, schedConfig.yieldTimeout
+        return needReload
+    def stubSchedulerSetExclusiveMode(sched):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_EXCLUSIVE
+        stubState["SchedMode"][s] = ZES_SCHED_MODE_EXCLUSIVE
+        return needReload
+    def stubSchedulerSetComputeUnitDebugMode(sched):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
+        stubState["SchedMode"][s] = ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
+        return needReload
+    def stubDeviceEnumStandbyDomains(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 1)
+        elif uint32_value(count_ptr) == 1:
+            items = zes_standby_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_standby_handle(0)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubStandbyGetProperties(stby, stbyProps):
+        stbyProps.type = ZES_STANDBY_TYPE_GLOBAL
+        stbyProps.onSubdevice = False
+        stbyProps.subdeviceId = 0
+    def stubStandbyGetMode(stby):
+        global stubState
+        return stubState.setdefault("Standby", ZES_STANDBY_PROMO_MODE_DEFAULT)
+    def stubStandbySetMode(stby, stbyMode):
+        global stubState
+        stubState["Standby"] = stbyMode
     def stillUnimplemented(*args, **kwargs):
         raise NotImplementedError
 
@@ -1734,7 +1745,20 @@ def unimplementedFunctionCall(func, *args, **kwargs):
                      zesPerformanceFactorSetConfig : stubPerformanceFactorSetConfig,
                      zesDeviceEnumPsus : stubDeviceEnumPsus,
                      zesPsuGetProperties : stubPsuGetProperties,
-                     zesPsuGetState : stubPsuGetState }
+                     zesPsuGetState : stubPsuGetState,
+                     zesDeviceEnumSchedulers : stubDeviceEnumSchedulers,
+                     zesSchedulerGetProperties : stubSchedulerGetProperties,
+                     zesSchedulerGetCurrentMode : stubSchedulerGetCurrentMode,
+                     zesSchedulerGetTimeoutModeProperties : stubSchedulerGetTimeoutModeProperties,
+                     zesSchedulerGetTimesliceModeProperties : stubSchedulerGetTimesliceModeProperties,
+                     zesSchedulerSetTimeoutMode : stubSchedulerSetTimeoutMode,
+                     zesSchedulerSetTimesliceMode : stubSchedulerSetTimesliceMode,
+                     zesSchedulerSetExclusiveMode : stubSchedulerSetExclusiveMode,
+                     zesSchedulerSetComputeUnitDebugMode : stubSchedulerSetComputeUnitDebugMode,
+                     zesDeviceEnumStandbyDomains : stubDeviceEnumStandbyDomains,
+                     zesStandbyGetProperties : stubStandbyGetProperties,
+                     zesStandbyGetMode : stubStandbyGetMode,
+                     zesStandbySetMode : stubStandbySetMode }
 
     replacementFunction = replacements.get(func, stillUnimplemented)
 
@@ -2025,6 +2049,21 @@ def schedModeString(schedMode):
                    ZES_SCHED_MODE_EXCLUSIVE : "Exclusive",
                    ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG : "Debug" }
     return schedModes.get(schedMode, "Unknown")
+
+def schedSupportedModesString(schedMode):
+    schedModes = [ZES_SCHED_MODE_TIMEOUT, ZES_SCHED_MODE_TIMESLICE, ZES_SCHED_MODE_EXCLUSIVE,
+                  ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG]
+
+    modesStrings = []
+    for m in schedModes:
+        if schedMode & (1 << m):
+            schedMode ^= (1 << m)
+            modesStrings.append(schedModeString(m))
+
+    if schedMode != 0:
+        modesStrings.append("Unknown mode")
+
+    return ", ".join(modesStrings)
 
 def diagResultString(diagResult):
     diagResults = { ZES_DIAG_RESULT_NO_ERRORS : "Pass",
@@ -2403,7 +2442,7 @@ def parseArgs():
     parser.add_argument("--set-energy-threshold", nargs='+', metavar=('J',''),
                         help="set energy threshold")
     parser.add_argument("--set-freq", nargs='+', metavar=('MIN','MAX'), help="set frequency limits")
-    parser.add_argument("--set-scheduler", nargs='+', metavar=('MODE',''), help="set scheduler mode")
+    parser.add_argument("--set-scheduler", nargs='+', metavar=('IDX','MODE'), help="set scheduler mode")
     parser.add_argument("--clear-errors", action='store_true', help="clear error counters")
     parser.add_argument("--set-error-thresholds", nargs='+', type=int, metavar=('TYPE','N'),
                         help="set error thresholds")
@@ -2715,7 +2754,7 @@ def parseJoules(opts):
                 hitRemainder = True
                 if opt in ["m", "mj", "mjoule", "mjoules", "millijoule", "millijoules"]:
                     multiplier = 0.001
-                if opt in ["k", "kj", "kjoule", "kjoules", "kilojoule", "kilojoules"]:
+                elif opt in ["k", "kj", "kjoule", "kjoules", "kilojoule", "kilojoules"]:
                     multiplier = 1000.0
                 elif opt in ["j", "joule", "joules"]:
                     remainder.append(opt)
@@ -2785,11 +2824,13 @@ def parseSchedulerMode(opts):
     opt, remainder = opts[0].lower(), opts[1:]
 
     if opt in ["timeout", "time", "to", "t"]:
-        mode = ET_SCHED_MODE_TIMEOUT
+        mode = ZES_SCHED_MODE_TIMEOUT
     elif opt in ["timeslice", "slice", "ts", "s"]:
         mode = ZES_SCHED_MODE_TIMESLICE
     elif opt in ["exclusive", "exc", "ex", "e", "x"]:
         mode = ZES_SCHED_MODE_EXCLUSIVE
+    elif opt in ["cudebug", "debug", "dbg", "db", "d", "g"]:
+        mode = ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
     else:
         pr.err("ERROR: Unrecognized scheduler mode", opt)
         raise ValueError(opt)
@@ -2837,7 +2878,7 @@ def parseMicroseconds(opts):
                 hitRemainder = True
                 if opt in ["u", "us", "usec", "usecond", "useconds", "microsecond", "microseconds"]:
                     multiplier = 1.0
-                if opt in ["m", "ms", "msec", "msecond", "mseconds", "millisecond", "milliseconds"]:
+                elif opt in ["m", "ms", "msec", "msecond", "mseconds", "millisecond", "milliseconds"]:
                     multiplier = 1000.0
                 elif opt not in ["s", "sec", "second", "seconds"]:
                     remainder.append(opt)
@@ -4288,98 +4329,144 @@ def main():
                     engineNames = enginesUsedString(proc.engines)
                     Node(procNode, "EngineUsage", engineNames)
 
-        schedModeCount = uint32_ptr()
+        schedCount = uint32_ptr()
         try:
-            call(zesSchedulerGetSupportedModes, device, schedModeCount.cast(), None)
+            zeCall(zesDeviceEnumSchedulers, device, schedCount.cast(), None)
         except:
             pass
         else:
-            # %array_class(zes_sched_handle_t, zes_sched_handle_array);
-            modes = zes_sched_mode_array(schedModeCount.value())
-            call(zesSchedulerGetSupportedModes, device, schedModeCount.cast(), modes.cast())
+            scheds = zes_sched_handle_array(schedCount.value())
+            zeCall(zesDeviceEnumSchedulers, device, schedCount.cast(), scheds.cast())
 
-        schedModes = []
-        for i in range(schedModeCount.value()):
-            schedModes.append(modes[i])
-
-        if args.set_scheduler and schedModes:
-            mode, remainder = parseSchedulerMode(args.set_scheduler)
-            needsReboot = False
-            if mode == ET_SCHED_MODE_TIMEOUT:
-                schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES)
-                watchdogTimeout, remainder = parseMicroseconds(remainder)
-                if watchdogTimeout == 0:
-                    zeCall(zesSchedulerGetTimeoutModeProperties, device, False, schedProps)
-                else:
-                    schedProps.watchdogTimeout = watchdogTimeout
-                if args.dry_run:
-                    pr("Would set scheduling mode to timeout")
-                else:
-                    needsReboot = zeCall(zesSchedulerSetTimeoutMode, device, schedProps)
-            elif mode == ZES_SCHED_MODE_TIMESLICE:
-                schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
-                interval, remainder = parseMicroseconds(remainder)
-                yieldTimeout, remainder = parseMicroseconds(remainder)
-                if interval == 0 or yieldTimeout == 0:
-                    zeCall(zesSchedulerGetTimeoutModeProperties, device, False, schedProps)
-                if interval != 0:
-                    schedProps.interval = interval
-                if yieldTimeout != 0:
-                    schedProps.yieldTimeout = yieldTimeout
-                if args.dry_run:
-                    pr("Would set scheduling mode to timeslice")
-                else:
-                    needsReboot = zeCall(zesSchedulerSetTimesliceMode, device, schedProps)
-            elif mode == ZES_SCHED_MODE_EXCLUSIVE:
-                if args.dry_run:
-                    pr("Would set scheduling mode to exclusive")
-                else:
-                    needsReboot = zeCall(zesSchedulerSetExclusiveMode, device)
-            if remainder:
-                pr.err("WARNING: Extra set-scheduler arguments ignored")
-            if needsReboot:
-                pr.err("NOTE: reboot required")
+        if args.set_scheduler:
+            idx, schedulerArgs = args.set_scheduler[0], args.set_scheduler[1:]
+            try:
+                i = int(idx)
+                assert 0 <= i < schedCount.value()
+                sched = scheds[i]
+                mode, remainder = parseSchedulerMode(schedulerArgs)
+                needsReboot = False
+                if mode == ZES_SCHED_MODE_TIMEOUT:
+                    schedCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES)
+                    watchdogTimeout, remainder = parseMicroseconds(remainder)
+                    if watchdogTimeout == 0:
+                        zeCall(zesSchedulerGetTimeoutModeProperties, sched, False, schedCfg)
+                    else:
+                        schedCfg.watchdogTimeout = watchdogTimeout
+                    if args.dry_run:
+                        pr("Would set scheduling mode to timeout")
+                    else:
+                        needsReboot = zeCall(zesSchedulerSetTimeoutMode, sched, schedCfg)
+                elif mode == ZES_SCHED_MODE_TIMESLICE:
+                    schedCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
+                    interval, remainder = parseMicroseconds(remainder)
+                    yieldTimeout, remainder = parseMicroseconds(remainder)
+                    if interval == 0 or yieldTimeout == 0:
+                        zeCall(zesSchedulerGetTimesliceModeProperties, sched, False, schedCfg)
+                    if interval != 0:
+                        schedCfg.interval = interval
+                    if yieldTimeout != 0:
+                        schedCfg.yieldTimeout = yieldTimeout
+                    if args.dry_run:
+                        pr("Would set scheduling mode to timeslice")
+                    else:
+                        needsReboot = zeCall(zesSchedulerSetTimesliceMode, sched, schedCfg)
+                elif mode == ZES_SCHED_MODE_EXCLUSIVE:
+                    if args.dry_run:
+                        pr("Would set scheduling mode to exclusive")
+                    else:
+                        needsReboot = zeCall(zesSchedulerSetExclusiveMode, sched)
+                elif mode == ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG:
+                    if args.dry_run:
+                        pr("Would set scheduling mode to compute unit debug")
+                    else:
+                        needsReboot = zeCall(zesSchedulerSetComputeUnitDebugMode, sched)
+                if remainder:
+                    pr.err("WARNING: Extra set-scheduler arguments ignored")
+                    pr.err(remainder)
+                if needsReboot:
+                    pr.err("NOTE: reboot required")
+            except:
+                pr.fail("Must specify a valid scheduler index and supported mode")
 
         if args.show_scheduler:
-            schedNode = Node(devNode, "Scheduler", None)
+            schedTop = Node(devNode, "Schedulers", None)
+            for i in range(schedCount.value()):
+                sched = scheds[i]
+                schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_PROPERTIES)
+                try:
+                    zeCall(zesSchedulerGetProperties, sched, schedProps)
+                except NotImplementedError:
+                    continue
+                except ValueError:
+                    reportZeException()
+                    continue
 
-            if args.show_inventory:
-                schedModesNode = Node(schedNode, "SupportedModes", None)
-                for mode in schedModes:
-                    Node(schedModesNode, "Mode", schedModeString(mode))
-                    if mode == ZES_SCHED_MODE_TIMEOUT:
-                        schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES)
-                        zeCall(zesSchedulerGetTimeoutModeProperties, device, True, schedProps)
-                        if schedProps.watchdogTimeout == ZES_SCHED_WATCHDOG_DISABLE:
-                            Node(schedModesNode, "Timeout", "Disabled")
+                if schedProps.onSubdevice:
+                    schedNode = Node(schedTop, "Scheduler", None, ("Index", i),
+                                     ("SubdeviceId", rasProps.subdeviceId))
+                else:
+                    schedNode = Node(schedTop, "Scheduler", None, ("Index", i))
+
+                if args.show_inventory:
+                    Node(schedNode, "CanControl", bool(schedProps.canControl))
+                    Node(schedNode, "Engines", enginesUsedString(schedProps.engines))
+                    Node(schedNode, "SupportedModes", schedSupportedModesString(schedProps.supportedModes))
+                    if args.verbose:
+                        timeoutCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES)
+                        zeCall(zesSchedulerGetTimeoutModeProperties, sched, True, timeoutCfg)
+                        if timeoutCfg.watchdogTimeout == ZES_SCHED_WATCHDOG_DISABLE:
+                            Node(schedNode, "DefaultTimeout", "Disabled")
                         else:
-                            wd = schedProps.watchdogTimeout / 1000.0
-                            Node(schedModesNode, "DefaultTimeout", "%.3f" % wd, ("Units", "msec"))
-                    if mode == ZES_SCHED_MODE_TIMESLICE:
-                        schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
-                        zeCall(zesSchedulerGetTimeoutModeProperties, device, True, schedProps)
-                        Node(schedModesNode, "DefaultInterval", "%.3f" % schedProps.interval / 1000.0,
-                             ("Units", "msec"))
-                        Node(schedModesNode, "DefaultYieldTimeout",
-                             "%.3f" % schedProps.yieldTimeout / 1000.0, ("Units", "msec"))
+                            wd = timeoutCfg.watchdogTimeout / 1000.0
+                            Node(schedNode, "DefaultTimeout", "%.3f" % wd, ("Units", "msec"))
+                        tsCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
+                        zeCall(zesSchedulerGetTimesliceModeProperties, sched, True, tsCfg)
+                        tsi = tsCfg.interval / 1000.0
+                        tsy = tsCfg.yieldTimeout / 1000.0
+                        Node(schedNode, "DefaultInterval", "%.3f" % tsi, ("Units", "msec"))
+                        Node(schedNode, "DefaultYieldTimeout", "%.3f" % tsy, ("Units", "msec"))
 
-            if args.show_telemetry and schedModes:
-                mode = zeCall(zesSchedulerGetCurrentMode,device)
-                Node(schedNode, "CurrentMode", schedModeString(mode))
-                if mode == ZES_SCHED_MODE_TIMEOUT:
-                    schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES)
-                    zeCall(zesSchedulerGetTimeoutModeProperties, device, False, schedProps)
-                    if schedProps.watchdogTimeout == ZES_SCHED_WATCHDOG_DISABLE:
-                        Node(schedNode, "Timeout", "Disabled")
-                    else:
-                        wd = schedProps.watchdogTimeout / 1000.0
-                        Node(schedNode, "Timeout", "%.3f" % wd, ("Units", "msec"))
-                if mode == ZES_SCHED_MODE_TIMESLICE:
-                    schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
-                    zeCall(zesSchedulerGetTimeoutModeProperties, device, False, schedProps)
-                    Node(schedNode, "Interval", "%.3f" % schedProps.interval / 1000.0, ("Units", "msec"))
-                    Node(schedNode, "YieldTimeout", "%.3f" % schedProps.yieldTimeout / 1000.0,
-                         ("Units", "msec"))
+                if args.show_telemetry:
+                    cfgs = [zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES),
+                            zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)]
+                    nodes = []
+                    nodes.append(Node(schedNode, "Mode", "?"))
+                    nodes.append(Node(schedNode, "Timeout", "?", ("Units", "msec")))
+                    nodes.append(Node(schedNode, "Interval", "?", ("Units", "msec")))
+                    nodes.append(Node(schedNode, "YieldTimeout", "?", ("Units", "msec")))
+
+                    def schedTelemetry(sched=sched, node=nodes, cfg=cfgs):
+                        try:
+                            mode = zeCall(zesSchedulerGetCurrentMode, sched)
+                            if mode == ZES_SCHED_MODE_TIMEOUT:
+                                zeCall(zesSchedulerGetTimeoutModeProperties, sched, False, cfg[0])
+                            elif mode == ZES_SCHED_MODE_TIMESLICE:
+                                zeCall(zesSchedulerGetTimesliceModeProperties, sched, False, cfg[1])
+                        except NotImplementedError:
+                            pass
+                        except ValueError:
+                            reportZeException()
+                        else:
+                            node[0].setText(schedModeString(mode))
+                            if mode == ZES_SCHED_MODE_TIMEOUT:
+                                if cfg[0].watchdogTimeout == ZES_SCHED_WATCHDOG_DISABLE:
+                                    node[1].setText("Disabled")
+                                else:
+                                    wd = cfg[0].watchdogTimeout / 1000.0
+                                    node[1].setText("%.3f" % wd)
+                            else:
+                                node[1].setText("?")
+                            if mode == ZES_SCHED_MODE_TIMESLICE:
+                                tsi = cfg[1].interval / 1000.0
+                                tsy = cfg[1].yieldTimeout / 1000.0
+                                node[2].setText("%.3f" % tsi)
+                                node[3].setText("%.3f" % tsy)
+                            else:
+                                node[2].setText("?")
+                                node[3].setText("?")
+
+                    telemetryClosures.append(schedTelemetry)
 
         diagCount = uint32_ptr()
         try:
