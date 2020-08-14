@@ -128,7 +128,6 @@ private:
   long double calculate_gbps(long double period, long double buffer_size);
 };
 
-uint64_t max_device_object_size(L0Context &context);
 TimingMeasurement is_bandwidth_with_event_timer(void);
 
 #endif /* ZE_PEAK_H */

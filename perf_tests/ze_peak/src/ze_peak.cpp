@@ -949,37 +949,6 @@ unsigned long long int total_available_memory() {
 
 #endif
 
-inline bool
-is_integrated_gpu(ze_device_memory_properties_t &device_memory_properties) {
-  return (device_memory_properties.totalSize == 0);
-}
-
-uint64_t max_device_object_size(L0Context &context) {
-  ze_result_t result;
-
-  ze_device_memory_properties_t device_memory_properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES};
-
-  uint32_t device_count = 1;
-  result = zeDeviceGetMemoryProperties(context.device, &device_count,
-                                       &device_memory_properties);
-  if (result) {
-    throw std::runtime_error("zeDeviceGetMemoryProperties failed: " +
-                             std::to_string(result));
-  }
-
-  if (is_integrated_gpu(device_memory_properties)) {
-    unsigned long long int total_memory = total_available_memory();
-    if (total_memory > FOUR_GB) {
-      return FOUR_GB - EIGHT_KB;
-    } else {
-      return std::max(total_memory / 4, 128 * ONE_MB);
-    }
-  } else {
-    return device_memory_properties.totalSize;
-  }
-}
-
 TimingMeasurement ZePeak::is_bandwidth_with_event_timer(void) {
   if (use_event_timer) {
     return TimingMeasurement::BANDWIDTH_EVENT_TIMING;

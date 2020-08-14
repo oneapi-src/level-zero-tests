@@ -20,7 +20,8 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
   context.create_module(binary_file);
 
-  uint64_t maxItems = max_device_object_size(context) / sizeof(float) / 2;
+  uint64_t maxItems =
+      context.device_property.maxMemAllocSize / sizeof(float) / 2;
   uint64_t numItems = roundToMultipleOf(
       maxItems,
       (context.device_compute_property.maxGroupSizeX * FETCH_PER_WI * 16),

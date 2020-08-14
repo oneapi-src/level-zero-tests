@@ -29,7 +29,7 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
   // same multiplier in clPeak
   uint64_t max_work_items = get_max_work_items(context) * 2048;
   uint64_t max_number_of_allocated_items =
-      max_device_object_size(context) / sizeof(cl_half);
+      context.device_property.maxMemAllocSize / sizeof(cl_half);
   uint64_t number_of_work_items =
       MIN(max_number_of_allocated_items, (max_work_items * sizeof(cl_half)));
   number_of_work_items =
