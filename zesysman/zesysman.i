@@ -139,15 +139,15 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 // %pybuffer_binary(void* pImage, uint32_t size);
 
 // So use a char-based wrapper instead:
-%pybuffer_binary(char* pImage, uint32_t size);
+%pybuffer_binary(char* pImage, uint32_t nBytes);
 %inline %{
 ze_result_t
-zesFirmwareFlashData(zes_firmware_handle_t hFirmware, char* pImage, uint32_t size)
+zesFirmwareFlashData(zes_firmware_handle_t hFirmware, char* pImage, uint32_t nBytes)
 {
-    return zesFirmwareFlash(hFirmware, pImage, size);
+    return zesFirmwareFlash(hFirmware, pImage, nBytes);
 }
 %}
-%clear (char* pImage, uint32_t size);
+%clear (char* pImage, uint32_t nBytes);
 
 //
 // Standard C constructs

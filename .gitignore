@@ -1,0 +1,7 @@
+# Build outputs
+/build
+/mediadata/merged
+
+# Editor temporary files
+*~
+.*.sw?
