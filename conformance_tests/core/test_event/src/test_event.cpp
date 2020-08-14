@@ -73,7 +73,7 @@ TEST_F(
     zeDeviceCreateEventPoolTests,
     GivenDefaultDeviceWhenGettingIpcEventHandleAndOpeningAndClosingThenSuccessIsReturned) {
   ze_ipc_event_pool_handle_t hIpc;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 32);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(ep.event_pool_, &hIpc));
@@ -91,7 +91,7 @@ TEST_F(
     GivenDefaultDeviceWhenAppendingSignalEventToComandListThenSuccessIsReturned) {
   lzt::zeEventPool ep;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 1);
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
@@ -110,7 +110,7 @@ TEST_F(
   const size_t event_count = 2;
   lzt::zeEventPool ep;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 2);
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
@@ -175,7 +175,7 @@ TEST_F(
     GivenDefaultDeviceAndEventPoolWhenAppendingEventResetThenSuccessIsReturned) {
   lzt::zeEventPool ep;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 1);
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
@@ -227,7 +227,7 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   size_t num_event = 10;
   ASSERT_GE(num_event, 3);
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 10);
   std::vector<ze_event_handle_t> device_event(num_event, nullptr);
   ze_command_list_handle_t cmd_list =
@@ -284,7 +284,7 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   size_t num_event = 10;
   ASSERT_GE(num_event, 3);
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 10);
   std::vector<ze_event_handle_t> device_event(num_event, nullptr);
   ze_command_list_handle_t cmd_list =
@@ -339,7 +339,7 @@ TEST_F(zeEventSignalingTests,
   ASSERT_GE(num_event, 4);
   size_t num_loop = 4;
   ASSERT_GE(num_loop, 4);
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 10);
   std::vector<ze_event_handle_t> device_event(num_event, nullptr);
   ze_command_list_handle_t cmd_list =
@@ -406,7 +406,7 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
   ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
   ep_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   ep_desc.count = 10;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   auto ep = lzt::create_event_pool(context, ep_desc, devices);
   ze_event_scope_flag_t flag = (ze_event_scope_flag_t)(
       ZE_EVENT_SCOPE_FLAG_DEVICE | ZE_EVENT_SCOPE_FLAG_SUBDEVICE);

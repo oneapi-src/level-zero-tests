@@ -21,6 +21,9 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+constexpr size_t num_threads = 16;
+constexpr size_t num_iterations = 2000;
+
 void thread_func(const ze_command_queue_handle_t cq) {
   std::thread::id thread_id = std::this_thread::get_id();
   LOG_DEBUG << "child thread spawned with ID ::" << thread_id;
@@ -29,7 +32,7 @@ void thread_func(const ze_command_queue_handle_t cq) {
 
   void *output_buffer = lzt::allocate_shared_memory(memory_size);
 
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < num_iterations; i++) {
     ze_fence_handle_t fence_ = lzt::create_fence(cq);
 
     const uint8_t pattern_base = std::rand() % 0xFF;
@@ -58,6 +61,7 @@ void thread_func(const ze_command_queue_handle_t cq) {
 
     lzt::destroy_command_list(cl);
   }
+  lzt::synchronize(cq, UINT32_MAX);
 
   lzt::free_memory(output_buffer);
 
@@ -72,9 +76,7 @@ TEST(
 
   ze_command_queue_handle_t cq = lzt::create_command_queue();
 
-  size_t num_threads = 8;
-
-  LOG_INFO << "Total number of threads spawned ::" << num_threads;
+  LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 
   std::vector<std::thread *> threads;
 

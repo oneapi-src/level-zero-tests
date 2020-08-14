@@ -20,8 +20,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-constexpr uint32_t thread_iters = 200;
-constexpr size_t num_threads = 8;
+constexpr uint32_t thread_iters = 2000;
+constexpr size_t num_threads = 16;
 
 void thread_create_destroy_command_list_default() {
   std::thread::id thread_id = std::this_thread::get_id();
