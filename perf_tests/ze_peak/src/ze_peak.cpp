@@ -337,7 +337,7 @@ void L0Context::execute_commandlist_and_sync(bool use_copy_only_queue) {
   if (verbose)
     std::cout << "Command list closed\n";
 
-  result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &command_list, nullptr);
+  result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_list, nullptr);
   if (result) {
     throw std::runtime_error("zeCommandQueueExecuteCommandLists failed: " +
                              std::to_string(result));
