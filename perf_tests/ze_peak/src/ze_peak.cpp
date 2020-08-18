@@ -89,11 +89,33 @@ void L0Context::create_module(std::vector<uint8_t> binary_file) {
     std::cout << "Module created\n";
 }
 
+#define MAX_UUID_STRING_SIZE 49
+
+static char hexdigit(int i) { return (i > 9) ? 'a' - 10 + i : '0' + i; }
+
+static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s) {
+  int i;
+
+  for (i = bytes - 1; i >= 0; --i) {
+    *s++ = hexdigit(id[i] / 0x10);
+    *s++ = hexdigit(id[i] % 0x10);
+    if (i >= 6 && i <= 12 && (i & 1) == 0) {
+      *s++ = '-';
+    }
+  }
+  *s = '\0';
+}
+
 //---------------------------------------------------------------------
 // Utility function to print the device properties from zeDeviceGetProperties.
 //---------------------------------------------------------------------
 void L0Context::print_ze_device_properties(
     const ze_device_properties_t &props) {
+
+  ze_device_uuid_t uuid = props.uuid;
+  char id[MAX_UUID_STRING_SIZE];
+  generic_uuid_to_string(uuid.id, ZE_MAX_DEVICE_UUID_SIZE, id);
+
   std::cout << "Device : \n"
             << " * name : " << props.name << "\n"
             << " * vendorId : " << props.vendorId << "\n"
@@ -103,6 +125,7 @@ void L0Context::print_ze_device_properties(
             << ((props.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) ? "TRUE"
                                                                   : "FALSE")
             << "\n"
+            << " * UUID : " << id << "\n"
             << " * coreClockRate : " << props.coreClockRate << "\n"
             << std::endl;
 }
@@ -112,7 +135,8 @@ void L0Context::print_ze_device_properties(
 // command queue, & device property information.
 // On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
-void L0Context::init_xe() {
+void L0Context::init_xe(uint32_t specified_platform,
+                        uint32_t specified_device) {
   ze_command_list_desc_t command_list_description{};
   ze_command_queue_desc_t command_queue_description{};
   ze_result_t result = ZE_RESULT_SUCCESS;
@@ -153,15 +177,22 @@ void L0Context::init_xe() {
     throw std::runtime_error("zeDeviceGet failed: " + std::to_string(result));
   }
   if (verbose)
-    std::cout << "Device count retrieved\n";
+    std::cout << "Device count retrieved: " << device_count << "\n";
 
-  device_count = 1;
-  result = zeDeviceGet(driver, &device_count, &device);
+  std::vector<ze_device_handle_t> devices(device_count);
+  result = zeDeviceGet(driver, &device_count, devices.data());
   if (result) {
     throw std::runtime_error("zeDeviceGet failed: " + std::to_string(result));
   }
   if (verbose)
     std::cout << "Device retrieved\n";
+
+  device = devices[0];
+  if (specified_device >= device_count)
+    std::cout << "Specified device " << specified_device
+              << " is not valid, will default to the first device" << std::endl;
+  else
+    device = devices[specified_device];
 
   device_property.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
   device_property.pNext = nullptr;
@@ -856,7 +887,8 @@ int main(int argc, char **argv) {
   peak_benchmark.parse_arguments(argc, argv);
   context.verbose = peak_benchmark.verbose;
 
-  context.init_xe();
+  context.init_xe(peak_benchmark.specified_platform,
+                  peak_benchmark.specified_device);
 
   if (peak_benchmark.run_global_bw)
     peak_benchmark.ze_peak_global_bw(context);
