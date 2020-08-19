@@ -151,7 +151,9 @@ TEST_F(MemoryModuleTest,
       EXPECT_GE(state.health, ZES_MEM_HEALTH_UNKNOWN);
       EXPECT_LE(state.health, ZES_MEM_HEALTH_REPLACE);
       auto properties = lzt::get_mem_properties(memHandle);
-      EXPECT_LE(state.size, properties.physicalSize);
+      if (properties.physicalSize != 0) {
+        EXPECT_LE(state.size, properties.physicalSize);
+      }
       EXPECT_LE(state.free, state.size);
     }
   }
