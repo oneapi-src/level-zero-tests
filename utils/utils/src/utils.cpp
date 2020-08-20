@@ -517,19 +517,17 @@ std::string to_string(const ze_image_flag_t flag) {
   return flags;
 }
 
-ze_image_flag_t to_flag(const std::string flag) {
+ze_image_flags_t to_image_flag(const std::string flag) {
 
   // by default setting to READ
-  ze_image_flag_t image_flags = {};
+  ze_image_flags_t image_flags = 0;
 
   // check if "READ" position is found in flag string
   if (flag.find("WRITE") != std::string::npos) {
-    image_flags =
-        static_cast<ze_image_flag_t>(image_flags | ZE_IMAGE_FLAG_KERNEL_WRITE);
+    image_flags = image_flags | ZE_IMAGE_FLAG_KERNEL_WRITE;
   }
   if (flag.find("UNCACHED") != std::string::npos) {
-    image_flags =
-        static_cast<ze_image_flag_t>(image_flags | ZE_IMAGE_FLAG_BIAS_UNCACHED);
+    image_flags = image_flags | ZE_IMAGE_FLAG_BIAS_UNCACHED;
   }
 
   return image_flags;

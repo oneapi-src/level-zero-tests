@@ -117,14 +117,22 @@ bool ZeMandelbrot::verify_results() {
   if (save_images_and_quit) {
     printf("Saving CPU and GPU generated images on the disk.. \n");
     FILE *f1 = fopen("ze_mandelbrot_result.ppm", "w");
+    if (f1 == nullptr) {
+      printf("Failed to open ze_mandelbrot_result.ppm\n");
+      exit(1);
+    }
     fprintf(f1, "P3\n%d %d\n%d\n", width, height, 255);
 
     for (unsigned int i = 0; i < width * height; i++)
       fprintf(f1, "%d %d %d ", (unsigned char)(255.0f * (result[i])),
               (unsigned char)(255.0f * (result[i])),
               (unsigned char)(255.0f * (result[i])));
-
+    fclose(f1);
     FILE *f2 = fopen("cpu_mandelbrot_result.ppm", "w");
+    if (f2 == nullptr) {
+      printf("Failed to open cpu_mandelbrot_result.ppm\n");
+      exit(1);
+    }
     fprintf(f2, "P3\n%d %d\n%d\n", width, height, 255);
 
     for (unsigned int i = 0; i < width * height; i++)
@@ -132,6 +140,7 @@ bool ZeMandelbrot::verify_results() {
               (unsigned char)(255.0f * (result_CPU[i])),
               (unsigned char)(255.0f * (result_CPU[i])));
 
+    fclose(f2);
     return false;
   }
 

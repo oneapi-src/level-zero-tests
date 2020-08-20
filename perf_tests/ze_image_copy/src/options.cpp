@@ -59,7 +59,7 @@ int ZeImageCopy::parse_command_line(int argc, char **argv) {
   if (layout.size() != 0)
     Imagelayout = level_zero_tests::to_layout(layout);
   if (flags.size() != 0)
-    Imageflags = level_zero_tests::to_flag(flags);
+    Imageflags = level_zero_tests::to_image_flag(flags);
   if (format.size() != 0)
     Imageformat = level_zero_tests::to_format_type(format);
   if (type.size() != 0)

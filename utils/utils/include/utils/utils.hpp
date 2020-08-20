@@ -46,7 +46,7 @@ std::string to_string(const ze_driver_uuid_t uuid);
 std::string to_string(const ze_native_kernel_uuid_t uuid);
 ze_image_format_layout_t to_layout(const std::string layout);
 ze_image_format_type_t to_format_type(const std::string format_type);
-ze_image_flag_t to_flag(const std::string flag);
+ze_image_flags_t to_image_flag(const std::string flag);
 ze_image_type_t to_image_type(const std::string type);
 
 void print_driver_version();

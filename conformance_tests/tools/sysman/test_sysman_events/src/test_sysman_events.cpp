@@ -339,7 +339,7 @@ TEST_F(
 
       lzt::set_ras_config(rasHandle, config);
 
-      zes_event_type_flags_t setEvent = {};
+      zes_event_type_flags_t setEvent = 0;
       switch (props.type) {
       case ZES_RAS_ERROR_TYPE_CORRECTABLE:
         setEvent = ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS;
