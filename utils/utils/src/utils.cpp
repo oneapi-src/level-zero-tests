@@ -484,6 +484,59 @@ ze_image_format_type_t to_format_type(const std::string format_type) {
   }
 }
 
+uint32_t num_bytes_per_pixel(ze_image_format_layout_t layout) {
+  switch (layout) {
+  case ZE_IMAGE_FORMAT_LAYOUT_8:
+    return 1;
+  case ZE_IMAGE_FORMAT_LAYOUT_16:
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_32:
+    return 4;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8:
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16:
+    return 4;
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32:
+    return 8;
+  case ZE_IMAGE_FORMAT_LAYOUT_5_6_5:
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_11_11_10:
+    return 4;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8:
+    return 4;
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16:
+    return 8;
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32:
+    return 16;
+  case ZE_IMAGE_FORMAT_LAYOUT_AYUV:
+    return 4;
+  case ZE_IMAGE_FORMAT_LAYOUT_NV12: // 12 bits per pixel
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_P010: // 10 bits per pixel
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_P012: // 12 bits per pixel
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_P016:
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_P216:
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_UYVY:
+  case ZE_IMAGE_FORMAT_LAYOUT_VYUY:
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_Y8:
+    return 1;
+  case ZE_IMAGE_FORMAT_LAYOUT_Y16:
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_Y216:
+    return 2;
+  case ZE_IMAGE_FORMAT_LAYOUT_Y410: // 10 bits per pixel
+    return 2;
+  default:
+    LOG_ERROR << "Unrecognized image format layout: " << layout;
+    return 0;
+  }
+}
+
 std::string to_string(const ze_image_format_swizzle_t swizzle) {
   if (swizzle == ZE_IMAGE_FORMAT_SWIZZLE_R) {
     return "ZE_IMAGE_FORMAT_SWIZZLE_R";

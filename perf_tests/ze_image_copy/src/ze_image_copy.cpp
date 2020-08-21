@@ -40,8 +40,8 @@ bool ZeImageCopy::is_json_output_enabled(void) {
 }
 
 void ZeImageCopy::test_initialize(void) {
-  buffer_size = width * height *
-                depth; /* ZE_IMAGE_FORMAT_LAYOUT_8 -> 1 channel per pixel */
+  buffer_size = level_zero_tests::num_bytes_per_pixel(Imagelayout) * width *
+                height * depth;
   region = {xOffset, yOffset, zOffset, width, height, depth};
   formatDesc = {Imagelayout,
                 Imageformat,
