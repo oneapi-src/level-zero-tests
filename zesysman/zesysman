@@ -3913,6 +3913,7 @@ def main():
 
             for i in range(freqCount.value()):
                 freq = frequencies[i]
+                ocNode = None
                 try:
                     freqProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_PROPERTIES)
                     zeCall(zesFrequencyGetProperties, freq, freqProps)
@@ -3930,7 +3931,7 @@ def main():
                     else:
                         ocNode = Node(ocTop, "OverclockDomain", None, ("Index", i), ("Name", freqType))
 
-                if args.show_inventory:
+                if ocNode and args.show_inventory:
                     try:
                         mode = zeCall(zesFrequencyOcGetMode, freq)
                     except:
@@ -4054,19 +4055,20 @@ def main():
                 else:
                     memNode = Node(memTop, "MemoryModule", None, ("Index", i), ("Name", memType))
 
-                memState = zes_typed_structure(ZES_STRUCTURE_TYPE_MEM_STATE)
-                zeCall(zesMemoryGetState, mem, memState)
-
                 if args.show_inventory:
                     Node(memNode, "Location", memLocString(memProps.location))
                     Node(memNode, "PhysicalSize", memProps.physicalSize, ("Units", "Bytes"))
-                    Node(memNode, "AllocatableSize", memState.size, ("Units", "Bytes"))
                     Node(memNode, "BusWidth", knownvalue(memProps.busWidth))
                     Node(memNode, "NumChannels", knownvalue(memProps.numChannels))
 
                 if args.show_telemetry:
                     memCounter = zes_mem_bandwidth_t()
-                    zeCall(zesMemoryGetBandwidth, mem, memCounter)
+                    memState = zes_typed_structure(ZES_STRUCTURE_TYPE_MEM_STATE)
+                    try:
+                        zeCall(zesMemoryGetBandwidth, mem, memCounter)
+                        zeCall(zesMemoryGetState, mem, memState)
+                    except:
+                        pass
                     nodes = []
                     nodes.append(Node(memNode, "Health", "?"))
                     nodes.append(Node(memNode, "Free", "?", ("Units", "Bytes")))
@@ -4078,30 +4080,39 @@ def main():
                     def memTelemetry(mem=mem, memState=memState, memCounter=memCounter, node=nodes):
                         oldRead, oldWrite = memCounter.readCounter, memCounter.writeCounter
                         oldTimestamp = memCounter.timestamp
-                        zeCall(zesMemoryGetState, mem, memState)
-                        zeCall(zesMemoryGetBandwidth, mem, memCounter)
-                        deltaR = memCounter.readCounter - oldRead
-                        deltaW = memCounter.writeCounter - oldWrite
-                        deltaT = memCounter.timestamp - oldTimestamp
-                        maxBW = 1.0 * memCounter.maxBandwidth
-                        if deltaT > 0:
-                            readThroughput = "%.1f" % (1e6 * deltaR / deltaT)
-                            writeThroughput = "%.1f" % (1e6 * deltaW / deltaT)
-                            if maxBW > 0:
-                                memBandwidth = "%.1f" % (1e8 * (deltaR + deltaW) / (maxBW * deltaT))
-                            else:
-                                memBandwidth = "?"
+                        try:
+                            zeCall(zesMemoryGetState, mem, memState)
+                        except:
+                            pass
                         else:
-                            readThroughput = "?"
-                            writeThroughput = "?"
-                            memBandwidth = "?"
+                            node[0].setText(memHealthString(memState.health))
+                            node[1].setText(memState.free)
+                            node[2].setText("%.1f" % (100.0 * (memState.size - memState.free / memState.size)))
 
-                        node[0].setText(memHealthString(memState.health))
-                        node[1].setText(memState.free)
-                        node[2].setText("%.1f" % (100.0 * (memState.size - memState.free / memState.size)))
-                        node[3].setText(readThroughput)
-                        node[4].setText(writeThroughput)
-                        node[5].setText(memBandwidth)
+                        try:
+                            zeCall(zesMemoryGetBandwidth, mem, memCounter)
+                        except:
+                            pass
+                        else:
+                            deltaR = memCounter.readCounter - oldRead
+                            deltaW = memCounter.writeCounter - oldWrite
+                            deltaT = memCounter.timestamp - oldTimestamp
+                            maxBW = 1.0 * memCounter.maxBandwidth
+                            if deltaT > 0:
+                                readThroughput = "%.1f" % (1e6 * deltaR / deltaT)
+                                writeThroughput = "%.1f" % (1e6 * deltaW / deltaT)
+                                if maxBW > 0:
+                                    memBandwidth = "%.1f" % (1e8 * (deltaR + deltaW) / (maxBW * deltaT))
+                                else:
+                                    memBandwidth = "?"
+                            else:
+                                readThroughput = "?"
+                                writeThroughput = "?"
+                                memBandwidth = "?"
+
+                            node[3].setText(readThroughput)
+                            node[4].setText(writeThroughput)
+                            node[5].setText(memBandwidth)
 
                     telemetryClosures.append(memTelemetry)
                     pollDelayRequired = True
