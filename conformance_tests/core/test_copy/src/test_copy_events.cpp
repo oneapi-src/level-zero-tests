@@ -135,6 +135,105 @@ TEST_F(
   lzt::free_memory(dst_buffer);
 }
 
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  auto src_buffer = lzt::allocate_shared_memory(size);
+  auto dst_buffer = lzt::allocate_shared_memory(size);
+  memset(src_buffer, 0x1, size);
+  memset(dst_buffer, 0x0, size);
+
+  // Verify Host Reads Event as unset
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+
+  // Execute and verify GPU reads event
+  lzt::append_memory_copy(cmdlist, dst_buffer, src_buffer, size, nullptr, 1,
+                          &hEvent);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+
+  // Verify Copy Waits for Signal
+  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
+
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  // Verify Memory Copy completed
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+
+  lzt::free_memory(src_buffer);
+  lzt::free_memory(dst_buffer);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryFillThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  auto ref_buffer = lzt::allocate_shared_memory(size);
+  auto dst_buffer = lzt::allocate_shared_memory(size);
+  memset(ref_buffer, 0x1, size);
+  memset(dst_buffer, 0x0, size);
+  const uint8_t one = 1;
+
+  // Verify Host Reads Event as unset
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+
+  // Execute and verify GPU reads event
+  lzt::append_memory_fill(cmdlist, dst_buffer, &one, size, size, nullptr, 1,
+                          &hEvent);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+
+  // Verify Device Waits For Event
+  EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, size));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
+
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  // Verify Memory Fill completed
+  EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, size));
+
+  lzt::free_memory(ref_buffer);
+  lzt::free_memory(dst_buffer);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  uint32_t width = 16;
+  uint32_t height = 16;
+  size = height * width;
+  auto src_buffer = lzt::allocate_shared_memory(size);
+  auto dst_buffer = lzt::allocate_shared_memory(size);
+  memset(src_buffer, 0x1, size);
+  memset(dst_buffer, 0x0, size);
+
+  // Verify Host Reads Event as unset
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+
+  // Execute and verify Device reads event
+  ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
+  ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
+  lzt::append_memory_copy_region(cmdlist, dst_buffer, &dr, width, 0, src_buffer,
+                                 &sr, width, 0, nullptr, 1, &hEvent);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+
+  // Verify Memory Set Waits
+  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
+
+  // Signal Event On Host
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  // Verify Memory Set completed
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+
+  lzt::free_memory(src_buffer);
+  lzt::free_memory(dst_buffer);
+}
+
 static ze_image_handle_t create_test_image(int height, int width) {
   ze_image_desc_t image_description = {};
   image_description.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
@@ -208,6 +307,67 @@ TEST_F(
 
   lzt::synchronize(cmdqueue, UINT32_MAX);
   // cleanup
+  ep.destroy_event(hEvent1);
+  ep.destroy_event(hEvent2);
+  ep.destroy_event(hEvent3);
+  ep.destroy_event(hEvent4);
+  lzt::destroy_ze_image(input_xeimage);
+  lzt::destroy_ze_image(output_xeimage);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenImageCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+
+  // create 2 images
+  lzt::ImagePNG32Bit input("test_input.png");
+  int width = input.width();
+  int height = input.height();
+  lzt::ImagePNG32Bit output(width, height);
+  auto input_xeimage = create_test_image(height, width);
+  auto output_xeimage = create_test_image(height, width);
+  ze_event_handle_t hEvent0, hEvent1, hEvent2, hEvent3, hEvent4;
+  ep.create_event(hEvent0, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+  lzt::append_signal_event(cmdlist, hEvent0);
+
+  // Use ImageCopyFromMemory to upload ImageA
+  lzt::append_image_copy_from_mem(cmdlist, input_xeimage, input.raw_data(),
+                                  hEvent1, 1, &hEvent0);
+  // use ImageCopy to copy A -> B
+  lzt::append_image_copy(cmdlist, output_xeimage, input_xeimage, hEvent2, 1,
+                         &hEvent1);
+  // use ImageCopyRegion to copy part of A -> B
+  ze_image_region_t sr = {0, 0, 0, 1, 1, 1};
+  ze_image_region_t dr = {0, 0, 0, 1, 1, 1};
+  lzt::append_image_copy_region(cmdlist, output_xeimage, input_xeimage, &dr,
+                                &sr, hEvent3, 1, &hEvent2);
+  // use ImageCopyToMemory to dowload ImageB
+  lzt::append_image_copy_to_mem(cmdlist, output.raw_data(), output_xeimage,
+                                hEvent4, 1, &hEvent3);
+  lzt::append_wait_on_events(cmdlist, 1, &hEvent4);
+  // execute commands
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+
+  // Make sure all events signaled from host perspective
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent0, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent1, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent2, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent3, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent4, UINT64_MAX));
+
+  // Verfy A matches B
+  EXPECT_EQ(0,
+            memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
+
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+  // cleanup
+  ep.destroy_event(hEvent0);
   ep.destroy_event(hEvent1);
   ep.destroy_event(hEvent2);
   ep.destroy_event(hEvent3);

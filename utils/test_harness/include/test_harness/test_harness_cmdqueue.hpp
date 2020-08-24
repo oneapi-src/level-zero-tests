@@ -45,7 +45,7 @@ void execute_command_lists(ze_command_queue_handle_t cq,
                            uint32_t numCommandLists,
                            ze_command_list_handle_t *phCommandLists,
                            ze_fence_handle_t hFence);
-void synchronize(ze_command_queue_handle_t cq, uint32_t timeout);
+void synchronize(ze_command_queue_handle_t cq, uint64_t timeout);
 
 void destroy_command_queue(ze_command_queue_handle_t cq);
 

@@ -77,7 +77,7 @@ void execute_command_lists(ze_command_queue_handle_t cq,
                                               phCommandLists, hFence));
 }
 
-void synchronize(ze_command_queue_handle_t cq, uint32_t timeout) {
+void synchronize(ze_command_queue_handle_t cq, uint64_t timeout) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cq, timeout));
 }
 

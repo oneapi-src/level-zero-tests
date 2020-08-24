@@ -59,12 +59,23 @@ void append_memory_set(ze_command_list_handle_t cl, void *dstptr,
 void append_memory_fill(ze_command_list_handle_t cl, void *dstptr,
                         const void *pattern, size_t pattern_size, size_t size,
                         ze_event_handle_t hSignalEvent);
+void append_memory_fill(ze_command_list_handle_t cl, void *dstptr,
+                        const void *pattern, size_t pattern_size, size_t size,
+                        ze_event_handle_t hSignalEvent,
+                        uint32_t num_wait_events,
+                        ze_event_handle_t *wait_events);
 
 void append_memory_copy(ze_command_list_handle_t cl, void *dstptr,
                         const void *srcptr, size_t size,
                         ze_event_handle_t hSignalEvent);
 void append_memory_copy(ze_command_list_handle_t cl, void *dstptr,
                         const void *srcptr, size_t size);
+void append_memory_copy(ze_command_list_handle_t cl, void *dstptr,
+                        const void *srcptr, size_t size,
+                        ze_event_handle_t hSignalEvent,
+                        uint32_t num_wait_events,
+                        ze_event_handle_t *wait_events);
+
 void append_memory_copy_region(ze_command_list_handle_t hCommandList,
                                void *dstptr, const ze_copy_region_t *dstRegion,
                                uint32_t dstPitch, uint32_t dstSlicePitch,
@@ -72,6 +83,15 @@ void append_memory_copy_region(ze_command_list_handle_t hCommandList,
                                const ze_copy_region_t *srcRegion,
                                uint32_t srcPitch, uint32_t srcSlicePitch,
                                ze_event_handle_t hSignalEvent);
+void append_memory_copy_region(ze_command_list_handle_t hCommandList,
+                               void *dstptr, const ze_copy_region_t *dstRegion,
+                               uint32_t dstPitch, uint32_t dstSlicePitch,
+                               const void *srcptr,
+                               const ze_copy_region_t *srcRegion,
+                               uint32_t srcPitch, uint32_t srcSlicePitch,
+                               ze_event_handle_t hSignalEvent,
+                               uint32_t num_wait_events,
+                               ze_event_handle_t *wait_events);
 
 void append_barrier(ze_command_list_handle_t cl,
                     ze_event_handle_t hSignalEvent);
@@ -103,8 +123,11 @@ void append_reset_event(ze_command_list_handle_t hCommandList,
 void append_image_copy(ze_command_list_handle_t hCommandList,
                        ze_image_handle_t dst, ze_image_handle_t src,
                        ze_event_handle_t hEvent);
-void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
-                              ze_image_handle_t src, ze_event_handle_t hEvent);
+void append_image_copy(ze_command_list_handle_t hCommandList,
+                       ze_image_handle_t dst, ze_image_handle_t src,
+                       ze_event_handle_t hEvent, uint32_t num_wait_events,
+                       ze_event_handle_t *wait_events);
+
 void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
                                 ze_image_handle_t dst, void *src,
                                 ze_event_handle_t hEvent);
@@ -112,15 +135,46 @@ void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
                                 ze_image_handle_t dst, void *src,
                                 ze_image_region_t region,
                                 ze_event_handle_t hEvent);
+void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
+                                ze_image_handle_t dst, void *src,
+                                ze_image_region_t region,
+                                ze_event_handle_t hEvent,
+                                uint32_t num_wait_events,
+                                ze_event_handle_t *wait_events);
+void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
+                                ze_image_handle_t dst, void *src,
+                                ze_event_handle_t hEvent,
+                                uint32_t num_wait_events,
+                                ze_event_handle_t *wait_events);
 
 void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
                               ze_image_handle_t src, ze_image_region_t region,
                               ze_event_handle_t hEvent);
+void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
+                              ze_image_handle_t src, ze_image_region_t region,
+                              ze_event_handle_t hEvent,
+                              uint32_t num_wait_events,
+                              ze_event_handle_t *wait_events);
+
+void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
+                              ze_image_handle_t src, ze_event_handle_t hEvent);
+void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
+                              ze_image_handle_t src, ze_event_handle_t hEvent,
+                              uint32_t num_wait_events,
+                              ze_event_handle_t *wait_events);
+
 void append_image_copy_region(ze_command_list_handle_t hCommandList,
                               ze_image_handle_t dst, ze_image_handle_t src,
                               const ze_image_region_t *dst_region,
                               const ze_image_region_t *src_region,
                               ze_event_handle_t hEvent);
+void append_image_copy_region(ze_command_list_handle_t hCommandList,
+                              ze_image_handle_t dst, ze_image_handle_t src,
+                              const ze_image_region_t *dst_region,
+                              const ze_image_region_t *src_region,
+                              ze_event_handle_t hEvent,
+                              uint32_t num_wait_events,
+                              ze_event_handle_t *wait_events);
 
 void close_command_list(ze_command_list_handle_t cl);
 void reset_command_list(ze_command_list_handle_t cl);
