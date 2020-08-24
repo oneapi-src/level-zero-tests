@@ -26,6 +26,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     ASSERT_EQ(fanHandles.size(), count);
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
@@ -39,6 +44,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t actualCount = 0;
     lzt::get_fan_handles(device, actualCount);
+    if (actualCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = actualCount + 1;
     lzt::get_fan_handles(device, testCount);
     EXPECT_EQ(testCount, actualCount);
@@ -51,6 +61,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fanHandlesInitial = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fanHandle : fanHandlesInitial) {
       ASSERT_NE(nullptr, fanHandle);
     }
@@ -70,6 +85,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
       auto properties = lzt::get_fan_properties(fanHandle);
@@ -92,6 +112,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
       auto propertiesInitial = lzt::get_fan_properties(fanHandle);
@@ -110,6 +135,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
       auto config = lzt::get_fan_configuration(fanHandle);
@@ -137,6 +167,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
       auto properties = lzt::get_fan_properties(fanHandle);
@@ -172,6 +207,11 @@ TEST_F(FanModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
       zet_fan_speed_units_t units = ZET_FAN_SPEED_UNITS_RPM;

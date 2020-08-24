@@ -62,6 +62,11 @@ TEST_F(RASOperationsTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto rasHandles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
       zes_ras_config_t rasConfig = lzt::get_ras_config(rasHandle);
@@ -76,6 +81,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto rasHandles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
       zes_ras_config_t rasConfigSet = {ZES_STRUCTURE_TYPE_RAS_CONFIG, nullptr};
@@ -139,6 +149,11 @@ TEST_F(RASOperationsTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto rasHandles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
       ze_bool_t clear = 0;
@@ -154,6 +169,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto rasHandles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
       ze_bool_t clear = 0;
@@ -175,6 +195,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto rasHandles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
       auto propertiesInitial = lzt::get_ras_properties(rasHandle);
@@ -197,6 +222,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto rasHandles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto rasHandle : rasHandles) {
       ASSERT_NE(nullptr, rasHandle);
     }

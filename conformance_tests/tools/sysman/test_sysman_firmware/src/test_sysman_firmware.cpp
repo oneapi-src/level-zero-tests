@@ -32,6 +32,10 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     count = lzt::get_firmware_handle_count(device);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
   }
 }
 TEST_F(
@@ -40,6 +44,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto firmwareHandles = lzt::get_firmware_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     ASSERT_EQ(firmwareHandles.size(), count);
     for (auto firmwareHandle : firmwareHandles) {
       ASSERT_NE(nullptr, firmwareHandle);
@@ -53,6 +62,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t actualCount = 0;
     auto firmwareHandles = lzt::get_firmware_handles(device, actualCount);
+    if (actualCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = actualCount + 1;
     firmwareHandles = lzt::get_firmware_handles(device, testCount);
     EXPECT_EQ(testCount, actualCount);
@@ -64,6 +78,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto firmwareHandles = lzt::get_firmware_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto firmwareHandle : firmwareHandles) {
       ASSERT_NE(nullptr, firmwareHandle);
       auto properties = lzt::get_firmware_properties(firmwareHandle);
@@ -83,6 +102,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto firmwareHandles = lzt::get_firmware_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto firmwareHandle : firmwareHandles) {
       ASSERT_NE(nullptr, firmwareHandle);
       auto propertiesInitial = lzt::get_firmware_properties(firmwareHandle);
@@ -114,6 +138,11 @@ TEST_F(FirmwareTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto firmwareHandles = lzt::get_firmware_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto firmwareHandle : firmwareHandles) {
       ASSERT_NE(nullptr, firmwareHandle);
       auto propFw = lzt::get_firmware_properties(firmwareHandle);

@@ -32,6 +32,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
     }
@@ -44,6 +49,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     lzt::get_freq_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = pCount + 1;
     lzt::get_freq_handles(device, testCount);
     EXPECT_EQ(testCount, pCount);
@@ -56,6 +66,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandlesInitial = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandlesInitial) {
       EXPECT_NE(nullptr, pFreqHandle);
     }
@@ -73,6 +88,11 @@ TEST_F(FrequencyModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       zes_freq_state_t pState = lzt::get_freq_state(pFreqHandle);
@@ -87,6 +107,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       zes_freq_range_t limits = {};
@@ -112,6 +137,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       uint32_t icount = 0;
@@ -129,6 +159,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       uint32_t count = 0;
@@ -150,6 +185,11 @@ TEST_F(FrequencyModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       uint32_t pCount = 0;
@@ -167,6 +207,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       zes_freq_properties_t properties = {};
@@ -187,6 +232,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       zes_freq_properties_t properties = {};
@@ -203,6 +253,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
     }
@@ -233,6 +288,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       zes_freq_range_t freqRange = {};
@@ -248,6 +308,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       std::vector<zes_freq_range_t> freqRangeToCompare;
@@ -268,6 +333,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     zes_freq_range_t freqRange = {};
     for (auto pFreqHandle : pFreqHandles)
       freqRange = lzt::get_and_validate_freq_range(pFreqHandle);
@@ -280,6 +350,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
 
@@ -367,6 +442,11 @@ TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pFreqHandles = lzt::get_freq_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       {

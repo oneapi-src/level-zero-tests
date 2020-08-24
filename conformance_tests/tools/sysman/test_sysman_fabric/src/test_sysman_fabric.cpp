@@ -31,6 +31,10 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
   }
 }
 
@@ -40,6 +44,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     ASSERT_EQ(fabricPortHandles.size(), count);
     for (auto fabricPortHandle : fabricPortHandles) {
       EXPECT_NE(nullptr, fabricPortHandle);
@@ -53,6 +62,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t actualCount = 0;
     lzt::get_fabric_port_handles(device, actualCount);
+    if (actualCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = actualCount + 1;
     lzt::get_fabric_port_handles(device, testCount);
     EXPECT_EQ(testCount, actualCount);
@@ -65,6 +79,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandlesInitial = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fabricPortHandle : fabricPortHandlesInitial) {
       EXPECT_NE(nullptr, fabricPortHandle);
     }
@@ -84,6 +103,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto properties = lzt::get_fabric_port_properties(fabricPortHandle);
@@ -111,6 +135,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto propertiesInitial =
@@ -150,6 +179,11 @@ TEST_F(FabricPortsOperationsTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto defaultConfig = lzt::get_fabric_port_config(fabricPortHandle);
@@ -172,6 +206,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto state = lzt::get_fabric_port_state(fabricPortHandle);
@@ -216,6 +255,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto throughput = lzt::get_fabric_port_throughput(fabricPortHandle);
@@ -231,6 +275,11 @@ TEST_F(FabricPortsOperationsTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto fabricPortLinkType = lzt::get_fabric_port_link(fabricPortHandle);
@@ -250,6 +299,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto fabricPortLinkTypeInitial =

@@ -35,6 +35,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     ASSERT_EQ(ledHandles.size(), count);
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
@@ -48,6 +53,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t actualCount = 0;
     lzt::get_led_handles(device, actualCount);
+    if (actualCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = actualCount + 1;
     lzt::get_led_handles(device, testCount);
     EXPECT_EQ(testCount, actualCount);
@@ -60,6 +70,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandlesInitial = lzt::get_led_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto ledHandle : ledHandlesInitial) {
       ASSERT_NE(nullptr, ledHandle);
     }
@@ -79,6 +94,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
       auto properties = lzt::get_led_properties(ledHandle);
@@ -95,6 +115,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
       auto propertiesInitial = lzt::get_led_properties(ledHandle);
@@ -113,6 +138,11 @@ TEST_F(LedModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
       auto properties = lzt::get_led_properties(ledHandle);
@@ -136,6 +166,11 @@ TEST_F(LedModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
       auto initial_state = lzt::get_led_state(ledHandle);
@@ -164,6 +199,11 @@ TEST_F(LedModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
       lzt::set_led_state(ledHandle, false);

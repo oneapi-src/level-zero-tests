@@ -34,6 +34,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto memHandles = lzt::get_mem_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     ASSERT_EQ(memHandles.size(), count);
     for (auto memHandle : memHandles) {
       EXPECT_NE(nullptr, memHandle);
@@ -47,6 +52,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t actualCount = 0;
     lzt::get_mem_handles(device, actualCount);
+    if (actualCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = actualCount + 1;
     lzt::get_mem_handles(device, testCount);
     EXPECT_EQ(testCount, actualCount);
@@ -59,6 +69,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto memHandlesInitial = lzt::get_mem_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto memHandle : memHandlesInitial) {
       EXPECT_NE(nullptr, memHandle);
     }
@@ -78,6 +93,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto memHandles = lzt::get_mem_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto memHandle : memHandles) {
       ASSERT_NE(nullptr, memHandle);
       auto properties = lzt::get_mem_properties(memHandle);
@@ -105,6 +125,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto memHandles = lzt::get_mem_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto memHandle : memHandles) {
       EXPECT_NE(nullptr, memHandle);
       auto propertiesInitial = lzt::get_mem_properties(memHandle);
@@ -129,6 +154,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto memHandles = lzt::get_mem_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto memHandle : memHandles) {
       ASSERT_NE(nullptr, memHandle);
       auto bandwidth = lzt::get_mem_bandwidth(memHandle);
@@ -145,6 +175,11 @@ TEST_F(MemoryModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto memHandles = lzt::get_mem_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto memHandle : memHandles) {
       ASSERT_NE(nullptr, memHandle);
       auto state = lzt::get_mem_state(memHandle);

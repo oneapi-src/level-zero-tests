@@ -35,6 +35,11 @@ TEST_F(
     uint32_t count = 0;
     auto psuHandles = lzt::get_psu_handles(device, count);
     ASSERT_EQ(psuHandles.size(), count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto psuHandle : psuHandles) {
       ASSERT_NE(nullptr, psuHandle);
     }
@@ -47,6 +52,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t actualCount = 0;
     lzt::get_psu_handles(device, actualCount);
+    if (actualCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = actualCount + 1;
     lzt::get_psu_handles(device, testCount);
     EXPECT_EQ(testCount, actualCount);
@@ -59,6 +69,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto psuHandlesInitial = lzt::get_psu_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto psuHandle : psuHandlesInitial) {
       ASSERT_NE(nullptr, psuHandle);
     }
@@ -78,6 +93,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto psuHandles = lzt::get_psu_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto psuHandle : psuHandles) {
       ASSERT_NE(nullptr, psuHandle);
       auto properties = lzt::get_psu_properties(psuHandle);
@@ -97,6 +117,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto psuHandles = lzt::get_psu_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto psuHandle : psuHandles) {
       ASSERT_NE(nullptr, psuHandle);
       auto propertiesInitial = lzt::get_psu_properties(psuHandle);
@@ -114,6 +139,11 @@ TEST_F(PsuModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto psuHandles = lzt::get_psu_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto psuHandle : psuHandles) {
       ASSERT_NE(nullptr, psuHandle);
       auto state = lzt::get_psu_state(psuHandle);

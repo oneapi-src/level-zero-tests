@@ -23,7 +23,12 @@ TEST_F(
     SchedulerTest,
     GivenComponentCountZeroWhenRetrievingSchedulerHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
-    lzt::get_scheduler_handle_count(device);
+    uint32_t count = 0;
+    count = lzt::get_scheduler_handle_count(device);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
   }
 }
 
@@ -33,6 +38,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
     }
@@ -45,6 +55,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = pCount + 1;
     lzt::get_scheduler_handles(device, testCount);
     EXPECT_EQ(testCount, pCount);
@@ -57,6 +72,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pSchedHandlesInitial = lzt::get_scheduler_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandlesInitial) {
       EXPECT_NE(nullptr, pSchedHandle);
     }
@@ -74,6 +94,11 @@ TEST_F(SchedulerTest,
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
@@ -88,6 +113,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto cur_mode_initial = lzt::get_scheduler_current_mode(pSchedHandle);
@@ -103,6 +133,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
@@ -120,6 +155,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
@@ -140,6 +180,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
@@ -158,6 +203,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
@@ -180,6 +230,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto timeout_default_properties =
@@ -205,6 +260,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto timeslice_default_properties =
@@ -232,6 +292,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto timeout_default_properties =
@@ -262,6 +327,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       lzt::set_compute_unit_debug_mode(pSchedHandle);
@@ -276,6 +346,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       ASSERT_NE(nullptr, pSchedHandle);
       auto properties = lzt::get_scheduler_properties(pSchedHandle);
@@ -299,6 +374,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
+    if (pCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pSchedHandle : pSchedHandles) {
       EXPECT_NE(nullptr, pSchedHandle);
       auto propertiesInitial = lzt::get_scheduler_properties(pSchedHandle);

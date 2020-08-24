@@ -23,7 +23,12 @@ TEST_F(
     TempModuleTest,
     GivenComponentCountZeroWhenRetrievingTempHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
-    lzt::get_temp_handle_count(device);
+    uint32_t count = 0;
+    count = lzt::get_temp_handle_count(device);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
   }
 }
 
@@ -33,6 +38,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto tempHandles = lzt::get_temp_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     ASSERT_EQ(tempHandles.size(), count);
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
@@ -45,6 +55,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t actualCount = 0;
     lzt::get_temp_handles(device, actualCount);
+    if (actualCount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t testCount = actualCount + 1;
     lzt::get_temp_handles(device, testCount);
     EXPECT_EQ(testCount, actualCount);
@@ -57,6 +72,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto tempHandlesInitial = lzt::get_temp_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto tempHandle : tempHandlesInitial) {
       ASSERT_NE(nullptr, tempHandle);
     }
@@ -75,6 +95,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto tempHandles = lzt::get_temp_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
       auto properties = lzt::get_temp_properties(tempHandle);
@@ -94,6 +119,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto tempHandles = lzt::get_temp_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
       auto propertiesInitial = lzt::get_temp_properties(tempHandle);
@@ -119,6 +149,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto tempHandles = lzt::get_temp_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
       auto config = lzt::get_temp_config(tempHandle);
@@ -143,6 +178,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto tempHandles = lzt::get_temp_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
       auto properties = lzt::get_temp_properties(tempHandle);
@@ -201,6 +241,11 @@ TEST_F(TempModuleTest,
   for (auto device : devices) {
     uint32_t count = 0;
     auto tempHandles = lzt::get_temp_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
       auto temp = lzt::get_temp_state(tempHandle);

@@ -51,7 +51,6 @@ TEST_F(
     }
   }
 }
-
 TEST_F(
     SysmanDeviceTest,
     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenValidPropertiesAreReturned) {

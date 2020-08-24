@@ -24,6 +24,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
     }
@@ -36,6 +41,11 @@ TEST_F(
     uint32_t icount = 0;
     uint32_t lcount = 0;
     auto pPowerHandlesInitial = lzt::get_power_handles(device, icount);
+    if (icount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     auto pPowerHandlesLater = lzt::get_power_handles(device, lcount);
     EXPECT_EQ(pPowerHandlesInitial, pPowerHandlesLater);
   }
@@ -46,6 +56,11 @@ TEST_F(
   for (auto device : devices) {
 
     uint32_t pcount = lzt::get_power_handle_count(device);
+    if (pcount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t tcount = pcount + 1;
     lzt::get_power_handles(device, tcount);
     EXPECT_EQ(tcount, pcount);
@@ -62,6 +77,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       auto pProperties = lzt::get_power_properties(pPowerHandle);
@@ -80,6 +100,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       auto pPropertiesInitial = lzt::get_power_properties(pPowerHandle);
@@ -102,6 +127,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       zes_power_sustained_limit_t pSustained = {};
@@ -121,6 +151,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       zes_power_sustained_limit_t pSustainedInitial = {};
@@ -150,6 +185,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       zes_power_sustained_limit_t pSustainedInitial = {};
@@ -200,6 +240,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       zes_power_energy_counter_t pEnergyCounter = {};
@@ -221,6 +266,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       auto pThreshold = lzt::get_power_energy_threshold(pPowerHandle);
@@ -238,6 +288,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       auto pThresholdInitial = lzt::get_power_energy_threshold(pPowerHandle);
@@ -254,6 +309,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto pPowerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       auto pThresholdInitial =
