@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 add_lzt_test(
-  NAME test_power
+  NAME test_sysman_power
   GROUP "/conformance_tests/tools/sysman"
   SOURCES
-    src/test_power.cpp
+    src/test_sysman_power.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging

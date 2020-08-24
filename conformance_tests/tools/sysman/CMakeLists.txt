@@ -4,10 +4,10 @@
 # SPDX-License-Identifier: MIT
 #
 
-add_subdirectory(test_pci)
-add_subdirectory(test_frequency)
-add_subdirectory(test_standby)
-add_subdirectory(test_power)
+add_subdirectory(test_sysman_pci)
+add_subdirectory(test_sysman_frequency)
+add_subdirectory(test_sysman_standby)
+add_subdirectory(test_sysman_power)
 add_subdirectory(test_sysman_diagnostics)
 add_subdirectory(test_sysman_events)
 add_subdirectory(test_sysman_memory)
