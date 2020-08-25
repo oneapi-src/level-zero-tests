@@ -376,7 +376,7 @@ void L0Context::execute_commandlist_and_sync(bool use_copy_only_queue) {
   if (verbose)
     std::cout << "Command list enqueued\n";
 
-  result = zeCommandQueueSynchronize(cmd_q, UINT32_MAX);
+  result = zeCommandQueueSynchronize(cmd_q, UINT64_MAX);
   if (result) {
     throw std::runtime_error("zeCommandQueueSynchronize failed: " +
                              std::to_string(result));
@@ -488,21 +488,22 @@ void ZePeak::run_command_queue(L0Context &context) {
 //---------------------------------------------------------------------
 void ZePeak::synchronize_command_queue(L0Context &context) {
   ze_result_t result = ZE_RESULT_SUCCESS;
-  result = zeCommandQueueSynchronize(context.command_queue, UINT32_MAX);
+  result = zeCommandQueueSynchronize(context.command_queue, UINT64_MAX);
   if (result) {
     throw std::runtime_error("zeCommandQueueSynchronize failed: " +
                              std::to_string(result));
   }
 }
 
-void single_event_pool_create(
-    L0Context &context, ze_event_pool_handle_t *kernel_launch_event_pool) {
+void single_event_pool_create(L0Context &context,
+                              ze_event_pool_handle_t *kernel_launch_event_pool,
+                              ze_event_pool_flags_t flags) {
   ze_result_t result;
   ze_event_pool_desc_t kernel_launch_event_pool_desc = {};
   kernel_launch_event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
 
   kernel_launch_event_pool_desc.count = 1;
-  kernel_launch_event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+  kernel_launch_event_pool_desc.flags = flags;
 
   kernel_launch_event_pool_desc.pNext = nullptr;
 
@@ -537,11 +538,13 @@ void single_event_create(ze_event_pool_handle_t event_pool,
 // and will time the kernel executed given the timing type.
 // The current timing types supported are:
 //          BANDWIDTH -> Average time to execute the kernel for # iterations
-//          KERNEL_LAUNCH_LATENCY -> Average time to execute the kernel on
+//          BANDWIDTH_EVENT_TIMING -> Average time to execute the kernel for #
+//                                    iterations using Level Zero Events
+//          KERNEL_LAUNCH_LATENCY->Average time to execute the kernel on
 //                                  the command list
 //          KERNEL_COMPLETE_LATENCY - Average time to execute a given kernel
 //                                  for # iterations.
-// On success, the average time is returned.
+// On success, the average time in microseconds is returned.
 // On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
 long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
@@ -598,7 +601,9 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     ze_event_pool_handle_t event_pool;
     ze_event_handle_t function_event;
 
-    single_event_pool_create(context, &event_pool);
+    single_event_pool_create(context, &event_pool,
+                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                 ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
     if (verbose)
       std::cout << "Event Pool Created\n";
 
@@ -632,13 +637,13 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
                                  std::to_string(result));
       }
 
-      result = zeEventHostSynchronize(function_event, UINT32_MAX);
+      result = zeEventHostSynchronize(function_event, UINT64_MAX);
       if (result) {
         throw std::runtime_error("zeEventHostSynchronize failed: " +
                                  std::to_string(result));
       }
 
-      result = zeCommandQueueSynchronize(context.command_queue, UINT32_MAX);
+      result = zeCommandQueueSynchronize(context.command_queue, UINT64_MAX);
       if (result) {
         throw std::runtime_error("zeCommandQueueSynchronize failed: " +
                                  std::to_string(result));
@@ -654,7 +659,6 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     }
 
     for (uint32_t i = 0; i < iters; i++) {
-      timer.start();
       result = zeCommandQueueExecuteCommandLists(
           context.command_queue, 1, &context.command_list, nullptr);
       if (result) {
@@ -662,14 +666,15 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
                                  std::to_string(result));
       }
 
-      result = zeEventHostSynchronize(function_event, UINT32_MAX);
+      result = zeEventHostSynchronize(function_event, UINT64_MAX);
       if (result) {
         throw std::runtime_error("zeEventHostSynchronize failed: " +
                                  std::to_string(result));
       }
-      timed += timer.stopAndTime();
 
-      result = zeCommandQueueSynchronize(context.command_queue, UINT32_MAX);
+      timed += context_time_in_us(context, function_event);
+
+      result = zeCommandQueueSynchronize(context.command_queue, UINT64_MAX);
       if (result) {
         throw std::runtime_error("zeCommandQueueSynchronize failed: " +
                                  std::to_string(result));
@@ -686,11 +691,13 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
         std::cout << "Event Reset\n";
     }
     zeEventDestroy(function_event);
+    zeEventPoolDestroy(event_pool);
   } else if (type == TimingMeasurement::KERNEL_LAUNCH_LATENCY) {
     ze_event_handle_t kernel_launch_event;
     ze_event_pool_handle_t kernel_launch_event_pool;
 
-    single_event_pool_create(context, &kernel_launch_event_pool);
+    single_event_pool_create(context, &kernel_launch_event_pool,
+                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
     if (verbose)
       std::cout << "Event Pool Created\n";
 
@@ -727,7 +734,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     for (uint32_t i = 0; i < warmup_iterations; i++) {
       run_command_queue(context);
       synchronize_command_queue(context);
-      result = zeEventHostSynchronize(kernel_launch_event, UINT32_MAX);
+      result = zeEventHostSynchronize(kernel_launch_event, UINT64_MAX);
       if (result) {
         throw std::runtime_error("zeEventHostSynchronize failed: " +
                                  std::to_string(result));
@@ -750,14 +757,14 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
                                  std::to_string(result));
       }
 
-      result = zeEventHostSynchronize(kernel_launch_event, UINT32_MAX);
+      result = zeEventHostSynchronize(kernel_launch_event, UINT64_MAX);
       if (result) {
         throw std::runtime_error("zeEventHostSynchronize failed: " +
                                  std::to_string(result));
       }
       timed += timer.stopAndTime();
 
-      result = zeCommandQueueSynchronize(context.command_queue, UINT32_MAX);
+      result = zeCommandQueueSynchronize(context.command_queue, UINT64_MAX);
       if (result) {
         throw std::runtime_error("zeCommandQueueSynchronize failed: " +
                                  std::to_string(result));
@@ -773,10 +780,27 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
       if (verbose)
         std::cout << "Event Reset\n";
     }
+    zeEventDestroy(kernel_launch_event);
+    zeEventPoolDestroy(kernel_launch_event_pool);
+
   } else if (type == TimingMeasurement::KERNEL_COMPLETE_RUNTIME) {
+    ze_event_pool_handle_t event_pool;
+    ze_event_handle_t kernel_duration_event;
+
+    single_event_pool_create(context, &event_pool,
+                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                 ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
+    if (verbose)
+      std::cout << "Event Pool Created\n";
+
+    single_event_create(event_pool, &kernel_duration_event);
+    if (verbose)
+      std::cout << "Event Created\n";
+
     result = zeCommandListAppendLaunchKernel(
         context.command_list, function, &workgroup_info.thread_group_dimensions,
-        nullptr, 0, nullptr);
+        kernel_duration_event, 0, nullptr);
+
     if (result) {
       throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
                                std::to_string(result));
@@ -794,18 +818,42 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
     for (uint32_t i = 0; i < warmup_iterations; i++) {
       run_command_queue(context);
+      result = zeEventHostSynchronize(kernel_duration_event, UINT64_MAX);
+      if (result) {
+        throw std::runtime_error("zeEventHostSynchronize failed: " +
+                                 std::to_string(result));
+      }
+      result = zeEventHostReset(kernel_duration_event);
+      if (result) {
+        throw std::runtime_error("zeEventHostReset failed: " +
+                                 std::to_string(result));
+      }
     }
 
     synchronize_command_queue(context);
 
     for (uint32_t i = 0; i < iters; i++) {
-      timer.start();
       run_command_queue(context);
       synchronize_command_queue(context);
-      timed += timer.stopAndTime();
-    }
-  }
 
+      result = zeEventHostSynchronize(kernel_duration_event, UINT64_MAX);
+      if (result) {
+        throw std::runtime_error("zeEventHostSynchronize failed: " +
+                                 std::to_string(result));
+      }
+
+      timed += context_time_in_us(context, kernel_duration_event);
+
+      result = zeEventHostReset(kernel_duration_event);
+      if (result) {
+        throw std::runtime_error("zeEventHostReset failed: " +
+                                 std::to_string(result));
+      }
+    }
+
+    zeEventDestroy(kernel_duration_event);
+    zeEventPoolDestroy(event_pool);
+  }
   if (reset_command_list)
     context.reset_commandlist(context.command_list);
 
@@ -960,4 +1008,30 @@ TimingMeasurement ZePeak::is_bandwidth_with_event_timer(void) {
 long double ZePeak::calculate_gbps(long double period,
                                    long double buffer_size) {
   return buffer_size / period / 1e3f;
+}
+
+long double ZePeak::context_time_in_us(L0Context &context,
+                                       ze_event_handle_t &event) {
+  ze_result_t result = ZE_RESULT_SUCCESS;
+  long double context_time_ns = 0;
+  ze_kernel_timestamp_result_t ts_result = {};
+
+  result = zeEventQueryKernelTimestamp(event, &ts_result);
+  if (result) {
+    throw std::runtime_error("zeEventQueryKernelTimeStamp failed: " +
+                             std::to_string(result));
+  }
+
+  const uint64_t timestamp_freq = context.device_property.timerResolution;
+  const uint64_t timestamp_max_value =
+      ~(-1 << context.device_property.kernelTimestampValidBits);
+  context_time_ns =
+      (ts_result.context.kernelEnd >= ts_result.context.kernelStart)
+          ? (ts_result.context.kernelEnd - ts_result.context.kernelStart) *
+                (double)timestamp_freq
+          : ((timestamp_max_value - ts_result.context.kernelStart) +
+             ts_result.context.kernelEnd + 1) *
+                (double)timestamp_freq;
+
+  return (context_time_ns / 1000); // time is returned in microseconds
 }

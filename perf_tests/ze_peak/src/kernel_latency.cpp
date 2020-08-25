@@ -63,7 +63,7 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
   ///////////////////////////////////////////////////////////////////////////
   std::cout << "Kernel launch latency : ";
   latency = run_kernel(context, local_offset_v1, workgroup_info,
-                       TimingMeasurement::KERNEL_LAUNCH_LATENCY, false);
+                       TimingMeasurement::KERNEL_LAUNCH_LATENCY, true);
   std::cout << latency << " (uS)\n";
 
   ///////////////////////////////////////////////////////////////////////////

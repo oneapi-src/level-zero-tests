@@ -84,7 +84,7 @@ public:
   bool run_transfer_bw = true;
   bool run_kernel_lat = true;
   uint32_t specified_platform = 0;
-  uint32_t specified_device =0;
+  uint32_t specified_device = 0;
   uint32_t global_bw_max_size = 1 << 29;
   uint32_t transfer_bw_max_size = 1 << 29;
   uint32_t iters = 50;
@@ -126,6 +126,7 @@ private:
                                   std::vector<float> local_memory);
   TimingMeasurement is_bandwidth_with_event_timer(void);
   long double calculate_gbps(long double period, long double buffer_size);
+  long double context_time_in_us(L0Context &context, ze_event_handle_t &event);
 };
 
 TimingMeasurement is_bandwidth_with_event_timer(void);
