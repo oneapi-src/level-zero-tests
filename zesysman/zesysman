@@ -4012,22 +4012,28 @@ def main():
 
                 if args.show_telemetry:
                     utilStats = zes_engine_stats_t()
-                    zeCall(zesEngineGetActivity, eng, utilStats)
-                    node = Node(engNode, "Activity", "?", ("Units", "%"))
-
-                    def utilTelemetry(eng=eng, utilStats=utilStats, node=node):
-                        oldActive, oldTimestamp = utilStats.activeTime, utilStats.timestamp
+                    try:
                         zeCall(zesEngineGetActivity, eng, utilStats)
-                        deltaA = utilStats.activeTime - oldActive
-                        deltaT = utilStats.timestamp - oldTimestamp
-                        if deltaT > 0:
-                            util = "%.0f" % (100.0 * deltaA / deltaT)
-                        else:
-                            util = "?"
-                        node.setText(util)
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        reportZeException()
+                    else:
+                        node = Node(engNode, "Activity", "?", ("Units", "%"))
 
-                    telemetryClosures.append(utilTelemetry)
-                    pollDelayRequired = True
+                        def utilTelemetry(eng=eng, utilStats=utilStats, node=node):
+                            oldActive, oldTimestamp = utilStats.activeTime, utilStats.timestamp
+                            zeCall(zesEngineGetActivity, eng, utilStats)
+                            deltaA = utilStats.activeTime - oldActive
+                            deltaT = utilStats.timestamp - oldTimestamp
+                            if deltaT > 0:
+                                util = "%.0f" % (100.0 * deltaA / deltaT)
+                            else:
+                                util = "?"
+                            node.setText(util)
+
+                        telemetryClosures.append(utilTelemetry)
+                        pollDelayRequired = True
 
         memCount = uint32_ptr()
         try:
