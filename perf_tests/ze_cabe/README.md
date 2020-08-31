@@ -1,5 +1,5 @@
 # Description
-ze_cabe is a GeekBench/Basemark/CompuBench-style benchmark to compare the performance of level-zero and opencl. It is a part of compute-api-bench, which also tests vulkan and dx11.
+ze_cabe is a GeekBench/Basemark/CompuBench-style benchmark to compare the performance of level-zero and opencl.
 
 As for the scenarios, it currently has Sobel as an image processing scenario, Mandelbrot as fractal generation scenario and BlackScholes (fp32 and fp64) as a finance workload scenario (+SimpleAdd as a HelloWorld type of application).
 

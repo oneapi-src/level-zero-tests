@@ -32,11 +32,8 @@ In addition, these naming conventions should be followed:
 
 Follow the [LLVM code formatting guidelines][llvm_code_formatting].
 
-A [`.clang-format`](./.clang-format) file is included in this repository, and
-the GitLab build automation will fail the build if your merge request has
-improperly formatted code.
-
-Build targets are provided in the cmake for convenience. `clang-format` will
+A [`.clang-format`](./.clang-format) file is included in this repository and
+build targets are provided in the cmake for convenience. `clang-format` will
 check and fix any formatting issues with your code, and `clang-format-check`
 will check for issues and print a diff of the corrections required.
 

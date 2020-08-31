@@ -33,8 +33,6 @@ using namespace compute_api_bench;
 void print_help() {
   printf(R"===(
 ze_cabe is a benchmark designed to compare the performance of level-zero and opencl.
-It is a part of compute-api-bench project which also tests vulkan and dx11;
-it can be found at https://gitlab.devtools.intel.com/jacekjan/compute-api-bench.
 
 Parameters:
  -api <api> - Valid values: opencl, level-zero, all. The default is all. 
@@ -46,8 +44,8 @@ Parameters:
  -color - presents SDs in color (does not work in Windows cmd).
 
 Usage examples:
- compute-api-bench -api opencl
- compute-api-bench -api level-zero -scenario sobel -iterations 10 -csv out.csv -color
+ ze_cabe -api opencl
+ ze_cabe -api level-zero -scenario sobel -iterations 10 -csv out.csv -color
 
 )===");
 }
