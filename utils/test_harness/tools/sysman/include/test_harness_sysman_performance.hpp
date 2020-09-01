@@ -14,14 +14,15 @@ namespace level_zero_tests {
 
 uint32_t get_performance_handle_count(zes_device_handle_t device);
 
-std::vector<zes_perf_handle_t> get_performance_handles(zes_device_handle_t device,
-                                                uint32_t &count);
+std::vector<zes_perf_handle_t>
+get_performance_handles(zes_device_handle_t device, uint32_t &count);
 
-zes_perf_properties_t get_performance_properties(zes_perf_handle_t performanceHandle);
+zes_perf_properties_t
+get_performance_properties(zes_perf_handle_t performanceHandle);
 
 double get_performance_config(zes_perf_handle_t performanceHandle);
 
-void set_performance_config(zes_perf_handle_t performanceHandle,double factor);
+void set_performance_config(zes_perf_handle_t performanceHandle, double factor);
 
 } // namespace level_zero_tests
 
