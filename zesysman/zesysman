@@ -2877,13 +2877,13 @@ def parseMHz(opts):
 def parseSchedulerMode(opts):
     opt, remainder = opts[0].lower(), opts[1:]
 
-    if opt in ["timeout", "time", "to", "t"]:
+    if opt in ["timeout", "time", "to", "t", "zes_sched_mode_timeout"]:
         mode = ZES_SCHED_MODE_TIMEOUT
-    elif opt in ["timeslice", "slice", "ts", "s"]:
+    elif opt in ["timeslice", "slice", "ts", "s", "zes_sched_mode_timeslice"]:
         mode = ZES_SCHED_MODE_TIMESLICE
-    elif opt in ["exclusive", "exc", "ex", "e", "x"]:
+    elif opt in ["exclusive", "exc", "ex", "e", "x", "zes_sched_mode_exclusive"]:
         mode = ZES_SCHED_MODE_EXCLUSIVE
-    elif opt in ["cudebug", "debug", "dbg", "db", "d", "g"]:
+    elif opt in ["cudebug", "debug", "dbg", "db", "d", "g", "zes_sched_mode_compute_unit_debug"]:
         mode = ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
     else:
         pr.err("ERROR: Unrecognized scheduler mode", opt)
@@ -3723,7 +3723,6 @@ def main():
                                       node=nodes, verbose=args.verbose):
                         throttlePercent = "?"
                         if freqThrottle:
-                            oldActive, oldTimestamp = utilStats.activeTime, utilStats.timestamp
                             oldHeld, oldTimestamp = freqThrottle.throttleTime, freqThrottle.timestamp
                             try:
                                 zeCall(zesFrequencyGetThrottleTime, freq, freqThrottle)
