@@ -35,30 +35,12 @@ class SysmanDeviceTest : public lzt::SysmanCtsClass {};
 
 TEST_F(
     SysmanDeviceTest,
-    GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetIsSucceded) {
-  for (auto device : devices) {
-    lzt::sysman_device_reset(device);
-  }
-}
-
-TEST_F(
-    SysmanDeviceTest,
-    GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceded) {
-  int number_iterations = 10;
-  for (int i = 0; i < number_iterations; i++) {
-    for (auto device : devices) {
-      lzt::sysman_device_reset(device);
-    }
-  }
-}
-TEST_F(
-    SysmanDeviceTest,
     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto properties = lzt::get_sysman_device_properties(device);
 
     EXPECT_GE(ZE_DEVICE_TYPE_GPU, properties.core.type);
-    EXPECT_LE(ZE_DEVICE_TYPE_MCA, properties.core.type);
+    EXPECT_LE(properties.core.type, ZE_DEVICE_TYPE_MCA);
     if (properties.core.flags <= ZE_DEVICE_PROPERTY_FLAG_INTEGRATED |
         ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE | ZE_DEVICE_PROPERTY_FLAG_ECC |
         ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
@@ -152,7 +134,7 @@ TEST_F(
         EXPECT_GT(process.processId, 0u);
         EXPECT_GE(process.memSize, 0u);
         EXPECT_LT(process.sharedSize, UINT64_MAX);
-        EXPECT_GE(process.engines, 1);
+        EXPECT_GE(process.engines, 0);
         EXPECT_LE(process.engines, (1 << ZES_ENGINE_TYPE_FLAG_DMA));
       }
     }
@@ -184,4 +166,22 @@ TEST_F(
   }
 }
 
+TEST_F(
+    SysmanDeviceTest,
+    GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetIsSucceded) {
+  for (auto device : devices) {
+    lzt::sysman_device_reset(device);
+  }
+}
+
+TEST_F(
+    SysmanDeviceTest,
+    GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceded) {
+  int number_iterations = 10;
+  for (int i = 0; i < number_iterations; i++) {
+    for (auto device : devices) {
+      lzt::sysman_device_reset(device);
+    }
+  }
+}
 } // namespace

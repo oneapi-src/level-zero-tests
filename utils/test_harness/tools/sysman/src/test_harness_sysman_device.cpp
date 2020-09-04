@@ -17,7 +17,7 @@ namespace level_zero_tests {
 
 void sysman_device_reset(zes_device_handle_t device) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceReset(device, true));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceReset(device, false));
 }
 
 zes_device_properties_t
