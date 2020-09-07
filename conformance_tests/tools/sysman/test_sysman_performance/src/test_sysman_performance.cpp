@@ -72,8 +72,7 @@ TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarPerformanceHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto performanceHandlesInitial =
-        lzt::get_performance_handles(device, count);
+    auto performanceHandlesInitial = lzt::get_performance_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
@@ -85,7 +84,7 @@ TEST_F(
 
     count = 0;
     auto performanceHandlesLater = lzt::get_performance_handles(device, count);
-    for (auto performanceHandle : performanceHandlesLater) {
+    for (auto performanceHandle :performanceHandlesLater) {
       ASSERT_NE(nullptr, performanceHandle);
     }
     EXPECT_EQ(performanceHandlesInitial, performanceHandlesLater);
@@ -106,11 +105,14 @@ TEST_F(
     for (auto performanceHandle : performanceHandles) {
       ASSERT_NE(nullptr, performanceHandle);
       auto properties = lzt::get_performance_properties(performanceHandle);
+     
       if (properties.onSubdevice == true) {
         EXPECT_LT(properties.subdeviceId, UINT32_MAX);
       } else {
         EXPECT_EQ(0, properties.subdeviceId);
       }
+  EXPECT_GE(properties.engines,0);
+EXPECT_LE(properties.engines, ZES_ENGINE_TYPE_FLAG_OTHER | ZES_ENGINE_TYPE_FLAG_COMPUTE | ZES_ENGINE_TYPE_FLAG_3D | ZES_ENGINE_TYPE_FLAG_MEDIA | ZES_ENGINE_TYPE_FLAG_DMA);
     }
   }
 }
@@ -128,22 +130,43 @@ TEST_F(
 
     for (auto performanceHandle : performanceHandles) {
       ASSERT_NE(nullptr, performanceHandle);
-      auto propertiesInitial =
-          lzt::get_performance_properties(performanceHandle);
+      auto propertiesInitial = lzt::get_performance_properties(performanceHandle);
       auto propertiesLater = lzt::get_performance_properties(performanceHandle);
-
+      
       if (propertiesInitial.onSubdevice == true &&
           propertiesLater.onSubdevice == true) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
-      EXPECT_EQ(propertiesInitial.engines, propertiesLater.engines);
-    }
+      EXPECT_EQ(propertiesInitial.engines,propertiesLater.engines);
+          }
   }
 }
 
-TEST_F(
-    PerformanceModuleTest,
-    GivenValidPerformanceHandleWhenSettingPerformanceConfigurationThenSuccessIsReturned) {
+TEST_F(PerformanceModuleTest,
+       GivenValidPerformanceHandleWhenSettingPerformanceConfigurationThenSuccessIsReturned) {
+for (auto device : devices) {
+    uint32_t count = 0;
+    auto performanceHandles = lzt::get_performance_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto performanceHandle : performanceHandles) {
+      ASSERT_NE(nullptr, performanceHandle);
+ auto initialFactor = lzt::get_performance_config(performanceHandle); 
+ double factor = 50;      // Checking with a random factor value within its range
+  lzt::set_performance_config(performanceHandle,factor);
+ auto getFactor = lzt::get_performance_config(performanceHandle);
+EXPECT_GT(getFactor,0);
+EXPECT_LT(getFactor,100);
+ lzt::set_performance_config(performanceHandle,initialfactor);
+}
+}
+}
+
+TEST_F(PerformanceModuleTest,
+       GivenValidPerformanceHandleWhenGettingPerformanceConfigurationThenValidPerformanceFactorIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto performanceHandles = lzt::get_performance_handles(device, count);
@@ -154,33 +177,11 @@ TEST_F(
 
     for (auto performanceHandle : performanceHandles) {
       ASSERT_NE(nullptr, performanceHandle);
-      double factor = 50;
-      lzt::set_performance_config(performanceHandle, factor);
-      auto getFactor = lzt::get_performance_config(performanceHandle);
-      EXPECT_GT(getFactor, 0);
-      EXPECT_LT(getFactor, 100);
-    }
-  }
-}
-
-TEST_F(
-    PerformanceModuleTest,
-    GivenValidPerformanceHandleWhenGettingPerformanceConfigurationThenValidPerformanceFactorIsReturned) {
-  for (auto device : devices) {
-    uint32_t count = 0;
-    auto performanceHandles = lzt::get_performance_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto performanceHandle : performanceHandles) {
-      ASSERT_NE(nullptr, performanceHandle);
-      double factor = 40;
-      lzt::set_performance_config(performanceHandle, factor);
-      auto getFactor = lzt::get_performance_config(performanceHandle);
-      EXPECT_EQ(factor, getFactor);
-    }
+ lzt::set_performance_config(performanceHandle,factor);
+ auto getFactor = lzt::get_performance_config(performanceHandle);
+EXPECT_GT(getFactor,0);
+EXPECT_LT(getFactor,100);
+          }
   }
 }
 } // namespace

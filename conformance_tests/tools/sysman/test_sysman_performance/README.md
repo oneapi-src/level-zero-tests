@@ -13,8 +13,7 @@ For this API there are two test cases.
 * GivenValidPerformanceHandleWhenRetrievingPerformancePropertiesThenExpectSamePropertiesReturnedTwice :- Test checks whether API returns consistent values by retrieving performance properties twice and comparing them.
 #zesPerformanceFactorGetConfig
 For this API there is one test case.
-* GivenValidPerformanceHandleWhenGettingPerformanceConfigurationThenValidPerformanceFactorIsReturned :- Test case checks whether API is returning success or not and if the factor value passed by SetConfig is matching or not.
+* GivenValidPerformanceHandleWhenGettingPerformanceConfigurationThenValidPerformanceFactorIsReturned :- Test case checks whether API is returning success or not and if the performance factor value returned is valid or not.
 #zesPerformanceFactorSetConfig
 For this API there is one test case.
-* GivenValidPerformanceHandleWhenSettingPerformanceConfigurationThenSuccessIsReturned :- Test case checks whether API is returning success or not and verifies if the factor value is in valid range.
-
+*GivenValidPerformanceHandleWhenSettingPerformanceConfigurationThenSuccessIsReturned :- Test case checks whether API is returning success or not after setting the factor value.
