@@ -30,6 +30,10 @@ protected:
 
 ze_command_list_handle_t create_command_list(ze_context_handle_t context,
                                              ze_device_handle_t device,
+                                             ze_command_list_flags_t flags,
+                                             uint32_t ordinal);
+ze_command_list_handle_t create_command_list(ze_context_handle_t context,
+                                             ze_device_handle_t device,
                                              ze_command_list_flags_t flags);
 ze_command_list_handle_t create_command_list(ze_device_handle_t device,
                                              ze_command_list_flags_t flags);

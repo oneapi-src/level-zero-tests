@@ -30,11 +30,19 @@ ze_command_list_handle_t create_command_list(ze_device_handle_t device,
 ze_command_list_handle_t create_command_list(ze_context_handle_t context,
                                              ze_device_handle_t device,
                                              ze_command_list_flags_t flags) {
+  return create_command_list(context, device, flags, 0);
+}
+
+ze_command_list_handle_t create_command_list(ze_context_handle_t context,
+                                             ze_device_handle_t device,
+                                             ze_command_list_flags_t flags,
+                                             uint32_t ordinal) {
   ze_command_list_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
 
   descriptor.pNext = nullptr;
   descriptor.flags = flags;
+  descriptor.commandQueueGroupOrdinal = ordinal;
   ze_command_list_handle_t command_list = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListCreate(context, device, &descriptor, &command_list));

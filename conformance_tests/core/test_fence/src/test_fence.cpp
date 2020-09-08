@@ -192,7 +192,8 @@ TEST_P(
     cmdq[i] = lzt::create_command_queue(
         context, device, cmdq_flag, ZE_COMMAND_QUEUE_MODE_DEFAULT,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal);
-    cmdlist[i] = lzt::create_command_list(context, device, cmdlist_flag);
+    cmdlist[i] =
+        lzt::create_command_list(context, device, cmdlist_flag, ordinal);
     fence[i] = lzt::create_fence(cmdq[i]);
     buffer[i] = lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
     val[i] = static_cast<uint8_t>(i + 1);
