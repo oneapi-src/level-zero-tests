@@ -26,7 +26,7 @@ void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output) {
   lzt::close_command_list(command_list);
   auto command_queue = lzt::create_command_queue();
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
   lzt::destroy_command_queue(command_queue);
   lzt::destroy_command_list(command_list);
 }
@@ -41,7 +41,7 @@ void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output) {
   lzt::close_command_list(command_list);
   auto command_queue = lzt::create_command_queue();
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
   lzt::destroy_command_queue(command_queue);
   lzt::destroy_command_list(command_list);
 }

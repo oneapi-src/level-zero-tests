@@ -98,7 +98,7 @@ void ZeMandelbrot::create_cmdlist() {
 void ZeMandelbrot::execute_work() {
   ZE_CHECK_RESULT(zeCommandQueueExecuteCommandLists(command_queue, 1,
                                                     &command_list, nullptr));
-  ZE_CHECK_RESULT(zeCommandQueueSynchronize(command_queue, UINT32_MAX));
+  ZE_CHECK_RESULT(zeCommandQueueSynchronize(command_queue, UINT64_MAX));
 }
 
 bool ZeMandelbrot::verify_results() {

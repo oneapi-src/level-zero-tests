@@ -369,7 +369,7 @@ void ZeApp::destroy_event(ze_event_handle_t event) {
 }
 
 void ZeApp::commandQueueSynchronize(ze_command_queue_handle_t command_queue) {
-  SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT32_MAX));
+  SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT64_MAX));
 }
 
 void ZeApp::singleDeviceInit(void) {

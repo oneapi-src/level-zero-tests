@@ -138,7 +138,7 @@ void ZeImageCopy::measureHost2Device2Host() {
 
     SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
         command_queue, 1, &command_list, nullptr));
-    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT32_MAX));
+    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT64_MAX));
 
     timer.end();
     total_time_usec += timer.period_minus_overhead();
@@ -194,7 +194,7 @@ void ZeImageCopy::measureParallelHost2Device() {
     timer.start();
     SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
         command_queue, 1, &command_list_a, nullptr));
-    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT32_MAX));
+    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT64_MAX));
     timer.end();
 
     total_time_usec += timer.period_minus_overhead();
@@ -260,7 +260,7 @@ void ZeImageCopy::measureParallelDevice2Host() {
     timer.start();
     SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
         command_queue, 1, &command_list_b, nullptr));
-    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT32_MAX));
+    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT64_MAX));
     timer.end();
 
     total_time_usec += timer.period_minus_overhead();

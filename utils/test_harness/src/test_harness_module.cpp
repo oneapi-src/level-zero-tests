@@ -218,7 +218,7 @@ void create_and_execute_function(ze_device_handle_t device,
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandQueueExecuteCommandLists(cmdq, 1, &cmdlist, nullptr));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmdq, UINT32_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmdq, UINT64_MAX));
 
   destroy_function(function);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(cmdq));

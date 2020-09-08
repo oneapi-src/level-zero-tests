@@ -279,7 +279,7 @@ TEST_P(
                                           ++streamerMarker);
   lzt::close_command_list(commandList);
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
-  lzt::synchronize(commandQueue, std::numeric_limits<uint32_t>::max());
+  lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
 
   uint8_t *rawData = lzt::metric_streamer_read_data(metricStreamerHandle);

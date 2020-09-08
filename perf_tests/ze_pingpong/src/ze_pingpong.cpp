@@ -289,7 +289,7 @@ void ZePingPong::run_command_queue(L0Context &context) {
 //---------------------------------------------------------------------
 void ZePingPong::synchronize_command_queue(L0Context &context) {
   ze_result_t result = ZE_RESULT_SUCCESS;
-  result = zeCommandQueueSynchronize(context.command_queue, UINT32_MAX);
+  result = zeCommandQueueSynchronize(context.command_queue, UINT64_MAX);
   if (result) {
     throw std::runtime_error("zeCommandQueueSynchronize failed: " +
                              std::to_string(result));

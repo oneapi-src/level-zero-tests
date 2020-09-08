@@ -134,7 +134,7 @@ TEST_F(
 
   lzt::execute_command_lists(command_queue, 1, &command_list1, hFence);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, lzt::sync_fence(hFence, UINT32_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, lzt::sync_fence(hFence, UINT64_MAX));
 
   // Now use the same signalled fence above for below other commandlist
   // execution
@@ -159,7 +159,7 @@ TEST_F(
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
 
   EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-            uint64_t(zeCommandQueueSynchronize(nullptr, UINT32_MAX)));
+            uint64_t(zeCommandQueueSynchronize(nullptr, UINT64_MAX)));
 
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
