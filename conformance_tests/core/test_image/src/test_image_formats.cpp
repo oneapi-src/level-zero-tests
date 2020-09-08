@@ -72,7 +72,7 @@ void ImageFormatTests::run_test(void *inbuff, void *outbuff,
   lzt::append_barrier(command_list, nullptr, 0, nullptr);
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
   lzt::destroy_function(kernel);
 }
 

@@ -105,7 +105,7 @@ TEST_F(
     }
 
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT32_MAX);
+    lzt::synchronize(command_queue, UINT64_MAX);
 
     temp = data->next;
     for (int i = 0; i < size; i++) {
@@ -190,7 +190,7 @@ TEST_F(
       temp = temp2;
     }
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT32_MAX);
+    lzt::synchronize(command_queue, UINT64_MAX);
 
     temp = data->next;
     for (int i = 0; i < size; i++) {
@@ -274,7 +274,7 @@ TEST_F(
     lzt::close_command_list(command_list);
 
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT32_MAX);
+    lzt::synchronize(command_queue, UINT64_MAX);
 
     // cleanup
     temp = data;
@@ -348,7 +348,7 @@ TEST_F(
                                 nullptr);
     lzt::close_command_list(command_list);
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT32_MAX);
+    lzt::synchronize(command_queue, UINT64_MAX);
 
     // cleanup
     temp = data;

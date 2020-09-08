@@ -110,7 +110,7 @@ void all_memory_create_destroy_submissions_thread(
                             alloc_size, nullptr);
     lzt::close_command_list(cl);
     lzt::execute_command_lists(cq, 1, &cl, fence_);
-    lzt::sync_fence(fence_, UINT32_MAX);
+    lzt::sync_fence(fence_, UINT64_MAX);
     lzt::query_fence(fence_);
     lzt::reset_fence(fence_);
     EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));
@@ -120,7 +120,7 @@ void all_memory_create_destroy_submissions_thread(
     lzt::append_memory_copy(cl, device_ptr, host_ptr, alloc_size, nullptr);
     lzt::close_command_list(cl);
     lzt::execute_command_lists(cq, 1, &cl, fence_);
-    lzt::sync_fence(fence_, UINT32_MAX);
+    lzt::sync_fence(fence_, UINT64_MAX);
     lzt::query_fence(fence_);
     lzt::reset_fence(fence_);
     EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));

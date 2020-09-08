@@ -93,7 +93,7 @@ TEST_P(zeFenceSynchronizeTests,
 }
 
 INSTANTIATE_TEST_CASE_P(FenceSyncParameterizedTest, zeFenceSynchronizeTests,
-                        ::testing::Values(UINT32_MAX - 1, UINT32_MAX));
+                        ::testing::Values(UINT32_MAX - 1, UINT64_MAX));
 
 TEST_F(zeFenceSynchronizeTests,
        GivenSignaledFenceWhenQueryingThenSuccessIsReturned) {
@@ -108,7 +108,7 @@ TEST_F(zeFenceSynchronizeTests,
                           nullptr);
   lzt::close_command_list(cmd_list_);
   lzt::execute_command_lists(cmd_q_, 1, &cmd_list_, fence_);
-  lzt::sync_fence(fence_, UINT32_MAX);
+  lzt::sync_fence(fence_, UINT64_MAX);
   lzt::query_fence(fence_);
   lzt::free_memory(context_, output_buffer);
 }
@@ -127,7 +127,7 @@ TEST_F(zeFenceSynchronizeTests,
 
   lzt::close_command_list(cmd_list_);
   lzt::execute_command_lists(cmd_q_, 1, &cmd_list_, fence_);
-  lzt::sync_fence(fence_, UINT32_MAX);
+  lzt::sync_fence(fence_, UINT64_MAX);
   lzt::reset_fence(fence_);
   lzt::free_memory(context_, output_buffer);
 }
@@ -146,7 +146,7 @@ TEST_F(zeFenceSynchronizeTests,
 
   lzt::close_command_list(cmd_list_);
   lzt::execute_command_lists(cmd_q_, 1, &cmd_list_, fence_);
-  lzt::sync_fence(fence_, UINT32_MAX);
+  lzt::sync_fence(fence_, UINT64_MAX);
   lzt::reset_fence(fence_);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));
   lzt::free_memory(context_, output_buffer);
@@ -222,7 +222,7 @@ TEST_P(
   }
 
   for (size_t i = 0; i < num_cmdq; i++) {
-    lzt::sync_fence(fence[i], UINT32_MAX);
+    lzt::sync_fence(fence[i], UINT64_MAX);
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceQueryStatus(fence[i]));
     for (size_t j = 0; j < size; j++) {
       EXPECT_EQ(static_cast<uint8_t *>(buffer[i])[j], val[i]);

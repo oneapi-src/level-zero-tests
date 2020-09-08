@@ -141,14 +141,14 @@ TEST_F(P2PImageCopy,
   lzt::append_wait_on_events(command_list_dev0, 1, &event2);
   lzt::close_command_list(command_list_dev0);
   lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT32_MAX);
+  lzt::synchronize(command_q_dev0, UINT64_MAX);
 
   // Copyback to host
   lzt::append_image_copy_to_mem(command_list_dev1, output_png.raw_data(),
                                 img_dev1, nullptr);
   lzt::close_command_list(command_list_dev1);
   lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT32_MAX);
+  lzt::synchronize(command_q_dev1, UINT64_MAX);
 
   // compare results
   EXPECT_EQ(input_png, output_png);
@@ -190,14 +190,14 @@ TEST_F(P2PImageCopy,
 
   lzt::close_command_list(command_list_dev0);
   lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT32_MAX);
+  lzt::synchronize(command_q_dev0, UINT64_MAX);
 
   // Copyback to host
   lzt::append_image_copy_to_mem(command_list_dev1, output_png.raw_data(),
                                 img_dev1, nullptr);
   lzt::close_command_list(command_list_dev1);
   lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT32_MAX);
+  lzt::synchronize(command_q_dev1, UINT64_MAX);
 
   // compare results
   EXPECT_EQ(input_png, output_png);
@@ -250,14 +250,14 @@ TEST_P(P2PImageCopyMemory,
   lzt::append_wait_on_events(command_list_dev0, 1, &event2);
   lzt::close_command_list(command_list_dev0);
   lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT32_MAX);
+  lzt::synchronize(command_q_dev0, UINT64_MAX);
 
   // Copyback to host
   lzt::append_memory_copy(command_list_dev1, output_png.raw_data(), target_mem,
                           mem_size);
   lzt::close_command_list(command_list_dev1);
   lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT32_MAX);
+  lzt::synchronize(command_q_dev1, UINT64_MAX);
 
   // compare results
   EXPECT_EQ(input_png, output_png);
@@ -301,7 +301,7 @@ TEST_P(P2PImageCopyMemory,
   lzt::append_wait_on_events(command_list_dev0, 1, &event1);
   lzt::close_command_list(command_list_dev0);
   lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT32_MAX);
+  lzt::synchronize(command_q_dev0, UINT64_MAX);
 
   // on dev1, copy from dev 0
   lzt::append_image_copy_from_mem(command_list_dev1, img_dev0, target_mem,
@@ -313,7 +313,7 @@ TEST_P(P2PImageCopyMemory,
                           mem_size);
   lzt::close_command_list(command_list_dev1);
   lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT32_MAX);
+  lzt::synchronize(command_q_dev1, UINT64_MAX);
 
   // compare results
   EXPECT_EQ(input_png, output_png);

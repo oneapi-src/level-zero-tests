@@ -83,7 +83,7 @@ void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, int x, int y,
                                   nullptr);
   lzt::close_command_list(cmd_list_);
   lzt::execute_command_lists(cmd_queue_, 1, &cmd_list_, nullptr);
-  lzt::synchronize(cmd_queue_, UINT32_MAX);
+  lzt::synchronize(cmd_queue_, UINT64_MAX);
   lzt::reset_command_list(cmd_list_);
   return;
 }
@@ -95,7 +95,7 @@ uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image, int x,
   lzt::append_image_copy_to_mem(cmd_list_, temp_png.raw_data(), image, nullptr);
   lzt::close_command_list(cmd_list_);
   lzt::execute_command_lists(cmd_queue_, 1, &cmd_list_, nullptr);
-  lzt::synchronize(cmd_queue_, UINT32_MAX);
+  lzt::synchronize(cmd_queue_, UINT64_MAX);
   lzt::reset_command_list(cmd_list_);
   return temp_png.get_pixel(x, y);
 }

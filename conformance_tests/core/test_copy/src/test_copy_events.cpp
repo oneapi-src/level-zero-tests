@@ -59,12 +59,12 @@ TEST_F(
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
   // Verify Host Reads Event as set
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT32_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
 
   // Verify Memory Copy completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
 
-  lzt::synchronize(cmdqueue, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
   lzt::free_memory(src_buffer);
   lzt::free_memory(dst_buffer);
 }
@@ -89,12 +89,12 @@ TEST_F(
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
   // Verify Host Reads Event as set
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT32_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
 
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, size));
 
-  lzt::synchronize(cmdqueue, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
   lzt::free_memory(ref_buffer);
   lzt::free_memory(dst_buffer);
 }
@@ -125,12 +125,12 @@ TEST_F(
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
   // Verify Host Reads Event as set
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT32_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
 
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
 
-  lzt::synchronize(cmdqueue, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
   lzt::free_memory(src_buffer);
   lzt::free_memory(dst_buffer);
 }
@@ -296,16 +296,16 @@ TEST_F(
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
   // Make sure all events signaled from host perspective
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent1, UINT32_MAX));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent2, UINT32_MAX));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent3, UINT32_MAX));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent4, UINT32_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent1, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent2, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent3, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent4, UINT64_MAX));
 
   // Verfy A matches B
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 
-  lzt::synchronize(cmdqueue, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
   // cleanup
   ep.destroy_event(hEvent1);
   ep.destroy_event(hEvent2);

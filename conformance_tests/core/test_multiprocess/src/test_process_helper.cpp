@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
 
   // verify kernel execution
   for (int i = 0; i < memory_size; i++) {

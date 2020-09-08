@@ -49,7 +49,7 @@ void thread_func(const ze_command_queue_handle_t cq) {
 
     lzt::execute_command_lists(cq, 1, &cl, fence_);
 
-    lzt::sync_fence(fence_, UINT32_MAX);
+    lzt::sync_fence(fence_, UINT64_MAX);
 
     lzt::query_fence(fence_);
 
@@ -61,7 +61,7 @@ void thread_func(const ze_command_queue_handle_t cq) {
 
     lzt::destroy_command_list(cl);
   }
-  lzt::synchronize(cq, UINT32_MAX);
+  lzt::synchronize(cq, UINT64_MAX);
 
   lzt::free_memory(output_buffer);
 

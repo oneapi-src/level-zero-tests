@@ -230,7 +230,7 @@ TEST_F(
   lzt::append_memory_copy(cmd_list, host_mem, dev_mem, xfer_size, nullptr);
   lzt::close_command_list(cmd_list);
   lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-  lzt::synchronize(cmd_q, UINT32_MAX);
+  lzt::synchronize(cmd_q, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeEventHostSynchronize(event_barrier_to_host, UINT32_MAX - 1));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_barrier_to_host));
@@ -276,7 +276,7 @@ TEST_F(
   for (uint32_t i = 2; i < num_events; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(events_to_barrier[i]));
   }
-  lzt::synchronize(cmd_q, UINT32_MAX);
+  lzt::synchronize(cmd_q, UINT64_MAX);
   for (uint32_t i = 0; i < num_events; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events_to_barrier[i]));
   }
@@ -318,7 +318,7 @@ TEST_F(
   lzt::append_memory_copy(cmd_list, host_mem, dev_mem, xfer_size, nullptr);
   lzt::close_command_list(cmd_list);
   lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-  lzt::synchronize(cmd_q, UINT32_MAX);
+  lzt::synchronize(cmd_q, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeEventHostSynchronize(event_barrier_to_host, UINT32_MAX - 1));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_barrier_to_host));
@@ -369,7 +369,7 @@ TEST_F(
   for (uint32_t i = 2; i < num_events; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(events_to_barrier[i]));
   }
-  lzt::synchronize(cmd_q, UINT32_MAX);
+  lzt::synchronize(cmd_q, UINT64_MAX);
   for (uint32_t i = 0; i < num_events; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events_to_barrier[i]));
   }
@@ -496,7 +496,7 @@ TEST_P(
 
   lzt::close_command_list(cmd_list);
   lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-  lzt::synchronize(cmd_q, UINT32_MAX);
+  lzt::synchronize(cmd_q, UINT64_MAX);
   val = (2 * val_1) + addval_2;
   for (size_t i = 0; i < num_int; i++) {
     EXPECT_EQ(p_host[i], val);

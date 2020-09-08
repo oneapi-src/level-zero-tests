@@ -299,7 +299,7 @@ protected:
 
     for (uint32_t i = 0; i < num; i++) {
       EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandQueueSynchronize(dev_access_[i].cmd_q, UINT32_MAX));
+                zeCommandQueueSynchronize(dev_access_[i].cmd_q, UINT64_MAX));
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(dev_access_[i].cmd_list));
     }
 

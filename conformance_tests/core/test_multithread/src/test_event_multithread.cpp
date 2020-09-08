@@ -132,7 +132,7 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
     lzt::signal_event_from_host(events[0]);
     lzt::close_command_list(cmd_list[0]);
     lzt::execute_command_lists(cmd_queue, 1, &cmd_list[0], nullptr);
-    lzt::event_host_synchronize(events[0], UINT32_MAX);
+    lzt::event_host_synchronize(events[0], UINT64_MAX);
     lzt::query_event(events[0]);
     lzt::event_host_reset(events[0]);
 
@@ -156,7 +156,7 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
     lzt::append_signal_event(cmd_list[0], events[0]);
     lzt::close_command_list(cmd_list[0]);
     lzt::execute_command_lists(cmd_queue, 1, &cmd_list[0], nullptr);
-    lzt::event_host_synchronize(events[0], UINT32_MAX);
+    lzt::event_host_synchronize(events[0], UINT64_MAX);
     lzt::query_event(events[0]);
 
     for (auto event : events) {
@@ -205,7 +205,7 @@ void ThreadMultipleEventsSync(const ze_command_queue_handle_t cmd_queue) {
     lzt::append_signal_event(cmd_list[0], events[0]);
     lzt::close_command_list(cmd_list[0]);
     lzt::execute_command_lists(cmd_queue, 1, &cmd_list[0], nullptr);
-    lzt::event_host_synchronize(events[0], UINT32_MAX);
+    lzt::event_host_synchronize(events[0], UINT64_MAX);
     lzt::query_event(events[0]);
 
     lzt::append_wait_on_events(cmd_list[1], 1, &events[1]);
@@ -236,7 +236,7 @@ void ThreadMultipleEventsSync(const ze_command_queue_handle_t cmd_queue) {
     lzt::signal_event_from_host(events[2]);
     lzt::close_command_list(cmd_list[2]);
     lzt::execute_command_lists(cmd_queue, 1, &cmd_list[2], nullptr);
-    lzt::event_host_synchronize(events[2], UINT32_MAX);
+    lzt::event_host_synchronize(events[2], UINT64_MAX);
     lzt::query_event(events[2]);
     lzt::reset_command_list(cmd_list[2]);
 
@@ -269,7 +269,7 @@ void ThreadSharedEventSync(const ze_command_queue_handle_t cmd_queue,
 
     lzt::close_command_list(cmd_list);
     lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
-    lzt::event_host_synchronize(event[0], UINT32_MAX);
+    lzt::event_host_synchronize(event[0], UINT64_MAX);
     lzt::query_event(event[0]);
 
     lzt::reset_command_list(cmd_list);
@@ -282,7 +282,7 @@ void ThreadSharedEventSync(const ze_command_queue_handle_t cmd_queue,
       signal_host_event = false;
     }
 
-    lzt::event_host_synchronize(event[1], UINT32_MAX);
+    lzt::event_host_synchronize(event[1], UINT64_MAX);
     lzt::query_event(event[1]);
 
     lzt::destroy_command_list(cmd_list);

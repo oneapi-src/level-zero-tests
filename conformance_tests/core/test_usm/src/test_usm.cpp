@@ -130,7 +130,7 @@ protected:
 
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
 
-    lzt::synchronize(command_queue, UINT32_MAX);
+    lzt::synchronize(command_queue, UINT64_MAX);
 
     lzt::destroy_command_queue(command_queue);
     lzt::destroy_command_list(command_list);
@@ -610,7 +610,7 @@ TEST_P(
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
   memset(host_mem, 0x0, size_of_chunk);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
 
   for (uint32_t i = 0; i < size_of_chunk; i++) {
     ASSERT_EQ((device_mem)[i], pattern);
@@ -657,7 +657,7 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
                             memory_size, nullptr);
     lzt::close_command_list(command_list);
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT32_MAX);
+    lzt::synchronize(command_queue, UINT64_MAX);
 
     *pattern++;
 

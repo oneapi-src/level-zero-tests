@@ -125,7 +125,7 @@ TEST_F(PciModuleTest,
     lzt::append_barrier(command_list, nullptr, 0, nullptr);
     lzt::close_command_list(command_list);
     lzt::execute_command_lists(cq, 1, &command_list, nullptr);
-    lzt::synchronize(cq, UINT32_MAX);
+    lzt::synchronize(cq, UINT64_MAX);
 
     lzt::validate_data_pattern(host_memory2.data(), size, 1);
     lzt::free_memory(device_memory);

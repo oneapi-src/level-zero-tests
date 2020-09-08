@@ -68,7 +68,7 @@ TEST_P(
   lzt::close_command_list(cmdlist_.command_list_);
   lzt::execute_command_lists(cmdqueue_.command_queue_, 1,
                              &cmdlist_.command_list_, nullptr);
-  lzt::synchronize(cmdqueue_.command_queue_, UINT32_MAX);
+  lzt::synchronize(cmdqueue_.command_queue_, UINT64_MAX);
   lzt::validate_data_pattern(other_memory, size_, 1);
   lzt::free_memory(other_memory);
 }
@@ -83,7 +83,7 @@ TEST_P(zeMemAccessCommandListTests,
   lzt::close_command_list(cmdlist_.command_list_);
   lzt::execute_command_lists(cmdqueue_.command_queue_, 1,
                              &cmdlist_.command_list_, nullptr);
-  lzt::synchronize(cmdqueue_.command_queue_, UINT32_MAX);
+  lzt::synchronize(cmdqueue_.command_queue_, UINT64_MAX);
   for (unsigned int ui = 0; ui < size_; ui++)
     EXPECT_EQ(value, static_cast<uint8_t *>(memory_)[ui]);
 }

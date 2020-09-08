@@ -158,7 +158,7 @@ TEST_P(zeHostEventSyncPermuteTimeoutTests,
 
 INSTANTIATE_TEST_CASE_P(ImplictHostSynchronizeEventParameterizedTest,
                         zeHostEventSyncPermuteTimeoutTests,
-                        ::testing::Values(0, 10000000, UINT32_MAX));
+                        ::testing::Values(0, 10000000, UINT64_MAX));
 
 TEST_F(
     zeDeviceCreateEventTests,
@@ -255,7 +255,7 @@ TEST_F(
               zeEventHostSynchronize(device_event[i], UINT32_MAX - 1));
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeEventHostSignal(device_event[num_event - 1]));
-    lzt::synchronize(cmd_q, UINT32_MAX);
+    lzt::synchronize(cmd_q, UINT64_MAX);
 
     for (uint32_t j = 0; j < num_event - 1; j++) {
       if (j == i) {
@@ -315,7 +315,7 @@ TEST_F(
   for (uint32_t i = 2; i < num_event; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(device_event[i]));
   }
-  lzt::synchronize(cmd_q, UINT32_MAX);
+  lzt::synchronize(cmd_q, UINT64_MAX);
 
   for (uint32_t i = 0; i < num_event; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(device_event[i]));
@@ -375,7 +375,7 @@ TEST_F(zeEventSignalingTests,
         EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(device_event[j]));
       }
     }
-    lzt::synchronize(cmd_q, UINT32_MAX);
+    lzt::synchronize(cmd_q, UINT64_MAX);
 
     for (size_t j = 0; j < num_event; j++) {
       if (i == j) {
@@ -428,7 +428,7 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
     lzt::append_signal_event(cmdlist, event);
     lzt::close_command_list(cmdlist);
     lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-    lzt::synchronize(cmdqueue, UINT32_MAX);
+    lzt::synchronize(cmdqueue, UINT64_MAX);
 
     // cleanup
     lzt::destroy_command_list(cmdlist);
@@ -445,7 +445,7 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
     lzt::append_wait_on_events(cmdlist, 1, &event);
     lzt::close_command_list(cmdlist);
     lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-    lzt::synchronize(cmdqueue, UINT32_MAX);
+    lzt::synchronize(cmdqueue, UINT64_MAX);
 
     // cleanup
     lzt::destroy_command_list(cmdlist);

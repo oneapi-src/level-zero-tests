@@ -186,7 +186,7 @@ protected:
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
                                      command_queue, 1, &command_list, nullptr));
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(command_queue, UINT32_MAX));
+              zeCommandQueueSynchronize(command_queue, UINT64_MAX));
 
     lzt::destroy_command_queue(command_queue);
     lzt::destroy_command_list(command_list);

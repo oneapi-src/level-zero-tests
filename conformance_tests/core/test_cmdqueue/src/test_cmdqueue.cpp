@@ -106,7 +106,7 @@ TEST_F(
 
 struct CustomExecuteParams {
   uint32_t num_command_lists;
-  uint32_t sync_timeout;
+  uint64_t sync_timeout;
 };
 
 class zeCommandQueueExecuteCommandListTests
@@ -244,7 +244,7 @@ CustomExecuteParams synchronize_test_input[] = {{1, 0},
                                                 {20, UINT32_MAX >> 4},
                                                 {30, UINT32_MAX >> 2},
                                                 {50, UINT32_MAX >> 1},
-                                                {100, UINT32_MAX}};
+                                                {100, UINT64_MAX}};
 
 INSTANTIATE_TEST_CASE_P(TestIncreasingNumberCommandListsWithSynchronize,
                         zeCommandQueueExecuteCommandListTestsSynchronize,
@@ -273,10 +273,10 @@ TEST_P(
 }
 
 CustomExecuteParams fence_test_input[] = {
-    {1, UINT32_MAX},  {2, UINT32_MAX},  {3, UINT32_MAX},  {4, UINT32_MAX},
-    {5, UINT32_MAX},  {6, UINT32_MAX},  {7, UINT32_MAX},  {8, UINT32_MAX},
-    {9, UINT32_MAX},  {10, UINT32_MAX}, {20, UINT32_MAX}, {30, UINT32_MAX},
-    {50, UINT32_MAX}, {100, UINT32_MAX}};
+    {1, UINT64_MAX},  {2, UINT64_MAX},  {3, UINT64_MAX},  {4, UINT64_MAX},
+    {5, UINT64_MAX},  {6, UINT64_MAX},  {7, UINT64_MAX},  {8, UINT64_MAX},
+    {9, UINT64_MAX},  {10, UINT64_MAX}, {20, UINT64_MAX}, {30, UINT64_MAX},
+    {50, UINT64_MAX}, {100, UINT64_MAX}};
 
 INSTANTIATE_TEST_CASE_P(TestIncreasingNumberCommandListsWithCommandQueueFence,
                         zeCommandQueueExecuteCommandListTestsFence,
@@ -331,7 +331,7 @@ TEST_P(
 
   child_thread.join();
   if (mode == ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS) {
-    lzt::synchronize(cq, UINT32_MAX);
+    lzt::synchronize(cq, UINT64_MAX);
   }
 
   ep.destroy_event(hEvent);
@@ -384,7 +384,7 @@ TEST_F(
       ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
   EXPECT_EQ(0, memcmp(host_buffer, device_buffer, buff_size_bytes));
   lzt::reset_command_list(command_list);
   for (uint32_t i = 0; i < buff_size_bytes; i++) {
@@ -396,13 +396,13 @@ TEST_F(
   lzt::close_command_list(command_list);
   ze_fence_handle_t hFence = lzt::create_fence(command_queue);
   lzt::execute_command_lists(command_queue, 1, &command_list, hFence);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, lzt::sync_fence(hFence, UINT32_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, lzt::sync_fence(hFence, UINT64_MAX));
 
   EXPECT_EQ(0, memcmp(host_buffer, device_buffer, buff_size_bytes));
 
   /*cleanup*/
   lzt::destroy_fence(hFence);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
   lzt::destroy_command_queue(command_queue);
   lzt::destroy_command_list(command_list);
 }
@@ -511,10 +511,10 @@ TEST(
                              nullptr);
 
   lzt::signal_event_from_host(event_sync);
-  lzt::synchronize(cmdqueue_compute_high, UINT32_MAX);
-  lzt::synchronize(cmdqueue_compute_low, UINT32_MAX);
-  lzt::synchronize(cmdqueue_copy_high, UINT32_MAX);
-  lzt::synchronize(cmdqueue_copy_low, UINT32_MAX);
+  lzt::synchronize(cmdqueue_compute_high, UINT64_MAX);
+  lzt::synchronize(cmdqueue_compute_low, UINT64_MAX);
+  lzt::synchronize(cmdqueue_copy_high, UINT64_MAX);
+  lzt::synchronize(cmdqueue_copy_low, UINT64_MAX);
 
   uint8_t *uchar_compute_high = static_cast<uint8_t *>(buffer_compute_high);
   uint8_t *uchar_copy_high = static_cast<uint8_t *>(buffer_copy_high);

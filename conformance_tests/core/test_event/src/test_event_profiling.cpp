@@ -82,8 +82,8 @@ TEST_F(
 
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT32_MAX);
-  lzt::event_host_synchronize(event, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+  lzt::event_host_synchronize(event, UINT64_MAX);
   ze_kernel_timestamp_result_t timestamp =
       lzt::get_event_kernel_timestamp(event);
 
@@ -98,8 +98,8 @@ TEST_F(EventProfilingTests,
 
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT32_MAX);
-  lzt::event_host_synchronize(event, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+  lzt::event_host_synchronize(event, UINT64_MAX);
   ze_kernel_timestamp_result_t timestamp =
       lzt::get_event_kernel_timestamp(event);
 
@@ -127,9 +127,9 @@ TEST_F(EventProfilingTests,
   lzt::append_wait_on_events(cmdlist, 1, &regular_event);
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT32_MAX);
-  lzt::event_host_synchronize(event, UINT32_MAX);
-  lzt::event_host_synchronize(regular_event, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+  lzt::event_host_synchronize(event, UINT64_MAX);
+  lzt::event_host_synchronize(regular_event, UINT64_MAX);
   ze_kernel_timestamp_result_t timestamp =
       lzt::get_event_kernel_timestamp(event);
 
@@ -204,7 +204,7 @@ TEST_P(EventProfilingCacheCoherencyTests,
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event5, UINT32_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event5, UINT64_MAX));
   std::unique_ptr<uint8_t> output(new uint8_t[size]);
   memcpy(output.get(), buffer5, size);
 
@@ -285,8 +285,8 @@ TEST_F(KernelEventProfilingCacheCoherencyTests,
 
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT32_MAX);
-  lzt::event_host_synchronize(event, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+  lzt::event_host_synchronize(event, UINT64_MAX);
 
   EXPECT_GT(tsResult->global.kernelStart, 0);
   EXPECT_GT(tsResult->global.kernelEnd, 0);

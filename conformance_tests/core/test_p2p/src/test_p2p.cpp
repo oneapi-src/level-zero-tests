@@ -144,11 +144,11 @@ TEST_P(
                                      &dev_instance_[i].cmd_list, nullptr));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(
-                                     dev_instance_[i - 1].cmd_q, UINT32_MAX));
+                                     dev_instance_[i - 1].cmd_q, UINT64_MAX));
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandListReset(dev_instance_[i - 1].cmd_list));
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT32_MAX));
+              zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT64_MAX));
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(dev_instance_[i].cmd_list));
   }
 }
@@ -181,7 +181,7 @@ TEST_P(
                                      &dev_instance_[i - 1].cmd_list, nullptr));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(
-                                     dev_instance_[i - 1].cmd_q, UINT32_MAX));
+                                     dev_instance_[i - 1].cmd_q, UINT64_MAX));
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandListReset(dev_instance_[i - 1].cmd_list));
 
@@ -194,7 +194,7 @@ TEST_P(
                                      &dev_instance_[i].cmd_list, nullptr));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT32_MAX));
+              zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT64_MAX));
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(dev_instance_[i].cmd_list));
 
     for (uint32_t j = 0; j < mem_size_; j++) {
@@ -264,7 +264,7 @@ TEST_P(
       lzt::close_command_list(ptr_dev_src->cmd_list);
       lzt::execute_command_lists(ptr_dev_src->cmd_q, 1, &ptr_dev_src->cmd_list,
                                  nullptr);
-      lzt::synchronize(ptr_dev_src->cmd_q, UINT32_MAX);
+      lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
       lzt::reset_command_list(ptr_dev_src->cmd_list);
 
       lzt::append_memory_copy_region(
@@ -275,7 +275,7 @@ TEST_P(
       lzt::close_command_list(ptr_dev_src->cmd_list);
       lzt::execute_command_lists(ptr_dev_src->cmd_q, 1, &ptr_dev_src->cmd_list,
                                  nullptr);
-      lzt::synchronize(ptr_dev_src->cmd_q, UINT32_MAX);
+      lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
       lzt::reset_command_list(ptr_dev_src->cmd_list);
 
       lzt::append_memory_copy(ptr_dev_dst->cmd_list, verification_memory,
@@ -283,7 +283,7 @@ TEST_P(
       lzt::close_command_list(ptr_dev_dst->cmd_list);
       lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1, &ptr_dev_dst->cmd_list,
                                  nullptr);
-      lzt::synchronize(ptr_dev_dst->cmd_q, UINT32_MAX);
+      lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
       lzt::reset_command_list(ptr_dev_dst->cmd_list);
 
       for (int z = 0; z < depth; z++) {
@@ -375,7 +375,7 @@ TEST_P(
         lzt::close_command_list(ptr_dev_src->cmd_list);
         lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
                                    &ptr_dev_src->cmd_list, nullptr);
-        lzt::synchronize(ptr_dev_src->cmd_q, UINT32_MAX);
+        lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
         lzt::reset_command_list(ptr_dev_src->cmd_list);
 
         lzt::append_memory_copy_region(
@@ -386,7 +386,7 @@ TEST_P(
         lzt::close_command_list(ptr_dev_src->cmd_list);
         lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
                                    &ptr_dev_src->cmd_list, nullptr);
-        lzt::synchronize(ptr_dev_src->cmd_q, UINT32_MAX);
+        lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
 
         lzt::append_memory_copy(ptr_dev_dst->cmd_list, verification_memory,
                                 ptr_dev_dst->dst_region, mem_size_);
@@ -489,7 +489,7 @@ TEST_P(
           lzt::close_command_list(ptr_dev_src->cmd_list);
           lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
                                      &ptr_dev_src->cmd_list, nullptr);
-          lzt::synchronize(ptr_dev_src->cmd_q, UINT32_MAX);
+          lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
           lzt::reset_command_list(ptr_dev_src->cmd_list);
 
           lzt::append_memory_copy_region(
@@ -500,7 +500,7 @@ TEST_P(
           lzt::close_command_list(ptr_dev_src->cmd_list);
           lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
                                      &ptr_dev_src->cmd_list, nullptr);
-          lzt::synchronize(ptr_dev_src->cmd_q, UINT32_MAX);
+          lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
 
           lzt::append_memory_copy(ptr_dev_dst->cmd_list, verification_memory,
                                   ptr_dev_dst->dst_region, mem_size_);
@@ -568,7 +568,7 @@ TEST_P(zeP2PTests,
                                      dev_instance_[i].cmd_q, 1,
                                      &dev_instance_[i].cmd_list, nullptr));
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT32_MAX));
+              zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT64_MAX));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(dev_instance_[i].cmd_list));
 
@@ -585,7 +585,7 @@ TEST_P(zeP2PTests,
                                      &dev_instance_[i].cmd_list, nullptr));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT32_MAX));
+              zeCommandQueueSynchronize(dev_instance_[i].cmd_q, UINT64_MAX));
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(dev_instance_[i].cmd_list));
     ASSERT_EQ(shr_mem[0], value + 1)
         << "Memory Copied from Device did not match.";

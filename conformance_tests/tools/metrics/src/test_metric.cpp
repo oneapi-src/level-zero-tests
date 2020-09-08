@@ -118,7 +118,7 @@ TEST_F(
   lzt::close_command_list(commandList);
   ze_command_queue_handle_t commandQueue = lzt::create_command_queue();
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
-  lzt::synchronize(commandQueue, UINT32_MAX);
+  lzt::synchronize(commandQueue, UINT64_MAX);
   lzt::deactivate_metric_groups(device);
   lzt::destroy_command_queue(commandQueue);
   lzt::destroy_command_list(commandList);
@@ -173,7 +173,7 @@ TEST_P(
   lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
   lzt::close_command_list(commandList);
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
-  lzt::synchronize(commandQueue, UINT32_MAX);
+  lzt::synchronize(commandQueue, UINT64_MAX);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
   uint8_t *rawData = lzt::metric_query_get_data(metricQueryHandle);

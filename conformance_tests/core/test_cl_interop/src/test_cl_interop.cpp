@@ -258,7 +258,7 @@ static std::vector<int> bitonic_sort_l0(std::vector<int> input) {
                           input.size() * sizeof(input[0]), nullptr);
   lzt::close_command_list(cmd_list);
   lzt::execute_command_lists(l0_cmd_queue, 1, &cmd_list, nullptr);
-  lzt::synchronize(l0_cmd_queue, UINT32_MAX);
+  lzt::synchronize(l0_cmd_queue, UINT64_MAX);
 
   // cleanup
   lzt::destroy_command_list(cmd_list);

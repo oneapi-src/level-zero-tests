@@ -45,7 +45,7 @@ protected:
   ze_event_handle_t event0 = nullptr;
   ze_command_list_handle_t cmdlist_immediate = nullptr;
   ze_command_queue_mode_t mode;
-  uint32_t timeout = UINT32_MAX - 1;
+  uint64_t timeout = UINT32_MAX - 1;
 };
 
 TEST_P(
@@ -400,7 +400,7 @@ TEST_P(
   // use ImageCopyToMemory to dowload ImageB
   lzt::append_image_copy_to_mem(cmdlist_immediate_3, output.raw_data(),
                                 output_xeimage, hEvent4);
-  lzt::event_host_synchronize(hEvent4, UINT32_MAX);
+  lzt::event_host_synchronize(hEvent4, UINT64_MAX);
 
   // Verfy A matches B
   EXPECT_EQ(0,

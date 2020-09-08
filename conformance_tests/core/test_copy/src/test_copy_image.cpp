@@ -91,7 +91,7 @@ protected:
     lzt::append_barrier(cl, nullptr, 0, nullptr);
     close_command_list(cl);
     execute_command_lists(cq, 1, &cl, nullptr);
-    synchronize(cq, UINT32_MAX);
+    synchronize(cq, UINT64_MAX);
 
     EXPECT_EQ(png_img_src, png_img_dest);
   }
@@ -145,7 +145,7 @@ protected:
     // Execute all of the commands involving copying of images
     close_command_list(cl);
     execute_command_lists(cq, 1, &cl, nullptr);
-    synchronize(cq, UINT32_MAX);
+    synchronize(cq, UINT64_MAX);
 
     EXPECT_EQ(0, lzt::compare_data_pattern(new_host_image, region,
                                            foreground_image, background_image));
@@ -172,7 +172,7 @@ protected:
 
     close_command_list(cl);
     execute_command_lists(cq, 1, &cl, nullptr);
-    synchronize(cq, UINT32_MAX);
+    synchronize(cq, UINT64_MAX);
 
     EXPECT_EQ(png_img_src, png_img_dest);
   }
@@ -217,7 +217,7 @@ protected:
 
     close_command_list(cl);
     execute_command_lists(cq, 1, &cl, nullptr);
-    synchronize(cq, UINT32_MAX);
+    synchronize(cq, UINT64_MAX);
 
     for (int i = 0; i < (image_size / 4); i++) {
       ASSERT_EQ(png_img_src.raw_data()[i], png_img_dest.raw_data()[i])
@@ -256,7 +256,7 @@ protected:
     // Execute
     close_command_list(cl);
     execute_command_lists(cq, 1, &cl, nullptr);
-    synchronize(cq, UINT32_MAX);
+    synchronize(cq, UINT64_MAX);
 
     // Verify output image matches initial host image.
     // Output image contains input image data shifted by in_region's origin

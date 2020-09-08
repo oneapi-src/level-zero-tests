@@ -517,7 +517,7 @@ protected:
       }
     }
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmd_q, UINT32_MAX));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmd_q, UINT64_MAX));
 
     if (signal_to_host) {
       EXPECT_EQ(ZE_RESULT_SUCCESS,

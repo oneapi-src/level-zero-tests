@@ -54,7 +54,7 @@ static void parent_device_signals(ze_event_handle_t hEvent) {
   auto cmdqueue = lzt::create_command_queue();
   lzt::append_signal_event(cmdlist, hEvent);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT32_MAX);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
 
   // cleanup
   lzt::destroy_command_list(cmdlist);

@@ -420,7 +420,7 @@ void load_for_gpu() {
   lzt::close_command_list(cmd_list);
   ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
   lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-  lzt::synchronize(cmd_q, UINT32_MAX);
+  lzt::synchronize(cmd_q, UINT64_MAX);
   std::memcpy(c.data(), c_buffer, c.size() * sizeof(float));
   lzt::destroy_command_queue(cmd_q);
   lzt::destroy_command_list(cmd_list);

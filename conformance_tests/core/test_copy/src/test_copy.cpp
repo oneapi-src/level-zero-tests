@@ -86,7 +86,7 @@ TEST_F(zeCommandListAppendMemoryFillVerificationTests,
   append_barrier(command_list, nullptr, 0, nullptr);
   close_command_list(command_list);
   execute_command_lists(cq, 1, &command_list, nullptr);
-  synchronize(cq, UINT32_MAX);
+  synchronize(cq, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern)
@@ -109,7 +109,7 @@ TEST_F(zeCommandListAppendMemoryFillVerificationTests,
   append_barrier(command_list, nullptr, 0, nullptr);
   close_command_list(command_list);
   execute_command_lists(cq, 1, &command_list, nullptr);
-  synchronize(cq, UINT32_MAX);
+  synchronize(cq, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern)
@@ -133,13 +133,13 @@ TEST_F(zeCommandListAppendMemoryFillVerificationTests,
   append_barrier(command_list, nullptr, 0, nullptr);
   close_command_list(command_list);
   execute_command_lists(cq, 1, &command_list, nullptr);
-  synchronize(cq, UINT32_MAX);
+  synchronize(cq, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(command_list));
   append_memory_copy(command_list, local_mem, memory, size, nullptr);
   append_barrier(command_list, nullptr, 0, nullptr);
   close_command_list(command_list);
   execute_command_lists(cq, 1, &command_list, nullptr);
-  synchronize(cq, UINT32_MAX);
+  synchronize(cq, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(local_mem)[i], pattern)
@@ -200,7 +200,7 @@ TEST_P(
       lzt::append_memory_copy(command_list, host_memory, memory, size);
       lzt::close_command_list(command_list);
       lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-      lzt::synchronize(command_queue, UINT32_MAX);
+      lzt::synchronize(command_queue, UINT64_MAX);
 
       for (int i = 0; i < size; i++) {
         ASSERT_EQ(static_cast<uint8_t *>(host_memory)[i], pattern)
@@ -246,7 +246,7 @@ TEST_P(zeCommandListAppendMemoryFillPatternVerificationTests,
   append_barrier(command_list, nullptr, 0, nullptr);
   close_command_list(command_list);
   execute_command_lists(cq, 1, &command_list, nullptr);
-  synchronize(cq, UINT32_MAX);
+  synchronize(cq, UINT64_MAX);
 
   for (uint32_t i = 0; i < total_size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(target_memory)[i], i % pattern_size)
@@ -285,7 +285,7 @@ TEST_F(
   append_barrier(cl.command_list_, nullptr, 0, nullptr);
   close_command_list(cl.command_list_);
   execute_command_lists(cq.command_queue_, 1, &cl.command_list_, nullptr);
-  synchronize(cq.command_queue_, UINT32_MAX);
+  synchronize(cq.command_queue_, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
   free_memory(device_memory);
@@ -322,7 +322,7 @@ TEST_F(
   append_barrier(cl.command_list_, nullptr, 0, nullptr);
   close_command_list(cl.command_list_);
   execute_command_lists(cq.command_queue_, 1, &cl.command_list_, nullptr);
-  synchronize(cq.command_queue_, UINT32_MAX);
+  synchronize(cq.command_queue_, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
 
@@ -437,7 +437,7 @@ protected:
                          memory_size);
       close_command_list(command_list);
       execute_command_lists(command_queue, 1, &command_list, nullptr);
-      synchronize(command_queue, UINT32_MAX);
+      synchronize(command_queue, UINT64_MAX);
       reset_command_list(command_list);
 
       for (int z = 0; z < depth; z++) {
@@ -536,7 +536,7 @@ TEST(zeCommandListAppendMemoryPrefetchTests,
   auto command_queue = lzt::create_command_queue();
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
 
   for (size_t i = 0; i < size; i++) {
     ASSERT_EQ(value, ((uint8_t *)memory)[i]);
@@ -568,7 +568,7 @@ TEST_P(zeCommandListAppendMemAdviseTests,
   auto command_queue = lzt::create_command_queue();
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT32_MAX);
+  lzt::synchronize(command_queue, UINT64_MAX);
 
   for (size_t i = 0; i < size; i++) {
     ASSERT_EQ(value, ((uint8_t *)memory)[i]);

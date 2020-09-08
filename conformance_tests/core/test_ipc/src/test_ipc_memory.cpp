@@ -53,7 +53,7 @@ void run_parent(int size) {
   lzt::append_memory_copy(cl, buffer, memory, size);
   lzt::close_command_list(cl);
   lzt::execute_command_lists(cq, 1, &cl, nullptr);
-  lzt::synchronize(cq, UINT32_MAX);
+  lzt::synchronize(cq, UINT64_MAX);
 
   LOG_DEBUG << "[Server] Validating buffer received correctly";
   lzt::validate_data_pattern(buffer, size, 1);
@@ -88,7 +88,7 @@ void run_child(int size) {
   lzt::append_memory_copy(cl, memory, buffer, size);
   lzt::close_command_list(cl);
   lzt::execute_command_lists(cq, 1, &cl, nullptr);
-  lzt::synchronize(cq, UINT32_MAX);
+  lzt::synchronize(cq, UINT64_MAX);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
   lzt::send_ipc_handle(ipc_handle);
