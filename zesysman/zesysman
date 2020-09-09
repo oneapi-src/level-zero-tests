@@ -1617,60 +1617,13 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "STUB_API":
         global stubState
         stubState["Standby"] = stbyMode
 
+    def isStub(fn):
+        return fn.startswith("stubze") and eval("type(%s) == type(isStub)" % fn)
+
     fntemplate = "def %s(*args, **kwargs):\n    return {'fn':%s, 'args':args, 'kwargs':kwargs}\n"
-    allFnsToReplace = """
-    zesDeviceEnumTemperatureSensors zesTemperatureGetProperties zesTemperatureGetConfig
-    zesTemperatureSetConfig         zesTemperatureGetState
 
-    zesDeviceEnumPowerDomains zesPowerGetProperties      zesPowerSetLimits          zesPowerGetLimits
-    zesPowerGetEnergyCounter  zesPowerGetEnergyThreshold zesPowerSetEnergyThreshold
-
-    zesDeviceEnumFrequencyDomains    zesFrequencyGetProperties      zesFrequencyGetAvailableClocks
-    zesFrequencyGetRange             zesFrequencySetRange           zesFrequencyGetState
-    zesFrequencyGetThrottleTime      zesFrequencyOcGetCapabilities  zesFrequencyOcGetFrequencyTarget
-    zesFrequencyOcSetFrequencyTarget zesFrequencyOcGetVoltageTarget zesFrequencyOcSetVoltageTarget
-    zesFrequencyOcSetMode            zesFrequencyOcGetMode          zesFrequencyOcGetIccMax
-    zesFrequencyOcSetIccMax          zesFrequencyOcGetTjMax         zesFrequencyOcSetTjMax
-
-    zesDeviceEnumEngineGroups zesEngineGetProperties zesEngineGetActivity
-
-    zesDevicePciGetProperties zesDevicePciGetState zesDevicePciGetStats zesDevicePciGetBars
-
-    zesDeviceEnumDiagnosticTestSuites zesDiagnosticsGetProperties zesDiagnosticsGetTests
-    zesDiagnosticsRunTests
-
-    zesDeviceEventRegister zesDriverEventListen
-
-    zesDeviceEnumFabricPorts zesFabricPortGetProperties zesFabricPortGetLinkType zesFabricPortGetConfig
-    zesFabricPortSetConfig   zesFabricPortGetState      zesFabricPortGetThroughput
-
-    zesDeviceEnumRasErrorSets zesRasGetProperties zesRasGetConfig zesRasSetConfig zesRasGetState
-
-    zesDeviceProcessesGetState
-
-    zesDeviceEnumFans   zesFanSetDefaultMode zesFanSetFixedSpeedMode zesFanSetSpeedTableMode
-    zesFanGetProperties zesFanGetConfig      zesFanGetState
-
-    zesDeviceEnumFirmwares zesFirmwareGetProperties zesFirmwareFlashData
-
-    zesDeviceEnumLeds zesLedGetProperties zesLedGetState zesLedSetState zesLedSetColor
-
-    zesDeviceEnumMemoryModules zesMemoryGetProperties zesMemoryGetState zesMemoryGetBandwidth
-
-    zesDeviceEnumPerformanceFactorDomains zesPerformanceFactorGetProperties zesPerformanceFactorGetConfig
-    zesPerformanceFactorSetConfig
-
-    zesDeviceEnumPsus zesPsuGetProperties zesPsuGetState
-
-    zesDeviceEnumSchedulers              zesSchedulerGetProperties              zesSchedulerGetCurrentMode
-    zesSchedulerGetTimeoutModeProperties zesSchedulerGetTimesliceModeProperties zesSchedulerSetTimeoutMode
-    zesSchedulerSetTimesliceMode         zesSchedulerSetExclusiveMode
-    zesSchedulerSetComputeUnitDebugMode
-
-    zesDeviceEnumStandbyDomains zesStandbyGetProperties zesStandbyGetMode zesStandbySetMode
-    """
-    for f in allFnsToReplace.split():
-        exec(fntemplate % (f, "stub"+f))
+    for f in filter(isStub, dir()):
+        exec(fntemplate % (f[4:], f))
 
 # Call ZE function, stripping (first) return code and converting non-success to exception:
 def zeCall(rc):
