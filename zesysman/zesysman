@@ -526,12 +526,1098 @@ def zes_typed_array(stype, count):
         init(stype, array[i])
 
     return array
+#
+# Helper
+#
+def saturate(value, minLimit, maxLimit):
+    return min(max(value, minLimit), maxLimit)
 
-# This is a special developer mode that forces all API functions for which a
-# replacement is available to return UNIMPLEMENTED. Normally, you would want
-# to specify --stub-unimplemented when using this mode
-if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED":
-    fntemplate = "def %s(*args, **kwargs):\n    return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE\n"
+if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "STUB_API":
+    # For stubs to retain state:
+    stubState = {}
+
+    def stubzesDeviceEnumTemperatureSensors(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 6)
+        elif uint32_value(count_ptr) == 6:
+            items = zes_temp_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GLOBAL)
+            items[1] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GPU)
+            items[2] = ulong_to_temp_handle(ZES_TEMP_SENSORS_MEMORY)
+            items[3] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GLOBAL_MIN)
+            items[4] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GPU_MIN)
+            items[5] = ulong_to_temp_handle(ZES_TEMP_SENSORS_MEMORY_MIN)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesTemperatureGetProperties(temp, tempProps):
+        t = temp_handle_to_ulong(temp)
+        tempProps.type = t
+        tempProps.onSubdevice = False
+        tempProps.subdeviceId = 0
+        tempProps.maxTemperature = 90.0 - 20.0 * t
+        tempProps.isCriticalTempSupported = t < ZES_TEMP_SENSORS_GLOBAL_MIN
+        tempProps.isThreshold1Supported = t != ZES_TEMP_SENSORS_MEMORY
+        tempProps.isThreshold2Supported = t not in [ZES_TEMP_SENSORS_MEMORY, ZES_TEMP_SENSORS_MEMORY_MIN]
+    def stubzesTemperatureGetConfig(temp, tempCfg):
+        global stubState
+        t = temp_handle_to_ulong(temp)
+        temps = stubState.setdefault("TempConfig", {})
+        cfg = temps.get(t, ( False, ( False, False, 50.0 ), ( False, False, 50.0 ) ))
+        tempCfg.enableCritical, t1cfg, t2cfg = cfg
+        t1 = tempCfg.threshold1
+        t1.enableLowToHigh, t1.enableHighToLow, t1.threshold = t1cfg
+        tempCfg.threshold1 = t1
+        t2 = tempCfg.threshold2
+        t2.enableLowToHigh, t2.enableHighToLow, t2.threshold = t2cfg
+        tempCfg.threshold2 = t2
+    def stubzesTemperatureSetConfig(temp, tempCfg):
+        global stubState
+        t = temp_handle_to_ulong(temp)
+        temps = stubState.setdefault("TempConfig", {})
+        temps[t] = ( tempCfg.enableCritical,
+                     ( tempCfg.threshold1.enableLowToHigh, tempCfg.threshold1.enableHighToLow,
+                       tempCfg.threshold1.threshold),
+                     ( tempCfg.threshold2.enableLowToHigh, tempCfg.threshold2.enableHighToLow,
+                       tempCfg.threshold2.threshold) )
+    def stubzesTemperatureGetState(temp):
+        global stubState
+        t = stubState.get("Temp", 50.0)
+        stubState["Temp"] = t + 0.1
+        return t
+    def stubzesDeviceEnumPowerDomains(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 1)
+        elif uint32_value(count_ptr) == 1:
+            p = stubState.setdefault("Pwr", {})
+            p["sustained"] = { "enabled" : True, "power" : 100000, "interval" : 1000 }
+            p["burst"] = { "enabled" : True, "power" : 150000 }
+            p["peak"] = { "powerAC" : 120000, "powerDC" : 90000 }
+            p["counter"] = { "energy" : 0, "timestamp" : 0 }
+            p["threshold"] = { "threshold" : 0.0, "process" : 0xffffffff }
+            items = zes_pwr_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_pwr_handle(0)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesPowerGetProperties(pwr, pwrProps):
+        pwrProps.onSubdevice = False
+        pwrProps.canControl = True
+        pwrProps.isEnergyThresholdSupported = True
+        pwrProps.defaultLimit = -1
+        pwrProps.minLimit = 20
+        pwrProps.maxLimit = 200000
+    def stubzesPowerSetLimits(pwr, sustainedLimit, burstLimit, peakLimit):
+        global stubState
+        p = stubState["Pwr"]
+        if sustainedLimit is not None:
+            p["sustained"]["enabled"] = sustainedLimit.enabled
+            p["sustained"]["power"] = sustainedLimit.power
+            p["sustained"]["interval"] = sustainedLimit.interval
+        if burstLimit is not None:
+            p["burst"]["enabled"] = burstLimit.enabled
+            p["burst"]["power"] = burstLimit.power
+        if peakLimit is not None:
+            p["peak"]["powerAC"] = peakLimit.powerAC
+            p["peak"]["powerDC"] = peakLimit.powerDC
+    def stubzesPowerGetLimits(pwr, sustainedLimit, burstLimit, peakLimit):
+        global stubState
+        p = stubState["Pwr"]
+        if sustainedLimit is not None:
+            sustainedLimit.enabled = p["sustained"]["enabled"]
+            sustainedLimit.power = p["sustained"]["power"]
+            sustainedLimit.interval = p["sustained"]["interval"]
+        if burstLimit is not None:
+            burstLimit.enabled = p["burst"]["enabled"]
+            burstLimit.power = p["burst"]["power"]
+        if peakLimit is not None:
+            peakLimit.powerAC = p["peak"]["powerAC"]
+            peakLimit.powerDC = p["peak"]["powerDC"]
+    def stubzesPowerGetEnergyCounter(pwr, pwrCounter):
+        global stubState
+        p = stubState["Pwr"]
+        p["counter"]["energy"] += 100000000
+        p["counter"]["timestamp"] += 1000000
+        pwrCounter.energy = p["counter"]["energy"]
+        pwrCounter.timestamp = p["counter"]["timestamp"]
+    def stubzesPowerGetEnergyThreshold(pwr, pwrThreshold):
+        global stubState
+        p = stubState["Pwr"]
+        pwrThreshold.enable = p["threshold"]["threshold"] != 0.0
+        pwrThreshold.threshold = p["threshold"]["threshold"]
+        pwrThreshold.processId = p["threshold"]["process"]
+    def stubzesPowerSetEnergyThreshold(pwr, threshold):
+        global stubState
+        p = stubState["Pwr"]
+        p["threshold"]["threshold"] = threshold
+        p["threshold"]["process"] = os.getpid()
+    def stubzesDeviceEnumFrequencyDomains(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            p = stubState.setdefault("Freq", {})
+            p[ZES_FREQ_DOMAIN_GPU] = { "Range" : (200.0, 1200.0),
+                                       "State" : 300.0,
+                                       "Throttled" : [0, 0],
+                                       "ocFreq" : 1200.0,
+                                       "ocVolt" : (3.0, 0.0),
+                                       "ocMode" : ZES_OC_MODE_OFF,
+                                       "iccMax" : 15.0,
+                                       "tjMax" : 150.0 }
+            p[ZES_FREQ_DOMAIN_MEMORY] = { "Range" : (200.0, 1200.0),
+                                          "State" : 300.0,
+                                          "Throttled" : [0, 0] }
+            items = zes_freq_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_freq_handle(ZES_FREQ_DOMAIN_GPU)
+            items[1] = ulong_to_freq_handle(ZES_FREQ_DOMAIN_MEMORY)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesFrequencyGetProperties(freq, freqProp):
+        freqProp.type = freq_handle_to_ulong(freq)
+        freqProp.onSubdevice = False
+        freqProp.subdeviceId = 0
+        freqProp.canControl = True
+        freqProp.isThrottleEventSupported = False
+        freqProp.min = 200.0
+        freqProp.max = 1200.0
+    def stubzesFrequencyGetAvailableClocks(freq, count_ptr, freq_array):
+        freqProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_PROPERTIES)
+        zeCall(zesFrequencyGetProperties(freq, freqProps))
+        freqs = []
+        freq = freqProps.min
+        while freq <= freqProps.max:
+            freqs.append(freq)
+            freq += 50.0
+        if freq_array is None:
+            uint32_assign(count_ptr, len(freqs))
+        elif uint32_value(count_ptr) == len(freqs):
+            results = double_array.frompointer(freq_array)
+            for i in range(len(freqs)):
+                results[i] = freqs[i]
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesFrequencyGetRange(freq, freqLimits):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        freqLimits.min, freqLimits.max = stubState["Freq"][f]["Range"]
+    def stubzesFrequencySetRange(freq, freqLimits):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        minLimit = saturate(freqLimits.min, 200.0, 1200.0)
+        maxLimit = saturate(freqLimits.max, 200.0, 1200.0)
+        stubState["Freq"][f]["Range"] = minLimit, maxLimit
+    def stubzesFrequencyGetState(freq, freqState):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        freqState.currentVoltage = 3.0
+        freqState.request = stubState["Freq"][f]["State"]
+        freqState.tdp = 1200.0
+        freqState.efficient = 1000.0
+        freqState.actual = stubState["Freq"][f]["State"]
+        freqState.throttleReasons = 0
+    def stubzesFrequencyGetThrottleTime(freq, freqThrottle):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        freqThrottle.throttleTime, freqThrottle.timestamp = stubState["Freq"][f]["Throttled"]
+        stubState["Freq"][f]["Throttled"][0] += 100000
+        stubState["Freq"][f]["Throttled"][1] += 1000000
+    def stubzesFrequencyOcGetCapabilities(freq, ocCapabilities):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            ocCapabilities.isOcSupported = True
+            ocCapabilities.maxFactoryDefaultFrequency = 300.0
+            ocCapabilities.maxFactoryDefaultVoltage = 3.0
+            ocCapabilities.maxOcFrequency = 2000
+            ocCapabilities.minOcVoltageOffset = 0.5
+            ocCapabilities.maxOcVoltageOffset = 1.5
+            ocCapabilities.maxOcVoltage = 5.0
+            ocCapabilities.isTjMaxSupported = True
+            ocCapabilities.isIccMaxSupported = True
+            ocCapabilities.isHighVoltModeCapable = True
+            ocCapabilities.isHighVoltModeEnabled = False
+            ocCapabilities.isExtendedModeSupported = True
+            ocCapabilities.isFixedModeSupported = True
+        elif f == 1:
+            ocCapabilities.isOcSupported = False
+            ocCapabilities.maxFactoryDefaultFrequency = 300.0
+            ocCapabilities.maxFactoryDefaultVoltage = 3.0
+            ocCapabilities.maxOcFrequency = 1200
+            ocCapabilities.minOcVoltageOffset = 0.0
+            ocCapabilities.maxOcVoltageOffset = 0.0
+            ocCapabilities.maxOcVoltage = 3.0
+            ocCapabilities.isTjMaxSupported = False
+            ocCapabilities.isIccMaxSupported = False
+            ocCapabilities.isHighVoltModeCapable = False
+            ocCapabilities.isHighVoltModeEnabled = False
+            ocCapabilities.isExtendedModeSupported = False
+            ocCapabilities.isFixedModeSupported = False
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcGetFrequencyTarget(freq):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["ocFreq"]
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcSetFrequencyTarget(freq, ocFTarget):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["ocFreq"] = ocFTarget
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcGetVoltageTarget(freq):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["ocVolt"]
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcSetVoltageTarget(freq, ocVTarget, ocVOffset):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["ocVolt"] = (ocVTarget, ocVOffset)
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcSetMode(freq, ocMode):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["ocMode"] = ocMode
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcGetMode(freq):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["ocMode"]
+        else:
+            return ZES_OC_MODE_OFF
+    def stubzesFrequencyOcGetIccMax(freq):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["iccMax"]
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcSetIccMax(freq, ocIccMax):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["iccMax"] = ocIccMax
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcGetTjMax(freq):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            return stubState["Freq"][f]["tjMax"]
+        else:
+            raise ValueError(f)
+    def stubzesFrequencyOcSetTjMax(freq, ocTjMax):
+        global stubState
+        f = freq_handle_to_ulong(freq)
+        if f == 0:
+            stubState["Freq"][f]["tjMax"] = ocTjMax
+        else:
+            raise ValueError(f)
+    def stubzesDeviceEnumEngineGroups(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 9)
+        elif uint32_value(count_ptr) == 9:
+            e = stubState.setdefault("Engine", {})
+            e[ZES_ENGINE_GROUP_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_COMPUTE_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_MEDIA_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_COPY_ALL] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_COMPUTE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_RENDER_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            e[ZES_ENGINE_GROUP_COPY_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
+            items = zes_engine_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_engine_handle(ZES_ENGINE_GROUP_ALL)
+            items[1] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COMPUTE_ALL)
+            items[2] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_ALL)
+            items[3] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COPY_ALL)
+            items[4] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COMPUTE_SINGLE)
+            items[5] = ulong_to_engine_handle(ZES_ENGINE_GROUP_RENDER_SINGLE)
+            items[6] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE)
+            items[7] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE)
+            items[8] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COPY_SINGLE)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesEngineGetProperties(eng, engProps):
+        engProps.type = engine_handle_to_ulong(eng)
+    def stubzesEngineGetActivity(eng, utilStats):
+        global stubState
+        e = stubState["Engine"]
+        etype = engine_handle_to_ulong(eng)
+        stats = e[etype]
+        stats["timestamp"] += 1000000
+        if etype == ZES_ENGINE_GROUP_ALL:
+            stats["activeTime"] += 700000
+        if etype == ZES_ENGINE_GROUP_COMPUTE_ALL:
+            stats["activeTime"] += 500000
+        if etype == ZES_ENGINE_GROUP_MEDIA_ALL:
+            stats["activeTime"] += 150000
+        if etype == ZES_ENGINE_GROUP_COPY_ALL:
+            stats["activeTime"] += 50000
+        if etype == ZES_ENGINE_GROUP_COMPUTE_SINGLE:
+            stats["activeTime"] += 300000
+        if etype == ZES_ENGINE_GROUP_RENDER_SINGLE:
+            stats["activeTime"] += 200000
+        if etype == ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE:
+            stats["activeTime"] += 30000
+        if etype == ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE:
+            stats["activeTime"] += 120000
+        if etype == ZES_ENGINE_GROUP_COPY_SINGLE:
+            stats["activeTime"] += 50000
+        utilStats.timestamp = stats["timestamp"]
+        utilStats.activeTime = stats["activeTime"]
+    def stubzesDevicePciGetProperties(dev, pciProps):
+        pciProps.address.domain = 1
+        pciProps.address.bus = 2
+        pciProps.address.device = 3
+        pciProps.address.function = 4
+        pciProps.maxSpeed.gen = 4
+        pciProps.maxSpeed.width = 16
+        pciProps.maxSpeed.maxBandwidth = -1
+        pciProps.haveBandwidthCounters = True
+        pciProps.havePacketCounters = True
+        pciProps.haveReplayCounters = True
+    def stubzesDevicePciGetState(dev, pciState):
+        pciState.status = ZES_PCI_LINK_STATUS_GOOD
+        pciState.qualityIssues = 0
+        pciState.stabilityIssues = 0
+        pciState.speed.gen = 4
+        pciState.speed.width = 4
+        pciState.speed.maxBandwidth = 7880000000
+    def stubzesDevicePciGetStats(dev, pciCounter):
+        global stubState
+        devs = stubState.setdefault("Devices", {})
+        d = devs.setdefault(device_handle_to_ulong(dev), {})
+        r = d.setdefault("PCIstats", [0,0,0,0,0])
+        pciCounter.timestamp = r[0]
+        pciCounter.replayCounter = r[1]
+        pciCounter.packetCounter = r[2]
+        pciCounter.rxCounter = r[3]
+        pciCounter.txCounter = r[4]
+        r[0] += 1000000
+        r[1] += 10
+        r[2] += 1000
+        r[3] += 788000000
+        r[4] += 78800000
+        pciCounter.speed.gen = 4
+        pciCounter.speed.width = 4
+        pciCounter.speed.maxBandwidth = 7880000000
+    def stubzesDevicePciGetBars(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 3)
+        elif uint32_value(count_ptr) == 3:
+            items = zes_pci_bar_properties_array.frompointer(handle_array)
+            item = items[0]
+            item.type = ZES_PCI_BAR_TYPE_MMIO
+            item.index = 0
+            item.base = 0x0000400000000000
+            item.size = 0x0000000000010000
+            items[0] = item
+            item = items[1]
+            item.type = ZES_PCI_BAR_TYPE_ROM
+            item.index = 1
+            item.base = 0x0000400000080000
+            item.size = 0x0000000000080000
+            items[1] = item
+            item = items[2]
+            item.type = ZES_PCI_BAR_TYPE_MEM
+            item.index = 2
+            item.base = 0x0000400000100000
+            item.size = 0x0000000000300000
+            items[2] = item
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesDeviceEnumDiagnosticTestSuites(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            items = zes_diag_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_diag_handle(0)
+            items[1] = ulong_to_diag_handle(1)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesDiagnosticsGetProperties(diag, diagProps):
+        diagProps.onSubdevice = False
+        suite = diag_handle_to_ulong(diag)
+        if suite == 0:
+            diagProps.name = "ARRAY"
+            diagProps.haveTests = True
+        elif suite == 1:
+            diagProps.name = "SCAN"
+            diagProps.haveTests = False
+        else:
+            raise ValueError(suite)
+    def stubzesDiagnosticsGetTests(diag, count_ptr, tests_array):
+        suite = diag_handle_to_ulong(diag)
+        if suite == 0:
+            if tests_array is None:
+                uint32_assign(count_ptr, 3)
+            elif uint32_value(count_ptr) == 3:
+                tests = zes_diag_test_array.frompointer(tests_array)
+                test = tests[0]
+                test.index = 65
+                test.name = "A"
+                tests[0] = test
+                test = tests[1]
+                test.index = 77
+                test.name = "M"
+                tests[1] = test
+                test = tests[2]
+                test.index = 80
+                test.name = "P"
+                tests[2] = test
+            else:
+                raise ValueError(uint32_value(count_ptr))
+        elif suite == 1:
+            if tests_array is None:
+                uint32_assign(count_ptr, 0)
+            elif uint32_value(count_ptr) != 0:
+                raise ValueError(uint32_value(count_ptr))
+        else:
+            raise ValueError(suite)
+    def stubzesDiagnosticsRunTests(diag, first, last):
+        suite = diag_handle_to_ulong(diag)
+        if suite == 0:
+            result = ZES_DIAG_RESULT_ABORT
+            if first <= 65 and last >= 65:
+                result = ZES_DIAG_RESULT_NO_ERRORS
+            if first <= 77 and last >= 77:
+                result = ZES_DIAG_RESULT_REBOOT_FOR_REPAIR
+            if first <= 80 and last >= 80:
+                result = ZES_DIAG_RESULT_FAIL_CANT_REPAIR
+            return result
+        elif suite == 1:
+            return ZES_DIAG_RESULT_NO_ERRORS
+        else:
+            raise ValueError(suite)
+    def stubzesDeviceEventRegister(dev, events):
+        global stubState
+        devs = stubState.setdefault("Devices", {})
+        d = devs.setdefault(device_handle_to_ulong(dev), {})
+        d["EventEnables"] = events
+    def stubzesDriverEventListen(drv, timeout, count, device_array, event_array):
+        global stubState
+        devs = stubState.setdefault("Devices", {})
+        devices = ze_device_handle_array.frompointer(device_array)
+        events = zes_event_type_flags_array.frompointer(event_array)
+        for i in range(count):
+            dev = devices[i]
+            d = devs.setdefault(device_handle_to_ulong(dev), {})
+            enables = d.setdefault("EventEnables", 0)
+            events[i] = enables & (ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH |
+                                   ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS |
+                                   ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED)
+        return count
+    def stubzesDeviceEnumFabricPorts(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 10)
+        elif uint32_value(count_ptr) == 10:
+            nextFabricId = stubState.setdefault("NextFabricId", 0)
+            devs = stubState.setdefault("Devices", {})
+            d = devs.setdefault(device_handle_to_ulong(dev), {})
+            fabricId = d.setdefault("FabricId", nextFabricId)
+            if fabricId == nextFabricId:
+                stubState["NextFabricId"] += 1
+            items = zes_fabric_port_handle_array.frompointer(handle_array)
+            for i in range(10):
+                items[i] = ulong_to_fabric_port_handle(fabricId * 10 + i)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesFabricPortGetProperties(port, portProps):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        fabricId = p // 10
+        localIdx = p % 10
+        portProps.model = "ANR"
+        portProps.onSubDevice = True
+        portProps.subdeviceId = localIdx // 5
+        portProps.portId.fabricId = fabricId
+        portProps.portId.attachId = localIdx // 5
+        portProps.portId.portNumber = localIdx % 5
+        portProps.maxRxSpeed.bitRate = 1000000000
+        portProps.maxRxSpeed.width = 8
+        portProps.maxTxSpeed.bitRate = 1000000000
+        portProps.maxTxSpeed.width = 8
+    def stubzesFabricPortGetLinkType(port, linkType):
+        linkType.desc = "ANR"
+    def stubzesFabricPortGetConfig(port, portConfig):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        ports = stubState.setdefault("FabricPortConfig", {})
+        portConfig.enabled, portConfig.beaconing = ports.setdefault(p, (True, False))
+    def stubzesFabricPortSetConfig(port, portConfig):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        ports = stubState.setdefault("FabricPortConfig", {})
+        ports[p] = (portConfig.enabled, portConfig.beaconing)
+    def stubzesFabricPortGetState(port, portState):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        ports = stubState.setdefault("FabricPortConfig", {})
+        enabled, _ = ports.setdefault(p, (True, False))
+        fabricId = p // 10
+        localIdx = p % 10
+        portState.qualityIssues = 0
+        portState.failureReasons = 0
+        if enabled:
+            if localIdx == 0:
+                portState.status = ZES_FABRIC_PORT_STATUS_UNKNOWN
+            elif localIdx == 1:
+                portState.status = ZES_FABRIC_PORT_STATUS_HEALTHY
+            elif localIdx == 2:
+                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
+                portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS
+            elif localIdx == 3:
+                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
+                portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED
+            elif localIdx == 4:
+                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
+                portState.qualityIssues = (ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS |
+                                           ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED)
+            elif localIdx == 5:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = (ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT |
+                                            ZES_FABRIC_PORT_FAILURE_FLAG_FAILED)
+            elif localIdx == 6:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = (ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING |
+                                            ZES_FABRIC_PORT_FAILURE_FLAG_FAILED)
+            elif localIdx == 7:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT
+            elif localIdx == 8:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING
+            else:
+                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
+                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FAILED
+        else:
+            portState.status = ZES_FABRIC_PORT_STATUS_DISABLED
+        portState.remotePortId.fabricId = fabricId ^ 1
+        portState.remotePortId.attachId = localIdx // 5
+        portState.remotePortId.portNumber = localIdx % 5
+        portState.rxSpeed.bitRate = 1000000000
+        portState.rxSpeed.width = 8
+        portState.txSpeed.bitRate = 1000000000
+        portState.txSpeed.width = 8
+    def stubzesFabricPortGetThroughput(port, portThroughput):
+        global stubState
+        p = fabric_port_handle_to_ulong(port)
+        ports = stubState.setdefault("FabricPortThroughput", {})
+        r = ports.setdefault(p, [0,0,0])
+        portThroughput.timestamp = r[0]
+        portThroughput.rxCounter = r[1]
+        portThroughput.txCounter = r[2]
+        r[0] += 1000000
+        r[1] += 1000000000
+        r[2] += 900000000
+    def stubzesDeviceEnumRasErrorSets(dev, count_ptr, handle_array):
+        global stubState
+        stubState.setdefault("RasErrors", {ZES_RAS_ERROR_TYPE_CORRECTABLE : [2, 0, 0, 0, 0, 0, 3],
+                                           ZES_RAS_ERROR_TYPE_UNCORRECTABLE : [1, 0, 0, 0, 0, 0, 1]})
+        stubState.setdefault("RasThresh", {ZES_RAS_ERROR_TYPE_CORRECTABLE : [2, 3, 1, 0, 0, 0, 0, 9],
+                                           ZES_RAS_ERROR_TYPE_UNCORRECTABLE : [1, 0, 1, 2, 3, 1, 0, 5]})
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            items = zes_ras_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_ras_handle(ZES_RAS_ERROR_TYPE_CORRECTABLE)
+            items[1] = ulong_to_ras_handle(ZES_RAS_ERROR_TYPE_UNCORRECTABLE)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesRasGetProperties(ras, rasProps):
+        rasProps.type = ras_handle_to_ulong(ras)
+        rasProps.onSubdevice = False
+        rasProps.subdeviceId = 0
+    def stubzesRasGetConfig(ras, rasConfig):
+        global stubState
+        r = ras_handle_to_ulong(ras)
+        thresholds = stubState["RasThresh"][r]
+        rasConfig.totalThreshold = thresholds[ZES_MAX_RAS_ERROR_CATEGORY_COUNT]
+        for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
+            ras_category_set(rasConfig.detailedThresholds, i, thresholds[i])
+    def stubzesRasSetConfig(ras, rasConfig):
+        global stubState
+        r = ras_handle_to_ulong(ras)
+        thresholds = stubState["RasThresh"][r]
+        thresholds[ZES_MAX_RAS_ERROR_CATEGORY_COUNT] = rasConfig.totalThreshold
+        for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
+            thresholds[i] = ras_category(rasConfig.detailedThresholds, i)
+    def stubzesRasGetState(ras, clearErrors, rasState):
+        global stubState
+        r = ras_handle_to_ulong(ras)
+        if clearErrors:
+            stubState["RasErrors"][r] = [0, 0, 0, 0, 0, 0, 0]
+        if rasState is not None:
+            errors = stubState["RasErrors"][r]
+            for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
+                ras_category_set(rasState, i, errors[i])
+                errors[i] += (i + 1)
+    def stubzesDeviceProcessesGetState(dev, count_ptr, proc_array):
+        if proc_array is None:
+            uint32_assign(count_ptr, 4)
+        elif uint32_value(count_ptr) == 4:
+            procs = zes_process_state_array.frompointer(proc_array)
+            proc = procs[0]
+            proc.processId = 32765
+            proc.memSize = 0x10000
+            proc.sharedSize = 0x1000
+            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_OTHER | 1 << ZES_ENGINE_TYPE_FLAG_COMPUTE
+            procs[0] = proc
+            proc = procs[1]
+            proc.processId = 32766
+            proc.memSize = 0x20000
+            proc.sharedSize = 0x1000
+            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_3D
+            procs[1] = proc
+            proc = procs[2]
+            proc.processId = 32767
+            proc.memSize = 0x30000
+            proc.sharedSize = 0x1000
+            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_MEDIA | 1 << ZES_ENGINE_TYPE_FLAG_DMA
+            procs[2] = proc
+            proc = procs[3]
+            proc.processId = 32768
+            proc.memSize = 0x40000
+            proc.sharedSize = 0x1000
+            proc.engines = (1 << ZES_ENGINE_TYPE_FLAG_OTHER | 1 << ZES_ENGINE_TYPE_FLAG_COMPUTE |
+                            1 << ZES_ENGINE_TYPE_FLAG_3D | 1 << ZES_ENGINE_TYPE_FLAG_MEDIA |
+                            1 << ZES_ENGINE_TYPE_FLAG_DMA)
+            procs[3] = proc
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesDeviceEnumFans(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            items = zes_fan_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_fan_handle(0)
+            items[1] = ulong_to_fan_handle(1)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesFanSetDefaultMode(fan):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        fanModes[f] = ZES_FAN_SPEED_MODE_DEFAULT
+    def stubzesFanSetFixedSpeedMode(fan, speed):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        fanModes[f] = ZES_FAN_SPEED_MODE_FIXED
+        fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
+        fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
+        fanSpeeds[f] = speed.speed
+        fanUnits[f] = speed.units
+    def stubzesFanSetSpeedTableMode(fan, speedTable):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        fanModes[f] = ZES_FAN_SPEED_MODE_TABLE
+        fanTables = stubState.setdefault("FanTable", {})
+        fanTablePoints = stubState.setdefault("FanTablePoints", {})
+        fanTablePoints[f] = speedTable.numPoints
+        table = []
+        tableSize = speedTable.numPoints
+        tempSpeed = zes_fan_temp_speed_array(tableSize)
+        fan_speed_table_get(speedTable, tableSize, tempSpeed.cast())
+        for t in range(tableSize):
+            item = tempSpeed[t]
+            entry = (item.temperature, item.speed.speed, item.speed.units)
+            table.append(entry)
+        fanTables[f] = table
+    def stubzesFanGetProperties(fan, fanProps):
+        f = fan_handle_to_ulong(fan)
+        fanProps.onSubdevice = f > 0
+        fanProps.subdeviceId = f
+        fanProps.canControl = True
+        fanProps.supportedModes = 7
+        fanProps.supportedUnits = 3
+        fanProps.maxRPM = 10000
+        fanProps.maxPoints = 10
+    def stubzesFanGetConfig(fan, fanConfig):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        fanConfig.mode = fanModes.setdefault(f, ZES_FAN_SPEED_MODE_DEFAULT)
+        if fanConfig.mode == ZES_FAN_SPEED_MODE_FIXED:
+            fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
+            fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
+            fanConfig.speedFixed.speed = fanSpeeds.setdefault(f, 1000)
+            fanConfig.speedFixed.units = fanUnits.setdefault(f, ZES_FAN_SPEED_UNITS_RPM)
+        elif fanConfig.mode == ZES_FAN_SPEED_MODE_TABLE:
+            fanTables = stubState.setdefault("FanTable", {})
+            fanTablePoints = stubState.setdefault("FanTablePoints", {})
+            tableSize = fanTablePoints.setdefault(f, 3)
+            table = fanTables.setdefault(f, [(50, 1000, ZES_FAN_SPEED_UNITS_RPM),
+                                             (100, 5000, ZES_FAN_SPEED_UNITS_RPM),
+                                             (150, 10000, ZES_FAN_SPEED_UNITS_RPM)])
+            tempSpeed = zes_fan_temp_speed_array(tableSize)
+            for t, entry in indexed(table):
+                item = tempSpeed[t]
+                item.temperature = entry[0]
+                item.speed.speed = entry[1]
+                item.speed.units = entry[2]
+                tempSpeed[t] = item
+            # fan_config_speed_table_set(fanConfig, tableSize, tempSpeed)
+    def stubzesFanGetState(fan, units):
+        global stubState
+        f = fan_handle_to_ulong(fan)
+        fanModes = stubState.setdefault("FanMode", {})
+        mode = fanModes.setdefault(f, ZES_FAN_SPEED_MODE_DEFAULT)
+        if mode == ZES_FAN_SPEED_MODE_FIXED:
+            fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
+            fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
+            current_speed = fanSpeeds.setdefault(f, 1000)
+            current_units = fanUnits.setdefault(f, ZES_FAN_SPEED_UNITS_RPM)
+        elif mode == ZES_FAN_SPEED_MODE_TABLE:
+            fanTables = stubState.setdefault("FanTable", {})
+            fanTablePoints = stubState.setdefault("FanTablePoints", {})
+            fanTableIndices = stubState.setdefault("FanTableIndices", {})
+            numPoints = fanTablePoints.setdefault(f, 3)
+            table = fanTables.setdefault(f, [(50, 1000, ZES_FAN_SPEED_UNITS_RPM),
+                                             (100, 5000, ZES_FAN_SPEED_UNITS_RPM),
+                                             (150, 10000, ZES_FAN_SPEED_UNITS_RPM)])
+            idx = fanTableIndices.setdefault(f, 0)
+            current_speed = table[idx][1]
+            current_units = table[idx][2]
+            if units == ZES_FAN_SPEED_UNITS_PERCENT:
+                fanTableIndices[f] = (idx + 1) % len(table)
+        else:
+            current_speed = 2000
+            current_units = ZES_FAN_SPEED_UNITS_RPM
+        if current_units == units:
+            return current_speed
+        elif units == ZES_FAN_SPEED_UNITS_RPM:
+            return current_speed * 100
+        else:
+            return current_speed // 100
+    def stubzesDeviceEnumFirmwares(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 1)
+        elif uint32_value(count_ptr) == 1:
+            items = zes_firmware_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_firmware_handle(0)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesFirmwareGetProperties(fw, fwProps):
+        fwProps.onSubdevice = False
+        fwProps.subdeviceId = 0
+        fwProps.canControl = True
+        fwProps.name = "FIRMWARE"
+        fwProps.version = "1.0.0"
+    def stubzesFirmwareFlashData(handle, image):
+        fw = firmware_handle_to_ulong(handle)
+        pr("Flashing firmware image", fw, "of size", len(image), ":")
+        if image.isascii():
+            lines = str(image, 'utf-8').splitlines()
+            if len(lines) < 100:
+                pr(" " + "\n ".join(lines))
+            else:
+                pr(" [ascii data, greater than 100 lines]")
+        else:
+            pr(" [binary data]")
+    def stubzesDeviceEnumLeds(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 2)
+        elif uint32_value(count_ptr) == 2:
+            l = stubState.setdefault("Led", {})
+            l[0] = { "on" : False, "color" : (1.0, 0.0, 0.0) }
+            l[1] = { "on" : False, "color" : (1.0, 0.0, 0.0) }
+            items = zes_led_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_led_handle(0)
+            items[1] = ulong_to_led_handle(1)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesLedGetProperties(led, ledProps):
+        global stubState
+        l = led_handle_to_ulong(led)
+        if l > 1:
+            raise ValueError(l)
+        ledProps.canControl = True
+        ledProps.haveRGB = l==0
+    def stubzesLedGetState(led, ledState):
+        global stubState
+        l = led_handle_to_ulong(led)
+        if l > 1:
+            raise ValueError(l)
+        ledState.isOn = stubState["Led"][l]["on"]
+        color = zes_led_color_t()
+        color.red,color.green,color.blue = stubState["Led"][l]["color"]
+        ledState.color = color
+    def stubzesLedSetState(led, enable):
+        global stubState
+        l = led_handle_to_ulong(led)
+        if l > 1:
+            raise ValueError(l)
+        stubState["Led"][l]["on"] = enable
+    def stubzesLedSetColor(led, color):
+        global stubState
+        l = led_handle_to_ulong(led)
+        if l > 1:
+            raise ValueError(l)
+        stubState["Led"][l]["color"] = color.red,color.green,color.blue
+    def stubzesDeviceEnumMemoryModules(dev, count_ptr, handle_array):
+        global stubState
+        if handle_array is None:
+            uint32_assign(count_ptr, 14)
+        elif uint32_value(count_ptr) == 14:
+            m = stubState.setdefault("Mem", {})
+            m[ZES_MEM_TYPE_HBM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_DDR] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_DDR3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_DDR4] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_DDR5] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_LPDDR] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_LPDDR3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_LPDDR4] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_LPDDR5] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_SRAM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_L1] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_L3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_GRF] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            m[ZES_MEM_TYPE_SLM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
+            items = zes_mem_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_mem_handle(ZES_MEM_TYPE_HBM)
+            items[1] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR)
+            items[2] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR3)
+            items[3] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR4)
+            items[4] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR5)
+            items[5] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR)
+            items[6] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR3)
+            items[7] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR4)
+            items[8] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR5)
+            items[9] = ulong_to_mem_handle(ZES_MEM_TYPE_SRAM)
+            items[10] = ulong_to_mem_handle(ZES_MEM_TYPE_L1)
+            items[11] = ulong_to_mem_handle(ZES_MEM_TYPE_L3)
+            items[12] = ulong_to_mem_handle(ZES_MEM_TYPE_GRF)
+            items[13] = ulong_to_mem_handle(ZES_MEM_TYPE_SLM)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesMemoryGetProperties(mem, memProps):
+        m = mem_handle_to_ulong(mem)
+        if m > ZES_MEM_TYPE_SLM:
+            raise ValueError(m)
+        memProps.type = m
+        if m < ZES_MEM_TYPE_LPDDR:
+            memProps.onSubdevice = False
+        else:
+            memProps.onSubdevice = True
+        memProps.subdeviceId = 0
+        if m < ZES_MEM_TYPE_SRAM:
+            memProps.location = ZES_MEM_LOC_SYSTEM
+        else:
+            memProps.location = ZES_MEM_LOC_DEVICE
+        memProps.physicalSize = 2000000000
+        memProps.busWidth = 64
+        memProps.numChannels = 2
+    def stubzesMemoryGetState(mem, memState):
+        global stubState
+        m = mem_handle_to_ulong(mem)
+        memState.health = m % 5
+        f, s = stubState["Mem"][m]["usage"]
+        memState.free, memState.size = f, s
+        f -= 100000000 + m * 10000000
+        while f < 0:
+            f += s
+        stubState["Mem"][m]["usage"] = f, s
+    def stubzesMemoryGetBandwidth(mem, memBw):
+        global stubState
+        m = mem_handle_to_ulong(mem)
+        r, w, x, t = stubState["Mem"][m]["bw"]
+        memBw.readCounter, memBw.writeCounter, memBw.maxBandwidth, memBw.timestamp = r, w, x, t
+        r += 200000000 + m * 10000000
+        w += 100000000 + m * 20000000
+        t += 1000000
+        stubState["Mem"][m]["bw"] = r, w, x, t
+    def stubzesDeviceEnumPerformanceFactorDomains(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 5)
+        elif uint32_value(count_ptr) == 5:
+            items = zes_perf_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE)
+            items[1] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE | ZES_ENGINE_TYPE_FLAG_3D)
+            items[2] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_OTHER | ZES_ENGINE_TYPE_FLAG_MEDIA)
+            items[3] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_OTHER | ZES_ENGINE_TYPE_FLAG_DMA)
+            items[4] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_DMA)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesPerformanceFactorGetProperties(perf, perfProps):
+        p = perf_handle_to_ulong(perf)
+        perfProps.onSubdevice = False
+        perfProps.subdeviceId = 0
+        perfProps.engines = p
+    def stubzesPerformanceFactorGetConfig(perf):
+        global stubState
+        p = perf_handle_to_ulong(perf)
+        pds = stubState.setdefault("Perf", {})
+        return pds.setdefault(p, 50.0)
+    def stubzesPerformanceFactorSetConfig(perf, val):
+        global stubState
+        p = perf_handle_to_ulong(perf)
+        pds = stubState.setdefault("Perf", {})
+        pds[p] = val
+    def stubzesDeviceEnumPsus(dev, count_ptr, handle_array):
+        global stubState
+        stubState.setdefault("PsuState", ZES_PSU_VOLTAGE_STATUS_NORMAL)
+        stubState.setdefault("PsuTable", { ZES_PSU_VOLTAGE_STATUS_UNKNOWN : (True, 250, 100),
+                                           ZES_PSU_VOLTAGE_STATUS_NORMAL : (False, 50, 200),
+                                           ZES_PSU_VOLTAGE_STATUS_OVER : (True, 150, 750),
+                                           ZES_PSU_VOLTAGE_STATUS_UNDER : (False, 75, 150) })
+        if handle_array is None:
+            uint32_assign(count_ptr, 1)
+        elif uint32_value(count_ptr) == 1:
+            items = zes_psu_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_psu_handle(0)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesPsuGetProperties(psu, psuProps):
+        psuProps.onSubdevice = False
+        psuProps.subdeviceId = 0
+        psuProps.haveFan = True
+        psuProps.ampLimit = 750
+    def stubzesPsuGetState(psu, psuState):
+        global stubState
+        voltStatus = stubState["PsuState"]
+        psuState.voltStatus = voltStatus
+        psuState.fanFailed, psuState.temperature, psuState.current = stubState["PsuTable"][voltStatus]
+        stubState["PsuState"] = (voltStatus + 1) % 4
+    def stubzesDeviceEnumSchedulers(dev, count_ptr, handle_array):
+        global stubState
+        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
+        stubState.setdefault("SchedMode", { ZES_ENGINE_TYPE_FLAG_COMPUTE : ZES_SCHED_MODE_TIMESLICE,
+                                            ZES_ENGINE_TYPE_FLAG_3D : ZES_SCHED_MODE_TIMEOUT,
+                                            ZES_ENGINE_TYPE_FLAG_MEDIA : ZES_SCHED_MODE_TIMEOUT,
+                                            DMA_ENGINE_TYPES : ZES_SCHED_MODE_EXCLUSIVE })
+        stubState.setdefault("Timeout", { ZES_ENGINE_TYPE_FLAG_COMPUTE : 5000000,
+                                          ZES_ENGINE_TYPE_FLAG_3D : 25000000,
+                                          ZES_ENGINE_TYPE_FLAG_MEDIA : 15000000,
+                                          DMA_ENGINE_TYPES : 1000000 })
+        stubState.setdefault("Timeslice", { ZES_ENGINE_TYPE_FLAG_COMPUTE : (500000, 5000000),
+                                            ZES_ENGINE_TYPE_FLAG_3D : (1000000, 25000000),
+                                            ZES_ENGINE_TYPE_FLAG_MEDIA : (750000, 15000000),
+                                            DMA_ENGINE_TYPES : (500000, 1000000) })
+        if handle_array is None:
+            uint32_assign(count_ptr, 4)
+        elif uint32_value(count_ptr) == 4:
+            items = zes_sched_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE)
+            items[1] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_3D)
+            items[2] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_MEDIA)
+            items[3] = ulong_to_sched_handle(DMA_ENGINE_TYPES)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesSchedulerGetProperties(sched, schedProps):
+        s = sched_handle_to_ulong(sched)
+        schedProps.onSubdevice = False
+        schedProps.subdeviceId = 0
+        schedProps.canControl = not (s & ZES_ENGINE_TYPE_FLAG_DMA)
+        schedProps.engines = s
+        supportedModes = 0
+        if s & ZES_ENGINE_TYPE_FLAG_DMA:
+            supportedModes = 1 << ZES_SCHED_MODE_EXCLUSIVE
+        if s & ZES_ENGINE_TYPE_FLAG_COMPUTE:
+            supportedModes |= 1 << ZES_SCHED_MODE_TIMEOUT
+            supportedModes |= 1 << ZES_SCHED_MODE_TIMESLICE
+            supportedModes |= 1 << ZES_SCHED_MODE_EXCLUSIVE
+            supportedModes |= 1 << ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
+        if s & ZES_ENGINE_TYPE_FLAG_3D:
+            supportedModes |= 1 << ZES_SCHED_MODE_TIMESLICE
+        if s & ZES_ENGINE_TYPE_FLAG_MEDIA:
+            supportedModes |= 1 << ZES_SCHED_MODE_TIMEOUT
+            supportedModes |= 1 << ZES_SCHED_MODE_EXCLUSIVE
+        schedProps.supportedModes = supportedModes
+    def stubzesSchedulerGetCurrentMode(sched):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        return stubState["SchedMode"][s]
+    def stubzesSchedulerGetTimeoutModeProperties(sched, getDefaults, schedConfig):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
+        if getDefaults:
+            timeoutProperties = { ZES_ENGINE_TYPE_FLAG_COMPUTE : 5000000,
+                                  ZES_ENGINE_TYPE_FLAG_3D : 25000000,
+                                  ZES_ENGINE_TYPE_FLAG_MEDIA : 15000000,
+                                  DMA_ENGINE_TYPES : 1000000 }
+        else:
+            timeoutProperties = stubState["Timeout"]
+        schedConfig.watchdogTimeout = timeoutProperties[s]
+    def stubzesSchedulerGetTimesliceModeProperties(sched, getDefaults, schedConfig):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
+        if getDefaults:
+            timesliceProperties = { ZES_ENGINE_TYPE_FLAG_COMPUTE : (500000, 5000000),
+                                    ZES_ENGINE_TYPE_FLAG_3D : (1000000, 25000000),
+                                    ZES_ENGINE_TYPE_FLAG_MEDIA : (750000, 15000000),
+                                    DMA_ENGINE_TYPES : (500000, 1000000) }
+        else:
+            timesliceProperties = stubState["Timeslice"]
+        schedConfig.interval, schedConfig.yieldTimeout = timesliceProperties[s]
+    def stubzesSchedulerSetTimeoutMode(sched, schedConfig):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_TIMEOUT
+        stubState["SchedMode"][s] = ZES_SCHED_MODE_TIMEOUT
+        if schedConfig:
+            stubState["Timeout"][s] = schedConfig.watchdogTimeout
+        return needReload
+    def stubzesSchedulerSetTimesliceMode(sched, schedConfig):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_TIMESLICE
+        stubState["SchedMode"][s] = ZES_SCHED_MODE_TIMESLICE
+        if schedConfig:
+            stubState["Timeslice"][s] = schedConfig.interval, schedConfig.yieldTimeout
+        return needReload
+    def stubzesSchedulerSetExclusiveMode(sched):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_EXCLUSIVE
+        stubState["SchedMode"][s] = ZES_SCHED_MODE_EXCLUSIVE
+        return needReload
+    def stubzesSchedulerSetComputeUnitDebugMode(sched):
+        global stubState
+        s = sched_handle_to_ulong(sched)
+        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
+        stubState["SchedMode"][s] = ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
+        return needReload
+    def stubzesDeviceEnumStandbyDomains(dev, count_ptr, handle_array):
+        if handle_array is None:
+            uint32_assign(count_ptr, 1)
+        elif uint32_value(count_ptr) == 1:
+            items = zes_standby_handle_array.frompointer(handle_array)
+            items[0] = ulong_to_standby_handle(0)
+        else:
+            raise ValueError(uint32_value(count_ptr))
+    def stubzesStandbyGetProperties(stby, stbyProps):
+        stbyProps.type = ZES_STANDBY_TYPE_GLOBAL
+        stbyProps.onSubdevice = False
+        stbyProps.subdeviceId = 0
+    def stubzesStandbyGetMode(stby):
+        global stubState
+        return stubState.setdefault("Standby", ZES_STANDBY_PROMO_MODE_DEFAULT)
+    def stubzesStandbySetMode(stby, stbyMode):
+        global stubState
+        stubState["Standby"] = stbyMode
+
+    fntemplate = "def %s(*args, **kwargs):\n    return {'fn':%s, 'args':args, 'kwargs':kwargs}\n"
     allFnsToReplace = """
     zesDeviceEnumTemperatureSensors zesTemperatureGetProperties zesTemperatureGetConfig
     zesTemperatureSetConfig         zesTemperatureGetState
@@ -584,1217 +1670,13 @@ if os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper() == "FORCE_UNIMPLEMENTED"
     zesDeviceEnumStandbyDomains zesStandbyGetProperties zesStandbyGetMode zesStandbySetMode
     """
     for f in allFnsToReplace.split():
-        exec(fntemplate % f)
-
-#
-# For development purposes, to replace unimplemented functions
-#
-replaceUnimplementedFunctions = False
-
-#
-# Helper
-#
-def saturate(value, minLimit, maxLimit):
-    return min(max(value, minLimit), maxLimit)
-
-# For stubs to retain state:
-stubState = {}
-
-def unimplementedFunctionCall(func, *args, **kwargs):
-    global replaceUnimplementedFunctions
-
-    pr.dbg(func, "unimplemented")
-
-    if not replaceUnimplementedFunctions:
-        raise NotImplementedError
-
-    def stubDeviceEnumTemperatureSensors(dev, count_ptr, handle_array):
-        if handle_array is None:
-            uint32_assign(count_ptr, 6)
-        elif uint32_value(count_ptr) == 6:
-            items = zes_temp_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GLOBAL)
-            items[1] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GPU)
-            items[2] = ulong_to_temp_handle(ZES_TEMP_SENSORS_MEMORY)
-            items[3] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GLOBAL_MIN)
-            items[4] = ulong_to_temp_handle(ZES_TEMP_SENSORS_GPU_MIN)
-            items[5] = ulong_to_temp_handle(ZES_TEMP_SENSORS_MEMORY_MIN)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubTemperatureGetProperties(temp, tempProps):
-        t = temp_handle_to_ulong(temp)
-        tempProps.type = t
-        tempProps.onSubdevice = False
-        tempProps.subdeviceId = 0
-        tempProps.maxTemperature = 90.0 - 20.0 * t
-        tempProps.isCriticalTempSupported = t < ZES_TEMP_SENSORS_GLOBAL_MIN
-        tempProps.isThreshold1Supported = t != ZES_TEMP_SENSORS_MEMORY
-        tempProps.isThreshold2Supported = t not in [ZES_TEMP_SENSORS_MEMORY, ZES_TEMP_SENSORS_MEMORY_MIN]
-    def stubTemperatureGetConfig(temp, tempCfg):
-        global stubState
-        t = temp_handle_to_ulong(temp)
-        temps = stubState.setdefault("TempConfig", {})
-        cfg = temps.get(t, ( False, ( False, False, 50.0 ), ( False, False, 50.0 ) ))
-        tempCfg.enableCritical, t1cfg, t2cfg = cfg
-        t1 = tempCfg.threshold1
-        t1.enableLowToHigh, t1.enableHighToLow, t1.threshold = t1cfg
-        tempCfg.threshold1 = t1
-        t2 = tempCfg.threshold2
-        t2.enableLowToHigh, t2.enableHighToLow, t2.threshold = t2cfg
-        tempCfg.threshold2 = t2
-    def stubTemperatureSetConfig(temp, tempCfg):
-        global stubState
-        t = temp_handle_to_ulong(temp)
-        temps = stubState.setdefault("TempConfig", {})
-        temps[t] = ( tempCfg.enableCritical,
-                     ( tempCfg.threshold1.enableLowToHigh, tempCfg.threshold1.enableHighToLow,
-                       tempCfg.threshold1.threshold),
-                     ( tempCfg.threshold2.enableLowToHigh, tempCfg.threshold2.enableHighToLow,
-                       tempCfg.threshold2.threshold) )
-    def stubTemperatureGetState(temp):
-        global stubState
-        t = stubState.get("Temp", 50.0)
-        stubState["Temp"] = t + 0.1
-        return t
-    def stubDeviceEnumPowerDomains(dev, count_ptr, handle_array):
-        global stubState
-        if handle_array is None:
-            uint32_assign(count_ptr, 1)
-        elif uint32_value(count_ptr) == 1:
-            p = stubState.setdefault("Pwr", {})
-            p["sustained"] = { "enabled" : True, "power" : 100000, "interval" : 1000 }
-            p["burst"] = { "enabled" : True, "power" : 150000 }
-            p["peak"] = { "powerAC" : 120000, "powerDC" : 90000 }
-            p["counter"] = { "energy" : 0, "timestamp" : 0 }
-            p["threshold"] = { "threshold" : 0.0, "process" : 0xffffffff }
-            items = zes_pwr_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_pwr_handle(0)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubPowerGetProperties(pwr, pwrProps):
-        pwrProps.onSubdevice = False
-        pwrProps.canControl = True
-        pwrProps.isEnergyThresholdSupported = True
-        pwrProps.defaultLimit = -1
-        pwrProps.minLimit = 20
-        pwrProps.maxLimit = 200000
-    def stubPowerSetLimits(pwr, sustainedLimit, burstLimit, peakLimit):
-        global stubState
-        p = stubState["Pwr"]
-        if sustainedLimit is not None:
-            p["sustained"]["enabled"] = sustainedLimit.enabled
-            p["sustained"]["power"] = sustainedLimit.power
-            p["sustained"]["interval"] = sustainedLimit.interval
-        if burstLimit is not None:
-            p["burst"]["enabled"] = burstLimit.enabled
-            p["burst"]["power"] = burstLimit.power
-        if peakLimit is not None:
-            p["peak"]["powerAC"] = peakLimit.powerAC
-            p["peak"]["powerDC"] = peakLimit.powerDC
-    def stubPowerGetLimits(pwr, sustainedLimit, burstLimit, peakLimit):
-        global stubState
-        p = stubState["Pwr"]
-        if sustainedLimit is not None:
-            sustainedLimit.enabled = p["sustained"]["enabled"]
-            sustainedLimit.power = p["sustained"]["power"]
-            sustainedLimit.interval = p["sustained"]["interval"]
-        if burstLimit is not None:
-            burstLimit.enabled = p["burst"]["enabled"]
-            burstLimit.power = p["burst"]["power"]
-        if peakLimit is not None:
-            peakLimit.powerAC = p["peak"]["powerAC"]
-            peakLimit.powerDC = p["peak"]["powerDC"]
-    def stubPowerGetEnergyCounter(pwr, pwrCounter):
-        global stubState
-        p = stubState["Pwr"]
-        p["counter"]["energy"] += 100000000
-        p["counter"]["timestamp"] += 1000000
-        pwrCounter.energy = p["counter"]["energy"]
-        pwrCounter.timestamp = p["counter"]["timestamp"]
-    def stubPowerGetEnergyThreshold(pwr, pwrThreshold):
-        global stubState
-        p = stubState["Pwr"]
-        pwrThreshold.enable = p["threshold"]["threshold"] != 0.0
-        pwrThreshold.threshold = p["threshold"]["threshold"]
-        pwrThreshold.processId = p["threshold"]["process"]
-    def stubPowerSetEnergyThreshold(pwr, threshold):
-        global stubState
-        p = stubState["Pwr"]
-        p["threshold"]["threshold"] = threshold
-        p["threshold"]["process"] = os.getpid()
-    def stubDeviceEnumFrequencyDomains(dev, count_ptr, handle_array):
-        global stubState
-        if handle_array is None:
-            uint32_assign(count_ptr, 2)
-        elif uint32_value(count_ptr) == 2:
-            p = stubState.setdefault("Freq", {})
-            p[ZES_FREQ_DOMAIN_GPU] = { "Range" : (200.0, 1200.0),
-                                       "State" : 300.0,
-                                       "Throttled" : [0, 0],
-                                       "ocFreq" : 1200.0,
-                                       "ocVolt" : (3.0, 0.0),
-                                       "ocMode" : ZES_OC_MODE_OFF,
-                                       "iccMax" : 15.0,
-                                       "tjMax" : 150.0 }
-            p[ZES_FREQ_DOMAIN_MEMORY] = { "Range" : (200.0, 1200.0),
-                                          "State" : 300.0,
-                                          "Throttled" : [0, 0] }
-            items = zes_freq_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_freq_handle(ZES_FREQ_DOMAIN_GPU)
-            items[1] = ulong_to_freq_handle(ZES_FREQ_DOMAIN_MEMORY)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubFrequencyGetProperties(freq, freqProp):
-        freqProp.type = freq_handle_to_ulong(freq)
-        freqProp.onSubdevice = False
-        freqProp.subdeviceId = 0
-        freqProp.canControl = True
-        freqProp.isThrottleEventSupported = False
-        freqProp.min = 200.0
-        freqProp.max = 1200.0
-    def stubFrequencyGetAvailableClocks(freq, count_ptr, freq_array):
-        freqProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_PROPERTIES)
-        zeCall(zesFrequencyGetProperties, freq, freqProps)
-        freqs = []
-        freq = freqProps.min
-        while freq <= freqProps.max:
-            freqs.append(freq)
-            freq += 50.0
-        if freq_array is None:
-            uint32_assign(count_ptr, len(freqs))
-        elif uint32_value(count_ptr) == len(freqs):
-            results = double_array.frompointer(freq_array)
-            for i in range(len(freqs)):
-                results[i] = freqs[i]
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubFrequencyGetRange(freq, freqLimits):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        freqLimits.min, freqLimits.max = stubState["Freq"][f]["Range"]
-    def stubFrequencySetRange(freq, freqLimits):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        minLimit = saturate(freqLimits.min, 200.0, 1200.0)
-        maxLimit = saturate(freqLimits.max, 200.0, 1200.0)
-        stubState["Freq"][f]["Range"] = minLimit, maxLimit
-    def stubFrequencyGetState(freq, freqState):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        freqState.currentVoltage = 3.0
-        freqState.request = stubState["Freq"][f]["State"]
-        freqState.tdp = 1200.0
-        freqState.efficient = 1000.0
-        freqState.actual = stubState["Freq"][f]["State"]
-        freqState.throttleReasons = 0
-    def stubFrequencyGetThrottleTime(freq, freqThrottle):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        freqThrottle.throttleTime, freqThrottle.timestamp = stubState["Freq"][f]["Throttled"]
-        stubState["Freq"][f]["Throttled"][0] += 100000
-        stubState["Freq"][f]["Throttled"][1] += 1000000
-    def stubFrequencyOcGetCapabilities(freq, ocCapabilities):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            ocCapabilities.isOcSupported = True
-            ocCapabilities.maxFactoryDefaultFrequency = 300.0
-            ocCapabilities.maxFactoryDefaultVoltage = 3.0
-            ocCapabilities.maxOcFrequency = 2000
-            ocCapabilities.minOcVoltageOffset = 0.5
-            ocCapabilities.maxOcVoltageOffset = 1.5
-            ocCapabilities.maxOcVoltage = 5.0
-            ocCapabilities.isTjMaxSupported = True
-            ocCapabilities.isIccMaxSupported = True
-            ocCapabilities.isHighVoltModeCapable = True
-            ocCapabilities.isHighVoltModeEnabled = False
-            ocCapabilities.isExtendedModeSupported = True
-            ocCapabilities.isFixedModeSupported = True
-        elif f == 1:
-            ocCapabilities.isOcSupported = False
-            ocCapabilities.maxFactoryDefaultFrequency = 300.0
-            ocCapabilities.maxFactoryDefaultVoltage = 3.0
-            ocCapabilities.maxOcFrequency = 1200
-            ocCapabilities.minOcVoltageOffset = 0.0
-            ocCapabilities.maxOcVoltageOffset = 0.0
-            ocCapabilities.maxOcVoltage = 3.0
-            ocCapabilities.isTjMaxSupported = False
-            ocCapabilities.isIccMaxSupported = False
-            ocCapabilities.isHighVoltModeCapable = False
-            ocCapabilities.isHighVoltModeEnabled = False
-            ocCapabilities.isExtendedModeSupported = False
-            ocCapabilities.isFixedModeSupported = False
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcGetFrequencyTarget(freq):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            return stubState["Freq"][f]["ocFreq"]
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcSetFrequencyTarget(freq, ocFTarget):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            stubState["Freq"][f]["ocFreq"] = ocFTarget
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcGetVoltageTarget(freq):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            return stubState["Freq"][f]["ocVolt"]
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcSetVoltageTarget(freq, ocVTarget, ocVOffset):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            stubState["Freq"][f]["ocVolt"] = (ocVTarget, ocVOffset)
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcSetMode(freq, ocMode):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            stubState["Freq"][f]["ocMode"] = ocMode
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcGetMode(freq):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            return stubState["Freq"][f]["ocMode"]
-        else:
-            return ZES_OC_MODE_OFF
-    def stubFrequencyOcGetIccMax(freq):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            return stubState["Freq"][f]["iccMax"]
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcSetIccMax(freq, ocIccMax):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            stubState["Freq"][f]["iccMax"] = ocIccMax
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcGetTjMax(freq):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            return stubState["Freq"][f]["tjMax"]
-        else:
-            raise ValueError(f)
-    def stubFrequencyOcSetTjMax(freq, ocTjMax):
-        global stubState
-        f = freq_handle_to_ulong(freq)
-        if f == 0:
-            stubState["Freq"][f]["tjMax"] = ocTjMax
-        else:
-            raise ValueError(f)
-    def stubDeviceEnumEngineGroups(dev, count_ptr, handle_array):
-        global stubState
-        if handle_array is None:
-            uint32_assign(count_ptr, 9)
-        elif uint32_value(count_ptr) == 9:
-            e = stubState.setdefault("Engine", {})
-            e[ZES_ENGINE_GROUP_ALL] = { "activeTime" : 0, "timestamp" : 0 }
-            e[ZES_ENGINE_GROUP_COMPUTE_ALL] = { "activeTime" : 0, "timestamp" : 0 }
-            e[ZES_ENGINE_GROUP_MEDIA_ALL] = { "activeTime" : 0, "timestamp" : 0 }
-            e[ZES_ENGINE_GROUP_COPY_ALL] = { "activeTime" : 0, "timestamp" : 0 }
-            e[ZES_ENGINE_GROUP_COMPUTE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
-            e[ZES_ENGINE_GROUP_RENDER_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
-            e[ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
-            e[ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
-            e[ZES_ENGINE_GROUP_COPY_SINGLE] = { "activeTime" : 0, "timestamp" : 0 }
-            items = zes_engine_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_engine_handle(ZES_ENGINE_GROUP_ALL)
-            items[1] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COMPUTE_ALL)
-            items[2] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_ALL)
-            items[3] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COPY_ALL)
-            items[4] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COMPUTE_SINGLE)
-            items[5] = ulong_to_engine_handle(ZES_ENGINE_GROUP_RENDER_SINGLE)
-            items[6] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE)
-            items[7] = ulong_to_engine_handle(ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE)
-            items[8] = ulong_to_engine_handle(ZES_ENGINE_GROUP_COPY_SINGLE)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubEngineGetProperties(eng, engProps):
-        engProps.type = engine_handle_to_ulong(eng)
-    def stubEngineGetActivity(eng, utilStats):
-        global stubState
-        e = stubState["Engine"]
-        etype = engine_handle_to_ulong(eng)
-        stats = e[etype]
-        stats["timestamp"] += 1000000
-        if etype == ZES_ENGINE_GROUP_ALL:
-            stats["activeTime"] += 700000
-        if etype == ZES_ENGINE_GROUP_COMPUTE_ALL:
-            stats["activeTime"] += 500000
-        if etype == ZES_ENGINE_GROUP_MEDIA_ALL:
-            stats["activeTime"] += 150000
-        if etype == ZES_ENGINE_GROUP_COPY_ALL:
-            stats["activeTime"] += 50000
-        if etype == ZES_ENGINE_GROUP_COMPUTE_SINGLE:
-            stats["activeTime"] += 300000
-        if etype == ZES_ENGINE_GROUP_RENDER_SINGLE:
-            stats["activeTime"] += 200000
-        if etype == ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE:
-            stats["activeTime"] += 30000
-        if etype == ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE:
-            stats["activeTime"] += 120000
-        if etype == ZES_ENGINE_GROUP_COPY_SINGLE:
-            stats["activeTime"] += 50000
-        utilStats.timestamp = stats["timestamp"]
-        utilStats.activeTime = stats["activeTime"]
-    def stubDevicePciGetProperties(dev, pciProps):
-        pciProps.address.domain = 1
-        pciProps.address.bus = 2
-        pciProps.address.device = 3
-        pciProps.address.function = 4
-        pciProps.maxSpeed.gen = 4
-        pciProps.maxSpeed.width = 16
-        pciProps.maxSpeed.maxBandwidth = -1
-        pciProps.haveBandwidthCounters = True
-        pciProps.havePacketCounters = True
-        pciProps.haveReplayCounters = True
-    def stubDevicePciGetState(dev, pciState):
-        pciState.status = ZES_PCI_LINK_STATUS_GOOD
-        pciState.qualityIssues = 0
-        pciState.stabilityIssues = 0
-        pciState.speed.gen = 4
-        pciState.speed.width = 4
-        pciState.speed.maxBandwidth = 7880000000
-    def stubDevicePciGetStats(dev, pciCounter):
-        global stubState
-        devs = stubState.setdefault("Devices", {})
-        d = devs.setdefault(device_handle_to_ulong(dev), {})
-        r = d.setdefault("PCIstats", [0,0,0,0,0])
-        pciCounter.timestamp = r[0]
-        pciCounter.replayCounter = r[1]
-        pciCounter.packetCounter = r[2]
-        pciCounter.rxCounter = r[3]
-        pciCounter.txCounter = r[4]
-        r[0] += 1000000
-        r[1] += 10
-        r[2] += 1000
-        r[3] += 788000000
-        r[4] += 78800000
-        pciCounter.speed.gen = 4
-        pciCounter.speed.width = 4
-        pciCounter.speed.maxBandwidth = 7880000000
-    def stubDevicePciGetBars(dev, count_ptr, handle_array):
-        if handle_array is None:
-            uint32_assign(count_ptr, 3)
-        elif uint32_value(count_ptr) == 3:
-            items = zes_pci_bar_properties_array.frompointer(handle_array)
-            item = items[0]
-            item.type = ZES_PCI_BAR_TYPE_MMIO
-            item.index = 0
-            item.base = 0x0000400000000000
-            item.size = 0x0000000000010000
-            items[0] = item
-            item = items[1]
-            item.type = ZES_PCI_BAR_TYPE_ROM
-            item.index = 1
-            item.base = 0x0000400000080000
-            item.size = 0x0000000000080000
-            items[1] = item
-            item = items[2]
-            item.type = ZES_PCI_BAR_TYPE_MEM
-            item.index = 2
-            item.base = 0x0000400000100000
-            item.size = 0x0000000000300000
-            items[2] = item
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubDeviceEnumDiagnosticTestSuites(dev, count_ptr, handle_array):
-        if handle_array is None:
-            uint32_assign(count_ptr, 2)
-        elif uint32_value(count_ptr) == 2:
-            items = zes_diag_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_diag_handle(0)
-            items[1] = ulong_to_diag_handle(1)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubDiagnosticsGetProperties(diag, diagProps):
-        diagProps.onSubdevice = False
-        suite = diag_handle_to_ulong(diag)
-        if suite == 0:
-            diagProps.name = "ARRAY"
-            diagProps.haveTests = True
-        elif suite == 1:
-            diagProps.name = "SCAN"
-            diagProps.haveTests = False
-        else:
-            raise ValueError(suite)
-    def stubDiagnosticsGetTests(diag, count_ptr, tests_array):
-        suite = diag_handle_to_ulong(diag)
-        if suite == 0:
-            if tests_array is None:
-                uint32_assign(count_ptr, 3)
-            elif uint32_value(count_ptr) == 3:
-                tests = zes_diag_test_array.frompointer(tests_array)
-                test = tests[0]
-                test.index = 65
-                test.name = "A"
-                tests[0] = test
-                test = tests[1]
-                test.index = 77
-                test.name = "M"
-                tests[1] = test
-                test = tests[2]
-                test.index = 80
-                test.name = "P"
-                tests[2] = test
-            else:
-                raise ValueError(uint32_value(count_ptr))
-        elif suite == 1:
-            if tests_array is None:
-                uint32_assign(count_ptr, 0)
-            elif uint32_value(count_ptr) != 0:
-                raise ValueError(uint32_value(count_ptr))
-        else:
-            raise ValueError(suite)
-    def stubDiagnosticsRunTests(diag, first, last):
-        suite = diag_handle_to_ulong(diag)
-        if suite == 0:
-            result = ZES_DIAG_RESULT_ABORT
-            if first <= 65 and last >= 65:
-                result = ZES_DIAG_RESULT_NO_ERRORS
-            if first <= 77 and last >= 77:
-                result = ZES_DIAG_RESULT_REBOOT_FOR_REPAIR
-            if first <= 80 and last >= 80:
-                result = ZES_DIAG_RESULT_FAIL_CANT_REPAIR
-            return result
-        elif suite == 1:
-            return ZES_DIAG_RESULT_NO_ERRORS
-        else:
-            raise ValueError(suite)
-    def stubDeviceEventRegister(dev, events):
-        global stubState
-        devs = stubState.setdefault("Devices", {})
-        d = devs.setdefault(device_handle_to_ulong(dev), {})
-        d["EventEnables"] = events
-    def stubDriverEventListen(drv, timeout, count, device_array, event_array):
-        global stubState
-        devs = stubState.setdefault("Devices", {})
-        devices = ze_device_handle_array.frompointer(device_array)
-        events = zes_event_type_flags_array.frompointer(event_array)
-        for i in range(count):
-            dev = devices[i]
-            d = devs.setdefault(device_handle_to_ulong(dev), {})
-            enables = d.setdefault("EventEnables", 0)
-            events[i] = enables & (ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH |
-                                   ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS |
-                                   ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED)
-        return count
-    def stubDeviceEnumFabricPorts(dev, count_ptr, handle_array):
-        global stubState
-        if handle_array is None:
-            uint32_assign(count_ptr, 10)
-        elif uint32_value(count_ptr) == 10:
-            nextFabricId = stubState.setdefault("NextFabricId", 0)
-            devs = stubState.setdefault("Devices", {})
-            d = devs.setdefault(device_handle_to_ulong(dev), {})
-            fabricId = d.setdefault("FabricId", nextFabricId)
-            if fabricId == nextFabricId:
-                stubState["NextFabricId"] += 1
-            items = zes_fabric_port_handle_array.frompointer(handle_array)
-            for i in range(10):
-                items[i] = ulong_to_fabric_port_handle(fabricId * 10 + i)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubFabricPortGetProperties(port, portProps):
-        global stubState
-        p = fabric_port_handle_to_ulong(port)
-        fabricId = p // 10
-        localIdx = p % 10
-        portProps.model = "ANR"
-        portProps.onSubDevice = True
-        portProps.subdeviceId = localIdx // 5
-        portProps.portId.fabricId = fabricId
-        portProps.portId.attachId = localIdx // 5
-        portProps.portId.portNumber = localIdx % 5
-        portProps.maxRxSpeed.bitRate = 1000000000
-        portProps.maxRxSpeed.width = 8
-        portProps.maxTxSpeed.bitRate = 1000000000
-        portProps.maxTxSpeed.width = 8
-    def stubFabricPortGetLinkType(port, linkType):
-        linkType.desc = "ANR"
-    def stubFabricPortGetConfig(port, portConfig):
-        global stubState
-        p = fabric_port_handle_to_ulong(port)
-        ports = stubState.setdefault("FabricPortConfig", {})
-        portConfig.enabled, portConfig.beaconing = ports.setdefault(p, (True, False))
-    def stubFabricPortSetConfig(port, portConfig):
-        global stubState
-        p = fabric_port_handle_to_ulong(port)
-        ports = stubState.setdefault("FabricPortConfig", {})
-        ports[p] = (portConfig.enabled, portConfig.beaconing)
-    def stubFabricPortGetState(port, portState):
-        global stubState
-        p = fabric_port_handle_to_ulong(port)
-        ports = stubState.setdefault("FabricPortConfig", {})
-        enabled, _ = ports.setdefault(p, (True, False))
-        fabricId = p // 10
-        localIdx = p % 10
-        portState.qualityIssues = 0
-        portState.failureReasons = 0
-        if enabled:
-            if localIdx == 0:
-                portState.status = ZES_FABRIC_PORT_STATUS_UNKNOWN
-            elif localIdx == 1:
-                portState.status = ZES_FABRIC_PORT_STATUS_HEALTHY
-            elif localIdx == 2:
-                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
-                portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS
-            elif localIdx == 3:
-                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
-                portState.qualityIssues = ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED
-            elif localIdx == 4:
-                portState.status = ZES_FABRIC_PORT_STATUS_DEGRADED
-                portState.qualityIssues = (ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS |
-                                           ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED)
-            elif localIdx == 5:
-                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
-                portState.failureReasons = (ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT |
-                                            ZES_FABRIC_PORT_FAILURE_FLAG_FAILED)
-            elif localIdx == 6:
-                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
-                portState.failureReasons = (ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING |
-                                            ZES_FABRIC_PORT_FAILURE_FLAG_FAILED)
-            elif localIdx == 7:
-                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
-                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT
-            elif localIdx == 8:
-                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
-                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING
-            else:
-                portState.status = ZES_FABRIC_PORT_STATUS_FAILED
-                portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FAILED
-        else:
-            portState.status = ZES_FABRIC_PORT_STATUS_DISABLED
-        portState.remotePortId.fabricId = fabricId ^ 1
-        portState.remotePortId.attachId = localIdx // 5
-        portState.remotePortId.portNumber = localIdx % 5
-        portState.rxSpeed.bitRate = 1000000000
-        portState.rxSpeed.width = 8
-        portState.txSpeed.bitRate = 1000000000
-        portState.txSpeed.width = 8
-    def stubFabricPortGetThroughput(port, portThroughput):
-        global stubState
-        p = fabric_port_handle_to_ulong(port)
-        ports = stubState.setdefault("FabricPortThroughput", {})
-        r = ports.setdefault(p, [0,0,0])
-        portThroughput.timestamp = r[0]
-        portThroughput.rxCounter = r[1]
-        portThroughput.txCounter = r[2]
-        r[0] += 1000000
-        r[1] += 1000000000
-        r[2] += 900000000
-    def stubDeviceEnumRasErrorSets(dev, count_ptr, handle_array):
-        global stubState
-        stubState.setdefault("RasErrors", {ZES_RAS_ERROR_TYPE_CORRECTABLE : [2, 0, 0, 0, 0, 0, 3],
-                                           ZES_RAS_ERROR_TYPE_UNCORRECTABLE : [1, 0, 0, 0, 0, 0, 1]})
-        stubState.setdefault("RasThresh", {ZES_RAS_ERROR_TYPE_CORRECTABLE : [2, 3, 1, 0, 0, 0, 0, 9],
-                                           ZES_RAS_ERROR_TYPE_UNCORRECTABLE : [1, 0, 1, 2, 3, 1, 0, 5]})
-        if handle_array is None:
-            uint32_assign(count_ptr, 2)
-        elif uint32_value(count_ptr) == 2:
-            items = zes_ras_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_ras_handle(ZES_RAS_ERROR_TYPE_CORRECTABLE)
-            items[1] = ulong_to_ras_handle(ZES_RAS_ERROR_TYPE_UNCORRECTABLE)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubRasGetProperties(ras, rasProps):
-        rasProps.type = ras_handle_to_ulong(ras)
-        rasProps.onSubdevice = False
-        rasProps.subdeviceId = 0
-    def stubRasGetConfig(ras, rasConfig):
-        global stubState
-        r = ras_handle_to_ulong(ras)
-        thresholds = stubState["RasThresh"][r]
-        rasConfig.totalThreshold = thresholds[ZES_MAX_RAS_ERROR_CATEGORY_COUNT]
-        for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
-            ras_category_set(rasConfig.detailedThresholds, i, thresholds[i])
-    def stubRasSetConfig(ras, rasConfig):
-        global stubState
-        r = ras_handle_to_ulong(ras)
-        thresholds = stubState["RasThresh"][r]
-        thresholds[ZES_MAX_RAS_ERROR_CATEGORY_COUNT] = rasConfig.totalThreshold
-        for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
-            thresholds[i] = ras_category(rasConfig.detailedThresholds, i)
-    def stubRasGetState(ras, clearErrors, rasState):
-        global stubState
-        r = ras_handle_to_ulong(ras)
-        if clearErrors:
-            stubState["RasErrors"][r] = [0, 0, 0, 0, 0, 0, 0]
-        if rasState is not None:
-            errors = stubState["RasErrors"][r]
-            for i in range(ZES_MAX_RAS_ERROR_CATEGORY_COUNT):
-                ras_category_set(rasState, i, errors[i])
-                errors[i] += (i + 1)
-    def stubDeviceProcessesGetState(dev, count_ptr, proc_array):
-        if proc_array is None:
-            uint32_assign(count_ptr, 4)
-        elif uint32_value(count_ptr) == 4:
-            procs = zes_process_state_array.frompointer(proc_array)
-            proc = procs[0]
-            proc.processId = 32765
-            proc.memSize = 0x10000
-            proc.sharedSize = 0x1000
-            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_OTHER | 1 << ZES_ENGINE_TYPE_FLAG_COMPUTE
-            procs[0] = proc
-            proc = procs[1]
-            proc.processId = 32766
-            proc.memSize = 0x20000
-            proc.sharedSize = 0x1000
-            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_3D
-            procs[1] = proc
-            proc = procs[2]
-            proc.processId = 32767
-            proc.memSize = 0x30000
-            proc.sharedSize = 0x1000
-            proc.engines = 1 << ZES_ENGINE_TYPE_FLAG_MEDIA | 1 << ZES_ENGINE_TYPE_FLAG_DMA
-            procs[2] = proc
-            proc = procs[3]
-            proc.processId = 32768
-            proc.memSize = 0x40000
-            proc.sharedSize = 0x1000
-            proc.engines = (1 << ZES_ENGINE_TYPE_FLAG_OTHER | 1 << ZES_ENGINE_TYPE_FLAG_COMPUTE |
-                            1 << ZES_ENGINE_TYPE_FLAG_3D | 1 << ZES_ENGINE_TYPE_FLAG_MEDIA |
-                            1 << ZES_ENGINE_TYPE_FLAG_DMA)
-            procs[3] = proc
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubDeviceEnumFans(dev, count_ptr, handle_array):
-        if handle_array is None:
-            uint32_assign(count_ptr, 2)
-        elif uint32_value(count_ptr) == 2:
-            items = zes_fan_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_fan_handle(0)
-            items[1] = ulong_to_fan_handle(1)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubFanSetDefaultMode(fan):
-        global stubState
-        f = fan_handle_to_ulong(fan)
-        fanModes = stubState.setdefault("FanMode", {})
-        fanModes[f] = ZES_FAN_SPEED_MODE_DEFAULT
-    def stubFanSetFixedSpeedMode(fan, speed):
-        global stubState
-        f = fan_handle_to_ulong(fan)
-        fanModes = stubState.setdefault("FanMode", {})
-        fanModes[f] = ZES_FAN_SPEED_MODE_FIXED
-        fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
-        fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
-        fanSpeeds[f] = speed.speed
-        fanUnits[f] = speed.units
-    def stubFanSetSpeedTableMode(fan, speedTable):
-        global stubState
-        f = fan_handle_to_ulong(fan)
-        fanModes = stubState.setdefault("FanMode", {})
-        fanModes[f] = ZES_FAN_SPEED_MODE_TABLE
-        fanTables = stubState.setdefault("FanTable", {})
-        fanTablePoints = stubState.setdefault("FanTablePoints", {})
-        fanTablePoints[f] = speedTable.numPoints
-        table = []
-        tableSize = speedTable.numPoints
-        tempSpeed = zes_fan_temp_speed_array(tableSize)
-        fan_speed_table_get(speedTable, tableSize, tempSpeed.cast())
-        for t in range(tableSize):
-            item = tempSpeed[t]
-            entry = (item.temperature, item.speed.speed, item.speed.units)
-            table.append(entry)
-        fanTables[f] = table
-    def stubFanGetProperties(fan, fanProps):
-        f = fan_handle_to_ulong(fan)
-        fanProps.onSubdevice = f > 0
-        fanProps.subdeviceId = f
-        fanProps.canControl = True
-        fanProps.supportedModes = 7
-        fanProps.supportedUnits = 3
-        fanProps.maxRPM = 10000
-        fanProps.maxPoints = 10
-    def stubFanGetConfig(fan, fanConfig):
-        global stubState
-        f = fan_handle_to_ulong(fan)
-        fanModes = stubState.setdefault("FanMode", {})
-        fanConfig.mode = fanModes.setdefault(f, ZES_FAN_SPEED_MODE_DEFAULT)
-        if fanConfig.mode == ZES_FAN_SPEED_MODE_FIXED:
-            fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
-            fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
-            fanConfig.speedFixed.speed = fanSpeeds.setdefault(f, 1000)
-            fanConfig.speedFixed.units = fanUnits.setdefault(f, ZES_FAN_SPEED_UNITS_RPM)
-        elif fanConfig.mode == ZES_FAN_SPEED_MODE_TABLE:
-            fanTables = stubState.setdefault("FanTable", {})
-            fanTablePoints = stubState.setdefault("FanTablePoints", {})
-            tableSize = fanTablePoints.setdefault(f, 3)
-            table = fanTables.setdefault(f, [(50, 1000, ZES_FAN_SPEED_UNITS_RPM),
-                                             (100, 5000, ZES_FAN_SPEED_UNITS_RPM),
-                                             (150, 10000, ZES_FAN_SPEED_UNITS_RPM)])
-            tempSpeed = zes_fan_temp_speed_array(tableSize)
-            for t, entry in indexed(table):
-                item = tempSpeed[t]
-                item.temperature = entry[0]
-                item.speed.speed = entry[1]
-                item.speed.units = entry[2]
-                tempSpeed[t] = item
-            # fan_config_speed_table_set(fanConfig, tableSize, tempSpeed)
-    def stubFanGetState(fan, units):
-        global stubState
-        f = fan_handle_to_ulong(fan)
-        fanModes = stubState.setdefault("FanMode", {})
-        mode = fanModes.setdefault(f, ZES_FAN_SPEED_MODE_DEFAULT)
-        if mode == ZES_FAN_SPEED_MODE_FIXED:
-            fanSpeeds = stubState.setdefault("FanFixedSpeed", {})
-            fanUnits = stubState.setdefault("FanFixedSpeedUnits", {})
-            current_speed = fanSpeeds.setdefault(f, 1000)
-            current_units = fanUnits.setdefault(f, ZES_FAN_SPEED_UNITS_RPM)
-        elif mode == ZES_FAN_SPEED_MODE_TABLE:
-            fanTables = stubState.setdefault("FanTable", {})
-            fanTablePoints = stubState.setdefault("FanTablePoints", {})
-            fanTableIndices = stubState.setdefault("FanTableIndices", {})
-            numPoints = fanTablePoints.setdefault(f, 3)
-            table = fanTables.setdefault(f, [(50, 1000, ZES_FAN_SPEED_UNITS_RPM),
-                                             (100, 5000, ZES_FAN_SPEED_UNITS_RPM),
-                                             (150, 10000, ZES_FAN_SPEED_UNITS_RPM)])
-            idx = fanTableIndices.setdefault(f, 0)
-            current_speed = table[idx][1]
-            current_units = table[idx][2]
-            if units == ZES_FAN_SPEED_UNITS_PERCENT:
-                fanTableIndices[f] = (idx + 1) % len(table)
-        else:
-            current_speed = 2000
-            current_units = ZES_FAN_SPEED_UNITS_RPM
-        if current_units == units:
-            return current_speed
-        elif units == ZES_FAN_SPEED_UNITS_RPM:
-            return current_speed * 100
-        else:
-            return current_speed // 100
-    def stubDeviceEnumFirmwares(dev, count_ptr, handle_array):
-        if handle_array is None:
-            uint32_assign(count_ptr, 1)
-        elif uint32_value(count_ptr) == 1:
-            items = zes_firmware_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_firmware_handle(0)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubFirmwareGetProperties(fw, fwProps):
-        fwProps.onSubdevice = False
-        fwProps.subdeviceId = 0
-        fwProps.canControl = True
-        fwProps.name = "FIRMWARE"
-        fwProps.version = "1.0.0"
-    def stubFirmwareFlashData(handle, image):
-        fw = firmware_handle_to_ulong(handle)
-        pr("Flashing firmware image", fw, "of size", len(image), ":")
-        if image.isascii():
-            lines = str(image, 'utf-8').splitlines()
-            if len(lines) < 100:
-                pr(" " + "\n ".join(lines))
-            else:
-                pr(" [ascii data, greater than 100 lines]")
-        else:
-            pr(" [binary data]")
-    def stubDeviceEnumLeds(dev, count_ptr, handle_array):
-        global stubState
-        if handle_array is None:
-            uint32_assign(count_ptr, 2)
-        elif uint32_value(count_ptr) == 2:
-            l = stubState.setdefault("Led", {})
-            l[0] = { "on" : False, "color" : (1.0, 0.0, 0.0) }
-            l[1] = { "on" : False, "color" : (1.0, 0.0, 0.0) }
-            items = zes_led_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_led_handle(0)
-            items[1] = ulong_to_led_handle(1)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubLedGetProperties(led, ledProps):
-        global stubState
-        l = led_handle_to_ulong(led)
-        if l > 1:
-            raise ValueError(l)
-        ledProps.canControl = True
-        ledProps.haveRGB = l==0
-    def stubLedGetState(led, ledState):
-        global stubState
-        l = led_handle_to_ulong(led)
-        if l > 1:
-            raise ValueError(l)
-        ledState.isOn = stubState["Led"][l]["on"]
-        color = zes_led_color_t()
-        color.red,color.green,color.blue = stubState["Led"][l]["color"]
-        ledState.color = color
-    def stubLedSetState(led, enable):
-        global stubState
-        l = led_handle_to_ulong(led)
-        if l > 1:
-            raise ValueError(l)
-        stubState["Led"][l]["on"] = enable
-    def stubLedSetColor(led, color):
-        global stubState
-        l = led_handle_to_ulong(led)
-        if l > 1:
-            raise ValueError(l)
-        stubState["Led"][l]["color"] = color.red,color.green,color.blue
-    def stubDeviceEnumMemoryModules(dev, count_ptr, handle_array):
-        global stubState
-        if handle_array is None:
-            uint32_assign(count_ptr, 14)
-        elif uint32_value(count_ptr) == 14:
-            m = stubState.setdefault("Mem", {})
-            m[ZES_MEM_TYPE_HBM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_DDR] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_DDR3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_DDR4] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_DDR5] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_LPDDR] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_LPDDR3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_LPDDR4] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_LPDDR5] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_SRAM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_L1] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_L3] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_GRF] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            m[ZES_MEM_TYPE_SLM] = { "usage" : (1000000000, 1000000000), "bw" : (0, 0, 1000000000, 0) }
-            items = zes_mem_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_mem_handle(ZES_MEM_TYPE_HBM)
-            items[1] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR)
-            items[2] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR3)
-            items[3] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR4)
-            items[4] = ulong_to_mem_handle(ZES_MEM_TYPE_DDR5)
-            items[5] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR)
-            items[6] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR3)
-            items[7] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR4)
-            items[8] = ulong_to_mem_handle(ZES_MEM_TYPE_LPDDR5)
-            items[9] = ulong_to_mem_handle(ZES_MEM_TYPE_SRAM)
-            items[10] = ulong_to_mem_handle(ZES_MEM_TYPE_L1)
-            items[11] = ulong_to_mem_handle(ZES_MEM_TYPE_L3)
-            items[12] = ulong_to_mem_handle(ZES_MEM_TYPE_GRF)
-            items[13] = ulong_to_mem_handle(ZES_MEM_TYPE_SLM)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubMemoryGetProperties(mem, memProps):
-        m = mem_handle_to_ulong(mem)
-        if m > ZES_MEM_TYPE_SLM:
-            raise ValueError(m)
-        memProps.type = m
-        if m < ZES_MEM_TYPE_LPDDR:
-            memProps.onSubdevice = False
-        else:
-            memProps.onSubdevice = True
-        memProps.subdeviceId = 0
-        if m < ZES_MEM_TYPE_SRAM:
-            memProps.location = ZES_MEM_LOC_SYSTEM
-        else:
-            memProps.location = ZES_MEM_LOC_DEVICE
-        memProps.physicalSize = 2000000000
-        memProps.busWidth = 64
-        memProps.numChannels = 2
-    def stubMemoryGetState(mem, memState):
-        global stubState
-        m = mem_handle_to_ulong(mem)
-        memState.health = m % 5
-        f, s = stubState["Mem"][m]["usage"]
-        memState.free, memState.size = f, s
-        f -= 100000000 + m * 10000000
-        while f < 0:
-            f += s
-        stubState["Mem"][m]["usage"] = f, s
-    def stubMemoryGetBandwidth(mem, memBw):
-        global stubState
-        m = mem_handle_to_ulong(mem)
-        r, w, x, t = stubState["Mem"][m]["bw"]
-        memBw.readCounter, memBw.writeCounter, memBw.maxBandwidth, memBw.timestamp = r, w, x, t
-        r += 200000000 + m * 10000000
-        w += 100000000 + m * 20000000
-        t += 1000000
-        stubState["Mem"][m]["bw"] = r, w, x, t
-    def stubDeviceEnumPerformanceFactorDomains(dev, count_ptr, handle_array):
-        if handle_array is None:
-            uint32_assign(count_ptr, 5)
-        elif uint32_value(count_ptr) == 5:
-            items = zes_perf_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE)
-            items[1] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE | ZES_ENGINE_TYPE_FLAG_3D)
-            items[2] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_OTHER | ZES_ENGINE_TYPE_FLAG_MEDIA)
-            items[3] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_OTHER | ZES_ENGINE_TYPE_FLAG_DMA)
-            items[4] = ulong_to_perf_handle(ZES_ENGINE_TYPE_FLAG_DMA)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubPerformanceFactorGetProperties(perf, perfProps):
-        p = perf_handle_to_ulong(perf)
-        perfProps.onSubdevice = False
-        perfProps.subdeviceId = 0
-        perfProps.engines = p
-    def stubPerformanceFactorGetConfig(perf):
-        global stubState
-        p = perf_handle_to_ulong(perf)
-        pds = stubState.setdefault("Perf", {})
-        return pds.setdefault(p, 50.0)
-    def stubPerformanceFactorSetConfig(perf, val):
-        global stubState
-        p = perf_handle_to_ulong(perf)
-        pds = stubState.setdefault("Perf", {})
-        pds[p] = val
-    def stubDeviceEnumPsus(dev, count_ptr, handle_array):
-        global stubState
-        stubState.setdefault("PsuState", ZES_PSU_VOLTAGE_STATUS_NORMAL)
-        stubState.setdefault("PsuTable", { ZES_PSU_VOLTAGE_STATUS_UNKNOWN : (True, 250, 100),
-                                           ZES_PSU_VOLTAGE_STATUS_NORMAL : (False, 50, 200),
-                                           ZES_PSU_VOLTAGE_STATUS_OVER : (True, 150, 750),
-                                           ZES_PSU_VOLTAGE_STATUS_UNDER : (False, 75, 150) })
-        if handle_array is None:
-            uint32_assign(count_ptr, 1)
-        elif uint32_value(count_ptr) == 1:
-            items = zes_psu_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_psu_handle(0)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubPsuGetProperties(psu, psuProps):
-        psuProps.onSubdevice = False
-        psuProps.subdeviceId = 0
-        psuProps.haveFan = True
-        psuProps.ampLimit = 750
-    def stubPsuGetState(psu, psuState):
-        global stubState
-        voltStatus = stubState["PsuState"]
-        psuState.voltStatus = voltStatus
-        psuState.fanFailed, psuState.temperature, psuState.current = stubState["PsuTable"][voltStatus]
-        stubState["PsuState"] = (voltStatus + 1) % 4
-    def stubDeviceEnumSchedulers(dev, count_ptr, handle_array):
-        global stubState
-        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
-        stubState.setdefault("SchedMode", { ZES_ENGINE_TYPE_FLAG_COMPUTE : ZES_SCHED_MODE_TIMESLICE,
-                                            ZES_ENGINE_TYPE_FLAG_3D : ZES_SCHED_MODE_TIMEOUT,
-                                            ZES_ENGINE_TYPE_FLAG_MEDIA : ZES_SCHED_MODE_TIMEOUT,
-                                            DMA_ENGINE_TYPES : ZES_SCHED_MODE_EXCLUSIVE })
-        stubState.setdefault("Timeout", { ZES_ENGINE_TYPE_FLAG_COMPUTE : 5000000,
-                                          ZES_ENGINE_TYPE_FLAG_3D : 25000000,
-                                          ZES_ENGINE_TYPE_FLAG_MEDIA : 15000000,
-                                          DMA_ENGINE_TYPES : 1000000 })
-        stubState.setdefault("Timeslice", { ZES_ENGINE_TYPE_FLAG_COMPUTE : (500000, 5000000),
-                                            ZES_ENGINE_TYPE_FLAG_3D : (1000000, 25000000),
-                                            ZES_ENGINE_TYPE_FLAG_MEDIA : (750000, 15000000),
-                                            DMA_ENGINE_TYPES : (500000, 1000000) })
-        if handle_array is None:
-            uint32_assign(count_ptr, 4)
-        elif uint32_value(count_ptr) == 4:
-            items = zes_sched_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_COMPUTE)
-            items[1] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_3D)
-            items[2] = ulong_to_sched_handle(ZES_ENGINE_TYPE_FLAG_MEDIA)
-            items[3] = ulong_to_sched_handle(DMA_ENGINE_TYPES)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubSchedulerGetProperties(sched, schedProps):
-        s = sched_handle_to_ulong(sched)
-        schedProps.onSubdevice = False
-        schedProps.subdeviceId = 0
-        schedProps.canControl = not (s & ZES_ENGINE_TYPE_FLAG_DMA)
-        schedProps.engines = s
-        supportedModes = 0
-        if s & ZES_ENGINE_TYPE_FLAG_DMA:
-            supportedModes = 1 << ZES_SCHED_MODE_EXCLUSIVE
-        if s & ZES_ENGINE_TYPE_FLAG_COMPUTE:
-            supportedModes |= 1 << ZES_SCHED_MODE_TIMEOUT
-            supportedModes |= 1 << ZES_SCHED_MODE_TIMESLICE
-            supportedModes |= 1 << ZES_SCHED_MODE_EXCLUSIVE
-            supportedModes |= 1 << ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
-        if s & ZES_ENGINE_TYPE_FLAG_3D:
-            supportedModes |= 1 << ZES_SCHED_MODE_TIMESLICE
-        if s & ZES_ENGINE_TYPE_FLAG_MEDIA:
-            supportedModes |= 1 << ZES_SCHED_MODE_TIMEOUT
-            supportedModes |= 1 << ZES_SCHED_MODE_EXCLUSIVE
-        schedProps.supportedModes = supportedModes
-    def stubSchedulerGetCurrentMode(sched):
-        global stubState
-        s = sched_handle_to_ulong(sched)
-        return stubState["SchedMode"][s]
-    def stubSchedulerGetTimeoutModeProperties(sched, getDefaults, schedConfig):
-        global stubState
-        s = sched_handle_to_ulong(sched)
-        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
-        if getDefaults:
-            timeoutProperties = { ZES_ENGINE_TYPE_FLAG_COMPUTE : 5000000,
-                                  ZES_ENGINE_TYPE_FLAG_3D : 25000000,
-                                  ZES_ENGINE_TYPE_FLAG_MEDIA : 15000000,
-                                  DMA_ENGINE_TYPES : 1000000 }
-        else:
-            timeoutProperties = stubState["Timeout"]
-        schedConfig.watchdogTimeout = timeoutProperties[s]
-    def stubSchedulerGetTimesliceModeProperties(sched, getDefaults, schedConfig):
-        global stubState
-        s = sched_handle_to_ulong(sched)
-        DMA_ENGINE_TYPES = ZES_ENGINE_TYPE_FLAG_DMA | ZES_ENGINE_TYPE_FLAG_OTHER
-        if getDefaults:
-            timesliceProperties = { ZES_ENGINE_TYPE_FLAG_COMPUTE : (500000, 5000000),
-                                    ZES_ENGINE_TYPE_FLAG_3D : (1000000, 25000000),
-                                    ZES_ENGINE_TYPE_FLAG_MEDIA : (750000, 15000000),
-                                    DMA_ENGINE_TYPES : (500000, 1000000) }
-        else:
-            timesliceProperties = stubState["Timeslice"]
-        schedConfig.interval, schedConfig.yieldTimeout = timesliceProperties[s]
-    def stubSchedulerSetTimeoutMode(sched, schedConfig):
-        global stubState
-        s = sched_handle_to_ulong(sched)
-        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_TIMEOUT
-        stubState["SchedMode"][s] = ZES_SCHED_MODE_TIMEOUT
-        if schedConfig:
-            stubState["Timeout"][s] = schedConfig.watchdogTimeout
-        return needReload
-    def stubSchedulerSetTimesliceMode(sched, schedConfig):
-        global stubState
-        s = sched_handle_to_ulong(sched)
-        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_TIMESLICE
-        stubState["SchedMode"][s] = ZES_SCHED_MODE_TIMESLICE
-        if schedConfig:
-            stubState["Timeslice"][s] = schedConfig.interval, schedConfig.yieldTimeout
-        return needReload
-    def stubSchedulerSetExclusiveMode(sched):
-        global stubState
-        s = sched_handle_to_ulong(sched)
-        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_EXCLUSIVE
-        stubState["SchedMode"][s] = ZES_SCHED_MODE_EXCLUSIVE
-        return needReload
-    def stubSchedulerSetComputeUnitDebugMode(sched):
-        global stubState
-        s = sched_handle_to_ulong(sched)
-        needReload = stubState["SchedMode"][s] != ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
-        stubState["SchedMode"][s] = ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
-        return needReload
-    def stubDeviceEnumStandbyDomains(dev, count_ptr, handle_array):
-        if handle_array is None:
-            uint32_assign(count_ptr, 1)
-        elif uint32_value(count_ptr) == 1:
-            items = zes_standby_handle_array.frompointer(handle_array)
-            items[0] = ulong_to_standby_handle(0)
-        else:
-            raise ValueError(uint32_value(count_ptr))
-    def stubStandbyGetProperties(stby, stbyProps):
-        stbyProps.type = ZES_STANDBY_TYPE_GLOBAL
-        stbyProps.onSubdevice = False
-        stbyProps.subdeviceId = 0
-    def stubStandbyGetMode(stby):
-        global stubState
-        return stubState.setdefault("Standby", ZES_STANDBY_PROMO_MODE_DEFAULT)
-    def stubStandbySetMode(stby, stbyMode):
-        global stubState
-        stubState["Standby"] = stbyMode
-    def stillUnimplemented(*args, **kwargs):
-        raise NotImplementedError
-
-    replacements = { zesDeviceEnumTemperatureSensors : stubDeviceEnumTemperatureSensors,
-                     zesTemperatureGetProperties : stubTemperatureGetProperties,
-                     zesTemperatureGetConfig : stubTemperatureGetConfig,
-                     zesTemperatureSetConfig : stubTemperatureSetConfig,
-                     zesTemperatureGetState : stubTemperatureGetState,
-                     zesDeviceEnumPowerDomains : stubDeviceEnumPowerDomains,
-                     zesPowerGetProperties : stubPowerGetProperties,
-                     zesPowerSetLimits : stubPowerSetLimits,
-                     zesPowerGetLimits : stubPowerGetLimits,
-                     zesPowerGetEnergyCounter : stubPowerGetEnergyCounter,
-                     zesPowerGetEnergyThreshold : stubPowerGetEnergyThreshold,
-                     zesPowerSetEnergyThreshold : stubPowerSetEnergyThreshold,
-                     zesDeviceEnumFrequencyDomains : stubDeviceEnumFrequencyDomains,
-                     zesFrequencyGetProperties : stubFrequencyGetProperties,
-                     zesFrequencyGetAvailableClocks : stubFrequencyGetAvailableClocks,
-                     zesFrequencyGetRange : stubFrequencyGetRange,
-                     zesFrequencySetRange : stubFrequencySetRange,
-                     zesFrequencyGetState : stubFrequencyGetState,
-                     zesFrequencyGetThrottleTime : stubFrequencyGetThrottleTime,
-                     zesFrequencyOcGetCapabilities : stubFrequencyOcGetCapabilities,
-                     zesFrequencyOcGetFrequencyTarget : stubFrequencyOcGetFrequencyTarget,
-                     zesFrequencyOcSetFrequencyTarget : stubFrequencyOcSetFrequencyTarget,
-                     zesFrequencyOcGetVoltageTarget : stubFrequencyOcGetVoltageTarget,
-                     zesFrequencyOcSetVoltageTarget : stubFrequencyOcSetVoltageTarget,
-                     zesFrequencyOcSetMode : stubFrequencyOcSetMode,
-                     zesFrequencyOcGetMode : stubFrequencyOcGetMode,
-                     zesFrequencyOcGetIccMax : stubFrequencyOcGetIccMax,
-                     zesFrequencyOcSetIccMax : stubFrequencyOcSetIccMax,
-                     zesFrequencyOcGetTjMax : stubFrequencyOcGetTjMax,
-                     zesFrequencyOcSetTjMax : stubFrequencyOcSetTjMax,
-                     zesDeviceEnumEngineGroups : stubDeviceEnumEngineGroups,
-                     zesEngineGetProperties : stubEngineGetProperties,
-                     zesEngineGetActivity : stubEngineGetActivity,
-                     zesDevicePciGetProperties : stubDevicePciGetProperties,
-                     zesDevicePciGetState : stubDevicePciGetState,
-                     zesDevicePciGetStats : stubDevicePciGetStats,
-                     zesDevicePciGetBars : stubDevicePciGetBars,
-                     zesDeviceEnumDiagnosticTestSuites : stubDeviceEnumDiagnosticTestSuites,
-                     zesDiagnosticsGetProperties : stubDiagnosticsGetProperties,
-                     zesDiagnosticsGetTests : stubDiagnosticsGetTests,
-                     zesDiagnosticsRunTests : stubDiagnosticsRunTests,
-                     zesDeviceEventRegister : stubDeviceEventRegister,
-                     zesDriverEventListen : stubDriverEventListen,
-                     zesDeviceEnumFabricPorts : stubDeviceEnumFabricPorts,
-                     zesFabricPortGetProperties : stubFabricPortGetProperties,
-                     zesFabricPortGetLinkType : stubFabricPortGetLinkType,
-                     zesFabricPortGetConfig : stubFabricPortGetConfig,
-                     zesFabricPortSetConfig : stubFabricPortSetConfig,
-                     zesFabricPortGetState : stubFabricPortGetState,
-                     zesFabricPortGetThroughput : stubFabricPortGetThroughput,
-                     zesDeviceEnumRasErrorSets : stubDeviceEnumRasErrorSets,
-                     zesRasGetProperties : stubRasGetProperties,
-                     zesRasGetConfig : stubRasGetConfig,
-                     zesRasSetConfig : stubRasSetConfig,
-                     zesRasGetState : stubRasGetState,
-                     zesDeviceProcessesGetState : stubDeviceProcessesGetState,
-                     zesDeviceEnumFans : stubDeviceEnumFans,
-                     zesFanSetDefaultMode : stubFanSetDefaultMode,
-                     zesFanSetFixedSpeedMode : stubFanSetFixedSpeedMode,
-                     zesFanSetSpeedTableMode : stubFanSetSpeedTableMode,
-                     zesFanGetProperties : stubFanGetProperties,
-                     zesFanGetConfig : stubFanGetConfig,
-                     zesFanGetState : stubFanGetState,
-                     zesDeviceEnumFirmwares : stubDeviceEnumFirmwares,
-                     zesFirmwareGetProperties : stubFirmwareGetProperties,
-                     zesFirmwareFlashData : stubFirmwareFlashData,
-                     zesDeviceEnumLeds : stubDeviceEnumLeds,
-                     zesLedGetProperties : stubLedGetProperties,
-                     zesLedGetState : stubLedGetState,
-                     zesLedSetState : stubLedSetState,
-                     zesLedSetColor : stubLedSetColor,
-                     zesDeviceEnumMemoryModules : stubDeviceEnumMemoryModules,
-                     zesMemoryGetProperties : stubMemoryGetProperties,
-                     zesMemoryGetState : stubMemoryGetState,
-                     zesMemoryGetBandwidth : stubMemoryGetBandwidth,
-                     zesDeviceEnumPerformanceFactorDomains : stubDeviceEnumPerformanceFactorDomains,
-                     zesPerformanceFactorGetProperties : stubPerformanceFactorGetProperties,
-                     zesPerformanceFactorGetConfig : stubPerformanceFactorGetConfig,
-                     zesPerformanceFactorSetConfig : stubPerformanceFactorSetConfig,
-                     zesDeviceEnumPsus : stubDeviceEnumPsus,
-                     zesPsuGetProperties : stubPsuGetProperties,
-                     zesPsuGetState : stubPsuGetState,
-                     zesDeviceEnumSchedulers : stubDeviceEnumSchedulers,
-                     zesSchedulerGetProperties : stubSchedulerGetProperties,
-                     zesSchedulerGetCurrentMode : stubSchedulerGetCurrentMode,
-                     zesSchedulerGetTimeoutModeProperties : stubSchedulerGetTimeoutModeProperties,
-                     zesSchedulerGetTimesliceModeProperties : stubSchedulerGetTimesliceModeProperties,
-                     zesSchedulerSetTimeoutMode : stubSchedulerSetTimeoutMode,
-                     zesSchedulerSetTimesliceMode : stubSchedulerSetTimesliceMode,
-                     zesSchedulerSetExclusiveMode : stubSchedulerSetExclusiveMode,
-                     zesSchedulerSetComputeUnitDebugMode : stubSchedulerSetComputeUnitDebugMode,
-                     zesDeviceEnumStandbyDomains : stubDeviceEnumStandbyDomains,
-                     zesStandbyGetProperties : stubStandbyGetProperties,
-                     zesStandbyGetMode : stubStandbyGetMode,
-                     zesStandbySetMode : stubStandbySetMode }
-
-    replacementFunction = replacements.get(func, stillUnimplemented)
-
-    return replacementFunction(*args, **kwargs)
+        exec(fntemplate % (f, "stub"+f))
 
 # Call ZE function, stripping (first) return code and converting non-success to exception:
-def zeCall(func, *args, **kwargs):
-    rc = func(*args, **kwargs)
-    if type(rc) in (type(()),type([])):
+def zeCall(rc):
+    if type(rc) == type({}):
+        return rc['fn'](*rc['args'], **rc['kwargs'])
+    elif type(rc) in (type(()),type([])):
         val = rc[1:]
         rc = rc[0]
         if len(val) == 1:
@@ -1802,7 +1684,7 @@ def zeCall(func, *args, **kwargs):
     else:
         val = None
     if rc == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
-        return unimplementedFunctionCall(func, *args, **kwargs)
+        raise NotImplementedError
     elif rc != ZE_RESULT_SUCCESS:
         raise ValueError(resultString(rc))
     return val
@@ -2227,7 +2109,7 @@ def driverUUIDs(count, drivers):
     for i in range(count):
         driver = drivers[i]
         driver_props = ze_typed_structure(ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES)
-        zeCall(zeDriverGetProperties, driver, driver_props)
+        zeCall(zeDriverGetProperties(driver, driver_props))
         uuid_string = uuid_string_t()
         driver_uuid_to_string(driver_props.uuid, uuid_string)
         uuids.append(str(uuid_string.id))
@@ -2238,16 +2120,16 @@ def listDrivers(count, drivers):
     for i in range(count):
         pr.err("Driver", i, ":")
         driver = drivers[i]
-        api_version = zeCall(zeDriverGetApiVersion, driver)
+        api_version = zeCall(zeDriverGetApiVersion(driver))
         pr.err("  API version:", versionString(api_version))
         driver_props = ze_typed_structure(ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES)
-        zeCall(zeDriverGetProperties, driver, driver_props)
+        zeCall(zeDriverGetProperties(driver, driver_props))
         uuid_string = uuid_string_t()
         driver_uuid_to_string(driver_props.uuid, uuid_string)
         pr.err("  uuid:", uuid_string.id)
         pr.err("  driver version:", driver_props.driverVersion)
         ipcProps = ze_typed_structure(ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES)
-        zeCall(zeDriverGetIpcProperties, driver, ipcProps)
+        zeCall(zeDriverGetIpcProperties(driver, ipcProps))
         pr.err("  IPC passing:", ipcPropertiesString(ipcProps.flags))
 
 def listDriversAndFail(count, drivers):
@@ -2264,7 +2146,7 @@ def listDevices(driverIndices, deviceCounts, deviceLists):
                 pr.err("Device", i, ":")
             device = devices[i]
             device_properties = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-            zeCall(zeDeviceGetProperties, device, device_properties)
+            zeCall(zeDeviceGetProperties(device, device_properties))
             devType = deviceTypeString(device_properties.type)
             pr.err("  type:", devType)
             pr.err("  name:", device_properties.name)
@@ -2280,13 +2162,13 @@ def listDevicesAndFail(driverIndices, deviceCounts, deviceLists):
 
 def getDrivers(driverSelection):
     driverCount = uint32_ptr()
-    zeCall(zeDriverGet, driverCount.cast(), None)
+    zeCall(zeDriverGet(driverCount.cast(), None))
     numDrivers = driverCount.value()
     if numDrivers < 1:
         pr.fail("No compatible drivers found")
 
     drivers = ze_driver_handle_array(numDrivers)
-    zeCall(zeDriverGet, driverCount.cast(), drivers.cast())
+    zeCall(zeDriverGet(driverCount.cast(), drivers.cast()))
 
     if driverSelection:
         indices = []
@@ -2324,7 +2206,7 @@ def getDeviceUUIDs(deviceCounts, deviceLists):
         for i in range(count):
             device = devices[i]
             device_properties = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-            zeCall(zeDeviceGetProperties, device, device_properties)
+            zeCall(zeDeviceGetProperties(device, device_properties))
             uuid_string = uuid_string_t()
             device_uuid_to_string(device_properties.uuid, uuid_string)
             uuids.append(str(uuid_string.id))
@@ -2340,7 +2222,7 @@ def listDevices(driverIndices, deviceCounts, deviceLists):
                 pr.err("Device", i, ":")
             device = devices[i]
             device_properties = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-            zeCall(zeDeviceGetProperties, device, device_properties)
+            zeCall(zeDeviceGetProperties(device, device_properties))
             devType = deviceTypeString(device_properties.type)
             pr.err("  type:", devType)
             pr.err("  name:", device_properties.name)
@@ -2363,12 +2245,12 @@ def getDevices(driverIndices, drivers, deviceSelection):
 
     for _,driver in zip(driverIndices, drivers):
         deviceCount = uint32_ptr()
-        zeCall(zeDeviceGet, driver, deviceCount.cast(), None)
+        zeCall(zeDeviceGet(driver, deviceCount.cast(), None))
 
         if deviceCount.value() > 0:
             deviceFound = True
             driverDevices = ze_device_handle_array(deviceCount.value())
-            zeCall(zeDeviceGet, driver, deviceCount.cast(), driverDevices.cast())
+            zeCall(zeDeviceGet(driver, deviceCount.cast(), driverDevices.cast()))
         else:
             driverDevices = None
 
@@ -2533,8 +2415,6 @@ def parseArgs():
         parser.add_argument("--tiny-uuid", action='store_true', help="print tiny device UUIDs")
         parser.add_argument("--debug", action='store_true', help="debug (for development only)")
         parser.add_argument("--reset-freq", action='store_true', help="reset frequency limits")
-        parser.add_argument("--stub-unimplemented", action='store_true',
-                            help="provide stubs for some unimplemented functions (for development only)")
         parser.add_argument("--show-timestamp", action='store_true',
                             help="show timestamps when iterating")
         parser.add_argument("--wait-events", nargs='*', metavar=('MSEC','MASK'), help="wait for events")
@@ -2587,7 +2467,6 @@ def parseArgs():
         args.subdevice = None
         args.tiny_uuid = None
         args.debug = None
-        args.stub_unimplemented = None
         args.reset_freq = None
         args.wait_events = None
         args.show_fans = None
@@ -2669,9 +2548,6 @@ def parseArgs():
     if args.uuid_index:
         IndexAttributes = SecondaryIndexAttributes
         SecondaryIndexAttributes = []
-
-    if args.stub_unimplemented:
-        replaceUnimplementedFunctions = True
 
     if args.ansi_256:
         addAnsi256ColorBlock = True
@@ -2944,7 +2820,7 @@ def findTestSuite(diagCount, diags, name):
     match = None
     for i in range(diagCount):
         diag = diags[i]
-        zeCall(zesDiagnosticsGetProperties, diag, diagProps)
+        zeCall(zesDiagnosticsGetProperties(diag, diagProps))
         # TODO: should we allow regexp matching?
         if name == diagProps.name:
             if match is None:
@@ -2983,19 +2859,19 @@ def parseTestSuite(diagCount, diags, opts):
             raise ValueError(opts)
         else:
             diagProps = zes_typed_structure(ZES_STRUCTURE_TYPE_DIAG_PROPERTIES)
-            zeCall(zesDiagnosticsGetProperties, diag, diagProps)
+            zeCall(zesDiagnosticsGetProperties(diag, diagProps))
             if diagProps.haveTests:
                 firstFound, lastFound = False, False
                 testCount = uint32_ptr()
                 try:
-                    zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), None)
+                    zeCall(zesDiagnosticsGetTests(diag, testCount.cast(), None))
                 except NotImplementedError:
                     pass
                 except ValueError:
                     reportZeException()
                 else:
                     tests = zes_diag_test_array(testCount.value())
-                    zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests.cast())
+                    zeCall(zesDiagnosticsGetTests(diag, testCount.cast(), tests.cast()))
                     for t in range(testCount.value()):
                         test = tests[t]
                         if test.index == first:
@@ -3081,7 +2957,7 @@ def main():
                 pr("Would RESET device", deviceName)
             else:
                 pr("RESETTING device", deviceName)
-                zeCall(zesDeviceReset, devices[0], args.force)
+                zeCall(zesDeviceReset(devices[0], args.force))
         else:
             pr("NOT resetting device")
 
@@ -3093,14 +2969,14 @@ def main():
 
         diagCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumDiagnosticTestSuites, devices[0], diagCount.cast(), None)
+            zeCall(zesDeviceEnumDiagnosticTestSuites(devices[0], diagCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             diags = zes_diag_handle_array(diagCount.value())
-            zeCall(zesDeviceEnumDiagnosticTestSuites, devices[0], diagCount.cast(), diags.cast())
+            zeCall(zesDeviceEnumDiagnosticTestSuites(devices[0], diagCount.cast(), diags.cast()))
 
         suite, first, last = parseTestSuite(diagCount.value(), diags, args.run_diag)
 
@@ -3108,7 +2984,7 @@ def main():
             deviceName = "%s [%s]" % (deviceIDs[0], deviceUUID(deviceUUIDs[0]))
             pr("Would run diagnostics on device", deviceName)
         else:
-            result = zeCall(zesDiagnosticsRunTests, suite, first, last)
+            result = zeCall(zesDiagnosticsRunTests(suite, first, last))
             pr("Diagnostic test result:", diagResultString(result))
 
         sys.exit(result)
@@ -3135,7 +3011,7 @@ def main():
 
         for device in devices:
             try:
-                zeCall(zesDeviceEventRegister, device, selectedEvents)
+                zeCall(zesDeviceEventRegister(device, selectedEvents))
             except NotImplementedError:
                 pass
             except ValueError:
@@ -3153,15 +3029,14 @@ def main():
         pEvents = zes_event_type_flags_array(count)
 
         try:
-            numDeviceEvents = zeCall(zesDriverEventListen, driver, timeout, count, phDevices.cast(),
-                                     pEvents.cast())
+            numEvents = zeCall(zesDriverEventListen(driver, timeout, count, phDevices.cast(), pEvents.cast()))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
-            if numDeviceEvents:
-                pr(numDeviceEvents, "device(s) reported events:")
+            if numEvents:
+                pr(numEvents, "device(s) reported events:")
                 for i in range(count):
                     events = eventsString(pEvents[i])
                     pr("   ", deviceIDs[i], ":", deviceUUIDs[i], events)
@@ -3170,7 +3045,7 @@ def main():
 
         for device in devices:
             try:
-                zeCall(zesDeviceEventRegister, device, 0)
+                zeCall(zesDeviceEventRegister(device, 0))
             except NotImplementedError:
                 pass
             except ValueError:
@@ -3189,7 +3064,7 @@ def main():
         devNode = Node(topNode, "Device", None, ("Index", devID), ("UUID", deviceUUID(devUUID)))
         if args.show_device:
             coreProps = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-            zeCall(zeDeviceGetProperties, device, coreProps)
+            zeCall(zeDeviceGetProperties(device, coreProps))
             Node(devNode, "Name", coreProps.name)
             Node(devNode, "Type", deviceTypeString(coreProps.type))
             Node(devNode, "VendorId", hex(coreProps.vendorId))
@@ -3197,7 +3072,7 @@ def main():
             if args.show_inventory:
                 try:
                     props = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-                    zeCall(zesDeviceGetProperties, device, props)
+                    zeCall(zesDeviceGetProperties(device, props))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3232,7 +3107,7 @@ def main():
                 def deviceTelemetry(device=device, nodes=nodes):
                     state = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_STATE)
                     try:
-                        zeCall(zesDeviceGetState, device, state)
+                        zeCall(zesDeviceGetState(device, state))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -3245,14 +3120,14 @@ def main():
 
         tempCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumTemperatureSensors, device,tempCount.cast(), None)
+            zeCall(zesDeviceEnumTemperatureSensors(device,tempCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             temperatures = zes_temp_handle_array(tempCount.value())
-            zeCall(zesDeviceEnumTemperatureSensors, device,tempCount.cast(), temperatures.cast())
+            zeCall(zesDeviceEnumTemperatureSensors(device,tempCount.cast(), temperatures.cast()))
 
         if args.enable_critical_temp:
             t, = args.enable_critical_temp
@@ -3260,9 +3135,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.enableCritical = True
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3275,9 +3150,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.enableCritical = False
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3290,9 +3165,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold1.enableLowToHigh = True
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3305,9 +3180,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold1.enableLowToHigh = False
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3320,9 +3195,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold1.enableHighToLow = True
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3335,9 +3210,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold1.enableHighToLow = False
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3350,9 +3225,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold1.threshold = v
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3365,9 +3240,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold2.enableLowToHigh = True
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3380,9 +3255,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold2.enableLowToHigh = False
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3395,9 +3270,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold2.enableHighToLow = True
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3410,9 +3285,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold2.enableHighToLow = False
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3425,9 +3300,9 @@ def main():
                 temp = temperatures[t]
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                     tempConfig.threshold2.threshold = v
-                    zeCall(zesTemperatureSetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureSetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3443,14 +3318,14 @@ def main():
                 tempProps = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_PROPERTIES)
                 tempConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_TEMP_CONFIG)
                 try:
-                    zeCall(zesTemperatureGetProperties, temp, tempProps)
+                    zeCall(zesTemperatureGetProperties(temp, tempProps))
                 except NotImplementedError:
                     continue
                 except ValueError:
                     reportZeException()
                     continue
                 try:
-                    zeCall(zesTemperatureGetConfig, temp, tempConfig)
+                    zeCall(zesTemperatureGetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3484,7 +3359,7 @@ def main():
 
                     def tempTelemetry(temp=temp, node=node, degC=degC):
                         try:
-                            tempCurrent = zeCall(zesTemperatureGetState, temp)
+                            tempCurrent = zeCall(zesTemperatureGetState(temp))
                         except NotImplementedError:
                             pass
                         except ValueError:
@@ -3496,14 +3371,14 @@ def main():
 
         pwrCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumPowerDomains, device,pwrCount.cast(), None)
+            zeCall(zesDeviceEnumPowerDomains(device,pwrCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             powers = zes_pwr_handle_array(pwrCount.value())
-            zeCall(zesDeviceEnumPowerDomains, device, pwrCount.cast(), powers.cast())
+            zeCall(zesDeviceEnumPowerDomains(device, pwrCount.cast(), powers.cast()))
 
         if args.set_power or args.set_burst_power or args.set_peak_power:
             sustainedLimit = None
@@ -3540,7 +3415,7 @@ def main():
                         pr("Would set peak AC, DC limits to", peakLimit.powerAC, "mW,",
                            peakLimit.powerDC, "mW")
                 else:
-                    zeCall(zesPowerSetLimits, pwr, sustainedLimit, burstLimit, peakLimit)
+                    zeCall(zesPowerSetLimits(pwr, sustainedLimit, burstLimit, peakLimit))
 
         if args.set_energy_threshold:
             threshold, remainder = parseJoules(args.set_energy_threshold)
@@ -3549,7 +3424,7 @@ def main():
                 if args.dry_run:
                     pr("Would set energy threshold to", threshold, "J")
                 else:
-                    zeCall(zesPowerSetEnergyThreshold, pwr, threshold)
+                    zeCall(zesPowerSetEnergyThreshold(pwr, threshold))
 
         if args.show_power:
             pwrTop = Node(devNode, "PowerDomains", None)
@@ -3557,7 +3432,7 @@ def main():
             for i in range(pwrCount.value()):
                 pwr = powers[i]
                 pwrProps = zes_typed_structure(ZES_STRUCTURE_TYPE_POWER_PROPERTIES)
-                zeCall(zesPowerGetProperties, pwr, pwrProps)
+                zeCall(zesPowerGetProperties(pwr, pwrProps))
                 if pwrProps.onSubdevice:
                     pwrNode = Node(pwrTop, "PowerDomain", None, ("Index", i), ("Name", "Subdevice"),
                                       ("SubdeviceId", pwrProps.subdeviceId))
@@ -3578,7 +3453,7 @@ def main():
                     sustainedLimit = zes_power_sustained_limit_t()
                     burstLimit = zes_power_burst_limit_t()
                     peakLimit = zes_power_peak_limit_t()
-                    zeCall(zesPowerGetLimits, pwr, sustainedLimit, burstLimit, peakLimit)
+                    zeCall(zesPowerGetLimits(pwr, sustainedLimit, burstLimit, peakLimit))
                     sustainedNode = Node(pwrNode, "SustainedLimit", None)
                     Node(sustainedNode, "Enabled", bool(sustainedLimit.enabled))
                     Node(sustainedNode, "Power", "%.3f" % (sustainedLimit.power / 1000),
@@ -3597,7 +3472,7 @@ def main():
                 if args.show_telemetry:
                     pwrCounter = zes_power_energy_counter_t()
                     pwrThreshold = zes_energy_threshold_t()
-                    zeCall(zesPowerGetEnergyCounter, pwr, pwrCounter)
+                    zeCall(zesPowerGetEnergyCounter(pwr, pwrCounter))
                     nodes = []
                     nodes.append(Node(pwrNode, "CurrentPower", "?", ("Units", "Watts")))
                     nodes.append(Node(pwrNode, "MonitorProcess", "?"))
@@ -3605,7 +3480,7 @@ def main():
 
                     def pwrTelemetry(pwr=pwr, pwrCounter=pwrCounter, pwrThreshold=pwrThreshold, node=nodes):
                         oldEnergy, oldTimestamp = pwrCounter.energy, pwrCounter.timestamp
-                        zeCall(zesPowerGetEnergyCounter, pwr, pwrCounter)
+                        zeCall(zesPowerGetEnergyCounter(pwr, pwrCounter))
                         deltaE = pwrCounter.energy - oldEnergy
                         deltaT = pwrCounter.timestamp - oldTimestamp
                         if deltaT > 0:
@@ -3613,7 +3488,7 @@ def main():
                         else:
                             watts = "?"
                         node[0].setText(watts)
-                        zeCall(zesPowerGetEnergyThreshold, pwr, pwrThreshold)
+                        zeCall(zesPowerGetEnergyThreshold(pwr, pwrThreshold))
                         if pwrThreshold.enable:
                             if pwrThreshold.processId != 0xffffffff:
                                 node[1].setText(pwrThreshold.processId)
@@ -3628,14 +3503,14 @@ def main():
 
         freqCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumFrequencyDomains, device, freqCount.cast(), None)
+            zeCall(zesDeviceEnumFrequencyDomains(device, freqCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             frequencies = zes_freq_handle_array(freqCount.value())
-            zeCall(zesDeviceEnumFrequencyDomains, device, freqCount.cast(), frequencies.cast())
+            zeCall(zesDeviceEnumFrequencyDomains(device, freqCount.cast(), frequencies.cast()))
 
         if args.set_freq or args.reset_freq:
             for i in range(freqCount.value()):
@@ -3655,7 +3530,7 @@ def main():
                 if args.dry_run:
                     pr("Would set frequency range to", freqRange.min, "MHz -", freqRange.max, "MHz")
                 else:
-                    zeCall(zesFrequencySetRange, freq, freqRange)
+                    zeCall(zesFrequencySetRange(freq, freqRange))
 
         if args.show_freq:
             freqTop = Node(devNode, "FrequencyDomains", None)
@@ -3663,7 +3538,7 @@ def main():
             for i in range(freqCount.value()):
                 freq = frequencies[i]
                 freqProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_PROPERTIES)
-                zeCall(zesFrequencyGetProperties, freq, freqProps)
+                zeCall(zesFrequencyGetProperties(freq, freqProps))
                 freqType = freqTypeString(freqProps.type)
                 if freqProps.onSubdevice:
                     freqNode = Node(freqTop, "FrequencyDomain", None, ("Index", i), ("Name", freqType),
@@ -3682,20 +3557,19 @@ def main():
                     if args.verbose:
                         clockCount = uint32_ptr()
                         try:
-                            zeCall(zesFrequencyGetAvailableClocks, freq, clockCount.cast(), None)
+                            zeCall(zesFrequencyGetAvailableClocks(freq, clockCount.cast(), None))
                         except:
                             pass
                         else:
                             clockFreqs = double_array(clockCount.value())
-                            zeCall(zesFrequencyGetAvailableClocks, freq, clockCount.cast(),
-                                   clockFreqs.cast())
+                            zeCall(zesFrequencyGetAvailableClocks(freq, clockCount.cast(), clockFreqs.cast()))
                         for clk in range(clockCount.value()):
                             clockFreq = clockFreqs[clk]
                             Node(availFreqsNode, "AvailableFrequency", "%.1f" % clockFreq,
                                  ("Units", "MHz"))
 
                     freqRange = zes_freq_range_t()
-                    zeCall(zesFrequencyGetRange, freq, freqRange)
+                    zeCall(zesFrequencyGetRange(freq, freqRange))
                     rangeFreqsNode = Node(freqNode, "FrequencyRange", None)
                     Node(rangeFreqsNode, "Min", "%.1f" % freqRange.min, ("Units", "MHz"))
                     Node(rangeFreqsNode, "Max", "%.1f" % freqRange.max, ("Units", "MHz"))
@@ -3704,7 +3578,7 @@ def main():
                     freqState = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_STATE)
                     freqThrottle = zes_freq_throttle_time_t()
                     try:
-                        zeCall(zesFrequencyGetThrottleTime, freq, freqThrottle)
+                        zeCall(zesFrequencyGetThrottleTime(freq, freqThrottle))
                     except NotImplementedError:
                         freqThrottle = None
                     except ValueError:
@@ -3725,7 +3599,7 @@ def main():
                         if freqThrottle:
                             oldHeld, oldTimestamp = freqThrottle.throttleTime, freqThrottle.timestamp
                             try:
-                                zeCall(zesFrequencyGetThrottleTime, freq, freqThrottle)
+                                zeCall(zesFrequencyGetThrottleTime(freq, freqThrottle))
                             except:
                                 reportZeException()
                             else:
@@ -3735,7 +3609,7 @@ def main():
                                     throttlePercent = "%.0f" % (100.0 * deltaH / deltaT)
                                 else:
                                     throttlePercent = "?"
-                        zeCall(zesFrequencyGetState, freq, freqState)
+                        zeCall(zesFrequencyGetState(freq, freqState))
                         node[0].setText(fmtknown(freqState.request))
                         node[1].setText(fmtknown(freqState.actual))
                         node[2].setText(throttleReasonsString(freqState.throttleReasons))
@@ -3764,10 +3638,10 @@ def main():
                 try:
                     freq = frequencies[i]
                     ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
-                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    zeCall(zesFrequencyOcGetCapabilities(freq, ocCaps))
                     assert ocCaps.isOcSupported
                     frqMHz = saturate(frqMHz, 0.0, ocCaps.maxOcFrequency)
-                    zeCall(zesFrequencyOcSetFrequencyTarget, freq, frqMHz)
+                    zeCall(zesFrequencyOcSetFrequencyTarget(freq, frqMHz))
                 except:
                     pr.fail("--set-oc-freq not supported")
 
@@ -3786,11 +3660,11 @@ def main():
                 try:
                     freq = frequencies[i]
                     ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
-                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    zeCall(zesFrequencyOcGetCapabilities(freq, ocCaps))
                     assert ocCaps.isOcSupported
                     vTarget = saturate(vTarget, 0.0, ocCaps.maxOcVoltage)
                     vOffset = saturate(vOffset, ocCaps.minOcVoltageOffset, ocCaps.maxOcVoltageOffset)
-                    zeCall(zesFrequencyOcSetVoltageTarget, freq, vTarget, vOffset)
+                    zeCall(zesFrequencyOcSetVoltageTarget(freq, vTarget, vOffset))
                 except:
                     pr.fail("--set-oc-volts not supported")
 
@@ -3806,7 +3680,7 @@ def main():
             else:
                 try:
                     freq = frequencies[i]
-                    zeCall(zesFrequencyOcSetMode, freq, ZES_OC_MODE_OFF)
+                    zeCall(zesFrequencyOcSetMode(freq, ZES_OC_MODE_OFF))
                 except:
                     pr.fail("--set-oc-off not supported")
 
@@ -3823,9 +3697,9 @@ def main():
                 try:
                     freq = frequencies[i]
                     ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
-                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    zeCall(zesFrequencyOcGetCapabilities(freq, ocCaps))
                     assert ocCaps.isOcSupported
-                    zeCall(zesFrequencyOcSetMode, freq, ZES_OC_MODE_OVERRIDE)
+                    zeCall(zesFrequencyOcSetMode(freq, ZES_OC_MODE_OVERRIDE))
                 except:
                     pr.fail("--set-oc-override not supported")
 
@@ -3842,9 +3716,9 @@ def main():
                 try:
                     freq = frequencies[i]
                     ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
-                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    zeCall(zesFrequencyOcGetCapabilities(freq, ocCaps))
                     assert ocCaps.isOcSupported
-                    zeCall(zesFrequencyOcSetMode, freq, ZES_OC_MODE_INTERPOLATIVE)
+                    zeCall(zesFrequencyOcSetMode(freq, ZES_OC_MODE_INTERPOLATIVE))
                 except:
                     pr.fail("--set-oc-interpolate not supported")
 
@@ -3861,9 +3735,9 @@ def main():
                 try:
                     freq = frequencies[i]
                     ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
-                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    zeCall(zesFrequencyOcGetCapabilities(freq, ocCaps))
                     assert ocCaps.isOcSupported and ocCaps.isFixedModeSupported
-                    zeCall(zesFrequencyOcSetMode, freq, ZES_OC_MODE_FIXED)
+                    zeCall(zesFrequencyOcSetMode(freq, ZES_OC_MODE_FIXED))
                 except:
                     pr.fail("--set-oc-interpolate not supported")
 
@@ -3881,9 +3755,9 @@ def main():
                 try:
                     freq = frequencies[i]
                     ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
-                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    zeCall(zesFrequencyOcGetCapabilities(freq, ocCaps))
                     assert ocCaps.isOcSupported and ocCaps.isIccMaxSupported
-                    zeCall(zesFrequencyOcSetIccMax, freq, iccAmps)
+                    zeCall(zesFrequencyOcSetIccMax(freq, iccAmps))
                 except:
                     pr.fail("--set-oc-max-current not supported")
 
@@ -3901,9 +3775,9 @@ def main():
                 try:
                     freq = frequencies[i]
                     ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
-                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    zeCall(zesFrequencyOcGetCapabilities(freq, ocCaps))
                     assert ocCaps.isOcSupported and ocCaps.isTjMaxSupported
-                    zeCall(zesFrequencyOcSetTjMax, freq, tempC)
+                    zeCall(zesFrequencyOcSetTjMax(freq, tempC))
                 except:
                     pr.fail("--set-oc-max-temp not supported")
 
@@ -3915,9 +3789,9 @@ def main():
                 ocNode = None
                 try:
                     freqProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_PROPERTIES)
-                    zeCall(zesFrequencyGetProperties, freq, freqProps)
+                    zeCall(zesFrequencyGetProperties(freq, freqProps))
                     ocCaps = zes_typed_structure(ZES_STRUCTURE_TYPE_OC_CAPABILITIES)
-                    zeCall(zesFrequencyOcGetCapabilities, freq, ocCaps)
+                    zeCall(zesFrequencyOcGetCapabilities(freq, ocCaps))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -3932,7 +3806,7 @@ def main():
 
                 if ocNode and args.show_inventory:
                     try:
-                        mode = zeCall(zesFrequencyOcGetMode, freq)
+                        mode = zeCall(zesFrequencyOcGetMode(freq))
                     except:
                         mode = ZES_OC_MODE_OFF
                     Node(ocNode, "OverclockingMode", ocModeString(mode))
@@ -3954,13 +3828,13 @@ def main():
 
                     if ocCaps.isOcSupported:
                         try:
-                            frq = zeCall(zesFrequencyOcGetFrequencyTarget, freq)
+                            frq = zeCall(zesFrequencyOcGetFrequencyTarget(freq))
                             ocFreq = "%.1f" % frq
                         except:
                             ocFreq = "?"
                         Node(ocNode, "CurrentOcFrequencyTarget", ocFreq, ("Units", "MHz"))
                         try:
-                            tgt, off = zeCall(zesFrequencyOcGetVoltageTarget, freq)
+                            tgt, off = zeCall(zesFrequencyOcGetVoltageTarget(freq))
                             vTarget, vOffset = "%.1f" % tgt, "%.1f" % off
                         except:
                             vTarget, vOffset = "?", "?"
@@ -3969,7 +3843,7 @@ def main():
 
                     if ocCaps.isIccMaxSupported:
                         try:
-                            icc = zeCall(zesFrequencyOcGetIccMax, freq)
+                            icc = zeCall(zesFrequencyOcGetIccMax(freq))
                             iccMax = "%.1f" % icc
                         except:
                             iccMax = "?"
@@ -3977,7 +3851,7 @@ def main():
 
                     if ocCaps.isTjMaxSupported:
                         try:
-                            tj = zeCall(zesFrequencyOcGetTjMax, freq)
+                            tj = zeCall(zesFrequencyOcGetTjMax(freq))
                             tjMax = "%.1f" % tj
                         except:
                             tjMax = "?"
@@ -3985,14 +3859,14 @@ def main():
 
         engCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumEngineGroups, device, engCount.cast(), None)
+            zeCall(zesDeviceEnumEngineGroups(device, engCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             engs = zes_engine_handle_array(engCount.value())
-            zeCall(zesDeviceEnumEngineGroups, device, engCount.cast(), engs.cast())
+            zeCall(zesDeviceEnumEngineGroups(device, engCount.cast(), engs.cast()))
 
         if args.show_util:
             engTop = Node(devNode, "EngineGroups", None)
@@ -4000,7 +3874,7 @@ def main():
             for i in range(engCount.value()):
                 eng = engs[i]
                 engProps = zes_typed_structure(ZES_STRUCTURE_TYPE_ENGINE_PROPERTIES)
-                zeCall(zesEngineGetProperties, eng, engProps)
+                zeCall(zesEngineGetProperties(eng, engProps))
                 engType = engTypeString(engProps.type)
 
                 if engProps.onSubdevice:
@@ -4012,7 +3886,7 @@ def main():
                 if args.show_telemetry:
                     utilStats = zes_engine_stats_t()
                     try:
-                        zeCall(zesEngineGetActivity, eng, utilStats)
+                        zeCall(zesEngineGetActivity(eng, utilStats))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -4022,7 +3896,7 @@ def main():
 
                         def utilTelemetry(eng=eng, utilStats=utilStats, node=node):
                             oldActive, oldTimestamp = utilStats.activeTime, utilStats.timestamp
-                            zeCall(zesEngineGetActivity, eng, utilStats)
+                            zeCall(zesEngineGetActivity(eng, utilStats))
                             deltaA = utilStats.activeTime - oldActive
                             deltaT = utilStats.timestamp - oldTimestamp
                             if deltaT > 0:
@@ -4036,14 +3910,14 @@ def main():
 
         memCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumMemoryModules, device, memCount.cast(), None)
+            zeCall(zesDeviceEnumMemoryModules(device, memCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             mems = zes_mem_handle_array(memCount.value())
-            zeCall(zesDeviceEnumMemoryModules, device, memCount.cast(), mems.cast())
+            zeCall(zesDeviceEnumMemoryModules(device, memCount.cast(), mems.cast()))
 
         if args.show_mem:
             memTop = Node(devNode, "MemoryModules", None)
@@ -4051,7 +3925,7 @@ def main():
             for i in range(memCount.value()):
                 mem = mems[i]
                 memProps = zes_typed_structure(ZES_STRUCTURE_TYPE_MEM_PROPERTIES)
-                zeCall(zesMemoryGetProperties, mem, memProps)
+                zeCall(zesMemoryGetProperties(mem, memProps))
                 memType = memTypeString(memProps.type)
 
                 if memProps.onSubdevice:
@@ -4070,8 +3944,8 @@ def main():
                     memCounter = zes_mem_bandwidth_t()
                     memState = zes_typed_structure(ZES_STRUCTURE_TYPE_MEM_STATE)
                     try:
-                        zeCall(zesMemoryGetBandwidth, mem, memCounter)
-                        zeCall(zesMemoryGetState, mem, memState)
+                        zeCall(zesMemoryGetBandwidth(mem, memCounter))
+                        zeCall(zesMemoryGetState(mem, memState))
                     except:
                         pass
                     nodes = []
@@ -4086,7 +3960,7 @@ def main():
                         oldRead, oldWrite = memCounter.readCounter, memCounter.writeCounter
                         oldTimestamp = memCounter.timestamp
                         try:
-                            zeCall(zesMemoryGetState, mem, memState)
+                            zeCall(zesMemoryGetState(mem, memState))
                         except:
                             pass
                         else:
@@ -4095,7 +3969,7 @@ def main():
                             node[2].setText("%.1f" % (100.0 * (memState.size - memState.free) / memState.size))
 
                         try:
-                            zeCall(zesMemoryGetBandwidth, mem, memCounter)
+                            zeCall(zesMemoryGetBandwidth(mem, memCounter))
                         except:
                             pass
                         else:
@@ -4126,7 +4000,7 @@ def main():
         if args.show_pci:
             pciProps = zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_PROPERTIES)
             try:
-                zeCall(zesDevicePciGetProperties, device, pciProps)
+                zeCall(zesDevicePciGetProperties(device, pciProps))
             except NotImplementedError:
                 pass
             except ValueError:
@@ -4138,7 +4012,7 @@ def main():
             pciTop = Node(devNode, "PCI", None)
             if args.show_inventory:
                 props = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-                zeCall(zesDeviceGetProperties, device, props)
+                zeCall(zesDeviceGetProperties(device, props))
                 Node(pciTop, "DeviceId", hex(props.core.deviceId))
                 pciAddr = pciProps.address
                 address = "%02x:%02x.%x" % (pciAddr.bus, pciAddr.device, pciAddr.function)
@@ -4156,9 +4030,9 @@ def main():
                 if args.verbose:
                     barTop = Node(pciTop, "Bars", None)
                     barCount = uint32_ptr()
-                    zeCall(zesDevicePciGetBars, device, barCount.cast(), None)
+                    zeCall(zesDevicePciGetBars(device, barCount.cast(), None))
                     bars = zes_typed_array(ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES, barCount.value())
-                    zeCall(zesDevicePciGetBars, device, barCount.cast(), bars.cast())
+                    zeCall(zesDevicePciGetBars(device, barCount.cast(), bars.cast()))
 
                     for i in range(barCount.value()):
                         bar = bars[i]
@@ -4172,7 +4046,7 @@ def main():
             if args.show_telemetry:
                 tmp = zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_STATE)
                 try:
-                    zeCall(zesDevicePciGetState, device, tmp)
+                    zeCall(zesDevicePciGetState(device, tmp))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -4186,7 +4060,7 @@ def main():
                          'replay' : pciProps.haveReplayCounters }
                 pciState = zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_STATE)
                 pciCounter = zes_pci_stats_t()
-                zeCall(zesDevicePciGetStats, device, pciCounter)
+                zeCall(zesDevicePciGetStats(device, pciCounter))
 
                 nodes = []
                 nodes.append(Node(pciTop, "Status", "?"))
@@ -4212,8 +4086,8 @@ def main():
                     oldPacket = pciCounter.packetCounter
                     oldReplay = pciCounter.replayCounter
                     oldTimestamp = pciCounter.timestamp
-                    zeCall(zesDevicePciGetState, device, pciState)
-                    zeCall(zesDevicePciGetStats, device, pciCounter)
+                    zeCall(zesDevicePciGetState(device, pciState))
+                    zeCall(zesDevicePciGetStats(device, pciCounter))
                     deltaRx = pciCounter.rxCounter - oldRx
                     deltaTx = pciCounter.txCounter - oldTx
                     deltaPacket = pciCounter.packetCounter - oldPacket
@@ -4271,14 +4145,14 @@ def main():
 
         portCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumFabricPorts, device, portCount.cast(), None)
+            zeCall(zesDeviceEnumFabricPorts(device, portCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             ports = zes_fabric_port_handle_array(portCount.value())
-            zeCall(zesDeviceEnumFabricPorts, device, portCount.cast(), ports.cast())
+            zeCall(zesDeviceEnumFabricPorts(device, portCount.cast(), ports.cast()))
 
         if (args.enable_fabric_ports is not None or args.disable_fabric_ports is not None or
             args.enable_beaconing is not None or args.disable_beaconing is not None):
@@ -4317,7 +4191,7 @@ def main():
                 if i in affected_ports:
                     port = ports[i]
                     portConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_CONFIG)
-                    zeCall(zesFabricPortGetConfig, port, portConfig)
+                    zeCall(zesFabricPortGetConfig(port, portConfig))
                     if i in enable_ports:
                         portConfig.enabled = True
                     if i in disable_ports:
@@ -4334,7 +4208,7 @@ def main():
             for i in range(portCount.value()):
                 port = ports[i]
                 portProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_PROPERTIES)
-                zeCall(zesFabricPortGetProperties, port, portProps)
+                zeCall(zesFabricPortGetProperties(port, portProps))
 
                 if portProps.onSubdevice:
                     portNode = Node(portTop, "FabricPort", None, ("Index", i),
@@ -4346,8 +4220,8 @@ def main():
                     portLinkType = zes_fabric_link_type_t()
                     portConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_CONFIG)
 
-                    zeCall(zesFabricPortGetLinkType, port, portLinkType)
-                    zeCall(zesFabricPortGetConfig, port, portConfig)
+                    zeCall(zesFabricPortGetLinkType(port, portLinkType))
+                    zeCall(zesFabricPortGetConfig(port, portConfig))
 
                     Node(portNode, "Model", portProps.model)
                     Node(portNode, "PhysicalAttachmentType", portLinkType.desc)
@@ -4364,7 +4238,7 @@ def main():
                 if args.show_telemetry:
                     portState = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_STATE)
                     portCounter = zes_fabric_port_throughput_t()
-                    zeCall(zesFabricPortGetThroughput, port, portCounter)
+                    zeCall(zesFabricPortGetThroughput(port, portCounter))
                     nodes = []
                     nodes.append(Node(portNode, "Status", "?"))
                     nodes.append(Node(portNode, "QualityIssues", "?"))
@@ -4383,8 +4257,8 @@ def main():
                                       node=nodes):
                         oldRx, oldTx = portCounter.rxCounter, portCounter.txCounter
                         oldTimestamp = portCounter.timestamp
-                        zeCall(zesFabricPortGetState, port, portState)
-                        zeCall(zesFabricPortGetThroughput, port, portCounter)
+                        zeCall(zesFabricPortGetState(port, portState))
+                        zeCall(zesFabricPortGetThroughput(port, portCounter))
 
                         deltaRx = portCounter.rxCounter - oldRx
                         deltaTx = portCounter.txCounter - oldTx
@@ -4414,14 +4288,14 @@ def main():
 
         edomCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumRasErrorSets, device, edomCount.cast(), None)
+            zeCall(zesDeviceEnumRasErrorSets(device, edomCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             edoms = zes_ras_handle_array(edomCount.value())
-            zeCall(zesDeviceEnumRasErrorSets, device, edomCount.cast(), edoms.cast())
+            zeCall(zesDeviceEnumRasErrorSets(device, edomCount.cast(), edoms.cast()))
 
         if args.set_error_thresholds:
             i,thresholds = args.set_error_thresholds[0], args.set_error_thresholds[1:]
@@ -4439,12 +4313,12 @@ def main():
                         ras = edoms[i]
                         rasConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_CONFIG)
                         if len(thresholds) < ZES_MAX_RAS_ERROR_CATEGORY_COUNT + 1:
-                            zeCall(zesRasGetConfig, ras, rasConfig)
+                            zeCall(zesRasGetConfig(ras, rasConfig))
                         else:
                             rasConfig.totalThreshold = thresholds.pop()
                         for t in range(len(thresholds)):
                             ras_category_set(rasConfig.detailedThresholds, t, thresholds[t])
-                        zeCall(zesRasSetConfig, ras, rasConfig)
+                        zeCall(zesRasSetConfig(ras, rasConfig))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -4457,7 +4331,7 @@ def main():
                 ras = edoms[i]
                 rasProps = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_PROPERTIES)
                 try:
-                    zeCall(zesRasGetProperties, ras, rasProps)
+                    zeCall(zesRasGetProperties(ras, rasProps))
                 except NotImplementedError:
                     continue
                 except ValueError:
@@ -4474,7 +4348,7 @@ def main():
                 if args.show_inventory:
                     try:
                         rasConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_CONFIG)
-                        zeCall(zesRasGetConfig, ras, rasConfig)
+                        zeCall(zesRasGetConfig(ras, rasConfig))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -4512,7 +4386,7 @@ def main():
 
                     def rasTelemetry(ras=ras, node=nodes, rasState=rasState):
                         try:
-                            zeCall(zesRasGetState, ras, args.clear_errors, rasState)
+                            zeCall(zesRasGetState(ras, args.clear_errors, rasState))
                         except NotImplementedError:
                             pass
                         except ValueError:
@@ -4532,20 +4406,20 @@ def main():
             for i in range(edomCount.value()):
                 ras = edoms[i]
                 try:
-                    zeCall(zesRasGetState, ras, True, None)
+                    zeCall(zesRasGetState(ras, True, None))
                 except ValueError as err:
                     pr.err("workaround... ERROR: zesRasGetState returned error, ignoring...", err)
 
         stbyCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumStandbyDomains, device, stbyCount.cast(), None)
+            zeCall(zesDeviceEnumStandbyDomains(device, stbyCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             stbys = zes_standby_handle_array(stbyCount.value())
-            zeCall(zesDeviceEnumStandbyDomains, device, stbyCount.cast(), stbys.cast())
+            zeCall(zesDeviceEnumStandbyDomains(device, stbyCount.cast(), stbys.cast()))
 
         if args.set_standby is not None:
             for i in range(stbyCount.value()):
@@ -4554,12 +4428,12 @@ def main():
                     if args.dry_run:
                         pr("Would enable standby promotion")
                     else:
-                        zeCall(zesStandbySetMode, stby, ZES_STANDBY_PROMO_MODE_DEFAULT)
+                        zeCall(zesStandbySetMode(stby, ZES_STANDBY_PROMO_MODE_DEFAULT))
                 elif args.set_standby.lower() in ["disabled", "dis", "0", "n", "no", "f", "false"]:
                     if args.dry_run:
                         pr("Would disable standby promotion")
                     else:
-                        zeCall(zesStandbySetMode, stby, ZES_STANDBY_PROMO_MODE_NEVER)
+                        zeCall(zesStandbySetMode(stby, ZES_STANDBY_PROMO_MODE_NEVER))
                 else:
                     pr.err("WARNING: ignoring unrecognized set-standby value", args.set_standby)
 
@@ -4569,7 +4443,7 @@ def main():
             for i in range(stbyCount.value()):
                 stby = stbys[i]
                 stbyProps = zes_typed_structure(ZES_STRUCTURE_TYPE_STANDBY_PROPERTIES)
-                zeCall(zesStandbyGetProperties, stby, stbyProps)
+                zeCall(zesStandbyGetProperties(stby, stbyProps))
                 stbyType = stbyTypeString(stbyProps.type)
 
                 if stbyProps.onSubdevice:
@@ -4579,19 +4453,19 @@ def main():
                     stbyNode = Node(stbyTop, "StandbyDomain", None, ("Index", i), ("Name", stbyType))
 
                 if args.show_inventory:
-                    modeString = stbyPromoModeString(zeCall(zesStandbyGetMode, stby))
+                    modeString = stbyPromoModeString(zeCall(zesStandbyGetMode(stby)))
                     Node(stbyNode, "SleepStateMode", modeString)
 
         procCount = uint32_ptr()
         try:
-            zeCall(zesDeviceProcessesGetState, device, procCount.cast(), None)
+            zeCall(zesDeviceProcessesGetState(device, procCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             procs = zes_typed_array(ZES_STRUCTURE_TYPE_PROCESS_STATE, procCount.value())
-            zeCall(zesDeviceProcessesGetState, device, procCount.cast(), procs.cast())
+            zeCall(zesDeviceProcessesGetState(device, procCount.cast(), procs.cast()))
 
         if args.show_processes:
             procTop = Node(devNode, "ProcessUsages", None)
@@ -4607,12 +4481,12 @@ def main():
 
         schedCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumSchedulers, device, schedCount.cast(), None)
+            zeCall(zesDeviceEnumSchedulers(device, schedCount.cast(), None))
         except:
             pass
         else:
             scheds = zes_sched_handle_array(schedCount.value())
-            zeCall(zesDeviceEnumSchedulers, device, schedCount.cast(), scheds.cast())
+            zeCall(zesDeviceEnumSchedulers(device, schedCount.cast(), scheds.cast()))
 
         if args.set_scheduler:
             idx, schedulerArgs = args.set_scheduler[0], args.set_scheduler[1:]
@@ -4626,19 +4500,19 @@ def main():
                     schedCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES)
                     watchdogTimeout, remainder = parseMicroseconds(remainder)
                     if watchdogTimeout == 0:
-                        zeCall(zesSchedulerGetTimeoutModeProperties, sched, False, schedCfg)
+                        zeCall(zesSchedulerGetTimeoutModeProperties(sched, False, schedCfg))
                     else:
                         schedCfg.watchdogTimeout = watchdogTimeout
                     if args.dry_run:
                         pr("Would set scheduling mode to timeout")
                     else:
-                        needsReboot = zeCall(zesSchedulerSetTimeoutMode, sched, schedCfg)
+                        needsReboot = zeCall(zesSchedulerSetTimeoutMode(sched, schedCfg))
                 elif mode == ZES_SCHED_MODE_TIMESLICE:
                     schedCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
                     interval, remainder = parseMicroseconds(remainder)
                     yieldTimeout, remainder = parseMicroseconds(remainder)
                     if interval == 0 or yieldTimeout == 0:
-                        zeCall(zesSchedulerGetTimesliceModeProperties, sched, False, schedCfg)
+                        zeCall(zesSchedulerGetTimesliceModeProperties(sched, False, schedCfg))
                     if interval != 0:
                         schedCfg.interval = interval
                     if yieldTimeout != 0:
@@ -4646,17 +4520,17 @@ def main():
                     if args.dry_run:
                         pr("Would set scheduling mode to timeslice")
                     else:
-                        needsReboot = zeCall(zesSchedulerSetTimesliceMode, sched, schedCfg)
+                        needsReboot = zeCall(zesSchedulerSetTimesliceMode(sched, schedCfg))
                 elif mode == ZES_SCHED_MODE_EXCLUSIVE:
                     if args.dry_run:
                         pr("Would set scheduling mode to exclusive")
                     else:
-                        needsReboot = zeCall(zesSchedulerSetExclusiveMode, sched)
+                        needsReboot = zeCall(zesSchedulerSetExclusiveMode(sched))
                 elif mode == ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG:
                     if args.dry_run:
                         pr("Would set scheduling mode to compute unit debug")
                     else:
-                        needsReboot = zeCall(zesSchedulerSetComputeUnitDebugMode, sched)
+                        needsReboot = zeCall(zesSchedulerSetComputeUnitDebugMode(sched))
                 if remainder:
                     pr.err("WARNING: Extra set-scheduler arguments ignored")
                     pr.err(remainder)
@@ -4671,7 +4545,7 @@ def main():
                 sched = scheds[i]
                 schedProps = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_PROPERTIES)
                 try:
-                    zeCall(zesSchedulerGetProperties, sched, schedProps)
+                    zeCall(zesSchedulerGetProperties(sched, schedProps))
                 except NotImplementedError:
                     continue
                 except ValueError:
@@ -4690,14 +4564,14 @@ def main():
                     Node(schedNode, "SupportedModes", schedSupportedModesString(schedProps.supportedModes))
                     if args.verbose:
                         timeoutCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES)
-                        zeCall(zesSchedulerGetTimeoutModeProperties, sched, True, timeoutCfg)
+                        zeCall(zesSchedulerGetTimeoutModeProperties(sched, True, timeoutCfg))
                         if timeoutCfg.watchdogTimeout == ZES_SCHED_WATCHDOG_DISABLE:
                             Node(schedNode, "DefaultTimeout", "Disabled")
                         else:
                             wd = timeoutCfg.watchdogTimeout / 1000.0
                             Node(schedNode, "DefaultTimeout", "%.3f" % wd, ("Units", "msec"))
                         tsCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
-                        zeCall(zesSchedulerGetTimesliceModeProperties, sched, True, tsCfg)
+                        zeCall(zesSchedulerGetTimesliceModeProperties(sched, True, tsCfg))
                         tsi = tsCfg.interval / 1000.0
                         tsy = tsCfg.yieldTimeout / 1000.0
                         Node(schedNode, "DefaultInterval", "%.3f" % tsi, ("Units", "msec"))
@@ -4714,11 +4588,11 @@ def main():
 
                     def schedTelemetry(sched=sched, node=nodes, cfg=cfgs):
                         try:
-                            mode = zeCall(zesSchedulerGetCurrentMode, sched)
+                            mode = zeCall(zesSchedulerGetCurrentMode(sched))
                             if mode == ZES_SCHED_MODE_TIMEOUT:
-                                zeCall(zesSchedulerGetTimeoutModeProperties, sched, False, cfg[0])
+                                zeCall(zesSchedulerGetTimeoutModeProperties(sched, False, cfg[0]))
                             elif mode == ZES_SCHED_MODE_TIMESLICE:
-                                zeCall(zesSchedulerGetTimesliceModeProperties, sched, False, cfg[1])
+                                zeCall(zesSchedulerGetTimesliceModeProperties(sched, False, cfg[1]))
                         except NotImplementedError:
                             pass
                         except ValueError:
@@ -4746,14 +4620,14 @@ def main():
 
         diagCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumDiagnosticTestSuites, device, diagCount.cast(), None)
+            zeCall(zesDeviceEnumDiagnosticTestSuites(device, diagCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             diags = zes_diag_handle_array(diagCount.value())
-            zeCall(zesDeviceEnumDiagnosticTestSuites, device, diagCount.cast(), diags.cast())
+            zeCall(zesDeviceEnumDiagnosticTestSuites(device, diagCount.cast(), diags.cast()))
 
         if args.show_diag:
             diagTop = Node(devNode, "TestSuites", None)
@@ -4761,7 +4635,7 @@ def main():
             for i in range(diagCount.value()):
                 diag = diags[i]
                 diagProps = zes_typed_structure(ZES_STRUCTURE_TYPE_DIAG_PROPERTIES)
-                zeCall(zesDiagnosticsGetProperties, diag, diagProps)
+                zeCall(zesDiagnosticsGetProperties(diag, diagProps))
                 if diagProps.onSubdevice:
                     diagNode = Node(diagTop, "TestSuite", None, ("Index", i), ("Name", diagProps.name),
                                     ("SubdeviceId", diagProps.subdeviceId))
@@ -4771,14 +4645,14 @@ def main():
                 if args.show_inventory and diagProps.haveTests:
                     testCount = uint32_ptr()
                     try:
-                        zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), None)
+                        zeCall(zesDiagnosticsGetTests(diag, testCount.cast(), None))
                     except NotImplementedError:
                         pass
                     except ValueError:
                         reportZeException()
                     else:
                         tests = zes_diag_test_array(testCount.value())
-                        zeCall(zesDiagnosticsGetTests, diag, testCount.cast(), tests.cast())
+                        zeCall(zesDiagnosticsGetTests(diag, testCount.cast(), tests.cast()))
 
                     for t in range(testCount.value()):
                         test = tests[t]
@@ -4786,21 +4660,21 @@ def main():
 
         fanCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumFans, device, fanCount.cast(), None)
+            zeCall(zesDeviceEnumFans(device, fanCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             fans = zes_fan_handle_array(fanCount.value())
-            zeCall(zesDeviceEnumFans, device, fanCount.cast(), fans.cast())
+            zeCall(zesDeviceEnumFans(device, fanCount.cast(), fans.cast()))
 
         if args.set_fan_speed_default:
             i, = args.set_fan_speed_default
             if 0 <= i < fanCount.value():
                 try:
                     fan = fans[i]
-                    zeCall(zesFanSetDefaultMode, fan)
+                    zeCall(zesFanSetDefaultMode(fan))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -4811,7 +4685,7 @@ def main():
         if args.set_fan_speed_rpm:
             try:
                 fanProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)
-                zeCall(zesFanGetProperties, fan, fanProps)
+                zeCall(zesFanGetProperties(fan, fanProps))
                 maxRPM = fanProps.maxRPM
             except:
                 maxRPM = 1000000
@@ -4822,7 +4696,7 @@ def main():
                     speed = zes_fan_speed_t()
                     speed.speed = rpm
                     speed.units = ZES_FAN_SPEED_UNITS_RPM
-                    zeCall(zesFanSetFixedSpeedMode, fan, speed)
+                    zeCall(zesFanSetFixedSpeedMode(fan, speed))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -4838,7 +4712,7 @@ def main():
                     speed = zes_fan_speed_t()
                     speed.speed = pct
                     speed.units = ZES_FAN_SPEED_UNITS_PERCENT
-                    zeCall(zesFanSetFixedSpeedMode, fan, speed)
+                    zeCall(zesFanSetFixedSpeedMode(fan, speed))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -4849,7 +4723,7 @@ def main():
         if args.set_fan_speed_table_rpm:
             try:
                 fanProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)
-                zeCall(zesFanGetProperties, fan, fanProps)
+                zeCall(zesFanGetProperties(fan, fanProps))
                 maxRPM = fanProps.maxRPM
                 maxPoints = fanProps.maxPoints
             except:
@@ -4884,7 +4758,7 @@ def main():
                         item.speed.units = ZES_FAN_SPEED_UNITS_RPM
                         tempSpeed[t] = item
                     fan_speed_table_set(fanTable, len(table), tempSpeed.cast())
-                    zeCall(zesFanSetSpeedTableMode, fan, fanTable)
+                    zeCall(zesFanSetSpeedTableMode(fan, fanTable))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -4895,7 +4769,7 @@ def main():
         if args.set_fan_speed_table_percent:
             try:
                 fanProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)
-                zeCall(zesFanGetProperties, fan, fanProps)
+                zeCall(zesFanGetProperties(fan, fanProps))
                 maxPoints = fanProps.maxPoints
             except:
                 maxPoints = ZES_FAN_TEMP_SPEED_PAIR_COUNT
@@ -4928,7 +4802,7 @@ def main():
                         item.speed.units = ZES_FAN_SPEED_UNITS_PERCENT
                         tempSpeed[t] = item
                     fan_speed_table_set(fanTable, len(table), tempSpeed.cast())
-                    zeCall(zesFanSetSpeedTableMode, fan, fanTable)
+                    zeCall(zesFanSetSpeedTableMode(fan, fanTable))
                 except NotImplementedError:
                     pass
                 except ValueError:
@@ -4943,7 +4817,7 @@ def main():
                 fan = fans[i]
 
                 fanProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_PROPERTIES)
-                zeCall(zesFanGetProperties, fan, fanProps)
+                zeCall(zesFanGetProperties(fan, fanProps))
 
                 if fanProps.onSubdevice:
                     fanNode = Node(fanTop, "Fan", None, ("Index", i),
@@ -4952,7 +4826,7 @@ def main():
                     fanNode = Node(fanTop, "Fan", None, ("Index", i))
 
                 fanConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_FAN_CONFIG)
-                zeCall(zesFanGetConfig, fan, fanConfig)
+                zeCall(zesFanGetConfig(fan, fanConfig))
 
                 if args.show_inventory:
                     Node(fanNode, "CanControl", bool(fanProps.canControl))
@@ -4985,8 +4859,8 @@ def main():
 
                     def fanTelemetry(fan=fan, node=nodes):
                         try:
-                            rpm = zeCall(zesFanGetState, fan, ZES_FAN_SPEED_UNITS_RPM)
-                            pct = zeCall(zesFanGetState, fan, ZES_FAN_SPEED_UNITS_PERCENT)
+                            rpm = zeCall(zesFanGetState(fan, ZES_FAN_SPEED_UNITS_RPM))
+                            pct = zeCall(zesFanGetState(fan, ZES_FAN_SPEED_UNITS_PERCENT))
                         except NotImplementedError:
                             pass
                         except ValueError:
@@ -4999,14 +4873,14 @@ def main():
 
         fwCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumFirmwares, device, fwCount.cast(), None)
+            zeCall(zesDeviceEnumFirmwares(device, fwCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             fws = zes_firmware_handle_array(fwCount.value())
-            zeCall(zesDeviceEnumFirmwares, device, fwCount.cast(), fws.cast())
+            zeCall(zesDeviceEnumFirmwares(device, fwCount.cast(), fws.cast()))
 
         if args.flash_firmware:
             filename, = args.flash_firmware
@@ -5023,15 +4897,15 @@ def main():
                     pr("Would flash device(s) now")
                 else:
                     pr("Preparing to flash devices")
-                    zeCall(zesDeviceReset, devices[0], args.force)
+                    zeCall(zesDeviceReset(devices[0], args.force))
                     size = uint32_ptr()
                     with open(filename, "rb") as f:
                         image = f.read()
                     for i in range(fwCount.value()):
                         fw = fws[i]
                         pr("Flashing device", names[i])
-                        # zeCall(zesFirmwareFlash, fw, image, len(image))
-                        zeCall(zesFirmwareFlashData, fw, image)
+                        # zeCall(zesFirmwareFlash(fw, image, len(image)))
+                        zeCall(zesFirmwareFlashData(fw, image))
             else:
                 pr("NOT flashing device(s)")
 
@@ -5044,7 +4918,7 @@ def main():
                 fw = fws[i]
 
                 fwProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES)
-                zeCall(zesFirmwareGetProperties, fw, fwProps)
+                zeCall(zesFirmwareGetProperties(fw, fwProps))
 
                 if fwProps.onSubdevice:
                     fwNode = Node(fwTop, "Firmware", None, ("Index", i),
@@ -5059,14 +4933,14 @@ def main():
 
         ledCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumLeds, device, ledCount.cast(), None)
+            zeCall(zesDeviceEnumLeds(device, ledCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             leds = zes_led_handle_array(ledCount.value())
-            zeCall(zesDeviceEnumLeds, device, ledCount.cast(), leds.cast())
+            zeCall(zesDeviceEnumLeds(device, ledCount.cast(), leds.cast()))
 
         if args.enable_led:
             i, = args.enable_led
@@ -5076,7 +4950,7 @@ def main():
                 else:
                     try:
                         led = leds[i]
-                        zeCall(zesLedSetState, led, True)
+                        zeCall(zesLedSetState(led, True))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -5092,7 +4966,7 @@ def main():
                 else:
                     try:
                         led = leds[i]
-                        zeCall(zesLedSetState, led, False)
+                        zeCall(zesLedSetState(led, False))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -5134,7 +5008,7 @@ def main():
                 else:
                     try:
                         led = leds[i]
-                        zeCall(zesLedSetColor, led, color)
+                        zeCall(zesLedSetColor(led, color))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -5147,7 +5021,7 @@ def main():
                 led = leds[i]
 
                 ledProps = zes_typed_structure(ZES_STRUCTURE_TYPE_LED_PROPERTIES)
-                zeCall(zesLedGetProperties, led, ledProps)
+                zeCall(zesLedGetProperties(led, ledProps))
 
                 if ledProps.onSubdevice:
                     ledNode = Node(ledTop, "Led", None, ("Index", i),
@@ -5168,7 +5042,7 @@ def main():
 
                     def ledTelemetry(led=led, node=nodes, ledState=ledState):
                         try:
-                            zeCall(zesLedGetState, led, ledState)
+                            zeCall(zesLedGetState(led, ledState))
                         except NotImplementedError:
                             pass
                         except ValueError:
@@ -5182,14 +5056,14 @@ def main():
 
         perfCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumPerformanceFactorDomains, device, perfCount.cast(), None)
+            zeCall(zesDeviceEnumPerformanceFactorDomains(device, perfCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             perfs = zes_perf_handle_array(perfCount.value())
-            zeCall(zesDeviceEnumPerformanceFactorDomains, device, perfCount.cast(), perfs.cast())
+            zeCall(zesDeviceEnumPerformanceFactorDomains(device, perfCount.cast(), perfs.cast()))
 
         if args.set_perf:
             idx,valStr = args.set_perf
@@ -5206,7 +5080,7 @@ def main():
                 else:
                     try:
                         perf = perfs[i]
-                        zeCall(zesPerformanceFactorSetConfig, perf, val)
+                        zeCall(zesPerformanceFactorSetConfig(perf, val))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -5219,7 +5093,7 @@ def main():
                 perf = perfs[i]
 
                 perfProps = zes_typed_structure(ZES_STRUCTURE_TYPE_PERF_PROPERTIES)
-                zeCall(zesPerformanceFactorGetProperties, perf, perfProps)
+                zeCall(zesPerformanceFactorGetProperties(perf, perfProps))
 
                 if perfProps.onSubdevice:
                     perfNode = Node(perfTop, "PerformanceFactor", None, ("Index", i),
@@ -5236,7 +5110,7 @@ def main():
 
                     def perfTelemetry(perf=perf, node=nodes):
                         try:
-                            val = zeCall(zesPerformanceFactorGetConfig, perf)
+                            val = zeCall(zesPerformanceFactorGetConfig(perf))
                         except NotImplementedError:
                             pass
                         except ValueError:
@@ -5248,14 +5122,14 @@ def main():
 
         psuCount = uint32_ptr()
         try:
-            zeCall(zesDeviceEnumPsus, device, psuCount.cast(), None)
+            zeCall(zesDeviceEnumPsus(device, psuCount.cast(), None))
         except NotImplementedError:
             pass
         except ValueError:
             reportZeException()
         else:
             psus = zes_psu_handle_array(psuCount.value())
-            zeCall(zesDeviceEnumPsus, device, psuCount.cast(), psus.cast())
+            zeCall(zesDeviceEnumPsus(device, psuCount.cast(), psus.cast()))
 
         if args.set_perf:
             idx,valStr = args.set_perf
@@ -5272,7 +5146,7 @@ def main():
                 else:
                     try:
                         perf = perfs[i]
-                        zeCall(zesPerformanceFactorSetConfig, perf, val)
+                        zeCall(zesPerformanceFactorSetConfig(perf, val))
                     except NotImplementedError:
                         pass
                     except ValueError:
@@ -5285,7 +5159,7 @@ def main():
                 psu = psus[i]
 
                 psuProps = zes_typed_structure(ZES_STRUCTURE_TYPE_PSU_PROPERTIES)
-                zeCall(zesPsuGetProperties, psu, psuProps)
+                zeCall(zesPsuGetProperties(psu, psuProps))
 
                 if psuProps.onSubdevice:
                     psuNode = Node(psuTop, "PowerSupply", None, ("Index", i),
@@ -5308,7 +5182,7 @@ def main():
 
                     def psuTelemetry(psu=psu, node=nodes, psuState=psuState):
                         try:
-                            zeCall(zesPsuGetState, psu, psuState)
+                            zeCall(zesPsuGetState(psu, psuState))
                         except NotImplementedError:
                             pass
                         except ValueError:
