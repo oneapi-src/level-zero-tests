@@ -135,7 +135,7 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %clear zes_standby_promo_mode_t* pMode;
 %clear double* pTemperature;
 
-// This fails in Ubuntu 19.10 (and presumably SWIG 3):
+// This would be better but fails in Ubuntu 19.10 (and presumably SWIG 3):
 // %pybuffer_binary(void* pImage, uint32_t size);
 
 // So use a char-based wrapper instead:
@@ -148,6 +148,45 @@ zesFirmwareFlashData(zes_firmware_handle_t hFirmware, char* pImage, uint32_t nBy
 }
 %}
 %clear (char* pImage, uint32_t nBytes);
+
+// Can use the same mechanism to access UUIDs in binary:
+%pybuffer_binary(char* pUUID, uint32_t nBytes);
+%inline %{
+// Perhaps these should throw exceptions if nBytes is wrong
+uint32_t write_driver_uuid(ze_driver_uuid_t *uuid_struct, char* pUUID, uint32_t nBytes)
+{
+    if (nBytes > ZE_MAX_DRIVER_UUID_SIZE)
+    {
+        nBytes = ZE_MAX_DRIVER_UUID_SIZE;
+    }
+    memcpy(uuid_struct->id, pUUID, nBytes);
+}
+uint32_t read_driver_uuid(char* pUUID, uint32_t nBytes, ze_driver_uuid_t *uuid_struct)
+{
+    if (nBytes > ZE_MAX_DRIVER_UUID_SIZE)
+    {
+        nBytes = ZE_MAX_DRIVER_UUID_SIZE;
+    }
+    memcpy(pUUID, uuid_struct->id, nBytes);
+}
+uint32_t write_device_uuid(ze_device_uuid_t *uuid_struct, char* pUUID, uint32_t nBytes)
+{
+    if (nBytes > ZE_MAX_DEVICE_UUID_SIZE)
+    {
+        nBytes = ZE_MAX_DEVICE_UUID_SIZE;
+    }
+    memcpy(uuid_struct->id, pUUID, nBytes);
+}
+uint32_t read_device_uuid(char* pUUID, uint32_t nBytes, ze_device_uuid_t *uuid_struct)
+{
+    if (nBytes > ZE_MAX_DEVICE_UUID_SIZE)
+    {
+        nBytes = ZE_MAX_DEVICE_UUID_SIZE;
+    }
+    memcpy(pUUID, uuid_struct->id, nBytes);
+}
+%}
+%clear (char* pUUID, uint32_t nBytes);
 
 //
 // Standard C constructs
