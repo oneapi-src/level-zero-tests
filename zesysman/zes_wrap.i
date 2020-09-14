@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: MIT
  */
-%module zesysman
+%module zes_wrap
 
 %{
 #include <sys/stat.h>
@@ -31,7 +31,7 @@ void _zes_exception(const char *format, ...)
     exit(1);
 }
 
-void _initialize_zesysman()
+void _initialize_zes_wrap()
 {
     unsigned int result;
 
@@ -82,7 +82,7 @@ os.environ.setdefault('ZES_ENABLE_SYSMAN',"1")
 %}
 
 %init %{
-    _initialize_zesysman();
+    _initialize_zes_wrap();
 %}
 
 %include <typemaps.i>

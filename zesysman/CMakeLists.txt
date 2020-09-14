@@ -13,13 +13,13 @@ set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 include_directories(${LevelZero_INCLUDE_DIRS})
 include_directories(${Python3_INCLUDE_DIRS})
 
-swig_add_library(zesysman
+swig_add_library(zes_wrap
     TYPE SHARED
     LANGUAGE python
     SOURCES 
-        zesysman.i)
+        zes_wrap.i)
 
-swig_link_libraries(zesysman
+swig_link_libraries(zes_wrap
         PRIVATE
           LevelZero::LevelZero
      )
@@ -28,14 +28,16 @@ set(destination "${CMAKE_INSTALL_PREFIX}/zesysman")
 
 
 install(
-      TARGETS ${SWIG_MODULE_zesysman_REAL_NAME}
-      DESTINATION ${destination}
+      TARGETS ${SWIG_MODULE_zes_wrap_REAL_NAME}
+      DESTINATION ${destination}/zesys
       COMPONENT zesysman
 )
 
 install(
-      FILES ${CMAKE_CURRENT_BINARY_DIR}/zesysman.py
-      DESTINATION ${destination}
+      FILES ${CMAKE_CURRENT_BINARY_DIR}/zes_wrap.py
+      FILES zesys/logger.py
+      FILES zesys/__init__.py
+      DESTINATION ${destination}/zesys
       COMPONENT zesysman
 )
 

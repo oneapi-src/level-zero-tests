@@ -5,61 +5,18 @@
 import argparse
 import os
 import os.path
-import re
 import signal
 import sys
 import time
-import traceback
 import xml.etree.ElementTree as ElementTree
 import xml.dom.minidom as minidom
 
-from zesysman import *
+from zesys import *
+from zesys.zes_wrap import *
 
-ZESYSMAN_PROG_VERSION = "version 0.2"
+ZESYSMAN_PROG_VERSION = "version 0.3"
 
-#
-# Output support
-#
-
-class Logger:
-    def __init__(self):
-        self.outputFile = sys.stdout
-        self.debugFile = None
-        self.teeOutput = False
-
-    # Print to standard error
-    def err(self, *args, **kwargs):
-        kwargs["file"] = sys.stderr
-        print(*args, **kwargs)
-
-    # Print to selected debug stream (suppressed when self.debugFile=None)
-    def dbg(self, *args, **kwargs):
-        if self.debugFile:
-            kwargs["file"] = self.debugFile
-            print(*args, **kwargs)
-
-    # Print to current output file, copy to stdout if tee requested:
-    def __call__(self, *args, **kwargs):
-        kwargs["file"] = self.outputFile
-        print(*args, **kwargs)
-        if self.teeOutput:
-            kwargs["file"] = sys.stdout
-            print(*args, **kwargs)
-
-    def fail(self, *args, **kwargs):
-        self.err(*args, **kwargs)
-        sys.exit(1)
-
-pr = Logger()
-
-def reportZeException():
-    eType, eValue, eTrace = sys.exc_info()
-    tb = traceback.format_tb(eTrace, limit=1)[0]
-    match = re.search(r".*zeCall\((\w+)\s*,", tb)
-    if match:
-        pr.err("WARNING:", match.group(1), "returned", eValue)
-    else:
-        pr.err("WARNING:", eValue, "returned from\n", tb.rstrip())
+pr = logger.Logger()
 
 #
 # display formats
@@ -2944,7 +2901,7 @@ def parseTestSuite(diagCount, diags, opts):
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
                 else:
                     tests = zes_diag_test_array(testCount.value())
                     zeCall(zesDiagnosticsGetTests(diag, testCount.cast(), tests.cast()))
@@ -3052,7 +3009,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             diags = zes_diag_handle_array(diagCount.value())
             zeCall(zesDeviceEnumDiagnosticTestSuites(devices[0], diagCount.cast(), diags.cast()))
@@ -3094,7 +3051,7 @@ def main():
             except NotImplementedError:
                 pass
             except ValueError:
-                reportZeException()
+                logger.reportZeException()
 
         driver = drivers[0]
         if len(args.wait_events) > 0:
@@ -3112,7 +3069,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             if numEvents:
                 pr(numEvents, "device(s) reported events:")
@@ -3128,7 +3085,7 @@ def main():
             except NotImplementedError:
                 pass
             except ValueError:
-                reportZeException()
+                logger.reportZeException()
 
         sys.exit(0)
 
@@ -3168,7 +3125,7 @@ def main():
         except NotImplementedError:
             pr("Not supported by current driver")
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
 
         if args.topo_map == "matrix":
             matrix = [["-"] * len(deviceIDs) for _ in deviceIDs]
@@ -3259,7 +3216,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
                 else:
                     Node(devNode, "NumSubdevices", props.numSubdevices)
                     Node(devNode, "serialNumber", props.serialNumber)
@@ -3294,7 +3251,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
                     else:
                         nodes[0].setText(resetReasonsString(state.reset))
                         nodes[1].setText(repairStatusString(state.repaired))
@@ -3307,7 +3264,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             temperatures = zes_temp_handle_array(tempCount.value())
             zeCall(zesDeviceEnumTemperatureSensors(device,tempCount.cast(), temperatures.cast()))
@@ -3324,7 +3281,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.disable_critical_temp:
@@ -3339,7 +3296,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.enable_t1_low_to_high:
@@ -3354,7 +3311,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.disable_t1_low_to_high:
@@ -3369,7 +3326,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.enable_t1_high_to_low:
@@ -3384,7 +3341,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.disable_t1_high_to_low:
@@ -3399,7 +3356,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.set_t1_threshold:
@@ -3414,7 +3371,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.enable_t2_low_to_high:
@@ -3429,7 +3386,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.disable_t2_low_to_high:
@@ -3444,7 +3401,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.enable_t2_high_to_low:
@@ -3459,7 +3416,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.disable_t2_high_to_low:
@@ -3474,7 +3431,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
         if args.set_t2_threshold:
@@ -3489,7 +3446,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must provide a valid temperature index")
 
@@ -3505,14 +3462,14 @@ def main():
                 except NotImplementedError:
                     continue
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
                     continue
                 try:
                     zeCall(zesTemperatureGetConfig(temp, tempConfig))
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
                 tempType = tempTypeString(tempProps.type)
                 if tempProps.onSubdevice:
                     tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType),
@@ -3546,7 +3503,7 @@ def main():
                         except NotImplementedError:
                             pass
                         except ValueError:
-                            reportZeException()
+                            logger.reportZeException()
                         else:
                             node.setText("%.1f" % tempCurrent)
 
@@ -3558,7 +3515,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             powers = zes_pwr_handle_array(pwrCount.value())
             zeCall(zesDeviceEnumPowerDomains(device, pwrCount.cast(), powers.cast()))
@@ -3690,7 +3647,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             frequencies = zes_freq_handle_array(freqCount.value())
             zeCall(zesDeviceEnumFrequencyDomains(device, freqCount.cast(), frequencies.cast()))
@@ -3765,7 +3722,7 @@ def main():
                     except NotImplementedError:
                         freqThrottle = None
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
                     nodes = []
                     nodes.append(Node(freqNode, "RequestedFrequency", "?", ("Units", "MHz")))
                     nodes.append(Node(freqNode, "ActualFrequency", "?", ("Units", "MHz")))
@@ -3784,7 +3741,7 @@ def main():
                             try:
                                 zeCall(zesFrequencyGetThrottleTime(freq, freqThrottle))
                             except:
-                                reportZeException()
+                                logger.reportZeException()
                             else:
                                 deltaH = freqThrottle.throttleTime - oldHeld
                                 deltaT = freqThrottle.timestamp - oldTimestamp
@@ -3978,7 +3935,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
                 else:
                     freqType = freqTypeString(freqProps.type)
                     if freqProps.onSubdevice:
@@ -4046,7 +4003,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             engs = zes_engine_handle_array(engCount.value())
             zeCall(zesDeviceEnumEngineGroups(device, engCount.cast(), engs.cast()))
@@ -4073,7 +4030,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
                     else:
                         node = Node(engNode, "Activity", "?", ("Units", "%"))
 
@@ -4097,7 +4054,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             mems = zes_mem_handle_array(memCount.value())
             zeCall(zesDeviceEnumMemoryModules(device, memCount.cast(), mems.cast()))
@@ -4187,7 +4144,7 @@ def main():
             except NotImplementedError:
                 pass
             except ValueError:
-                reportZeException()
+                logger.reportZeException()
             else:
                 showPci = True
 
@@ -4233,7 +4190,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
                 else:
                     showPciTelemetry = True
                 del tmp
@@ -4332,7 +4289,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             ports = zes_fabric_port_handle_array(portCount.value())
             zeCall(zesDeviceEnumFabricPorts(device, portCount.cast(), ports.cast()))
@@ -4475,7 +4432,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             edoms = zes_ras_handle_array(edomCount.value())
             zeCall(zesDeviceEnumRasErrorSets(device, edomCount.cast(), edoms.cast()))
@@ -4505,7 +4462,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
 
         if args.show_errors:
             rasTop = Node(devNode, "ErrorDomains", None)
@@ -4518,7 +4475,7 @@ def main():
                 except NotImplementedError:
                     continue
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
                     continue
                 rasType = rasTypeString(rasProps.type)
 
@@ -4535,7 +4492,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
                     else:
                         thresholdNode = Node(rasNode, "Thresholds", None)
                         thresholds = rasConfig.detailedThresholds
@@ -4573,7 +4530,7 @@ def main():
                         except NotImplementedError:
                             pass
                         except ValueError:
-                            reportZeException()
+                            logger.reportZeException()
                         else:
                             node[0].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_RESET))
                             node[1].setText(ras_category(rasState, ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS))
@@ -4599,7 +4556,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             stbys = zes_standby_handle_array(stbyCount.value())
             zeCall(zesDeviceEnumStandbyDomains(device, stbyCount.cast(), stbys.cast()))
@@ -4645,7 +4602,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             procs = zes_typed_array(ZES_STRUCTURE_TYPE_PROCESS_STATE, procCount.value())
             zeCall(zesDeviceProcessesGetState(device, procCount.cast(), procs.cast()))
@@ -4732,7 +4689,7 @@ def main():
                 except NotImplementedError:
                     continue
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
                     continue
 
                 if schedProps.onSubdevice:
@@ -4779,7 +4736,7 @@ def main():
                         except NotImplementedError:
                             pass
                         except ValueError:
-                            reportZeException()
+                            logger.reportZeException()
                         else:
                             node[0].setText(schedModeString(mode))
                             if mode == ZES_SCHED_MODE_TIMEOUT:
@@ -4807,7 +4764,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             diags = zes_diag_handle_array(diagCount.value())
             zeCall(zesDeviceEnumDiagnosticTestSuites(device, diagCount.cast(), diags.cast()))
@@ -4832,7 +4789,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
                     else:
                         tests = zes_diag_test_array(testCount.value())
                         zeCall(zesDiagnosticsGetTests(diag, testCount.cast(), tests.cast()))
@@ -4847,7 +4804,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             fans = zes_fan_handle_array(fanCount.value())
             zeCall(zesDeviceEnumFans(device, fanCount.cast(), fans.cast()))
@@ -4861,7 +4818,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must specify a valid fan index")
 
@@ -4883,7 +4840,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must specify a valid fan index")
 
@@ -4899,7 +4856,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must specify a valid fan index and fan percent")
 
@@ -4945,7 +4902,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must specify a valid fan index and rpm table")
 
@@ -4989,7 +4946,7 @@ def main():
                 except NotImplementedError:
                     pass
                 except ValueError:
-                    reportZeException()
+                    logger.reportZeException()
             else:
                 pr.fail("ERROR: must specify a valid fan index and fan percent table")
 
@@ -5047,7 +5004,7 @@ def main():
                         except NotImplementedError:
                             pass
                         except ValueError:
-                            reportZeException()
+                            logger.reportZeException()
                         else:
                             node[0].setText(rpm)
                             node[1].setText(pct)
@@ -5060,7 +5017,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             fws = zes_firmware_handle_array(fwCount.value())
             zeCall(zesDeviceEnumFirmwares(device, fwCount.cast(), fws.cast()))
@@ -5120,7 +5077,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             leds = zes_led_handle_array(ledCount.value())
             zeCall(zesDeviceEnumLeds(device, ledCount.cast(), leds.cast()))
@@ -5137,7 +5094,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
             else:
                 pr.fail("ERROR: must specify a valid led index")
 
@@ -5153,7 +5110,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
             else:
                 pr.fail("ERROR: must specify a valid led index")
 
@@ -5195,7 +5152,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
 
         if args.show_leds:
             ledTop = Node(devNode, "Leds", None)
@@ -5229,7 +5186,7 @@ def main():
                         except NotImplementedError:
                             pass
                         except ValueError:
-                            reportZeException()
+                            logger.reportZeException()
                         else:
                             node[0].setText(onOffString(ledState.isOn))
                             if len(node) > 1:
@@ -5243,7 +5200,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             perfs = zes_perf_handle_array(perfCount.value())
             zeCall(zesDeviceEnumPerformanceFactorDomains(device, perfCount.cast(), perfs.cast()))
@@ -5267,7 +5224,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
 
         if args.show_perf:
             perfTop = Node(devNode, "PerformanceFactors", None)
@@ -5297,7 +5254,7 @@ def main():
                         except NotImplementedError:
                             pass
                         except ValueError:
-                            reportZeException()
+                            logger.reportZeException()
                         else:
                             node[0].setText(val)
 
@@ -5309,7 +5266,7 @@ def main():
         except NotImplementedError:
             pass
         except ValueError:
-            reportZeException()
+            logger.reportZeException()
         else:
             psus = zes_psu_handle_array(psuCount.value())
             zeCall(zesDeviceEnumPsus(device, psuCount.cast(), psus.cast()))
@@ -5333,7 +5290,7 @@ def main():
                     except NotImplementedError:
                         pass
                     except ValueError:
-                        reportZeException()
+                        logger.reportZeException()
 
         if args.show_psu:
             psuTop = Node(devNode, "PowerSupplies", None)
@@ -5369,7 +5326,7 @@ def main():
                         except NotImplementedError:
                             pass
                         except ValueError:
-                            reportZeException()
+                            logger.reportZeException()
                         else:
                             node[0].setText(psuVoltageStatusString(psuState.voltStatus))
                             node[1].setText(bool(psuState.fanFailed))
