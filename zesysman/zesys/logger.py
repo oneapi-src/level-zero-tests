@@ -39,6 +39,8 @@ class Logger:
         self.err(*args, **kwargs)
         sys.exit(1)
 
+pr = Logger()
+
 def reportZeException():
     eType, eValue, eTrace = sys.exc_info()
     tb = traceback.format_tb(eTrace, limit=1)[0]

@@ -35,8 +35,14 @@ install(
 
 install(
       FILES ${CMAKE_CURRENT_BINARY_DIR}/zes_wrap.py
-      FILES zesys/logger.py
       FILES zesys/__init__.py
+      FILES zesys/arg.py
+      FILES zesys/logger.py
+      FILES zesys/output.py
+      FILES zesys/otree.py
+      FILES zesys/state.py
+      FILES zesys/stub.py
+      FILES zesys/util.py
       DESTINATION ${destination}/zesys
       COMPONENT zesysman
 )
