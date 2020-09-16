@@ -492,7 +492,7 @@ def api():
         portProps.model = "ANR"
         portProps.onSubDevice = True
         portProps.subdeviceId = localIdx // 5
-        portProps.portId.fabricId = fabricId
+        portProps.portId.fabricId = 0x10000 | fabricId
         portProps.portId.attachId = localIdx // 5
         portProps.portId.portNumber = localIdx % 5
         portProps.maxRxSpeed.bitRate = 1000000000
@@ -551,7 +551,7 @@ def api():
                 portState.failureReasons = ZES_FABRIC_PORT_FAILURE_FLAG_FAILED
         else:
             portState.status = ZES_FABRIC_PORT_STATUS_DISABLED
-        portState.remotePortId.fabricId = fabricId ^ 1
+        portState.remotePortId.fabricId = 0x10000 | (fabricId ^ 1)
         portState.remotePortId.attachId = localIdx // 5
         portState.remotePortId.portNumber = localIdx % 5
         portState.rxSpeed.bitRate = 1000000000
@@ -1116,7 +1116,7 @@ def topo():
         portProps.model = "STUBBY_PVC"
         portProps.onSubdevice = 0
         portProps.subdeviceId = attachId
-        portProps.portId.fabricId = fabricId
+        portProps.portId.fabricId = 0x10000 | fabricId
         portProps.portId.attachId = attachId
         portProps.portId.portNumber = portNum
         portProps.maxRxSpeed.bitRate = 53000000000
@@ -1132,7 +1132,7 @@ def topo():
         portState.status = ZES_FABRIC_PORT_STATUS_HEALTHY
         portState.qualityIssues = 0
         portState.failureReasons = 0
-        portState.remotePortId.fabricId = remoteFabricId
+        portState.remotePortId.fabricId = 0x10000 | remoteFabricId
         portState.remotePortId.attachId = remoteAttachId
         portState.remotePortId.portNumber = remotePortNum
         portState.rxSpeed.bitRate = 25000000000
@@ -1141,5 +1141,8 @@ def topo():
         portState.txSpeed.width = 4
     return locals().copy()
 
-def replacement(f,s):
+#
+# Produce a function definition that maps to a dict of calling details
+#
+def replacement_map_to_call_dict(f,s):
     return "def %s(*args, **kwargs): return {'fn':%s['%s'], 'args':args, 'kwargs':kwargs}" % (f, s, f)

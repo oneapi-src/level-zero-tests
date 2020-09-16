@@ -174,7 +174,7 @@ def parse():
     if not util.developer_mode():
         darg = dparse.parse_args([])
         for a,v in darg.__dict__.items():
-            args[a] = v
+            args.__dict__[a] = v
 
     otree.setNodeClassByName(args.format)
 

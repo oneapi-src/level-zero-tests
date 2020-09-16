@@ -11,3 +11,8 @@ def saturate(value, minLimit, maxLimit):
 # determine if running in a developer mode
 def developer_mode():
     return os.environ.get("ZESYSMAN_DEVELOPER_MODE","").upper()
+
+# indexed lists
+# to allow *args to be empty, return "args and zip(range(len(args[0])), *args)" instead:
+def indexed(*args):
+    return zip(range(len(args[0])), *args)
