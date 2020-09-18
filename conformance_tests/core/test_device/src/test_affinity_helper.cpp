@@ -12,14 +12,19 @@
 
 namespace lzt = level_zero_tests;
 
+#define SUCCESS_PREFIX "0"
+#define ERROR_PREFIX "1"
+#define ERROR_CODE "1:0"
+
 int main(int argc, char **argv) {
 
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
-    exit(-1);
+    std::cout << ERROR_CODE << std::endl;
+    std::cout << "zeInit failed";
+    exit(1);
   }
 
-  LOG_INFO << "child";
   char *val = getenv("ZE_AFFINITY_MASK");
 
   for (auto driver : lzt::get_all_driver_handles()) {
@@ -29,7 +34,9 @@ int main(int argc, char **argv) {
 
     result = zeDriverGetProperties(driver, &driver_properties);
     if (result != ZE_RESULT_SUCCESS) {
-      exit(-1);
+      std::cout << ERROR_CODE << std::endl;
+      std::cout << "zeDriverGetProperties failed";
+      exit(1);
     }
 
     if (!strcmp(argv[1], lzt::to_string(driver_properties.uuid).c_str())) {
@@ -38,17 +45,17 @@ int main(int argc, char **argv) {
 
       auto devices = lzt::get_devices(driver);
 
-      if (devices.empty())
-        exit(0);
-
       for (auto device : devices) {
         auto num_sub_devices = lzt::get_sub_device_count(device);
         num_total_devices += num_sub_devices ? num_sub_devices : 1;
       }
 
-      exit(num_total_devices);
+      std::cout << SUCCESS_PREFIX << ":" << num_total_devices << std::endl;
+      exit(0);
     }
   }
 
-  exit(-1);
+  std::cout << ERROR_CODE << std::endl;
+  std::cout << "Matching driver not found in child process";
+  exit(1);
 }
