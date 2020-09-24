@@ -124,10 +124,18 @@ TEST_F(
       lzt::idle_check(pFreqHandle);
       zes_freq_state_t state = lzt::get_freq_state(pFreqHandle);
       lzt::validate_freq_state(pFreqHandle, state);
-      EXPECT_LE(state.actual, limits.max);
-      EXPECT_GE(state.actual, limits.min);
-      EXPECT_LE(state.request, limits.max);
-      EXPECT_GE(state.request, limits.min);
+      if (state.actual > 0) {
+        EXPECT_LE(state.actual, limits.max);
+        EXPECT_GE(state.actual, limits.min);
+      } else {
+        LOG_INFO << "Actual frequency is unknown";
+      }
+      if (state.request > 0) {
+        EXPECT_LE(state.request, limits.max);
+        EXPECT_GE(state.request, limits.min);
+      } else {
+        LOG_INFO << "Requested frequency is unknown";
+      }
     }
   }
 }
@@ -450,8 +458,12 @@ TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       {
-        uint32_t pcount = 0;
-        auto pPowerHandles = lzt::get_power_handles(device, pcount);
+        uint32_t pCount = 0;
+        auto pPowerHandles = lzt::get_power_handles(device, pCount);
+        if (pCount == 0) {
+          FAIL() << "No handles found: "
+                 << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+        }
         for (auto pPowerHandle : pPowerHandles) {
           EXPECT_NE(nullptr, pPowerHandle);
           zes_power_sustained_limit_t power_sustained_limit_Initial;

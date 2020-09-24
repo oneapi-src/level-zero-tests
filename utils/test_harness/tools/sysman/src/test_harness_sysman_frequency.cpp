@@ -9,6 +9,7 @@
 #include <chrono>
 #include <thread>
 #include "test_harness/test_harness.hpp"
+#include "logging/logging.hpp"
 
 #include <level_zero/zes_api.h>
 #include "utils/utils.hpp"
@@ -62,11 +63,19 @@ zes_freq_properties_t get_freq_properties(zes_freq_handle_t pFreqHandle) {
 zes_freq_range_t get_and_validate_freq_range(zes_freq_handle_t pFreqHandle) {
   zes_freq_range_t pLimits = get_freq_range(pFreqHandle);
   zes_freq_properties_t pProperty = get_freq_properties(pFreqHandle);
-  EXPECT_LE(pLimits.min, pLimits.max);
-  EXPECT_GE(pLimits.min, pProperty.min);
-  EXPECT_LE(pLimits.min, pProperty.max);
-  EXPECT_GE(pLimits.max, pProperty.min);
-  EXPECT_LE(pLimits.max, pProperty.max);
+  if (pLimits.min > 0) {
+    EXPECT_LE(pLimits.min, pLimits.max);
+    EXPECT_GE(pLimits.min, pProperty.min);
+  } else {
+    LOG_INFO << "no external minimum frequency limit is in effect";
+  }
+  if (pLimits.max > 0) {
+    EXPECT_LE(pLimits.min, pProperty.max);
+    EXPECT_GE(pLimits.max, pProperty.min);
+    EXPECT_LE(pLimits.max, pProperty.max);
+  } else {
+    LOG_INFO << "no external maximum frequency limit is in effect";
+  }
   return pLimits;
 }
 
@@ -92,30 +101,47 @@ void validate_freq_state(zes_freq_handle_t pFreqHandle,
                          zes_freq_state_t pState) {
   zes_freq_range_t pLimits = get_and_validate_freq_range(pFreqHandle);
   zes_freq_properties_t pProperty = get_freq_properties(pFreqHandle);
-  zes_oc_capabilities_t ocProperty = get_oc_capabilities(pFreqHandle);
-  EXPECT_GE(pState.actual, pProperty.min);
-  EXPECT_LE(pState.actual, pProperty.max);
-  EXPECT_LE(pState.actual, pLimits.max);
-  if (!(pState.throttleReasons >= ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP &&
-        pState.throttleReasons <= ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE)) {
-    EXPECT_DOUBLE_EQ(pState.actual,
-                     std::min<double>(pProperty.max, pState.request));
-    EXPECT_DOUBLE_EQ(pState.tdp, pProperty.max);
+  if (pState.actual > 0) {
+    EXPECT_GE(pState.actual, pProperty.min);
+    EXPECT_LE(pState.actual, pProperty.max);
+    EXPECT_LE(pState.actual, pLimits.max);
   } else {
-    EXPECT_LT(pState.actual, pState.request);
-    EXPECT_LT(pState.tdp, pProperty.max);
+    LOG_INFO << "Actual frequency is unknown";
   }
-
-  EXPECT_GE(pState.request, pProperty.min);
-  EXPECT_LE(pState.currentVoltage, ocProperty.maxOcVoltage);
-  EXPECT_LE(pState.request, std::numeric_limits<std::uint32_t>::max());
-  EXPECT_GE(pState.efficient, pProperty.min);
-  EXPECT_LE(pState.efficient, pProperty.max);
+  if (pState.request > 0) {
+    EXPECT_GE(pState.request, pProperty.min);
+    EXPECT_LE(pState.request, std::numeric_limits<std::uint32_t>::max());
+  } else {
+    LOG_INFO << "Requested frequency is unknown";
+  }
+  if (pState.efficient > 0) {
+    EXPECT_GE(pState.efficient, pProperty.min);
+    EXPECT_LE(pState.efficient, pProperty.max);
+  } else {
+    LOG_INFO << "Efficient frequency is unknown";
+  }
+  if (pState.tdp > 0) {
+    if (pState.throttleReasons == 0) {
+      EXPECT_EQ(pState.tdp, pProperty.max);
+    } else {
+      EXPECT_LT(pState.tdp, pProperty.max);
+    }
+  } else {
+    LOG_INFO << "TDP frequency is unknown";
+  }
+  EXPECT_GE(pState.throttleReasons, 0);
+  EXPECT_LE(pState.throttleReasons,
+            ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE |
+                ZES_FREQ_THROTTLE_REASON_FLAG_SW_RANGE |
+                ZES_FREQ_THROTTLE_REASON_FLAG_PSU_ALERT |
+                ZES_FREQ_THROTTLE_REASON_FLAG_THERMAL_LIMIT |
+                ZES_FREQ_THROTTLE_REASON_FLAG_CURRENT_LIMIT |
+                ZES_FREQ_THROTTLE_REASON_FLAG_BURST_PWR_CAP |
+                ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP);
 }
 
 void idle_check(zes_freq_handle_t pFreqHandle) {
   int wait = 0;
-
   /* Monitor frequencies until cur settles down to min, which should
    * happen within the allotted time */
   do {
@@ -134,7 +160,13 @@ bool check_for_throttling(zes_freq_handle_t pFreqHandle) {
   do {
     zes_freq_state_t state = get_freq_state(pFreqHandle);
     if (state.throttleReasons >= ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP &&
-        state.throttleReasons <= ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE)
+        state.throttleReasons <= ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE |
+            ZES_FREQ_THROTTLE_REASON_FLAG_SW_RANGE |
+            ZES_FREQ_THROTTLE_REASON_FLAG_PSU_ALERT |
+            ZES_FREQ_THROTTLE_REASON_FLAG_THERMAL_LIMIT |
+            ZES_FREQ_THROTTLE_REASON_FLAG_CURRENT_LIMIT |
+            ZES_FREQ_THROTTLE_REASON_FLAG_BURST_PWR_CAP |
+            ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP)
       return true;
     std::this_thread::sleep_for(std::chrono::microseconds(1000 * 10));
     wait += 10;
