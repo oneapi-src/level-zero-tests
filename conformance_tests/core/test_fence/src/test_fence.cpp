@@ -168,9 +168,12 @@ TEST_P(
   auto cmdq_properties = lzt::get_command_queue_group_properties(device);
 
   size_t num_cmdq = 0;
+  std::vector<int> num_queues_per_group;
   for (auto properties : cmdq_properties) {
+    num_queues_per_group.push_back(properties.numQueues);
     num_cmdq += properties.numQueues;
   }
+
   bool use_event = GetParam();
 
   const size_t size = 16;
@@ -187,13 +190,18 @@ TEST_P(
   ze_command_queue_flags_t cmdq_flag = 0;
   uint32_t ordinal = 0;
 
+  uint32_t group_ordinal = 0;
+  uint32_t queue_index = 0;
   for (size_t i = 0; i < num_cmdq; i++) {
-
+    if (queue_index >= num_queues_per_group[group_ordinal]) {
+      group_ordinal++;
+      queue_index = 0;
+    }
     cmdq[i] = lzt::create_command_queue(
         context, device, cmdq_flag, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal);
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, group_ordinal, queue_index);
     cmdlist[i] =
-        lzt::create_command_list(context, device, cmdlist_flag, ordinal);
+        lzt::create_command_list(context, device, cmdlist_flag, group_ordinal);
     fence[i] = lzt::create_fence(cmdq[i]);
     buffer[i] = lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
     val[i] = static_cast<uint8_t>(i + 1);
@@ -206,7 +214,7 @@ TEST_P(
     lzt::append_memory_set(cmdlist[i], buffer[i], &val[i], size);
     lzt::append_barrier(cmdlist[i], nullptr, 0, nullptr);
     lzt::close_command_list(cmdlist[i]);
-    ordinal++;
+    queue_index++;
   }
 
   // attempt to execute command queues simutanesously
