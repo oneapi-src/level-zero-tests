@@ -90,8 +90,8 @@ def resetReasonsString(reasons):
     if not reasons:
         return "Not required"
 
-    resetReasons = [(zes_wrap.zes_wrap.ZES_RESET_REASON_FLAG_WEDGED, "Hardware is wedged"),
-                    (zes_wrap.zes_wrap.ZES_RESET_REASON_FLAG_REPAIR, "Required for in-field repairs")]
+    resetReasons = [(zes_wrap.ZES_RESET_REASON_FLAG_WEDGED, "Hardware is wedged"),
+                    (zes_wrap.ZES_RESET_REASON_FLAG_REPAIR, "Required for in-field repairs")]
     reasonStrings = []
     for r, s in reasonReasons:
         if reasons & r:
@@ -103,9 +103,9 @@ def resetReasonsString(reasons):
     return ", ".join(reasonStrings)
 
 def repairStatusString(repairStatus):
-    repairStatuses = { zes_wrap.zes_wrap.ZES_REPAIR_STATUS_UNSUPPORTED : "Unsupported",
-                       zes_wrap.zes_wrap.ZES_REPAIR_STATUS_NOT_PERFORMED : "Unrepaired",
-                       zes_wrap.zes_wrap.ZES_REPAIR_STATUS_PERFORMED : "Repaired" }
+    repairStatuses = { zes_wrap.ZES_REPAIR_STATUS_UNSUPPORTED : "Unsupported",
+                       zes_wrap.ZES_REPAIR_STATUS_NOT_PERFORMED : "Unrepaired",
+                       zes_wrap.ZES_REPAIR_STATUS_PERFORMED : "Repaired" }
     return repairStatuses.get(repairStatus, "Unknown")
 
 def tempTypeString(tempType):
@@ -139,6 +139,18 @@ def engTypeString(engType):
                  zes_wrap.ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE : "MediaDecodeEngine",
                  zes_wrap.ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE : "MediaEncodeEngine",
                  zes_wrap.ZES_ENGINE_GROUP_COPY_SINGLE : "CopyEngine" }
+    return engTypes.get(engType, "Unknown")
+
+def engTypeTableString(engType):
+    engTypes = { zes_wrap.ZES_ENGINE_GROUP_ALL : "Util",
+                 zes_wrap.ZES_ENGINE_GROUP_COMPUTE_ALL : "AllComputeUtil",
+                 zes_wrap.ZES_ENGINE_GROUP_MEDIA_ALL : "AllMediaUtil",
+                 zes_wrap.ZES_ENGINE_GROUP_COPY_ALL : "AllCopyUtil",
+                 zes_wrap.ZES_ENGINE_GROUP_COMPUTE_SINGLE : "ComputeUtil",
+                 zes_wrap.ZES_ENGINE_GROUP_RENDER_SINGLE : "RenderUtil",
+                 zes_wrap.ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE : "DecodeUtil",
+                 zes_wrap.ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE : "EncodeUtil",
+                 zes_wrap.ZES_ENGINE_GROUP_COPY_SINGLE : "CopyUtil" }
     return engTypes.get(engType, "Unknown")
 
 def memTypeString(memType):

@@ -7,3 +7,5 @@ maxIterations = 1
 indentStr = "    "
 condensedList = False
 addAnsi256ColorBlock = False
+hideTimestamp = False
+indexAttribute = "Index"

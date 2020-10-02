@@ -124,8 +124,8 @@ def parse():
     dparse.add_argument("--tiny-uuid", action='store_true', help="print tiny device UUIDs")
     dparse.add_argument("--debug", action='store_true', help="debug (for development only)")
     dparse.add_argument("--reset-freq", action='store_true', help="reset frequency limits")
-    dparse.add_argument("--show-timestamp", action='store_true',
-                        help="show timestamps when iterating")
+    dparse.add_argument("--hide-timestamp", action='store_true',
+                        help="hide timestamps when iterating")
     dparse.add_argument("--wait-events", nargs='*', metavar=('MSEC','MASK'), help="wait for events")
     dparse.add_argument("--show-fans", action='store_true', help="show fans")
     dparse.add_argument("--set-fan-speed-default", nargs=1, type=int, metavar='IDX',
@@ -215,11 +215,12 @@ def parse():
     state.condensedList = (args.style == "condensed")
 
     if args.uuid_index:
-        otree.IndexAttributes = otree.SecondaryIndexAttributes
-        otree.SecondaryIndexAttributes = []
+        state.indexAttribute = "UUID"
 
     if args.ansi_256:
         state.addAnsi256ColorBlock = True
+
+    state.hideTimestamp = args.hide_timestamp
 
     return args
 

@@ -1061,7 +1061,7 @@ def topo():
     def zeDriverGetApiVersion(drv):
         return 0x00010000
     def zeDriverGetProperties(drv, drvProps):
-        uuid = bytes(10) + b'\x86\x80' + bytes(4)
+        uuid = bytes(6) + b'\xcd\xab\xef\xbe\xad\xde' + bytes(4)
         write_driver_uuid(drvProps.uuid, uuid)
         drvProps.driverVersion = 1
     def zeDriverGetIpcProperties(drv, ipcProps):
@@ -1094,7 +1094,7 @@ def topo():
         devProps.timerResolution = 500
         devProps.timestampValidBits = 32
         devProps.kernelTimestampValidBits = 24
-        uuid = bytes([d,0,0,0,0,0]) + bytes(2) + b'\xcd\xa0\x86\x80' + bytes(4)
+        uuid = b'\x86\x80\x00\x00\xcd\xa0' + bytes(6) + bytes([d,0,0,0])
         write_device_uuid(devProps.uuid, uuid)
         devProps.name = "stubDevice" + str(d)
     def zesDeviceEnumFabricPorts(dev, count_ptr, handle_array):

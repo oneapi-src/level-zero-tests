@@ -2,112 +2,414 @@
 # Copyright (C) 2020 Intel Corporation
 # SPDX-License-Identifier: MIT
 
-import xml.etree.ElementTree as ElementTree
-import xml.dom.minidom as minidom
+import time
 
 from . import logger
 from . import state
 
-IgnoreAttributes = [ "Number" ]
+pr = logger.pr
+
 RenameAttributes = [ "Name", "Id" ]
-IndexAttributes = [ "Index" ]
-SecondaryIndexAttributes = [ "UUID" ]
+IndexAttributes = [ "Index", "UUID" ]
 DecorateAttributes = ["Units"]
-TableRenameNodes = { "TemperatureSensor" : "Temp",
-                     "PowerDomain" : "Power",
-                     "FrequencyDomain" : "Freq",
-                     "RequestedFrequency" : "Requested",
-                     "ActualFrequency" : "Actual",
-                     "MemoryModule" : "Mem",
-                     "ErrorDomain" : "Err",
-                     "FabricPort" : "Port",
-                     "StandbyDomain" : "Standby",
-                     "EngineGroup" : "",
-                     "Activity" : "" }
-TablePostRename = { "AllEngines" : "Util",
-                    "AllComputeEngines" : "AllComputeUtil",
-                    "AllMediaEngines" : "AllMediaUtil",
-                    "AllCopyEngines" : "AllCopyUtil",
-                    "ComputeEngine" : "ComputeUtil",
-                    "RenderEngine" : "RenderUtil",
-                    "MediaDecodeEngine" : "DecodeUtil",
-                    "MediaEncodeEngine" : "EncodeUtil",
-                    "CopyEngine" : "CopyUtil" }
-TableKeepNodes = [ "PCI" ]
 
-def tableNode(parent, node, text, *attrs):
-    if parent is None:
-        if state.maxIterations > 1:
-            return (["Iteration"], [])
+class Node:
+    def __init__(self, parent, name, text, *args, **kwargs):
+        self.parent = parent
+        self.name = name
+        self.text = text
+        self.attrs = args
+        self.children = []
+        self.discard = set(kwargs.get("discard", []))
+        self.index = kwargs.get("index", False)
+        self.heading = kwargs.get("heading")
+        self.join = kwargs.get("join")
+        self.width = kwargs.get("width")
+        if parent and not kwargs.get("transient"):
+            parent.children.append(self)
+        headingAttrs = kwargs.get("headingAttrs")
+        if headingAttrs is not None:
+            self.headingAttrs = [(a,v) for a,v in self.attrs if a in set(headingAttrs)]
         else:
-            return ([], [])
-    elif len(parent) == 2:
-        columns, rows = parent
-        index = len(rows)
-        rows.append({})
-
-        for attr,val in attrs:
-            if attr in IndexAttributes:
-                if attr not in columns:
-                    columns.append(attr)
-                rows[index][attr] = str(val)
-        return (columns, rows, index, "")
-    else:
-        node = TableRenameNodes.get(node, str(node))
-        attrs = [ (a,v) for a,v in attrs if a not in IgnoreAttributes ]
-        if text is None and node not in TableKeepNodes and not attrs:
-            return parent
-        if any(a in RenameAttributes for a,v in attrs):
-            attrs = [ (a,v) for a,v in attrs if a not in IndexAttributes ]
-        columns, rows, index, column = parent
-        for attr,val in attrs:
-            if node or column:
-                node += "[" + str(val) + "]"
+            if any(a in RenameAttributes for a,v in self.attrs):
+                self.headingAttrs = [ (a,v) for a,v in self.attrs if a not in IndexAttributes ]
             else:
-                node = str(val)
-        node = TablePostRename.get(node, str(node))
-        if column and node and node[0] != "[":
-            column += "."
-        column += node
+                self.headingAttrs = self.attrs
+    def outputStart(self):
+        pass
+    def nodeOutput(self):
+        return ""
+    def outputTree(self):
+        pass
+    def outputFinish(self):
+        pass
+    def setText(self, text):
+        self.text = text
+
+class IterationNode(Node):
+    def __init__(self, parent, name, text, *args, **kwargs):
+        super().__init__(parent, name, text, *args, **kwargs)
+        self.iteration = 0
+    def nodeOutput(self, *args, **kwargs):
+        self.iteration += 1
+        if state.hideTimestamp:
+            timestamp = "%d" % self.iteration
+        else:
+            fulltime = time.time()
+            ms = int(1000 * (fulltime - int(fulltime)))
+            timestamp = time.strftime("%H:%M:%S") + ".%03d" % ms
+        return timestamp
+
+Node.IterationNode = IterationNode
+
+class ListNode(Node):
+    def dataIndent(self, indent=""):
+        if "list" in self.discard:
+            lengths = [child.dataIndent(indent) for child in self.children]
+        else:
+            lengths = [child.dataIndent(indent + state.indentStr) for child in self.children]
+            name = self.name
+            for a,v in self.attrs:
+                if a in RenameAttributes:
+                    name = str(v)
+            lengths.append(len(indent) + len(name))
+        return max(lengths)
+    def nodeOutput(self, indent, dataIndent):
+        childIdentifiers = []
+        nodeText = indent + str(self.name)
+        text = self.text
+        for attr,val in self.attrs:
+            if attr in RenameAttributes:
+                nodeText = indent + str(val)
+            elif attr in IndexAttributes:
+                if attr == state.indexAttribute:
+                    nodeText += " " + str(val)
+                else:
+                    childIdentifiers.append(self.__class__(self, attr, val, transient=True))
+            elif attr in DecorateAttributes and text is not None:
+                text = str(text) + " " + str(val)
+            else:
+                nodeText += "." + attr + "_" + str(val)
         if text is not None:
-            if column not in columns:
-                columns.append(column)
-            rows[index][column] = str(text)
-        return (columns, rows, index, column)
+            nodeText += " " * (dataIndent - len(nodeText)) + " : " + str(text)
+        return (nodeText, childIdentifiers)
+    def outputTree(self, indent="", dataIndent=None):
+        if dataIndent is None:
+            if state.condensedList:
+                dataIndent = 0
+            elif "list" in self.discard:
+                dataIndent = max([child.dataIndent() for child in self.children])
+            else:
+                dataIndent = self.dataIndent()
+        nodeText, childIdentifiers = self.nodeOutput(indent, dataIndent)
+        if "list" in self.discard:
+            for child in childIdentifiers + self.children:
+                child.outputTree(indent, dataIndent)
+        else:
+            pr(nodeText)
+            for child in childIdentifiers + self.children:
+                child.outputTree(indent + state.indentStr, dataIndent)
 
-def makeTableLine(chEnd, chLine, widths):
-    return chEnd + chEnd.join([chLine * (w+2) for w in widths]) + chEnd
+class IterationListNode(ListNode, IterationNode):
+    def __init__(self, parent, name, text, *args, **kwargs):
+        IterationNode.__init__(self, parent, name, text, *args, **kwargs)
+    def nodeOutput(self, indent, dataIndent):
+        timeStr = IterationNode.nodeOutput(self)
+        if state.hideTimestamp:
+            nodeText = "\n" + indent + "Iteration " + str(self.iteration)
+        else:
+            nodeText = "\n" + indent + timeStr
+        return (nodeText, [])
 
-tableEndLine = ""
+ListNode.IterationNode = IterationListNode
 
-def tableOutputNode(node, currentIteration):
-    global tableEndLine
-    columns, rows = node
-    widths = [ max([len(w)] + [len(r.get(w,"")) for r in rows]) for w in columns ]
-    if currentIteration < 2:
-        tableEndLine = makeTableLine("+", "-", widths)
-        headings = [ " " + c + " " * (w - len(c)) + " " for c,w in zip(columns, widths) ]
-        innerLine = makeTableLine("|", "=", widths)
-        logger.pr(tableEndLine)
-        logger.pr("|" + "|".join(headings) + "|")
-        logger.pr(innerLine)
-    for row in rows:
-        line = []
-        if state.maxIterations > 1:
-            row["Iteration"] = str(currentIteration)
-        for column,width in zip(columns,widths):
-            text = row.get(column, " " * (width // 2) + "-")
-            line.append(" " + text + " " * (width - len(text)) + " ")
-        logger.pr("|" + "|".join(line) + "|")
+class XmlNode(Node):
+    def outputStart(self):
+        pr('<?xml version="1.0" ?>')
+    def nodeOutput(self, indent):
+        childIdentifiers = []
+        nodeStart = indent + "<" + str(self.name)
+        for attr,val in self.attrs:
+            nodeStart += " " + attr + '="' + str(val) + '"'
+        nodeText = None
+        nodeFinish = None
+        if self.children:
+            nodeStart += ">"
+            if nodeText:
+                nodeText = indent + state.indentStr + str(self.text)
+            nodeFinish = indent + "</" + str(self.name) + ">"
+        elif self.text is not None and self.text != "":
+            nodeStart += ">" + str(self.text) + "</" + str(self.name) + ">"
+        else:
+            nodeStart += "/>"
+        return (nodeStart, nodeText, nodeFinish, childIdentifiers)
+    def outputTree(self, indent=""):
+        nodeStart, nodeText, nodeFinish, childIdentifiers = self.nodeOutput(indent)
+        if "xml" in self.discard:
+            for child in childIdentifiers + self.children:
+                child.outputTree(indent)
+        else:
+            if nodeStart:
+                pr(nodeStart)
+            if nodeText:
+                pr(nodeText)
+            for child in childIdentifiers + self.children:
+                child.outputTree(indent + state.indentStr)
+            if nodeFinish:
+                pr(nodeFinish)
 
-def tableOutputComplete():
-    global tableEndLine
-    logger.pr(tableEndLine)
+class IterationXmlNode(XmlNode, IterationNode):
+    def __init__(self, parent, name, text, *args, **kwargs):
+        IterationNode.__init__(self, parent, name, text, *args, **kwargs)
+    def nodeOutput(self, indent):
+        timeStr = IterationNode.nodeOutput(self)
+        nodeStart = '<Iteration Num="%d">' % self.iteration
+        nodeText = None
+        nodeFinish = '</Iteration>'
+        childIdentifiers = []
+        if not state.hideTimestamp:
+            childIdentifiers.append(XmlNode(self, "Timestamp", timeStr, transient=True))
+        return (nodeStart, nodeText, nodeFinish, childIdentifiers)
 
-def tableSetText(node, text, *attrs):
-    if len(node) == 4:
-        columns, rows, index, column = node
-        rows[index][column] = str(text)
+XmlNode.IterationNode = IterationXmlNode
+
+class TableNode(Node):
+    def __init__(self, parent, name, text, *args, **kwargs):
+        # pr(parent and parent.name, "->", name, text, args, kwargs)
+        super().__init__(parent, name, text, *args, **kwargs)
+        if self.width is None:
+            if self.index or text is not None:
+                self.width = max(len(self.headerString()), len(self.nodeOutput()))
+            else:
+                self.width = 0
+    def discarded(self):
+        return "table" in self.discard
+    def headerString(self):
+        if self.join is not None:
+            prefix = self.parent.headerString() + self.join
+        else:
+            prefix = ""
+        if self.heading is not None:
+            name = self.heading
+        elif self.index:
+            return prefix + state.indexAttribute
+        elif self.discarded() or self.text is None and not self.headingAttrs:
+            return prefix
+        else:
+            name = str(self.name)
+        for attr, val in self.headingAttrs:
+            name += "[%s]" % str(val)
+        return prefix + name
+    def headerList(self):
+        myHeader = []
+        if self.width != 0:
+            myHeader.append((self.width, self.headerString()))
+        childHeaders = []
+        for child in self.children:
+            if child.index:
+                childHeaders.append(child.headerList())
+            else:
+                childHeaders += child.headerList()
+        return myHeader + childHeaders
+    def flatHeaderList(self, pad):
+        leftHeaders, allIndexed, rightHeaders = [], [], []
+        indexedStarted, indexedFinished = False, False
+        allHeaders = self.headerList()
+        for header in allHeaders:
+            if not indexedStarted:
+                if type(header) == tuple:
+                    width, text = header
+                    if pad:
+                        text += " " * (width - len(text))
+                    leftHeaders.append(text)
+                elif type(header) == list:
+                    indexedStarted = True
+                else:
+                    pr.fail("Internal error - bad header list")
+
+            if indexedStarted and not indexedFinished:
+                if type(header) == list:
+                    allIndexed.append(header)
+                    for nested in header:
+                        if type(nested) != tuple:
+                            pr.fail("Internal error - doubly-nested header list")
+                elif type(header) == tuple:
+                    indexedFinished = True
+                else:
+                    pr.fail("Internal error - bad header list")
+
+            if indexedFinished:
+                if type(header) == tuple:
+                    width, text = header
+                    if pad:
+                        text += " " * (width - len(text))
+                    rightHeaders.append(text)
+                else:
+                    pr.fail("Internal error - multiply-indexed header list")
+
+        if not allIndexed:
+            return leftHeaders + rightHeaders
+
+        headerNames = [n for _,n in allIndexed[0]]
+        for row in range(1, len(allIndexed)):
+            headerRow = allIndexed[row].copy()
+            headerCol = 0
+            for col in range(0, len(headerRow)):
+                width, name = headerRow[col]
+                if headerCol >= len(headerNames):
+                    headerNames.append(name)
+                    for r in range(row):
+                        allIndexed[r].append((0, name))
+                elif name == headerNames[headerCol]:
+                    headerCol += 1
+                else:
+                    remainingNames = headerNames[headerCol:]
+                    if name in remainingNames:
+                        skipCount = remainingNames.index(name)
+                        allIndexed[row][headerCol:headerCol] = [(0, n) for n in remainingNames[:skipCount]]
+                        headerCol += skipCount + 1
+                    else:
+                        headerNames.insert(headerCol,name)
+                        for r in range(row):
+                            allIndexed[r].insert(headerCol,(0, name))
+                        headerCol += 1
+
+        indexWidths = []
+        for headerRow in allIndexed:
+            indexWidths.append([width for width, _ in headerRow])
+
+        self.indexWidths = indexWidths
+        widths = [max(w) for w in zip(*indexWidths)]
+
+        indexedHeaders = []
+        for width, text in zip(widths, headerNames):
+            if pad:
+                text += " " * (width - len(text))
+            indexedHeaders.append(text)
+
+        return leftHeaders + indexedHeaders + rightHeaders
+    def outputStart(self):
+        headers = self.flatHeaderList(pad=True)
+        pr("+-" + "-+-".join(["-" * len(h) for h in headers]) + "-+")
+        pr("| " + " | ".join(headers) + " |")
+        pr("|=" + "=|=".join(["=" * len(h) for h in headers]) + "=|")
+    def nodeOutput(self):
+        if self.index:
+            return str([v for a,v in self.attrs if a == state.indexAttribute][0])
+        else:
+            return str(self.text)
+    def rowList(self):
+        myCell = []
+        if self.width != 0:
+            myCell.append((self.width, self.nodeOutput()))
+        childRows = []
+        for child in self.children:
+            if child.index:
+                childRows.append(child.rowList())
+            else:
+                childRows += child.rowList()
+        return myCell + childRows
+    def flatRowList(self, pad):
+        leftRows, allIndexed, rightRows = [], [], []
+        indexedStarted, indexedFinished = False, False
+        for row in self.rowList():
+            if not indexedStarted:
+                if type(row) == tuple:
+                    width, text = row
+                    if pad:
+                        text += " " * (width - len(text))
+                    leftRows.append(text)
+                elif type(row) == list:
+                    indexedStarted = True
+                else:
+                    pr.fail("Internal error - bad row list")
+
+            if indexedStarted and not indexedFinished:
+                if type(row) == list:
+                    allIndexed.append(row)
+                    for nested in row:
+                        if type(nested) != tuple:
+                            pr.fail("Internal error - doubly-nested row list")
+                elif type(row) == tuple:
+                    indexedFinished = True
+                else:
+                    pr.fail("Internal error - bad row list")
+
+            if indexedFinished:
+                if type(row) == tuple:
+                    width, text = row
+                    if pad:
+                        text += " " * (width - len(text))
+                    rightRows.append(text)
+                else:
+                    pr.fail("Internal error - multiply-indexed row list")
+
+        allWidths = []
+        allText = []
+        for row in range(len(allIndexed)):
+            indexWidths = self.indexWidths[row]
+            widths = []
+            texts = []
+            indexedRow = allIndexed[row]
+            indexedCol = 0
+            for col in range(len(indexWidths)):
+                if indexWidths[col]:
+                    width, text = indexedRow[indexedCol]
+                    widths.append(max(width, indexWidths[col]))
+                    texts.append(text)
+                    indexedCol += 1
+                else:
+                    widths.append(0)
+                    texts.append("")
+            allWidths.append(widths)
+            allText.append(texts)
+
+        widths = [max(w) for w in zip(*allWidths)]
+        if not allText:
+            allText = [[]]
+
+        rows = []
+
+        for row in allText:
+            indexedRows = []
+            for width, text in zip(widths, row):
+                if pad:
+                    if text == "":
+                        text = " " * (width//2) + "-"
+                        text += " " * (width - len(text))
+                    else:
+                        text += " " * (width - len(text))
+                indexedRows.append(text)
+            rows.append(leftRows + indexedRows + rightRows)
+
+        return rows
+    def outputTree(self):
+        for row in self.flatRowList(pad=True):
+            pr("| " + " | ".join(row) + " |")
+    def outputFinish(self):
+        headers = self.flatHeaderList(pad=True)
+        pr("+-" + "-+-".join(["-" * len(h) for h in headers]) + "-+")
+    def setText(self, text):
+        super().setText(text)
+        self.text = text
+        self.width = max(len(self.nodeOutput()), self.width)
+
+class IterationTableNode(TableNode, IterationNode):
+    def __init__(self, parent, name, text, *args, **kwargs):
+        IterationNode.__init__(self, parent, name, text, *args, **kwargs)
+        if state.hideTimestamp:
+            self.width = len("Iteration")
+        else:
+            self.width = len("HH:MM:SS.xxx")
+    def headerString(self):
+        if state.hideTimestamp:
+            return "Iteration"
+        else:
+            return "Time"
+    def nodeOutput(self):
+        return IterationNode.nodeOutput(self)
+
+TableNode.IterationNode = IterationTableNode
 
 def csvQuote(s):
     s = s.replace('"','""')
@@ -116,213 +418,33 @@ def csvQuote(s):
     else:
         return s
 
-def csvOutputNode(node, currentIteration):
-    columns, rows = node
-    if currentIteration < 2:
-        logger.pr(",".join([ csvQuote(c) for c in columns ]))
-    for row in rows:
-        line = []
-        if state.maxIterations > 1:
-            row["Iteration"] = str(currentIteration)
-
-        for column in columns:
-            line.append(csvQuote(row.get(column,"")))
-        logger.pr(",".join(line))
-
-def listNode(parent, node, text, *attrs):
-    if parent is None:
-        if state.maxIterations > 1:
-            children = [ state.indentStr ]
-        else:
-            children = [ "" ]
-    else:
-        indent = parent[0]
-        n = indent + str(node)
-        children = [ indent + state.indentStr ]
-        attrs = [ (a,v) for a,v in attrs if a not in IgnoreAttributes ]
-        for attr,val in attrs:
-            if attr in RenameAttributes:
-                n = indent + str(val)
-            elif attr in IndexAttributes:
-                n += " " + str(val)
-            elif attr in SecondaryIndexAttributes:
-                listNode(children, attr, val)
-            elif attr in DecorateAttributes and text is not None:
-                text = str(text) + " " + str(val)
-            else:
-                n += "." + attr + "_" + str(val)
-
-        if text is None:
-            parent.append(([n], children))
-        else:
-            leaf_node = [n, str(text)]
-            parent.append((leaf_node, children))
-            # this only works because all text nodes are leaf nodes:
-            return leaf_node
-
-    return children
-
-def listDataIndent(i, node):
-    for child, descendents in node[1:]:
-        i = max(len(child[0]), i, listDataIndent(i, descendents))
-    return i
-
-def prListIndented(i, node):
-    for child, descendents in node[1:]:
-        if len(child) == 1:
-            logger.pr(child[0])
-        else:
-            logger.pr(child[0] + " " * (i - len(child[0])), ":", " ".join(child[1:]))
-        prListIndented(i, descendents)
-
-def listOutputNode(node, currentIteration):
-    if state.maxIterations > 1:
-        logger.pr("\nIteration", currentIteration)
-    if state.condensedList:
-        prListIndented(0, node)
-    else:
-        prListIndented(listDataIndent(0, node), node)
-
-def listSetText(node, text, *attrs):
-    if len(node) == 2:
-        text = str(text)
-        for attr,val in attrs:
-            if attr in DecorateAttributes:
-                text += " " + str(val)
-        node[1] = text
-
-xmlIterationCount = None
-
-def xmlNode(parent, node, text, *attrs):
-    global xmlIterationCount
-    if parent is None:
-        if state.maxIterations > 1:
-            if xmlIterationCount is None:
-                xmlIterationCount = ElementTree.Element("Iteration")
-                xmlIterationCount.set("Num", "?")
-            e = ElementTree.SubElement(xmlIterationCount, node)
-        else:
-            new_elem = ElementTree.Element(node)
-            e = new_elem
-    else:
-        new_elem = ElementTree.SubElement(parent, node)
-        e = new_elem
-    for attr, value in attrs:
-        e.set(attr, str(value))
-    if text is not None:
-        e.text = str(text)
-    return e
-
-def xmlPrettyPrint(node):
-    xml = minidom.parseString(ElementTree.tostring(node))
-    text = xml.toprettyxml(indent=state.indentStr).rstrip()
-    return "\n".join(text.split("\n")[1:])
-
-def xmlOutputNode(node, currentIteration):
-    global xmlIterationCount
-    if currentIteration == 1:
-        logger.pr('<?xml version="1.0" ?>')
-    if state.maxIterations > 1 and xmlIterationCount is not None:
-        xmlIterationCount.set("Num", str(currentIteration))
-        node = xmlIterationCount
-    text = xmlPrettyPrint(node)
-    logger.pr(text)
-
-def xmlOutputComplete():
-    global xmlIterationCount
-    xmlIterationCount = None
-
-def xmlSetText(node, text, *attrs):
-    node.text = str(text)
-
-def noAction(*args, **kwargs):
-    pass
-
-#
-# Function pointers for each format
-#
-
-class FormatNode:
-    def __init__(self, parent, name, text, *attrs):
-        self.parent = parent
-        self.name = name
-        self.text = text
-        self.attrs = attrs
-    def output(self, currentIteration):
+class CsvNode(TableNode):
+    def discarded(self):
+        return "csv" in self.discard
+    def outputStart(self):
+        pr(",".join([ csvQuote(c) for c in self.flatHeaderList(pad=False) ]))
+    def outputTree(self):
+        for row in self.flatRowList(pad=False):
+            pr(",".join([ csvQuote(c) for c in row ]))
+    def outputFinish(self):
         pass
-    def outputComplete(self):
-        pass
-    def setText(self, text):
-        self.text = text
-
-class ListFormatNode(FormatNode):
-    def __init__(self, parent, name, text, *attrs):
-        super().__init__(parent, name, text, *attrs)
-        if parent:
-            parent = parent.node
-        self.node = listNode(parent, name, text, *attrs)
-    def output(self, currentIteration):
-        listOutputNode(self.node, currentIteration)
-    def setText(self, text):
-        super().setText(text)
-        listSetText(self.node, text, *self.attrs)
-
-class XMLFormatNode(FormatNode):
-    def __init__(self, parent, name, text, *attrs):
-        super().__init__(parent, name, text, *attrs)
-        if parent:
-            parent = parent.node
-        self.node = xmlNode(parent, name, text, *attrs)
-    def output(self, currentIteration):
-        xmlOutputNode(self.node, currentIteration)
-    def outputComplete(self):
-        xmlOutputComplete()
-    def setText(self, text):
-        super().setText(text)
-        xmlSetText(self.node, text, *self.attrs)
-
-class TableFormatNode(FormatNode):
-    def __init__(self, parent, name, text, *attrs):
-        super().__init__(parent, name, text, *attrs)
-        if parent:
-            parent = parent.node
-        self.node = tableNode(parent, name, text, *attrs)
-    def output(self, currentIteration):
-        tableOutputNode(self.node, currentIteration)
-    def outputComplete(self):
-        tableOutputComplete()
-    def setText(self, text):
-        super().setText(text)
-        tableSetText(self.node, text, *self.attrs)
-
-class CSVFormatNode(FormatNode):
-    def __init__(self, parent, name, text, *attrs):
-        super().__init__(parent, name, text, *attrs)
-        if parent:
-            parent = parent.node
-        self.node = tableNode(parent, name, text, *attrs)
-    def output(self, currentIteration):
-        csvOutputNode(self.node, currentIteration)
-    def setText(self, text):
-        super().setText(text)
-        tableSetText(self.node, text, *self.attrs)
 
 # Currently-selected Node class
-NodeClass = ListFormatNode
+NodeClass = ListNode
 
 def setNodeClassByName(name):
     global NodeClass
-    classMap = { "list" : ListFormatNode, "xml" : XMLFormatNode,
-                 "table" : TableFormatNode, "csv" : CSVFormatNode }
+    classMap = { "list" : ListNode, "xml" : XmlNode,
+                 "table" : TableNode, "csv" : CsvNode }
 
     NodeClass = classMap.get(name, NodeClass)
 
 def setNodeClassByExtension(ext):
     global NodeClass
-    classMap = { ".xml" : XMLFormatNode, ".csv" : CSVFormatNode }
+    classMap = { ".xml" : XmlNode, ".csv" : CsvNode }
 
     NodeClass = classMap.get(ext, NodeClass)
 
 def setNullNodeClass():
     global NodeClass
-    NodeClass = FormatNode
+    NodeClass = Node

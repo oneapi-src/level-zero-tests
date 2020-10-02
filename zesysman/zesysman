@@ -573,11 +573,12 @@ def main():
             pr("}")
 
         if args.show_topo == "info":
-            topNode = Node(None, "Devices", None)
+            topNode = Node(None, "Devices", None, discard=["list"])
             for devID, devUUID in zip(deviceIDs, deviceUUIDs):
                 for fabricId in fabricIds:
                     if devID in fabricMap[fabricId]:
-                        devNode = Node(topNode, "Device", None, ("Index", devID), ("UUID", deviceUUID(devUUID)))
+                        devNode = Node(topNode, "Device", None, ("Index", devID),
+                                       ("UUID", deviceUUID(devUUID)), index=True)
                         Node(devNode, "FabricID", hex(fabricId))
                         sdsNode = Node(devNode, "AttachPoints", None)
                         sds = list(fabricAttach[fabricId])
@@ -586,12 +587,13 @@ def main():
                             sdNode = Node(sdsNode, "AttachPoint", None, ("Index", sd))
                             for (f,s,p),(rf,rs,rp) in fabric:
                                 if (f,s) == (fabricId,sd):
-                                    portNode = Node(sdNode, "Port", None, ("Index", p))
-                                    Node(portNode, "RemoteFabricId", hex(rf))
-                                    Node(portNode, "RemoteAttachId", rs)
-                                    Node(portNode, "RemotePortNumber", rp)
-            topNode.output(1)
-            topNode.outputComplete()
+                                    portNode = Node(sdNode, "Port", None, ("Index", p), join=".")
+                                    Node(portNode, "RemoteFabricId", hex(rf), join=".")
+                                    Node(portNode, "RemoteAttachId", rs, join=".")
+                                    Node(portNode, "RemotePortNumber", rp, join=".")
+            topNode.outputStart()
+            topNode.outputTree()
+            topNode.outputFinish()
 
         sys.exit(0)
 
@@ -600,10 +602,16 @@ def main():
     else:
         degC = "°C"
 
-    topNode = Node(None, "Devices", None)
+    if state.maxIterations > 1:
+        topNode = Node.IterationNode(None, "Iteration", None)
+        devicesNode = Node(topNode, "Devices", None, discard=["list"])
+    else:
+        devicesNode = Node(None, "Devices", None, discard=["list"])
+        topNode = devicesNode
 
     for devID, devUUID, device in zip(deviceIDs, deviceUUIDs, devices):
-        devNode = Node(topNode, "Device", None, ("Index", devID), ("UUID", deviceUUID(devUUID)))
+        devNode = Node(devicesNode, "Device", None, ("Index", devID), ("UUID", deviceUUID(devUUID)),
+                       index=True)
         if args.show_device:
             coreProps = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
             zeCall(zeDeviceGetProperties(device, coreProps))
@@ -875,29 +883,36 @@ def main():
                 tempType = tempTypeString(tempProps.type)
                 if tempProps.onSubdevice:
                     tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType),
-                                    ("SubdeviceId", tempProps.subdeviceId))
+                                    ("SubdeviceId", tempProps.subdeviceId), heading="Temp")
                 else:
-                    tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType))
+                    tempNode = Node(tempTop, "TemperatureSensor", None, ("Index", i), ("Name", tempType),
+                                    heading="Temp")
 
                 if args.show_inventory:
-                    Node(tempNode, "MaxTemperature", "%.1f" % tempProps.maxTemperature, ("Units", degC))
+                    Node(tempNode, "MaxTemperature", "%.1f" % tempProps.maxTemperature, ("Units", degC),
+                         heading="Max", join=".")
                     if tempProps.isCriticalTempSupported:
-                        Node(tempNode, "CriticalTempEnabled", bool(tempConfig.enableCritical))
+                        Node(tempNode, "CriticalTempEnabled", bool(tempConfig.enableCritical),
+                             header="EnabledCritical", join=".")
                     if tempProps.isThreshold1Supported:
-                        t1Node = Node(tempNode, "Threshold1", None)
-                        Node(t1Node, "EnabledLowToHigh", bool(tempConfig.threshold1.enableLowToHigh))
-                        Node(t1Node, "EnabledHighToLow", bool(tempConfig.threshold1.enableHighToLow))
+                        t1Node = Node(tempNode, "Threshold1", None, heading="T1", join=".")
+                        Node(t1Node, "EnabledLowToHigh", bool(tempConfig.threshold1.enableLowToHigh),
+                             join=".")
+                        Node(t1Node, "EnabledHighToLow", bool(tempConfig.threshold1.enableHighToLow),
+                             join=".")
                         Node(t1Node, "Threshold", "%.1f" % tempConfig.threshold1.threshold,
-                             ("Units", degC))
+                             ("Units", degC), join=".")
                     if tempProps.isThreshold2Supported:
-                        t2Node = Node(tempNode, "Threshold2", None)
-                        Node(t2Node, "EnabledLowToHigh", bool(tempConfig.threshold2.enableLowToHigh))
-                        Node(t2Node, "EnabledHighToLow", bool(tempConfig.threshold2.enableHighToLow))
+                        t2Node = Node(tempNode, "Threshold2", None, heading="T2", join=".")
+                        Node(t2Node, "EnabledLowToHigh", bool(tempConfig.threshold2.enableLowToHigh),
+                             join=".")
+                        Node(t2Node, "EnabledHighToLow", bool(tempConfig.threshold2.enableHighToLow),
+                             join=".")
                         Node(t2Node, "Threshold", "%.1f" % tempConfig.threshold2.threshold,
-                             ("Units", degC))
+                             ("Units", degC), join=".")
 
                 if args.show_telemetry:
-                    node = Node(tempNode, "Current", "?", ("Units", degC))
+                    node = Node(tempNode, "Current", "?", ("Units", degC), join=".")
 
                     def tempTelemetry(temp=temp, node=node, degC=degC):
                         try:
@@ -977,48 +992,52 @@ def main():
                 zeCall(zesPowerGetProperties(pwr, pwrProps))
                 if pwrProps.onSubdevice:
                     pwrNode = Node(pwrTop, "PowerDomain", None, ("Index", i), ("Name", "Subdevice"),
-                                      ("SubdeviceId", pwrProps.subdeviceId))
+                                   ("SubdeviceId", pwrProps.subdeviceId), heading="Power")
                 else:
-                    pwrNode = Node(pwrTop, "PowerDomain", None, ("Index", i), ("Name", "Package"))
+                    pwrNode = Node(pwrTop, "PowerDomain", None, ("Index", i), ("Name", "Package"),
+                                   heading="Power")
 
                 if args.show_inventory:
                     if args.verbose:
-                        Node(pwrNode, "CanControl", bool(pwrProps.canControl))
-                        Node(pwrNode, "ThresholdSupported", bool(pwrProps.isEnergyThresholdSupported))
+                        Node(pwrNode, "CanControl", bool(pwrProps.canControl), join=".")
+                        Node(pwrNode, "ThresholdSupported", bool(pwrProps.isEnergyThresholdSupported),
+                             join=".")
                         Node(pwrNode, "DefaultLimit", fmtknown(pwrProps.defaultLimit / 1000, "%.3f"),
-                             ("Units", "Watts"))
+                             ("Units", "Watts"), join=".")
                         Node(pwrNode, "MinLimit", fmtknown(pwrProps.minLimit / 1000, "%.3f"),
-                             ("Units", "Watts"))
+                             ("Units", "Watts"), join=".")
                         Node(pwrNode, "MaxLimit", fmtknown(pwrProps.maxLimit / 1000, "%.3f"),
-                             ("Units", "Watts"))
+                             ("Units", "Watts"), join=".")
 
                     sustainedLimit = zes_power_sustained_limit_t()
                     burstLimit = zes_power_burst_limit_t()
                     peakLimit = zes_power_peak_limit_t()
                     zeCall(zesPowerGetLimits(pwr, sustainedLimit, burstLimit, peakLimit))
-                    sustainedNode = Node(pwrNode, "SustainedLimit", None)
-                    Node(sustainedNode, "Enabled", bool(sustainedLimit.enabled))
+                    sustainedNode = Node(pwrNode, "SustainedLimit", None, heading="Sustained", join=".")
+                    Node(sustainedNode, "Enabled", bool(sustainedLimit.enabled), join=".")
                     Node(sustainedNode, "Power", "%.3f" % (sustainedLimit.power / 1000),
-                         ("Units", "Watts"))
+                         ("Units", "Watts"), join=".")
                     Node(sustainedNode, "Interval", "%.3f" % (sustainedLimit.interval / 1000),
-                         ("Units", "sec"))
-                    burstNode = Node(pwrNode, "BurstLimit", None)
-                    Node(burstNode, "Enabled", bool(burstLimit.enabled))
-                    Node(burstNode, "Power", "%.3f" % (burstLimit.power / 1000), ("Units", "Watts"))
-                    peakNode = Node(pwrNode, "PeakLimit", None)
-                    Node(peakNode, "Power", "%.3f" % (peakLimit.powerAC / 1000), ("Units", "Watts"))
+                         ("Units", "sec"), join=".")
+                    burstNode = Node(pwrNode, "BurstLimit", None, heading="Burst", join=".")
+                    Node(burstNode, "Enabled", bool(burstLimit.enabled), join=".")
+                    Node(burstNode, "Power", "%.3f" % (burstLimit.power / 1000), ("Units", "Watts"),
+                         join=".")
+                    peakNode = Node(pwrNode, "PeakLimit", None, heading="Peak", join=".")
+                    Node(peakNode, "Power", "%.3f" % (peakLimit.powerAC / 1000), ("Units", "Watts"),
+                         join=".")
                     if peakLimit.powerDC > 0:
                         Node(peakNode, "PowerOnDC", "%.3f" % (peakLimit.powerDC / 1000),
-                             ("Units", "Watts"))
+                             ("Units", "Watts"), join=".")
 
                 if args.show_telemetry:
                     pwrCounter = zes_power_energy_counter_t()
                     pwrThreshold = zes_energy_threshold_t()
                     zeCall(zesPowerGetEnergyCounter(pwr, pwrCounter))
                     nodes = []
-                    nodes.append(Node(pwrNode, "CurrentPower", "?", ("Units", "Watts")))
-                    nodes.append(Node(pwrNode, "MonitorProcess", "?"))
-                    nodes.append(Node(pwrNode, "EnergyThreshold", "?", ("Units", "Joules")))
+                    nodes.append(Node(pwrNode, "CurrentPower", "?", ("Units", "Watts"), join="."))
+                    nodes.append(Node(pwrNode, "MonitorProcess", "?", join="."))
+                    nodes.append(Node(pwrNode, "EnergyThreshold", "?", ("Units", "Joules"), join="."))
 
                     def pwrTelemetry(pwr=pwr, pwrCounter=pwrCounter, pwrThreshold=pwrThreshold, node=nodes):
                         oldEnergy, oldTimestamp = pwrCounter.energy, pwrCounter.timestamp
@@ -1084,18 +1103,20 @@ def main():
                 freqType = freqTypeString(freqProps.type)
                 if freqProps.onSubdevice:
                     freqNode = Node(freqTop, "FrequencyDomain", None, ("Index", i), ("Name", freqType),
-                                       ("SubdeviceId", freqProps.subdeviceId))
+                                       ("SubdeviceId", freqProps.subdeviceId), heading="Freq")
                 else:
-                    freqNode = Node(freqTop, "FrequencyDomain", None, ("Index", i), ("Name", freqType))
+                    freqNode = Node(freqTop, "FrequencyDomain", None, ("Index", i), ("Name", freqType),
+                                    heading="Freq")
 
                 if args.show_inventory:
                     if args.verbose:
-                        Node(freqNode, "CanControl", bool(freqProps.canControl))
+                        Node(freqNode, "CanControl", bool(freqProps.canControl), join=".")
                         Node(freqNode, "ThrottleEventSupported",
-                             bool(freqProps.isThrottleEventSupported))
-                    availFreqsNode = Node(freqNode, "AvailableFrequencies", None)
-                    Node(availFreqsNode, "Min", "%.1f" % freqProps.min, ("Units", "MHz"))
-                    Node(availFreqsNode, "Max", "%.1f" % freqProps.max, ("Units", "MHz"))
+                             bool(freqProps.isThrottleEventSupported), join=".")
+                    availFreqsNode = Node(freqNode, "AvailableFrequencies", None, heading="Avail",
+                                          join=".")
+                    Node(availFreqsNode, "Min", "%.1f" % freqProps.min, ("Units", "MHz"), join=".")
+                    Node(availFreqsNode, "Max", "%.1f" % freqProps.max, ("Units", "MHz"), join=".")
                     if args.verbose:
                         clockCount = uint32_ptr()
                         try:
@@ -1104,17 +1125,18 @@ def main():
                             pass
                         else:
                             clockFreqs = double_array(clockCount.value())
-                            zeCall(zesFrequencyGetAvailableClocks(freq, clockCount.cast(), clockFreqs.cast()))
+                            zeCall(zesFrequencyGetAvailableClocks(freq, clockCount.cast(),
+                                   clockFreqs.cast()))
                         for clk in range(clockCount.value()):
                             clockFreq = clockFreqs[clk]
                             Node(availFreqsNode, "AvailableFrequency", "%.1f" % clockFreq,
-                                 ("Units", "MHz"))
+                                 ("Units", "MHz"), join=".")
 
                     freqRange = zes_freq_range_t()
                     zeCall(zesFrequencyGetRange(freq, freqRange))
-                    rangeFreqsNode = Node(freqNode, "FrequencyRange", None)
-                    Node(rangeFreqsNode, "Min", "%.1f" % freqRange.min, ("Units", "MHz"))
-                    Node(rangeFreqsNode, "Max", "%.1f" % freqRange.max, ("Units", "MHz"))
+                    rangeFreqsNode = Node(freqNode, "FrequencyRange", None, heading="Range", join=".")
+                    Node(rangeFreqsNode, "Min", "%.1f" % freqRange.min, ("Units", "MHz"), join=".")
+                    Node(rangeFreqsNode, "Max", "%.1f" % freqRange.max, ("Units", "MHz"), join=".")
 
                 if args.show_telemetry:
                     freqState = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_STATE)
@@ -1126,14 +1148,16 @@ def main():
                     except ValueError:
                         logger.reportZeException()
                     nodes = []
-                    nodes.append(Node(freqNode, "RequestedFrequency", "?", ("Units", "MHz")))
-                    nodes.append(Node(freqNode, "ActualFrequency", "?", ("Units", "MHz")))
-                    nodes.append(Node(freqNode, "ThrottleReasons", "?"))
-                    nodes.append(Node(freqNode, "ThrottleTime", "?", ("Units", "%")))
+                    nodes.append(Node(freqNode, "RequestedFrequency", "?", ("Units", "MHz"),
+                                      heading="Requested", join="."))
+                    nodes.append(Node(freqNode, "ActualFrequency", "?", ("Units", "MHz"),
+                                      heading="Actual", join="."))
+                    nodes.append(Node(freqNode, "ThrottleReasons", "?", join="."))
+                    nodes.append(Node(freqNode, "ThrottleTime", "?", ("Units", "%"), join="."))
                     if args.verbose:
-                        nodes.append(Node(freqNode, "CurrentVoltage", "?", ("Units", "Volts")))
-                        nodes.append(Node(freqNode, "Efficient", "?", ("Units", "MHz")))
-                        nodes.append(Node(freqNode, "MaximumTDP", "?", ("Units", "MHz")))
+                        nodes.append(Node(freqNode, "CurrentVoltage", "?", ("Units", "Volts"), join="."))
+                        nodes.append(Node(freqNode, "Efficient", "?", ("Units", "MHz"), join="."))
+                        nodes.append(Node(freqNode, "MaximumTDP", "?", ("Units", "MHz"), join="."))
 
                     def freqTelemetry(freq=freq, freqState=freqState, freqThrottle=freqThrottle,
                                       node=nodes, verbose=args.verbose):
@@ -1351,22 +1375,25 @@ def main():
                         mode = zeCall(zesFrequencyOcGetMode(freq))
                     except:
                         mode = ZES_OC_MODE_OFF
-                    Node(ocNode, "OverclockingMode", ocModeString(mode))
-                    Node(ocNode, "isOcSupported", bool(ocCaps.isOcSupported))
+                    Node(ocNode, "OverclockingMode", ocModeString(mode), join=".")
+                    Node(ocNode, "isOcSupported", bool(ocCaps.isOcSupported), join=".")
                     Node(ocNode, "maxFactoryDefaultFrequency", "%.1f" % ocCaps.maxFactoryDefaultFrequency,
-                         ("Units", "MHz"))
+                         ("Units", "MHz"), join=".")
                     Node(ocNode, "maxFactoryDefaultVoltage", "%.1f" % ocCaps.maxFactoryDefaultVoltage,
-                         ("Units", "V"))
-                    Node(ocNode, "maxOcFrequency", "%.1f" % ocCaps.maxOcFrequency, ("Units", "MHz"))
-                    Node(ocNode, "minOcVoltageOffset", "%.1f" % ocCaps.minOcVoltageOffset, ("Units", "V"))
-                    Node(ocNode, "maxOcVoltageOffset", "%.1f" % ocCaps.maxOcVoltageOffset, ("Units", "V"))
-                    Node(ocNode, "maxOcVoltage", "%.1f" % ocCaps.maxOcVoltage, ("Units", "V"))
-                    Node(ocNode, "isTjMaxSupported", bool(ocCaps.isTjMaxSupported))
-                    Node(ocNode, "isIccMaxSupported", bool(ocCaps.isIccMaxSupported))
-                    Node(ocNode, "isHighVoltModeCapable", bool(ocCaps.isHighVoltModeCapable))
-                    Node(ocNode, "isHighVoltModeEnabled", bool(ocCaps.isHighVoltModeEnabled))
-                    Node(ocNode, "isExtendedModeSupported", bool(ocCaps.isExtendedModeSupported))
-                    Node(ocNode, "isFixedModeSupported", bool(ocCaps.isFixedModeSupported))
+                         ("Units", "V"), join=".")
+                    Node(ocNode, "maxOcFrequency", "%.1f" % ocCaps.maxOcFrequency, ("Units", "MHz"),
+                         join=".")
+                    Node(ocNode, "minOcVoltageOffset", "%.1f" % ocCaps.minOcVoltageOffset, ("Units", "V"),
+                         join=".")
+                    Node(ocNode, "maxOcVoltageOffset", "%.1f" % ocCaps.maxOcVoltageOffset, ("Units", "V"),
+                         join=".")
+                    Node(ocNode, "maxOcVoltage", "%.1f" % ocCaps.maxOcVoltage, ("Units", "V"), join=".")
+                    Node(ocNode, "isTjMaxSupported", bool(ocCaps.isTjMaxSupported), join=".")
+                    Node(ocNode, "isIccMaxSupported", bool(ocCaps.isIccMaxSupported), join=".")
+                    Node(ocNode, "isHighVoltModeCapable", bool(ocCaps.isHighVoltModeCapable), join=".")
+                    Node(ocNode, "isHighVoltModeEnabled", bool(ocCaps.isHighVoltModeEnabled), join=".")
+                    Node(ocNode, "isExtendedModeSupported", bool(ocCaps.isExtendedModeSupported), join=".")
+                    Node(ocNode, "isFixedModeSupported", bool(ocCaps.isFixedModeSupported), join=".")
 
                     if ocCaps.isOcSupported:
                         try:
@@ -1374,14 +1401,14 @@ def main():
                             ocFreq = "%.1f" % frq
                         except:
                             ocFreq = "?"
-                        Node(ocNode, "CurrentOcFrequencyTarget", ocFreq, ("Units", "MHz"))
+                        Node(ocNode, "CurrentOcFrequencyTarget", ocFreq, ("Units", "MHz"), join=".")
                         try:
                             tgt, off = zeCall(zesFrequencyOcGetVoltageTarget(freq))
                             vTarget, vOffset = "%.1f" % tgt, "%.1f" % off
                         except:
                             vTarget, vOffset = "?", "?"
-                        Node(ocNode, "CurrentOcVoltageTarget", vTarget, ("Units", "V"))
-                        Node(ocNode, "CurrentOcVoltageOffset", vOffset, ("Units", "V"))
+                        Node(ocNode, "CurrentOcVoltageTarget", vTarget, ("Units", "V"), join=".")
+                        Node(ocNode, "CurrentOcVoltageOffset", vOffset, ("Units", "V"), join=".")
 
                     if ocCaps.isIccMaxSupported:
                         try:
@@ -1389,7 +1416,7 @@ def main():
                             iccMax = "%.1f" % icc
                         except:
                             iccMax = "?"
-                        Node(ocNode, "OcCurrentLimit", iccMax, ("Units", "A"))
+                        Node(ocNode, "OcCurrentLimit", iccMax, ("Units", "A"), join=".")
 
                     if ocCaps.isTjMaxSupported:
                         try:
@@ -1397,7 +1424,7 @@ def main():
                             tjMax = "%.1f" % tj
                         except:
                             tjMax = "?"
-                        Node(ocNode, "OcTemperatureLimit", tjMax, ("Units", degC))
+                        Node(ocNode, "OcTemperatureLimit", tjMax, ("Units", degC), join=".")
 
         engCount = uint32_ptr()
         try:
@@ -1418,12 +1445,15 @@ def main():
                 engProps = zes_typed_structure(ZES_STRUCTURE_TYPE_ENGINE_PROPERTIES)
                 zeCall(zesEngineGetProperties(eng, engProps))
                 engType = engTypeString(engProps.type)
+                tableType = engTypeTableString(engProps.type)
 
                 if engProps.onSubdevice:
                     engNode = Node(engTop, "EngineGroup", None, ("Index", i), ("Name", engType),
-                                      ("SubdeviceId", engProps.subdeviceId))
+                                   ("SubdeviceId", engProps.subdeviceId), heading=tableType,
+                                   headingAttrs=[])
                 else:
-                    engNode = Node(engTop, "EngineGroup", None, ("Index", i), ("Name", engType))
+                    engNode = Node(engTop, "EngineGroup", None, ("Index", i), ("Name", engType),
+                                   heading=tableType, headingAttrs=[])
 
                 if args.show_telemetry:
                     utilStats = zes_engine_stats_t()
@@ -1434,7 +1464,7 @@ def main():
                     except ValueError:
                         logger.reportZeException()
                     else:
-                        node = Node(engNode, "Activity", "?", ("Units", "%"))
+                        node = Node(engNode, "Activity", "?", ("Units", "%"), heading="", join="")
 
                         def utilTelemetry(eng=eng, utilStats=utilStats, node=node):
                             oldActive, oldTimestamp = utilStats.activeTime, utilStats.timestamp
@@ -1472,15 +1502,16 @@ def main():
 
                 if memProps.onSubdevice:
                     memNode = Node(memTop, "MemoryModule", None, ("Index", i), ("Name", memType),
-                                      ("SubdeviceId", memProps.subdeviceId))
+                                      ("SubdeviceId", memProps.subdeviceId), heading="Mem")
                 else:
-                    memNode = Node(memTop, "MemoryModule", None, ("Index", i), ("Name", memType))
+                    memNode = Node(memTop, "MemoryModule", None, ("Index", i), ("Name", memType),
+                                   heading="Mem")
 
                 if args.show_inventory:
-                    Node(memNode, "Location", memLocString(memProps.location))
-                    Node(memNode, "PhysicalSize", memProps.physicalSize, ("Units", "Bytes"))
-                    Node(memNode, "BusWidth", knownvalue(memProps.busWidth))
-                    Node(memNode, "NumChannels", knownvalue(memProps.numChannels))
+                    Node(memNode, "Location", memLocString(memProps.location), join=".")
+                    Node(memNode, "PhysicalSize", memProps.physicalSize, ("Units", "Bytes"), join=".")
+                    Node(memNode, "BusWidth", knownvalue(memProps.busWidth), join=".")
+                    Node(memNode, "NumChannels", knownvalue(memProps.numChannels), join=".")
 
                 if args.show_telemetry:
                     memCounter = zes_mem_bandwidth_t()
@@ -1491,12 +1522,12 @@ def main():
                     except:
                         pass
                     nodes = []
-                    nodes.append(Node(memNode, "Health", "?"))
-                    nodes.append(Node(memNode, "Free", "?", ("Units", "Bytes")))
-                    nodes.append(Node(memNode, "Utilized", "?", ("Units", "%")))
-                    nodes.append(Node(memNode, "ReadThroughput", "?", ("Units", "Bytes/s")))
-                    nodes.append(Node(memNode, "WriteThroughput", "?", ("Units", "Bytes/s")))
-                    nodes.append(Node(memNode, "Bandwidth", "?", ("Units", "%")))
+                    nodes.append(Node(memNode, "Health", "?", join="."))
+                    nodes.append(Node(memNode, "Free", "?", ("Units", "Bytes"), join="."))
+                    nodes.append(Node(memNode, "Utilized", "?", ("Units", "%"), join="."))
+                    nodes.append(Node(memNode, "ReadThroughput", "?", ("Units", "Bytes/s"), join="."))
+                    nodes.append(Node(memNode, "WriteThroughput", "?", ("Units", "Bytes/s"), join="."))
+                    nodes.append(Node(memNode, "Bandwidth", "?", ("Units", "%"), join="."))
 
                     def memTelemetry(mem=mem, memState=memState, memCounter=memCounter, node=nodes):
                         oldRead, oldWrite = memCounter.readCounter, memCounter.writeCounter
@@ -1551,23 +1582,23 @@ def main():
                 showPci = True
 
         if showPci:
-            pciTop = Node(devNode, "PCI", None)
+            pciTop = Node(devNode, "PCI", None, heading="PCI")
             if args.show_inventory:
                 props = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES)
                 zeCall(zesDeviceGetProperties(device, props))
-                Node(pciTop, "DeviceId", hex(props.core.deviceId))
+                Node(pciTop, "DeviceId", hex(props.core.deviceId), join=".")
                 pciAddr = pciProps.address
                 address = "%02x:%02x.%x" % (pciAddr.bus, pciAddr.device, pciAddr.function)
                 if pciAddr.domain != 0:
                     address = ("%04x:" % pciAddr.domain) + address
-                Node(pciTop, "Address", address)
-                Node(pciTop, "MaxGen", knownvalue(pciProps.maxSpeed.gen))
-                Node(pciTop, "MaxLanes", knownvalue(pciProps.maxSpeed.width))
+                Node(pciTop, "Address", address, join=".")
+                Node(pciTop, "MaxGen", knownvalue(pciProps.maxSpeed.gen), join=".")
+                Node(pciTop, "MaxLanes", knownvalue(pciProps.maxSpeed.width), join=".")
                 Node(pciTop, "MaxBandwidth", fmtknown(pciProps.maxSpeed.maxBandwidth),
-                     ("Units", "Bytes/s"))
-                Node(pciTop, "HaveBandwidthCounters", pciProps.haveBandwidthCounters)
-                Node(pciTop, "HavePacketCounters", pciProps.havePacketCounters)
-                Node(pciTop, "HaveReplayCounters", pciProps.haveReplayCounters)
+                     ("Units", "Bytes/s"), join=".")
+                Node(pciTop, "HaveBandwidthCounters", pciProps.haveBandwidthCounters, join=".")
+                Node(pciTop, "HavePacketCounters", pciProps.havePacketCounters, join=".")
+                Node(pciTop, "HaveReplayCounters", pciProps.haveReplayCounters, join=".")
 
                 if args.verbose:
                     barTop = Node(pciTop, "Bars", None)
@@ -1580,9 +1611,9 @@ def main():
                         bar = bars[i]
                         barName = barTypeString(bar.type)
                         barNode = Node(barTop, "Bar", None, ("Name", barName))
-                        Node(barNode, "Index", bar.index)
-                        Node(barNode, "Base", "0x%016x" % bar.base)
-                        Node(barNode, "Size", "0x%016x" % bar.size)
+                        Node(barNode, "Index", bar.index, join=".")
+                        Node(barNode, "Base", "0x%016x" % bar.base, join=".")
+                        Node(barNode, "Size", "0x%016x" % bar.size, join=".")
 
             showPciTelemetry = False
             if args.show_telemetry:
@@ -1605,22 +1636,22 @@ def main():
                 zeCall(zesDevicePciGetStats(device, pciCounter))
 
                 nodes = []
-                nodes.append(Node(pciTop, "Status", "?"))
-                nodes.append(Node(pciTop, "QualityIssues", "?"))
-                nodes.append(Node(pciTop, "StabilityIssues", "?"))
-                nodes.append(Node(pciTop, "CurrentGen", "?"))
-                nodes.append(Node(pciTop, "CurrentLanes", "?"))
-                nodes.append(Node(pciTop, "CurrentBandwidth", "?", ("Units", "Bytes/s")))
+                nodes.append(Node(pciTop, "Status", "?", join="."))
+                nodes.append(Node(pciTop, "QualityIssues", "?", join="."))
+                nodes.append(Node(pciTop, "StabilityIssues", "?", join="."))
+                nodes.append(Node(pciTop, "CurrentGen", "?", join="."))
+                nodes.append(Node(pciTop, "CurrentLanes", "?", join="."))
+                nodes.append(Node(pciTop, "CurrentBandwidth", "?", ("Units", "Bytes/s"), join="."))
                 if have['bw']:
-                    nodes.append(Node(pciTop, "RxThroughput", "?", ("Units", "Bytes/s")))
-                    nodes.append(Node(pciTop, "TxThroughput", "?", ("Units", "Bytes/s")))
-                    nodes.append(Node(pciTop, "Utilization", "?", ("Units", "%")))
+                    nodes.append(Node(pciTop, "RxThroughput", "?", ("Units", "Bytes/s"), join="."))
+                    nodes.append(Node(pciTop, "TxThroughput", "?", ("Units", "Bytes/s"), join="."))
+                    nodes.append(Node(pciTop, "Utilization", "?", ("Units", "%"), join="."))
                 if have['pkt']:
-                    nodes.append(Node(pciTop, "PacketRate", "?"))
+                    nodes.append(Node(pciTop, "PacketRate", "?", join="."))
                     if have['replay']:
-                        nodes.append(Node(pciTop, "ReplayRate", "?", ("Units", "%")))
+                        nodes.append(Node(pciTop, "ReplayRate", "?", ("Units", "%"), join="."))
                 elif have['replay']:
-                        nodes.append(Node(pciTop, "ReplayRate", "?"))
+                        nodes.append(Node(pciTop, "ReplayRate", "?", join="."))
 
                 def pciTelemetry(device=device, have=have, pciState=pciState, pciCounter=pciCounter,
                                  node=nodes):
@@ -1754,9 +1785,9 @@ def main():
 
                 if portProps.onSubdevice:
                     portNode = Node(portTop, "FabricPort", None, ("Index", i),
-                                    ("SubdeviceId", portProps.subdeviceId))
+                                    ("SubdeviceId", portProps.subdeviceId), heading="Port")
                 else:
-                    portNode = Node(portTop, "FabricPort", None, ("Index", i))
+                    portNode = Node(portTop, "FabricPort", None, ("Index", i), heading="Port")
 
                 if args.show_inventory:
                     portLinkType = zes_fabric_link_type_t()
@@ -1765,35 +1796,37 @@ def main():
                     zeCall(zesFabricPortGetLinkType(port, portLinkType))
                     zeCall(zesFabricPortGetConfig(port, portConfig))
 
-                    Node(portNode, "Model", portProps.model)
-                    Node(portNode, "PhysicalAttachmentType", portLinkType.desc)
-                    Node(portNode, "FabricId", portProps.portId.fabricId)
-                    Node(portNode, "AttachId", portProps.portId.attachId)
-                    Node(portNode, "PortNumber", portProps.portId.portNumber)
-                    Node(portNode, "MaxRxBitrate", portProps.maxRxSpeed.bitRate, ("Units", "Bits/sec"))
-                    Node(portNode, "MaxRxWidth", portProps.maxRxSpeed.width)
-                    Node(portNode, "MaxTxBitrate", portProps.maxTxSpeed.bitRate, ("Units", "Bits/sec"))
-                    Node(portNode, "MaxTxWidth", portProps.maxTxSpeed.width)
-                    Node(portNode, "Enabled", bool(portConfig.enabled))
-                    Node(portNode, "Beaconing", bool(portConfig.beaconing))
+                    Node(portNode, "Model", portProps.model, join=".")
+                    Node(portNode, "PhysicalAttachmentType", portLinkType.desc, join=".")
+                    Node(portNode, "FabricId", portProps.portId.fabricId, join=".")
+                    Node(portNode, "AttachId", portProps.portId.attachId, join=".")
+                    Node(portNode, "PortNumber", portProps.portId.portNumber, join=".")
+                    Node(portNode, "MaxRxBitrate", portProps.maxRxSpeed.bitRate, ("Units", "Bits/sec"),
+                         join=".")
+                    Node(portNode, "MaxRxWidth", portProps.maxRxSpeed.width, join=".")
+                    Node(portNode, "MaxTxBitrate", portProps.maxTxSpeed.bitRate, ("Units", "Bits/sec"),
+                         join=".")
+                    Node(portNode, "MaxTxWidth", portProps.maxTxSpeed.width, join=".")
+                    Node(portNode, "Enabled", bool(portConfig.enabled), join=".")
+                    Node(portNode, "Beaconing", bool(portConfig.beaconing), join=".")
 
                 if args.show_telemetry:
                     portState = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_STATE)
                     portCounter = zes_fabric_port_throughput_t()
                     zeCall(zesFabricPortGetThroughput(port, portCounter))
                     nodes = []
-                    nodes.append(Node(portNode, "Status", "?"))
-                    nodes.append(Node(portNode, "QualityIssues", "?"))
-                    nodes.append(Node(portNode, "FailureReasons", "?"))
-                    nodes.append(Node(portNode, "RemoteFabricId", "?"))
-                    nodes.append(Node(portNode, "RemoteAttachId", "?"))
-                    nodes.append(Node(portNode, "RemotePortNumber", "?"))
-                    nodes.append(Node(portNode, "CurrentRxBitrate", "?", ("Units", "Bits/sec")))
-                    nodes.append(Node(portNode, "CurrentRxWidth", "?"))
-                    nodes.append(Node(portNode, "CurrentTxBitrate", "?", ("Units", "Bits/sec")))
-                    nodes.append(Node(portNode, "CurrentTxWidth", "?"))
-                    nodes.append(Node(portNode, "RxThroughput", "?", ("Units", "Bytes/s")))
-                    nodes.append(Node(portNode, "TxThroughput", "?", ("Units", "Bytes/s")))
+                    nodes.append(Node(portNode, "Status", "?", join="."))
+                    nodes.append(Node(portNode, "QualityIssues", "?", join="."))
+                    nodes.append(Node(portNode, "FailureReasons", "?", join="."))
+                    nodes.append(Node(portNode, "RemoteFabricId", "?", join="."))
+                    nodes.append(Node(portNode, "RemoteAttachId", "?", join="."))
+                    nodes.append(Node(portNode, "RemotePortNumber", "?", join="."))
+                    nodes.append(Node(portNode, "CurrentRxBitrate", "?", ("Units", "Bits/sec"), join="."))
+                    nodes.append(Node(portNode, "CurrentRxWidth", "?", join="."))
+                    nodes.append(Node(portNode, "CurrentTxBitrate", "?", ("Units", "Bits/sec"), join="."))
+                    nodes.append(Node(portNode, "CurrentTxWidth", "?", join="."))
+                    nodes.append(Node(portNode, "RxThroughput", "?", ("Units", "Bytes/s"), join="."))
+                    nodes.append(Node(portNode, "TxThroughput", "?", ("Units", "Bytes/s"), join="."))
 
                     def portTelemetry(port=port, portState=portState, portCounter=portCounter,
                                       node=nodes):
@@ -1883,9 +1916,10 @@ def main():
 
                 if rasProps.onSubdevice:
                     rasNode = Node(rasTop, "ErrorDomain", None, ("Index", i), ("Name", rasType),
-                                      ("SubdeviceId", rasProps.subdeviceId))
+                                   ("SubdeviceId", rasProps.subdeviceId), heading="Err")
                 else:
-                    rasNode = Node(rasTop, "ErrorDomain", None, ("Index", i), ("Name", rasType))
+                    rasNode = Node(rasTop, "ErrorDomain", None, ("Index", i), ("Name", rasType),
+                                   heading="Err")
 
                 if args.show_inventory:
                     try:
@@ -1896,35 +1930,36 @@ def main():
                     except ValueError:
                         logger.reportZeException()
                     else:
-                        thresholdNode = Node(rasNode, "Thresholds", None)
+                        thresholdNode = Node(rasNode, "Thresholds", None, heading="Threshold", join=".")
                         thresholds = rasConfig.detailedThresholds
 
-                        Node(thresholdNode, "Resets", ras_category(thresholds, ZES_RAS_ERROR_CAT_RESET))
+                        Node(thresholdNode, "Resets", ras_category(thresholds, ZES_RAS_ERROR_CAT_RESET),
+                             join=".")
                         Node(thresholdNode, "ProgrammingErrors",
-                             ras_category(thresholds, ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS))
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS), join=".")
                         Node(thresholdNode, "DriverErrors",
-                             ras_category(thresholds, ZES_RAS_ERROR_CAT_DRIVER_ERRORS))
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_DRIVER_ERRORS), join=".")
                         Node(thresholdNode, "ComputeErrors",
-                             ras_category(thresholds, ZES_RAS_ERROR_CAT_COMPUTE_ERRORS))
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_COMPUTE_ERRORS), join=".")
                         Node(thresholdNode, "NonComputeErrors",
-                             ras_category(thresholds, ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS))
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS), join=".")
                         Node(thresholdNode, "CacheErrors",
-                             ras_category(thresholds, ZES_RAS_ERROR_CAT_CACHE_ERRORS))
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_CACHE_ERRORS), join=".")
                         Node(thresholdNode, "DisplayErrors",
-                             ras_category(thresholds, ZES_RAS_ERROR_CAT_DISPLAY_ERRORS))
-                        Node(thresholdNode, "TotalErrors", rasConfig.totalThreshold)
+                             ras_category(thresholds, ZES_RAS_ERROR_CAT_DISPLAY_ERRORS), join=".")
+                        Node(thresholdNode, "TotalErrors", rasConfig.totalThreshold, join=".")
 
                 if args.show_telemetry:
                     rasState = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_STATE)
 
                     nodes = []
-                    nodes.append(Node(rasNode, "Resets", "?"))
-                    nodes.append(Node(rasNode, "ProgrammingErrors", "?"))
-                    nodes.append(Node(rasNode, "DriverErrors", "?"))
-                    nodes.append(Node(rasNode, "ComputeErrors", "?"))
-                    nodes.append(Node(rasNode, "NonComputeErrors", "?"))
-                    nodes.append(Node(rasNode, "CacheErrors", "?"))
-                    nodes.append(Node(rasNode, "DisplayErrors", "?"))
+                    nodes.append(Node(rasNode, "Resets", "?", join="."))
+                    nodes.append(Node(rasNode, "ProgrammingErrors", "?", join="."))
+                    nodes.append(Node(rasNode, "DriverErrors", "?", join="."))
+                    nodes.append(Node(rasNode, "ComputeErrors", "?", join="."))
+                    nodes.append(Node(rasNode, "NonComputeErrors", "?", join="."))
+                    nodes.append(Node(rasNode, "CacheErrors", "?", join="."))
+                    nodes.append(Node(rasNode, "DisplayErrors", "?", join="."))
 
                     def rasTelemetry(ras=ras, node=nodes, rasState=rasState):
                         try:
@@ -1990,13 +2025,14 @@ def main():
 
                 if stbyProps.onSubdevice:
                     stbyNode = Node(stbyTop, "StandbyDomain", None, ("Index", i), ("Name", stbyType),
-                                    ("SubdeviceId", stbyProps.subdeviceId))
+                                    ("SubdeviceId", stbyProps.subdeviceId), heading="Standby")
                 else:
-                    stbyNode = Node(stbyTop, "StandbyDomain", None, ("Index", i), ("Name", stbyType))
+                    stbyNode = Node(stbyTop, "StandbyDomain", None, ("Index", i), ("Name", stbyType),
+                                    heading="Standby")
 
                 if args.show_inventory:
                     modeString = stbyPromoModeString(zeCall(zesStandbyGetMode(stby)))
-                    Node(stbyNode, "SleepStateMode", modeString)
+                    Node(stbyNode, "SleepStateMode", modeString, join=".")
 
         procCount = uint32_ptr()
         try:
@@ -2017,9 +2053,9 @@ def main():
                 procNode = Node(procTop, "ProcessUsage", None, ("Id", proc.processId))
 
                 if args.show_telemetry:
-                    Node(procNode, "MemUsage", "0x%08x" % proc.memSize)
+                    Node(procNode, "MemUsage", "0x%08x" % proc.memSize, join=".")
                     engineNames = enginesUsedString(proc.engines)
-                    Node(procNode, "EngineUsage", engineNames)
+                    Node(procNode, "EngineUsage", engineNames, join=".")
 
         schedCount = uint32_ptr()
         try:
@@ -2101,32 +2137,33 @@ def main():
                     schedNode = Node(schedTop, "Scheduler", None, ("Index", i))
 
                 if args.show_inventory:
-                    Node(schedNode, "CanControl", bool(schedProps.canControl))
-                    Node(schedNode, "Engines", enginesUsedString(schedProps.engines))
-                    Node(schedNode, "SupportedModes", schedSupportedModesString(schedProps.supportedModes))
+                    Node(schedNode, "CanControl", bool(schedProps.canControl), join=".")
+                    Node(schedNode, "Engines", enginesUsedString(schedProps.engines), join=".")
+                    Node(schedNode, "SupportedModes", schedSupportedModesString(schedProps.supportedModes),
+                         join=".")
                     if args.verbose:
                         timeoutCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES)
                         zeCall(zesSchedulerGetTimeoutModeProperties(sched, True, timeoutCfg))
                         if timeoutCfg.watchdogTimeout == ZES_SCHED_WATCHDOG_DISABLE:
-                            Node(schedNode, "DefaultTimeout", "Disabled")
+                            Node(schedNode, "DefaultTimeout", "Disabled", join=".")
                         else:
                             wd = timeoutCfg.watchdogTimeout / 1000.0
-                            Node(schedNode, "DefaultTimeout", "%.3f" % wd, ("Units", "msec"))
+                            Node(schedNode, "DefaultTimeout", "%.3f" % wd, ("Units", "msec"), join=".")
                         tsCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
                         zeCall(zesSchedulerGetTimesliceModeProperties(sched, True, tsCfg))
                         tsi = tsCfg.interval / 1000.0
                         tsy = tsCfg.yieldTimeout / 1000.0
-                        Node(schedNode, "DefaultInterval", "%.3f" % tsi, ("Units", "msec"))
-                        Node(schedNode, "DefaultYieldTimeout", "%.3f" % tsy, ("Units", "msec"))
+                        Node(schedNode, "DefaultInterval", "%.3f" % tsi, ("Units", "msec"), join=".")
+                        Node(schedNode, "DefaultYieldTimeout", "%.3f" % tsy, ("Units", "msec"), join=".")
 
                 if args.show_telemetry:
                     cfgs = [zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES),
                             zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)]
                     nodes = []
-                    nodes.append(Node(schedNode, "Mode", "?"))
-                    nodes.append(Node(schedNode, "Timeout", "?", ("Units", "msec")))
-                    nodes.append(Node(schedNode, "Interval", "?", ("Units", "msec")))
-                    nodes.append(Node(schedNode, "YieldTimeout", "?", ("Units", "msec")))
+                    nodes.append(Node(schedNode, "Mode", "?", join="."))
+                    nodes.append(Node(schedNode, "Timeout", "?", ("Units", "msec"), join="."))
+                    nodes.append(Node(schedNode, "Interval", "?", ("Units", "msec"), join="."))
+                    nodes.append(Node(schedNode, "YieldTimeout", "?", ("Units", "msec"), join="."))
 
                     def schedTelemetry(sched=sched, node=nodes, cfg=cfgs):
                         try:
@@ -2198,7 +2235,7 @@ def main():
 
                     for t in range(testCount.value()):
                         test = tests[t]
-                        Node(diagNode, "Test", test.name, ("Id", test.index))
+                        Node(diagNode, "Test", test.name, ("Id", test.index), join=".")
 
         fanCount = uint32_ptr()
         try:
@@ -2371,33 +2408,35 @@ def main():
                 zeCall(zesFanGetConfig(fan, fanConfig))
 
                 if args.show_inventory:
-                    Node(fanNode, "CanControl", bool(fanProps.canControl))
-                    Node(fanNode, "SupportedModes", supportedFanModesString(fanProps.supportedModes))
-                    Node(fanNode, "SupportedUnits", supportedFanUnitsString(fanProps.supportedUnits))
-                    Node(fanNode, "MaxRPM", knownvalue(fanProps.maxRPM))
-                    Node(fanNode, "MaxPoints", knownvalue(fanProps.maxPoints, "Unsupported"))
-                    Node(fanNode, "Mode", fanModeString(fanConfig.mode))
+                    Node(fanNode, "CanControl", bool(fanProps.canControl), join=".")
+                    Node(fanNode, "SupportedModes", supportedFanModesString(fanProps.supportedModes),
+                         join=".")
+                    Node(fanNode, "SupportedUnits", supportedFanUnitsString(fanProps.supportedUnits),
+                         join=".")
+                    Node(fanNode, "MaxRPM", knownvalue(fanProps.maxRPM), join=".")
+                    Node(fanNode, "MaxPoints", knownvalue(fanProps.maxPoints, "Unsupported"), join=".")
+                    Node(fanNode, "Mode", fanModeString(fanConfig.mode), join=".")
                     if fanConfig.mode == ZES_FAN_SPEED_MODE_FIXED:
                         Node(fanNode, "FixedSpeed", fanConfig.speedFixed.speed,
-                             ("Units", fanUnitString(fanConfig.speedFixed.units)))
+                             ("Units", fanUnitString(fanConfig.speedFixed.units)), join=".")
                     # if fanConfig.mode == ZES_FAN_SPEED_MODE_TABLE:
                         # tableSize = fanConfig.speedTable.numPoints
                         # tempSpeed = zes_fan_temp_speed_array(tableSize)
                         # fan_config_speed_table_get(fanConfig, tableSize, tempSpeed.cast())
                         # numPoints = min(tableSize, ZES_FAN_TEMP_SPEED_PAIR_COUNT)
                         # for s in range(numPoints):
-                        #     fanTemp = Node(fanNode, "TempSpeed", None)
+                        #     fanTemp = Node(fanNode, "TempSpeed", None, join=".")
                         #     item = tempSpeed[s]
-                        #     Node(fanTemp, "Temp", item.temperature, ("Units", degC))
+                        #     Node(fanTemp, "Temp", item.temperature, ("Units", degC), join=".")
                         #     Node(fanTemp, "Speed", item.speed.speed, ("Index", s),
-                        #          ("Units", fanUnitString(item.speed.units)))
+                        #          ("Units", fanUnitString(item.speed.units)), join=".")
 
                 if args.show_telemetry:
                     nodes = []
                     nodes.append(Node(fanNode, "Speed", "?",
-                                 ("Units", fanUnitString(ZES_FAN_SPEED_UNITS_RPM))))
+                                 ("Units", fanUnitString(ZES_FAN_SPEED_UNITS_RPM)), join="."))
                     nodes.append(Node(fanNode, "Speed", "?",
-                                 ("Units", fanUnitString(ZES_FAN_SPEED_UNITS_PERCENT))))
+                                 ("Units", fanUnitString(ZES_FAN_SPEED_UNITS_PERCENT)), join="."))
 
                     def fanTelemetry(fan=fan, node=nodes):
                         try:
@@ -2469,9 +2508,9 @@ def main():
                     fwNode = Node(fwTop, "Firmware", None, ("Index", i))
 
                 if args.show_inventory:
-                    Node(fwNode, "CanControl", bool(fwProps.canControl))
-                    Node(fwNode, "Name", fwProps.name)
-                    Node(fwNode, "Version", fwProps.version)
+                    Node(fwNode, "CanControl", bool(fwProps.canControl), join=".")
+                    Node(fwNode, "Name", fwProps.name, join=".")
+                    Node(fwNode, "Version", fwProps.version, join=".")
 
         ledCount = uint32_ptr()
         try:
@@ -2572,15 +2611,15 @@ def main():
                     ledNode = Node(ledTop, "Led", None, ("Index", i))
 
                 if args.show_inventory:
-                    Node(ledNode, "CanControl", bool(ledProps.canControl))
-                    Node(ledNode, "HaveRGB", bool(ledProps.haveRGB))
+                    Node(ledNode, "CanControl", bool(ledProps.canControl), join=".")
+                    Node(ledNode, "HaveRGB", bool(ledProps.haveRGB), join=".")
 
                 if args.show_telemetry:
                     ledState = zes_typed_structure(ZES_STRUCTURE_TYPE_LED_STATE)
                     nodes = []
-                    nodes.append(Node(ledNode, "State", "?"))
+                    nodes.append(Node(ledNode, "State", "?", join="."))
                     if ledProps.haveRGB:
-                        nodes.append(Node(ledNode, "Color", "?"))
+                        nodes.append(Node(ledNode, "Color", "?", join="."))
 
                     def ledTelemetry(led=led, node=nodes, ledState=ledState):
                         try:
@@ -2644,11 +2683,11 @@ def main():
                     perfNode = Node(perfTop, "PerformanceFactor", None, ("Index", i))
 
                 if args.show_inventory:
-                    Node(perfNode, "Engines", enginesUsedString(perfProps.engines))
+                    Node(perfNode, "Engines", enginesUsedString(perfProps.engines), join=".")
 
                 if args.show_telemetry:
                     nodes = []
-                    nodes.append(Node(perfNode, "Value", "?", ("Units", "%")))
+                    nodes.append(Node(perfNode, "Value", "?", ("Units", "%"), join="."))
 
                     def perfTelemetry(perf=perf, node=nodes):
                         try:
@@ -2710,17 +2749,17 @@ def main():
                     psuNode = Node(psuTop, "PowerSupply", None, ("Index", i))
 
                 if args.show_inventory:
-                    Node(psuNode, "HaveFan", bool(psuProps.haveFan))
+                    Node(psuNode, "HaveFan", bool(psuProps.haveFan), join=".")
                     Node(psuNode, "CurrentLimit", fmtknown(psuProps.ampLimit / 1000, "%.3f"),
-                         ('Units', 'Amps'))
+                         ('Units', 'Amps'), join=".")
 
                 if args.show_telemetry:
                     psuState = zes_typed_structure(ZES_STRUCTURE_TYPE_PSU_STATE)
                     nodes = []
-                    nodes.append(Node(psuNode, "VoltageStatus", "?"))
-                    nodes.append(Node(psuNode, "FanFailed", "?"))
-                    nodes.append(Node(psuNode, "Temperature", "?"))
-                    nodes.append(Node(psuNode, "Current", "?", ('Units', 'Amps')))
+                    nodes.append(Node(psuNode, "VoltageStatus", "?", join="."))
+                    nodes.append(Node(psuNode, "FanFailed", "?", join="."))
+                    nodes.append(Node(psuNode, "Temperature", "?", join="."))
+                    nodes.append(Node(psuNode, "Current", "?", ('Units', 'Amps'), join="."))
 
                     def psuTelemetry(psu=psu, node=nodes, psuState=psuState):
                         try:
@@ -2737,19 +2776,27 @@ def main():
 
                     telemetryClosures.append(psuTelemetry)
 
-    currentIteration = 0
+    if pollDelayRequired:
+        time.sleep(pollInterval)
+
+    for closure in telemetryClosures:
+        closure()
+
+    topNode.outputStart()
+
+    currentIteration = 1
+    topNode.outputTree()
+
     while currentIteration < state.maxIterations:
-        if pollDelayRequired:
-            time.sleep(pollInterval)
+        time.sleep(pollInterval)
 
         for closure in telemetryClosures:
             closure()
 
         currentIteration += 1
-        topNode.output(currentIteration)
-        pollDelayRequired = True
+        topNode.outputTree()
 
-    topNode.outputComplete()
+    topNode.outputFinish()
 
 if __name__ == "__main__":
     main()
