@@ -48,7 +48,8 @@ ze_api_version_t get_api_version(ze_driver_handle_t driver) {
 }
 
 ze_driver_ipc_properties_t get_ipc_properties(ze_driver_handle_t driver) {
-  ze_driver_ipc_properties_t properties;
+  ze_driver_ipc_properties_t properties = {
+      ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES};
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetIpcProperties(driver, &properties));
 

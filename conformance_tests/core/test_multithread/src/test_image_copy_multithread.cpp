@@ -61,25 +61,23 @@ void image_copy_thread(const ze_command_queue_handle_t &command_queue) {
   ze_image_handle_t image1 = nullptr;
   ze_image_handle_t image2 = nullptr;
 
-  ze_image_desc_t image_descriptor = {};
-  image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+  ze_image_desc_t img_desc = {};
+  img_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+  img_desc.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
+  img_desc.type = ZE_IMAGE_TYPE_2D;
+  img_desc.format = {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_TYPE_UNORM,
+                     ZE_IMAGE_FORMAT_SWIZZLE_R,      ZE_IMAGE_FORMAT_SWIZZLE_G,
+                     ZE_IMAGE_FORMAT_SWIZZLE_B,      ZE_IMAGE_FORMAT_SWIZZLE_A};
+  img_desc.width = 128;
+  img_desc.height = 128;
+  img_desc.depth = 1;
+  img_desc.arraylevels = 0;
+  img_desc.miplevels = 0;
 
-  image_descriptor.pNext = nullptr;
-  image_descriptor.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
-  image_descriptor.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
-  image_descriptor.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
-  image_descriptor.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
-  image_descriptor.format.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
-  image_descriptor.format.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
-  image_descriptor.format.w = ZE_IMAGE_FORMAT_SWIZZLE_A;
-  image_descriptor.width = 128;
-  image_descriptor.height = 128;
-  image_descriptor.depth = 1;
-  image1 = lzt::create_ze_image(image_descriptor);
-  image2 = lzt::create_ze_image(image_descriptor);
-  lzt::ImagePNG32Bit source_image(image_descriptor.width,
-                                  image_descriptor.height),
-      dest_image(image_descriptor.width, image_descriptor.height);
+  image1 = lzt::create_ze_image(img_desc);
+  image2 = lzt::create_ze_image(img_desc);
+  lzt::ImagePNG32Bit source_image(img_desc.width, img_desc.height),
+      dest_image(img_desc.width, img_desc.height);
 
   for (int i = 0; i < thread_iters; i++) {
 
@@ -92,6 +90,7 @@ void image_copy_thread(const ze_command_queue_handle_t &command_queue) {
     lzt::append_barrier(command_list);
     lzt::append_image_copy_to_mem(command_list, dest_image.raw_data(), image2,
                                   nullptr);
+    lzt::append_barrier(command_list);
 
     lzt::close_command_list(command_list);
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);

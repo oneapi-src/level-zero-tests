@@ -28,7 +28,7 @@ void thread_func(const ze_command_queue_handle_t cq) {
   std::thread::id thread_id = std::this_thread::get_id();
   LOG_DEBUG << "child thread spawned with ID ::" << thread_id;
 
-  const size_t memory_size = 64 * 1024 * 1024;
+  const size_t memory_size = 64 * 1024;
 
   void *output_buffer = lzt::allocate_shared_memory(memory_size);
 

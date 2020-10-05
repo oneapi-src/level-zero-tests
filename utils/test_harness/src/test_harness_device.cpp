@@ -92,9 +92,8 @@ std::vector<ze_device_handle_t> get_ze_sub_devices(ze_device_handle_t device,
 }
 
 ze_device_properties_t get_device_properties(ze_device_handle_t device) {
-  ze_device_properties_t properties;
+  ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
 
-  properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
   return properties;
 }
