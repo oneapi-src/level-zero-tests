@@ -158,7 +158,7 @@ TEST_P(EventProfilingCacheCoherencyTests,
        GivenEventWhenUsingEventToSyncThenCacheIsCoherent) {
   const uint32_t size = 10000;
   const uint8_t value = 0x55;
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   auto ep = lzt::create_event_pool(context, 10, GetParam());
 
@@ -236,7 +236,7 @@ class KernelEventProfilingCacheCoherencyTests : public ::testing::Test {};
 TEST_F(KernelEventProfilingCacheCoherencyTests,
        GivenEventWhenUsingEventToSyncThenCacheIsCoherent) {
 
-  ze_context_handle_t context = lzt::get_default_context();
+  ze_context_handle_t context = lzt::create_context();
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   auto ep = lzt::create_event_pool(
       context, 10,
