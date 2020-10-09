@@ -2,6 +2,7 @@
 # Copyright (C) 2020 Intel Corporation
 # SPDX-License-Identifier: MIT
 
+from . import output
 from zesys.zes_wrap import *
 
 def default_structure_init(stype, obj):
@@ -104,3 +105,23 @@ def zes_typed_array(stype, count):
         init(stype, array[i])
 
     return array
+
+#
+# Parse ZE function result, stripping (first) return code and converting non-success to exception,
+# forwarding to stub handler if function has been replaced
+#
+def zeCall(rc):
+    if type(rc) == type({}):
+        return rc['fn'](*rc['args'], **rc['kwargs'])
+    elif type(rc) in (type(()),type([])):
+        val = rc[1:]
+        rc = rc[0]
+        if len(val) == 1:
+            val = val[0]
+    else:
+        val = None
+    if rc == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
+        raise NotImplementedError
+    elif rc != ZE_RESULT_SUCCESS:
+        raise ValueError(output.resultString(rc))
+    return val

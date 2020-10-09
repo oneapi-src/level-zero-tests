@@ -5,6 +5,7 @@
 from . import logger
 from . import state
 from zesys.zes_wrap import *
+from zesys.types import *
 
 def api():
     #
@@ -151,12 +152,13 @@ def api():
         freqProp.max = 1200.0
     def zesFrequencyGetAvailableClocks(freq, count_ptr, freq_array):
         freqProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_PROPERTIES)
-        zeCall(zesFrequencyGetProperties(freq, freqProps))
+        # zeCall(zesFrequencyGetProperties(freq, freqProps))
+        zesFrequencyGetProperties(freq, freqProps)
         freqs = []
-        freq = freqProps.min
-        while freq <= freqProps.max:
-            freqs.append(freq)
-            freq += 50.0
+        f = freqProps.min
+        while f <= freqProps.max:
+            freqs.append(f)
+            f += 50.0
         if freq_array is None:
             uint32_assign(count_ptr, len(freqs))
         elif uint32_value(count_ptr) == len(freqs):

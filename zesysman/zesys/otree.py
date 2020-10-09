@@ -16,14 +16,15 @@ DecorateAttributes = ["Units"]
 class Node:
     def __init__(self, parent, name, text, *args, **kwargs):
         self.parent = parent
-        self.name = name
         self.text = text
+        self.name = name
         self.attrs = args
         self.children = []
         self.discard = set(kwargs.get("discard", []))
         self.index = kwargs.get("index", False)
         self.heading = kwargs.get("heading")
         self.join = kwargs.get("join")
+        self.rangejoin = kwargs.get("rangejoin", " - ")
         self.width = kwargs.get("width")
         if parent and not kwargs.get("transient"):
             parent.children.append(self)
@@ -32,9 +33,17 @@ class Node:
             self.headingAttrs = [(a,v) for a,v in self.attrs if a in set(headingAttrs)]
         else:
             if any(a in RenameAttributes for a,v in self.attrs):
-                self.headingAttrs = [ (a,v) for a,v in self.attrs if a not in IndexAttributes ]
+                self.headingAttrs = [ (a,v) for a,v in self.attrs if a not in IndexAttributes + DecorateAttributes ]
             else:
-                self.headingAttrs = self.attrs
+                self.headingAttrs = [ (a,v) for a,v in self.attrs if a not in DecorateAttributes ]
+        self.setFn = kwargs.get("setFn", lambda x:None)
+        self.setFn(self)
+    def decoratedText(self):
+        text = self.text
+        for attr,val in self.attrs:
+            if attr in DecorateAttributes and text is not None:
+                text = str(text) + " " + str(val)
+        return text
     def outputStart(self):
         pass
     def nodeOutput(self):
@@ -43,14 +52,18 @@ class Node:
         pass
     def outputFinish(self):
         pass
+    def replaceUnits(self, units):
+        self.attrs = [(a,v) for a,v in self.attrs if a != "Units"]
+        self.attrs.append(("Units", units))
     def setText(self, text):
         self.text = text
+        self.setFn(self)
 
 class IterationNode(Node):
     def __init__(self, parent, name, text, *args, **kwargs):
         super().__init__(parent, name, text, *args, **kwargs)
         self.iteration = 0
-    def nodeOutput(self, *args, **kwargs):
+    def iterationOutput(self):
         self.iteration += 1
         if state.hideTimestamp:
             timestamp = "%d" % self.iteration
@@ -61,6 +74,11 @@ class IterationNode(Node):
         return timestamp
 
 Node.IterationNode = IterationNode
+
+class RangeNode(Node):
+    pass
+
+Node.RangeNode = RangeNode
 
 class ListNode(Node):
     def dataIndent(self, indent=""):
@@ -77,7 +95,7 @@ class ListNode(Node):
     def nodeOutput(self, indent, dataIndent):
         childIdentifiers = []
         nodeText = indent + str(self.name)
-        text = self.text
+        text = self.decoratedText()
         for attr,val in self.attrs:
             if attr in RenameAttributes:
                 nodeText = indent + str(val)
@@ -86,12 +104,13 @@ class ListNode(Node):
                     nodeText += " " + str(val)
                 else:
                     childIdentifiers.append(self.__class__(self, attr, val, transient=True))
-            elif attr in DecorateAttributes and text is not None:
-                text = str(text) + " " + str(val)
-            else:
+            elif attr not in DecorateAttributes:
                 nodeText += "." + attr + "_" + str(val)
         if text is not None:
-            nodeText += " " * (dataIndent - len(nodeText)) + " : " + str(text)
+            if type(text) == list:
+                nodeText += " " * (dataIndent - len(nodeText)) + " : " + ", ".join(text)
+            else:
+                nodeText += " " * (dataIndent - len(nodeText)) + " : " + str(text)
         return (nodeText, childIdentifiers)
     def outputTree(self, indent="", dataIndent=None):
         if dataIndent is None:
@@ -114,7 +133,7 @@ class IterationListNode(ListNode, IterationNode):
     def __init__(self, parent, name, text, *args, **kwargs):
         IterationNode.__init__(self, parent, name, text, *args, **kwargs)
     def nodeOutput(self, indent, dataIndent):
-        timeStr = IterationNode.nodeOutput(self)
+        timeStr = self.iterationOutput()
         if state.hideTimestamp:
             nodeText = "\n" + indent + "Iteration " + str(self.iteration)
         else:
@@ -122,6 +141,11 @@ class IterationListNode(ListNode, IterationNode):
         return (nodeText, [])
 
 ListNode.IterationNode = IterationListNode
+
+class RangeListNode(ListNode):
+    pass
+
+ListNode.RangeNode = RangeListNode
 
 class XmlNode(Node):
     def outputStart(self):
@@ -135,9 +159,21 @@ class XmlNode(Node):
         nodeFinish = None
         if self.children:
             nodeStart += ">"
-            if nodeText:
-                nodeText = indent + state.indentStr + str(self.text)
+            if self.text:
+                if type(self.text) == list:
+                    nodeText = indent + state.indentStr + ("\n" + indent + state.indentStr).join(self.text)
+                else:
+                    nodeText = indent + state.indentStr + str(self.text)
             nodeFinish = indent + "</" + str(self.name) + ">"
+        elif type(self.text) == list:
+            if len(self.text) == 0:
+                nodeStart += "/>"
+            elif len(self.text) == 1:
+                nodeStart += ">" + self.text[0] + "</" + str(self.name) + ">"
+            else:
+                nodeStart += ">"
+                nodeText = indent + state.indentStr + ("\n" + indent + state.indentStr).join(self.text)
+                nodeFinish = indent + "</" + str(self.name) + ">"
         elif self.text is not None and self.text != "":
             nodeStart += ">" + str(self.text) + "</" + str(self.name) + ">"
         else:
@@ -162,7 +198,7 @@ class IterationXmlNode(XmlNode, IterationNode):
     def __init__(self, parent, name, text, *args, **kwargs):
         IterationNode.__init__(self, parent, name, text, *args, **kwargs)
     def nodeOutput(self, indent):
-        timeStr = IterationNode.nodeOutput(self)
+        timeStr = self.iterationOutput()
         nodeStart = '<Iteration Num="%d">' % self.iteration
         nodeText = None
         nodeFinish = '</Iteration>'
@@ -172,6 +208,11 @@ class IterationXmlNode(XmlNode, IterationNode):
         return (nodeStart, nodeText, nodeFinish, childIdentifiers)
 
 XmlNode.IterationNode = IterationXmlNode
+
+class RangeXmlNode(XmlNode):
+    pass
+
+XmlNode.RangeNode = RangeXmlNode
 
 class TableNode(Node):
     def __init__(self, parent, name, text, *args, **kwargs):
@@ -296,8 +337,10 @@ class TableNode(Node):
     def nodeOutput(self):
         if self.index:
             return str([v for a,v in self.attrs if a == state.indexAttribute][0])
+        elif type(self.text) == list:
+            return ", ".join(self.text)
         else:
-            return str(self.text)
+            return self.decoratedText()
     def rowList(self):
         myCell = []
         if self.width != 0:
@@ -407,9 +450,39 @@ class IterationTableNode(TableNode, IterationNode):
         else:
             return "Time"
     def nodeOutput(self):
-        return IterationNode.nodeOutput(self)
+        return self.iterationOutput()
 
 TableNode.IterationNode = IterationTableNode
+
+class RangeTableNode(TableNode):
+    def headerString(self):
+        if self.join is not None:
+            prefix = self.parent.headerString() + self.join
+        else:
+            prefix = ""
+        if self.heading is not None:
+            name = self.heading
+        elif self.discarded():
+            return prefix
+        else:
+            name = str(self.name)
+        for attr, val in self.headingAttrs:
+            name += "[%s]" % str(val)
+        return prefix + name
+    def headerList(self):
+        self.width = max(len(self.nodeOutput()), len(self.headerString()))
+        return [(self.width, self.headerString())]
+    def nodeOutput(self):
+        text = ""
+        for child in self.children:
+            if text:
+                text += child.rangejoin
+            text += str(child.decoratedText())
+        return text
+    def rowList(self):
+        return [(self.width, self.nodeOutput())]
+
+TableNode.RangeNode = RangeTableNode
 
 def csvQuote(s):
     s = s.replace('"','""')

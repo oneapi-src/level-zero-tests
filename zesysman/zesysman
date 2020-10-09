@@ -28,26 +28,6 @@ else:
 for f in stubs:
     exec(stub.replacement_map_to_call_dict(f, "stubs"))
 
-#
-# Parse ZE function result, stripping (first) return code and converting non-success to exception,
-# forwarding to stub handler if function has been replaced
-#
-def zeCall(rc):
-    if type(rc) == type({}):
-        return rc['fn'](*rc['args'], **rc['kwargs'])
-    elif type(rc) in (type(()),type([])):
-        val = rc[1:]
-        rc = rc[0]
-        if len(val) == 1:
-            val = val[0]
-    else:
-        val = None
-    if rc == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
-        raise NotImplementedError
-    elif rc != ZE_RESULT_SUCCESS:
-        raise ValueError(resultString(rc))
-    return val
-
 def driverUUIDs(count, drivers):
     uuids = []
     for i in range(count):
@@ -60,45 +40,61 @@ def driverUUIDs(count, drivers):
     return uuids
 
 def listDrivers(count, drivers):
-    pr.err("Available drivers:")
+    Node = otree.NodeClass
+    savedPr = otree.pr
+    otree.pr = pr.err
+    topNode = Node(None, "Available Drivers", None)
     for i in range(count):
-        pr.err("Driver", i, ":")
         driver = drivers[i]
-        api_version = zeCall(zeDriverGetApiVersion(driver))
-        pr.err("  API version:", versionString(api_version))
         driver_props = ze_typed_structure(ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES)
         zeCall(zeDriverGetProperties(driver, driver_props))
         uuid_string = uuid_string_t()
         driver_uuid_to_string(driver_props.uuid, uuid_string)
-        pr.err("  uuid:", uuid_string.id)
-        pr.err("  driver version:", driver_props.driverVersion)
+        drvNode = Node(topNode, "Driver", None, ("Index", i), ("UUID", uuid_string.id),
+                       index=True)
+        api_version = zeCall(zeDriverGetApiVersion(driver))
+        Node(drvNode, "API version", versionString(api_version))
+        Node(drvNode, "Driver version", driver_props.driverVersion)
         ipcProps = ze_typed_structure(ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES)
         zeCall(zeDriverGetIpcProperties(driver, ipcProps))
-        pr.err("  IPC passing:", ipcPropertiesString(ipcProps.flags))
+        Node(drvNode, "IPC passing", ipcPropertiesString(ipcProps.flags))
+
+    topNode.outputStart()
+    topNode.outputTree()
+    topNode.outputFinish()
+    otree.pr = savedPr
 
 def listDriversAndFail(count, drivers):
     listDrivers(count, drivers)
     pr.fail("Use --driver to specify a valid driver")
 
 def listDevices(driverIndices, deviceCounts, deviceLists):
-    pr.err("Available devices:")
+    Node = otree.NodeClass
+    savedPr = otree.pr
+    otree.pr = pr.err
+    topNode = Node(None, "Available Devices", None)
     for driver, count, devices in zip(driverIndices, deviceCounts, deviceLists):
         for i in range(count):
-            if len(driverIndices) > 1:
-                pr.err("Device", str(driver) + "." + str(i), ":")
-            else:
-                pr.err("Device", i, ":")
             device = devices[i]
             device_properties = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
             zeCall(zeDeviceGetProperties(device, device_properties))
-            devType = deviceTypeString(device_properties.type)
-            pr.err("  type:", devType)
-            pr.err("  name:", device_properties.name)
-            pr.err("  vendorId:", hex(device_properties.vendorId))
-            pr.err("  deviceId:", hex(device_properties.deviceId))
             uuid_string = uuid_string_t()
             device_uuid_to_string(device_properties.uuid, uuid_string)
-            pr.err("  uuid:", uuid_string.id)
+            if len(driverIndices) > 1:
+                devNode = Node(topNode, "Device", None, ("Index", str(driver) + "." + str(i)),
+                               ("UUID", uuid_string.id), index=True)
+            else:
+                devNode = Node(topNode, "Device", None, ("Index", i), ("UUID", uuid_string.id),
+                               index=True)
+            Node(devNode, "Type", deviceTypeString(device_properties.type))
+            Node(devNode, "Name", device_properties.name)
+            Node(devNode, "VendorId", hex(device_properties.vendorId))
+            Node(devNode, "DeviceId", hex(device_properties.deviceId))
+
+    topNode.outputStart()
+    topNode.outputTree()
+    topNode.outputFinish()
+    otree.pr = savedPr
 
 def listDevicesAndFail(driverIndices, deviceCounts, deviceLists):
     listDevices(driverIndices, deviceCounts, deviceLists)
@@ -155,26 +151,6 @@ def getDeviceUUIDs(deviceCounts, deviceLists):
             device_uuid_to_string(device_properties.uuid, uuid_string)
             uuids.append(str(uuid_string.id))
     return uuids
-
-def listDevices(driverIndices, deviceCounts, deviceLists):
-    pr.err("Available devices:")
-    for driver, count, devices in zip(driverIndices, deviceCounts, deviceLists):
-        for i in range(count):
-            if len(driverIndices) > 1:
-                pr.err("Device", str(driver) + "." + str(i), ":")
-            else:
-                pr.err("Device", i, ":")
-            device = devices[i]
-            device_properties = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
-            zeCall(zeDeviceGetProperties(device, device_properties))
-            devType = deviceTypeString(device_properties.type)
-            pr.err("  type:", devType)
-            pr.err("  name:", device_properties.name)
-            pr.err("  vendorId:", hex(device_properties.vendorId))
-            pr.err("  deviceId:", hex(device_properties.deviceId))
-            uuid_string = uuid_string_t()
-            device_uuid_to_string(device_properties.uuid, uuid_string)
-            pr.err("  uuid:", uuid_string.id)
 
 def firstMatch(sel, *places):
     for place in places:
@@ -322,6 +298,188 @@ def parseTestSuite(diagCount, diags, opts):
 
 def sigintHandler(sigNum, frame):
     state.maxIterations = 0
+
+def unitsMHz(node):
+    if type(node.text) == str or node.text < 0:
+        node.text = "?"
+        node.replaceUnits("MHz")
+    elif node.text < 1000:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("MHz")
+    else:
+        node.text = "%.2f" % (node.text / 1000)
+        node.replaceUnits("GHz")
+
+def units_mW(node):
+    if type(node.text) == str or node.text < 0:
+        node.text = "?"
+        node.replaceUnits("W")
+    elif node.text == 0:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("W")
+    elif node.text < 1000:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("mW")
+    elif node.text < 1000000:
+        node.text = "%.2f" % (node.text / 1000)
+        node.replaceUnits("W")
+    else:
+        node.text = "%.2f" % (node.text / 1000000)
+        node.replaceUnits("kW")
+
+def units_ms(node):
+    if type(node.text) == str or node.text < 0:
+        node.text = "?"
+        node.replaceUnits("s")
+    elif node.text == 0:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("s")
+    elif node.text < 1000:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("ms")
+    else:
+        node.text = "%.2f" % (node.text / 1000)
+        node.replaceUnits("s")
+
+def units_us(node):
+    if type(node.text) == str or node.text < 0.0:
+        node.text = "?"
+        node.replaceUnits("ms")
+    elif node.text == 0.0:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("ms")
+    elif node.text < 1000.0:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("us")
+    elif node.text < 1000000.0:
+        node.text = "%.2f" % (node.text / 1000)
+        node.replaceUnits("ms")
+    else:
+        node.text = "%.2f" % (node.text / 1000000)
+        node.replaceUnits("s")
+
+def thresh_mJ(node):
+    if type(node.text) == str or node.text < 0.0:
+        node.text = "?"
+        node.replaceUnits("J")
+    elif node.text == 0.0:
+        node.text = "unspecified"
+        node.replaceUnits("J")
+    elif node.text < 0.001:
+        node.text = "%.1f" % (node.text * 1000000)
+        node.replaceUnits("uJ")
+    elif node.text < 1.0:
+        node.text = "%.2f" % (node.text * 1000)
+        node.replaceUnits("mJ")
+    elif node.text < 1000.0:
+        node.text = "%.2f" % (node.text)
+        node.replaceUnits("J")
+    elif node.text < 1000000.0:
+        node.text = "%.2f" % (node.text / 1000)
+        node.replaceUnits("kJ")
+    else:
+        node.text = "%.2f" % (node.text / 1000000)
+        node.replaceUnits("MJ")
+
+def unitsV(node):
+    if type(node.text) == str or node.text < 0.0:
+        node.text = "?"
+        node.replaceUnits("V")
+    elif node.text == 0.0:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("V")
+    elif node.text < 0.001:
+        node.text = "%.1f" % (node.text * 1000000)
+        node.replaceUnits("uV")
+    elif node.text < 1.0:
+        node.text = "%.1f" % (node.text * 1000)
+        node.replaceUnits("mV")
+    elif node.text < 1000.0:
+        node.text = "%.1f" % (node.text)
+        node.replaceUnits("V")
+    elif node.text < 1000000.0:
+        node.text = "%.2f" % (node.text / 1000)
+        node.replaceUnits("kV")
+    else:
+        node.text = "%.2f" % (node.text / 1000000)
+        node.replaceUnits("MV")
+
+def units_mA(node):
+    if type(node.text) == str or node.text < 0.0:
+        node.text = "?"
+        node.replaceUnits("A")
+    elif node.text == 0:
+        node.text = "%.1f" % node.text
+        node.replaceUnits("A")
+    elif node.text < 1.0:
+        node.text = "%.1f" % (node.text * 1000)
+        node.replaceUnits("uA")
+    elif node.text < 1000:
+        node.text = "%.2f" % node.text
+        node.replaceUnits("mA")
+    else:
+        node.text = "%.3f" % (node.text / 1000)
+        node.replaceUnits("A")
+
+# TODO: Should kB be 1000 or 1024 (kiB), etc.?
+def unitsB(node):
+    if type(node.text) == str or node.text < 0:
+        node.text = "?"
+        node.replaceUnits("B")
+    elif node.text < 1000:
+        node.replaceUnits("B")
+    elif node.text < 1000000:
+        node.text = "%.1f" % (node.text / 1000)
+        node.replaceUnits("kB")
+    elif node.text < 1000000000:
+        node.text = "%.1f" % (node.text / 1000000)
+        node.replaceUnits("MB")
+    elif node.text < 1000000000000:
+        node.text = "%.2f" % (node.text / 1000000000)
+        node.replaceUnits("GB")
+    else:
+        node.text = "%.2f" % (node.text / 1000000000000)
+        node.replaceUnits("TB")
+
+# TODO: Should kB be 1000 or 1024 (kiB), etc.?
+def unitsBps(node):
+    if type(node.text) == str or node.text < 0:
+        node.text = "?"
+        node.replaceUnits("B/s")
+    elif node.text < 1000:
+        node.replaceUnits("B/s")
+    elif node.text < 1000000:
+        node.text = "%.1f" % (node.text / 1000)
+        node.replaceUnits("kB/s")
+    elif node.text < 1000000000:
+        node.text = "%.1f" % (node.text / 1000000)
+        node.replaceUnits("MB/s")
+    elif node.text < 1000000000000:
+        node.text = "%.2f" % (node.text / 1000000000)
+        node.replaceUnits("GB/s")
+    else:
+        node.text = "%.2f" % (node.text / 1000000000000)
+        node.replaceUnits("TB/s")
+
+# TODO: Should kb be 1000 or 1024 (kib), etc.?
+def units_bps(node):
+    if type(node.text) == str or node.text < 0:
+        node.text = "?"
+        node.replaceUnits("bps")
+    elif node.text < 1000:
+        node.replaceUnits("bps")
+    elif node.text < 1000000:
+        node.text = "%.1f" % (node.text / 1000)
+        node.replaceUnits("kbps")
+    elif node.text < 1000000000:
+        node.text = "%.1f" % (node.text / 1000000)
+        node.replaceUnits("Mbps")
+    elif node.text < 1000000000000:
+        node.text = "%.2f" % (node.text / 1000000000)
+        node.replaceUnits("Gbps")
+    else:
+        node.text = "%.2f" % (node.text / 1000000000000)
+        node.replaceUnits("Tbps")
 
 #
 # Main program
@@ -636,7 +794,7 @@ def main():
                     Node(devNode, "vendorName", props.vendorName)
                     Node(devNode, "driverVersion", props.driverVersion)
                     if args.verbose:
-                        Node(devNode, "coreClockRate", props.core.coreClockRate, ("Units", "MHz"))
+                        Node(devNode, "coreClockRate", props.core.coreClockRate, ("Units", "MHz"), setFn=unitsMHz)
                         Node(devNode, "maxMemAllocSize", props.core.maxMemAllocSize)
                         Node(devNode, "maxHardwareContexts", props.core.maxHardwareContexts)
                         Node(devNode, "timestampValidBits", props.core.timestampValidBits)
@@ -1002,12 +1160,12 @@ def main():
                         Node(pwrNode, "CanControl", bool(pwrProps.canControl), join=".")
                         Node(pwrNode, "ThresholdSupported", bool(pwrProps.isEnergyThresholdSupported),
                              join=".")
-                        Node(pwrNode, "DefaultLimit", fmtknown(pwrProps.defaultLimit / 1000, "%.3f"),
-                             ("Units", "Watts"), join=".")
-                        Node(pwrNode, "MinLimit", fmtknown(pwrProps.minLimit / 1000, "%.3f"),
-                             ("Units", "Watts"), join=".")
-                        Node(pwrNode, "MaxLimit", fmtknown(pwrProps.maxLimit / 1000, "%.3f"),
-                             ("Units", "Watts"), join=".")
+                        limitNode = Node.RangeNode(pwrNode, "Limit", None, join=".")
+                        Node(limitNode, "Min", pwrProps.minLimit, ("Units", "W"), join=".", setFn=units_mW)
+                        if pwrProps.defaultLimit >= 0:
+                            Node(limitNode, "Default", pwrProps.defaultLimit, ("Units", "W"), join=".",
+                                 setFn=units_mW)
+                        Node(limitNode, "Max", pwrProps.maxLimit, ("Units", "W"), join=".", setFn=units_mW)
 
                     sustainedLimit = zes_power_sustained_limit_t()
                     burstLimit = zes_power_burst_limit_t()
@@ -1015,29 +1173,24 @@ def main():
                     zeCall(zesPowerGetLimits(pwr, sustainedLimit, burstLimit, peakLimit))
                     sustainedNode = Node(pwrNode, "SustainedLimit", None, heading="Sustained", join=".")
                     Node(sustainedNode, "Enabled", bool(sustainedLimit.enabled), join=".")
-                    Node(sustainedNode, "Power", "%.3f" % (sustainedLimit.power / 1000),
-                         ("Units", "Watts"), join=".")
-                    Node(sustainedNode, "Interval", "%.3f" % (sustainedLimit.interval / 1000),
-                         ("Units", "sec"), join=".")
+                    Node(sustainedNode, "Power", sustainedLimit.power, ("Units", "W"), join=".", setFn=units_mW)
+                    Node(sustainedNode, "Interval", sustainedLimit.interval, ("Units", "s"), join=".", setFn=units_ms)
                     burstNode = Node(pwrNode, "BurstLimit", None, heading="Burst", join=".")
                     Node(burstNode, "Enabled", bool(burstLimit.enabled), join=".")
-                    Node(burstNode, "Power", "%.3f" % (burstLimit.power / 1000), ("Units", "Watts"),
-                         join=".")
+                    Node(burstNode, "Power", burstLimit.power, ("Units", "W"), join=".", setFn=units_mW)
                     peakNode = Node(pwrNode, "PeakLimit", None, heading="Peak", join=".")
-                    Node(peakNode, "Power", "%.3f" % (peakLimit.powerAC / 1000), ("Units", "Watts"),
-                         join=".")
+                    Node(peakNode, "Power", peakLimit.powerAC, ("Units", "W"), join=".", setFn=units_mW)
                     if peakLimit.powerDC > 0:
-                        Node(peakNode, "PowerOnDC", "%.3f" % (peakLimit.powerDC / 1000),
-                             ("Units", "Watts"), join=".")
+                        Node(peakNode, "PowerOnDC", peakLimit.powerDC, ("Units", "W"), join=".", setFn=units_mW)
 
                 if args.show_telemetry:
                     pwrCounter = zes_power_energy_counter_t()
                     pwrThreshold = zes_energy_threshold_t()
                     zeCall(zesPowerGetEnergyCounter(pwr, pwrCounter))
                     nodes = []
-                    nodes.append(Node(pwrNode, "CurrentPower", "?", ("Units", "Watts"), join="."))
+                    nodes.append(Node(pwrNode, "CurrentPower", "?", ("Units", "W"), join=".", setFn=units_mW))
                     nodes.append(Node(pwrNode, "MonitorProcess", "?", join="."))
-                    nodes.append(Node(pwrNode, "EnergyThreshold", "?", ("Units", "Joules"), join="."))
+                    nodes.append(Node(pwrNode, "EnergyThreshold", "?", ("Units", "J"), join=".", setFn=thresh_mJ))
 
                     def pwrTelemetry(pwr=pwr, pwrCounter=pwrCounter, pwrThreshold=pwrThreshold, node=nodes):
                         oldEnergy, oldTimestamp = pwrCounter.energy, pwrCounter.timestamp
@@ -1045,10 +1198,10 @@ def main():
                         deltaE = pwrCounter.energy - oldEnergy
                         deltaT = pwrCounter.timestamp - oldTimestamp
                         if deltaT > 0:
-                            watts = "%.3f" % (float(deltaE) / deltaT)
+                            mW = float(deltaE) * 1000 / deltaT
                         else:
-                            watts = "?"
-                        node[0].setText(watts)
+                            mW = "?"
+                        node[0].setText(mW)
                         zeCall(zesPowerGetEnergyThreshold(pwr, pwrThreshold))
                         if pwrThreshold.enable:
                             if pwrThreshold.processId != 0xffffffff:
@@ -1057,7 +1210,7 @@ def main():
                                 node[1].setText("Unknown")
                         else:
                             node[1].setText("None")
-                        node[2].setText("%.3f" % pwrThreshold.threshold)
+                        node[2].setText(pwrThreshold.threshold)
 
                     telemetryClosures.append(pwrTelemetry)
                     pollDelayRequired = True
@@ -1113,30 +1266,31 @@ def main():
                         Node(freqNode, "CanControl", bool(freqProps.canControl), join=".")
                         Node(freqNode, "ThrottleEventSupported",
                              bool(freqProps.isThrottleEventSupported), join=".")
-                    availFreqsNode = Node(freqNode, "AvailableFrequencies", None, heading="Avail",
-                                          join=".")
-                    Node(availFreqsNode, "Min", "%.1f" % freqProps.min, ("Units", "MHz"), join=".")
-                    Node(availFreqsNode, "Max", "%.1f" % freqProps.max, ("Units", "MHz"), join=".")
+                    availFreqsNode = Node.RangeNode(freqNode, "AvailableFrequencies", None, heading="AvailFreqs",
+                                                    join=".")
                     if args.verbose:
                         clockCount = uint32_ptr()
                         try:
                             zeCall(zesFrequencyGetAvailableClocks(freq, clockCount.cast(), None))
                         except:
-                            pass
+                            Node(availFreqsNode, "Min", freqProps.min, ("Units", "MHz"), join=".", setFn=unitsMHz)
+                            Node(availFreqsNode, "Max", freqProps.max, ("Units", "MHz"), join=".", setFn=unitsMHz)
                         else:
                             clockFreqs = double_array(clockCount.value())
-                            zeCall(zesFrequencyGetAvailableClocks(freq, clockCount.cast(),
-                                   clockFreqs.cast()))
-                        for clk in range(clockCount.value()):
-                            clockFreq = clockFreqs[clk]
-                            Node(availFreqsNode, "AvailableFrequency", "%.1f" % clockFreq,
-                                 ("Units", "MHz"), join=".")
+                            zeCall(zesFrequencyGetAvailableClocks(freq, clockCount.cast(), clockFreqs.cast()))
+                            for clk in range(clockCount.value()):
+                                clockFreq = clockFreqs[clk]
+                                Node(availFreqsNode, "AvailableFrequency", clockFreq, ("Units", "MHz"), join=".",
+                                     rangejoin=", ", setFn=unitsMHz)
+                    else:
+                        Node(availFreqsNode, "Min", freqProps.min, ("Units", "MHz"), join=".", setFn=unitsMHz)
+                        Node(availFreqsNode, "Max", freqProps.max, ("Units", "MHz"), join=".", setFn=unitsMHz)
 
                     freqRange = zes_freq_range_t()
                     zeCall(zesFrequencyGetRange(freq, freqRange))
-                    rangeFreqsNode = Node(freqNode, "FrequencyRange", None, heading="Range", join=".")
-                    Node(rangeFreqsNode, "Min", "%.1f" % freqRange.min, ("Units", "MHz"), join=".")
-                    Node(rangeFreqsNode, "Max", "%.1f" % freqRange.max, ("Units", "MHz"), join=".")
+                    rangeFreqsNode = Node.RangeNode(freqNode, "FrequencyRange", None, heading="Range", join=".")
+                    Node(rangeFreqsNode, "Min", freqRange.min, ("Units", "MHz"), join=".", setFn=unitsMHz)
+                    Node(rangeFreqsNode, "Max", freqRange.max, ("Units", "MHz"), join=".", setFn=unitsMHz)
 
                 if args.show_telemetry:
                     freqState = zes_typed_structure(ZES_STRUCTURE_TYPE_FREQ_STATE)
@@ -1149,15 +1303,15 @@ def main():
                         logger.reportZeException()
                     nodes = []
                     nodes.append(Node(freqNode, "RequestedFrequency", "?", ("Units", "MHz"),
-                                      heading="Requested", join="."))
+                                      heading="Requested", join=".", setFn=unitsMHz))
                     nodes.append(Node(freqNode, "ActualFrequency", "?", ("Units", "MHz"),
-                                      heading="Actual", join="."))
+                                      heading="Actual", join=".", setFn=unitsMHz))
                     nodes.append(Node(freqNode, "ThrottleReasons", "?", join="."))
                     nodes.append(Node(freqNode, "ThrottleTime", "?", ("Units", "%"), join="."))
                     if args.verbose:
-                        nodes.append(Node(freqNode, "CurrentVoltage", "?", ("Units", "Volts"), join="."))
-                        nodes.append(Node(freqNode, "Efficient", "?", ("Units", "MHz"), join="."))
-                        nodes.append(Node(freqNode, "MaximumTDP", "?", ("Units", "MHz"), join="."))
+                        nodes.append(Node(freqNode, "CurrentVoltage", "?", ("Units", "V"), join=".", setFn=unitsV))
+                        nodes.append(Node(freqNode, "Efficient", "?", ("Units", "MHz"), join=".", setFn=unitsMHz))
+                        nodes.append(Node(freqNode, "MaximumTDP", "?", ("Units", "MHz"), join=".", setFn=unitsMHz))
 
                     def freqTelemetry(freq=freq, freqState=freqState, freqThrottle=freqThrottle,
                                       node=nodes, verbose=args.verbose):
@@ -1176,14 +1330,14 @@ def main():
                                 else:
                                     throttlePercent = "?"
                         zeCall(zesFrequencyGetState(freq, freqState))
-                        node[0].setText(fmtknown(freqState.request))
-                        node[1].setText(fmtknown(freqState.actual))
+                        node[0].setText(freqState.request)
+                        node[1].setText(freqState.actual)
                         node[2].setText(throttleReasonsString(freqState.throttleReasons))
                         node[3].setText(throttlePercent)
                         if verbose:
-                            node[4].setText(fmtknown(freqState.currentVoltage))
-                            node[5].setText(fmtknown(freqState.efficient))
-                            node[6].setText(fmtknown(freqState.tdp))
+                            node[4].setText(freqState.currentVoltage)
+                            node[5].setText(freqState.efficient)
+                            node[6].setText(freqState.tdp)
 
                     telemetryClosures.append(freqTelemetry)
                     pollDelayRequired = True
@@ -1377,17 +1531,14 @@ def main():
                         mode = ZES_OC_MODE_OFF
                     Node(ocNode, "OverclockingMode", ocModeString(mode), join=".")
                     Node(ocNode, "isOcSupported", bool(ocCaps.isOcSupported), join=".")
-                    Node(ocNode, "maxFactoryDefaultFrequency", "%.1f" % ocCaps.maxFactoryDefaultFrequency,
-                         ("Units", "MHz"), join=".")
-                    Node(ocNode, "maxFactoryDefaultVoltage", "%.1f" % ocCaps.maxFactoryDefaultVoltage,
-                         ("Units", "V"), join=".")
-                    Node(ocNode, "maxOcFrequency", "%.1f" % ocCaps.maxOcFrequency, ("Units", "MHz"),
-                         join=".")
-                    Node(ocNode, "minOcVoltageOffset", "%.1f" % ocCaps.minOcVoltageOffset, ("Units", "V"),
-                         join=".")
-                    Node(ocNode, "maxOcVoltageOffset", "%.1f" % ocCaps.maxOcVoltageOffset, ("Units", "V"),
-                         join=".")
-                    Node(ocNode, "maxOcVoltage", "%.1f" % ocCaps.maxOcVoltage, ("Units", "V"), join=".")
+                    Node(ocNode, "maxFactoryDefaultFrequency", ocCaps.maxFactoryDefaultFrequency, ("Units", "MHz"),
+                         join=".", setFn=unitsMHz)
+                    Node(ocNode, "maxFactoryDefaultVoltage", ocCaps.maxFactoryDefaultVoltage, ("Units", "V"), join=".",
+                         setFn=unitsV)
+                    Node(ocNode, "maxOcFrequency", ocCaps.maxOcFrequency, ("Units", "MHz"), join=".", setFn=unitsMHz)
+                    Node(ocNode, "minOcVoltageOffset", ocCaps.minOcVoltageOffset, ("Units", "V"), join=".", setFn=unitsV)
+                    Node(ocNode, "maxOcVoltageOffset", ocCaps.maxOcVoltageOffset, ("Units", "V"), join=".", setFn=unitsV)
+                    Node(ocNode, "maxOcVoltage", ocCaps.maxOcVoltage, ("Units", "V"), join=".", setFn=unitsV)
                     Node(ocNode, "isTjMaxSupported", bool(ocCaps.isTjMaxSupported), join=".")
                     Node(ocNode, "isIccMaxSupported", bool(ocCaps.isIccMaxSupported), join=".")
                     Node(ocNode, "isHighVoltModeCapable", bool(ocCaps.isHighVoltModeCapable), join=".")
@@ -1397,26 +1548,23 @@ def main():
 
                     if ocCaps.isOcSupported:
                         try:
-                            frq = zeCall(zesFrequencyOcGetFrequencyTarget(freq))
-                            ocFreq = "%.1f" % frq
+                            ocFreq = zeCall(zesFrequencyOcGetFrequencyTarget(freq))
                         except:
                             ocFreq = "?"
-                        Node(ocNode, "CurrentOcFrequencyTarget", ocFreq, ("Units", "MHz"), join=".")
+                        Node(ocNode, "CurrentOcFrequencyTarget", ocFreq, ("Units", "MHz"), join=".", setFn=unitsMHz)
                         try:
-                            tgt, off = zeCall(zesFrequencyOcGetVoltageTarget(freq))
-                            vTarget, vOffset = "%.1f" % tgt, "%.1f" % off
+                            vTarget, vOffset = zeCall(zesFrequencyOcGetVoltageTarget(freq))
                         except:
                             vTarget, vOffset = "?", "?"
-                        Node(ocNode, "CurrentOcVoltageTarget", vTarget, ("Units", "V"), join=".")
-                        Node(ocNode, "CurrentOcVoltageOffset", vOffset, ("Units", "V"), join=".")
+                        Node(ocNode, "CurrentOcVoltageTarget", vTarget, ("Units", "V"), join=".", setFn=unitsV)
+                        Node(ocNode, "CurrentOcVoltageOffset", vOffset, ("Units", "V"), join=".", setFn=unitsV)
 
                     if ocCaps.isIccMaxSupported:
                         try:
-                            icc = zeCall(zesFrequencyOcGetIccMax(freq))
-                            iccMax = "%.1f" % icc
+                            iccMax = zeCall(zesFrequencyOcGetIccMax(freq))
                         except:
                             iccMax = "?"
-                        Node(ocNode, "OcCurrentLimit", iccMax, ("Units", "A"), join=".")
+                        Node(ocNode, "OcCurrentLimit", iccMax * 1000, ("Units", "A"), join=".", setFn=units_mA)
 
                     if ocCaps.isTjMaxSupported:
                         try:
@@ -1509,7 +1657,7 @@ def main():
 
                 if args.show_inventory:
                     Node(memNode, "Location", memLocString(memProps.location), join=".")
-                    Node(memNode, "PhysicalSize", memProps.physicalSize, ("Units", "Bytes"), join=".")
+                    Node(memNode, "PhysicalSize", memProps.physicalSize, ("Units", "B"), join=".", setFn=unitsB)
                     Node(memNode, "BusWidth", knownvalue(memProps.busWidth), join=".")
                     Node(memNode, "NumChannels", knownvalue(memProps.numChannels), join=".")
 
@@ -1523,10 +1671,10 @@ def main():
                         pass
                     nodes = []
                     nodes.append(Node(memNode, "Health", "?", join="."))
-                    nodes.append(Node(memNode, "Free", "?", ("Units", "Bytes"), join="."))
+                    nodes.append(Node(memNode, "Free", "?", ("Units", "B"), join=".", setFn=unitsB))
                     nodes.append(Node(memNode, "Utilized", "?", ("Units", "%"), join="."))
-                    nodes.append(Node(memNode, "ReadThroughput", "?", ("Units", "Bytes/s"), join="."))
-                    nodes.append(Node(memNode, "WriteThroughput", "?", ("Units", "Bytes/s"), join="."))
+                    nodes.append(Node(memNode, "ReadThroughput", "?", ("Units", "B/s"), join=".", setFn=unitsBps))
+                    nodes.append(Node(memNode, "WriteThroughput", "?", ("Units", "B/s"), join=".", setFn=unitsBps))
                     nodes.append(Node(memNode, "Bandwidth", "?", ("Units", "%"), join="."))
 
                     def memTelemetry(mem=mem, memState=memState, memCounter=memCounter, node=nodes):
@@ -1551,8 +1699,8 @@ def main():
                             deltaT = memCounter.timestamp - oldTimestamp
                             maxBW = 1.0 * memCounter.maxBandwidth
                             if deltaT > 0:
-                                readThroughput = "%.1f" % (1e6 * deltaR / deltaT)
-                                writeThroughput = "%.1f" % (1e6 * deltaW / deltaT)
+                                readThroughput = 1e6 * deltaR / deltaT
+                                writeThroughput = 1e6 * deltaW / deltaT
                                 if maxBW > 0:
                                     memBandwidth = "%.1f" % (1e8 * (deltaR + deltaW) / (maxBW * deltaT))
                                 else:
@@ -1594,8 +1742,7 @@ def main():
                 Node(pciTop, "Address", address, join=".")
                 Node(pciTop, "MaxGen", knownvalue(pciProps.maxSpeed.gen), join=".")
                 Node(pciTop, "MaxLanes", knownvalue(pciProps.maxSpeed.width), join=".")
-                Node(pciTop, "MaxBandwidth", fmtknown(pciProps.maxSpeed.maxBandwidth),
-                     ("Units", "Bytes/s"), join=".")
+                Node(pciTop, "MaxBandwidth", pciProps.maxSpeed.maxBandwidth, ("Units", "B/s"), join=".", setFn=unitsBps)
                 Node(pciTop, "HaveBandwidthCounters", pciProps.haveBandwidthCounters, join=".")
                 Node(pciTop, "HavePacketCounters", pciProps.havePacketCounters, join=".")
                 Node(pciTop, "HaveReplayCounters", pciProps.haveReplayCounters, join=".")
@@ -1641,10 +1788,10 @@ def main():
                 nodes.append(Node(pciTop, "StabilityIssues", "?", join="."))
                 nodes.append(Node(pciTop, "CurrentGen", "?", join="."))
                 nodes.append(Node(pciTop, "CurrentLanes", "?", join="."))
-                nodes.append(Node(pciTop, "CurrentBandwidth", "?", ("Units", "Bytes/s"), join="."))
+                nodes.append(Node(pciTop, "CurrentBandwidth", "?", ("Units", "B/s"), join=".", setFn=unitsBps))
                 if have['bw']:
-                    nodes.append(Node(pciTop, "RxThroughput", "?", ("Units", "Bytes/s"), join="."))
-                    nodes.append(Node(pciTop, "TxThroughput", "?", ("Units", "Bytes/s"), join="."))
+                    nodes.append(Node(pciTop, "RxThroughput", "?", ("Units", "B/s"), join=".", setFn=unitsBps))
+                    nodes.append(Node(pciTop, "TxThroughput", "?", ("Units", "B/s"), join=".", setFn=unitsBps))
                     nodes.append(Node(pciTop, "Utilization", "?", ("Units", "%"), join="."))
                 if have['pkt']:
                     nodes.append(Node(pciTop, "PacketRate", "?", join="."))
@@ -1668,8 +1815,8 @@ def main():
                     deltaT = pciCounter.timestamp - oldTimestamp
                     maxBW = 1.0 * pciCounter.speed.maxBandwidth
                     if deltaT > 0:
-                        rxThroughput = "%.1f" % (1e6 * deltaRx / deltaT)
-                        txThroughput = "%.1f" % (1e6 * deltaTx / deltaT)
+                        rxThroughput = 1e6 * deltaRx / deltaT
+                        txThroughput = 1e6 * deltaTx / deltaT
                         if maxBW > 0:
                             pciUtilization = "%.1f" % (1e8 * (deltaRx + deltaTx) / (maxBW * deltaT))
                         else:
@@ -1700,7 +1847,7 @@ def main():
                     node[2].setText(pciStabilityIssuesString(pciState.stabilityIssues))
                     node[3].setText(knownvalue(pciCounter.speed.gen))
                     node[4].setText(knownvalue(pciCounter.speed.width))
-                    node[5].setText(fmtknown(pciCounter.speed.maxBandwidth))
+                    node[5].setText(pciCounter.speed.maxBandwidth)
                     i = 6
                     if have['bw']:
                         node[i].setText(rxThroughput)
@@ -1801,11 +1948,11 @@ def main():
                     Node(portNode, "FabricId", portProps.portId.fabricId, join=".")
                     Node(portNode, "AttachId", portProps.portId.attachId, join=".")
                     Node(portNode, "PortNumber", portProps.portId.portNumber, join=".")
-                    Node(portNode, "MaxRxBitrate", portProps.maxRxSpeed.bitRate, ("Units", "Bits/sec"),
-                         join=".")
+                    Node(portNode, "MaxRxBitrate", portProps.maxRxSpeed.bitRate, ("Units", "bps"), join=".",
+                         setFn=units_bps)
                     Node(portNode, "MaxRxWidth", portProps.maxRxSpeed.width, join=".")
-                    Node(portNode, "MaxTxBitrate", portProps.maxTxSpeed.bitRate, ("Units", "Bits/sec"),
-                         join=".")
+                    Node(portNode, "MaxTxBitrate", portProps.maxTxSpeed.bitRate, ("Units", "bps"), join=".",
+                         setFn=units_bps)
                     Node(portNode, "MaxTxWidth", portProps.maxTxSpeed.width, join=".")
                     Node(portNode, "Enabled", bool(portConfig.enabled), join=".")
                     Node(portNode, "Beaconing", bool(portConfig.beaconing), join=".")
@@ -1821,12 +1968,12 @@ def main():
                     nodes.append(Node(portNode, "RemoteFabricId", "?", join="."))
                     nodes.append(Node(portNode, "RemoteAttachId", "?", join="."))
                     nodes.append(Node(portNode, "RemotePortNumber", "?", join="."))
-                    nodes.append(Node(portNode, "CurrentRxBitrate", "?", ("Units", "Bits/sec"), join="."))
+                    nodes.append(Node(portNode, "CurrentRxBitrate", "?", ("Units", "bps"), join=".", setFn=units_bps))
                     nodes.append(Node(portNode, "CurrentRxWidth", "?", join="."))
-                    nodes.append(Node(portNode, "CurrentTxBitrate", "?", ("Units", "Bits/sec"), join="."))
+                    nodes.append(Node(portNode, "CurrentTxBitrate", "?", ("Units", "bps"), join=".", setFn=units_bps))
                     nodes.append(Node(portNode, "CurrentTxWidth", "?", join="."))
-                    nodes.append(Node(portNode, "RxThroughput", "?", ("Units", "Bytes/s"), join="."))
-                    nodes.append(Node(portNode, "TxThroughput", "?", ("Units", "Bytes/s"), join="."))
+                    nodes.append(Node(portNode, "RxThroughput", "?", ("Units", "B/s"), join=".", setFn=unitsBps))
+                    nodes.append(Node(portNode, "TxThroughput", "?", ("Units", "B/s"), join=".", setFn=unitsBps))
 
                     def portTelemetry(port=port, portState=portState, portCounter=portCounter,
                                       node=nodes):
@@ -1839,8 +1986,8 @@ def main():
                         deltaTx = portCounter.txCounter - oldTx
                         deltaT = portCounter.timestamp - oldTimestamp
                         if deltaT > 0:
-                            rxThroughput = "%.1f" % (1e6 * deltaRx / deltaT)
-                            txThroughput = "%.1f" % (1e6 * deltaTx / deltaT)
+                            rxThroughput = 1e6 * deltaRx / deltaT
+                            txThroughput = 1e6 * deltaTx / deltaT
                         else:
                             rxThroughput = "?"
                             txThroughput = "?"
@@ -2147,23 +2294,22 @@ def main():
                         if timeoutCfg.watchdogTimeout == ZES_SCHED_WATCHDOG_DISABLE:
                             Node(schedNode, "DefaultTimeout", "Disabled", join=".")
                         else:
-                            wd = timeoutCfg.watchdogTimeout / 1000.0
-                            Node(schedNode, "DefaultTimeout", "%.3f" % wd, ("Units", "msec"), join=".")
+                            Node(schedNode, "DefaultTimeout", timeoutCfg.watchdogTimeout, ("Units", "ms"), join=".",
+                                 setFn=units_us)
                         tsCfg = zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)
                         zeCall(zesSchedulerGetTimesliceModeProperties(sched, True, tsCfg))
-                        tsi = tsCfg.interval / 1000.0
-                        tsy = tsCfg.yieldTimeout / 1000.0
-                        Node(schedNode, "DefaultInterval", "%.3f" % tsi, ("Units", "msec"), join=".")
-                        Node(schedNode, "DefaultYieldTimeout", "%.3f" % tsy, ("Units", "msec"), join=".")
+                        Node(schedNode, "DefaultInterval", tsCfg.interval, ("Units", "ms"), join=".", setFn=units_us)
+                        Node(schedNode, "DefaultYieldTimeout", tsCfg.yieldTimeout, ("Units", "ms"), join=".",
+                             setFn=units_us)
 
                 if args.show_telemetry:
                     cfgs = [zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES),
                             zes_typed_structure(ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES)]
                     nodes = []
                     nodes.append(Node(schedNode, "Mode", "?", join="."))
-                    nodes.append(Node(schedNode, "Timeout", "?", ("Units", "msec"), join="."))
-                    nodes.append(Node(schedNode, "Interval", "?", ("Units", "msec"), join="."))
-                    nodes.append(Node(schedNode, "YieldTimeout", "?", ("Units", "msec"), join="."))
+                    nodes.append(Node(schedNode, "Timeout", "?", ("Units", "ms"), join=".", setFn=units_us))
+                    nodes.append(Node(schedNode, "Interval", "?", ("Units", "ms"), join=".", setFn=units_us))
+                    nodes.append(Node(schedNode, "YieldTimeout", "?", ("Units", "ms"), join=".", setFn=units_us))
 
                     def schedTelemetry(sched=sched, node=nodes, cfg=cfgs):
                         try:
@@ -2182,15 +2328,12 @@ def main():
                                 if cfg[0].watchdogTimeout == ZES_SCHED_WATCHDOG_DISABLE:
                                     node[1].setText("Disabled")
                                 else:
-                                    wd = cfg[0].watchdogTimeout / 1000.0
-                                    node[1].setText("%.3f" % wd)
+                                    node[1].setText(cfg[0].watchdogTimeout)
                             else:
                                 node[1].setText("?")
                             if mode == ZES_SCHED_MODE_TIMESLICE:
-                                tsi = cfg[1].interval / 1000.0
-                                tsy = cfg[1].yieldTimeout / 1000.0
-                                node[2].setText("%.3f" % tsi)
-                                node[3].setText("%.3f" % tsy)
+                                node[2].setText(cfg[1].interval)
+                                node[3].setText(cfg[1].yieldTimeout)
                             else:
                                 node[2].setText("?")
                                 node[3].setText("?")
@@ -2419,6 +2562,7 @@ def main():
                     if fanConfig.mode == ZES_FAN_SPEED_MODE_FIXED:
                         Node(fanNode, "FixedSpeed", fanConfig.speedFixed.speed,
                              ("Units", fanUnitString(fanConfig.speedFixed.units)), join=".")
+                    # Current API does not support this yet:
                     # if fanConfig.mode == ZES_FAN_SPEED_MODE_TABLE:
                         # tableSize = fanConfig.speedTable.numPoints
                         # tempSpeed = zes_fan_temp_speed_array(tableSize)
@@ -2750,16 +2894,15 @@ def main():
 
                 if args.show_inventory:
                     Node(psuNode, "HaveFan", bool(psuProps.haveFan), join=".")
-                    Node(psuNode, "CurrentLimit", fmtknown(psuProps.ampLimit / 1000, "%.3f"),
-                         ('Units', 'Amps'), join=".")
+                    Node(psuNode, "CurrentLimit", psuProps.ampLimit, ('Units', 'A'), join=".", setFn=units_mA)
 
                 if args.show_telemetry:
                     psuState = zes_typed_structure(ZES_STRUCTURE_TYPE_PSU_STATE)
                     nodes = []
                     nodes.append(Node(psuNode, "VoltageStatus", "?", join="."))
                     nodes.append(Node(psuNode, "FanFailed", "?", join="."))
-                    nodes.append(Node(psuNode, "Temperature", "?", join="."))
-                    nodes.append(Node(psuNode, "Current", "?", ('Units', 'Amps'), join="."))
+                    nodes.append(Node(psuNode, "Temperature", "?", ('Units', degC), join="."))
+                    nodes.append(Node(psuNode, "Current", "?", ('Units', 'A'), join=".", setFn=units_mA))
 
                     def psuTelemetry(psu=psu, node=nodes, psuState=psuState):
                         try:
@@ -2772,7 +2915,7 @@ def main():
                             node[0].setText(psuVoltageStatusString(psuState.voltStatus))
                             node[1].setText(bool(psuState.fanFailed))
                             node[2].setText(fmtknown(psuState.temperature))
-                            node[3].setText(fmtknown(psuState.current / 1000, "%.3f"))
+                            node[3].setText(psuState.current)
 
                     telemetryClosures.append(psuTelemetry)
 

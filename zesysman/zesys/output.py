@@ -76,7 +76,7 @@ def ipcPropertiesString(ipcProps):
     if ipcProps != 0:
         propStrings.append("Unknown property")
 
-    return ", ".join(propStrings)
+    return propStrings
 
 def versionString(version):
     return str(version >> 16) + "." + str(version & 0xffff)
@@ -100,7 +100,7 @@ def resetReasonsString(reasons):
     if reasons != 0:
         reasonStrings.append("Unknown reset reason")
 
-    return ", ".join(reasonStrings)
+    return reasonStrings
 
 def repairStatusString(repairStatus):
     repairStatuses = { zes_wrap.ZES_REPAIR_STATUS_UNSUPPORTED : "Unsupported",
@@ -207,7 +207,7 @@ def throttleReasonsString(reasons):
     if reasons != 0:
         reasonStrings.append("Unknown throttle reason")
 
-    return ", ".join(reasonStrings)
+    return reasonStrings
 
 def pciLinkStatusString(pciLinkStatus):
     pciLinkStatuses = { zes_wrap.ZES_PCI_LINK_STATUS_GOOD : "Good",
@@ -230,7 +230,7 @@ def pciQualityIssuesString(reasons):
     if reasons != 0:
         reasonStrings.append("Unknown degradation reason")
 
-    return ", ".join(reasonStrings)
+    return reasonStrings
 
 def pciStabilityIssuesString(reasons):
     if not reasons:
@@ -245,7 +245,7 @@ def pciStabilityIssuesString(reasons):
     if reasons != 0:
         reasonStrings.append("Unknown stability issue")
 
-    return ", ".join(reasonStrings)
+    return reasonStrings
 
 def portStatusString(portStatus):
     portStatuses = { zes_wrap.ZES_FABRIC_PORT_STATUS_UNKNOWN : "Unknown",
@@ -269,7 +269,7 @@ def portQualityIssuesString(reasons):
     if reasons != 0:
         reasonStrings.append("Unknown degradation reason")
 
-    return ", ".join(reasonStrings)
+    return reasonStrings
 
 def portFailureReasonsString(reasons):
     if not reasons:
@@ -286,7 +286,7 @@ def portFailureReasonsString(reasons):
     if reasons != 0:
         reasonStrings.append("Unknown failure")
 
-    return ", ".join(reasonStrings)
+    return reasonStrings
 
 def rasTypeString(rasType):
     rasTypes = { zes_wrap.ZES_RAS_ERROR_TYPE_CORRECTABLE : "Correctable",
@@ -321,7 +321,7 @@ def enginesUsedString(engines):
     if engines != 0:
         engineStrings.append("Unknown engine")
 
-    return ", ".join(engineStrings)
+    return engineStrings
 
 def schedModeString(schedMode):
     schedModes = { zes_wrap.ZES_SCHED_MODE_TIMEOUT : "Timeout",
@@ -343,7 +343,7 @@ def schedSupportedModesString(schedMode):
     if schedMode != 0:
         modesStrings.append("Unknown mode")
 
-    return ", ".join(modesStrings)
+    return modesStrings
 
 def diagResultString(diagResult):
     diagResults = { zes_wrap.ZES_DIAG_RESULT_NO_ERRORS : "Pass",
@@ -381,7 +381,7 @@ def eventsString(events):
     if events != 0:
         eventStrings.append("Unknown event")
 
-    return ", ".join(eventStrings)
+    return eventStrings
 
 def fanModeString(mode):
     fanModes = { zes_wrap.ZES_FAN_SPEED_MODE_DEFAULT:  "Default",
@@ -404,7 +404,7 @@ def supportedFanModesString(modes):
     if modes != 0:
         modeStrings.append("Unknown")
 
-    return ", ".join(modeStrings)
+    return modeStrings
 
 def fanUnitString(unit):
     fanUnits = { zes_wrap.ZES_FAN_SPEED_UNITS_RPM : "RPM",
@@ -426,7 +426,7 @@ def supportedFanUnitsString(units):
     if units != 0:
         unitStrings.append("Unknown")
 
-    return ", ".join(unitStrings)
+    return unitStrings
 
 def psuVoltageStatusString(status):
     psuVoltageStatuses = { zes_wrap.ZES_PSU_VOLTAGE_STATUS_NORMAL : "Normal",
