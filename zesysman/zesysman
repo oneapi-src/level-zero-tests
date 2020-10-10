@@ -1095,23 +1095,34 @@ def main():
             powers = zes_pwr_handle_array(pwrCount.value())
             zeCall(zesDeviceEnumPowerDomains(device, pwrCount.cast(), powers.cast()))
 
-        if args.set_power or args.set_burst_power or args.set_peak_power:
+        if (args.set_power or args.enable_power or args.disable_power or args.set_burst_power
+            or args.enable_burst_power or args.disable_burst_power or args.set_peak_power):
             sustainedLimit = None
             burstLimit = None
             peakLimit = None
-            if args.set_power:
+            if args.set_power or args.enable_power or args.disable_power:
                 sustainedLimit = zes_power_sustained_limit_t()
-                sustainedLimit.enabled = True
-                sustainedLimit.power, remainder = arg.parseMilliwatts(args.set_power)
-                sustainedLimit.interval, remainder = arg.parseMilliseconds(remainder)
-                if remainder:
-                    pr.err("WARNING: Extra set-power arguments ignored")
-            if args.set_burst_power:
+                if args.set_power:
+                    sustainedLimit.enabled = True
+                    sustainedLimit.power, remainder = arg.parseMilliwatts(args.set_power)
+                    sustainedLimit.interval, remainder = arg.parseMilliseconds(remainder)
+                    if remainder:
+                        pr.err("WARNING: Extra set-power arguments ignored")
+                    if args.enable_power:
+                        sustainedLimit.enabled = True
+                    if args.disable_power:
+                        sustainedLimit.enabled = False
+            if args.set_burst_power or args.enable_burst_power or args.disable_burst_power:
                 burstLimit = zes_power_burst_limit_t()
-                burstLimit.enabled = True
-                burstLimit.power, remainder = arg.parseMilliwatts(args.set_burst_power)
-                if remainder:
-                    pr.err("WARNING: Extra set-burst-power arguments ignored")
+                if args.set_burst_power:
+                    burstLimit.enabled = True
+                    burstLimit.power, remainder = arg.parseMilliwatts(args.set_burst_power)
+                    if remainder:
+                        pr.err("WARNING: Extra set-burst-power arguments ignored")
+                    if args.enable_burst_power:
+                        burstLimit.enabled = True
+                    if args.disable_burst_power:
+                        burstLimit.enabled = False
             if args.set_peak_power:
                 peakLimit = zes_power_peak_limit_t()
                 peakLimit.powerAC, remainder = arg.parseMilliwatts(args.set_peak_power)
@@ -1120,12 +1131,24 @@ def main():
                     pr.err("WARNING: Extra set-peak-power arguments ignored")
             for i in range(pwrCount.value()):
                 pwr = powers[i]
+                if sustainedLimit and not args.set_power:
+                    zeCall(zesPowerGetLimits(pwr, sustainedLimit, None, None))
+                    if args.enable_power:
+                        sustainedLimit.enabled = True
+                    if args.disable_power:
+                        sustainedLimit.enabled = False
+                if burstLimit and not args.set_burst_power:
+                    zeCall(zesPowerGetLimits(pwr, None, burstLimit, None))
+                    if args.enable_burst_power:
+                        burstLimit.enabled = True
+                    if args.disable_burst_power:
+                        burstLimit.enabled = False
                 if args.dry_run:
                     if sustainedLimit:
                         pr("Would set sustained limit to", sustainedLimit.power, "mW,",
-                           sustainedLimit.interval, "ms")
+                           sustainedLimit.interval, "ms, enabled =", bool(sustainedLimit.enabled))
                     if burstLimit:
-                        pr("Would set burst limit to", burstLimit.power, "mW")
+                        pr("Would set burst limit to", burstLimit.power, "mW, enabled = ", bool(burstLimit.enabled))
                     if peakLimit:
                         pr("Would set peak AC, DC limits to", peakLimit.powerAC, "mW,",
                            peakLimit.powerDC, "mW")

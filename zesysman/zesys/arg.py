@@ -74,8 +74,12 @@ def parse():
                         help="set temperature threshold 2")
     parser.add_argument("--set-power", nargs='+', metavar=('POW','TAU'),
                         help="set sustained power limit")
+    parser.add_argument("--enable-power", action='store_true', help="enable sustained power limit")
+    parser.add_argument("--disable-power", action='store_true', help="disable sustained power limit")
     parser.add_argument("--set-burst-power", nargs='+', metavar=('POW',''),
                         help="set burst power limit")
+    parser.add_argument("--enable-burst-power", action='store_true', help="enable burst power limit")
+    parser.add_argument("--disable-burst-power", action='store_true', help="disable burst power limit")
     parser.add_argument("--set-peak-power", nargs='+', metavar=('POW',''),
                         help="set peak power limit")
     parser.add_argument("--set-energy-threshold", nargs='+', metavar=('J',''),
