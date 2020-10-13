@@ -223,7 +223,7 @@ void signal_event_from_host(ze_event_handle_t hEvent) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
 }
 
-void event_host_synchronize(ze_event_handle_t hEvent, uint32_t timeout) {
+void event_host_synchronize(ze_event_handle_t hEvent, uint64_t timeout) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, timeout));
 }
 
