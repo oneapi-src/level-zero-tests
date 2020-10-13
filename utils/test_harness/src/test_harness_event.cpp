@@ -81,7 +81,9 @@ get_event_kernel_timestamp(ze_event_handle_t event) {
 
 void zeEventPool::InitEventPool() { InitEventPool(32); }
 
-void zeEventPool::InitEventPool(uint32_t count) { InitEventPool(count, 0); }
+void zeEventPool::InitEventPool(uint32_t count) {
+  InitEventPool(count, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+}
 void zeEventPool::InitEventPool(uint32_t count, ze_event_pool_flags_t flags) {
   if (event_pool_ == nullptr) {
     if (context_ == nullptr) {
@@ -98,7 +100,8 @@ void zeEventPool::InitEventPool(ze_context_handle_t context, uint32_t count) {
     if (context_ == nullptr) {
       context_ = lzt::get_default_context();
     }
-    event_pool_ = create_event_pool(context_, count, 0);
+    event_pool_ =
+        create_event_pool(context_, count, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
     pool_indexes_available_.resize(count, true);
   }
 }
