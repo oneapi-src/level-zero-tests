@@ -23,9 +23,9 @@ protected:
     context = lzt::create_context();
     const ze_device_handle_t device =
         lzt::zeDevice::get_instance()->get_device();
-    auto ep = lzt::create_event_pool(context, 10,
-                                     (ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
-                                      ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP));
+    ep = lzt::create_event_pool(context, 10,
+                                (ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                 ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP));
     ze_event_desc_t event_desc = {};
     event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
     event_desc.index = 0;
