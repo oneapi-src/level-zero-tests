@@ -431,6 +431,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::Values(0, ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
                     ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                     ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY));
+
 class zeCommandListFlagTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<ze_command_list_flag_t> {};
@@ -468,5 +469,70 @@ INSTANTIATE_TEST_CASE_P(
     CreateFlagParameterizedTest, zeCommandListFlagTests,
     ::testing::Values(0, ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                       ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY));
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned) {
+  auto cq = lzt::create_command_queue();
+  auto cmd_list = lzt::create_command_list();
+  const int transfer_size = 1;
+  const int num_iteration = 3;
+  const uint8_t max_copy_count = 100;
+  const size_t copy_size = 100;
+  auto host_memory_src = lzt::allocate_host_memory(copy_size);
+  auto host_memory_dst = lzt::allocate_host_memory(copy_size);
+
+  auto temp = static_cast<uint8_t *>(host_memory_src);
+  for (uint8_t i = 0; i < max_copy_count; i++) {
+    temp[i] = i;
+  }
+
+  auto temp1 = static_cast<uint8_t *>(host_memory_src);
+  auto temp2 = static_cast<uint8_t *>(host_memory_dst);
+  for (uint32_t i = 0; i < max_copy_count; i++) {
+    lzt::append_memory_copy(cmd_list, temp2, temp1, transfer_size, nullptr);
+    temp1++;
+    temp2++;
+  }
+  lzt::close_command_list(cmd_list);
+  for (uint32_t iter = 0; iter < num_iteration; iter++) {
+    lzt::execute_command_lists(cq, 1, &cmd_list, nullptr);
+    lzt::synchronize(cq, UINT64_MAX);
+  }
+  lzt::reset_command_list(cmd_list);
+
+  temp = static_cast<uint8_t *>(host_memory_dst);
+  for (uint32_t i = 0; i < max_copy_count; i++) {
+    ASSERT_EQ(temp[i], i);
+  }
+
+  for (uint32_t iter = 0; iter < num_iteration; iter++) {
+    temp1 = static_cast<uint8_t *>(host_memory_src);
+    temp2 = static_cast<uint8_t *>(host_memory_dst);
+    for (uint32_t i = 0; i < max_copy_count; i++) {
+      temp1[i] = i;
+      temp2[i] = 0;
+    }
+    for (uint32_t i = 0; i < max_copy_count; i++) {
+      lzt::append_memory_copy(cmd_list, temp2, temp1, transfer_size, nullptr);
+      temp1++;
+      temp2++;
+    }
+    lzt::close_command_list(cmd_list);
+    lzt::execute_command_lists(cq, 1, &cmd_list, nullptr);
+    lzt::synchronize(cq, UINT64_MAX);
+    lzt::reset_command_list(cmd_list);
+
+    temp = static_cast<uint8_t *>(host_memory_dst);
+    for (uint32_t i = 0; i < max_copy_count; i++) {
+      ASSERT_EQ(temp[i], i);
+    }
+  }
+
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_queue(cq);
+  lzt::free_memory(host_memory_src);
+  lzt::free_memory(host_memory_dst);
+}
 
 } // namespace
