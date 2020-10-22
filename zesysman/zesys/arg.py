@@ -112,6 +112,7 @@ def parse():
     parser.add_argument("--style", choices=["condensed","aligned"], help="change output style")
     parser.add_argument("--uuid-index", action='store_true', help="use UUID as index")
     parser.add_argument("--ascii", action='store_true', help="use only 7-bit ascii characters")
+    parser.add_argument("-n", "--dry-run", action='store_true', help="perform no actions")
 
     #
     # Developer-only options
@@ -121,7 +122,6 @@ def parse():
     else:
         dparse = argparse.ArgumentParser()
 
-    dparse.add_argument("-n", "--dry-run", action='store_true', help="do not make any state changes")
     # dparse.add_argument("--save-profile", metavar='PROF', help="save device configuration")
     # dparse.add_argument("--restore-profile", metavar='PROF', help="restore device configuration")
     # dparse.add_argument("--subdevice", action='store_true', help="report by subdevice")

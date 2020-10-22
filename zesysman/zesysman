@@ -497,6 +497,7 @@ def main():
     deviceIDs, deviceUUIDs, devices = getDevices(driverIndices, drivers, args.device)
 
     generatingDeviceReport = False
+    dryRunMessage = "Action suppressed: --dry-run specified"
 
     if args.show_all:
         args.show_temp, args.show_power, args.show_freq, args.show_util = True, True, True, True
@@ -544,15 +545,18 @@ def main():
 
         deviceName = "%s [%s]" % (deviceIDs[0], deviceUUID(deviceUUIDs[0]))
 
-        if not args.yes:
+        if args.dry_run:
+            args.yes = True
+
+        if not args.yes and not args.dry_run:
             answer = input("Do you really want to reset device " + deviceName + "? ")
             args.yes = answer.lower() in ("y", "yes")
 
         if args.yes:
+            pr("Resetting device %s%s" % (deviceName, [""," (forced)"][args.force]))
             if args.dry_run:
-                pr("Would RESET device", deviceName)
+                pr(dryRunMessage)
             else:
-                pr("RESETTING device", deviceName)
                 zeCall(zesDeviceReset(devices[0], args.force))
         else:
             pr("NOT resetting device")
@@ -576,9 +580,11 @@ def main():
 
         suite, first, last = parseTestSuite(diagCount.value(), diags, args.run_diag)
 
+        deviceName = "%s [%s]" % (deviceIDs[0], deviceUUID(deviceUUIDs[0]))
+        pr("Device diagnostics:", deviceName)
+
         if args.dry_run:
-            deviceName = "%s [%s]" % (deviceIDs[0], deviceUUID(deviceUUIDs[0]))
-            pr("Would run diagnostics on device", deviceName)
+            pr(dryRunMessage)
         else:
             result = zeCall(zesDiagnosticsRunTests(suite, first, last))
             pr("Diagnostic test result:", diagResultString(result))
@@ -604,6 +610,11 @@ def main():
             selectedEvents = int(args.wait_events[1],0) & allEvents
         else:
             selectedEvents = allEvents
+
+        pr("Waiting on device event mask %x" % selectedEvents)
+        if args.dry_run:
+            pr(dryRunMessage)
+            sys.exit(0)
 
         for device in devices:
             try:
@@ -650,6 +661,10 @@ def main():
         sys.exit(0)
 
     if args.show_topo:
+        if args.dry_run:
+            pr("Topology Report", dryRunMessage)
+            sys.exit(0)
+
         fabric = []
         fabricMap = {}
         fabricAttach = {}
@@ -1143,15 +1158,15 @@ def main():
                         burstLimit.enabled = True
                     if args.disable_burst_power:
                         burstLimit.enabled = False
+                if sustainedLimit:
+                    pr("Setting sustained limit to", sustainedLimit.power, "mW,", sustainedLimit.interval,
+                       "ms, enabled =", bool(sustainedLimit.enabled))
+                if burstLimit:
+                    pr("Setting burst limit to", burstLimit.power, "mW, enabled = ", bool(burstLimit.enabled))
+                if peakLimit:
+                    pr("Setting peak AC, DC limits to", peakLimit.powerAC, "mW,", peakLimit.powerDC, "mW")
                 if args.dry_run:
-                    if sustainedLimit:
-                        pr("Would set sustained limit to", sustainedLimit.power, "mW,",
-                           sustainedLimit.interval, "ms, enabled =", bool(sustainedLimit.enabled))
-                    if burstLimit:
-                        pr("Would set burst limit to", burstLimit.power, "mW, enabled = ", bool(burstLimit.enabled))
-                    if peakLimit:
-                        pr("Would set peak AC, DC limits to", peakLimit.powerAC, "mW,",
-                           peakLimit.powerDC, "mW")
+                    pr(dryRunMessage)
                 else:
                     zeCall(zesPowerSetLimits(pwr, sustainedLimit, burstLimit, peakLimit))
 
@@ -1159,8 +1174,9 @@ def main():
             threshold, remainder = arg.parseJoules(args.set_energy_threshold)
             for i in range(pwrCount.value()):
                 pwr = powers[i]
+                pr("Setting energy threshold to", threshold, "J")
                 if args.dry_run:
-                    pr("Would set energy threshold to", threshold, "J")
+                    pr(dryRunMessage)
                 else:
                     zeCall(zesPowerSetEnergyThreshold(pwr, threshold))
 
@@ -1264,8 +1280,9 @@ def main():
                     else:
                         freqRange.max = freqRange.min
                 freq = frequencies[i]
+                pr("Setting frequency range to", freqRange.min, "MHz -", freqRange.max, "MHz")
                 if args.dry_run:
-                    pr("Would set frequency range to", freqRange.min, "MHz -", freqRange.max, "MHz")
+                    pr(dryRunMessage)
                 else:
                     zeCall(zesFrequencySetRange(freq, freqRange))
 
@@ -1375,8 +1392,9 @@ def main():
                 frqMHz = float(frqStr)
             except:
                 pr.fail("Usage: --set-oc-freq IDX FREQ")
+            pr("Setting oc", i, "frequency target to", frqMHz, "MHz")
             if args.dry_run:
-                pr("Would set oc", i, "frequency target to", frqMHz, "MHz")
+                pr(dryRunMessage)
             else:
                 try:
                     freq = frequencies[i]
@@ -1397,8 +1415,9 @@ def main():
                 vOffset = float(vOffsetStr)
             except:
                 pr.fail("Usage: --set-oc-volts IDX VOLTAGE_TARGET VOLTAGE_OFFSET")
+            pr("Setting oc", i, "voltage target to", vTarget, "V, offset", vOffset, "V")
             if args.dry_run:
-                pr("Would set oc", i, "voltage target to", vTarget, "V, offset", vOffset, "V")
+                pr(dryRunMessage)
             else:
                 try:
                     freq = frequencies[i]
@@ -1418,8 +1437,9 @@ def main():
                 assert 0 <= i < freqCount.value()
             except:
                 pr.fail("Usage: --set-oc-off IDX")
+            pr("Setting oc", i, "mode to OFF")
             if args.dry_run:
-                pr("Would set oc", i, "mode to OFF")
+                pr(dryRunMessage)
             else:
                 try:
                     freq = frequencies[i]
@@ -1434,8 +1454,9 @@ def main():
                 assert 0 <= i < freqCount.value()
             except:
                 pr.fail("Usage: --set-oc-override IDX")
+            pr("Setting oc", i, "mode to OVERRIDE")
             if args.dry_run:
-                pr("Would set oc", i, "mode to OVERRIDE")
+                pr(dryRunMessage)
             else:
                 try:
                     freq = frequencies[i]
@@ -1453,8 +1474,9 @@ def main():
                 assert 0 <= i < freqCount.value()
             except:
                 pr.fail("Usage: --set-oc-interpolate IDX")
+            pr("Setting oc", i, "mode to INTERPOLATIVE")
             if args.dry_run:
-                pr("Would set oc", i, "mode to INTERPOLATIVE")
+                pr(dryRunMessage)
             else:
                 try:
                     freq = frequencies[i]
@@ -1472,8 +1494,9 @@ def main():
                 assert 0 <= i < freqCount.value()
             except:
                 pr.fail("Usage: --set-oc-interpolate IDX")
+            pr("Setting oc", i, "mode to FIXED")
             if args.dry_run:
-                pr("Would set oc", i, "mode to FIXED")
+                pr(dryRunMessage)
             else:
                 try:
                     freq = frequencies[i]
@@ -1492,8 +1515,9 @@ def main():
                 iccAmps = float(iccStr)
             except:
                 pr.fail("Usage: --set-oc-max-current IDX MAX_AMPS")
+            pr("Setting oc", i, "maximum current to", iccAmps, "MHz")
             if args.dry_run:
-                pr("Would set oc", i, "maximum current to", iccAmps, "MHz")
+                pr(dryRunMessage)
             else:
                 try:
                     freq = frequencies[i]
@@ -1512,8 +1536,9 @@ def main():
                 tempC = float(tempStr)
             except:
                 pr.fail("Usage: --set-oc-max-temp IDX MAX_DEG_C")
+            pr("Setting oc", i, "maximum temperature to", tempC, "MHz")
             if args.dry_run:
-                pr("Would set oc", i, "maximum temperature to", tempC, "MHz")
+                pr(dryRunMessage)
             else:
                 try:
                     freq = frequencies[i]
@@ -2051,8 +2076,9 @@ def main():
                 pr.fail("ERROR: must specify a valid error domain index and 1 to",
                         ZES_MAX_RAS_ERROR_CATEGORY_COUNT + 1,"thresholds")
             else:
+                pr("Setting error domain", i, "thresholds to", thresholds)
                 if args.dry_run:
-                    pr("Would set error domain", i, "thresholds to", thresholds)
+                    pr(dryRunMessage)
                 else:
                     try:
                         ras = edoms[i]
@@ -2172,13 +2198,15 @@ def main():
             for i in range(stbyCount.value()):
                 stby = stbys[i]
                 if args.set_standby.lower() in ["enabled", "en", "1", "y", "yes", "t", "true"]:
+                    pr("Enabling standby promotion")
                     if args.dry_run:
-                        pr("Would enable standby promotion")
+                        pr(dryRunMessage)
                     else:
                         zeCall(zesStandbySetMode(stby, ZES_STANDBY_PROMO_MODE_DEFAULT))
                 elif args.set_standby.lower() in ["disabled", "dis", "0", "n", "no", "f", "false"]:
+                    pr("Disabling standby promotion")
                     if args.dry_run:
-                        pr("Would disable standby promotion")
+                        pr(dryRunMessage)
                     else:
                         zeCall(zesStandbySetMode(stby, ZES_STANDBY_PROMO_MODE_NEVER))
                 else:
@@ -2251,8 +2279,9 @@ def main():
                         zeCall(zesSchedulerGetTimeoutModeProperties(sched, False, schedCfg))
                     else:
                         schedCfg.watchdogTimeout = watchdogTimeout
+                    pr("Setting scheduling mode to timeout")
                     if args.dry_run:
-                        pr("Would set scheduling mode to timeout")
+                        pr(dryRunMessage)
                     else:
                         needsReboot = zeCall(zesSchedulerSetTimeoutMode(sched, schedCfg))
                 elif mode == ZES_SCHED_MODE_TIMESLICE:
@@ -2265,18 +2294,21 @@ def main():
                         schedCfg.interval = interval
                     if yieldTimeout != 0:
                         schedCfg.yieldTimeout = yieldTimeout
+                    pr("Setting scheduling mode to timeslice")
                     if args.dry_run:
-                        pr("Would set scheduling mode to timeslice")
+                        pr(dryRunMessage)
                     else:
                         needsReboot = zeCall(zesSchedulerSetTimesliceMode(sched, schedCfg))
                 elif mode == ZES_SCHED_MODE_EXCLUSIVE:
+                    pr("Setting scheduling mode to exclusive")
                     if args.dry_run:
-                        pr("Would set scheduling mode to exclusive")
+                        pr(dryRunMessage)
                     else:
                         needsReboot = zeCall(zesSchedulerSetExclusiveMode(sched))
                 elif mode == ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG:
+                    pr("Setting scheduling mode to compute unit debug")
                     if args.dry_run:
-                        pr("Would set scheduling mode to compute unit debug")
+                        pr(dryRunMessage)
                     else:
                         needsReboot = zeCall(zesSchedulerSetComputeUnitDebugMode(sched))
                 if remainder:
@@ -2641,10 +2673,10 @@ def main():
                 args.yes = answer.lower() in ("y", "yes")
 
             if args.yes:
+                pr("Preparing to flash devices")
                 if args.dry_run:
-                    pr("Would flash device(s) now")
+                    pr(dryRunMessage)
                 else:
-                    pr("Preparing to flash devices")
                     zeCall(zesDeviceReset(devices[0], args.force))
                     size = uint32_ptr()
                     with open(filename, "rb") as f:
@@ -2693,8 +2725,9 @@ def main():
         if args.enable_led:
             i, = args.enable_led
             if 0 <= i < ledCount.value():
+                pr("Enabling led", i)
                 if args.dry_run:
-                    pr("Would enable led", i)
+                    pr(dryRunMessage)
                 else:
                     try:
                         led = leds[i]
@@ -2709,8 +2742,9 @@ def main():
         if args.disable_led:
             i, = args.disable_led
             if 0 <= i < ledCount.value():
+                pr("Disabling led", i)
                 if args.dry_run:
-                    pr("Would disable led", i)
+                    pr(dryRunMessage)
                 else:
                     try:
                         led = leds[i]
@@ -2751,8 +2785,9 @@ def main():
             else:
                 color = zes_led_color_t()
                 color.red, color.green, color.blue = red, green, blue
+                pr("Setting led", i, "color to", colorString(color))
                 if args.dry_run:
-                    pr("Would set led", i, "color to", colorString(color))
+                    pr(dryRunMessage)
                 else:
                     try:
                         led = leds[i]
@@ -2823,8 +2858,9 @@ def main():
             except:
                 pr.fail("ERROR: must specify a valid performance factor index and value (0 - 100)")
             else:
+                pr("Setting performance factor", i, "to", val)
                 if args.dry_run:
-                    pr("Would set performance factor", i, "to", val)
+                    pr(dryRunMessage)
                 else:
                     try:
                         perf = perfs[i]
@@ -2889,8 +2925,9 @@ def main():
             except:
                 pr.fail("ERROR: must specify a valid performance factor index and value (0 - 100)")
             else:
+                pr("Setting performance factor", i, "to", val)
                 if args.dry_run:
-                    pr("Would set performance factor", i, "to", val)
+                    pr(dryRunMessage)
                 else:
                     try:
                         perf = perfs[i]
@@ -2941,6 +2978,11 @@ def main():
                             node[3].setText(psuState.current)
 
                     telemetryClosures.append(psuTelemetry)
+
+    if args.dry_run:
+        if generatingDeviceReport:
+            pr("Device Report", dryRunMessage)
+        sys.exit(0)
 
     if pollDelayRequired:
         time.sleep(pollInterval)
