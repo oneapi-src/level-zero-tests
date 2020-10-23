@@ -19,7 +19,7 @@ namespace {
 
 class EventProfilingTests : public ::testing::Test {
 protected:
-  EventProfilingTests() {
+  void SetUp() override {
     context = lzt::create_context();
     const ze_device_handle_t device =
         lzt::zeDevice::get_instance()->get_device();
@@ -54,7 +54,8 @@ protected:
     lzt::append_launch_function(cmdlist, kernel, &args, event, 0, nullptr);
   }
 
-  ~EventProfilingTests() {
+  void TearDown() override {
+
     lzt::free_memory(context, src_buffer);
     lzt::free_memory(context, dst_buffer);
     lzt::destroy_event(event);
@@ -65,6 +66,7 @@ protected:
     lzt::destroy_function(kernel);
     lzt::destroy_context(context);
   }
+
   void *src_buffer;
   void *dst_buffer;
   ze_context_handle_t context;
@@ -116,11 +118,11 @@ TEST_F(EventProfilingTests,
   const uint8_t value1 = 0x55;
   auto ep_no_timestamps =
       lzt::create_event_pool(context, 10, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
-  ze_event_desc_t event_desc = {};
-  event_desc.index = 1;
-  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
-  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
-  auto regular_event = lzt::create_event(ep_no_timestamps, event_desc);
+  ze_event_desc_t regular_event_desc = {};
+  regular_event_desc.index = 1;
+  regular_event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  regular_event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+  auto regular_event = lzt::create_event(ep_no_timestamps, regular_event_desc);
 
   lzt::append_memory_set(cmdlist, other_buffer, &value1, mem_size,
                          regular_event);
