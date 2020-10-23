@@ -297,7 +297,11 @@ def parseTestSuite(diagCount, diags, opts):
     return diag, first, last
 
 def sigintHandler(sigNum, frame):
+    state.earlyExit.set()
     state.maxIterations = 0
+
+def delay(pollInterval):
+    return not state.earlyExit.wait(pollInterval)
 
 def unitsMHz(node):
     if type(node.text) == str or node.text < 0:
@@ -530,11 +534,6 @@ def main():
         otree.setNullNodeClass()
 
     Node = otree.NodeClass
-
-    if args.poll and args.poll > 0 and args.poll <= 60:
-        pollInterval = args.poll
-    else:
-        pollInterval = 1
 
     pollDelayRequired = False
     telemetryClosures = []
@@ -2985,7 +2984,9 @@ def main():
         sys.exit(0)
 
     if pollDelayRequired:
-        time.sleep(pollInterval)
+        delayed = delay(state.pollInterval)
+        if not delayed:
+            sys.exit(0)
 
     for closure in telemetryClosures:
         closure()
@@ -2996,7 +2997,9 @@ def main():
     topNode.outputTree()
 
     while currentIteration < state.maxIterations:
-        time.sleep(pollInterval)
+        delayed = delay(state.pollInterval)
+        if not delayed:
+            break
 
         for closure in telemetryClosures:
             closure()

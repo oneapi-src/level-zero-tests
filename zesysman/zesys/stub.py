@@ -4,6 +4,7 @@
 
 from . import logger
 from . import state
+from . import util
 from zesys.zes_wrap import *
 from zesys.types import *
 

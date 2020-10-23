@@ -4,6 +4,8 @@
 
 import argparse
 import os.path
+import re
+import sys
 
 from . import logger
 from . import otree
@@ -11,6 +13,225 @@ from . import output
 from . import state
 from . import util
 from . import zes_wrap
+
+#
+# Pull out first argument, splitting out any numbers
+#
+nonnumeric = re.compile("[^-.,0-9]")
+
+def parseNumber(opts):
+    if opts:
+        rest = [ a.lower() for a in opts ]
+        opt = rest.pop(0)
+        match = nonnumeric.search(opt)
+        if match and match.start() > 0:
+            rest.insert(0, opt[match.start():])
+            opt = opt[:match.start()]
+
+        return opt, rest
+    else:
+        return None, []
+
+#
+# Parsing helper functions
+#
+
+def parseMilliwatts(opts):
+    value = 0.0
+    multiplier = 1000.0
+    opt, rest = parseNumber(opts)
+
+    if opt is None:
+        logger.pr.err("WARNING: No power value specified, using default/0")
+    else:
+        try:
+            value = float(opt)
+        except:
+            if opt not in ["d", "def", "default"]:
+                logger.pr.err("WARNING: Illegal power value (" + opt + "), using default/0")
+        else:
+            if rest:
+                opt = rest.pop(0)
+                if opt in ["m", "mw", "mwatt", "mwatts", "milliwatt", "milliwatts"]:
+                    multiplier = 1.0
+                elif opt in ["w", "wt", "watt", "watts"]:
+                    pass
+                elif opt in ["kw", "kwt", "kwatt", "kwatts", "kilowatt", "kilowatts"]:
+                    multiplier = 1000000.0
+                else:
+                    rest.insert(0, opt)
+
+    return int(value * multiplier), rest
+
+def parseJoules(opts):
+    value = 0.0
+    multiplier = 1.0
+    opt, rest = parseNumber(opts)
+
+    if opt is None:
+        logger.pr.err("WARNING: No energy value specified, using 0.0 J")
+    else:
+        try:
+            value = float(opt)
+        except:
+            logger.pr.err("WARNING: Illegal energy value (" + opt + "), using 0.0 J")
+        else:
+            if rest:
+                opt = rest.pop(0)
+                if opt in ["m", "mj", "mjoule", "mjoules", "millijoule", "millijoules"]:
+                    multiplier = 0.001
+                elif opt in ["k", "kj", "kjoule", "kjoules", "kilojoule", "kilojoules"]:
+                    multiplier = 1000.0
+                elif opt in ["j", "joule", "joules"]:
+                    pass
+                else:
+                    rest.insert(0, opt)
+
+    return value * multiplier, rest
+
+def parseMHz(opts):
+    value = 0.0
+    multiplier = 1.0
+    opt, rest = parseNumber(opts)
+
+    if opt is None:
+        logger.pr.err("WARNING: No power value specified, using default/0")
+    else:
+        try:
+            value = float(opt)
+        except:
+            if opt not in ["d", "def", "default"]:
+                logger.pr.err("WARNING: Illegal power value (" + opt + "), using default/0")
+        else:
+            if rest:
+                opt = rest.pop(0)
+                if opt in ["g", "ghz", "gigahertz"]:
+                    multiplier = 1000.0
+                elif opt in ["k", "khz", "kilohertz"]:
+                    multiplier = 1e-3
+                elif opt in ["h", "hz", "hertz"]:
+                    multiplier = 1e-6
+                elif opt in ["m", "mhz", "megahertz"]:
+                    pass
+                else:
+                    rest.insert(0, opt)
+
+    return value * multiplier, rest
+
+def parseSeconds(opts):
+    value = 1.0
+    multiplier = 1.0
+    opt, rest = parseNumber(opts)
+
+    if opt is not None:
+        try:
+            value = float(opt)
+        except:
+            if opt not in ["d", "def", "default"]:
+                logger.pr.err("WARNING: Illegal time value (" + opt + "), using default/1s")
+        else:
+            if rest:
+                opt = rest.pop(0)
+                if opt in ["u", "us", "usec", "usecond", "useconds", "microsec", "microsecond", "microseconds"]:
+                    multiplier = 1.0/1000000.0
+                elif opt in ["ms", "msec", "msecond", "mseconds", "millisec", "millisecond", "milliseconds"]:
+                    multiplier = 1.0/1000.0
+                elif opt in ["s", "sec", "second", "seconds"]:
+                    pass
+                elif opt in ["m", "min", "minute", "minutes"]:
+                    multiplier = 60.0
+                elif opt in ["h", "hr", "hour", "hours"]:
+                    multiplier = 60.0 * 60.0
+                elif opt in ["d", "dy", "day", "days"]:
+                    multiplier = 60.0 * 60.0 * 24.0
+                else:
+                    rest.insert(0, opt)
+
+    return value * multiplier, rest
+
+def parseMilliseconds(opts):
+    value = 0.0
+    multiplier = 1000.0
+    opt, rest = parseNumber(opts)
+
+    if opt is None:
+        logger.pr.err("WARNING: No time value specified, using default/0")
+    else:
+        try:
+            value = float(opt)
+        except:
+            if opt not in ["d", "def", "default"]:
+                logger.pr.err("WARNING: Illegal time value (" + opt + "), using default/0")
+        else:
+            if rest:
+                opt = rest.pop(0)
+                if opt in ["u", "us", "usec", "usecond", "useconds", "microsec", "microsecond", "microseconds"]:
+                    multiplier = 1.0/1000.0
+                elif opt in ["ms", "msec", "msecond", "mseconds", "millisec", "millisecond", "milliseconds"]:
+                    multiplier = 1.0
+                elif opt in ["s", "sec", "second", "seconds"]:
+                    pass
+                elif opt in ["m", "min", "minute", "minutes"]:
+                    multiplier = 1000.0 * 60
+                elif opt in ["h", "hr", "hour", "hours"]:
+                    multiplier = 1000.0 * 60 * 60
+                elif opt in ["d", "dy", "day", "days"]:
+                    multiplier = 1000.0 * 60 * 60 * 24
+                else:
+                    rest.insert(0, opt)
+
+    return int(value * multiplier), rest
+
+def parseMicroseconds(opts):
+    value = 0.0
+    multiplier = 1000000.0
+    opt, rest = parseNumber(opts)
+
+    if opt is not None:
+        try:
+            value = float(opt)
+        except:
+            if opt in ["n", "none", "disable", "watchdog_disable", "zes_sched_watchdog_disable"]:
+                value = zes_wrap.ZES_SCHED_WATCHDOG_DISABLE
+                multiplier = 1
+            elif opt not in ["d", "def", "default"]:
+                logger.pr.err("WARNING: Illegal time value (" + opt + "), using default")
+        else:
+            if rest:
+                opt = rest.pop(0)
+                if opt in ["u", "us", "usec", "usecond", "useconds", "microsec", "microsecond", "microseconds"]:
+                    multiplier = 1.0
+                elif opt in ["ms", "msec", "msecond", "mseconds", "millisec", "millisecond", "milliseconds"]:
+                    multiplier = 1000.0
+                elif opt in ["s", "sec", "second", "seconds"]:
+                    pass
+                elif opt in ["m", "min", "minute", "minutes"]:
+                    multiplier = 1000000.0 * 60
+                elif opt in ["h", "hr", "hour", "hours"]:
+                    multiplier = 1000000.0 * 60 * 60
+                elif opt in ["d", "dy", "day", "days"]:
+                    multiplier = 1000000.0 * 60 * 60 * 24
+                else:
+                    rest.insert(0, opt)
+
+    return int(value * multiplier), rest
+
+def parseSchedulerMode(opts):
+    opt, rest = opts[0].lower(), opts[1:]
+
+    if opt in ["timeout", "time", "to", "t", "zes_sched_mode_timeout"]:
+        mode = zes_wrap.ZES_SCHED_MODE_TIMEOUT
+    elif opt in ["timeslice", "slice", "ts", "s", "zes_sched_mode_timeslice"]:
+        mode = zes_wrap.ZES_SCHED_MODE_TIMESLICE
+    elif opt in ["exclusive", "exc", "ex", "e", "x", "zes_sched_mode_exclusive"]:
+        mode = zes_wrap.ZES_SCHED_MODE_EXCLUSIVE
+    elif opt in ["cudebug", "debug", "dbg", "db", "d", "g", "zes_sched_mode_compute_unit_debug"]:
+        mode = zes_wrap.ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
+    else:
+        logger.pr.err("ERROR: Unrecognized scheduler mode", opt)
+        raise ValueError(opt)
+
+    return mode, rest
 
 #
 # Parse arguments
@@ -44,7 +265,7 @@ def parse():
     parser.add_argument("--show-diag", action='store_true', help="show diagnostic test suites")
     parser.add_argument("--show-topo", choices=["matrix","graph","info"], help="show topology map")
     parser.add_argument("--verbose", action='store_true', help="show extra attributes")
-    parser.add_argument("--poll", metavar='TIME', type=int,
+    parser.add_argument("--poll", metavar=('TIME',''), nargs='*',
                         help="set sampling interval (in s by default)")
     parser.add_argument("--iterations", metavar='NUM', type=int,
                         help="samples to collect (0 = until stopped)")
@@ -182,16 +403,26 @@ def parse():
 
     otree.setNodeClassByName(args.format)
 
-    if args.poll is not None and args.iterations is not None:
+    if args.poll is not None and args.iterations is None:
         args.iterations = 0
 
     if args.iterations is not None:
         if args.iterations < 1:
-            state.maxIterations = sys.maxint
+            state.maxIterations = float("inf")
         else:
             state.maxIterations = args.iterations
-
         args.show_telemetry = True
+
+    if args.poll:
+        state.pollInterval, remainder = parseSeconds(args.poll)
+        if remainder:
+            logger.pr.err("WARNING: Extra polling arguments ignored:", remainder)
+
+    if state.pollInterval <= 0:
+        logger.pr.err("WARNING: Polling interval must be greater than 0, defaulting to 1s")
+        state.pollInterval = 1.0
+    elif state.pollInterval > 60:
+        logger.pr.err("WARNING: Long polling interval (%f s) specified" % state.pollInterval)
 
     if args.output and args.output != "-":
         if args.format is None:
@@ -227,260 +458,3 @@ def parse():
     state.hideTimestamp = args.hide_timestamp
 
     return args
-
-def parseMilliwatts(opts):
-    value = 0.0
-    multiplier = 1000.0
-    remainder = []
-    if opts:
-        opt = opts.pop(0).lower()
-        split = None
-        if "m" in opt:
-            split = opt.index("m")
-        if "w" in opt:
-            if split is None:
-                split = opt.index("w")
-            else:
-                split = min(split, opt.index("w"))
-        if split is None:
-            rest = opts
-        else:
-            opt, rest = opt[:split], [opt[split:]] + opts
-
-        try:
-            value = float(opt)
-        except:
-            hitRemainder = True
-            if opt not in ["d", "def", "default"]:
-                logger.pr.err("WARNING: Illegal power value (" + opt + "), using default/0")
-        else:
-            hitRemainder = False
-
-        for opt in rest:
-            opt = opt.lower()
-            if hitRemainder:
-                remainder.append(opt)
-            else:
-                hitRemainder = True
-                if opt in ["m", "mw", "mwatt", "mwatts", "milliwatt", "milliwatts"]:
-                    multiplier = 1.0
-                elif opt not in ["w", "wt", "watt", "watts"]:
-                    remainder.append(opt)
-    else:
-        logger.pr.err("WARNING: No power value specified, using default/0")
-
-    return int(value * multiplier), remainder
-
-def parseMilliseconds(opts):
-    value = 0.0
-    multiplier = 1000.0
-    remainder = []
-    if opts:
-        opt = opts.pop(0).lower()
-        split = None
-        if "m" in opt:
-            split = opt.index("m")
-        if "s" in opt:
-            if split is None:
-                split = opt.index("s")
-            else:
-                split = min(split, opt.index("s"))
-        if split is None:
-            rest = opts
-        else:
-            opt, rest = opt[:split], [opt[split:]] + opts
-
-        try:
-            value = float(opt)
-        except:
-            hitRemainder = True
-            if opt not in ["d", "def", "default"]:
-                logger.pr.err("WARNING: Illegal time value (" + opt + "), using default/0")
-        else:
-            hitRemainder = False
-
-        for opt in rest:
-            opt = opt.lower()
-            if hitRemainder:
-                remainder.append(opt)
-            else:
-                hitRemainder = True
-                if opt in ["m", "ms", "msec", "msecond", "mseconds", "millisecond", "milliseconds"]:
-                    multiplier = 1.0
-                elif opt not in ["s", "sec", "second", "seconds"]:
-                    remainder.append(opt)
-    else:
-        logger.pr.err("WARNING: No time value specified, using default/0")
-
-    return int(value * multiplier), remainder
-
-def parseJoules(opts):
-    value = 0.0
-    multiplier = 1.0
-    remainder = []
-    if opts:
-        opt = opts.pop(0).lower()
-        split = None
-        if "m" in opt:
-            split = opt.index("m")
-        if "k" in opt:
-            if split is None:
-                split = opt.index("k")
-            else:
-                split = min(split, opt.index("k"))
-        if "j" in opt:
-            if split is None:
-                split = opt.index("j")
-            else:
-                split = min(split, opt.index("j"))
-        if split is None:
-            rest = opts
-        else:
-            opt, rest = opt[:split], [opt[split:]] + opts
-
-        try:
-            value = float(opt)
-        except:
-            hitRemainder = True
-            logger.pr.err("WARNING: Illegal energy value (" + opt + "), using 0.0 J")
-        else:
-            hitRemainder = False
-
-        for opt in rest:
-            opt = opt.lower()
-            if hitRemainder:
-                remainder.append(opt)
-            else:
-                hitRemainder = True
-                if opt in ["m", "mj", "mjoule", "mjoules", "millijoule", "millijoules"]:
-                    multiplier = 0.001
-                elif opt in ["k", "kj", "kjoule", "kjoules", "kilojoule", "kilojoules"]:
-                    multiplier = 1000.0
-                elif opt in ["j", "joule", "joules"]:
-                    remainder.append(opt)
-    else:
-        logger.pr.err("WARNING: No energy value specified, using 0.0 J")
-
-    return value * multiplier, remainder
-
-def parseMHz(opts):
-    value = 0.0
-    multiplier = 1.0
-    remainder = []
-    if opts:
-        opt = opts.pop(0).lower()
-        split = None
-        if "m" in opt:
-            split = opt.index("m")
-        if "g" in opt:
-            if split is None:
-                split = opt.index("g")
-            else:
-                split = min(split, opt.index("g"))
-        if "h" in opt:
-            if split is None:
-                split = opt.index("h")
-            else:
-                split = min(split, opt.index("h"))
-        if "k" in opt:
-            if split is None:
-                split = opt.index("k")
-            else:
-                split = min(split, opt.index("k"))
-        if split is None:
-            rest = opts
-        else:
-            opt, rest = opt[:split], [opt[split:]] + opts
-
-        try:
-            value = float(opt)
-        except:
-            hitRemainder = True
-            if opt not in ["d", "def", "default"]:
-                logger.pr.err("WARNING: Illegal power value (" + opt + "), using default/0")
-        else:
-            hitRemainder = False
-
-        for opt in rest:
-            opt = opt.lower()
-            if hitRemainder:
-                remainder.append(opt)
-            else:
-                hitRemainder = True
-                if opt in ["g", "ghz", "gigahertz"]:
-                    multiplier = 1000.0
-                elif opt in ["k", "khz", "kilohertz"]:
-                    multiplier = 1e-3
-                elif opt in ["h", "hz", "hertz"]:
-                    multiplier = 1e-6
-                elif opt not in ["m", "mhz", "megahertz"]:
-                    remainder.append(opt)
-    else:
-        logger.pr.err("WARNING: No power value specified, using default/0")
-
-    return value * multiplier, remainder
-
-def parseSchedulerMode(opts):
-    opt, remainder = opts[0].lower(), opts[1:]
-
-    if opt in ["timeout", "time", "to", "t", "zes_sched_mode_timeout"]:
-        mode = zes_wrap.ZES_SCHED_MODE_TIMEOUT
-    elif opt in ["timeslice", "slice", "ts", "s", "zes_sched_mode_timeslice"]:
-        mode = zes_wrap.ZES_SCHED_MODE_TIMESLICE
-    elif opt in ["exclusive", "exc", "ex", "e", "x", "zes_sched_mode_exclusive"]:
-        mode = zes_wrap.ZES_SCHED_MODE_EXCLUSIVE
-    elif opt in ["cudebug", "debug", "dbg", "db", "d", "g", "zes_sched_mode_compute_unit_debug"]:
-        mode = zes_wrap.ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG
-    else:
-        logger.pr.err("ERROR: Unrecognized scheduler mode", opt)
-        raise ValueError(opt)
-
-    return mode, remainder
-
-def parseMicroseconds(opts):
-    value = 0.0
-    multiplier = 1000000.0
-    remainder = []
-    if opts:
-        opt = opts.pop(0).lower()
-        split = None
-        if "u" in opt:
-            split = opt.index("u")
-        if "m" in opt:
-            split = opt.index("m")
-        if "s" in opt:
-            if split is None:
-                split = opt.index("s")
-            else:
-                split = min(split, opt.index("s"))
-        if split is None:
-            rest = opts
-        else:
-            opt, rest = opt[:split], [opt[split:]] + opts
-
-        hitRemainder = True
-
-        if opt in ["n", "none"]:
-            value = zes_wrap.ZES_SCHED_WATCHDOG_DISABLE
-            multiplier = 1
-        elif opt not in ["d", "def", "default"]:
-            try:
-                value = float(opt)
-                hitRemainder = False
-            except:
-                logger.pr.err("WARNING: Illegal time value (" + opt + "), using default")
-
-        for opt in rest:
-            opt = opt.lower()
-            if hitRemainder:
-                remainder.append(opt)
-            else:
-                hitRemainder = True
-                if opt in ["u", "us", "usec", "usecond", "useconds", "microsecond", "microseconds"]:
-                    multiplier = 1.0
-                elif opt in ["m", "ms", "msec", "msecond", "mseconds", "millisecond", "milliseconds"]:
-                    multiplier = 1000.0
-                elif opt not in ["s", "sec", "second", "seconds"]:
-                    remainder.append(opt)
-
-    return int(value * multiplier), remainder
