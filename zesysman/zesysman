@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import os
+import re
 import signal
 import sys
 import time
@@ -50,7 +51,7 @@ def listDrivers(count, drivers):
         zeCall(zeDriverGetProperties(driver, driver_props))
         uuid_string = uuid_string_t()
         driver_uuid_to_string(driver_props.uuid, uuid_string)
-        drvNode = Node(topNode, "Driver", None, ("Index", i), ("UUID", uuid_string.id),
+        drvNode = Node(topNode, "Driver", None, ("Index", i), ("UUID", output.uuid(uuid_string.id)),
                        index=True)
         api_version = zeCall(zeDriverGetApiVersion(driver))
         Node(drvNode, "API version", versionString(api_version))
@@ -82,10 +83,10 @@ def listDevices(driverIndices, deviceCounts, deviceLists):
             device_uuid_to_string(device_properties.uuid, uuid_string)
             if len(driverIndices) > 1:
                 devNode = Node(topNode, "Device", None, ("Index", str(driver) + "." + str(i)),
-                               ("UUID", uuid_string.id), index=True)
+                               ("UUID", output.uuid(uuid_string.id)), index=True)
             else:
-                devNode = Node(topNode, "Device", None, ("Index", i), ("UUID", uuid_string.id),
-                               index=True)
+                devNode = Node(topNode, "Device", None, ("Index", i), ("UUID",
+                               output.uuid(uuid_string.id)), index=True)
             Node(devNode, "Type", deviceTypeString(device_properties.type))
             Node(devNode, "Name", device_properties.name)
             Node(devNode, "VendorId", hex(device_properties.vendorId))
@@ -100,6 +101,14 @@ def listDevicesAndFail(driverIndices, deviceCounts, deviceLists):
     listDevices(driverIndices, deviceCounts, deviceLists)
     pr.fail("Use --device to specify a set of valid devices")
 
+def uniquify_index(indices, info):
+    newIndices, newInfo = [], []
+    for i,o in zip(indices, info):
+        if i not in newIndices:
+            newIndices.append(i)
+            newInfo.append(o)
+    return newIndices, newInfo
+
 def getDrivers(driverSelection):
     driverCount = uint32_ptr()
     zeCall(zeDriverGet(driverCount.cast(), None))
@@ -113,24 +122,34 @@ def getDrivers(driverSelection):
     if driverSelection:
         indices = []
         uuids = driverUUIDs(numDrivers, drivers)
-        for sel in driverSelection:
-            sel = sel.lower()
+        for selection in driverSelection:
+            sel = selection.lower()
 
             if sel == "list":
                 listDrivers(numDrivers, drivers)
                 exit(0)
 
-            if sel in uuids:
-                i = uuids.index(sel)
-            else:
-                try:
-                    i = int(sel, 0)
-                    if i < 0 or i >= numDrivers:
-                        raise
-                except:
-                    pr.err("Error: Illegal driver index/UUID", sel, "specified")
-                    listDriversAndFail(numDrivers, drivers)
-            indices.append(i)
+            try:
+                i = int(sel)
+                if i < 0 or i >= numDrivers:
+                    raise
+                indices.append(i)
+            except:
+                if sel.startswith("uuid:") and len(sel) > 5:
+                    sel = sel[5:]
+                    selection = selection[5:]
+                if sel in uuids:
+                    indices.append(uuids.index(sel))
+                else:
+                    found = False
+                    sel_re = re.compile(selection, re.IGNORECASE)
+                    for i,uuid in util.indexed(uuids):
+                        if sel_re.search(uuid):
+                            found = True
+                            indices.append(i)
+                    if not found:
+                        pr.err("Error: Unknown driver index/UUID regexp:", selection)
+                        listDriversAndFail(numDrivers, drivers)
 
         # uniquify:
         indices = list(set(indices))
@@ -140,8 +159,9 @@ def getDrivers(driverSelection):
 
     return indices, drivers
 
-def getDeviceUUIDs(deviceCounts, deviceLists):
+def getDeviceDetails(deviceCounts, deviceLists):
     uuids = []
+    names = []
     for count, devices in zip(deviceCounts, deviceLists):
         for i in range(count):
             device = devices[i]
@@ -150,7 +170,8 @@ def getDeviceUUIDs(deviceCounts, deviceLists):
             uuid_string = uuid_string_t()
             device_uuid_to_string(device_properties.uuid, uuid_string)
             uuids.append(str(uuid_string.id))
-    return uuids
+            names.append(device_properties.name)
+    return uuids, names
 
 def firstMatch(sel, *places):
     for place in places:
@@ -180,7 +201,7 @@ def getDevices(driverIndices, drivers, deviceSelection):
     if not deviceFound:
         pr.fail("No devices found")
 
-    allUUIDs = getDeviceUUIDs(deviceCounts, deviceLists)
+    allUUIDs, allNames = getDeviceDetails(deviceCounts, deviceLists)
     allIndices = [ (r,d) for r,c in util.indexed(deviceCounts) for d in range(c) ]
 
     expandedIDs = [ str(driverIndices[r]) + "." + str(d) for r,d in allIndices ]
@@ -193,21 +214,81 @@ def getDevices(driverIndices, drivers, deviceSelection):
     if deviceSelection:
         indices = []
         deviceUUIDs = []
-        for sel in deviceSelection:
-            sel = sel.lower()
+        for selection in deviceSelection:
+            sel = selection.lower()
 
             if sel == "list":
                 listDevices(driverIndices, deviceCounts, deviceLists)
                 exit(0)
 
-            i = firstMatch(sel, allUUIDs, deviceIDs, expandedIDs)
+            if sel.startswith("name:") and len(sel) > 5:
+                selection = selection[5:]
+                i = firstMatch(selection, allNames)
 
+                if i is not None:
+                    indices.append(allIndices[i])
+                    deviceUUIDs.append(allUUIDs[i])
+                else:
+                    found = False
+                    sel_re = re.compile(selection)
+                    for i,name in util.indexed(allNames):
+                        if sel_re.search(name):
+                            found = True
+                            indices.append(allIndices[i])
+                            deviceUUIDs.append(allUUIDs[i])
+                    if not found:
+                        pr.err("Error: Unknown name regexp:", selection)
+                        listDevicesAndFail(driverIndices, deviceCounts, deviceLists)
+                continue
+
+            if sel.startswith("uuid:") and len(sel) > 5:
+                sel = sel[5:]
+                selection = selection[5:]
+                i = firstMatch(sel, allUUIDs)
+
+                if i is not None:
+                    indices.append(allIndices[i])
+                    deviceUUIDs.append(allUUIDs[i])
+                else:
+                    found = False
+                    sel_re = re.compile(selection, re.IGNORECASE)
+                    for i,uuid in util.indexed(allUUIDs):
+                        if sel_re.search(uuid):
+                            found = True
+                            indices.append(allIndices[i])
+                            deviceUUIDs.append(allUUIDs[i])
+                    if not found:
+                        pr.err("Error: Unknown UUID regexp:", selection)
+                        listDevicesAndFail(driverIndices, deviceCounts, deviceLists)
+                continue
+
+            i = firstMatch(selection, allNames)
             if i is None:
-                pr.err("Error: Illegal device index/UUID", sel, "specified")
-                listDevicesAndFail(driverIndices, deviceCounts, deviceLists)
-            else:
+                i = firstMatch(sel, allUUIDs, deviceIDs, expandedIDs)
+
+            if i is not None:
                 indices.append(allIndices[i])
                 deviceUUIDs.append(allUUIDs[i])
+            else:
+                found = False
+                sel_re = re.compile(selection, re.IGNORECASE)
+                for i,name in util.indexed(allNames):
+                    if sel_re.search(name):
+                        found = True
+                        indices.append(allIndices[i])
+                        deviceUUIDs.append(allUUIDs[i])
+                if found:
+                    continue
+                for i,uuid in util.indexed(allUUIDs):
+                    if sel_re.search(uuid):
+                        found = True
+                        indices.append(allIndices[i])
+                        deviceUUIDs.append(allUUIDs[i])
+                if not found:
+                    pr.err("Error: Unknown device index/name/UUID regexp:", selection)
+                    listDevicesAndFail(driverIndices, deviceCounts, deviceLists)
+
+        indices, deviceUUIDs = uniquify_index(indices, deviceUUIDs)
 
         if len(driverIndices) > 1:
             deviceIDs = [ str(driverIndices[r]) + "." + str(d) for r, d in indices ]
@@ -489,8 +570,6 @@ def units_bps(node):
 # Main program
 #
 def main():
-    global deviceUUID
-
     args = arg.parse()
 
     if state.maxIterations > 1:
@@ -542,7 +621,7 @@ def main():
         if len(devices) != 1:
             pr.fail("Cannot reset more than one GPU at a time")
 
-        deviceName = "%s [%s]" % (deviceIDs[0], deviceUUID(deviceUUIDs[0]))
+        deviceName = "%s [%s]" % (deviceIDs[0], output.uuid(deviceUUIDs[0]))
 
         if args.dry_run:
             args.yes = True
@@ -579,7 +658,7 @@ def main():
 
         suite, first, last = parseTestSuite(diagCount.value(), diags, args.run_diag)
 
-        deviceName = "%s [%s]" % (deviceIDs[0], deviceUUID(deviceUUIDs[0]))
+        deviceName = "%s [%s]" % (deviceIDs[0], output.uuid(deviceUUIDs[0]))
         pr("Device diagnostics:", deviceName)
 
         if args.dry_run:
@@ -750,7 +829,7 @@ def main():
                 for fabricId in fabricIds:
                     if devID in fabricMap[fabricId]:
                         devNode = Node(topNode, "Device", None, ("Index", devID),
-                                       ("UUID", deviceUUID(devUUID)), index=True)
+                                       ("UUID", output.uuid(devUUID)), index=True)
                         Node(devNode, "FabricID", hex(fabricId))
                         sdsNode = Node(devNode, "AttachPoints", None)
                         sds = list(fabricAttach[fabricId])
@@ -782,7 +861,7 @@ def main():
         topNode = devicesNode
 
     for devID, devUUID, device in zip(deviceIDs, deviceUUIDs, devices):
-        devNode = Node(devicesNode, "Device", None, ("Index", devID), ("UUID", deviceUUID(devUUID)),
+        devNode = Node(devicesNode, "Device", None, ("Index", devID), ("UUID", output.uuid(devUUID)),
                        index=True)
         if args.show_device:
             coreProps = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
@@ -2663,7 +2742,7 @@ def main():
 
         if args.flash_firmware:
             filename, = args.flash_firmware
-            names = ["%s [%s]" % (d,deviceUUID(u)) for d,u in zip(deviceIDs,deviceUUIDs)]
+            names = ["%s [%s]" % (d,output.uuid(u)) for d,u in zip(deviceIDs,deviceUUIDs)]
             pr("Requesting flash of", filename, "to the following devices:")
             pr(" " + "\n ".join(names))
 

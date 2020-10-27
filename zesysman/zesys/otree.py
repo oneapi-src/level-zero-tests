@@ -41,7 +41,7 @@ class Node:
     def decoratedText(self):
         text = self.text
         for attr,val in self.attrs:
-            if attr in DecorateAttributes and text is not None:
+            if attr in DecorateAttributes and text is not None and type(text) != list:
                 text = str(text) + " " + str(val)
         return text
     def outputStart(self):
@@ -340,7 +340,7 @@ class TableNode(Node):
         elif type(self.text) == list:
             return ", ".join(self.text)
         else:
-            return self.decoratedText()
+            return str(self.decoratedText())
     def rowList(self):
         myCell = []
         if self.width != 0:

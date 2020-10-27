@@ -332,6 +332,7 @@ def parse():
                         help="use COUNT space (or -COUNT tab) indents")
     parser.add_argument("--style", choices=["condensed","aligned"], help="change output style")
     parser.add_argument("--uuid-index", action='store_true', help="use UUID as index")
+    parser.add_argument("--compact-uuid", action='store_true', help="display UUIDs in a compacted form")
     parser.add_argument("--ascii", action='store_true', help="use only 7-bit ascii characters")
     parser.add_argument("-n", "--dry-run", action='store_true', help="perform no actions")
 
@@ -345,9 +346,6 @@ def parse():
 
     # dparse.add_argument("--save-profile", metavar='PROF', help="save device configuration")
     # dparse.add_argument("--restore-profile", metavar='PROF', help="restore device configuration")
-    # dparse.add_argument("--subdevice", action='store_true', help="report by subdevice")
-    dparse.add_argument("--tiny-uuid", action='store_true', help="print tiny device UUIDs")
-    dparse.add_argument("--debug", action='store_true', help="debug (for development only)")
     dparse.add_argument("--reset-freq", action='store_true', help="reset frequency limits")
     dparse.add_argument("--hide-timestamp", action='store_true',
                         help="hide timestamps when iterating")
@@ -441,11 +439,8 @@ def parse():
         else:
             state.indentStr = "\t" * -args.indent
 
-    if args.tiny_uuid:
-        output.deviceUUID = tinyUUID
-
-    if args.debug:
-        logger.pr.debugFile = sys.stderr
+    if args.compact_uuid:
+        output.uuid = output.compactUUID
 
     state.condensedList = (args.style == "condensed")
 

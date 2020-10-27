@@ -13,7 +13,7 @@ import traceback
 class Logger:
     def __init__(self):
         self.outputFile = sys.stdout
-        self.debugFile = None
+        self.debugFile = sys.stderr
         self.teeOutput = False
 
     # Print to standard error

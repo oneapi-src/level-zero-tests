@@ -460,7 +460,7 @@ def colorString(colors):
 def fullUUID(uuid):
     return uuid
 
-def tinyUUID(uuid):
-    return uuid[:2] + ".." + uuid[-2:]
+def compactUUID(uuid):
+    return "-".join(["{:x}".format(int(x,16)) for x in uuid.split("-")])
 
-deviceUUID = fullUUID
+uuid = fullUUID
