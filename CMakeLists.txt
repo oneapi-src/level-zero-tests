@@ -136,6 +136,7 @@ function(add_lzt_test_executable)
     is_test_group_member("/conformance_tests" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" is_conformance_test)
     is_test_group_member("/perf_tests" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" is_perf_test)
     is_test_group_member("/negative_tests" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" is_negative_test)
+    is_test_group_member("/layer_tests" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" is_layer_test)
     if(is_conformance_test)
         list(APPEND ADD_LZT_TEST_EXECUTABLE_LINK_LIBRARIES
           level_zero_tests::test_harness
@@ -155,6 +156,13 @@ function(add_lzt_test_executable)
           ${CMAKE_SOURCE_DIR}/perf_tests/common/include
         )
         set(component "perf-tests")
+    elseif(is_layer_test)
+        list(APPEND ADD_LZT_TEST_EXECUTABLE_LINK_LIBRARIES
+          level_zero_tests::test_harness
+          GMock::GMock
+          GTest::GTest
+        )
+        set(component "layer-tests")
     endif()
 
     add_executable(${ADD_LZT_TEST_EXECUTABLE_NAME} ${ADD_LZT_TEST_EXECUTABLE_SOURCES})
@@ -260,6 +268,7 @@ add_subdirectory(utils)
 add_subdirectory(perf_tests)
 add_subdirectory(conformance_tests)
 add_subdirectory(negative_tests)
+add_subdirectory(layer_tests)
 
 
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_BINARY_DIR}/out")

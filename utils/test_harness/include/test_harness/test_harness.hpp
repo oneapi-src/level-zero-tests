@@ -23,6 +23,7 @@
 //#include "test_harness_ocl_interop.hpp"
 #include "test_harness_driver_info.hpp"
 #include "../../tools/include/test_harness_api_tracing.hpp"
+#include "../../tools/include/test_harness_api_ltracing.hpp"
 #include "../../tools/sysman/include/test_harness_sysman.hpp"
 #include "../../tools/include/test_harness_metric.hpp"
 
