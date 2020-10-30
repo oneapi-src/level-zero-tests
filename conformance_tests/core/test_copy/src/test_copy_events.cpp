@@ -179,8 +179,8 @@ TEST_F(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_fill(cmdlist, dst_buffer, &one, size, size, nullptr, 1,
-                          &hEvent);
+  lzt::append_memory_fill(cmdlist, dst_buffer, &one, sizeof(one), size, nullptr,
+                          1, &hEvent);
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
