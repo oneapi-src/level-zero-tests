@@ -230,8 +230,10 @@ class ImageFormatLayoutTests
 public:
   template <typename T>
   void set_up_buffers(T *&inbuff, T *&outbuff, int size_multiplier = 1);
-  template <typename T> void verify_buffer(T *&buff, int size_multiplier = 1);
-  template <typename T> void verify_buffer_float(T *&buff);
+  template <typename T>
+  void verify_buffer(T *&buff, int size_multiplier = 1, bool saturates = true);
+  template <typename T>
+  void verify_buffer_float(T *&buff, bool saturates = true);
 };
 
 template <typename T>
@@ -242,23 +244,38 @@ void ImageFormatLayoutTests::set_up_buffers(T *&inbuff, T *&outbuff,
   outbuff = static_cast<T *>(
       lzt::allocate_host_memory(image_size * sizeof(T) * size_multiplier));
   for (int i = 0; i < (image_size * size_multiplier); i++) {
-    // set pixel value to max for data type so that when the kernel
-    // increments it, it rolls over
-    inbuff[i] = ~(0 & inbuff[i]);
+    // set pixel value to 1 less than max for data type so
+    // that when the kernel increments it, it saturates
+    // or rolls over
+    inbuff[i] = ~(0 & inbuff[i]) - 1;
   }
 }
 template <typename T>
-void ImageFormatLayoutTests::verify_buffer(T *&buff, int size_multiplier) {
+void ImageFormatLayoutTests::verify_buffer(T *&buff, int size_multiplier,
+                                           bool saturates) {
+  auto max_val = std::numeric_limits<T>::max();
   for (int i = 0; i < (image_size * size_multiplier); i++) {
-    ASSERT_EQ(buff[i], 0);
+    if (saturates) {
+      ASSERT_EQ(buff[i], max_val);
+    } else if (max_val == std::numeric_limits<uint64_t>::max()) {
+      // We use 64 bit buffers for the multi-32 bit component types, so
+      // adjust the expected value
+      ASSERT_EQ(buff[i], std::numeric_limits<uint32_t>::max() + (uint64_t)1);
+    } else {
+      ASSERT_EQ(buff[i], 0);
+    }
   }
 }
 
 template <typename T>
-void ImageFormatLayoutTests::verify_buffer_float(T *&buff) {
+void ImageFormatLayoutTests::verify_buffer_float(T *&buff, bool saturates) {
   for (int i = 0; i < image_size; i++) {
-    ASSERT_GT(buff[i], 0);
-    ASSERT_LT(buff[i], std::numeric_limits<T>::max());
+    if (saturates) {
+      ASSERT_EQ(buff[i], std::numeric_limits<T>::max());
+    } else {
+      ASSERT_GT(buff[i], 0);
+      ASSERT_LT(buff[i], std::numeric_limits<T>::max());
+    }
   }
 }
 
@@ -322,7 +339,7 @@ TEST_P(ImageFormatLayoutTests,
       uint32_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
       run_test(inbuff, outbuff, "image_format_layout_one_component");
-      verify_buffer(outbuff);
+      verify_buffer(outbuff, 1, false);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
 
@@ -357,7 +374,7 @@ TEST_P(ImageFormatLayoutTests,
       uint64_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
       run_test(inbuff, outbuff, "image_format_layout_two_components");
-      verify_buffer(outbuff);
+      verify_buffer(outbuff, 1, false);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
     } break;
@@ -380,7 +397,7 @@ TEST_P(ImageFormatLayoutTests,
       uint32_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
       run_test(inbuff, outbuff, "image_format_layout_three_components_float");
-      verify_buffer(outbuff);
+      verify_buffer_float(outbuff, false);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
     } break;
@@ -447,7 +464,7 @@ TEST_P(ImageFormatLayoutTests,
       uint64_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff, 2);
       run_test(inbuff, outbuff, "image_format_layout_four_components");
-      verify_buffer(outbuff, 2);
+      verify_buffer(outbuff, 2, false);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
     } break;

@@ -54,7 +54,7 @@ kernel void image_format_layout_one_component(read_only image2d_t image_in,
 
   const int2 coord = {get_global_id(0), get_global_id(1)};
   uint4 pixel = read_imageui(image_in, image_sampler, coord);
-  pixel.x += 1;
+  pixel.x += 2;
   write_imageui(image_out, coord, pixel);
 }
 
@@ -63,8 +63,8 @@ kernel void image_format_layout_two_components(read_only image2d_t image_in,
 
   const int2 coord = {get_global_id(0), get_global_id(1)};
   uint4 pixel = read_imageui(image_in, image_sampler, coord);
-  pixel.x += 1;
-  pixel.y += 1;
+  pixel.x += 2;
+  pixel.y += 2;
   write_imageui(image_out, coord, pixel);
 }
 
@@ -98,10 +98,10 @@ image_format_layout_four_components(read_only image2d_t image_in,
 
   const int2 coord = {get_global_id(0), get_global_id(1)};
   uint4 pixel = read_imageui(image_in, image_sampler, coord);
-  pixel.x += 1;
-  pixel.y += 1;
-  pixel.z += 1;
-  pixel.w += 1;
+  pixel.x += 2;
+  pixel.y += 2;
+  pixel.z += 2;
+  pixel.w += 2;
   write_imageui(image_out, coord, pixel);
 }
 
