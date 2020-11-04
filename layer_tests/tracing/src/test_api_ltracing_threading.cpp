@@ -54,7 +54,7 @@ void allocate_then_deallocate_device_memory() {
   lzt::free_memory(memory);
 }
 
-class TracingThreadTests : public ::testing::Test {
+class LTracingThreadTests : public ::testing::Test {
 protected:
   void SetUp() override {
     callback_exit_invocations = 0;
@@ -89,7 +89,7 @@ protected:
 };
 
 TEST_F(
-    TracingThreadTests,
+    LTracingThreadTests,
     GivenSingleTracingEnabledThreadWhenCallingDifferentAPIFunctionThenCallbacksCalledOnce) {
 
   std::thread child_thread(allocate_then_deallocate_device_memory);
@@ -104,7 +104,7 @@ TEST_F(
 }
 
 TEST_F(
-    TracingThreadTests,
+    LTracingThreadTests,
     GivenSingleTracingEnabledThreadWhenCallingSameAPIFunctionThenCallbackCalledTwice) {
 
   std::thread child_thread(allocate_then_deallocate_device_memory);
@@ -134,7 +134,7 @@ void trace_memory_allocation_then_deallocate(ze_memory_type_t memory_type) {
 }
 
 TEST_F(
-    TracingThreadTests,
+    LTracingThreadTests,
     GivenTwoThreadsWhenTracingEnabledCallingDifferentAPIFunctionThenCallbackCalledOnce) {
 
   std::thread second_trace_thread(trace_memory_allocation_then_deallocate,
@@ -151,7 +151,7 @@ TEST_F(
 }
 
 TEST_F(
-    TracingThreadTests,
+    LTracingThreadTests,
     GivenTwoThreadsWhenTracingEnabledCallingSameAPIFunctionThenCallbacksCalledTwice) {
 
   std::thread second_child_thread(trace_memory_allocation_then_deallocate,
@@ -167,13 +167,13 @@ TEST_F(
   EXPECT_EQ(2, callback_exit_invocations);
 }
 
-class TracingThreadTestsDisabling : public TracingThreadTests {
+class LTracingThreadTestsDisabling : public LTracingThreadTests {
 protected:
   void TearDown() override {}
 };
 
 TEST_F(
-    TracingThreadTestsDisabling,
+    LTracingThreadTestsDisabling,
     GivenInvokedPrologueWhenDisablingTracerInSeparateThreadThenEpilogueIsCalled) {
 
   std::thread child_thread(allocate_then_deallocate_device_memory);
