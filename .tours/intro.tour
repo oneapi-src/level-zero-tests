@@ -1,0 +1,80 @@
+{
+  "title": "Intro",
+  "steps": [
+    {
+      "file": "CMakeLists.txt",
+      "line": 271,
+      "description": "The repo contains these categories of tests and a subdirectory of utility function not specific to any test suite."
+    },
+    {
+      "file": "conformance_tests/CMakeLists.txt",
+      "line": 4,
+      "description": "Conformance tests validate adherence to the Level Zero specification and are broken down by sub-category, i.e. 'core' Level Zero features versus 'tools' for interacting with a Level Zero driver/device"
+    },
+    {
+      "file": "conformance_tests/core/CMakeLists.txt",
+      "line": 21,
+      "description": "test_template is an example showing how one would add a new conformance test. Add a matching line for the new conformance test here and match the structure of the 'test_template' subdirectory"
+    },
+    {
+      "file": "utils/test_harness/src/test_harness_cmdlist.cpp",
+      "line": 36,
+      "description": "Conformance test cases do not usually call Level Zero APIs directly, instead there are wrapper functions for some default values. Additions can be added as necessary in the test_harness under 'utils'"
+    },
+    {
+      "file": "perf_tests/CMakeLists.txt",
+      "line": 9,
+      "description": "Performance tests measure the performance of a Level Zero implementation/device."
+    },
+    {
+      "file": "perf_tests/ze_peak/src/ze_peak.cpp",
+      "line": 569,
+      "description": "zePeak is a performance test that measures peak performance of a level zero device/driver. The measurements can be found here."
+    },
+    {
+      "file": "perf_tests/common/include/ze_app.hpp",
+      "line": 20,
+      "description": "Performance tests are derived from this base class which provides utilities for common set-up actions."
+    },
+    {
+      "file": "conformance_tests/core/test_module/kernels/module_add.cl",
+      "line": 9,
+      "description": "Tests can include external kernel modules. This is an OpenCL kernel used for testing module functionality. It has been compiled and the output binary is included in the 'kernels' directory with this file with a substituted '.spv' extension",
+      "selection": {
+        "start": {
+          "line": 9,
+          "character": 1
+        },
+        "end": {
+          "line": 10,
+          "character": 1
+        }
+      }
+    },
+    {
+      "file": "utils/utils/src/utils.cpp",
+      "line": 198,
+      "description": "This file has a number of utilities that aren't tied to any specific test. The below functions help with logging different API structures."
+    },
+    {
+      "file": "utils/utils/src/utils.cpp",
+      "line": 689,
+      "description": "This function prints information about the driver under test at the start of each test execution. ",
+      "selection": {
+        "start": {
+          "line": 731,
+          "character": 4
+        },
+        "end": {
+          "line": 732,
+          "character": 1
+        }
+      }
+    },
+    {
+      "file": "utils/image/src/image.cpp",
+      "line": 8,
+      "description": "This file has utilities for working with images on a host system."
+    }
+  ]
+}
