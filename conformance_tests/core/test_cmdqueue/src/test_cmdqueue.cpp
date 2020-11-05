@@ -13,6 +13,7 @@
 #include "logging/logging.hpp"
 #include <chrono>
 #include <thread>
+#include "image/image.hpp"
 namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 
@@ -564,5 +565,131 @@ TEST(
   lzt::destroy_event(event_copy_high);
   lzt::destroy_event(event_copy_low);
   lzt::destroy_event(event_sync);
-} // namespace
+}
+
+class CommandQueueCopyOnlyTest : public ::testing::Test {
+protected:
+  CommandQueueCopyOnlyTest() {
+    device = lzt::get_default_device(lzt::get_default_driver());
+    context = lzt::create_context();
+  }
+  ~CommandQueueCopyOnlyTest() { lzt::destroy_context(context); }
+
+  ze_device_handle_t device;
+  ze_context_handle_t context;
+  ze_command_list_handle_t cmdlist;
+
+public:
+  bool get_copy_only_cmd_queue_and_list(ze_command_list_handle_t &cmdlist,
+                                        ze_command_queue_handle_t &cmdqueue) {
+    auto cmdq_group_properties =
+        lzt::get_command_queue_group_properties(device);
+    int copy_ordinal = -1;
+    for (int i = 0; i < cmdq_group_properties.size(); i++) {
+      if ((cmdq_group_properties[i].flags &
+           ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
+          !(cmdq_group_properties[i].flags &
+            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
+
+        if (cmdq_group_properties[i].numQueues == 0)
+          continue;
+
+        copy_ordinal = i;
+        break;
+      }
+    }
+    if (copy_ordinal < 0) {
+      return false;
+    }
+
+    cmdqueue = lzt::create_command_queue(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, copy_ordinal);
+
+    cmdlist = lzt::create_command_list(context, device, 0, copy_ordinal);
+
+    return true;
+  }
+};
+
+TEST_F(CommandQueueCopyOnlyTest,
+       GivenCopyOnlyCommandQueueWhenCopyingMemoryThenResultIsCorrect) {
+
+  ze_command_list_handle_t cmdlist;
+  ze_command_queue_handle_t cmdqueue;
+  if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue) == false) {
+    LOG_WARNING << "No Copy-Only command queue group found, can't run test";
+    SUCCEED();
+    return;
+  }
+
+  const size_t size = 1000;
+  auto source = lzt::allocate_host_memory(size, 1, context);
+  auto dest = lzt::allocate_host_memory(size, 1, context);
+  memset(source, 1, size);
+  memset(dest, 2, size);
+
+  lzt::append_memory_copy(cmdlist, dest, source, size);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  ASSERT_EQ(0, memcmp(dest, source, size));
+
+  lzt::destroy_command_list(cmdlist);
+  lzt::destroy_command_queue(cmdqueue);
+}
+
+TEST_F(CommandQueueCopyOnlyTest,
+       GivenCopyOnlyCommandQueueWhenCopyingImageThenResultIsCorrect) {
+
+  ze_command_list_handle_t cmdlist;
+  ze_command_queue_handle_t cmdqueue;
+  if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue) == false) {
+    LOG_WARNING << "No Copy-Only command queue group found, can't run test";
+    SUCCEED();
+    return;
+  }
+  ze_image_handle_t ze_img_src, ze_img_dest;
+  lzt::ImagePNG32Bit png_img_src, png_img_dest;
+
+  png_img_src = lzt::ImagePNG32Bit("test_input.png");
+  auto image_width = png_img_src.width();
+  auto image_height = png_img_src.height();
+  auto image_size = image_width * image_height * sizeof(uint32_t);
+  png_img_dest = lzt::ImagePNG32Bit(image_width, image_height);
+
+  ze_image_desc_t img_desc = {};
+  img_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+  img_desc.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
+  img_desc.type = ZE_IMAGE_TYPE_2D;
+  img_desc.format = {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_TYPE_UNORM,
+                     ZE_IMAGE_FORMAT_SWIZZLE_R,      ZE_IMAGE_FORMAT_SWIZZLE_G,
+                     ZE_IMAGE_FORMAT_SWIZZLE_B,      ZE_IMAGE_FORMAT_SWIZZLE_A};
+  img_desc.width = image_width;
+  img_desc.height = image_height;
+  img_desc.depth = 1;
+  img_desc.arraylevels = 0;
+  img_desc.miplevels = 0;
+  ze_img_src = lzt::create_ze_image(context, device, img_desc);
+  ze_img_dest = lzt::create_ze_image(context, device, img_desc);
+
+  lzt::append_image_copy_from_mem(cmdlist, ze_img_src, png_img_src.raw_data(),
+                                  nullptr);
+  lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
+  lzt::append_image_copy(cmdlist, ze_img_dest, ze_img_src, nullptr);
+  lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
+  lzt::append_image_copy_to_mem(cmdlist, png_img_dest.raw_data(), ze_img_dest,
+                                nullptr);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  EXPECT_EQ(png_img_src, png_img_dest);
+
+  lzt::destroy_command_list(cmdlist);
+  lzt::destroy_command_queue(cmdqueue);
+  lzt::destroy_ze_image(ze_img_src);
+  lzt::destroy_ze_image(ze_img_dest);
+}
+
 } // namespace
