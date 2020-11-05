@@ -45,7 +45,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
                             static_cast<size_t>((numItems * sizeof(float))), 1,
                             context.device, &inputBuf);
   if (result) {
-    throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
+    throw std::runtime_error("zeMemAllocDevice failed: " +
                              std::to_string(result));
   }
   if (verbose)
@@ -62,7 +62,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
                             static_cast<size_t>((numItems * sizeof(float))), 1,
                             context.device, &outputBuf);
   if (result) {
-    throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
+    throw std::runtime_error("zeMemAllocDevice failed: " +
                              std::to_string(result));
   }
   if (verbose)
@@ -81,7 +81,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
   result =
       zeCommandListAppendBarrier(context.command_list, nullptr, 0, nullptr);
   if (result) {
-    throw std::runtime_error("zeCommandListAppendExecutionBarrier failed: " +
+    throw std::runtime_error("zeCommandListAppendBarrier failed: " +
                              std::to_string(result));
   }
   if (verbose)
@@ -293,16 +293,14 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
   result = zeMemFree(context.context, inputBuf);
   if (result) {
-    throw std::runtime_error("zeDriverFreeMem failed: " +
-                             std::to_string(result));
+    throw std::runtime_error("zeMemFree failed: " + std::to_string(result));
   }
   if (verbose)
     std::cout << "Input Buffer freed\n";
 
   result = zeMemFree(context.context, outputBuf);
   if (result) {
-    throw std::runtime_error("zeDriverFreeMem failed: " +
-                             std::to_string(result));
+    throw std::runtime_error("zeMemFree failed: " + std::to_string(result));
   }
   if (verbose)
     std::cout << "Output Buffer freed\n";

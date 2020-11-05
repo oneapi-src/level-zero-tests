@@ -82,7 +82,7 @@ void L0Context::create_module(std::vector<uint8_t> binary_file) {
   result =
       zeModuleCreate(context, device, &module_description, &module, nullptr);
   if (result) {
-    throw std::runtime_error("zeDeviceCreateModule failed: " +
+    throw std::runtime_error("zeModuleCreate failed: " +
                              std::to_string(result));
   }
   if (verbose)
@@ -143,7 +143,7 @@ void L0Context::init_xe(uint32_t specified_platform,
 
   result = zeInit(0);
   if (result) {
-    throw std::runtime_error("zeDriverInit failed: " + std::to_string(result));
+    throw std::runtime_error("zeInit failed: " + std::to_string(result));
   }
   if (verbose)
     std::cout << "Driver initialized\n";
@@ -221,7 +221,7 @@ void L0Context::init_xe(uint32_t specified_platform,
   result = zeCommandListCreate(context, device, &command_list_description,
                                &command_list);
   if (result) {
-    throw std::runtime_error("zeDeviceCreateCommandList failed: " +
+    throw std::runtime_error("zeCommandListCreate failed: " +
                              std::to_string(result));
   }
   if (verbose)
@@ -235,7 +235,7 @@ void L0Context::init_xe(uint32_t specified_platform,
   result = zeCommandQueueCreate(context, device, &command_queue_description,
                                 &command_queue);
   if (result) {
-    throw std::runtime_error("zeDeviceCreateCommandQueue failed: " +
+    throw std::runtime_error("zeCommandQueueCreate failed: " +
                              std::to_string(result));
   }
   if (verbose)
@@ -877,7 +877,7 @@ void ZePeak::setup_function(L0Context &context, ze_kernel_handle_t &function,
 
   result = zeKernelCreate(context.module, &function_description, &function);
   if (result) {
-    throw std::runtime_error("zeModuleCreateFunction failed: " +
+    throw std::runtime_error("zeKernelCreate failed: " +
                              std::to_string(result));
   }
   if (verbose)
@@ -1018,7 +1018,7 @@ long double ZePeak::context_time_in_us(L0Context &context,
 
   result = zeEventQueryKernelTimestamp(event, &ts_result);
   if (result) {
-    throw std::runtime_error("zeEventQueryKernelTimeStamp failed: " +
+    throw std::runtime_error("zeEventQueryKernelTimestamp failed: " +
                              std::to_string(result));
   }
 

@@ -36,7 +36,7 @@ void ClImageCopy::CreateImage() {
                           &clImageFormat, &clImageDesc, src, &errNum);
 
   if (errNum != CL_SUCCESS) {
-    throw std::runtime_error("CreateImage failed: " + std::to_string(errNum));
+    throw std::runtime_error("clCreateImage failed: " + std::to_string(errNum));
   }
 }
 

@@ -151,7 +151,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
                             local_memory_size, 1, context.device,
                             &shared_memory_buffer);
   if (result) {
-    throw std::runtime_error("zeDriverAllocSharedMem failed: " +
+    throw std::runtime_error("zeMemAllocShared failed: " +
                              std::to_string(result));
   }
 
@@ -171,8 +171,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
 
   result = zeMemFree(context.context, shared_memory_buffer);
   if (result) {
-    throw std::runtime_error("zeDriverFreeMem failed: " +
-                             std::to_string(result));
+    throw std::runtime_error("zeMemFree failed: " + std::to_string(result));
   }
 }
 
@@ -203,7 +202,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
                        static_cast<size_t>(sizeof(float) * number_of_items), 1,
                        context.device, &device_buffer);
   if (result) {
-    throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
+    throw std::runtime_error("zeMemAllocDevice failed: " +
                              std::to_string(result));
   }
   if (verbose)
@@ -223,8 +222,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
 
   result = zeMemFree(context.context, device_buffer);
   if (result) {
-    throw std::runtime_error("zeDriverFreeMem failed: " +
-                             std::to_string(result));
+    throw std::runtime_error("zeMemFree failed: " + std::to_string(result));
   }
   if (verbose)
     std::cout << "Device Buffer freed\n";

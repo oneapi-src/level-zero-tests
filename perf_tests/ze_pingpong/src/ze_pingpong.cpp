@@ -21,7 +21,7 @@ void L0Context::init() {
 
   result = zeInit(0);
   if (result) {
-    throw std::runtime_error("zeDriverInit failed: " + std::to_string(result));
+    throw std::runtime_error("zeInit failed: " + std::to_string(result));
   }
 
   uint32_t driver_count = 0;
@@ -74,7 +74,7 @@ void L0Context::init() {
   result = zeCommandListCreate(context, device, &command_list_description,
                                &command_list);
   if (result) {
-    throw std::runtime_error("zeDeviceCreateCommandList failed: " +
+    throw std::runtime_error("zeCommandListCreate failed: " +
                              std::to_string(result));
   }
 
@@ -88,7 +88,7 @@ void L0Context::init() {
   result = zeCommandQueueCreate(context, device, &command_queue_description,
                                 &command_queue);
   if (result) {
-    throw std::runtime_error("zeDeviceCreateCommandQueue failed: " +
+    throw std::runtime_error("zeCommandQueueCreate failed: " +
                              std::to_string(result));
   }
 
@@ -101,7 +101,7 @@ void L0Context::init() {
   result = zeMemAllocDevice(context, &device_desc, sizeof(int), 1, device,
                             &device_input);
   if (result) {
-    throw std::runtime_error("zeDriverAllocDeviceMem failed: " +
+    throw std::runtime_error("zeMemAllocDevice failed: " +
                              std::to_string(result));
   }
 
@@ -112,7 +112,7 @@ void L0Context::init() {
   host_desc.flags = 0;
   result = zeMemAllocHost(context, &host_desc, sizeof(int), 1, &host_output);
   if (result) {
-    throw std::runtime_error("zeDriverAllocHostMem failed: " +
+    throw std::runtime_error("zeMemAllocHost failed: " +
                              std::to_string(result));
   }
 
@@ -130,7 +130,7 @@ void L0Context::init() {
   result = zeMemAllocShared(context, &shared_device_desc, &shared_host_desc,
                             sizeof(int), 1, device, &shared_output);
   if (result) {
-    throw std::runtime_error("zeDriverAllocSharedMem failed: " +
+    throw std::runtime_error("zeMemAllocShared failed: " +
                              std::to_string(result));
   }
 }
@@ -156,20 +156,17 @@ void L0Context::destroy() {
 
   result = zeMemFree(context, device_input);
   if (result) {
-    throw std::runtime_error("zeDriverFreeMem failed: " +
-                             std::to_string(result));
+    throw std::runtime_error("zeMemFree failed: " + std::to_string(result));
   }
 
   result = zeMemFree(context, host_output);
   if (result) {
-    throw std::runtime_error("zeDriverFreeMem failed: " +
-                             std::to_string(result));
+    throw std::runtime_error("zeMemFree failed: " + std::to_string(result));
   }
 
   result = zeMemFree(context, shared_output);
   if (result) {
-    throw std::runtime_error("zeDriverFreeMem failed: " +
-                             std::to_string(result));
+    throw std::runtime_error("zeMemFree failed: " + std::to_string(result));
   }
 
   result = zeContextDestroy(context);
@@ -249,7 +246,7 @@ void ZePingPong::create_module(L0Context &l0_context,
   result = zeModuleCreate(l0_context.context, l0_context.device,
                           &module_description, &l0_context.module, nullptr);
   if (result) {
-    throw std::runtime_error("zeDeviceCreateModule failed: " +
+    throw std::runtime_error("zeModuleCreate failed: " +
                              std::to_string(result));
   }
 }
@@ -333,7 +330,7 @@ void ZePingPong::setup_commandlist(L0Context &context, enum TestType test) {
     result =
         zeCommandListAppendBarrier(context.command_list, nullptr, 0, nullptr);
     if (result) {
-      throw std::runtime_error("zeCommandListAppendExecutionBarrier failed: " +
+      throw std::runtime_error("zeCommandListAppendBarrier failed: " +
                                std::to_string(result));
     }
 
@@ -348,7 +345,7 @@ void ZePingPong::setup_commandlist(L0Context &context, enum TestType test) {
     result =
         zeCommandListAppendBarrier(context.command_list, nullptr, 0, nullptr);
     if (result) {
-      throw std::runtime_error("zeCommandListAppendExecutionBarrier failed: " +
+      throw std::runtime_error("zeCommandListAppendBarrier failed: " +
                                std::to_string(result));
     }
 
