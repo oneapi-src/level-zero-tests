@@ -692,4 +692,70 @@ TEST_F(CommandQueueCopyOnlyTest,
   lzt::destroy_ze_image(ze_img_dest);
 }
 
+TEST(ConcurrentCommandQueueExecutionTests,
+     GivenMultipleCommandQueuesWhenExecutedOnSameDeviceResultsAreCorrect) {
+  const size_t num_queues = 100;
+  const size_t buff_size = 10000;
+  uint32_t ordinal = 0;
+  uint32_t index = 0;
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::get_default_device(driver);
+
+  struct queue_data_t {
+    ze_command_queue_handle_t cmdqueue;
+    ze_command_list_handle_t cmdlist;
+    void *src_buff;
+    void *dst_buff;
+    uint8_t data;
+  };
+  std::vector<queue_data_t> queues;
+
+  for (size_t i = 0; i < num_queues; i++) {
+    queue_data_t queue;
+    queue.cmdqueue = lzt::create_command_queue(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal, index);
+    queue.cmdlist = lzt::create_command_list(context, device, 0, ordinal);
+    queue.src_buff = lzt::allocate_host_memory(buff_size, 1, context);
+    memset(queue.src_buff, 0, buff_size);
+    queue.dst_buff = lzt::allocate_host_memory(buff_size, 1, context);
+    memset(queue.dst_buff, 0, buff_size);
+    queue.data = i;
+    queues.push_back(queue);
+  }
+
+  // populate each command list with operations
+  for (auto queue : queues) {
+    lzt::append_memory_set(queue.cmdlist, queue.src_buff, &queue.data,
+                           buff_size);
+    lzt::append_memory_copy(queue.cmdlist, queue.dst_buff, queue.src_buff,
+                            buff_size);
+    lzt::close_command_list(queue.cmdlist);
+  }
+
+  // execute all
+  for (auto queue : queues) {
+    lzt::execute_command_lists(queue.cmdqueue, 1, &queue.cmdlist, nullptr);
+  }
+
+  // Wait for completion and verify
+  for (auto queue : queues) {
+    lzt::synchronize(queue.cmdqueue, UINT64_MAX);
+    for (size_t i = 0; i < buff_size; i++) {
+      ASSERT_EQ(queue.data, ((uint8_t *)queue.src_buff)[i]);
+    }
+    ASSERT_EQ(0, memcmp(queue.src_buff, queue.dst_buff, buff_size));
+  }
+
+  // cleanup
+  for (auto queue : queues) {
+    lzt::destroy_command_list(queue.cmdlist);
+    lzt::destroy_command_queue(queue.cmdqueue);
+    lzt::free_memory(queue.src_buff);
+    lzt::free_memory(queue.dst_buff);
+  }
+  lzt::destroy_context(context);
+}
+
 } // namespace
