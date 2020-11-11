@@ -23,27 +23,24 @@ public:
   ZeApp(std::string module_path);
   ~ZeApp();
 
+  bool canAccessPeer(uint32_t device_index_0, uint32_t device_index_1);
   void memoryAlloc(size_t size, void **ptr);
-  void memoryAlloc(ze_context_handle_t context, ze_device_handle_t device,
-                   size_t size, void **ptr);
+  void memoryAlloc(const uint32_t device_index, size_t size, void **ptr);
   void memoryAllocHost(size_t size, void **ptr);
-  void memoryAllocHost(ze_context_handle_t context, size_t size, void **ptr);
   void memoryFree(const void *ptr);
-  void memoryFree(ze_context_handle_t context, const void *ptr);
+
   void functionCreate(ze_kernel_handle_t *function, const char *pFunctionName);
-  void functionCreate(ze_module_handle_t module, ze_kernel_handle_t *function,
+  void functionCreate(const uint32_t device_index, ze_kernel_handle_t *function,
                       const char *pFunctionName);
   void functionDestroy(ze_kernel_handle_t function);
+
   void imageCreate(const ze_image_desc_t *imageDesc, ze_image_handle_t *image);
-  void imageCreate(ze_device_handle_t device, const ze_image_desc_t *imageDesc,
-                   ze_image_handle_t *image);
-  void imageCreate(ze_device_handle_t device, ze_image_handle_t *image,
-                   uint32_t width, uint32_t height, uint32_t depth);
   void imageCreate(ze_image_handle_t *image, uint32_t width, uint32_t height,
                    uint32_t depth);
   void imageDestroy(ze_image_handle_t image);
+
   void commandListCreate(ze_command_list_handle_t *phCommandList);
-  void commandListCreate(ze_device_handle_t device,
+  void commandListCreate(uint32_t device_index,
                          ze_command_list_handle_t *phCommandList);
   void commandListDestroy(ze_command_list_handle_t phCommandList);
   void commandListClose(ze_command_list_handle_t phCommandList);
@@ -81,7 +78,7 @@ public:
 
   void commandQueueCreate(const uint32_t command_queue_id,
                           ze_command_queue_handle_t *command_queue);
-  void commandQueueCreate(ze_device_handle_t device,
+  void commandQueueCreate(const uint32_t device_index,
                           const uint32_t command_queue_id,
                           ze_command_queue_handle_t *command_queue);
   void commandQueueDestroy(ze_command_queue_handle_t command_queue);
@@ -89,40 +86,44 @@ public:
                                       uint32_t numCommandLists,
                                       ze_command_list_handle_t *command_lists);
   void commandQueueSynchronize(ze_command_queue_handle_t command_queue);
-  void moduleCreate(ze_device_handle_t device, ze_module_handle_t *module);
-  void moduleDestroy(ze_module_handle_t module);
+
   ze_event_pool_handle_t create_event_pool(uint32_t count,
                                            ze_event_pool_flags_t flags);
-
   ze_event_pool_handle_t create_event_pool(ze_event_pool_desc_t desc);
-
   void destroy_event_pool(ze_event_pool_handle_t event_pool);
 
   void create_event(ze_event_pool_handle_t event_pool, ze_event_handle_t &event,
                     uint32_t index);
-
   void destroy_event(ze_event_handle_t event);
 
   void singleDeviceInit(void);
+  uint32_t allDevicesInit(void);
   void singleDeviceCleanup(void);
+  void allDevicesCleanup(void);
 
-  uint32_t driverCount(void);
-  void driverGet(uint32_t *driver_count, ze_driver_handle_t *driver);
-  void contextCreate(ze_driver_handle_t driver, ze_context_desc_t context_desc,
-                     ze_context_handle_t *context);
-  void contextDestroy(ze_context_handle_t context);
+  ze_context_handle_t context; // This is used directly by some perf_tests.
+
+private:
+  std::vector<ze_device_handle_t> _devices;
+  std::vector<ze_module_handle_t> _modules;
+  std::string _module_path;
+  std::vector<uint8_t> _binary_file;
+
+  std::vector<uint8_t> load_binary_file(const std::string &file_path);
+
+  void imageCreate(ze_device_handle_t device, const ze_image_desc_t *imageDesc,
+                   ze_image_handle_t *image);
+  void imageCreate(ze_device_handle_t device, ze_image_handle_t *image,
+                   uint32_t width, uint32_t height, uint32_t depth);
+
+  void moduleCreate(ze_device_handle_t device, ze_module_handle_t *module);
+  void moduleDestroy(ze_module_handle_t module);
+
+  void initCountDevices(const uint32_t count);
+  void cleanupDevices(void);
+
   void driverGetDevices(ze_driver_handle_t driver, uint32_t device_count,
                         ze_device_handle_t *devices);
   uint32_t deviceCount(ze_driver_handle_t driver);
-
-  ze_context_handle_t context;
-  ze_driver_handle_t driver;
-  ze_device_handle_t device;
-  ze_module_handle_t module;
-
-private:
-  std::string module_path;
-  std::vector<uint8_t> binary_file;
-  std::vector<uint8_t> load_binary_file(const std::string &file_path);
 };
 #endif /* _ZE_APP_HPP_*/

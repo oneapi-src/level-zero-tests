@@ -13,63 +13,56 @@
 #include "ze_peer.h"
 
 #include <assert.h>
+#include <stdlib.h>
 #include <iomanip>
 #include <iostream>
+#include <vector>
 
 class ZePeer {
 public:
   ZePeer() {
+
     benchmark = new ZeApp("ze_peer_benchmarks.spv");
 
-    driver_count = benchmark->driverCount();
-    assert(driver_count > 0);
+    uint32_t device_count = benchmark->allDevicesInit();
+    for (uint32_t i = 0;
+         (i < device_count - 1) && (device_environs.size() == 0); i++) {
+      for (uint32_t j = i + 1; j < device_count; j++) {
+        if (benchmark->canAccessPeer(i, j)) {
+          if (device_environs.size() == 0) {
+            device_environs.emplace_back(i);
+          }
+          device_environs.emplace_back(j);
+        }
+      }
+    }
 
-    /* Retrieve driver number 1 */
-    driver_count = 1;
-    benchmark->driverGet(&driver_count, &driver);
+    if (device_environs.size() == 0) {
+      std::cerr << "ERROR: there are no peer devices among " << device_count
+                << " devices found" << std::endl;
+      std::terminate();
+    }
 
-    /* Create a context for all resources*/
-    ze_context_desc_t context_desc = {};
-    context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
-    benchmark->contextCreate(driver, context_desc, &context);
+    std::cout << "running tests with " << device_environs.size()
+              << " peer devices out of " << device_count << " devices found"
+              << std::endl;
 
-    /* Obtain device count */
-    device_count = benchmark->deviceCount(driver);
-    devices = new std::vector<ze_device_handle_t>(device_count);
-
-    /* Retrieve array of devices in driver */
-    benchmark->driverGetDevices(driver, device_count, devices->data());
-
-    device_contexts = new std::vector<device_context_t>(device_count);
-
-    for (uint32_t i = 0; i < device_count; i++) {
-      ze_device_handle_t device;
-      ze_module_handle_t module;
-      ze_command_queue_handle_t command_queue;
-      device_context_t *device_context = &device_contexts->at(i);
-
-      device = devices->at(i);
-      benchmark->moduleCreate(device, &module);
-      benchmark->commandQueueCreate(device, 0 /* command_queue_id */,
-                                    &command_queue);
-      device_context->device = device;
-      device_context->module = module;
-      device_context->command_queue = command_queue;
-      benchmark->commandListCreate(device, &device_context->command_list);
+    for (uint32_t i = 0; i < device_environs.size(); i++) {
+      benchmark->commandQueueCreate(device_environs[i].device_index,
+                                    0 /* command queue group ordinal */,
+                                    &device_environs[i].command_queue);
+      benchmark->commandListCreate(device_environs[i].device_index,
+                                   &device_environs[i].command_list);
     }
   }
 
   ~ZePeer() {
-    for (uint32_t i = 0; i < device_count; i++) {
-      device_context_t *device_context = &device_contexts->at(i);
-      benchmark->moduleDestroy(device_context->module);
-      benchmark->commandQueueDestroy(device_context->command_queue);
-      benchmark->commandListDestroy(device_context->command_list);
+    for (uint32_t i = 0; i < device_environs.size(); i++) {
+      benchmark->commandQueueDestroy(device_environs[i].command_queue);
+      benchmark->commandListDestroy(device_environs[i].command_list);
     }
-    benchmark->contextDestroy(context);
+    benchmark->allDevicesCleanup();
     delete benchmark;
-    delete device_contexts;
-    delete devices;
   }
 
   void bandwidth(bool bidirectional, peer_transfer_t transfer_type);
@@ -77,14 +70,9 @@ public:
 
 private:
   ZeApp *benchmark;
-  ze_context_handle_t context;
-  ze_driver_handle_t driver;
-  uint32_t driver_count;
-  uint32_t device_count;
-  std::vector<device_context_t> *device_contexts;
-  std::vector<ze_device_handle_t> *devices;
+  std::vector<device_environ_t> device_environs;
 
-  void _copy_function_setup(ze_module_handle_t module,
+  void _copy_function_setup(const uint32_t device_index,
                             ze_kernel_handle_t &function,
                             const char *function_name, uint32_t globalSizeX,
                             uint32_t globalSizeY, uint32_t globalSizeZ,
@@ -93,7 +81,7 @@ private:
   void _copy_function_cleanup(ze_kernel_handle_t function);
 };
 
-void ZePeer::_copy_function_setup(ze_module_handle_t module,
+void ZePeer::_copy_function_setup(const uint32_t device_index,
                                   ze_kernel_handle_t &function,
                                   const char *function_name,
                                   uint32_t globalSizeX, uint32_t globalSizeY,
@@ -104,7 +92,7 @@ void ZePeer::_copy_function_setup(ze_module_handle_t module,
   group_size_y = 0;
   group_size_z = 0;
 
-  benchmark->functionCreate(module, &function, function_name);
+  benchmark->functionCreate(device_index, &function, function_name);
 
   SUCCESS_OR_TERMINATE(
       zeKernelSuggestGroupSize(function, globalSizeX, globalSizeY, globalSizeZ,
@@ -121,34 +109,32 @@ void ZePeer::bandwidth(bool bidirectional, peer_transfer_t transfer_type) {
   int number_iterations = 5;
   int warm_up_iterations = 5;
   int number_buffer_elements = 10000000;
-  std::vector<void *> buffers(device_count, nullptr);
+  std::vector<void *> buffers(device_environs.size(), nullptr);
   size_t element_size = sizeof(unsigned long int);
   size_t buffer_size = element_size * number_buffer_elements;
 
-  for (uint32_t i = 0; i < device_count; i++) {
-    device_context_t *device_context = &device_contexts->at(i);
-
-    benchmark->memoryAlloc(context, device_context->device, buffer_size,
+  for (uint32_t i = 0; i < device_environs.size(); i++) {
+    benchmark->memoryAlloc(device_environs[i].device_index, buffer_size,
                            &buffers[i]);
   }
 
-  for (uint32_t i = 0; i < device_count; i++) {
-    device_context_t *device_context_i = &device_contexts->at(i);
+  for (uint32_t i = 0; i < device_environs.size(); i++) {
     ze_kernel_handle_t function_a = nullptr;
     ze_kernel_handle_t function_b = nullptr;
     void *buffer_i = buffers.at(i);
-    ze_command_list_handle_t command_list_a = device_context_i->command_list;
-    ze_command_queue_handle_t command_queue_a = device_context_i->command_queue;
+    ze_command_list_handle_t command_list_a = device_environs[i].command_list;
+    ze_command_queue_handle_t command_queue_a =
+        device_environs[i].command_queue;
     ze_group_count_t thread_group_dimensions;
     uint32_t group_size_x;
     uint32_t group_size_y;
     uint32_t group_size_z;
 
-    _copy_function_setup(device_context_i->module, function_a,
+    _copy_function_setup(device_environs[i].device_index, function_a,
                          "single_copy_peer_to_peer", number_buffer_elements, 1,
                          1, group_size_x, group_size_y, group_size_z);
     if (bidirectional) {
-      _copy_function_setup(device_context_i->module, function_b,
+      _copy_function_setup(device_environs[i].device_index, function_b,
                            "single_copy_peer_to_peer", number_buffer_elements,
                            1, 1, group_size_x, group_size_y, group_size_z);
     }
@@ -158,7 +144,7 @@ void ZePeer::bandwidth(bool bidirectional, peer_transfer_t transfer_type) {
     thread_group_dimensions.groupCountY = 1;
     thread_group_dimensions.groupCountZ = 1;
 
-    for (uint32_t j = 0; j < device_count; j++) {
+    for (uint32_t j = 0; j < device_environs.size(); j++) {
       long double total_time_usec;
       long double total_time_s;
       long double total_data_transfer;
@@ -266,7 +252,7 @@ void ZePeer::bandwidth(bool bidirectional, peer_transfer_t transfer_type) {
   }
 
   for (void *buffer : buffers) {
-    benchmark->memoryFree(context, buffer);
+    benchmark->memoryFree(buffer);
   }
 }
 
@@ -274,34 +260,32 @@ void ZePeer::latency(bool bidirectional, peer_transfer_t transfer_type) {
   int number_iterations = 100;
   int warm_up_iterations = 5;
   int number_buffer_elements = 1;
-  std::vector<void *> buffers(device_count, nullptr);
+  std::vector<void *> buffers(device_environs.size(), nullptr);
   size_t element_size = sizeof(unsigned long int);
   size_t buffer_size = element_size * number_buffer_elements;
 
-  for (uint32_t i = 0; i < device_count; i++) {
-    device_context_t *device_context = &device_contexts->at(i);
-
-    benchmark->memoryAlloc(context, device_context->device, buffer_size,
+  for (uint32_t i = 0; i < device_environs.size(); i++) {
+    benchmark->memoryAlloc(device_environs[i].device_index, buffer_size,
                            &buffers[i]);
   }
 
-  for (uint32_t i = 0; i < device_count; i++) {
-    device_context_t *device_context_i = &device_contexts->at(i);
+  for (uint32_t i = 0; i < device_environs.size(); i++) {
     ze_kernel_handle_t function_a = nullptr;
     ze_kernel_handle_t function_b = nullptr;
     void *buffer_i = buffers.at(i);
-    ze_command_list_handle_t command_list_a = device_context_i->command_list;
-    ze_command_queue_handle_t command_queue_a = device_context_i->command_queue;
+    ze_command_list_handle_t command_list_a = device_environs[i].command_list;
+    ze_command_queue_handle_t command_queue_a =
+        device_environs[i].command_queue;
     ze_group_count_t thread_group_dimensions;
     uint32_t group_size_x;
     uint32_t group_size_y;
     uint32_t group_size_z;
 
-    _copy_function_setup(device_context_i->module, function_a,
+    _copy_function_setup(device_environs[i].device_index, function_a,
                          "single_copy_peer_to_peer", number_buffer_elements, 1,
                          1, group_size_x, group_size_y, group_size_z);
     if (bidirectional) {
-      _copy_function_setup(device_context_i->module, function_b,
+      _copy_function_setup(device_environs[i].device_index, function_b,
                            "single_copy_peer_to_peer", number_buffer_elements,
                            1, 1, group_size_x, group_size_y, group_size_z);
     }
@@ -311,7 +295,7 @@ void ZePeer::latency(bool bidirectional, peer_transfer_t transfer_type) {
     thread_group_dimensions.groupCountY = 1;
     thread_group_dimensions.groupCountZ = 1;
 
-    for (uint32_t j = 0; j < device_count; j++) {
+    for (uint32_t j = 0; j < device_environs.size(); j++) {
       long double total_time_usec;
       Timer<std::chrono::microseconds::period> timer;
       void *buffer_j = buffers.at(j);
@@ -408,7 +392,7 @@ void ZePeer::latency(bool bidirectional, peer_transfer_t transfer_type) {
   }
 
   for (void *buffer : buffers) {
-    benchmark->memoryFree(context, buffer);
+    benchmark->memoryFree(buffer);
   }
 }
 
@@ -427,15 +411,15 @@ int main(int argc, char **argv) {
   peer.bandwidth(true /* bidirectional */, PEER_NONE);
   std::cout << std::endl;
 
-  std::cout << "Unidirectional Bandwidth P2P Write" << std::endl;
+  std::cout << "Unidirectional Latency P2P Write" << std::endl;
   peer.latency(false /* unidirectional */, PEER_WRITE);
   std::cout << std::endl;
 
-  std::cout << "Unidirectional Bandwidth P2P Read" << std::endl;
+  std::cout << "Unidirectional Latency P2P Read" << std::endl;
   peer.latency(false /* unidirectional */, PEER_READ);
   std::cout << std::endl;
 
-  std::cout << "Bidirectional Bandwidth P2P Write" << std::endl;
+  std::cout << "Bidirectional Latency P2P Write" << std::endl;
   peer.latency(true /* bidirectional */, PEER_NONE);
   std::cout << std::endl;
 

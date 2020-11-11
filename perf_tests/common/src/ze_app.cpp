@@ -42,24 +42,18 @@ std::vector<uint8_t> ZeApp::load_binary_file(const std::string &file_path) {
 
 ZeApp::ZeApp(void) {
   context = nullptr;
-  device = nullptr;
-  module = nullptr;
-  driver = nullptr;
-  this->module_path = "";
+  _module_path = "";
 
   SUCCESS_OR_TERMINATE(zeInit(0));
 }
 
 ZeApp::ZeApp(std::string module_path) {
   context = nullptr;
-  device = nullptr;
-  module = nullptr;
-  driver = nullptr;
-  this->module_path = module_path;
+  _module_path = module_path;
 
   SUCCESS_OR_TERMINATE(zeInit(0));
 
-  binary_file = load_binary_file(this->module_path);
+  _binary_file = load_binary_file(_module_path);
   std::cout << std::endl;
 }
 
@@ -70,12 +64,12 @@ void ZeApp::moduleCreate(ze_device_handle_t device,
 
   module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
-  module_description.inputSize = binary_file.size();
-  module_description.pInputModule = binary_file.data();
+  module_description.inputSize = _binary_file.size();
+  module_description.pInputModule = _binary_file.data();
   module_description.pBuildFlags = nullptr;
 
-  SUCCESS_OR_TERMINATE(zeModuleCreate(this->context, device,
-                                      &module_description, module, nullptr));
+  SUCCESS_OR_TERMINATE(
+      zeModuleCreate(context, device, &module_description, module, nullptr));
 }
 
 void ZeApp::moduleDestroy(ze_module_handle_t module) {
@@ -84,56 +78,55 @@ void ZeApp::moduleDestroy(ze_module_handle_t module) {
 
 ZeApp::~ZeApp(void) {}
 
-void ZeApp::memoryAlloc(size_t size, void **ptr) {
-  assert(this->device != nullptr);
-  assert(this->driver != nullptr);
-  assert(this->context != nullptr);
-  memoryAlloc(this->context, this->device, size, ptr);
+bool ZeApp::canAccessPeer(uint32_t device_index_0, uint32_t device_index_1) {
+  ze_bool_t canAccess = false;
+
+  assert(device_index_0 < _devices.size());
+  assert(device_index_1 < _devices.size());
+
+  SUCCESS_OR_TERMINATE(zeDeviceCanAccessPeer(
+      _devices[device_index_0], _devices[device_index_1], &canAccess));
+  return canAccess;
 }
 
-void ZeApp::memoryAlloc(ze_context_handle_t context, ze_device_handle_t device,
-                        size_t size, void **ptr) {
+void ZeApp::memoryAlloc(size_t size, void **ptr) {
+  assert(_devices.size() != 0);
+  assert(context != nullptr);
+  memoryAlloc(0, size, ptr);
+}
+
+void ZeApp::memoryAlloc(const uint32_t device_index, size_t size, void **ptr) {
+
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
-
   device_desc.pNext = nullptr;
   device_desc.ordinal = 0;
   device_desc.flags = 0;
-  SUCCESS_OR_TERMINATE(
-      zeMemAllocDevice(context, &device_desc, size, 1, device, ptr));
+
+  SUCCESS_OR_TERMINATE(zeMemAllocDevice(context, &device_desc, size, 1,
+                                        _devices[device_index], ptr));
 }
 
 void ZeApp::memoryAllocHost(size_t size, void **ptr) {
-  assert(this->driver != nullptr);
-  memoryAllocHost(this->context, size, ptr);
-}
 
-void ZeApp::memoryAllocHost(ze_context_handle_t context, size_t size,
-                            void **ptr) {
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
-
   host_desc.pNext = nullptr;
   host_desc.flags = 0;
+
   SUCCESS_OR_TERMINATE(zeMemAllocHost(context, &host_desc, size, 1, ptr));
 }
 
 void ZeApp::memoryFree(const void *ptr) {
-  assert(this->driver != nullptr);
-  SUCCESS_OR_TERMINATE(zeMemFree(this->context, const_cast<void *>(ptr)));
-}
-
-void ZeApp::memoryFree(ze_context_handle_t context, const void *ptr) {
   SUCCESS_OR_TERMINATE(zeMemFree(context, const_cast<void *>(ptr)));
 }
 
 void ZeApp::functionCreate(ze_kernel_handle_t *function,
                            const char *pFunctionName) {
-  assert(this->module != nullptr);
-  functionCreate(module, function, pFunctionName);
+  functionCreate(0, function, pFunctionName);
 }
 
-void ZeApp::functionCreate(ze_module_handle_t module,
+void ZeApp::functionCreate(const uint32_t device_index,
                            ze_kernel_handle_t *function,
                            const char *pFunctionName) {
   ze_kernel_desc_t function_description = {};
@@ -143,7 +136,8 @@ void ZeApp::functionCreate(ze_module_handle_t module,
   function_description.flags = 0;
   function_description.pKernelName = pFunctionName;
 
-  SUCCESS_OR_TERMINATE(zeKernelCreate(module, &function_description, function));
+  SUCCESS_OR_TERMINATE(
+      zeKernelCreate(_modules[device_index], &function_description, function));
 }
 
 void ZeApp::functionDestroy(ze_kernel_handle_t function) {
@@ -152,14 +146,14 @@ void ZeApp::functionDestroy(ze_kernel_handle_t function) {
 
 void ZeApp::imageCreate(const ze_image_desc_t *imageDesc,
                         ze_image_handle_t *image) {
-  assert(this->device != nullptr);
-  imageCreate(this->device, imageDesc, image);
+  assert(_devices.size() != 0);
+  imageCreate(_devices[0], imageDesc, image);
 }
 
 void ZeApp::imageCreate(ze_device_handle_t device,
                         const ze_image_desc_t *imageDesc,
                         ze_image_handle_t *image) {
-  SUCCESS_OR_TERMINATE(zeImageCreate(this->context, device, imageDesc, image));
+  SUCCESS_OR_TERMINATE(zeImageCreate(context, device, imageDesc, image));
 }
 
 void ZeApp::imageCreate(ze_device_handle_t device, ze_image_handle_t *image,
@@ -186,8 +180,8 @@ void ZeApp::imageCreate(ze_device_handle_t device, ze_image_handle_t *image,
 
 void ZeApp::imageCreate(ze_image_handle_t *image, uint32_t width,
                         uint32_t height, uint32_t depth) {
-  assert(this->device != nullptr);
-  imageCreate(this->device, image, width, height, depth);
+  assert(_devices.size() != 0);
+  imageCreate(_devices[0], image, width, height, depth);
 }
 
 void ZeApp::imageDestroy(ze_image_handle_t image) {
@@ -195,18 +189,19 @@ void ZeApp::imageDestroy(ze_image_handle_t image) {
 }
 
 void ZeApp::commandListCreate(ze_command_list_handle_t *phCommandList) {
-  assert(this->device != nullptr);
-  commandListCreate(this->device, phCommandList);
+  assert(_devices.size() != 0);
+  commandListCreate(0, phCommandList);
 }
 
-void ZeApp::commandListCreate(ze_device_handle_t device,
+void ZeApp::commandListCreate(uint32_t device_index,
                               ze_command_list_handle_t *phCommandList) {
   ze_command_list_desc_t command_list_description{};
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
 
-  SUCCESS_OR_TERMINATE(zeCommandListCreate(
-      this->context, device, &command_list_description, phCommandList));
+  SUCCESS_OR_TERMINATE(zeCommandListCreate(context, _devices[device_index],
+                                           &command_list_description,
+                                           phCommandList));
 }
 
 void ZeApp::commandListDestroy(ze_command_list_handle_t command_list) {
@@ -296,21 +291,22 @@ void ZeApp::hostSynchronize(ze_event_handle_t hEvent) {
 
 void ZeApp::commandQueueCreate(const uint32_t command_queue_id,
                                ze_command_queue_handle_t *command_queue) {
-  assert(this->device != nullptr);
-  commandQueueCreate(device, command_queue_id, command_queue);
+  assert(_devices.size() != 0);
+  commandQueueCreate(0, command_queue_id, command_queue);
 }
 
-void ZeApp::commandQueueCreate(ze_device_handle_t device,
-                               const uint32_t command_queue_id,
+void ZeApp::commandQueueCreate(const uint32_t device_index,
+                               const uint32_t command_queue_group_ordinal,
                                ze_command_queue_handle_t *command_queue) {
   ze_command_queue_desc_t command_queue_description{};
   command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
   command_queue_description.pNext = nullptr;
-  command_queue_description.ordinal = command_queue_id;
+  command_queue_description.ordinal = command_queue_group_ordinal;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
-  SUCCESS_OR_TERMINATE(zeCommandQueueCreate(
-      this->context, device, &command_queue_description, command_queue));
+  SUCCESS_OR_TERMINATE(zeCommandQueueCreate(context, _devices[device_index],
+                                            &command_queue_description,
+                                            command_queue));
 }
 
 void ZeApp::commandQueueDestroy(ze_command_queue_handle_t command_queue) {
@@ -340,7 +336,7 @@ ze_event_pool_handle_t ZeApp::create_event_pool(ze_event_pool_desc_t desc) {
   ze_event_pool_handle_t event_pool;
 
   SUCCESS_OR_TERMINATE(
-      zeEventPoolCreate(this->context, &desc, 1, &this->device, &event_pool));
+      zeEventPoolCreate(context, &desc, 1, &_devices[0], &event_pool));
 
   return event_pool;
 }
@@ -364,7 +360,6 @@ void ZeApp::create_event(ze_event_pool_handle_t event_pool,
 }
 
 void ZeApp::destroy_event(ze_event_handle_t event) {
-
   SUCCESS_OR_TERMINATE(zeEventDestroy(event));
 }
 
@@ -372,62 +367,60 @@ void ZeApp::commandQueueSynchronize(ze_command_queue_handle_t command_queue) {
   SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(command_queue, UINT64_MAX));
 }
 
-void ZeApp::singleDeviceInit(void) {
-  uint32_t driver_count = driverCount();
-  assert(driver_count > 0);
-
-  driver_count = 1;
-  driverGet(&driver_count, &driver);
-
-  ze_context_desc_t context_desc = {};
-  context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
-  contextCreate(driver, context_desc, &context);
-
-  uint32_t device_count = deviceCount(driver);
-  assert(device_count > 0);
-  device_count = 1;
-  driverGetDevices(driver, device_count, &device);
-
-  /*  if module paths string size is not 0 then only call modulecreate */
-  if (this->module_path.size() != 0)
-    moduleCreate(device, &module);
-}
-
-void ZeApp::singleDeviceCleanup(void) {
-
-  /*  if module pathsstring size is not 0 then only call moduledestory */
-  if (this->module_path.size() != 0)
-    moduleDestroy(module);
-
-  zeContextDestroy(context);
-}
-
-uint32_t ZeApp::driverCount(void) {
+void ZeApp::initCountDevices(const uint32_t count) {
   uint32_t driver_count = 0;
 
   SUCCESS_OR_TERMINATE(zeDriverGet(&driver_count, nullptr));
-
   if (driver_count == 0) {
-    std::cerr << "ERROR: zero devices were found" << std::endl;
+    std::cerr << "ERROR: zero drivers were found" << std::endl;
     std::terminate();
   }
 
-  return driver_count;
+  driver_count = 1;
+  ze_driver_handle_t driver;
+  SUCCESS_OR_TERMINATE(zeDriverGet(&driver_count, &driver));
+
+  ze_context_desc_t context_desc = {};
+  context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+  SUCCESS_OR_TERMINATE(zeContextCreate(driver, &context_desc, &context));
+
+  uint32_t device_count = deviceCount(driver);
+  assert(device_count > 0);
+  if (count != 0)
+    device_count = std::min(count, device_count);
+
+  _devices.resize(device_count);
+
+  driverGetDevices(driver, device_count, _devices.data());
+
+  if (_module_path.size() != 0) {
+    _modules.resize(device_count);
+    for (int i = 0; i < device_count; i++) {
+      moduleCreate(_devices[i], &_modules[i]);
+    }
+  }
 }
 
-/* Retrieve "driver_count" */
-void ZeApp::driverGet(uint32_t *driver_count, ze_driver_handle_t *driver) {
-  SUCCESS_OR_TERMINATE(zeDriverGet(driver_count, driver));
+void ZeApp::singleDeviceInit(void) { initCountDevices(1); }
+
+uint32_t ZeApp::allDevicesInit(void) {
+  initCountDevices(0);
+  return _devices.size();
 }
 
-void ZeApp::contextCreate(ze_driver_handle_t driver,
-                          ze_context_desc_t context_desc,
-                          ze_context_handle_t *context) {
-  zeContextCreate(driver, &context_desc, context);
+void ZeApp::cleanupDevices(void) {
+  if (_module_path.size() != 0) {
+    for (int i = 0; i < _devices.size(); i++) {
+      moduleDestroy(_modules[i]);
+    }
+  }
+
+  zeContextDestroy(this->context);
 }
-void ZeApp::contextDestroy(ze_context_handle_t context) {
-  zeContextDestroy(context);
-}
+
+void ZeApp::singleDeviceCleanup(void) { cleanupDevices(); }
+
+void ZeApp::allDevicesCleanup(void) { cleanupDevices(); }
 
 /* Retrieve array of devices in driver */
 void ZeApp::driverGetDevices(ze_driver_handle_t driver, uint32_t device_count,
