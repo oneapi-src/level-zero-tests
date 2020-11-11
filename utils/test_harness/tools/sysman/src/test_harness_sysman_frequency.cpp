@@ -99,33 +99,23 @@ std::vector<double> get_available_clocks(zes_freq_handle_t pFreqHandle,
 
 void validate_freq_state(zes_freq_handle_t pFreqHandle,
                          zes_freq_state_t pState) {
-  zes_freq_range_t pLimits = get_and_validate_freq_range(pFreqHandle);
-  zes_freq_properties_t pProperty = get_freq_properties(pFreqHandle);
   if (pState.actual > 0) {
-    EXPECT_GE(pState.actual, pProperty.min);
-    EXPECT_LE(pState.actual, pProperty.max);
-    EXPECT_LE(pState.actual, pLimits.max);
+    EXPECT_LT(pState.actual, DBL_MAX);
   } else {
     LOG_INFO << "Actual frequency is unknown";
   }
   if (pState.request > 0) {
-    EXPECT_GE(pState.request, pProperty.min);
-    EXPECT_LE(pState.request, std::numeric_limits<std::uint32_t>::max());
+    EXPECT_LT(pState.request, DBL_MAX);
   } else {
     LOG_INFO << "Requested frequency is unknown";
   }
   if (pState.efficient > 0) {
-    EXPECT_GE(pState.efficient, pProperty.min);
-    EXPECT_LE(pState.efficient, pProperty.max);
+    EXPECT_LT(pState.efficient, DBL_MAX);
   } else {
     LOG_INFO << "Efficient frequency is unknown";
   }
   if (pState.tdp > 0) {
-    if (pState.throttleReasons == 0) {
-      EXPECT_EQ(pState.tdp, pProperty.max);
-    } else {
-      EXPECT_LT(pState.tdp, pProperty.max);
-    }
+    EXPECT_LT(pState.tdp, DBL_MAX);
   } else {
     LOG_INFO << "TDP frequency is unknown";
   }
