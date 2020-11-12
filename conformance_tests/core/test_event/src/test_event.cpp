@@ -404,7 +404,7 @@ static void
 multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
   ze_event_pool_desc_t ep_desc = {};
   ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-  ep_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+  ep_desc.flags = 0;
   ep_desc.count = 10;
   ze_context_handle_t context = lzt::create_context();
   auto ep = lzt::create_event_pool(context, ep_desc, devices);
@@ -442,6 +442,61 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
         context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
+    // lzt::append_wait_on_events(cmdlist, 1, &event);
+    lzt::close_command_list(cmdlist);
+    lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+    lzt::synchronize(cmdqueue, UINT64_MAX);
+
+    // cleanup
+    lzt::destroy_command_list(cmdlist);
+    lzt::destroy_command_queue(cmdqueue);
+  }
+
+  lzt::destroy_event(event);
+  event = lzt::create_event(ep, event_desc);
+
+  // dev0 signals at kernel completion
+  {
+    auto cmdlist = lzt::create_command_list(context, devices[0], 0);
+    auto cmdqueue = lzt::create_command_queue(
+        context, devices[0], 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+    size_t size = 10000;
+    size_t buff_size = size * sizeof(int);
+    auto src_buffer = lzt::allocate_host_memory(buff_size, 1, context);
+    auto dst_buffer = lzt::allocate_host_memory(buff_size, 1, context);
+    const int addval = 0x11223344;
+    memset(src_buffer, 0, buff_size);
+    auto module =
+        lzt::create_module(context, devices[0], "profile_add.spv",
+                           ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+    auto kernel = lzt::create_function(module, "profile_add_constant");
+    lzt::set_group_size(kernel, 1, 1, 1);
+    ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+    lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
+    lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
+    lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
+    lzt::append_launch_function(cmdlist, kernel, &args, event, 0, nullptr);
+    lzt::close_command_list(cmdlist);
+    lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+    lzt::synchronize(cmdqueue, UINT64_MAX);
+
+    // cleanup
+    lzt::destroy_command_list(cmdlist);
+    lzt::destroy_command_queue(cmdqueue);
+    lzt::destroy_module(module);
+    lzt::destroy_function(kernel);
+    lzt::free_memory(src_buffer);
+    lzt::free_memory(dst_buffer);
+  }
+
+  // all devices can read it.
+  for (auto device : devices) {
+    auto cmdlist = lzt::create_command_list(context, device, 0);
+    auto cmdqueue = lzt::create_command_queue(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+
     lzt::append_wait_on_events(cmdlist, 1, &event);
     lzt::close_command_list(cmdlist);
     lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
@@ -461,22 +516,27 @@ TEST(MultiDeviceEventTests,
      GivenMultipleDeviceEventPoolwhenSignalledFromOneDeviceThenAllDevicesRead) {
   auto devices = lzt::get_ze_devices();
   if (devices.size() < 2) {
-    LOG_INFO << "Less than two devices, skipping test";
+    LOG_WARNING << "Less than two devices, skipping test";
+  } else {
+    multi_device_event_signal_read(devices);
   }
-  multi_device_event_signal_read(devices);
 }
 
 TEST(
     MultiDeviceEventTests,
     GivenMultipleSubDevicesEventPoolwhenSignalledFromOneSubDeviceThenAllSubDevicesRead) {
   auto devices = lzt::get_ze_devices();
+  bool test_run = false;
   for (auto device : devices) {
     auto sub_devices = lzt::get_ze_sub_devices(device);
     if (sub_devices.size() < 2) {
       continue;
     }
+    test_run = true;
     multi_device_event_signal_read(sub_devices);
   }
+  if (!test_run)
+    LOG_WARNING << "Less than two sub devices, skipping test";
 }
 
 } // namespace
