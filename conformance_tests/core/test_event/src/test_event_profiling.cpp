@@ -230,8 +230,9 @@ TEST_P(EventProfilingCacheCoherencyTests,
 
 INSTANTIATE_TEST_CASE_P(CacheCoherencyTimeStampEventVsRegularEvent,
                         EventProfilingCacheCoherencyTests,
-                        ::testing::Values(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
-                                          0));
+                        ::testing::Values(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP |
+                                              ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
+                                          ZE_EVENT_POOL_FLAG_HOST_VISIBLE));
 
 class KernelEventProfilingCacheCoherencyTests : public ::testing::Test {};
 

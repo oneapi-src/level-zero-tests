@@ -160,7 +160,7 @@ protected:
     ze_event_handle_t event = nullptr;
     ze_event_pool_desc_t event_pool_desc = {};
     event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-    event_pool_desc.flags = 0;
+    event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
     event_pool_desc.count = 1;
     ze_event_desc_t event_desc = {};
     event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
