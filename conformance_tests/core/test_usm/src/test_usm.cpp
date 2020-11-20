@@ -585,11 +585,20 @@ TEST_P(
     zeConcurrentAccessToMemoryTests,
     GivenSharedMemoryDividedIntoTwoChunksWhenBothHostAndDeviceAccessAChunkConcurrentlyThenSuccessIsReturned) {
 
+  ze_device_handle_t device =
+      lzt::get_default_device(lzt::get_default_driver());
+
+  auto device_mem_access_props = lzt::get_memory_access_properties(device);
+  if ((device_mem_access_props.sharedSingleDeviceAllocCapabilities &
+       ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT) == 0) {
+    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
+                   "device, skipping test";
+    return;
+  }
+
   size_t size_shared_memory = GetParam();
   size_t size_of_chunk = size_shared_memory / 2;
   ze_context_handle_t context = lzt::create_context();
-  ze_device_handle_t device =
-      lzt::get_default_device(lzt::get_default_driver());
   auto memory_shared =
       lzt::allocate_shared_memory(size_shared_memory, 1, 0, 0, device, context);
 
