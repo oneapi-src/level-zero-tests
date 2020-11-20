@@ -108,6 +108,18 @@ TEST(
 }
 
 TEST(
+    zeDeviceGetExternalMemoryPropertiesTests,
+    GivenValidDeviceWhenRetrievingExternalMemoryPropertiesThenValidPropertiesAreReturned) {
+
+  auto devices = lzt::get_ze_devices();
+  ASSERT_GT(devices.size(), 0);
+
+  for (auto device : devices) {
+    lzt::get_external_memory_properties(device);
+  }
+}
+
+TEST(
     zeDeviceGetMemoryAccessTests,
     GivenValidDeviceWhenRetrievingMemoryAccessPropertiesThenValidPropertiesReturned) {
   auto devices = lzt::get_ze_devices();
