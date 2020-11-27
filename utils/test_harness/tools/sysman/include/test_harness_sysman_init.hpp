@@ -11,13 +11,19 @@
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
+#include "logging/logging.hpp"
 
 namespace level_zero_tests {
 class SysmanCtsClass : public ::testing::Test {
 public:
   std::vector<ze_device_handle_t> devices;
 
-  SysmanCtsClass() { devices = get_ze_devices(); }
+  SysmanCtsClass() {
+    devices = get_ze_devices();
+    if (devices.size() == 0) {
+      LOG_INFO << "No device found";
+    }
+  }
   ~SysmanCtsClass() {}
 };
 

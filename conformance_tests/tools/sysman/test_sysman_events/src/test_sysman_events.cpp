@@ -37,6 +37,10 @@ TEST_F(
   for (auto device : devices) {
     uint32_t numTempSensors = 0;
     auto tempHandles = lzt::get_temp_handles(device, numTempSensors);
+    if (numTempSensors == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
     for (auto tempHandle : tempHandles) {
       auto tempProperties = lzt::get_temp_properties(tempHandle);
       auto tempConfig = lzt::get_temp_config(tempHandle);
@@ -226,6 +230,10 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto powerHandles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
     for (auto powerHandle : powerHandles) {
       auto energyThreshold = lzt::get_power_energy_threshold(powerHandle);
       // Aim to receive event for energy threshold after setting energy
@@ -328,6 +336,10 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto rasHandles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
     for (auto rasHandle : rasHandles) {
       auto props = lzt::get_ras_properties(rasHandle);
       auto config = lzt::get_ras_config(rasHandle);
