@@ -24,7 +24,12 @@ TEST_F(
     MemoryModuleTest,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
-    lzt::get_mem_handle_count(device);
+    uint32_t count = 0;
+    auto memHandles = lzt::get_mem_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
   }
 }
 
