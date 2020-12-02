@@ -42,7 +42,7 @@ cmake -D CMAKE_INSTALL_PREFIX=$PWD/../out ..
 cmake --build . --config Release --target install
 ```
 
-### Building a subset of the test executables
+### Building a Subset of the Test Executables
 
 Test executables are divided into a group hierarchy, and it is possible to
 select a specific grouping of test executables for build using the `GROUP`
@@ -72,7 +72,7 @@ cmake --build . --config Release --target install
 The group that any particular test executable belongs to can be seen by looking
 in its `CMakeLists.txt` file at the `add_lzt_test()` call.
 
-### Building zesysman 
+### Building Zesysman
 
 `zesysman` is an optional component that can be built by setting the `ENABLE_ZESYSMAN` 
 cmake flag to `yes`. Building zesysman requires the following additional dependencies
