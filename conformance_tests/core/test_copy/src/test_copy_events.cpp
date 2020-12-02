@@ -6,6 +6,9 @@
  *
  */
 
+#include <chrono>
+#include <thread>
+
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
@@ -137,7 +140,50 @@ TEST_F(
 
 TEST_F(
     zeCommandListEventTests,
+    GivenMemoryCopiesWithDependenciesWhenExecutingCommandListThenCommandsCompletesSuccessfully) {
+  auto src_buffer = lzt::allocate_shared_memory(size);
+  auto temp_buffer = lzt::allocate_shared_memory(size);
+  auto dst_buffer = lzt::allocate_shared_memory(size);
+  memset(src_buffer, 0x1, size);
+  memset(temp_buffer, 0xFF, size);
+  memset(dst_buffer, 0x0, size);
+  ze_event_handle_t hEvent1;
+  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+  // Verify Host Reads Event as unset
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+
+  // Execute and verify GPU reads event
+  lzt::append_memory_copy(cmdlist, temp_buffer, src_buffer, size, hEvent, 0,
+                          nullptr);
+  lzt::append_memory_copy(cmdlist, dst_buffer, temp_buffer, size, nullptr, 1,
+                          &hEvent1);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+
+  // Verify Copy Waits for Signal
+  lzt::event_host_synchronize(hEvent, UINT64_MAX);
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
+  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
+
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  // Verify Memory Copy completed
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+
+  lzt::free_memory(src_buffer);
+  lzt::free_memory(temp_buffer);
+  lzt::free_memory(dst_buffer);
+  lzt::destroy_event(hEvent1);
+}
+TEST_F(
+    zeCommandListEventTests,
     GivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  // This test is similar to the previous except that there is an
+  // added delay to specifically test the wait functionality
+
   auto src_buffer = lzt::allocate_shared_memory(size);
   auto dst_buffer = lzt::allocate_shared_memory(size);
   memset(src_buffer, 0x1, size);
@@ -153,6 +199,9 @@ TEST_F(
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
   // Verify Copy Waits for Signal
+  // This sleep simulates work (e.g. file i/o) on the host that would cause
+  // with a high probability the device to have to wait
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
   EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
@@ -168,7 +217,49 @@ TEST_F(
 
 TEST_F(
     zeCommandListEventTests,
+    GivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListThenCommandCompletesSuccessfully) {
+  auto ref_buffer = lzt::allocate_shared_memory(size);
+  auto dst_buffer = lzt::allocate_shared_memory(size);
+  memset(ref_buffer, 0x1, size);
+  const uint8_t zero = 0;
+  const uint8_t one = 1;
+
+  ze_event_handle_t hEvent1;
+  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+  // Verify Host Reads Event as unset
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+
+  // Execute and verify GPU reads event
+  lzt::append_memory_fill(cmdlist, dst_buffer, &zero, sizeof(zero), size,
+                          hEvent, 0, nullptr);
+  lzt::append_memory_fill(cmdlist, dst_buffer, &one, sizeof(one), size, nullptr,
+                          1, &hEvent1);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+
+  lzt::event_host_synchronize(hEvent, UINT64_MAX);
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
+  // Verify Device waits for Signal
+  EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, size));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
+
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  // Verify Memory Fill completed
+  EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, size));
+
+  lzt::free_memory(ref_buffer);
+  lzt::free_memory(dst_buffer);
+  lzt::destroy_event(hEvent1);
+}
+TEST_F(
+    zeCommandListEventTests,
     GivenMemoryFillThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  // This test is similar to the previous except that there is an
+  // added delay to specifically test the wait functionality
+
   auto ref_buffer = lzt::allocate_shared_memory(size);
   auto dst_buffer = lzt::allocate_shared_memory(size);
   memset(ref_buffer, 0x1, size);
@@ -184,7 +275,10 @@ TEST_F(
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
-  // Verify Device Waits For Event
+  // Verify Device waits for Signal
+  // This sleep simulates work (e.g. file i/o) on the host that would cause
+  // with a high probability the device to have to wait
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
   EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, size));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
@@ -200,7 +294,56 @@ TEST_F(
 
 TEST_F(
     zeCommandListEventTests,
+    GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully) {
+  uint32_t width = 16;
+  uint32_t height = 16;
+  size = height * width;
+  auto src_buffer = lzt::allocate_shared_memory(size);
+  auto temp_buffer = lzt::allocate_shared_memory(size);
+  auto dst_buffer = lzt::allocate_shared_memory(size);
+  memset(src_buffer, 0x1, size);
+  memset(temp_buffer, 0xFF, size);
+  memset(dst_buffer, 0x0, size);
+  ze_event_handle_t hEvent1;
+  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+  // Verify Host Reads Event as unset
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+
+  // Execute and verify Device reads event
+  ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
+  ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
+  lzt::append_memory_copy_region(cmdlist, temp_buffer, &dr, width, 0,
+                                 src_buffer, &sr, width, 0, hEvent, 0, nullptr);
+  lzt::append_memory_copy_region(cmdlist, dst_buffer, &dr, width, 0,
+                                 temp_buffer, &sr, width, 0, nullptr, 1,
+                                 &hEvent1);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+
+  // Verify Copy Waits for Signal
+  lzt::event_host_synchronize(hEvent, UINT64_MAX);
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
+  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
+
+  // Signal Event On Host
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  // Verify Memory Set completed
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+
+  lzt::free_memory(src_buffer);
+  lzt::free_memory(temp_buffer);
+  lzt::free_memory(dst_buffer);
+  lzt::destroy_event(hEvent1);
+}
+TEST_F(
+    zeCommandListEventTests,
     GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  // This test is similar to the previous except that there is an
+  // added delay to specifically test the wait functionality
+
   uint32_t width = 16;
   uint32_t height = 16;
   size = height * width;
@@ -220,7 +363,10 @@ TEST_F(
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
 
-  // Verify Memory Set Waits
+  // Verify Copy Waits for Signal
+  // This sleep simulates work (e.g. file i/o) on the host that would cause
+  // with a high probability the device to have to wait
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
   EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
 
   // Signal Event On Host
@@ -376,10 +522,97 @@ TEST_F(
   lzt::destroy_ze_image(output_xeimage);
 }
 
-// Other Test Variants:
-// ImageCopy
-// ImageCopyRegion
-// ImageCopyToMemory
-// ImageCopyFromMemory
+TEST(
+    zeCommandListCopyEventTest,
+    GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfully) {
+  const size_t size = 1024;
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto devices = lzt::get_devices(driver);
+
+  ASSERT_GT(devices.size(), 0);
+  bool test_run = false;
+  for (auto &device : devices) {
+    auto command_queue_groups = lzt::get_command_queue_group_properties(device);
+
+    // we want to test copies with differing engines
+    std::vector<int> copy_ordinals;
+    for (int i = 0; i < command_queue_groups.size(); i++) {
+      if (command_queue_groups[i].flags &
+          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) {
+        copy_ordinals.push_back(i);
+      }
+    }
+
+    if (copy_ordinals.size() < 2) {
+      continue;
+    }
+    test_run = true;
+
+    auto command_queue_0 = lzt::create_command_queue(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, copy_ordinals[0]);
+    auto command_queue_1 = lzt::create_command_queue(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, copy_ordinals[1]);
+
+    auto command_list_0 =
+        lzt::create_command_list(context, device, 0, copy_ordinals[0]);
+    auto command_list_1 =
+        lzt::create_command_list(context, device, 0, copy_ordinals[1]);
+
+    ze_event_pool_desc_t event_pool_desc = {};
+    event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    event_pool_desc.flags = 0;
+    event_pool_desc.count = 1;
+    auto event_pool = lzt::create_event_pool(context, event_pool_desc);
+    ze_event_desc_t event_desc = {};
+    event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    event_desc.index = 0;
+    auto event = lzt::create_event(event_pool, event_desc);
+
+    auto src_buffer =
+        lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+    auto temp_buffer =
+        lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+    auto dst_buffer =
+        lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+    memset(src_buffer, 0x1, size);
+    memset(temp_buffer, 0xFF, size);
+    memset(dst_buffer, 0x0, size);
+
+    // Execute and verify GPU reads event
+    lzt::append_memory_copy(command_list_0, temp_buffer, src_buffer, size,
+                            event, 0, nullptr);
+    lzt::append_memory_copy(command_list_1, dst_buffer, temp_buffer, size,
+                            nullptr, 1, &event);
+    lzt::close_command_list(command_list_0);
+    lzt::close_command_list(command_list_1);
+
+    lzt::execute_command_lists(command_queue_1, 1, &command_list_1, nullptr);
+    lzt::execute_command_lists(command_queue_0, 1, &command_list_0, nullptr);
+
+    lzt::synchronize(command_queue_0, UINT64_MAX);
+    lzt::synchronize(command_queue_1, UINT64_MAX);
+
+    // Verify Memory Copy completed
+    EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+
+    lzt::free_memory(context, src_buffer);
+    lzt::free_memory(context, temp_buffer);
+    lzt::free_memory(context, dst_buffer);
+    lzt::destroy_event(event);
+    lzt::destroy_event_pool(event_pool);
+    lzt::destroy_command_list(command_list_0);
+    lzt::destroy_command_queue(command_queue_0);
+    lzt::destroy_command_list(command_list_1);
+    lzt::destroy_command_queue(command_queue_1);
+  }
+  lzt::destroy_context(context);
+
+  if (!test_run) {
+    LOG_WARNING << "Less than 2 engines that support copy, test not run";
+  }
+}
 
 } // namespace
