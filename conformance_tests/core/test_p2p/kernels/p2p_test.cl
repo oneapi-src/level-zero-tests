@@ -6,7 +6,7 @@
  *
  */
 
-kernel void multi_device_function(global int *data) {
+kernel void multi_device_function(global char *data) {
   const int tid = get_global_id(0);
   data[tid]++;
 }
