@@ -28,3 +28,8 @@ For this there is one test case.
 ### zetSysmanFabricPortGetThroughput
 For this there is one test case.
 * GivenValidFabricPortHandleWhenGettingPortThroughputThenValidThroughputAreReturned :- Test case checks whether throughput API is retuning success and throughput returned are valid values and not some garbage out of bound value.
+
+### zetSysmanFabricPortGetLinkType
+For this API there are two test cases.
+* GivenValidFabricPortHandleWhenGettingPortLinkThenSuccessIsReturned :- Test case checks whether linktype API is retuning success and linktype returned are valid values and not some garbage out of bound value.
+* GivenValidFabricPortHandleWhenGettingPortLinkTwiceThenSameValueIsReturnedTwice :- Test checks whether linktype API returns consistent values by retrieving fabricPort linktype twice and comparing them.
