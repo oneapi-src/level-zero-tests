@@ -8,6 +8,7 @@ add_lzt_test(
     src/test_image.cpp
     src/test_image_formats.cpp
     src/test_image_layout.cpp
+    src/test_image_swizzle.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
@@ -15,4 +16,5 @@ add_lzt_test(
   KERNELS
     image_formats_tests
     image_media_layouts_tests
+    image_swizzle_tests
 )
