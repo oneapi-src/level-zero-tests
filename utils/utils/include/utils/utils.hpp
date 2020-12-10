@@ -43,6 +43,7 @@ std::string to_string(const ze_image_flag_t flag);
 std::string to_string(const ze_image_type_t type);
 std::string to_string(const ze_device_fp_flags_t capabilities);
 std::string to_string(const ze_driver_uuid_t uuid);
+std::string to_string(const ze_device_uuid_t uuid);
 std::string to_string(const ze_native_kernel_uuid_t uuid);
 ze_image_format_layout_t to_layout(const std::string layout);
 ze_image_format_type_t to_format_type(const std::string format_type);
@@ -81,6 +82,7 @@ std::ostream &operator<<(std::ostream &os, const ze_image_type_t &x);
 
 // std::ostream &operator<<(std::ostream &os, const ze_device_fp_flags_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_driver_uuid_t &x);
+std::ostream &operator<<(std::ostream &os, const ze_device_uuid_t &x);
 std::ostream &operator<<(std::ostream &os, const ze_native_kernel_uuid_t &x);
 
 bool operator==(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b);

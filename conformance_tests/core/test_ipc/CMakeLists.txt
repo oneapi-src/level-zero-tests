@@ -34,6 +34,26 @@ add_lzt_test(
     ${ipc_libraries}
 )
 
+add_lzt_test(
+  NAME test_ipc_multidevice
+  GROUP "/conformance_tests/core"
+  SOURCES
+    src/test_ipc_multidevice.cpp
+    src/test_ipc_comm.cpp
+  LINK_LIBRARIES
+    ${ipc_libraries}
+)
+
+add_lzt_test(
+  NAME test_ipc_multisubdevice
+  GROUP "/conformance_tests/core"
+  SOURCES
+    src/test_ipc_multisubdevice.cpp
+    src/test_ipc_comm.cpp
+  LINK_LIBRARIES
+    ${ipc_libraries}
+)
+
 add_lzt_test_executable(
   NAME test_ipc_event_helper
   GROUP "/conformance_tests/core"

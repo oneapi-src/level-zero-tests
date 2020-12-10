@@ -5,9 +5,6 @@
  * SPDX-License-Identifier: MIT
  *
  */
-
-#include <chrono>
-#include <thread>
 #ifdef __linux__
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -117,6 +114,9 @@ TEST(
 
 } // namespace
 
+// We put the main here because L0 doesn't currently specify how
+// zeInit should be handled with fork(), so each process must call
+// zeInit
 int main(int argc, char **argv) {
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);

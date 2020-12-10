@@ -653,23 +653,41 @@ std::string to_string(const ze_device_fp_flags_t capabilities) {
   return capabilities_str;
 }
 
+static char hexdigit(int i) { return (i > 9) ? 'a' - 10 + i : '0' + i; }
+template <typename T> static void uuid_to_string(T uuid, int bytes, char *s) {
+  int i;
+
+  for (i = bytes - 1; i >= 0; --i) {
+    *s++ = hexdigit(uuid.id[i] / 0x10);
+    *s++ = hexdigit(uuid.id[i] % 0x10);
+    if (i >= 6 && i <= 12 && (i & 1) == 0) {
+      *s++ = '-';
+    }
+  }
+  *s = '\0';
+}
+
 std::string to_string(const ze_driver_uuid_t uuid) {
   std::ostringstream result;
-  result << "{";
-  for (int i = 0; i < ZE_MAX_DRIVER_UUID_SIZE; i++) {
-    result << "0x" << std::hex << uuid.id[i] << ",";
-  }
-  result << "\b}";
+  char uuid_string[ZE_MAX_DRIVER_UUID_SIZE];
+  uuid_to_string(uuid, ZE_MAX_DRIVER_UUID_SIZE, uuid_string);
+  result << uuid_string;
+  return result.str();
+}
+
+std::string to_string(const ze_device_uuid_t uuid) {
+  std::ostringstream result;
+  char uuid_string[ZE_MAX_DEVICE_UUID_SIZE];
+  uuid_to_string(uuid, ZE_MAX_DEVICE_UUID_SIZE, uuid_string);
+  result << uuid_string;
   return result.str();
 }
 
 std::string to_string(const ze_native_kernel_uuid_t uuid) {
   std::ostringstream result;
-  result << "{";
-  for (int i = 0; i < ZE_MAX_NATIVE_KERNEL_UUID_SIZE; i++) {
-    result << "0x" << std::hex << uuid.id[i] << ",";
-  }
-  result << "\b}";
+  char uuid_string[ZE_MAX_KERNEL_UUID_SIZE];
+  uuid_to_string(uuid, ZE_MAX_KERNEL_UUID_SIZE, uuid_string);
+  result << uuid_string;
   return result.str();
 }
 
@@ -834,6 +852,10 @@ std::ostream &operator<<(std::ostream &os, const ze_driver_uuid_t &x) {
 }
 
 std::ostream &operator<<(std::ostream &os, const ze_native_kernel_uuid_t &x) {
+  return os << level_zero_tests::to_string(x);
+}
+
+std::ostream &operator<<(std::ostream &os, const ze_device_uuid_t &x) {
   return os << level_zero_tests::to_string(x);
 }
 
