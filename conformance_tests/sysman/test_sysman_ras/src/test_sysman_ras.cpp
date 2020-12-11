@@ -184,7 +184,7 @@ TEST_F(
       zes_ras_state_t rasStateAfterClear = lzt::get_ras_state(rasHandle, clear);
       validate_ras_state(rasStateAfterClear);
       uint64_t tErrorsAfterClear = lzt::sum_of_ras_errors(rasStateAfterClear);
-      EXPECT_NE(tErrorsinitial, tErrorsAfterClear);
+      EXPECT_GE(tErrorsinitial, tErrorsAfterClear);
     }
   }
 }
