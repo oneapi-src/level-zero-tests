@@ -47,7 +47,7 @@ protected:
         instance.src_region =
             lzt::allocate_shared_memory(mem_size_ + offset_, 1, 0, 0, device);
         instance.dst_region =
-            lzt::allocate_shared_memory(mem_size_, 1, 0, 0, device);
+            lzt::allocate_shared_memory(mem_size_ + offset_, 1, 0, 0, device);
       } else {
         FAIL() << "Unexpected memory type";
       }
@@ -62,14 +62,14 @@ protected:
         if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
           sub_device_instance.src_region = lzt::allocate_device_memory(
               mem_size_ + offset_, 1, 0, sub_device, context);
-          sub_device_instance.dst_region =
-              lzt::allocate_device_memory(mem_size_, 1, 0, sub_device, context);
+          sub_device_instance.dst_region = lzt::allocate_device_memory(
+              mem_size_ + offset_, 1, 0, sub_device, context);
 
         } else if (memory_type == ZE_MEMORY_TYPE_SHARED) {
           sub_device_instance.src_region = lzt::allocate_shared_memory(
               mem_size_ + offset_, 1, 0, 0, sub_device);
-          sub_device_instance.dst_region =
-              lzt::allocate_shared_memory(mem_size_, 1, 0, 0, sub_device);
+          sub_device_instance.dst_region = lzt::allocate_shared_memory(
+              mem_size_ + offset_, 1, 0, 0, sub_device);
 
         } else {
           FAIL() << "Unexpected memory type";
@@ -127,6 +127,7 @@ TEST_P(
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
   void *verification_memory1 = lzt::allocate_host_memory(mem_size_);
   void *verification_memory2 = lzt::allocate_host_memory(mem_size_);
+
   uint8_t *src = static_cast<uint8_t *>(initial_pattern_memory);
   for (uint32_t i = 0; i < mem_size_ + offset_; i++) {
     src[i] = i & 0xff;
@@ -139,52 +140,78 @@ TEST_P(
     if (!lzt::can_access_peer(dev_instance_[i].dev, dev_instance_[i - 1].dev)) {
       continue;
     }
-    lzt::append_memory_copy(dev_instance_[i].cmd_list,
-                            dev_instance_[i].src_region, initial_pattern_memory,
-                            mem_size_ + offset_);
-    lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(dev_instance_[i - 1].cmd_list,
-                            dev_instance_[i - 1].src_region,
-                            initial_pattern_memory, mem_size_ + offset_);
-    lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(
-        dev_instance_[i].cmd_list, dev_instance_[i - 1].dst_region,
-        static_cast<void *>(
-            static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
-        mem_size_, nullptr);
-    lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(
-        dev_instance_[i - 1].cmd_list, dev_instance_[i].dst_region,
-        static_cast<void *>(
-            static_cast<uint8_t *>(dev_instance_[i - 1].src_region) + offset_),
-        mem_size_, nullptr);
 
-    lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(dev_instance_[i].cmd_list, verification_memory1,
-                            dev_instance_[i - 1].dst_region, mem_size_,
-                            nullptr);
-    lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(dev_instance_[i - 1].cmd_list, verification_memory2,
-                            dev_instance_[i].dst_region, mem_size_, nullptr);
-    lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
-    lzt::close_command_list(dev_instance_[i - 1].cmd_list);
-    lzt::close_command_list(dev_instance_[i].cmd_list);
+    for (uint32_t d = 0; d < 2; d++) {
+      size_t src_offset, dst_offset;
+      if (d == 0) {
+        src_offset = offset_;
+        dst_offset = 0;
+      } else {
+        src_offset = 0;
+        dst_offset = offset_;
+      }
+      lzt::append_memory_copy(dev_instance_[i].cmd_list,
+                              dev_instance_[i].src_region,
+                              initial_pattern_memory, mem_size_ + src_offset);
+      lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
+      lzt::append_memory_copy(dev_instance_[i - 1].cmd_list,
+                              dev_instance_[i - 1].src_region,
+                              initial_pattern_memory, mem_size_ + src_offset);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
+      lzt::append_memory_copy(
+          dev_instance_[i].cmd_list,
+          static_cast<void *>(
+              static_cast<uint8_t *>(dev_instance_[i - 1].dst_region) +
+              dst_offset),
+          static_cast<void *>(
+              static_cast<uint8_t *>(dev_instance_[i].src_region) + src_offset),
+          mem_size_, nullptr);
+      lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
+      lzt::append_memory_copy(
+          dev_instance_[i - 1].cmd_list,
+          static_cast<void *>(
+              static_cast<uint8_t *>(dev_instance_[i].dst_region) + dst_offset),
+          static_cast<void *>(
+              static_cast<uint8_t *>(dev_instance_[i - 1].src_region) +
+              src_offset),
+          mem_size_, nullptr);
 
-    lzt::execute_command_lists(dev_instance_[i - 1].cmd_q, 1,
-                               &dev_instance_[i - 1].cmd_list, nullptr);
-    lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
-                               &dev_instance_[i].cmd_list, nullptr);
-    lzt::synchronize(dev_instance_[i - 1].cmd_q, UINT64_MAX);
-    lzt::reset_command_list(dev_instance_[i - 1].cmd_list);
-    lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
-    lzt::reset_command_list(dev_instance_[i].cmd_list);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
+      lzt::append_memory_copy(
+          dev_instance_[i].cmd_list, verification_memory1,
+          static_cast<void *>(
+              static_cast<uint8_t *>(dev_instance_[i - 1].dst_region) +
+              dst_offset),
+          mem_size_, nullptr);
+      lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
+      lzt::append_memory_copy(
+          dev_instance_[i - 1].cmd_list, verification_memory2,
+          static_cast<void *>(
+              static_cast<uint8_t *>(dev_instance_[i].dst_region) + dst_offset),
+          mem_size_, nullptr);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
+      lzt::close_command_list(dev_instance_[i - 1].cmd_list);
+      lzt::close_command_list(dev_instance_[i].cmd_list);
 
-    uint8_t *src = static_cast<uint8_t *>(initial_pattern_memory) + offset_;
-    uint8_t *dst1 = static_cast<uint8_t *>(verification_memory1);
-    uint8_t *dst2 = static_cast<uint8_t *>(verification_memory2);
-    for (uint32_t i = 0; i < mem_size_; i++) {
-      ASSERT_EQ(src[i], dst1[i]) << "Memory Copied from Device did not match.";
-      ASSERT_EQ(src[i], dst2[i]) << "Memory Copied from Device did not match.";
+      lzt::execute_command_lists(dev_instance_[i - 1].cmd_q, 1,
+                                 &dev_instance_[i - 1].cmd_list, nullptr);
+      lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
+                                 &dev_instance_[i].cmd_list, nullptr);
+      lzt::synchronize(dev_instance_[i - 1].cmd_q, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i - 1].cmd_list);
+      lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i].cmd_list);
+
+      uint8_t *src =
+          static_cast<uint8_t *>(initial_pattern_memory) + src_offset;
+      uint8_t *dst1 = static_cast<uint8_t *>(verification_memory1);
+      uint8_t *dst2 = static_cast<uint8_t *>(verification_memory2);
+      for (uint32_t i = 0; i < mem_size_; i++) {
+        ASSERT_EQ(src[i], dst1[i])
+            << "Memory Copied from Device did not match.";
+        ASSERT_EQ(src[i], dst2[i])
+            << "Memory Copied from Device did not match.";
+      }
     }
   }
   lzt::free_memory(verification_memory1);
@@ -215,68 +242,95 @@ TEST_P(
                                 dev_instance_[i].sub_devices[j - 1].dev)) {
         continue;
       }
-      lzt::append_memory_copy(dev_instance_[i].sub_devices[j].cmd_list,
-                              dev_instance_[i].sub_devices[j].src_region,
-                              initial_pattern_memory, mem_size_ + offset_);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
-                          nullptr);
-      lzt::append_memory_copy(dev_instance_[i].sub_devices[j - 1].cmd_list,
-                              dev_instance_[i].sub_devices[j - 1].src_region,
-                              initial_pattern_memory, mem_size_ + offset_);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list, nullptr,
-                          0, nullptr);
-      lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j].cmd_list,
-          dev_instance_[i].sub_devices[j - 1].dst_region,
-          static_cast<void *>(static_cast<uint8_t *>(
-                                  dev_instance_[i].sub_devices[j].src_region) +
-                              offset_),
-          mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
-                          nullptr);
-      lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j - 1].cmd_list,
-          dev_instance_[i].sub_devices[j].dst_region,
-          static_cast<void *>(
-              static_cast<uint8_t *>(
-                  dev_instance_[i].sub_devices[j - 1].src_region) +
-              offset_),
-          mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list, nullptr,
-                          0, nullptr);
 
-      lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j].cmd_list, verification_memory1,
-          dev_instance_[i].sub_devices[j - 1].dst_region, mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
-                          nullptr);
+      for (uint32_t d = 0; d < 2; d++) {
+        size_t src_offset, dst_offset;
+        if (d == 0) {
+          src_offset = offset_;
+          dst_offset = 0;
+        } else {
+          src_offset = 0;
+          dst_offset = offset_;
+        }
+        lzt::append_memory_copy(dev_instance_[i].sub_devices[j].cmd_list,
+                                dev_instance_[i].sub_devices[j].src_region,
+                                initial_pattern_memory, mem_size_ + src_offset);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr,
+                            0, nullptr);
+        lzt::append_memory_copy(dev_instance_[i].sub_devices[j - 1].cmd_list,
+                                dev_instance_[i].sub_devices[j - 1].src_region,
+                                initial_pattern_memory, mem_size_ + src_offset);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list,
+                            nullptr, 0, nullptr);
+        lzt::append_memory_copy(
+            dev_instance_[i].sub_devices[j].cmd_list,
+            static_cast<void *>(
+                static_cast<uint8_t *>(
+                    dev_instance_[i].sub_devices[j - 1].dst_region) +
+                dst_offset),
+            static_cast<void *>(
+                static_cast<uint8_t *>(
+                    dev_instance_[i].sub_devices[j].src_region) +
+                src_offset),
+            mem_size_, nullptr);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr,
+                            0, nullptr);
+        lzt::append_memory_copy(
+            dev_instance_[i].sub_devices[j - 1].cmd_list,
+            static_cast<void *>(
+                static_cast<uint8_t *>(
+                    dev_instance_[i].sub_devices[j].dst_region) +
+                dst_offset),
+            static_cast<void *>(
+                static_cast<uint8_t *>(
+                    dev_instance_[i].sub_devices[j - 1].src_region) +
+                src_offset),
+            mem_size_, nullptr);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list,
+                            nullptr, 0, nullptr);
 
-      lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j - 1].cmd_list, verification_memory2,
-          dev_instance_[i].sub_devices[j].dst_region, mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list, nullptr,
-                          0, nullptr);
-      lzt::close_command_list(dev_instance_[i].sub_devices[j - 1].cmd_list);
-      lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
-      lzt::execute_command_lists(dev_instance_[i].sub_devices[j - 1].cmd_q, 1,
-                                 &dev_instance_[i].sub_devices[j - 1].cmd_list,
-                                 nullptr);
-      lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
-                                 &dev_instance_[i].sub_devices[j].cmd_list,
-                                 nullptr);
-      lzt::synchronize(dev_instance_[i].sub_devices[j - 1].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j - 1].cmd_list);
-      lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+        lzt::append_memory_copy(
+            dev_instance_[i].sub_devices[j].cmd_list, verification_memory1,
+            static_cast<void *>(
+                static_cast<uint8_t *>(
+                    dev_instance_[i].sub_devices[j - 1].dst_region) +
+                dst_offset),
+            mem_size_, nullptr);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr,
+                            0, nullptr);
 
-      uint8_t *src = static_cast<uint8_t *>(initial_pattern_memory) + offset_;
-      uint8_t *dst1 = static_cast<uint8_t *>(verification_memory1);
-      uint8_t *dst2 = static_cast<uint8_t *>(verification_memory2);
-      for (uint32_t i = 0; i < mem_size_; i++) {
-        ASSERT_EQ(src[i], dst1[i])
-            << "Memory Copied from SubDevice did not match.";
-        ASSERT_EQ(src[i], dst2[i])
-            << "Memory Copied from SubDevice did not match.";
+        lzt::append_memory_copy(
+            dev_instance_[i].sub_devices[j - 1].cmd_list, verification_memory2,
+            static_cast<void *>(
+                static_cast<uint8_t *>(
+                    dev_instance_[i].sub_devices[j].dst_region) +
+                dst_offset),
+            mem_size_, nullptr);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list,
+                            nullptr, 0, nullptr);
+        lzt::close_command_list(dev_instance_[i].sub_devices[j - 1].cmd_list);
+        lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+        lzt::execute_command_lists(
+            dev_instance_[i].sub_devices[j - 1].cmd_q, 1,
+            &dev_instance_[i].sub_devices[j - 1].cmd_list, nullptr);
+        lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
+                                   &dev_instance_[i].sub_devices[j].cmd_list,
+                                   nullptr);
+        lzt::synchronize(dev_instance_[i].sub_devices[j - 1].cmd_q, UINT64_MAX);
+        lzt::reset_command_list(dev_instance_[i].sub_devices[j - 1].cmd_list);
+        lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
+        lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+
+        uint8_t *src =
+            static_cast<uint8_t *>(initial_pattern_memory) + src_offset;
+        uint8_t *dst1 = static_cast<uint8_t *>(verification_memory1);
+        uint8_t *dst2 = static_cast<uint8_t *>(verification_memory2);
+        for (uint32_t i = 0; i < mem_size_; i++) {
+          ASSERT_EQ(src[i], dst1[i])
+              << "Memory Copied from SubDevice did not match.";
+          ASSERT_EQ(src[i], dst2[i])
+              << "Memory Copied from SubDevice did not match.";
+        }
       }
     }
   }
@@ -448,60 +502,75 @@ TEST_P(
     DevInstance *ptr_dev_dst;
     for (int i = 1; i < dev_instance_.size(); i++) {
 
-      if (lzt::can_access_peer(dev_instance_[i - 1].dev,
-                               dev_instance_[i].dev)) {
-        ptr_dev_src = &dev_instance_[i - 1];
-        ptr_dev_dst = &dev_instance_[i];
-      } else if (lzt::can_access_peer(dev_instance_[i].dev,
-                                      dev_instance_[i - 1].dev)) {
-        ptr_dev_src = &dev_instance_[i];
-        ptr_dev_dst = &dev_instance_[i - 1];
-      } else {
-        continue;
-      }
-      test_count++;
-      lzt::append_memory_copy(ptr_dev_src->cmd_list, ptr_dev_src->src_region,
-                              initial_pattern_memory, mem_size_ + offset_);
-      lzt::close_command_list(ptr_dev_src->cmd_list);
-      lzt::execute_command_lists(ptr_dev_src->cmd_q, 1, &ptr_dev_src->cmd_list,
-                                 nullptr);
-      lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-      lzt::reset_command_list(ptr_dev_src->cmd_list);
+      for (uint32_t d = 0; d < 2; d++) {
+        size_t src_offset, dst_offset;
 
-      lzt::append_memory_copy_region(
-          ptr_dev_src->cmd_list, ptr_dev_dst->dst_region, &dest_region, columns,
-          columns * rows,
-          static_cast<uint8_t *>(ptr_dev_src->src_region) + offset_,
-          &src_region, columns, columns * rows, nullptr);
+        if (d == 0) {
+          src_offset = offset_;
+          dst_offset = 0;
+        } else {
+          src_offset = 0;
+          dst_offset = offset_;
+        }
 
-      lzt::close_command_list(ptr_dev_src->cmd_list);
-      lzt::execute_command_lists(ptr_dev_src->cmd_q, 1, &ptr_dev_src->cmd_list,
-                                 nullptr);
-      lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-      lzt::reset_command_list(ptr_dev_src->cmd_list);
+        if (lzt::can_access_peer(dev_instance_[i - 1].dev,
+                                 dev_instance_[i].dev)) {
+          ptr_dev_src = &dev_instance_[i - 1];
+          ptr_dev_dst = &dev_instance_[i];
+        } else if (lzt::can_access_peer(dev_instance_[i].dev,
+                                        dev_instance_[i - 1].dev)) {
+          ptr_dev_src = &dev_instance_[i];
+          ptr_dev_dst = &dev_instance_[i - 1];
+        } else {
+          continue;
+        }
+        test_count++;
+        lzt::append_memory_copy(ptr_dev_src->cmd_list, ptr_dev_src->src_region,
+                                initial_pattern_memory, mem_size_ + src_offset);
+        lzt::close_command_list(ptr_dev_src->cmd_list);
+        lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
+                                   &ptr_dev_src->cmd_list, nullptr);
+        lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
+        lzt::reset_command_list(ptr_dev_src->cmd_list);
 
-      lzt::append_memory_copy(ptr_dev_dst->cmd_list, verification_memory,
-                              ptr_dev_dst->dst_region, mem_size_);
-      lzt::close_command_list(ptr_dev_dst->cmd_list);
-      lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1, &ptr_dev_dst->cmd_list,
-                                 nullptr);
-      lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
-      lzt::reset_command_list(ptr_dev_dst->cmd_list);
+        lzt::append_memory_copy_region(
+            ptr_dev_src->cmd_list,
+            static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
+            &dest_region, columns, columns * rows,
+            static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
+            &src_region, columns, columns * rows, nullptr);
 
-      for (int z = 0; z < depth; z++) {
-        for (int y = 0; y < height; y++) {
-          for (int x = 0; x < width; x++) {
-            // index calculated based on memory sized by rows * columns *
-            // slices
-            size_t index = z * columns * rows + y * columns + x;
-            uint8_t dest_val =
-                static_cast<uint8_t *>(verification_memory)[index];
-            uint8_t src_val =
-                static_cast<uint8_t *>(initial_pattern_memory)[index + offset_];
+        lzt::close_command_list(ptr_dev_src->cmd_list);
+        lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
+                                   &ptr_dev_src->cmd_list, nullptr);
+        lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
+        lzt::reset_command_list(ptr_dev_src->cmd_list);
 
-            ASSERT_EQ(dest_val, src_val)
-                << "Copy failed with region(w,h,d)=(" << width << ", " << height
-                << ", " << depth << ")";
+        lzt::append_memory_copy(
+            ptr_dev_dst->cmd_list, verification_memory,
+            static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
+            mem_size_);
+        lzt::close_command_list(ptr_dev_dst->cmd_list);
+        lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1,
+                                   &ptr_dev_dst->cmd_list, nullptr);
+        lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
+        lzt::reset_command_list(ptr_dev_dst->cmd_list);
+
+        for (int z = 0; z < depth; z++) {
+          for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+              // index calculated based on memory sized by rows * columns *
+              // slices
+              size_t index = z * columns * rows + y * columns + x;
+              uint8_t dest_val =
+                  static_cast<uint8_t *>(verification_memory)[index];
+              uint8_t src_val = static_cast<uint8_t *>(
+                  initial_pattern_memory)[index + src_offset];
+
+              ASSERT_EQ(dest_val, src_val)
+                  << "Copy failed with region(w,h,d)=(" << width << ", "
+                  << height << ", " << depth << ")";
+            }
           }
         }
       }
@@ -556,64 +625,81 @@ TEST_P(
     DevInstance *ptr_dev_src;
     DevInstance *ptr_dev_dst;
     for (int i = 0; i < dev_instance_.size(); i++) {
-      for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
 
-        if (lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
-                                 dev_instance_[i].sub_devices[j].dev)) {
-          ptr_dev_src = &dev_instance_[i].sub_devices[j - 1];
-          ptr_dev_dst = &dev_instance_[i].sub_devices[j];
-        } else if (lzt::can_access_peer(
-                       dev_instance_[i].sub_devices[j].dev,
-                       dev_instance_[i].sub_devices[j - 1].dev)) {
-          ptr_dev_src = &dev_instance_[i].sub_devices[j];
-          ptr_dev_dst = &dev_instance_[i].sub_devices[j - 1];
+      for (uint32_t d = 0; d < 2; d++) {
+        size_t src_offset, dst_offset;
+
+        if (d == 0) {
+          src_offset = offset_;
+          dst_offset = 0;
         } else {
-          continue;
+          src_offset = 0;
+          dst_offset = offset_;
         }
 
-        test_count++;
-        lzt::append_memory_copy(ptr_dev_src->cmd_list, ptr_dev_src->src_region,
-                                initial_pattern_memory, mem_size_ + offset_);
-        lzt::close_command_list(ptr_dev_src->cmd_list);
-        lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                   &ptr_dev_src->cmd_list, nullptr);
-        lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-        lzt::reset_command_list(ptr_dev_src->cmd_list);
+        for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
 
-        lzt::append_memory_copy_region(
-            ptr_dev_src->cmd_list, ptr_dev_dst->dst_region, &dest_region,
-            columns, columns * rows,
-            static_cast<uint8_t *>(ptr_dev_src->src_region) + offset_,
-            &src_region, columns, columns * rows, nullptr);
+          if (lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
+                                   dev_instance_[i].sub_devices[j].dev)) {
+            ptr_dev_src = &dev_instance_[i].sub_devices[j - 1];
+            ptr_dev_dst = &dev_instance_[i].sub_devices[j];
+          } else if (lzt::can_access_peer(
+                         dev_instance_[i].sub_devices[j].dev,
+                         dev_instance_[i].sub_devices[j - 1].dev)) {
+            ptr_dev_src = &dev_instance_[i].sub_devices[j];
+            ptr_dev_dst = &dev_instance_[i].sub_devices[j - 1];
+          } else {
+            continue;
+          }
 
-        lzt::close_command_list(ptr_dev_src->cmd_list);
-        lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                   &ptr_dev_src->cmd_list, nullptr);
-        lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-        lzt::reset_command_list(ptr_dev_src->cmd_list);
+          test_count++;
+          lzt::append_memory_copy(
+              ptr_dev_src->cmd_list, ptr_dev_src->src_region,
+              initial_pattern_memory, mem_size_ + src_offset);
+          lzt::close_command_list(ptr_dev_src->cmd_list);
+          lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
+                                     &ptr_dev_src->cmd_list, nullptr);
+          lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
+          lzt::reset_command_list(ptr_dev_src->cmd_list);
 
-        lzt::append_memory_copy(ptr_dev_dst->cmd_list, verification_memory,
-                                ptr_dev_dst->dst_region, mem_size_);
-        lzt::close_command_list(ptr_dev_dst->cmd_list);
-        lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1,
-                                   &ptr_dev_dst->cmd_list, nullptr);
-        lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
-        lzt::reset_command_list(ptr_dev_dst->cmd_list);
+          lzt::append_memory_copy_region(
+              ptr_dev_src->cmd_list,
+              static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
+              &dest_region, columns, columns * rows,
+              static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
+              &src_region, columns, columns * rows, nullptr);
 
-        for (int z = 0; z < depth; z++) {
-          for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-              // index calculated based on memory sized by rows * columns *
-              // slices
-              size_t index = z * columns * rows + y * columns + x;
-              uint8_t dest_val =
-                  static_cast<uint8_t *>(verification_memory)[index];
-              uint8_t src_val = static_cast<uint8_t *>(
-                  initial_pattern_memory)[index + offset_];
+          lzt::close_command_list(ptr_dev_src->cmd_list);
+          lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
+                                     &ptr_dev_src->cmd_list, nullptr);
+          lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
+          lzt::reset_command_list(ptr_dev_src->cmd_list);
 
-              ASSERT_EQ(dest_val, src_val)
-                  << "Copy failed with region(w,h,d)=(" << width << ", "
-                  << height << ", " << depth << ")";
+          lzt::append_memory_copy(
+              ptr_dev_dst->cmd_list, verification_memory,
+              static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
+              mem_size_);
+          lzt::close_command_list(ptr_dev_dst->cmd_list);
+          lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1,
+                                     &ptr_dev_dst->cmd_list, nullptr);
+          lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
+          lzt::reset_command_list(ptr_dev_dst->cmd_list);
+
+          for (int z = 0; z < depth; z++) {
+            for (int y = 0; y < height; y++) {
+              for (int x = 0; x < width; x++) {
+                // index calculated based on memory sized by rows * columns *
+                // slices
+                size_t index = z * columns * rows + y * columns + x;
+                uint8_t dest_val =
+                    static_cast<uint8_t *>(verification_memory)[index];
+                uint8_t src_val = static_cast<uint8_t *>(
+                    initial_pattern_memory)[index + src_offset];
+
+                ASSERT_EQ(dest_val, src_val)
+                    << "Copy failed with region(w,h,d)=(" << width << ", "
+                    << height << ", " << depth << ")";
+              }
             }
           }
         }
@@ -671,66 +757,82 @@ TEST_P(
     DevInstance *ptr_dev_src;
     DevInstance *ptr_dev_dst;
     for (int i = 1; i < dev_instance_.size(); i++) {
-      for (int j = 0; j < dev_instance_[i].sub_devices.size(); j++) {
-        for (int k = 0; k < dev_instance_[i - 1].sub_devices.size(); k++) {
 
-          if (lzt::can_access_peer(dev_instance_[i].sub_devices[j].dev,
-                                   dev_instance_[i - 1].sub_devices[k].dev)) {
-            ptr_dev_src = &dev_instance_[i].sub_devices[j];
-            ptr_dev_dst = &dev_instance_[i - 1].sub_devices[k];
-          } else if (lzt::can_access_peer(
-                         dev_instance_[i - 1].sub_devices[k].dev,
-                         dev_instance_[i].sub_devices[j].dev)) {
-            ptr_dev_src = &dev_instance_[i - 1].sub_devices[k];
-            ptr_dev_dst = &dev_instance_[i].sub_devices[j];
-          } else {
-            continue;
-          }
+      for (uint32_t d = 0; d < 2; d++) {
+        size_t src_offset, dst_offset;
 
-          test_count++;
-          lzt::append_memory_copy(ptr_dev_src->cmd_list,
-                                  ptr_dev_src->src_region,
-                                  initial_pattern_memory, mem_size_ + offset_);
-          lzt::close_command_list(ptr_dev_src->cmd_list);
-          lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                     &ptr_dev_src->cmd_list, nullptr);
-          lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-          lzt::reset_command_list(ptr_dev_src->cmd_list);
+        if (d == 0) {
+          src_offset = offset_;
+          dst_offset = 0;
+        } else {
+          src_offset = 0;
+          dst_offset = offset_;
+        }
 
-          lzt::append_memory_copy_region(
-              ptr_dev_src->cmd_list, ptr_dev_dst->dst_region, &dest_region,
-              columns, columns * rows,
-              static_cast<uint8_t *>(ptr_dev_src->src_region) + offset_,
-              &src_region, columns, columns * rows, nullptr);
+        for (int j = 0; j < dev_instance_[i].sub_devices.size(); j++) {
+          for (int k = 0; k < dev_instance_[i - 1].sub_devices.size(); k++) {
 
-          lzt::close_command_list(ptr_dev_src->cmd_list);
-          lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                     &ptr_dev_src->cmd_list, nullptr);
-          lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-          lzt::reset_command_list(ptr_dev_src->cmd_list);
+            if (lzt::can_access_peer(dev_instance_[i].sub_devices[j].dev,
+                                     dev_instance_[i - 1].sub_devices[k].dev)) {
+              ptr_dev_src = &dev_instance_[i].sub_devices[j];
+              ptr_dev_dst = &dev_instance_[i - 1].sub_devices[k];
+            } else if (lzt::can_access_peer(
+                           dev_instance_[i - 1].sub_devices[k].dev,
+                           dev_instance_[i].sub_devices[j].dev)) {
+              ptr_dev_src = &dev_instance_[i - 1].sub_devices[k];
+              ptr_dev_dst = &dev_instance_[i].sub_devices[j];
+            } else {
+              continue;
+            }
 
-          lzt::append_memory_copy(ptr_dev_dst->cmd_list, verification_memory,
-                                  ptr_dev_dst->dst_region, mem_size_);
-          lzt::close_command_list(ptr_dev_dst->cmd_list);
-          lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1,
-                                     &ptr_dev_dst->cmd_list, nullptr);
-          lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
-          lzt::reset_command_list(ptr_dev_dst->cmd_list);
+            test_count++;
+            lzt::append_memory_copy(
+                ptr_dev_src->cmd_list, ptr_dev_src->src_region,
+                initial_pattern_memory, mem_size_ + src_offset);
+            lzt::close_command_list(ptr_dev_src->cmd_list);
+            lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
+                                       &ptr_dev_src->cmd_list, nullptr);
+            lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
+            lzt::reset_command_list(ptr_dev_src->cmd_list);
 
-          for (int z = 0; z < depth; z++) {
-            for (int y = 0; y < height; y++) {
-              for (int x = 0; x < width; x++) {
-                // index calculated based on memory sized by rows * columns *
-                // slices
-                size_t index = z * columns * rows + y * columns + x;
-                uint8_t dest_val =
-                    static_cast<uint8_t *>(verification_memory)[index];
-                uint8_t src_val = static_cast<uint8_t *>(
-                    initial_pattern_memory)[index + offset_];
+            lzt::append_memory_copy_region(
+                ptr_dev_src->cmd_list,
+                static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
+                &dest_region, columns, columns * rows,
+                static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
+                &src_region, columns, columns * rows, nullptr);
 
-                ASSERT_EQ(dest_val, src_val)
-                    << "Copy failed with region(w,h,d)=(" << width << ", "
-                    << height << ", " << depth << ")";
+            lzt::close_command_list(ptr_dev_src->cmd_list);
+            lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
+                                       &ptr_dev_src->cmd_list, nullptr);
+            lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
+            lzt::reset_command_list(ptr_dev_src->cmd_list);
+
+            lzt::append_memory_copy(
+                ptr_dev_dst->cmd_list, verification_memory,
+                static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
+                mem_size_);
+            lzt::close_command_list(ptr_dev_dst->cmd_list);
+            lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1,
+                                       &ptr_dev_dst->cmd_list, nullptr);
+            lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
+            lzt::reset_command_list(ptr_dev_dst->cmd_list);
+
+            for (int z = 0; z < depth; z++) {
+              for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                  // index calculated based on memory sized by rows * columns *
+                  // slices
+                  size_t index = z * columns * rows + y * columns + x;
+                  uint8_t dest_val =
+                      static_cast<uint8_t *>(verification_memory)[index];
+                  uint8_t src_val = static_cast<uint8_t *>(
+                      initial_pattern_memory)[index + src_offset];
+
+                  ASSERT_EQ(dest_val, src_val)
+                      << "Copy failed with region(w,h,d)=(" << width << ", "
+                      << height << ", " << depth << ")";
+                }
               }
             }
           }
