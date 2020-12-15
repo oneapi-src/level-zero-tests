@@ -85,11 +85,16 @@ TEST_F(
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       auto pProperties = lzt::get_power_properties(pPowerHandle);
-      EXPECT_GT(pProperties.maxLimit, 0);
-      EXPECT_LT(pProperties.maxLimit, INT32_MAX);
-      EXPECT_GT(pProperties.minLimit, 0);
+      if (pProperties.maxLimit == -1) {
+        LOG_INFO << "maxlimit unsupported: ";
+      }
+      if (pProperties.maxLimit != -1) {
+        EXPECT_GT(pProperties.maxLimit, 0);
+        EXPECT_LE(pProperties.maxLimit, INT32_MAX);
+        EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
+      }
+      EXPECT_GE(pProperties.minLimit, 0);
       EXPECT_LT(pProperties.minLimit, INT32_MAX);
-      EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
     }
   }
 }
@@ -108,6 +113,9 @@ TEST_F(
     for (auto pPowerHandle : pPowerHandles) {
       EXPECT_NE(nullptr, pPowerHandle);
       auto pPropertiesInitial = lzt::get_power_properties(pPowerHandle);
+      if (pPropertiesInitial.maxLimit == -1) {
+        LOG_INFO << "maxlimit unsupported: ";
+      }
       auto pPropertiesLater = lzt::get_power_properties(pPowerHandle);
       EXPECT_EQ(pPropertiesInitial.onSubdevice, pPropertiesLater.onSubdevice);
       EXPECT_EQ(pPropertiesInitial.subdeviceId, pPropertiesLater.subdeviceId);
@@ -139,9 +147,18 @@ TEST_F(
       zes_power_peak_limit_t pPeak = {};
       lzt::get_power_limits(pPowerHandle, &pSustained, &pBurst, &pPeak);
       auto pProperties = lzt::get_power_properties(pPowerHandle);
-      EXPECT_LE(pSustained.power, pBurst.power);
-      EXPECT_LE(pBurst.power, pPeak.powerAC);
-      EXPECT_LE(pPeak.powerAC, pProperties.maxLimit);
+      if (pProperties.maxLimit == -1) {
+        LOG_INFO << "maxlimit unsupported: ";
+      }
+      if ((pBurst.enabled != 0) && (pSustained.enabled != 0)) {
+        EXPECT_LE(pSustained.power, pBurst.power);
+      }
+      if ((pPeak.powerAC != -1) && (pBurst.enabled != 0)) {
+        EXPECT_LE(pBurst.power, pPeak.powerAC);
+      }
+      if (pProperties.maxLimit != -1) {
+        EXPECT_LE(pPeak.powerAC, pProperties.maxLimit);
+      }
     }
   }
 }
@@ -198,21 +215,26 @@ TEST_F(
       lzt::get_power_limits(pPowerHandle, &pSustainedInitial, &pBurstInitial,
                             &pPeakInitial); // get default power values
       auto pProperties = lzt::get_power_properties(pPowerHandle);
+      if (pProperties.maxLimit == -1) {
+        LOG_INFO << "maxlimit unsupported:";
+      }
       zes_power_sustained_limit_t pSustainedSet = {};
       zes_power_burst_limit_t pBurstSet = {};
       zes_power_peak_limit_t pPeakSet = {};
-      if (pSustainedInitial.enabled == true)
+      if (pSustainedInitial.enabled != true)
         pSustainedSet.enabled = false;
       else
         pSustainedSet.enabled = true;
-      pSustainedSet.power = pProperties.maxLimit;
       pSustainedSet.interval = pSustainedInitial.interval;
       if (pBurstInitial.enabled == true)
         pBurstSet.enabled = false;
       else
         pBurstSet.enabled = true;
-      pBurstSet.power = pProperties.maxLimit;
-      pPeakSet.powerAC = pProperties.maxLimit;
+      if (pProperties.maxLimit != -1) {
+        pSustainedSet.power = pProperties.maxLimit;
+        pBurstSet.power = pProperties.maxLimit;
+        pPeakSet.powerAC = pProperties.maxLimit;
+      }
       pPeakSet.powerDC = pPeakInitial.powerDC;
       lzt::set_power_limits(pPowerHandle, &pSustainedSet, &pBurstSet,
                             &pPeakSet); // Set power values
@@ -226,9 +248,13 @@ TEST_F(
       EXPECT_EQ(pSustainedGet.interval, pSustainedSet.interval);
       EXPECT_EQ(pBurstGet.enabled, pBurstSet.enabled);
       EXPECT_EQ(pBurstGet.power, pBurstSet.power);
-      EXPECT_EQ(pPeakGet.powerAC, pPeakSet.powerAC);
-      EXPECT_EQ(pPeakGet.powerDC,
-                pPeakSet.powerDC); // Verify whether values match or not
+      if (pPeakGet.powerAC != -1) {
+        EXPECT_EQ(pPeakGet.powerAC, pPeakSet.powerAC);
+      }
+      if (pPeakGet.powerDC != -1) {
+        EXPECT_EQ(pPeakGet.powerDC,
+                  pPeakSet.powerDC); // Verify whether values match or not
+      }
       lzt::set_power_limits(pPowerHandle, &pSustainedInitial, &pBurstInitial,
                             &pPeakInitial); // Set values to default
     }
