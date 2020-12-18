@@ -77,6 +77,48 @@ get_event_kernel_timestamp(ze_event_handle_t event) {
   return value;
 }
 
+double
+get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
+                              const ze_device_handle_t &device) {
+
+  double global_time_ns;
+  auto device_properties = lzt::get_device_properties(device);
+  uint64_t timestamp_freq = device_properties.timerResolution;
+  uint64_t timestamp_max_val =
+      ~(-1 << device_properties.kernelTimestampValidBits);
+
+  global_time_ns =
+      (timestamp->global.kernelEnd >= timestamp->global.kernelStart)
+          ? (timestamp->global.kernelEnd - timestamp->global.kernelStart) *
+                (double)timestamp_freq
+          : ((timestamp_max_val - timestamp->global.kernelStart) +
+             timestamp->global.kernelEnd + 1) *
+                (double)timestamp_freq;
+
+  return global_time_ns;
+}
+
+double
+get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
+                               const ze_device_handle_t &device) {
+
+  double context_time_ns;
+  auto device_properties = lzt::get_device_properties(device);
+  uint64_t timestamp_freq = device_properties.timerResolution;
+  uint64_t timestamp_max_val =
+      ~(-1 << device_properties.kernelTimestampValidBits);
+
+  context_time_ns =
+      (timestamp->context.kernelEnd >= timestamp->context.kernelStart)
+          ? (timestamp->context.kernelEnd - timestamp->context.kernelStart) *
+                (double)timestamp_freq
+          : ((timestamp_max_val - timestamp->context.kernelStart) +
+             timestamp->context.kernelEnd + 1) *
+                (double)timestamp_freq;
+
+  return context_time_ns;
+}
+
 void zeEventPool::InitEventPool() { InitEventPool(32); }
 
 void zeEventPool::InitEventPool(uint32_t count) {

@@ -79,6 +79,12 @@ void destroy_event(ze_event_handle_t event);
 void destroy_event_pool(ze_event_pool_handle_t event_pool);
 ze_kernel_timestamp_result_t
 get_event_kernel_timestamp(ze_event_handle_t event);
+double
+get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
+                              const ze_device_handle_t &device);
+double
+get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
+                               const ze_device_handle_t &device);
 
 class zeEventPoolTests : public ::testing::Test {
 protected:

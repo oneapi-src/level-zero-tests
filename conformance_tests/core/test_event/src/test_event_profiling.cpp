@@ -291,11 +291,6 @@ TEST_F(KernelEventProfilingCacheCoherencyTests,
   lzt::synchronize(cmdqueue, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
 
-  EXPECT_GT(tsResult->global.kernelStart, 0);
-  EXPECT_GT(tsResult->global.kernelEnd, 0);
-  EXPECT_GT(tsResult->context.kernelStart, 0);
-  EXPECT_GT(tsResult->context.kernelEnd, 0);
-
   for (int i = 0; i++; i < size) {
     int value = ((int *)src_buffer)[i];
     ASSERT_EQ(value, addval);
@@ -312,6 +307,168 @@ TEST_F(KernelEventProfilingCacheCoherencyTests,
   lzt::destroy_module(module);
   lzt::destroy_function(kernel);
   lzt::destroy_context(context);
+}
+
+static void
+kernel_timestamp_event_test(ze_context_handle_t context,
+                            std::vector<ze_device_handle_t> devices) {
+  const size_t size = 1000;
+  auto device0 = devices[0];
+  auto device1 = devices[1];
+
+  ze_event_pool_desc_t event_pool_desc = {};
+  event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  event_pool_desc.flags = ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP;
+  event_pool_desc.count = 1;
+  auto event_pool = lzt::create_event_pool(context, event_pool_desc, devices);
+
+  auto command_queue0 = lzt::create_command_queue(
+      context, device0, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  auto command_list0 = lzt::create_command_list(context, device0, 0, 0);
+
+  auto command_queue1 = lzt::create_command_queue(
+      context, device1, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  auto command_list1 = lzt::create_command_list(context, device1, 0, 0);
+
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
+  auto event = lzt::create_event(event_pool, event_desc);
+
+  auto module0 =
+      lzt::create_module(context, device0, "profile_add.spv",
+                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  auto kernel0 = lzt::create_function(module0, "profile_add_constant");
+
+  ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+  const int addval = 1;
+
+  void *src_buffer0 =
+      lzt::allocate_shared_memory(size, 1, 0, 0, device0, context);
+  void *dst_buffer0 =
+      lzt::allocate_shared_memory(size, 1, 0, 0, device0, context);
+
+  lzt::set_argument_value(kernel0, 0, sizeof(src_buffer0), &src_buffer0);
+  lzt::set_argument_value(kernel0, 1, sizeof(dst_buffer0), &dst_buffer0);
+  lzt::set_argument_value(kernel0, 2, sizeof(addval), &addval);
+  lzt::append_launch_function(command_list0, kernel0, &args, event, 0, nullptr);
+  lzt::close_command_list(command_list0);
+  lzt::execute_command_lists(command_queue0, 1, &command_list0, nullptr);
+
+  ze_kernel_timestamp_result_t *time_result0 = nullptr;
+  time_result0 =
+      static_cast<ze_kernel_timestamp_result_t *>(lzt::allocate_shared_memory(
+          sizeof(ze_kernel_timestamp_result_t), 1, 0, 0, device1, context));
+
+  ze_kernel_timestamp_result_t *time_result1 = nullptr;
+  time_result1 =
+      static_cast<ze_kernel_timestamp_result_t *>(lzt::allocate_shared_memory(
+          sizeof(ze_kernel_timestamp_result_t), 1, 0, 0, device1, context));
+
+  // Verify kernel timestamp can be queried from other device
+  // with accessibility to event
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendQueryKernelTimestamps(
+                                   command_list1, 1, &event, time_result0,
+                                   nullptr, nullptr, 1, &event));
+  lzt::append_barrier(command_list1);
+
+  // Verify kernel timestamp event can be added for reset
+  // to second commandlist/device
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendEventReset(command_list1, event));
+
+  auto module1 =
+      lzt::create_module(context, device1, "profile_add.spv",
+                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  auto kernel1 = lzt::create_function(module1, "profile_add_constant");
+
+  void *src_buffer1 =
+      lzt::allocate_shared_memory(size, 1, 0, 0, device1, context);
+  void *dst_buffer1 =
+      lzt::allocate_shared_memory(size, 1, 0, 0, device1, context);
+
+  lzt::set_argument_value(kernel1, 0, sizeof(src_buffer1), &src_buffer1);
+  lzt::set_argument_value(kernel1, 1, sizeof(dst_buffer1), &dst_buffer1);
+  lzt::set_argument_value(kernel1, 2, sizeof(addval), &addval);
+  // Re-use event on second device
+  lzt::append_launch_function(command_list1, kernel1, &args, event, 0, nullptr);
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendQueryKernelTimestamps(
+                                   command_list1, 1, &event, time_result1,
+                                   nullptr, nullptr, 1, &event));
+
+  lzt::close_command_list(command_list1);
+  lzt::execute_command_lists(command_queue1, 1, &command_list1, nullptr);
+
+  lzt::synchronize(command_queue0, UINT64_MAX);
+  lzt::synchronize(command_queue1, UINT64_MAX);
+
+  // timeresutlt0 and timeresult1 should be populated with nonzero
+  // durations
+  auto global_duration_0 =
+      lzt::get_timestamp_global_duration(time_result0, device0);
+  auto global_duration_1 =
+      lzt::get_timestamp_global_duration(time_result1, device1);
+
+  EXPECT_GT(global_duration_0, 0);
+  EXPECT_GT(global_duration_1, 0);
+
+  // cleanup
+  lzt::free_memory(context, src_buffer0);
+  lzt::free_memory(context, dst_buffer0);
+  lzt::free_memory(context, time_result0);
+  lzt::free_memory(context, time_result1);
+  lzt::free_memory(context, src_buffer1);
+  lzt::free_memory(context, dst_buffer1);
+  lzt::destroy_command_list(command_list0);
+  lzt::destroy_command_queue(command_queue0);
+  lzt::destroy_command_list(command_list1);
+  lzt::destroy_command_queue(command_queue1);
+  lzt::destroy_function(kernel0);
+  lzt::destroy_module(module0);
+  lzt::destroy_function(kernel1);
+  lzt::destroy_module(module1);
+  lzt::destroy_event_pool(event_pool);
+}
+
+TEST_F(
+    KernelEventProfilingCacheCoherencyTests,
+    GivenKernelTimestampEventsWhenUsingMultipleDevicesThenBothDevicesCanAccessAndUpdateEvent) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  if (devices.size() < 2) {
+    LOG_WARNING << "Less than 2 devices, skipping test";
+  } else {
+    auto context = lzt::create_context(driver);
+    kernel_timestamp_event_test(context, devices);
+    lzt::destroy_context(context);
+  }
+}
+
+TEST_F(
+    KernelEventProfilingCacheCoherencyTests,
+    GivenKernelTimestampEventsWhenUsingMultipleSubDevicesThenBothDevicesCanAccessAndUpdateEvent) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  auto test_run = false;
+  for (auto device : devices) {
+    auto sub_devices = lzt::get_ze_sub_devices(device);
+    if (sub_devices.size() < 2) {
+      continue;
+    }
+    test_run = true;
+    auto context = lzt::create_context(driver);
+    kernel_timestamp_event_test(context, sub_devices);
+    lzt::destroy_context(context);
+  }
+
+  if (!test_run) {
+    LOG_WARNING << "Less than two sub devices, skipping test";
+  }
 }
 
 } // namespace
