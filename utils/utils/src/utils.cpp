@@ -667,9 +667,11 @@ template <typename T> static void uuid_to_string(T uuid, int bytes, char *s) {
   *s = '\0';
 }
 
+#define MAX_UUID_STRING_SIZE 49
+
 std::string to_string(const ze_driver_uuid_t uuid) {
   std::ostringstream result;
-  char uuid_string[ZE_MAX_DRIVER_UUID_SIZE];
+  char uuid_string[MAX_UUID_STRING_SIZE];
   uuid_to_string(uuid, ZE_MAX_DRIVER_UUID_SIZE, uuid_string);
   result << uuid_string;
   return result.str();
@@ -677,7 +679,7 @@ std::string to_string(const ze_driver_uuid_t uuid) {
 
 std::string to_string(const ze_device_uuid_t uuid) {
   std::ostringstream result;
-  char uuid_string[ZE_MAX_DEVICE_UUID_SIZE];
+  char uuid_string[MAX_UUID_STRING_SIZE];
   uuid_to_string(uuid, ZE_MAX_DEVICE_UUID_SIZE, uuid_string);
   result << uuid_string;
   return result.str();
@@ -685,7 +687,7 @@ std::string to_string(const ze_device_uuid_t uuid) {
 
 std::string to_string(const ze_native_kernel_uuid_t uuid) {
   std::ostringstream result;
-  char uuid_string[ZE_MAX_KERNEL_UUID_SIZE];
+  char uuid_string[MAX_UUID_STRING_SIZE];
   uuid_to_string(uuid, ZE_MAX_KERNEL_UUID_SIZE, uuid_string);
   result << uuid_string;
   return result.str();
