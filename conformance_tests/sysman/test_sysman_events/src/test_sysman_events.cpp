@@ -31,6 +31,12 @@ public:
   ~EventsTest() {}
 };
 
+void register_unknown_event(zes_device_handle_t device,
+                            zes_event_type_flags_t events) {
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ENUMERATION,
+            zesDeviceEventRegister(device, events));
+}
+
 TEST_F(
     EventsTest,
     GivenValidEventHandleWhenListeningTemperatureEventsForCriticalOrThresholdTempThenEventsAreTriggered) {
@@ -383,6 +389,15 @@ TEST_F(
       LOG_INFO << "Spurious event for RAS errors received";
       FAIL();
     }
+  }
+}
+
+TEST_F(
+    EventsTest,
+    GivenValidDeviceHandleWhenListeningForAListOfEventsThenEventRegisterAPIReturnsProperErrorCodeInCaseEventsAreInvalid) {
+  for (auto device : devices) {
+    zes_event_type_flags_t events = ZES_EVENT_TYPE_FLAG_FORCE_UINT32;
+    register_unknown_event(device, events);
   }
 }
 

@@ -46,3 +46,7 @@ This test case validates ZET_SYSMAN_EVENT_TYPE_FABRIC_PORT_HEALTH event. Event w
 
 * GivenValidEventHandleWhenListeningEventForCrossingTotalRASErrorsThresholdThenEventsAreTriggeredForAccordingly
 This test case validates ZET_SYSMAN_EVENT_TYPE_RAS_CORRECTABLE_ERRORS and ZET_SYSMAN_EVENT_TYPE_RAS_UNCORRECTABLE_ERRORS event. Event will be triggered when RAS correctable/uncorrectable errors cross thresholds.
+
+*
+GivenValidDeviceHandleWhenListeningForAListOfEventsThenEventRegisterAPIReturnsProperErrorCodeInCaseEventsAreInvalid
+This test case checks for valid events and returns proper error code in case events are invalid.
