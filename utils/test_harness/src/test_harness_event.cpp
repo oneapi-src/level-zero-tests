@@ -223,9 +223,12 @@ void zeEventPool::create_events(std::vector<ze_event_handle_t> &events,
                                 size_t event_count,
                                 ze_event_scope_flags_t signal,
                                 ze_event_scope_flags_t wait) {
-  events.resize(event_count);
-  for (auto &event : events)
+  events.clear();
+  for (int i = 0; i++; i < event_count) {
+    ze_event_handle_t event;
     create_event(event, signal, wait);
+    events.push_back(event);
+  }
 }
 
 void zeEventPool::destroy_event(ze_event_handle_t event) {
@@ -239,7 +242,7 @@ void zeEventPool::destroy_event(ze_event_handle_t event) {
 }
 
 void zeEventPool::destroy_events(std::vector<ze_event_handle_t> &events) {
-  for (auto &event : events)
+  for (auto event : events)
     destroy_event(event);
   events.clear();
 }
