@@ -27,7 +27,9 @@ TEST_P(
   uint32_t max_group_count = 0;
   ze_module_handle_t module = nullptr;
   ze_kernel_handle_t kernel = nullptr;
-  auto device = lzt::zeDevice::get_instance()->get_device();
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+  auto context = lzt::create_context(driver);
   ze_command_queue_flags_t flags = 0;
   auto mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
   auto priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
@@ -47,20 +49,22 @@ TEST_P(
     LOG_WARNING << "No command queues that support cooperative kernels";
     return;
   }
-  auto command_queue =
-      lzt::create_command_queue(device, flags, mode, priority, ordinal);
-  auto command_list = lzt::create_command_list();
+  auto command_queue = lzt::create_command_queue(context, device, flags, mode,
+                                                 priority, ordinal);
+  auto command_list = lzt::create_command_list(context, device, 0, ordinal);
 
   // Set up input vector data
   const size_t data_size = 4096;
   uint64_t kernel_data[data_size] = {0};
-  auto input_data = lzt::allocate_shared_memory(sizeof(uint64_t) * data_size);
+  auto input_data = lzt::allocate_shared_memory(sizeof(uint64_t) * data_size, 1,
+                                                0, 0, device, context);
   memcpy(input_data, kernel_data, data_size * sizeof(uint64_t));
 
   auto row_num = GetParam();
   uint32_t groups_x = 1;
 
-  module = lzt::create_module(device, "cooperative_kernel.spv");
+  module = lzt::create_module(context, device, "cooperative_kernel.spv",
+                              ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
   kernel = lzt::create_function(module, "module_cooperative_pascal");
 
   // Use a small group size in order to use more groups
@@ -99,9 +103,10 @@ TEST_P(
     prev_val = val;
   }
 
-  lzt::free_memory(input_data);
+  lzt::free_memory(context, input_data);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
+  lzt::destroy_context(context);
 }
 
 INSTANTIATE_TEST_CASE_P(GroupNumbers, CooperativeKernelTests,

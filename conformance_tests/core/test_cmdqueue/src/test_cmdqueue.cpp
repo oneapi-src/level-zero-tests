@@ -444,8 +444,14 @@ TEST(
   auto cmdq_group_properties = lzt::get_command_queue_group_properties(device);
   int copy_ordinal = -1;
   for (int i = 0; i < cmdq_group_properties.size(); i++) {
-    if (cmdq_group_properties[i].flags &
-        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) {
+    if ((cmdq_group_properties[i].flags &
+         ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
+        !(cmdq_group_properties[i].flags &
+          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
+
+      if (cmdq_group_properties[i].numQueues == 0)
+        continue;
+
       copy_ordinal = i;
       break;
     }
@@ -475,9 +481,11 @@ TEST(
       ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW, copy_ordinal);
 
   auto cmdlist_compute_high = lzt::create_command_list();
-  auto cmdlist_copy_high = lzt::create_command_list();
+  auto cmdlist_copy_high =
+      lzt::create_command_list(context, device, 0, copy_ordinal);
   auto cmdlist_compute_low = lzt::create_command_list();
-  auto cmdlist_copy_low = lzt::create_command_list();
+  auto cmdlist_copy_low =
+      lzt::create_command_list(context, device, 0, copy_ordinal);
   auto buffer_compute_high = lzt::allocate_shared_memory(buff_size_high);
   auto buffer_copy_high = lzt::allocate_shared_memory(buff_size_high);
   auto buffer_compute_low = lzt::allocate_shared_memory(buff_size_low);
@@ -701,6 +709,12 @@ TEST(ConcurrentCommandQueueExecutionTests,
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
+  auto cmdq_groups = lzt::get_command_queue_group_properties(device);
+
+  std::vector<int> num_queues_per_group;
+  for (auto properties : cmdq_groups) {
+    num_queues_per_group.push_back(properties.numQueues);
+  }
 
   struct queue_data_t {
     ze_command_queue_handle_t cmdqueue;
@@ -712,6 +726,10 @@ TEST(ConcurrentCommandQueueExecutionTests,
   std::vector<queue_data_t> queues;
 
   for (size_t i = 0; i < num_queues; i++) {
+    if (index >= num_queues_per_group[ordinal]) {
+      index = 0;
+      ordinal = (ordinal + 1) % cmdq_groups.size();
+    }
     queue_data_t queue;
     queue.cmdqueue = lzt::create_command_queue(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -723,6 +741,8 @@ TEST(ConcurrentCommandQueueExecutionTests,
     memset(queue.dst_buff, 0, buff_size);
     queue.data = i;
     queues.push_back(queue);
+
+    index++;
   }
 
   // populate each command list with operations
