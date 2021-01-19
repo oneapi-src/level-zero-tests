@@ -3,3 +3,4 @@
 
 add_subdirectory(tracing)
 add_subdirectory(metrics)
+add_subdirectory(pin)
