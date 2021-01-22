@@ -433,9 +433,7 @@ protected:
     ze_kernel_properties_t kernel_properties;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeKernelGetProperties(function, &kernel_properties));
-    EXPECT_EQ(kernel_properties.requiredGroupSizeX, group_size_x);
-    EXPECT_EQ(kernel_properties.requiredGroupSizeY, group_size_y);
-    EXPECT_EQ(kernel_properties.requiredGroupSizeZ, group_size_z);
+
     EXPECT_EQ(kernel_properties.numKernelArgs, 2);
 
     ze_event_handle_t signal_event = nullptr;

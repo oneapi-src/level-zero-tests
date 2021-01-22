@@ -224,7 +224,7 @@ void zeEventPool::create_events(std::vector<ze_event_handle_t> &events,
                                 ze_event_scope_flags_t signal,
                                 ze_event_scope_flags_t wait) {
   events.clear();
-  for (int i = 0; i++; i < event_count) {
+  for (size_t i = 0; i < event_count; i++) {
     ze_event_handle_t event;
     create_event(event, signal, wait);
     events.push_back(event);
