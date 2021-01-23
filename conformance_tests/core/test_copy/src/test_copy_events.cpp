@@ -569,6 +569,7 @@ TEST(
     ze_event_desc_t event_desc = {};
     event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
     event_desc.index = 0;
+    event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
     auto event = lzt::create_event(event_pool, event_desc);
 
     auto src_buffer =
