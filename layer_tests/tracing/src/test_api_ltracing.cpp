@@ -678,6 +678,9 @@ TEST_F(
 
   init_memory();
 
+  mem_alloc_properties.pNext = nullptr;
+  mem_alloc_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
+
   ze_result_t initial_result =
       zeMemGetAllocProperties(context, memory, &mem_alloc_properties, nullptr);
 
