@@ -26,8 +26,9 @@ TEST(InitNegativeTests,
 TEST(DriverGetNegativeTests,
      GivenzeDriverGetIsCalledBeforezeInitThenUninitialiZedIsReturned) {
   uint32_t pCount = 0;
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_UNINITIALIZED),
-            uint64_t(zeDriverGet(&pCount, nullptr)));
+  uint64_t errorExpected = uint64_t(ZE_RESULT_ERROR_UNINITIALIZED);
+  uint64_t errorRecieved = uint64_t(zeDriverGet(&pCount, nullptr));
+  EXPECT_EQ(errorExpected, errorRecieved);
 }
 
 TEST(

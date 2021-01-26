@@ -65,7 +65,8 @@ TEST(
   module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
 
   module_description.pNext = nullptr;
-  module_description.format = static_cast<ze_module_format_t>(0);
+  module_description.format =
+      static_cast<ze_module_format_t>(ZE_MODULE_FORMAT_FORCE_UINT32);
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = nullptr;
