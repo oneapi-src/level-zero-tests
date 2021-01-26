@@ -31,7 +31,7 @@ See [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 ## License
 
-Distributed under the MIT license. See [LICENSE](LICENSE.md) for more information.
+Distributed under the MIT license. See [LICENSE](LICENSE) for more information.
 
 ## Security
 
