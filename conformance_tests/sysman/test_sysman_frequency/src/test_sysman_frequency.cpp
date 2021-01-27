@@ -115,11 +115,10 @@ TEST_F(
     for (auto pFreqHandle : pFreqHandles) {
       EXPECT_NE(nullptr, pFreqHandle);
       zes_freq_range_t limits = {};
-      uint32_t count = 0;
-      auto frequency = lzt::get_available_clocks(pFreqHandle, count);
-      ASSERT_GT(frequency.size(), 0);
-      limits.min = frequency[0];
-      limits.max = frequency[1];
+      zes_freq_properties_t properties = {};
+      properties = lzt::get_freq_properties(pFreqHandle);
+      limits.min = properties.min;
+      limits.max = properties.max;
       lzt::set_freq_range(pFreqHandle, limits);
       lzt::idle_check(pFreqHandle);
       zes_freq_state_t state = lzt::get_freq_state(pFreqHandle);
