@@ -22,7 +22,7 @@
 namespace {
 #ifdef __linux__
 
-void run_parent(int size) {
+void run_child(int size) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -61,9 +61,15 @@ void run_parent(int size) {
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
   lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
 }
 
-void run_child(int size) {
+void run_parent(int size) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -90,11 +96,25 @@ void run_child(int size) {
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
   lzt::send_ipc_handle(ipc_handle);
 
+  // free device memory once receiver is done
+  int child_status;
+  pid_t clientPId = wait(&child_status);
+  if (clientPId < 0) {
+    std::cerr << "Error waiting for receiver process " << strerror(errno)
+              << "\n";
+  }
+
+  if (WIFEXITED(child_status)) {
+    if (WEXITSTATUS(child_status)) {
+      FAIL() << "Receiver process failed memory verification\n";
+    }
+  }
+
+  lzt::free_memory(memory);
   lzt::free_memory(buffer);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
   lzt::destroy_context(context);
-  exit(0);
 }
 
 TEST(
