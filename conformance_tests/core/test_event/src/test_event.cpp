@@ -117,8 +117,12 @@ TEST_F(
   std::vector<ze_event_handle_t> events(event_count, nullptr);
 
   ep.create_events(events, event_count);
+  auto events_initial = events;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendWaitOnEvents(
                                    cmd_list, event_count, events.data()));
+  for (int i = 0; i < events.size(); i++) {
+    ASSERT_EQ(events[i], events_initial[i]);
+  }
   ep.destroy_events(events);
   lzt::destroy_command_list(cmd_list);
   lzt::destroy_context(context);

@@ -71,10 +71,9 @@ ze_bool_t can_access_peer(ze_device_handle_t dev1, ze_device_handle_t dev2);
 void set_kernel_cache_config(ze_kernel_handle_t kernel,
                              ze_cache_config_flags_t config);
 
-void make_memory_resident(const ze_device_handle_t &device, void *memory,
+void make_memory_resident(ze_device_handle_t device, void *memory,
                           const size_t size);
-void evict_memory(const ze_device_handle_t &device, void *memory,
-                  const size_t size);
+void evict_memory(ze_device_handle_t device, void *memory, const size_t size);
 
 }; // namespace level_zero_tests
 #endif

@@ -480,6 +480,24 @@ TEST_F(zeCommandListAppendImageCopyTests,
 
 TEST_F(
     zeCommandListAppendImageCopyTests,
+    GivenDeviceImageWhenAppendingImageCopyWithWaitEventThenSuccessIsReturned) {
+  ze_event_handle_t hEvent = nullptr;
+
+  ze_event_desc_t desc = {};
+  desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  desc.index = 0;
+  desc.signal = 0;
+  desc.wait = 0;
+  auto event = lzt::create_event(ep, desc);
+  auto event_before = event;
+  lzt::append_image_copy(cl, img.dflt_device_image_, img.dflt_device_image_2_,
+                         nullptr, 1, &event);
+  ASSERT_EQ(event, event_before);
+  destroy_event(event);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryAndFromMemoryWithOffsetsImageIsCorrectAndSuccessIsReturned) {
 
   int full_width = img.dflt_host_image_.width();
@@ -524,14 +542,28 @@ TEST_F(
   ep.destroy_event(hEvent);
 }
 
+TEST_F(
+    zeCommandListAppendImageCopyFromMemoryTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyWithWaitEventThenSuccessIsReturned) {
+  ze_event_handle_t hEvent = nullptr;
+
+  ep.create_event(hEvent);
+  auto hEvent_initial = hEvent;
+  lzt::append_image_copy_from_mem(cl.command_list_, img.dflt_device_image_,
+                                  img.dflt_host_image_.raw_data(), nullptr, 1,
+                                  &hEvent);
+  ASSERT_EQ(hEvent, hEvent_initial);
+  ep.destroy_event(hEvent);
+}
+
 class zeCommandListAppendImageCopyRegionTests
     : public zeCommandListAppendImageCopyFromMemoryTests {};
 
 TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionThenSuccessIsReturned) {
-  ze_image_region_t source_region;
-  ze_image_region_t dest_region;
+  ze_image_region_t source_region = {};
+  ze_image_region_t dest_region = {};
 
   dest_region.originX = 0;
   dest_region.originY = 0;
@@ -554,8 +586,8 @@ TEST_F(
 TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithHEventThenSuccessIsReturned) {
-  ze_image_region_t source_region;
-  ze_image_region_t dest_region;
+  ze_image_region_t source_region = {};
+  ze_image_region_t dest_region = {};
 
   dest_region.originX = 0;
   dest_region.originY = 0;
@@ -576,6 +608,36 @@ TEST_F(
   lzt::append_image_copy_region(cl.command_list_, img.dflt_device_image_,
                                 img.dflt_device_image_2_, &dest_region,
                                 &source_region, hEvent);
+  ep.destroy_event(hEvent);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyRegionTests,
+    GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithWaitEventThenSuccessIsReturned) {
+  ze_image_region_t source_region = {};
+  ze_image_region_t dest_region = {};
+
+  dest_region.originX = 0;
+  dest_region.originY = 0;
+  dest_region.originZ = 0;
+  dest_region.width = img.dflt_host_image_.width() / 2;
+  dest_region.height = img.dflt_host_image_.height() / 2;
+  dest_region.depth = 1;
+
+  source_region.originX = img.dflt_host_image_.width() / 2;
+  source_region.originY = img.dflt_host_image_.height() / 2;
+  source_region.originZ = 0;
+  source_region.width = img.dflt_host_image_.width() / 2;
+  source_region.height = img.dflt_host_image_.height() / 2;
+  source_region.depth = 1;
+  ze_event_handle_t hEvent = nullptr;
+
+  ep.create_event(hEvent);
+  auto hEvent_initial = hEvent;
+  lzt::append_image_copy_region(cl.command_list_, img.dflt_device_image_,
+                                img.dflt_device_image_2_, &dest_region,
+                                &source_region, nullptr, 1, &hEvent);
+  ASSERT_EQ(hEvent, hEvent_initial);
   ep.destroy_event(hEvent);
 }
 
@@ -606,4 +668,19 @@ TEST_F(
   free_memory(device_memory);
 }
 
+TEST_F(
+    zeCommandListAppendImageCopyToMemoryTests,
+    GivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventThenSuccessIsReturned) {
+  void *device_memory =
+      allocate_device_memory(size_in_bytes(img.dflt_host_image_));
+  ze_event_handle_t hEvent = nullptr;
+
+  ep.create_event(hEvent);
+  auto hEvent_initial = hEvent;
+  lzt::append_image_copy_to_mem(cl.command_list_, device_memory,
+                                img.dflt_device_image_, nullptr, 1, &hEvent);
+  ASSERT_EQ(hEvent, hEvent_initial);
+  ep.destroy_event(hEvent);
+  free_memory(device_memory);
+}
 } // namespace

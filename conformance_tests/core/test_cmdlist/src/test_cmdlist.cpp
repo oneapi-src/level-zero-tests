@@ -535,4 +535,34 @@ TEST(
   lzt::free_memory(host_memory_dst);
 }
 
+TEST(zeCommandListAppendWriteGlobalTimestampTest,
+     GivenCommandListWhenAppendingWriteGlobalTimestampThenSuccessIsReturned) {
+
+  ze_event_handle_t event = nullptr;
+  ze_event_pool_desc_t event_pool_desc = {};
+  event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  event_pool_desc.count = 1;
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+  lzt::zeEventPool ep;
+  ep.InitEventPool(event_pool_desc);
+  ep.create_event(event, event_desc);
+
+  auto command_list = lzt::create_command_list();
+  uint64_t dst_timestamp;
+  ze_event_handle_t wait_event_before, wait_event_after;
+  auto wait_event_initial = event;
+
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendWriteGlobalTimestamp(
+                command_list, &dst_timestamp, nullptr, 1, &event));
+  ASSERT_EQ(event, wait_event_initial);
+
+  ep.destroy_event(event);
+  lzt::destroy_command_list(command_list);
+}
+
 } // namespace

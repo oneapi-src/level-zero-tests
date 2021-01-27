@@ -82,9 +82,13 @@ TEST_F(
   ep.create_events(events, event_count);
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
+  auto events_initial = events;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendBarrier(cmd_list, event, events.size(),
                                        events.data()));
+  for (int i = 0; i < events.size(); i++) {
+    ASSERT_EQ(events[i], events_initial[i]);
+  }
   ep.destroy_events(events);
   ep.destroy_event(event);
   lzt::destroy_command_list(cmd_list);
@@ -162,8 +166,12 @@ TEST_F(
   ze_command_list_handle_t cmd_list =
       lzt::create_command_list(context, device, 0);
   ep.create_events(waiting_events, event_count);
+  auto wait_events_initial = waiting_events;
   AppendMemoryRangesBarrierTest(context, device, cmd_list, nullptr,
                                 waiting_events);
+  for (int i = 0; i < waiting_events.size(); i++) {
+    ASSERT_EQ(waiting_events[i], wait_events_initial[i]);
+  }
   ep.destroy_events(waiting_events);
   lzt::destroy_command_list(cmd_list);
   lzt::destroy_context(context);

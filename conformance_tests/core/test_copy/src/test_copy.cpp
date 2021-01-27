@@ -58,6 +58,27 @@ TEST_F(
   free_memory(memory);
 }
 
+TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
+  const size_t size = 4096;
+  void *memory = allocate_device_memory(size);
+  const uint8_t pattern = 0x00;
+  ze_event_handle_t hEvent = nullptr;
+  const int pattern_size = 1;
+
+  ep.create_event(hEvent);
+  auto hEvent_before = hEvent;
+  lzt::append_memory_fill(cl.command_list_, memory, &pattern, pattern_size,
+                          size, nullptr, 1, &hEvent);
+  ASSERT_EQ(hEvent, hEvent_before);
+  ep.destroy_event(hEvent);
+
+  free_memory(memory);
+}
+
 class zeCommandListAppendMemoryFillVerificationTests : public ::testing::Test {
 protected:
   zeCommandListAppendMemoryFillVerificationTests() {
@@ -517,6 +538,47 @@ TEST_F(
   append_memory_copy(cl.command_list_, memory, host_memory.data(),
                      size_in_bytes(host_memory), hEvent);
 
+  ep.destroy_event(hEvent);
+
+  free_memory(memory);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
+  const size_t size = 16;
+  const std::vector<char> host_memory(size, 123);
+  void *memory = allocate_device_memory(size_in_bytes(host_memory));
+  ze_event_handle_t hEvent = nullptr;
+
+  ep.create_event(hEvent);
+  auto hEvent_before = hEvent;
+  append_memory_copy(cl.command_list_, memory, host_memory.data(),
+                     size_in_bytes(host_memory), nullptr, 1, &hEvent);
+  ASSERT_EQ(hEvent, hEvent_before);
+  ep.destroy_event(hEvent);
+
+  free_memory(memory);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned) {
+  lzt::zeEventPool ep;
+  lzt::zeCommandList cl;
+  const size_t size = 16;
+  const std::vector<char> host_memory(size, 123);
+  void *memory = allocate_device_memory(size_in_bytes(host_memory));
+  ze_event_handle_t hEvent = nullptr;
+
+  ep.create_event(hEvent);
+  auto hEvent_before = hEvent;
+  append_memory_copy_region(cl.command_list_, memory, nullptr, 0, 0,
+                            host_memory.data(), nullptr, 0, 0, nullptr, 1,
+                            &hEvent);
+  ASSERT_EQ(hEvent, hEvent_before);
   ep.destroy_event(hEvent);
 
   free_memory(memory);

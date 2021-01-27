@@ -26,7 +26,7 @@ void *allocate_host_memory(const size_t size, const size_t alignment) {
 }
 
 void *allocate_host_memory(const size_t size, const size_t alignment,
-                           const ze_context_handle_t context) {
+                           ze_context_handle_t context) {
 
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
@@ -35,8 +35,10 @@ void *allocate_host_memory(const size_t size, const size_t alignment,
   host_desc.pNext = nullptr;
 
   void *memory = nullptr;
+  auto context_initial = context;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemAllocHost(context, &host_desc, size, alignment, &memory));
+  EXPECT_EQ(context, context_initial);
   EXPECT_NE(nullptr, memory);
 
   return memory;
@@ -76,12 +78,15 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_desc.ordinal = ordinal;
   device_desc.flags = flags;
-
   device_desc.pNext = nullptr;
 
+  auto context_initial = context;
+  auto device_initial = device_handle;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemAllocDevice(context, &device_desc, size, alignment,
                              device_handle, &memory));
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(device_handle, device_initial);
   EXPECT_NE(nullptr, memory);
 
   return memory;
@@ -132,11 +137,15 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
   host_desc.flags = host_flags;
-
   host_desc.pNext = nullptr;
+
+  auto context_initial = context;
+  auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemAllocShared(context, &device_desc, &host_desc, size, alignment,
                              device, &memory));
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(device, device_initial);
   EXPECT_NE(nullptr, memory);
 
   return memory;
@@ -164,7 +173,9 @@ void free_memory(const void *ptr) {
 }
 
 void free_memory(ze_context_handle_t context, const void *ptr) {
+  auto context_initial = context;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
+  EXPECT_EQ(context, context_initial);
 }
 
 void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
@@ -183,7 +194,9 @@ void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
 
 void get_ipc_handle(ze_context_handle_t context,
                     ze_ipc_mem_handle_t *mem_handle, void *memory) {
+  auto context_initial = context;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, mem_handle));
+  EXPECT_EQ(context, context_initial);
 }
 
 void write_data_pattern(void *buff, size_t size, int8_t data_pattern) {
@@ -212,7 +225,9 @@ void get_mem_alloc_properties(
     ze_context_handle_t context, const void *memory,
     ze_memory_allocation_properties_t *memory_properties,
     ze_device_handle_t *device) {
+  auto context_initial = context;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAllocProperties(
                                    context, memory, memory_properties, device));
+  EXPECT_EQ(context, context_initial);
 }
 }; // namespace level_zero_tests

@@ -370,9 +370,11 @@ kernel_timestamp_event_test(ze_context_handle_t context,
 
   // Verify kernel timestamp can be queried from other device
   // with accessibility to event
+  auto event_initial = event;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendQueryKernelTimestamps(
                                    command_list1, 1, &event, time_result0,
                                    nullptr, nullptr, 1, &event));
+  EXPECT_EQ(event, event_initial);
   lzt::append_barrier(command_list1);
 
   // Verify kernel timestamp event can be added for reset

@@ -65,8 +65,12 @@ ze_command_queue_handle_t create_command_queue(
   descriptor.ordinal = ordinal;
   descriptor.index = index;
   ze_command_queue_handle_t command_queue = nullptr;
+  auto context_initial = context;
+  auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandQueueCreate(context, device, &descriptor, &command_queue));
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(device, device_initial);
   EXPECT_NE(nullptr, command_queue);
 
   return command_queue;
@@ -82,13 +86,25 @@ void execute_command_lists(ze_command_queue_handle_t cq,
                            uint32_t numCommandLists,
                            ze_command_list_handle_t *phCommandLists,
                            ze_fence_handle_t hFence) {
+  auto command_queue_initial = cq;
+  auto fence_initial = hFence;
+  std::vector<ze_command_list_handle_t> command_lists_initial(numCommandLists);
+  std::memcpy(command_lists_initial.data(), phCommandLists,
+              sizeof(ze_command_list_handle_t) * numCommandLists);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandQueueExecuteCommandLists(cq, numCommandLists,
                                               phCommandLists, hFence));
+  EXPECT_EQ(cq, command_queue_initial);
+  EXPECT_EQ(hFence, fence_initial);
+  for (int i = 0; i < numCommandLists; i++) {
+    EXPECT_EQ(phCommandLists[i], command_lists_initial[i]);
+  }
 }
 
 void synchronize(ze_command_queue_handle_t cq, uint64_t timeout) {
+  auto command_queue_initial = cq;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cq, timeout));
+  EXPECT_EQ(cq, command_queue_initial);
 }
 
 void destroy_command_queue(ze_command_queue_handle_t cq) {

@@ -446,6 +446,7 @@ protected:
       p_wait_events = events_host_to_kernel.data();
       num_wait = num_events;
     }
+    auto wait_events_initial = events_host_to_kernel;
     if (type == FUNCTION) {
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
                                        cmd_list, function, &th_group_dim,
@@ -489,17 +490,22 @@ protected:
       uint32_t *num_launch_arg = static_cast<uint32_t *>(actual_launch);
       ze_group_count_t *mult_tg_dim =
           static_cast<ze_group_count_t *>(args_buff);
-
+      auto functions_initial = function_list;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeCommandListAppendLaunchMultipleKernelsIndirect(
                     cmd_list, 2, function_list.data(), num_launch_arg,
                     mult_tg_dim, signal_event, num_wait, p_wait_events));
+      for (int i = 0; i < function_list.size(); i++) {
+        ASSERT_EQ(function_list[i], functions_initial[i]);
+      }
 
       // Intentionally update args buffer and num_args after API
       num_launch_arg[0] = 2;
       memcpy(args_buff, arg_buffer_list.data(), 2 * sizeof(ze_group_count_t));
     }
-
+    for (int i = 0; i < events_host_to_kernel.size(); i++) {
+      EXPECT_EQ(events_host_to_kernel[i], wait_events_initial[i]);
+    }
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandListAppendBarrier(cmd_list, nullptr, 0, nullptr));
 

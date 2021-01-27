@@ -50,7 +50,11 @@ ze_image_handle_t create_ze_image(ze_context_handle_t context,
                                   ze_device_handle_t dev,
                                   ze_image_desc_t image_descriptor) {
   ze_image_handle_t image = nullptr;
+  auto context_initial = context;
+  auto device_initial = dev;
   ze_result_t result = zeImageCreate(context, dev, &image_descriptor, &image);
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(dev, device_initial);
   EXPECT_TRUE((result == ZE_RESULT_SUCCESS) ||
               (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT));
   if (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT) {

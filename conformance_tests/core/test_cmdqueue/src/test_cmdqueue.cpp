@@ -221,9 +221,13 @@ class zeCommandQueueExecuteCommandListTestsSynchronize
 TEST_P(
     zeCommandQueueExecuteCommandListTestsSynchronize,
     GivenCommandQueueSynchronizationWhenExecutingCommandListsThenSuccessIsReturned) {
+  auto command_lists_initial = list_of_command_lists;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
                                    command_queue, params.num_command_lists,
                                    list_of_command_lists.data(), nullptr));
+  for (int i = 0; i < list_of_command_lists.size(); i++) {
+    ASSERT_EQ(list_of_command_lists[i], command_lists_initial[i]);
+  }
   ze_result_t sync_status = ZE_RESULT_NOT_READY;
   while (sync_status != ZE_RESULT_SUCCESS) {
     EXPECT_EQ(sync_status, ZE_RESULT_NOT_READY);

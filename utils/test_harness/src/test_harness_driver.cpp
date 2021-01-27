@@ -23,7 +23,9 @@ ze_driver_properties_t get_driver_properties(ze_driver_handle_t driver) {
   ze_driver_properties_t properties = {};
   properties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
   properties.pNext = nullptr;
+  auto driver_initial = driver;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetProperties(driver, &properties));
+  EXPECT_EQ(driver, driver_initial);
   return properties;
 }
 
@@ -33,7 +35,9 @@ uint32_t get_driver_version(ze_driver_handle_t driver) {
   ze_driver_properties_t properties;
 
   properties.pNext = nullptr;
+  auto driver_initial = driver;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetProperties(driver, &properties));
+  EXPECT_EQ(driver, driver_initial);
   driverVersion = properties.driverVersion;
   EXPECT_NE(driverVersion, 0);
 
@@ -43,7 +47,9 @@ uint32_t get_driver_version(ze_driver_handle_t driver) {
 ze_api_version_t get_api_version(ze_driver_handle_t driver) {
   ze_api_version_t api_version;
 
+  auto driver_initial = driver;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetApiVersion(driver, &api_version));
+  EXPECT_EQ(driver, driver_initial);
   return api_version;
 }
 
@@ -51,8 +57,9 @@ ze_driver_ipc_properties_t get_ipc_properties(ze_driver_handle_t driver) {
   ze_driver_ipc_properties_t properties = {
       ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES};
 
+  auto driver_initial = driver;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetIpcProperties(driver, &properties));
-
+  EXPECT_EQ(driver, driver_initial);
   return properties;
 }
 
