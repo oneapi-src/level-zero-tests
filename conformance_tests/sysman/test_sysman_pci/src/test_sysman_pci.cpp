@@ -41,13 +41,11 @@ TEST_F(PciModuleTest, GivenSysmanHandleWhenRetrievingStateThenStateIsReturned) {
     }
   }
 }
-
 TEST_F(PciModuleTest,
        GivenSysmanHandleWhenRetrievingPCIPropertiesThenpropertiesIsReturned) {
   for (auto device : devices) {
     zes_pci_properties_t pciProps = {};
     pciProps = lzt::get_pci_properties(device);
-    auto pciStats = lzt::get_pci_stats(device);
     EXPECT_GE(pciProps.address.domain, 0);
     EXPECT_LT(pciProps.address.domain, MAX_DOMAINs);
     EXPECT_GE(pciProps.address.bus, 0);
@@ -62,6 +60,15 @@ TEST_F(PciModuleTest,
     EXPECT_LE(pciProps.maxSpeed.width, PCI_SPEED_MAX_LANE_WIDTH);
     EXPECT_GE(pciProps.maxSpeed.maxBandwidth, 0);
     EXPECT_LE(pciProps.maxSpeed.maxBandwidth, UINT64_MAX);
+  }
+}
+TEST_F(
+    PciModuleTest,
+    GivenSysmanHandleWhenRetrievingPCIStatsPropertiesThenStatspropertiesIsReturned) {
+  for (auto device : devices) {
+    zes_pci_properties_t pciProps = {};
+    pciProps = lzt::get_pci_properties(device);
+    auto pciStats = lzt::get_pci_stats(device);
     if (pciProps.haveReplayCounters == false) {
       EXPECT_EQ(pciStats.replayCounter, 0);
     }
