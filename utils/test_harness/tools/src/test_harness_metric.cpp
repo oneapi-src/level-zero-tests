@@ -142,14 +142,15 @@ size_t metric_query_get_data_size(zet_metric_query_handle_t metricQueryHandle) {
             zetMetricQueryGetData(metricQueryHandle, &metricSize, nullptr));
   return metricSize;
 }
-uint8_t *metric_query_get_data(zet_metric_query_handle_t metricQueryHandle) {
-  std::vector<uint8_t> metricData;
+void metric_query_get_data(zet_metric_query_handle_t metricQueryHandle,
+                           std::vector<uint8_t> *metricData) {
+  ASSERT_NE(nullptr, metricData);
   size_t metricSize = metric_query_get_data_size(metricQueryHandle);
-  metricData.resize(metricSize);
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
-      zetMetricQueryGetData(metricQueryHandle, &metricSize, metricData.data()));
-  return metricData.data();
+  EXPECT_GT(metricSize, 0);
+  metricData->resize(metricSize);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricQueryGetData(metricQueryHandle, &metricSize,
+                                  metricData->data()));
 }
 
 void metric_streamer_close(zet_metric_streamer_handle_t metricStreamerHandle) {
@@ -188,15 +189,16 @@ size_t metric_streamer_read_data_size(
                                       &metricSize, nullptr));
   return metricSize;
 }
-uint8_t *
-metric_streamer_read_data(zet_metric_streamer_handle_t metricStreamerHandle) {
-  std::vector<uint8_t> metricData;
+void metric_streamer_read_data(
+    zet_metric_streamer_handle_t metricStreamerHandle,
+    std::vector<uint8_t> *metricData) {
+  ASSERT_NE(nullptr, metricData);
   size_t metricSize = metric_streamer_read_data_size(metricStreamerHandle);
-  metricData.resize(metricSize);
+  EXPECT_GT(metricSize, 0);
+  metricData->resize(metricSize);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetMetricStreamerReadData(metricStreamerHandle, 0, &metricSize,
-                                      metricData.data()));
-  return metricData.data();
+                                      metricData->data()));
 }
 
 void activate_metric_groups(ze_device_handle_t device, uint32_t count,
@@ -250,11 +252,6 @@ void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
             zetMetricGet(matchedGroupHandle, &properties.metricCount,
                          metrics.data()));
   for (uint32_t i = 0; i < count; i++) {
-    zet_metric_properties_t metricProperties = {};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGetProperties(metrics[i % properties.metricCount],
-                                     &metricProperties));
-
     switch (results[i].type) {
     case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
       EXPECT_GE(results[i].value.b8, std::numeric_limits<unsigned char>::min());
@@ -278,6 +275,53 @@ void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
       break;
     default:
       ADD_FAILURE() << "Unexpected value type returned for metric query";
+    }
+  }
+  for (uint32_t i = 0; i < count; i++) {
+    zet_metric_properties_t metricProperties = {};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricGetProperties(metrics[i % properties.metricCount],
+                                     &metricProperties));
+
+    if (metricProperties.metricType ==
+        zet_metric_type_t::ZET_METRIC_TYPE_DURATION) {
+      switch (results[i].type) {
+      case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
+        if (results[i].value.b8 > 0) {
+          i = count;
+          continue;
+        }
+        break;
+      case zet_value_type_t::ZET_VALUE_TYPE_FLOAT32:
+        if (results[i].value.fp32 > 0) {
+          i = count;
+          continue;
+        }
+        break;
+      case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
+        if (results[i].value.fp64 > 0) {
+          i = count;
+          continue;
+        }
+        break;
+      case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
+        if (results[i].value.ui32 > 0) {
+          i = count;
+          continue;
+        }
+        break;
+      case zet_value_type_t::ZET_VALUE_TYPE_UINT64:
+        if (results[i].value.ui64 > 0) {
+          i = count;
+          continue;
+        }
+        break;
+      default:
+        ADD_FAILURE() << "Unexpected value type returned for metric query";
+      }
+    }
+    if (i == count - 1) {
+      ADD_FAILURE() << "All duration metrics are zero";
     }
   }
 }

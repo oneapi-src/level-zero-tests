@@ -42,7 +42,8 @@ metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle);
 void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle);
 
 size_t metric_query_get_data_size(zet_metric_query_handle_t metricQueryHandle);
-uint8_t *metric_query_get_data(zet_metric_query_handle_t metricQueryHandle);
+void metric_query_get_data(zet_metric_query_handle_t metricQueryHandle,
+                           std::vector<uint8_t> *metricData);
 zet_metric_streamer_handle_t
 metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
                      ze_event_handle_t eventHandle,
@@ -53,8 +54,9 @@ void commandlist_append_streamer_marker(
     zet_metric_streamer_handle_t metricStreamerHandle, uint32_t streamerMarker);
 size_t metric_streamer_read_data_size(
     zet_metric_streamer_handle_t metricStreamerHandle);
-uint8_t *
-metric_streamer_read_data(zet_metric_streamer_handle_t metricStreamerHandle);
+void metric_streamer_read_data(
+    zet_metric_streamer_handle_t metricStreamerHandle,
+    std::vector<uint8_t> *metricData);
 void activate_metric_groups(ze_device_handle_t device, uint32_t count,
                             zet_metric_group_handle_t matchedGroupHandle);
 void deactivate_metric_groups(ze_device_handle_t device);

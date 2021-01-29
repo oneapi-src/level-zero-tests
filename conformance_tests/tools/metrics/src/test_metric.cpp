@@ -176,11 +176,11 @@ TEST_P(
   lzt::synchronize(commandQueue, UINT64_MAX);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
-  uint8_t *rawData = lzt::metric_query_get_data(metricQueryHandle);
-  EXPECT_NE(nullptr, rawData);
+  std::vector<uint8_t> rawData;
+  lzt::metric_query_get_data(metricQueryHandle, &rawData);
   lzt::validate_metrics(matchedGroupHandle,
                         lzt::metric_query_get_data_size(metricQueryHandle),
-                        rawData);
+                        rawData.data());
   eventPool.destroy_event(eventHandle);
   lzt::destroy_metric_query(metricQueryHandle);
   lzt::destroy_metric_query_pool(metricQueryPoolHandle);
@@ -232,8 +232,8 @@ class zetMetricStreamerLoadTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::string> {
 protected:
-  uint32_t notifyEveryNReports = 1000;
-  uint32_t samplingPeriod = 40000;
+  uint32_t notifyEveryNReports = 30000;
+  uint32_t samplingPeriod = 1000000;
   ze_event_handle_t eventHandle;
   lzt::zeEventPool eventPool;
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -282,11 +282,12 @@ TEST_P(
   lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
 
-  uint8_t *rawData = lzt::metric_streamer_read_data(metricStreamerHandle);
-  EXPECT_NE(nullptr, rawData);
+  std::vector<uint8_t> rawData;
+  lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
   lzt::validate_metrics(
       matchedGroupHandle,
-      lzt::metric_streamer_read_data_size(metricStreamerHandle), rawData);
+      lzt::metric_streamer_read_data_size(metricStreamerHandle),
+      rawData.data());
 
   lzt::deactivate_metric_groups(device);
   lzt::metric_streamer_close(metricStreamerHandle);
@@ -297,7 +298,7 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_CASE_P(parameterizedMetricStreamerTests,
-                        zetMetricQueryLoadTest,
+                        zetMetricStreamerLoadTest,
                         ::testing::ValuesIn(lzt::get_metric_group_name_list(
                             lzt::zeDevice::get_instance()->get_device(),
                             ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED)));
