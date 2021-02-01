@@ -579,7 +579,8 @@ TEST(
   lzt::destroy_event(event_sync);
 }
 
-class CommandQueueCopyOnlyTest : public ::testing::Test {
+class CommandQueueCopyOnlyTest : public ::testing::Test,
+                                 public ::testing::WithParamInterface<bool> {
 protected:
   CommandQueueCopyOnlyTest() {
     device = lzt::get_default_device(lzt::get_default_driver());
@@ -593,7 +594,8 @@ protected:
 
 public:
   bool get_copy_only_cmd_queue_and_list(ze_command_list_handle_t &cmdlist,
-                                        ze_command_queue_handle_t &cmdqueue) {
+                                        ze_command_queue_handle_t &cmdqueue,
+                                        bool use_sync_queue) {
     auto cmdq_group_properties =
         lzt::get_command_queue_group_properties(device);
     int copy_ordinal = -1;
@@ -614,9 +616,14 @@ public:
       return false;
     }
 
-    cmdqueue = lzt::create_command_queue(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, copy_ordinal);
+    ze_command_queue_mode_t mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+    if (use_sync_queue) {
+      mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
+    }
+
+    cmdqueue = lzt::create_command_queue(context, device, 0, mode,
+                                         ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+                                         copy_ordinal);
 
     cmdlist = lzt::create_command_list(context, device, 0, copy_ordinal);
 
@@ -624,12 +631,13 @@ public:
   }
 };
 
-TEST_F(CommandQueueCopyOnlyTest,
+TEST_P(CommandQueueCopyOnlyTest,
        GivenCopyOnlyCommandQueueWhenCopyingMemoryThenResultIsCorrect) {
 
   ze_command_list_handle_t cmdlist;
   ze_command_queue_handle_t cmdqueue;
-  if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue) == false) {
+  if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue, GetParam()) ==
+      false) {
     LOG_WARNING << "No Copy-Only command queue group found, can't run test";
     SUCCEED();
     return;
@@ -652,12 +660,13 @@ TEST_F(CommandQueueCopyOnlyTest,
   lzt::destroy_command_queue(cmdqueue);
 }
 
-TEST_F(CommandQueueCopyOnlyTest,
+TEST_P(CommandQueueCopyOnlyTest,
        GivenCopyOnlyCommandQueueWhenCopyingImageThenResultIsCorrect) {
 
   ze_command_list_handle_t cmdlist;
   ze_command_queue_handle_t cmdqueue;
-  if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue) == false) {
+  if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue, GetParam()) ==
+      false) {
     LOG_WARNING << "No Copy-Only command queue group found, can't run test";
     SUCCEED();
     return;
@@ -703,6 +712,9 @@ TEST_F(CommandQueueCopyOnlyTest,
   lzt::destroy_ze_image(ze_img_src);
   lzt::destroy_ze_image(ze_img_dest);
 }
+
+INSTANTIATE_TEST_CASE_P(TestCopyOnlyQueueSyncAndAsync, CommandQueueCopyOnlyTest,
+                        testing::Values(true, false));
 
 TEST(ConcurrentCommandQueueExecutionTests,
      GivenMultipleCommandQueuesWhenExecutedOnSameDeviceResultsAreCorrect) {
