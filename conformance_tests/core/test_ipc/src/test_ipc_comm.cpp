@@ -143,9 +143,7 @@ void send_ipc_handle(const ze_ipc_mem_handle_t &ipc_handle) {
         "[Client] IPC process could not create UNIX socket");
   }
 
-  int len;
   std::chrono::milliseconds wait = std::chrono::milliseconds(0);
-  len = strlen(remote_addr.sun_path) + sizeof(remote_addr.sun_family);
   while (connect(unix_send_socket, (struct sockaddr *)&remote_addr,
                  sizeof(remote_addr)) == -1) {
 

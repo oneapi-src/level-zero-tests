@@ -23,6 +23,7 @@
 
 add_subdirectory(image)
 add_subdirectory(logging)
+add_subdirectory(net)
 add_subdirectory(random)
 add_subdirectory(utils)
 add_subdirectory(test_harness)

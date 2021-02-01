@@ -12,9 +12,6 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
-#include <chrono>
-#include <thread>
-
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
