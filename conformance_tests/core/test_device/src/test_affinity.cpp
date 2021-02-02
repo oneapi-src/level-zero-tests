@@ -63,11 +63,11 @@ TEST(
     TestAffinity,
     GivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
 
-  uint32_t num_total_devices = 0;
   std::string affinity_mask = "";
 
   for (auto driver : lzt::get_all_driver_handles()) {
     auto devices = lzt::get_devices(driver);
+    uint32_t num_total_devices = 0;
     if (devices.empty()) {
       continue;
     }
