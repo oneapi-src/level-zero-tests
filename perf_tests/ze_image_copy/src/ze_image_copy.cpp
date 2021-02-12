@@ -74,7 +74,8 @@ void ZeImageCopy::test_initialize(void) {
   // indicate completion event of entire batch of commands.
   num_wait_events = num_image_copies + 1;
   hdevice_event = new ze_event_handle_t[num_wait_events];
-  event_pool = benchmark->create_event_pool(num_wait_events, 0);
+  event_pool = benchmark->create_event_pool(num_wait_events,
+                                            ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
   for (int i = 0; i < num_wait_events; i++) {
     benchmark->create_event(event_pool, hdevice_event[i], i);
     zeEventHostReset(hdevice_event[i]);
