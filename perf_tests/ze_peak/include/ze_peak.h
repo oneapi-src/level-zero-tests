@@ -56,7 +56,7 @@ struct L0Context {
   ze_device_compute_properties_t device_compute_property;
   bool verbose = false;
 
-  void init_xe(uint32_t specified_platform, uint32_t specified_device);
+  void init_xe(uint32_t specified_driver, uint32_t specified_device);
   void clean_xe();
   void print_ze_device_properties(const ze_device_properties_t &props);
   void reset_commandlist(ze_command_list_handle_t cmd_list);
@@ -83,7 +83,7 @@ public:
   bool run_int_compute = true;
   bool run_transfer_bw = true;
   bool run_kernel_lat = true;
-  uint32_t specified_platform = 0;
+  uint32_t specified_driver = 0;
   uint32_t specified_device = 0;
   uint32_t global_bw_max_size = 1 << 29;
   uint32_t transfer_bw_max_size = 1 << 29;

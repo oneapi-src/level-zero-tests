@@ -12,7 +12,7 @@ static const char *usage_str =
     "\n ze_peak [OPTIONS]"
     "\n"
     "\n OPTIONS:"
-    "\n  -p, --platform num          choose platform (num starts with 0)"
+    "\n  -r, --driver num            choose driver (num starts with 0)"
     "\n  -d, --device num            choose device   (num starts with 0)"
     "\n  -e                          time using ze events instead of std "
     "chrono timer"
@@ -59,10 +59,10 @@ int ZePeak::parse_arguments(int argc, char **argv) {
     if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
       std::cout << usage_str;
       exit(0);
-    } else if ((strcmp(argv[i], "-p") == 0) ||
-               (strcmp(argv[i], "--platform") == 0)) {
+    } else if ((strcmp(argv[i], "-r") == 0) ||
+               (strcmp(argv[i], "--driver") == 0)) {
       if ((i + 1) < argc) {
-        specified_platform = sanitize_ulong(argv[i + 1]);
+        specified_driver = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if ((strcmp(argv[i], "-d") == 0) ||

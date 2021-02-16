@@ -135,8 +135,7 @@ void L0Context::print_ze_device_properties(
 // command queue, & device property information.
 // On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
-void L0Context::init_xe(uint32_t specified_platform,
-                        uint32_t specified_device) {
+void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device) {
   ze_command_list_desc_t command_list_description{};
   ze_command_queue_desc_t command_queue_description{};
   ze_result_t result = ZE_RESULT_SUCCESS;
@@ -155,12 +154,18 @@ void L0Context::init_xe(uint32_t specified_platform,
     throw std::runtime_error("zeDriverGet failed: " + std::to_string(result));
   }
 
-  /* Retrieve only one driver */
-  driver_count = 1;
-  result = zeDriverGet(&driver_count, &driver);
+  std::vector<ze_driver_handle_t> drivers(driver_count);
+  result = zeDriverGet(&driver_count, drivers.data());
   if (result) {
     throw std::runtime_error("zeDriverGet failed: " + std::to_string(result));
   }
+
+  driver = drivers[0];
+  if (specified_driver >= driver_count)
+    std::cout << "Specified driver " << specified_driver
+              << " is not valid, will default to the first driver" << std::endl;
+  else
+    driver = drivers[specified_driver];
 
   /* Create a context to manage resources */
   ze_context_desc_t context_desc = {};
@@ -935,7 +940,7 @@ int main(int argc, char **argv) {
   peak_benchmark.parse_arguments(argc, argv);
   context.verbose = peak_benchmark.verbose;
 
-  context.init_xe(peak_benchmark.specified_platform,
+  context.init_xe(peak_benchmark.specified_driver,
                   peak_benchmark.specified_device);
 
   if (peak_benchmark.run_global_bw)

@@ -1,4 +1,4 @@
-# Description
+#Description
 ze_peak is a performance benchmark suite ported from clpeak which profiles Ze devices to find their peak capacities for supported functionality.
 
 This Benchmark is based off the clpeak here licensed with the "unlicense": https://github.com/krrishnarraj/clpeak.
@@ -20,21 +20,21 @@ ze_peak measures the following:
 * Kernel Launch Latency in micro seconds
 * Kernel Duration in micro seconds
 
-# How to Build it
+#How to Build it
 See Build instructions in [BUILD](../BUILD.md) file.
 
-# How to Run it
+#How to Run it
 To run all benchmarks, use the following command. Additional Options and filtering benchmarks are described in the next section.
 ```
     cd bin
     ./ze_peak
 ```
 
-# Additional Options
+#Additional Options
 * To look up options available:
 ```
       $ ./ze_peak -h
-        -p, --platform num          choose platform (num starts with 0)
+        -r, --driver num            choose driver (num starts with 0)
         -d, --device num            choose device   (num starts with 0)
         -e                          time using ze events instead of std chrono timer
                                     hide driver latencies [default: No]
