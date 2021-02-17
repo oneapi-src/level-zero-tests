@@ -565,4 +565,155 @@ TEST(zeCommandListAppendWriteGlobalTimestampTest,
   lzt::destroy_command_list(command_list);
 }
 
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned) {
+  // Create buffers for scratch kernel
+  uint32_t arraySize = 32;
+  uint32_t vectorSize = 16;
+  uint32_t typeSize = sizeof(uint32_t);
+  uint32_t srcAdditionalMul = 3u;
+  uint32_t expectedMemorySize = arraySize * vectorSize * typeSize;
+  uint32_t srcMemorySize = expectedMemorySize * srcAdditionalMul;
+  uint32_t idxMemorySize = arraySize * sizeof(uint32_t);
+
+  ze_device_mem_alloc_desc_t deviceDesc = {};
+  deviceDesc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED;
+  deviceDesc.ordinal = 0;
+  ze_host_mem_alloc_desc_t hostDesc = {};
+  hostDesc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
+  void *srcBuffer = lzt::allocate_host_memory(srcMemorySize);
+  void *dstBuffer = lzt::allocate_host_memory(expectedMemorySize);
+  void *idxBuffer = lzt::allocate_host_memory(idxMemorySize);
+  void *expectedMemory = lzt::allocate_host_memory(expectedMemorySize);
+
+  // create two buffers for append fill/ copy kernel
+  size_t size = 1024;
+  auto device_memory = lzt::allocate_device_memory(size);
+  auto host_memory = lzt::allocate_host_memory(size);
+  uint8_t pattern = 0xAB;
+  const int pattern_size = 1;
+  uint32_t num_iterations = 2;
+
+  auto cmd_list0 = lzt::create_command_list();
+  auto cmd_list1 = lzt::create_command_list();
+  auto context = lzt::get_default_context();
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+  std::vector<ze_command_queue_handle_t> cmd_queue;
+  cmd_queue.resize(num_iterations);
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    ze_command_queue_handle_t queue_handle = lzt::create_command_queue();
+    cmd_queue[i] = queue_handle;
+  }
+
+  ze_module_handle_t module_handle =
+      lzt::create_module(device, "cmdlist_scratch.spv");
+  ze_kernel_flags_t flag = 0;
+  /* Prepare the fill function */
+  ze_kernel_handle_t scratch_function =
+      lzt::create_function(module_handle, flag, "scratch_kernel");
+  ze_kernel_properties_t kernelProperties = {};
+  zeKernelGetProperties(scratch_function, &kernelProperties);
+  EXPECT_NE(kernelProperties.spillMemSize, 0);
+  std::cout << "Scratch size = " << kernelProperties.spillMemSize << "\n";
+
+  uint32_t groupSizeX, groupSizeY, groupSizeZ;
+  lzt::suggest_group_size(scratch_function, arraySize, 1, 1, groupSizeX,
+                          groupSizeY, groupSizeZ);
+  size_t groupSize = groupSizeX * groupSizeY * groupSizeZ;
+  lzt::set_group_size(scratch_function, groupSizeX, groupSizeY, groupSizeZ);
+  lzt::set_argument_value(scratch_function, 2, sizeof(dstBuffer), &dstBuffer);
+  lzt::set_argument_value(scratch_function, 1, sizeof(srcBuffer), &srcBuffer);
+  lzt::set_argument_value(scratch_function, 0, sizeof(idxBuffer), &idxBuffer);
+  // if groupSize is greater then memory count, then at least one thread group
+  // should be dispatched
+  uint32_t threadGroup = arraySize / groupSize > 1 ? arraySize / groupSize : 1;
+  ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
+
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    // Initialize memory
+    constexpr uint8_t val = 0;
+    memset(srcBuffer, val, srcMemorySize);
+    memset(idxBuffer, 0, idxMemorySize);
+    memset(dstBuffer, 0, expectedMemorySize);
+    memset(expectedMemory, 0, expectedMemorySize);
+
+    auto srcBufferLong = static_cast<uint64_t *>(srcBuffer);
+    auto expectedMemoryLong = static_cast<uint64_t *>(expectedMemory);
+
+    for (uint32_t i = 0; i < arraySize; ++i) {
+      static_cast<uint32_t *>(idxBuffer)[i] = 2;
+      for (uint32_t vecIdx = 0; vecIdx < vectorSize; ++vecIdx) {
+        for (uint32_t srcMulIdx = 0; srcMulIdx < srcAdditionalMul;
+             ++srcMulIdx) {
+          srcBufferLong[(i * vectorSize * srcAdditionalMul) +
+                        srcMulIdx * vectorSize + vecIdx] = 1l;
+        }
+        expectedMemoryLong[i * vectorSize + vecIdx] = 2l;
+      }
+    }
+
+    memset(host_memory, 0, size);
+
+    // dispatch cmd_list1 for memory fill/ copy
+    lzt::append_memory_fill(cmd_list0, device_memory, &pattern, pattern_size,
+                            size, nullptr);
+    lzt::append_barrier(cmd_list0, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_list0, host_memory, device_memory, size,
+                            nullptr);
+    lzt::append_barrier(cmd_list0, nullptr, 0, nullptr);
+    lzt::close_command_list(cmd_list0);
+    lzt::execute_command_lists(cmd_queue[i], 1, &cmd_list0, nullptr);
+
+    // dispatch cmd_list0 with kernel having scratch space
+    lzt::append_launch_function(cmd_list1, scratch_function,
+                                &thread_group_dimensions, nullptr, 0, nullptr);
+    lzt::close_command_list(cmd_list1);
+    lzt::execute_command_lists(cmd_queue[i], 1, &cmd_list1, nullptr);
+
+    lzt::synchronize(cmd_queue[i], UINT64_MAX);
+
+    // Validate
+
+    bool outputValidationSuccessful = true;
+    if (memcmp(dstBuffer, expectedMemory, expectedMemorySize)) {
+      outputValidationSuccessful = false;
+      uint8_t *srcCharBuffer = static_cast<uint8_t *>(expectedMemory);
+      uint8_t *dstCharBuffer = static_cast<uint8_t *>(dstBuffer);
+      for (size_t i = 0; i < expectedMemorySize; i++) {
+        if (srcCharBuffer[i] != dstCharBuffer[i]) {
+          std::cout << "srcBuffer[" << i
+                    << "] = " << static_cast<unsigned int>(srcCharBuffer[i])
+                    << " not equal to "
+                    << "dstBuffer[" << i
+                    << "] = " << static_cast<unsigned int>(dstCharBuffer[i])
+                    << "\n";
+          break;
+        }
+      }
+    }
+
+    for (uint32_t i = 0; i < size; i++) {
+      ASSERT_EQ(static_cast<uint8_t *>(host_memory)[i], pattern);
+    }
+
+    lzt::reset_command_list(cmd_list0);
+    lzt::reset_command_list(cmd_list1);
+  }
+
+  lzt::destroy_command_list(cmd_list0);
+  lzt::destroy_command_list(cmd_list1);
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    lzt::destroy_command_queue(cmd_queue[i]);
+  }
+  cmd_queue.clear();
+  lzt::free_memory(host_memory);
+  lzt::free_memory(device_memory);
+  lzt::free_memory(dstBuffer);
+  lzt::free_memory(srcBuffer);
+  lzt::free_memory(idxBuffer);
+  lzt::free_memory(expectedMemory);
+}
+
 } // namespace

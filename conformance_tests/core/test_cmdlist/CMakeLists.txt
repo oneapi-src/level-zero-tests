@@ -13,6 +13,7 @@ add_lzt_test(
     level_zero_tests::utils
   KERNELS
     cmdlist_add
+    cmdlist_scratch
   MEDIA
     "png/test_input.png"
 )
