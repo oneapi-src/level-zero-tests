@@ -83,6 +83,7 @@ TEST_F(
     FanModuleTest,
     GivenValidFanHandleWhenRetrievingFanPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto fanHandles = lzt::get_fan_handles(device, count);
     if (count == 0) {
@@ -93,10 +94,8 @@ TEST_F(
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
       auto properties = lzt::get_fan_properties(fanHandle);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
-      } else {
-        EXPECT_EQ(0, properties.subdeviceId);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
       EXPECT_LT(properties.maxSpeed, UINT32_MAX);
       EXPECT_GT(properties.maxSpeed, 0);

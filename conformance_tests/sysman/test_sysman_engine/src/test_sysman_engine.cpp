@@ -96,6 +96,7 @@ TEST_F(
     EngineModuleTest,
     GivenValidEngineHandleWhenRetrievingEnginePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto engineHandles = lzt::get_engine_handles(device, count);
     if (count == 0) {
@@ -108,10 +109,8 @@ TEST_F(
       auto properties = lzt::get_engine_properties(engineHandle);
       EXPECT_GE(properties.type, ZES_ENGINE_GROUP_ALL);
       EXPECT_LE(properties.type, ZES_ENGINE_GROUP_COPY_SINGLE);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
-      } else {
-        EXPECT_GE(properties.subdeviceId, 0);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
     }
   }
@@ -134,8 +133,7 @@ TEST_F(
       auto propertiesLater = lzt::get_engine_properties(engineHandle);
       EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
     }

@@ -98,14 +98,18 @@ TEST_F(
 
 TEST_F(
     StandbyModuleTest,
-    GivenValidStandbyHandleWhenRetrievingStandbyPropertiesThenValidStandByPolicyIsReturned) {
+    GivenValidStandbyHandleWhenRetrievingStandbyPropertiesThenValidStandbyPropertiesIsReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto pStandbyHandles = lzt::get_standby_handles(device, count);
     for (auto pStandbyHandle : pStandbyHandles) {
       EXPECT_NE(nullptr, pStandbyHandle);
       auto properties = lzt::get_standby_properties(pStandbyHandle);
       EXPECT_EQ(properties.type, ZES_STANDBY_TYPE_GLOBAL);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
+      }
     }
   }
 }
@@ -122,8 +126,7 @@ TEST_F(
       ASSERT_EQ(propertiesInitial.type, ZES_STANDBY_TYPE_GLOBAL);
       EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true)
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice)
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
     }
   }

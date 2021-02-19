@@ -96,6 +96,7 @@ TEST_F(
     MemoryModuleTest,
     GivenValidMemHandleWhenRetrievingMemPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto memHandles = lzt::get_mem_handles(device, count);
     if (count == 0) {
@@ -106,10 +107,8 @@ TEST_F(
     for (auto memHandle : memHandles) {
       ASSERT_NE(nullptr, memHandle);
       auto properties = lzt::get_mem_properties(memHandle);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
-      } else {
-        EXPECT_EQ(0, properties.subdeviceId);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
       EXPECT_LT(properties.physicalSize, UINT64_MAX);
       EXPECT_GE(properties.location, ZES_MEM_LOC_SYSTEM);
@@ -141,8 +140,7 @@ TEST_F(
       auto propertiesLater = lzt::get_mem_properties(memHandle);
       EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
       EXPECT_EQ(propertiesInitial.physicalSize, propertiesLater.physicalSize);

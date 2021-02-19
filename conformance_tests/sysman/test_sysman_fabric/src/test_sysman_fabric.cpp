@@ -101,6 +101,7 @@ TEST_F(
     FabricPortsOperationsTest,
     GivenValidFabricPortHandleWhenRetrievingFabricPortPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto fabricPortHandles = lzt::get_fabric_port_handles(device, count);
     if (count == 0) {
@@ -111,8 +112,8 @@ TEST_F(
     for (auto fabricPortHandle : fabricPortHandles) {
       ASSERT_NE(nullptr, fabricPortHandle);
       auto properties = lzt::get_fabric_port_properties(fabricPortHandle);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
       validate_fabric_port_speed(properties.maxRxSpeed);
       validate_fabric_port_speed(properties.maxTxSpeed);
@@ -146,8 +147,7 @@ TEST_F(
           lzt::get_fabric_port_properties(fabricPortHandle);
       auto propertiesLater = lzt::get_fabric_port_properties(fabricPortHandle);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
       if (strcmp(propertiesInitial.model, propertiesLater.model) == 0) {

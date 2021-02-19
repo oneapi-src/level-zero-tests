@@ -47,12 +47,12 @@ void validate_ras_config(zes_ras_config_t rasConfig) {
   validate_ras_state(rasConfig.detailedThresholds);
 }
 
-void validate_ras_properties(zes_ras_properties_t rasProperties) {
+void validate_ras_properties(zes_ras_properties_t rasProperties,
+                             zes_device_properties_t deviceProperties) {
   EXPECT_LE(rasProperties.type, ZES_RAS_ERROR_TYPE_UNCORRECTABLE);
   EXPECT_GE(rasProperties.type, ZES_RAS_ERROR_TYPE_CORRECTABLE);
-  if (rasProperties.onSubdevice == true) {
-    EXPECT_LT(rasProperties.subdeviceId, UINT32_MAX);
-    EXPECT_GE(rasProperties.subdeviceId, 0);
+  if (rasProperties.onSubdevice) {
+    EXPECT_LT(rasProperties.subdeviceId, deviceProperties.numSubdevices);
   }
 }
 class RASOperationsTest : public lzt::SysmanCtsClass {};
@@ -193,6 +193,7 @@ TEST_F(
     RASOperationsTest,
     GivenValidRASHandleWhenRetrievingRASPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto rasHandles = lzt::get_ras_handles(device, count);
     if (count == 0) {
@@ -204,12 +205,11 @@ TEST_F(
       ASSERT_NE(nullptr, rasHandle);
       auto propertiesInitial = lzt::get_ras_properties(rasHandle);
       auto propertiesLater = lzt::get_ras_properties(rasHandle);
-      validate_ras_properties(propertiesInitial);
-      validate_ras_properties(propertiesLater);
+      validate_ras_properties(propertiesInitial, deviceProperties);
+      validate_ras_properties(propertiesLater, deviceProperties);
       EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
     }

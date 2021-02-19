@@ -344,6 +344,7 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenRetrievingSchedulerPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t pCount = 0;
     auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
     if (pCount == 0) {
@@ -359,10 +360,8 @@ TEST_F(
       EXPECT_GE(properties.supportedModes, 1);
       EXPECT_LE(properties.supportedModes,
                 (1 << ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG));
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
-      } else {
-        EXPECT_GE(properties.subdeviceId, 0);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
     }
   }
@@ -388,8 +387,7 @@ TEST_F(
                 propertiesLater.supportedModes);
       EXPECT_EQ(propertiesInitial.canControl, propertiesLater.canControl);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
     }

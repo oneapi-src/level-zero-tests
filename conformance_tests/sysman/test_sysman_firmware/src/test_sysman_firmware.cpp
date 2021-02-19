@@ -76,6 +76,7 @@ TEST_F(
     FirmwareTest,
     GivenValidFirmwareHandleWhenRetrievingFirmwarePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto firmwareHandles = lzt::get_firmware_handles(device, count);
     if (count == 0) {
@@ -86,8 +87,8 @@ TEST_F(
     for (auto firmwareHandle : firmwareHandles) {
       ASSERT_NE(nullptr, firmwareHandle);
       auto properties = lzt::get_firmware_properties(firmwareHandle);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
       EXPECT_LT(get_prop_length(properties.name), ZES_STRING_PROPERTY_SIZE);
       EXPECT_GT(get_prop_length(properties.name), 0);
@@ -112,8 +113,7 @@ TEST_F(
       auto propertiesInitial = lzt::get_firmware_properties(firmwareHandle);
       auto propertiesLater = lzt::get_firmware_properties(firmwareHandle);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
       EXPECT_TRUE(0 ==

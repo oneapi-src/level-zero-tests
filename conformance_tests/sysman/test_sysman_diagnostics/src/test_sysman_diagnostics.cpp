@@ -97,6 +97,7 @@ TEST_F(
     DiagnosticsTest,
     GivenValidDiagHandleWhenRetrievingDiagPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto diagHandles = lzt::get_diag_handles(device, count);
     if (count == 0) {
@@ -107,10 +108,8 @@ TEST_F(
     for (auto diagHandle : diagHandles) {
       ASSERT_NE(nullptr, diagHandle);
       auto properties = lzt::get_diag_properties(diagHandle);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
-      } else {
-        EXPECT_EQ(0, properties.subdeviceId);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
       EXPECT_LT(std::strlen(properties.name), ZES_STRING_PROPERTY_SIZE);
     }
@@ -133,8 +132,7 @@ TEST_F(
       auto propertiesInitial = lzt::get_diag_properties(diagHandle);
       auto propertiesLater = lzt::get_diag_properties(diagHandle);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
       EXPECT_TRUE(0 == std::memcmp(propertiesInitial.name, propertiesLater.name,

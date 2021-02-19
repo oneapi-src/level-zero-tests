@@ -96,6 +96,7 @@ TEST_F(
     PerformanceModuleTest,
     GivenValidPerformanceHandleWhenRetrievingPerformancePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto performanceHandles = lzt::get_performance_handles(device, count);
     if (count == 0) {
@@ -107,10 +108,8 @@ TEST_F(
       ASSERT_NE(nullptr, performanceHandle);
       auto properties = lzt::get_performance_properties(performanceHandle);
 
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
-      } else {
-        EXPECT_EQ(0, properties.subdeviceId);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
       EXPECT_GE(properties.engines, 0);
       EXPECT_LE(properties.engines,
@@ -138,8 +137,7 @@ TEST_F(
           lzt::get_performance_properties(performanceHandle);
       auto propertiesLater = lzt::get_performance_properties(performanceHandle);
 
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
       EXPECT_EQ(propertiesInitial.engines, propertiesLater.engines);

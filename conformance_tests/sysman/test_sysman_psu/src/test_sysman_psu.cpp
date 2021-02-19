@@ -91,6 +91,7 @@ TEST_F(
     PsuModuleTest,
     GivenValidPsuHandleWhenRetrievingPsuPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto psuHandles = lzt::get_psu_handles(device, count);
     if (count == 0) {
@@ -102,10 +103,8 @@ TEST_F(
       ASSERT_NE(nullptr, psuHandle);
       auto properties = lzt::get_psu_properties(psuHandle);
       EXPECT_LE(properties.ampLimit, UINT32_MAX);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
-      } else {
-        EXPECT_EQ(0, properties.subdeviceId);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
     }
   }

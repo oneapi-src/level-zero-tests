@@ -92,6 +92,7 @@ TEST_F(
     LedModuleTest,
     GivenValidLedHandleWhenRetrievingLedPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto ledHandles = lzt::get_led_handles(device, count);
     if (count == 0) {
@@ -102,8 +103,8 @@ TEST_F(
     for (auto ledHandle : ledHandles) {
       ASSERT_NE(nullptr, ledHandle);
       auto properties = lzt::get_led_properties(ledHandle);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
     }
   }
@@ -125,8 +126,7 @@ TEST_F(
       auto propertiesInitial = lzt::get_led_properties(ledHandle);
       auto propertiesLater = lzt::get_led_properties(ledHandle);
       EXPECT_EQ(propertiesInitial.canControl, propertiesLater.canControl);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
       EXPECT_EQ(propertiesInitial.haveRGB, propertiesLater.haveRGB);

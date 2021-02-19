@@ -277,8 +277,7 @@ TEST_F(
     for (uint32_t i = 1; i < properties.size(); i++) {
       EXPECT_EQ(properties[0].type, properties[i].type);
       EXPECT_EQ(properties[0].onSubdevice, properties[i].onSubdevice);
-      if (properties[0].onSubdevice == true &&
-          properties[i].onSubdevice == true)
+      if (properties[0].onSubdevice && properties[i].onSubdevice)
         EXPECT_EQ(properties[0].subdeviceId, properties[i].subdeviceId);
       EXPECT_EQ(properties[0].canControl, properties[i].canControl);
       EXPECT_EQ(properties[0].isThrottleEventSupported,

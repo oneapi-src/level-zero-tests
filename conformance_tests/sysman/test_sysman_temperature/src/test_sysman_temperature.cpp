@@ -93,6 +93,7 @@ TEST_F(
     TempModuleTest,
     GivenValidTempHandleWhenRetrievingTempPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
+    auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
     auto tempHandles = lzt::get_temp_handles(device, count);
     if (count == 0) {
@@ -103,10 +104,8 @@ TEST_F(
     for (auto tempHandle : tempHandles) {
       ASSERT_NE(nullptr, tempHandle);
       auto properties = lzt::get_temp_properties(tempHandle);
-      if (properties.onSubdevice == true) {
-        EXPECT_LT(properties.subdeviceId, UINT32_MAX);
-      } else {
-        EXPECT_EQ(0, properties.subdeviceId);
+      if (properties.onSubdevice) {
+        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
       EXPECT_GE(properties.type, ZES_TEMP_SENSORS_GLOBAL);
       EXPECT_LE(properties.type, ZES_TEMP_SENSORS_MEMORY_MIN);
@@ -129,8 +128,7 @@ TEST_F(
       auto propertiesInitial = lzt::get_temp_properties(tempHandle);
       auto propertiesLater = lzt::get_temp_properties(tempHandle);
       EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
-      if (propertiesInitial.onSubdevice == true &&
-          propertiesLater.onSubdevice == true) {
+      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
         EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
       }
       EXPECT_EQ(propertiesInitial.isThreshold1Supported,
