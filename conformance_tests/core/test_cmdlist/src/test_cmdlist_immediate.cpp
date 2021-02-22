@@ -151,41 +151,44 @@ TEST_P(
     zeImmediateCommandListExecutionTests,
     GivenMultipleImmediateCommandListWhenAppendCommandsToMultipleCommandListThenVerifyResultIsCorrect) {
 
-  ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_device_properties_t properties;
-
-  properties.pNext = nullptr;
-  properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
+  auto device_handle = lzt::zeDevice::get_instance()->get_device();
 
   auto command_queue_group_properties =
-      lzt::get_command_queue_group_properties(device);
+      lzt::get_command_queue_group_properties(device_handle);
 
-  size_t num_cmdq = 0;
+  uint32_t num_cmdq = 0;
   for (auto properties : command_queue_group_properties) {
     num_cmdq += properties.numQueues;
   }
 
-  std::vector<ze_event_handle_t> host_to_dev_event(num_cmdq, nullptr);
-  ep.InitEventPool(num_cmdq);
+  auto context_handle = lzt::get_default_context();
+  ze_event_pool_desc_t event_pool_desc = {
+      ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
+      ZE_EVENT_POOL_FLAG_HOST_VISIBLE, num_cmdq};
+
+  auto event_pool_handle =
+      lzt::create_event_pool(context_handle, event_pool_desc);
 
   std::vector<ze_command_list_handle_t> mulcmdlist_immediate(num_cmdq, nullptr);
   std::vector<void *> buffer(num_cmdq, nullptr);
   std::vector<uint8_t> val(num_cmdq, 0);
   const size_t size = 16;
 
-  for (size_t i = 0; i < num_cmdq; i++) {
+  std::vector<ze_event_handle_t> host_to_dev_event(num_cmdq, nullptr);
+  ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
+                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
+
+  for (uint32_t i = 0; i < num_cmdq; i++) {
     mulcmdlist_immediate[i] = lzt::create_immediate_command_list(
-        device, 0, mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+        context_handle, device_handle, 0, mode,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
     buffer[i] = lzt::allocate_shared_memory(size);
     val[i] = static_cast<uint8_t>(i + 1);
-
-    ep.create_event(host_to_dev_event[i], ZE_EVENT_SCOPE_FLAG_HOST,
-                    ZE_EVENT_SCOPE_FLAG_HOST);
+    host_to_dev_event[i] = lzt::create_event(event_pool_handle, event_desc);
 
     // This should execute immediately
-
     lzt::append_memory_set(mulcmdlist_immediate[i], buffer[i], &val[i], size,
                            host_to_dev_event[i]);
     if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
@@ -194,19 +197,19 @@ TEST_P(
   }
 
   // validate event status and validate buffer copied/set
-  for (size_t i = 0; i < num_cmdq; i++) {
+  for (uint32_t i = 0; i < num_cmdq; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(host_to_dev_event[i]));
     for (size_t j = 0; j < size; j++) {
       EXPECT_EQ(static_cast<uint8_t *>(buffer[i])[j], val[i]);
     }
   }
 
-  for (size_t i = 0; i < num_cmdq; i++) {
-    ep.destroy_event(host_to_dev_event[i]);
-
+  for (uint32_t i = 0; i < num_cmdq; i++) {
+    lzt::destroy_event(host_to_dev_event[i]);
     lzt::destroy_command_list(mulcmdlist_immediate[i]);
     lzt::free_memory(buffer[i]);
   }
+  lzt::destroy_event_pool(event_pool_handle);
 }
 
 TEST_P(zeImmediateCommandListExecutionTests,
