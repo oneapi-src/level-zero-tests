@@ -32,7 +32,7 @@ add_core_library(test_harness
     "sysman/src/test_harness_sysman_fabric.cpp"
     "sysman/src/test_harness_sysman_device.cpp"
     "sysman/src/test_harness_sysman_psu.cpp"
-    #"sysman/src/test_harness_sysman_fan.cpp"
+    "sysman/src/test_harness_sysman_fan.cpp"
     "sysman/src/test_harness_sysman_led.cpp"
     "sysman/src/test_harness_sysman_ras.cpp"
     "sysman/src/test_harness_sysman_engine.cpp"

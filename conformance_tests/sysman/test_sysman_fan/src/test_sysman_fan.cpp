@@ -1,3 +1,11 @@
+/*
+ *
+ * Copyright (C) 2020-2021 Intel Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ */
+
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"
@@ -97,10 +105,22 @@ TEST_F(
       if (properties.onSubdevice) {
         EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
-      EXPECT_LT(properties.maxSpeed, UINT32_MAX);
-      EXPECT_GT(properties.maxSpeed, 0);
-      EXPECT_LT(properties.maxPoints, UINT32_MAX);
-      EXPECT_GT(properties.maxPoints, 0);
+      if (properties.maxRPM == -1) {
+        LOG_INFO << "maxRPM unsupported: ";
+      }
+      if (properties.maxRPM != -1) {
+        EXPECT_LT(properties.maxRPM, INT32_MAX);
+      }
+      if (properties.maxPoints == -1) {
+        LOG_INFO << "maxPoints unsupported: ";
+      }
+      if (properties.maxPoints != -1) {
+        EXPECT_LT(properties.maxPoints, INT32_MAX);
+      }
+      EXPECT_GE(properties.supportedModes, 1);
+      EXPECT_LE(properties.supportedModes, (1 << ZES_FAN_SPEED_MODE_TABLE));
+      EXPECT_GE(properties.supportedUnits, 1);
+      EXPECT_LE(properties.supportedUnits, (1 << ZES_FAN_SPEED_UNITS_PERCENT));
     }
   }
 }
@@ -123,8 +143,12 @@ TEST_F(
       EXPECT_EQ(propertiesInitial.canControl, propertiesLater.canControl);
       EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
       EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
-      EXPECT_EQ(propertiesInitial.maxSpeed, propertiesLater.maxSpeed);
+      EXPECT_EQ(propertiesInitial.maxRPM, propertiesLater.maxRPM);
       EXPECT_EQ(propertiesInitial.maxPoints, propertiesLater.maxPoints);
+      EXPECT_EQ(propertiesInitial.supportedModes,
+                propertiesLater.supportedModes);
+      EXPECT_EQ(propertiesInitial.supportedUnits,
+                propertiesLater.supportedUnits);
     }
   }
 }
@@ -142,64 +166,23 @@ TEST_F(
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
       auto config = lzt::get_fan_configuration(fanHandle);
-      EXPECT_GE(config.mode, ZET_FAN_SPEED_MODE_DEFAULT);
-      EXPECT_LE(config.mode, ZET_FAN_SPEED_MODE_TABLE);
+      EXPECT_EQ(config.mode, ZES_FAN_SPEED_MODE_DEFAULT);
       auto properties = lzt::get_fan_properties(fanHandle);
-      EXPECT_LE(config.speed, properties.maxSpeed);
-      EXPECT_GE(config.speedUnits, ZET_FAN_SPEED_UNITS_RPM);
-      EXPECT_LE(config.speedUnits, ZET_FAN_SPEED_UNITS_PERCENT);
-      EXPECT_LE(config.numPoints, properties.maxPoints);
-      for (uint32_t i = 0; i < config.numPoints; i++) {
-        EXPECT_LT(config.table[i].temperature, UINT32_MAX);
-        EXPECT_GT(config.table[i].temperature, 0);
-        EXPECT_LE(config.table[i].speed, properties.maxSpeed);
-        EXPECT_GE(config.table[i].units, ZET_FAN_SPEED_UNITS_RPM);
-        EXPECT_LE(config.table[i].units, ZET_FAN_SPEED_UNITS_PERCENT);
+      if (config.speedFixed.speed == -1) {
+        LOG_INFO << "No fixed fan speed setting ";
       }
+      if (config.speedFixed.units == -1) {
+        LOG_INFO << "Units should be ignored";
+      }
+      if (config.speedFixed.units == ZES_FAN_SPEED_UNITS_RPM) {
+        EXPECT_LE(config.speedFixed.speed, properties.maxRPM);
+      }
+      EXPECT_GE(config.speedFixed.units, ZES_FAN_SPEED_UNITS_RPM);
+      EXPECT_LE(config.speedFixed.units, ZES_FAN_SPEED_UNITS_PERCENT);
     }
   }
 }
-
-TEST_F(
-    FanModuleTest,
-    GivenValidFanHandleWhenSettingFanConfigurationThenExpectzetSysmanFanSetConfigFollowedByzetSysmanFanGetConfigToMatch) {
-  for (auto device : devices) {
-    uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
-      auto properties = lzt::get_fan_properties(fanHandle);
-      auto initial_config = lzt::get_fan_configuration(fanHandle);
-      zet_fan_config_t set_config;
-      set_config.mode = ZET_FAN_SPEED_MODE_DEFAULT;
-      set_config.speed = properties.maxSpeed;
-      set_config.speedUnits = ZET_FAN_SPEED_UNITS_RPM;
-      set_config.numPoints = properties.maxPoints;
-      for (uint32_t i = 0; i < set_config.numPoints; i++) {
-        set_config.table[i].temperature = initial_config.table[i].temperature;
-        set_config.table[i].speed = initial_config.table[i].speed;
-        set_config.table[i].units = initial_config.table[i].units;
-      }
-      lzt::set_fan_configuration(fanHandle, set_config);
-      auto get_config = lzt::get_fan_configuration(fanHandle);
-      EXPECT_EQ(get_config.mode, set_config.mode);
-      EXPECT_EQ(get_config.speed, set_config.speed);
-      EXPECT_EQ(get_config.speedUnits, set_config.speedUnits);
-      EXPECT_EQ(get_config.numPoints, set_config.numPoints);
-      for (uint32_t i = 0; i < get_config.numPoints; i++) {
-        get_config.table[i].temperature = set_config.table[i].temperature;
-        get_config.table[i].speed = set_config.table[i].speed;
-        get_config.table[i].units = set_config.table[i].units;
-      }
-      lzt::set_fan_configuration(fanHandle, initial_config);
-    }
-  }
-}
+} // namespace
 
 TEST_F(FanModuleTest,
        GivenValidFanHandleWhenRetrievingFanStateThenValidStateIsReturned) {
@@ -213,14 +196,101 @@ TEST_F(FanModuleTest,
 
     for (auto fanHandle : fanHandles) {
       ASSERT_NE(nullptr, fanHandle);
-      zet_fan_speed_units_t units = ZET_FAN_SPEED_UNITS_RPM;
-      uint32_t speed;
+      zes_fan_speed_units_t units = {};
+      int32_t speed = {};
       lzt::get_fan_state(fanHandle, units, speed);
       auto properties = lzt::get_fan_properties(fanHandle);
-      EXPECT_LE(speed, properties.maxSpeed);
-      EXPECT_GE(units, ZET_FAN_SPEED_UNITS_RPM);
-      EXPECT_LE(units, ZET_FAN_SPEED_UNITS_PERCENT);
+      auto config = lzt::get_fan_configuration(fanHandle);
+      if (config.speedFixed.units == ZES_FAN_SPEED_UNITS_RPM) {
+        EXPECT_LE(config.speedFixed.speed, properties.maxRPM);
+      }
+      EXPECT_GE(units, ZES_FAN_SPEED_UNITS_RPM);
+      EXPECT_LE(units, ZES_FAN_SPEED_UNITS_PERCENT);
     }
   }
 }
+
+TEST_F(
+    FanModuleTest,
+    GivenValidFanHandleWhenSettingFanToDefaultModeThenValidFanConfigurationIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto fanHandle : fanHandles) {
+      ASSERT_NE(nullptr, fanHandle);
+      lzt::set_fan_default_mode(fanHandle);
+      auto config = lzt::get_fan_configuration(fanHandle);
+      EXPECT_EQ(config.mode, ZES_FAN_SPEED_MODE_DEFAULT);
+    }
+  }
+}
+
+TEST_F(
+    FanModuleTest,
+    GivenValidFanHandleWhenSettingFanToFixedSpeedModeThenValidFanConfigurationIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto fanHandle : fanHandles) {
+      ASSERT_NE(nullptr, fanHandle);
+      auto config = lzt::get_fan_configuration(fanHandle);
+      zes_fan_speed_t speed;
+      speed.speed = 50;
+      speed.units = ZES_FAN_SPEED_UNITS_RPM;
+      lzt::set_fan_fixed_speed_mode(fanHandle, speed);
+      EXPECT_EQ(config.mode, ZES_FAN_SPEED_MODE_FIXED);
+      EXPECT_EQ(config.speedFixed.speed, speed.speed);
+      EXPECT_EQ(config.speedFixed.units, speed.units);
+    }
+  }
+}
+
+TEST_F(
+    FanModuleTest,
+    GivenValidFanHandleWhenSettingFanToSpeedTableModeThenValidFanConfigurationIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fanHandles = lzt::get_fan_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto fanHandle : fanHandles) {
+      ASSERT_NE(nullptr, fanHandle);
+      auto config = lzt::get_fan_configuration(fanHandle);
+      zes_fan_speed_table_t speedTable;
+      speedTable.numPoints = 1;
+      speedTable.table->temperature = 140;
+      speedTable.table->speed.speed = 50;
+      speedTable.table->speed.units = ZES_FAN_SPEED_UNITS_RPM;
+      lzt::set_fan_speed_table_mode(fanHandle, speedTable);
+      auto properties = lzt::get_fan_properties(fanHandle);
+      EXPECT_EQ(config.mode, ZES_FAN_SPEED_MODE_TABLE);
+      EXPECT_LE(speedTable.numPoints, properties.maxPoints);
+      for (int32_t i = 0; i < speedTable.numPoints; i++) {
+        EXPECT_LT(speedTable.table[i].temperature, UINT32_MAX);
+        EXPECT_GT(speedTable.table[i].temperature, 0);
+        EXPECT_LE(speedTable.table[i].speed.speed, properties.maxRPM);
+        EXPECT_GE(speedTable.table[i].speed.units, ZES_FAN_SPEED_UNITS_RPM);
+        EXPECT_LE(speedTable.table[i].speed.units, ZES_FAN_SPEED_UNITS_PERCENT);
+        EXPECT_EQ(config.speedTable.table->temperature,
+                  speedTable.table->temperature);
+        EXPECT_EQ(config.speedTable.table->speed.speed,
+                  speedTable.table->speed.speed);
+        EXPECT_EQ(config.speedTable.table->speed.units,
+                  speedTable.table->speed.units);
+      }
+    }
+  }
 } // namespace
