@@ -15,6 +15,7 @@ add_lzt_test(
     level_zero_tests::utils
   KERNELS
     image_formats_tests
+    image_layout_tests
     image_media_layouts_tests
     image_swizzle_tests
 )
