@@ -63,4 +63,21 @@ ze_driver_ipc_properties_t get_ipc_properties(ze_driver_handle_t driver) {
   return properties;
 }
 
+std::vector<ze_driver_extension_properties_t>
+get_extension_properties(ze_driver_handle_t driver) {
+
+  uint32_t count = 0;
+  auto driver_initial = driver;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDriverGetExtensionProperties(driver, &count, nullptr));
+  EXPECT_EQ(driver, driver_initial);
+
+  std::vector<ze_driver_extension_properties_t> properties(count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDriverGetExtensionProperties(driver, &count, properties.data()));
+  EXPECT_EQ(driver, driver_initial);
+
+  return properties;
+}
+
 }; // namespace level_zero_tests

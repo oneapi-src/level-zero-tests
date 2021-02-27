@@ -73,12 +73,22 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
                              const uint32_t ordinal,
                              ze_device_handle_t device_handle,
                              ze_context_handle_t context) {
+
+  return lzt::allocate_device_memory(size, alignment, flags, nullptr, ordinal,
+                                     device_handle, context);
+}
+
+void *allocate_device_memory(const size_t size, const size_t alignment,
+                             const ze_device_mem_alloc_flags_t flags,
+                             void *pNext, const uint32_t ordinal,
+                             ze_device_handle_t device_handle,
+                             ze_context_handle_t context) {
   void *memory = nullptr;
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_desc.ordinal = ordinal;
   device_desc.flags = flags;
-  device_desc.pNext = nullptr;
+  device_desc.pNext = pNext;
 
   auto context_initial = context;
   auto device_initial = device_handle;
@@ -91,6 +101,7 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
 
   return memory;
 }
+
 void *allocate_shared_memory(const size_t size) {
   return allocate_shared_memory(size, 1);
 }
@@ -125,19 +136,30 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
                              ze_device_handle_t device,
                              ze_context_handle_t context) {
 
+  return allocate_shared_memory(size, alignment, dev_flags, nullptr, host_flags,
+                                nullptr, device, context);
+}
+
+void *allocate_shared_memory(const size_t size, const size_t alignment,
+                             const ze_device_mem_alloc_flags_t device_flags,
+                             void *device_pNext,
+                             const ze_host_mem_alloc_flags_t host_flags,
+                             void *host_pNext, ze_device_handle_t device,
+                             ze_context_handle_t context) {
+
   uint32_t ordinal = 0;
 
   void *memory = nullptr;
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_desc.ordinal = ordinal;
-  device_desc.flags = dev_flags;
+  device_desc.flags = device_flags;
+  device_desc.pNext = device_pNext;
 
-  device_desc.pNext = nullptr;
   ze_host_mem_alloc_desc_t host_desc = {};
   host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
   host_desc.flags = host_flags;
-  host_desc.pNext = nullptr;
+  host_desc.pNext = host_pNext;
 
   auto context_initial = context;
   auto device_initial = device;

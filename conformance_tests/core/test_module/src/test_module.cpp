@@ -813,6 +813,125 @@ void zeKernelLaunchTests::test_kernel_execution() {
   }
 }
 
+TEST_F(
+    zeKernelLaunchTests,
+    GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully) {
+
+  const auto size = 4000001000;
+
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+  auto context = lzt::create_context(driver);
+
+  auto command_queue = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  auto command_list = lzt::create_command_list(context, device, 0, 0);
+
+  auto module = lzt::create_module(
+      context, device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV,
+      "-ze-opt-greater-than-4GB-buffer-required", nullptr);
+  auto kernel = lzt::create_function(module, "module_add_constant_2");
+
+  auto device_properties = lzt::get_device_properties(device);
+
+  void *pNext = nullptr;
+  ze_relaxed_allocation_limits_exp_desc_t relaxed_allocation_limits_desc = {};
+  relaxed_allocation_limits_desc.stype =
+      ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC;
+  relaxed_allocation_limits_desc.flags =
+      ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE;
+
+  if (device_properties.maxMemAllocSize < size) {
+    auto driver_extension_properties = lzt::get_extension_properties(driver);
+
+    bool supports_relaxed_allocations = false;
+    for (auto &extension : driver_extension_properties) {
+      if (!std::strcmp("ZE_experimental_relaxed_allocation_limits",
+                       extension.name)) {
+        supports_relaxed_allocations = true;
+        break;
+      }
+    }
+
+    if (!supports_relaxed_allocations) {
+      LOG_WARNING
+          << "size exceeds device max allocation size and driver does not "
+             "support relaxed allocations, skipping test";
+      return;
+    }
+
+    pNext = &relaxed_allocation_limits_desc;
+  }
+
+  auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, pNext, 0, nullptr,
+                                              device, context);
+  auto buffer_b =
+      lzt::allocate_device_memory(size, 0, 0, pNext, 0, device, context);
+
+  if (::testing::Test::HasFailure()) {
+    FAIL() << "Error allocating memory";
+  }
+
+  std::memset(buffer_a, 0, size);
+  for (size_t i = 0; i < size; i++) {
+    static_cast<uint8_t *>(buffer_a)[i] = (i & 0xFF);
+  }
+  const int addval = 3;
+
+  lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
+  lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
+
+  auto device_compute_properties = lzt::get_compute_properties(device);
+
+  uint32_t group_size_x = 1;
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
+                          group_size_z);
+  if (group_size_x > device_compute_properties.maxGroupSizeX) {
+    LOG_WARNING
+        << "Suggested group size is larger than max group size, setting to max";
+    group_size_x = device_compute_properties.maxGroupSizeX;
+  }
+
+  lzt::set_group_size(kernel, group_size_x, 1, 1);
+  ze_group_count_t group_count = {};
+  group_count.groupCountX = size / group_size_x;
+
+  if (group_count.groupCountX > device_compute_properties.maxGroupCountX) {
+    LOG_WARNING << "group count is larger than max group count, setting to max";
+    group_count.groupCountX = device_compute_properties.maxGroupCountX;
+  }
+  group_count.groupCountY = 1;
+  group_count.groupCountZ = 1;
+
+  lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
+  lzt::append_barrier(command_list);
+  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+                              nullptr);
+  lzt::append_barrier(command_list);
+  lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
+  lzt::close_command_list(command_list);
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+  lzt::synchronize(command_queue, UINT64_MAX);
+
+  // validation
+  for (size_t i = 0; i < size; i++) {
+    ASSERT_EQ(static_cast<uint8_t *>(buffer_a)[i],
+              static_cast<uint8_t>((i & 0xFF) + addval));
+  }
+
+  // cleanup
+  lzt::free_memory(context, buffer_a);
+  lzt::free_memory(context, buffer_b);
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_context(context);
+}
+
 TEST_P(
     zeKernelLaunchTests,
     GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecution) {

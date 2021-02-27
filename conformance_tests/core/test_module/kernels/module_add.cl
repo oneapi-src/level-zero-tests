@@ -21,6 +21,18 @@ kernel void module_add_constant(global int *values, int addval) {
   }
 }
 
+kernel void module_add_constant_2(global uchar *values, int addval) {
+
+  const size_t xid = get_global_id(0);
+  const size_t yid = get_global_id(1);
+  const size_t zid = get_global_id(2);
+  const size_t xdim = get_global_size(0);
+  const size_t ydim = get_global_size(1);
+  const size_t zdim = get_global_size(2);
+
+  values[xid] = values[xid] + addval;
+}
+
 kernel void module_add_two_arrays(global int *output, global int *input) {
   const int tid = get_global_id(0);
   output[tid] = output[tid] + input[tid];
