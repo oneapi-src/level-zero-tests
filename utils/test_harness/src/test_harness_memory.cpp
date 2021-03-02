@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019 - 2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -219,6 +219,12 @@ void get_ipc_handle(ze_context_handle_t context,
   auto context_initial = context;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, mem_handle));
   EXPECT_EQ(context, context_initial);
+}
+
+void open_ipc_handle(ze_context_handle_t context, ze_device_handle_t device,
+                     ze_ipc_mem_handle_t mem_handle, void **memory) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemOpenIpcHandle(context, device, mem_handle, 0, memory));
 }
 
 void write_data_pattern(void *buff, size_t size, int8_t data_pattern) {

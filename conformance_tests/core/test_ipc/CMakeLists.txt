@@ -1,4 +1,4 @@
-# Copyright (C) 2019 Intel Corporation
+# Copyright (C) 2019 - 2021 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 set(ipc_libraries
@@ -49,6 +49,16 @@ add_lzt_test(
   GROUP "/conformance_tests/core"
   SOURCES
     src/test_ipc_multisubdevice.cpp
+    src/test_ipc_comm.cpp
+  LINK_LIBRARIES
+    ${ipc_libraries}
+)
+
+add_lzt_test(
+  NAME test_ipc_p2p_memory
+  GROUP "/conformance_tests/core"
+  SOURCES
+    src/test_ipc_p2p_memory.cpp
     src/test_ipc_comm.cpp
   LINK_LIBRARIES
     ${ipc_libraries}

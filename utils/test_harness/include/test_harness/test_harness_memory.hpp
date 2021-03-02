@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019 - 2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -76,6 +76,8 @@ void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
                                      ze_memory_type_t mem_type, size_t size);
 void get_ipc_handle(ze_context_handle_t context, ze_ipc_mem_handle_t *handle,
                     void *memory);
+void open_ipc_handle(ze_context_handle_t context, ze_device_handle_t device,
+                     ze_ipc_mem_handle_t mem_handle, void **memory);
 void write_data_pattern(void *buff, size_t size, int8_t data_pattern);
 void validate_data_pattern(void *buff, size_t size, int8_t data_pattern);
 void get_mem_alloc_properties(
