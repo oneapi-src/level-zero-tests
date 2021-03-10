@@ -43,7 +43,7 @@ void validate_ras_state(zes_ras_state_t detailedThresholds) {
 
 void validate_ras_config(zes_ras_config_t rasConfig) {
   EXPECT_LT(rasConfig.totalThreshold, UINT64_MAX);
-  EXPECT_GT(rasConfig.totalThreshold, 0);
+  EXPECT_GE(rasConfig.totalThreshold, 0);
   validate_ras_state(rasConfig.detailedThresholds);
 }
 
