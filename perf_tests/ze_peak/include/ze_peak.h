@@ -42,14 +42,19 @@ enum class TimingMeasurement {
 
 struct L0Context {
   ze_command_queue_handle_t command_queue = nullptr;
+  std::vector<ze_command_queue_handle_t> cmd_queue;
   ze_command_queue_handle_t copy_command_queue = nullptr;
   ze_command_list_handle_t command_list = nullptr;
+  std::vector<ze_command_list_handle_t> cmd_list;
   ze_command_list_handle_t copy_command_list = nullptr;
   ze_module_handle_t module = nullptr;
+  std::vector<ze_module_handle_t> subdevice_module;
   ze_context_handle_t context = nullptr;
   ze_driver_handle_t driver = nullptr;
   ze_device_handle_t device = nullptr;
   uint32_t device_count = 0;
+  uint32_t sub_device_count = 0;
+  std::vector<ze_device_handle_t> sub_devices;
   const uint32_t default_device = 0;
   const uint32_t command_queue_id = 0;
   ze_device_properties_t device_property;
@@ -89,6 +94,7 @@ public:
   uint32_t transfer_bw_max_size = 1 << 29;
   uint32_t iters = 50;
   uint32_t warmup_iterations = 10;
+  uint32_t current_sub_device_id = 0;
 
   int parse_arguments(int argc, char **argv);
 

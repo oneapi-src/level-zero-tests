@@ -79,11 +79,25 @@ void L0Context::create_module(std::vector<uint8_t> binary_file) {
       reinterpret_cast<const uint8_t *>(binary_file.data());
   module_description.pBuildFlags = nullptr;
 
-  result =
-      zeModuleCreate(context, device, &module_description, &module, nullptr);
-  if (result) {
-    throw std::runtime_error("zeModuleCreate failed: " +
-                             std::to_string(result));
+  if (sub_device_count) {
+    subdevice_module.resize(sub_device_count);
+    uint32_t i = 0;
+    for (auto device : sub_devices) {
+      result = zeModuleCreate(context, device, &module_description,
+                              &subdevice_module[i], nullptr);
+      if (result) {
+        throw std::runtime_error("zeModuleCreate failed: " +
+                                 std::to_string(result));
+      }
+      i++;
+    }
+  } else {
+    result =
+        zeModuleCreate(context, device, &module_description, &module, nullptr);
+    if (result) {
+      throw std::runtime_error("zeModuleCreate failed: " +
+                               std::to_string(result));
+    }
   }
   if (verbose)
     std::cout << "Module created\n";
@@ -220,15 +234,46 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device) {
   if (verbose)
     std::cout << "Device Compute Properties retrieved\n";
 
+  zeDeviceGetSubDevices(device, &sub_device_count, nullptr);
+  if (verbose)
+    std::cout << "Sub Device Count retrieved\n";
+
+  if (sub_device_count) {
+    std::cout << "Enable explicit scaling as we have sub devices inside root "
+                 "device\n";
+
+    sub_devices.resize(sub_device_count);
+    result =
+        zeDeviceGetSubDevices(device, &sub_device_count, sub_devices.data());
+    if (verbose)
+      std::cout << "Sub Device Handles retrieved\n";
+  }
+
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
+  command_list_description.flags = ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY;
 
-  result = zeCommandListCreate(context, device, &command_list_description,
-                               &command_list);
-  if (result) {
-    throw std::runtime_error("zeCommandListCreate failed: " +
-                             std::to_string(result));
+  if (sub_device_count) {
+    cmd_list.resize(sub_device_count);
+    uint32_t i = 0;
+    for (auto device : sub_devices) {
+      result = zeCommandListCreate(context, device, &command_list_description,
+                                   &cmd_list[i]);
+      if (result) {
+        throw std::runtime_error("zeCommandListCreate failed: " +
+                                 std::to_string(result));
+      }
+      i++;
+    }
+  } else {
+    result = zeCommandListCreate(context, device, &command_list_description,
+                                 &command_list);
+    if (result) {
+      throw std::runtime_error("zeCommandListCreate failed: " +
+                               std::to_string(result));
+    }
   }
+
   if (verbose)
     std::cout << "command_list created\n";
 
@@ -236,13 +281,29 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device) {
   command_queue_description.pNext = nullptr;
   command_queue_description.ordinal = command_queue_id;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+  command_queue_description.flags = ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY;
 
-  result = zeCommandQueueCreate(context, device, &command_queue_description,
-                                &command_queue);
-  if (result) {
-    throw std::runtime_error("zeCommandQueueCreate failed: " +
-                             std::to_string(result));
+  if (sub_device_count) {
+    cmd_queue.resize(sub_device_count);
+    uint32_t i = 0;
+    for (auto device : sub_devices) {
+      result = zeCommandQueueCreate(context, device, &command_queue_description,
+                                    &cmd_queue[i]);
+      if (result) {
+        throw std::runtime_error("zeCommandQueueCreate failed: " +
+                                 std::to_string(result));
+      }
+      i++;
+    }
+  } else {
+    result = zeCommandQueueCreate(context, device, &command_queue_description,
+                                  &command_queue);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueCreate failed: " +
+                               std::to_string(result));
+    }
   }
+
   if (verbose)
     std::cout << "Command queue created\n";
 
@@ -306,18 +367,38 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device) {
 void L0Context::clean_xe() {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  result = zeCommandQueueDestroy(command_queue);
-  if (result) {
-    throw std::runtime_error("zeCommandQueueDestroy failed: " +
-                             std::to_string(result));
+  if (sub_device_count) {
+    for (auto queue : cmd_queue) {
+      result = zeCommandQueueDestroy(queue);
+      if (result) {
+        throw std::runtime_error("zeCommandQueueDestroy failed: " +
+                                 std::to_string(result));
+      }
+    }
+  } else {
+    result = zeCommandQueueDestroy(command_queue);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueDestroy failed: " +
+                               std::to_string(result));
+    }
   }
   if (verbose)
     std::cout << "Command queue destroyed\n";
 
-  result = zeCommandListDestroy(command_list);
-  if (result) {
-    throw std::runtime_error("zeCommandListDestroy failed: " +
-                             std::to_string(result));
+  if (sub_device_count) {
+    for (auto list : cmd_list) {
+      result = zeCommandListDestroy(list);
+      if (result) {
+        throw std::runtime_error("zeCommandListDestroy failed: " +
+                                 std::to_string(result));
+      }
+    }
+  } else {
+    result = zeCommandListDestroy(command_list);
+    if (result) {
+      throw std::runtime_error("zeCommandListDestroy failed: " +
+                               std::to_string(result));
+    }
   }
   if (verbose)
     std::cout << "command_list destroyed\n";
@@ -362,34 +443,68 @@ void L0Context::clean_xe() {
 void L0Context::execute_commandlist_and_sync(bool use_copy_only_queue) {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  auto cmd_list = use_copy_only_queue ? copy_command_list : command_list;
-  auto cmd_q = use_copy_only_queue ? copy_command_queue : command_queue;
+  if (sub_device_count) {
+    for (auto i = 0; i < sub_device_count; i++) {
+      auto cmd_l = use_copy_only_queue ? copy_command_list : cmd_list[i];
+      auto cmd_q = use_copy_only_queue ? copy_command_queue : cmd_queue[i];
 
-  result = zeCommandListClose(cmd_list);
-  if (result) {
-    throw std::runtime_error("zeCommandListClose failed: " +
-                             std::to_string(result));
+      result = zeCommandListClose(cmd_l);
+      if (result) {
+        throw std::runtime_error("zeCommandListClose failed: " +
+                                 std::to_string(result));
+      }
+      if (verbose)
+        std::cout << "Command list closed\n";
+
+      result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_l, nullptr);
+      if (result) {
+        throw std::runtime_error("zeCommandQueueExecuteCommandLists failed: " +
+                                 std::to_string(result));
+      }
+      if (verbose)
+        std::cout << "Command list enqueued\n";
+
+      result = zeCommandQueueSynchronize(cmd_q, UINT64_MAX);
+      if (result) {
+        throw std::runtime_error("zeCommandQueueSynchronize failed: " +
+                                 std::to_string(result));
+      }
+      if (verbose)
+        std::cout << "Command queue synchronized\n";
+
+      reset_commandlist(cmd_l);
+    }
+
+  } else {
+    auto cmd_list = use_copy_only_queue ? copy_command_list : command_list;
+    auto cmd_q = use_copy_only_queue ? copy_command_queue : command_queue;
+
+    result = zeCommandListClose(cmd_list);
+    if (result) {
+      throw std::runtime_error("zeCommandListClose failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "Command list closed\n";
+
+    result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_list, nullptr);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueExecuteCommandLists failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "Command list enqueued\n";
+
+    result = zeCommandQueueSynchronize(cmd_q, UINT64_MAX);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueSynchronize failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "Command queue synchronized\n";
+
+    reset_commandlist(cmd_list);
   }
-  if (verbose)
-    std::cout << "Command list closed\n";
-
-  result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_list, nullptr);
-  if (result) {
-    throw std::runtime_error("zeCommandQueueExecuteCommandLists failed: " +
-                             std::to_string(result));
-  }
-  if (verbose)
-    std::cout << "Command list enqueued\n";
-
-  result = zeCommandQueueSynchronize(cmd_q, UINT64_MAX);
-  if (result) {
-    throw std::runtime_error("zeCommandQueueSynchronize failed: " +
-                             std::to_string(result));
-  }
-  if (verbose)
-    std::cout << "Command queue synchronized\n";
-
-  reset_commandlist(cmd_list);
 }
 
 //---------------------------------------------------------------------
@@ -479,11 +594,21 @@ uint64_t ZePeak::set_workgroups(L0Context &context,
 //---------------------------------------------------------------------
 void ZePeak::run_command_queue(L0Context &context) {
   ze_result_t result = ZE_RESULT_SUCCESS;
-  result = zeCommandQueueExecuteCommandLists(context.command_queue, 1,
-                                             &context.command_list, nullptr);
-  if (result) {
-    throw std::runtime_error("zeCommandQueueExecuteCommandLists failed: " +
-                             std::to_string(result));
+  if (context.sub_device_count) {
+    result = zeCommandQueueExecuteCommandLists(
+        context.cmd_queue[current_sub_device_id], 1,
+        &context.cmd_list[current_sub_device_id], nullptr);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueExecuteCommandLists failed: " +
+                               std::to_string(result));
+    }
+  } else {
+    result = zeCommandQueueExecuteCommandLists(context.command_queue, 1,
+                                               &context.command_list, nullptr);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueExecuteCommandLists failed: " +
+                               std::to_string(result));
+    }
   }
 }
 
@@ -493,10 +618,19 @@ void ZePeak::run_command_queue(L0Context &context) {
 //---------------------------------------------------------------------
 void ZePeak::synchronize_command_queue(L0Context &context) {
   ze_result_t result = ZE_RESULT_SUCCESS;
-  result = zeCommandQueueSynchronize(context.command_queue, UINT64_MAX);
-  if (result) {
-    throw std::runtime_error("zeCommandQueueSynchronize failed: " +
-                             std::to_string(result));
+  if (context.sub_device_count) {
+    result = zeCommandQueueSynchronize(context.cmd_queue[current_sub_device_id],
+                                       UINT64_MAX);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueSynchronize failed: " +
+                               std::to_string(result));
+    }
+  } else {
+    result = zeCommandQueueSynchronize(context.command_queue, UINT64_MAX);
+    if (result) {
+      throw std::runtime_error("zeCommandQueueSynchronize failed: " +
+                               std::to_string(result));
+    }
   }
 }
 
@@ -572,20 +706,42 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
   Timer timer;
 
   if (type == TimingMeasurement::BANDWIDTH) {
-    result = zeCommandListAppendLaunchKernel(
-        context.command_list, function, &workgroup_info.thread_group_dimensions,
-        nullptr, 0, nullptr);
-    if (result) {
-      throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
-                               std::to_string(result));
+    if (context.sub_device_count) {
+      if (verbose) {
+        std::cout << "current_sub_device_id value is ::"
+                  << current_sub_device_id << std::endl;
+      }
+      result = zeCommandListAppendLaunchKernel(
+          context.cmd_list[current_sub_device_id], function,
+          &workgroup_info.thread_group_dimensions, nullptr, 0, nullptr);
+      if (result) {
+        throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
+                                 std::to_string(result));
+      }
+    } else {
+      result = zeCommandListAppendLaunchKernel(
+          context.command_list, function,
+          &workgroup_info.thread_group_dimensions, nullptr, 0, nullptr);
+      if (result) {
+        throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
+                                 std::to_string(result));
+      }
     }
     if (verbose)
       std::cout << "Function launch appended\n";
 
-    result = zeCommandListClose(context.command_list);
-    if (result) {
-      throw std::runtime_error("zeCommandListClose failed: " +
-                               std::to_string(result));
+    if (context.sub_device_count) {
+      result = zeCommandListClose(context.cmd_list[current_sub_device_id]);
+      if (result) {
+        throw std::runtime_error("zeCommandListClose failed: " +
+                                 std::to_string(result));
+      }
+    } else {
+      result = zeCommandListClose(context.command_list);
+      if (result) {
+        throw std::runtime_error("zeCommandListClose failed: " +
+                                 std::to_string(result));
+      }
     }
     if (verbose)
       std::cout << "Command list closed\n";
@@ -600,7 +756,18 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     for (uint32_t i = 0; i < iters; i++) {
       run_command_queue(context);
     }
-    synchronize_command_queue(context);
+
+    if (context.sub_device_count) {
+      if (context.sub_device_count == current_sub_device_id + 1) {
+        current_sub_device_id = 0;
+        while (current_sub_device_id < context.sub_device_count) {
+          synchronize_command_queue(context);
+          current_sub_device_id++;
+        }
+      }
+    } else {
+      synchronize_command_queue(context);
+    }
     timed = timer.stopAndTime();
   } else if (type == TimingMeasurement::BANDWIDTH_EVENT_TIMING) {
     ze_event_pool_handle_t event_pool;
@@ -859,15 +1026,28 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     zeEventDestroy(kernel_duration_event);
     zeEventPoolDestroy(event_pool);
   }
-  if (reset_command_list)
-    context.reset_commandlist(context.command_list);
-
+  if (reset_command_list) {
+    if (context.sub_device_count) {
+      if (context.sub_device_count == current_sub_device_id) {
+        current_sub_device_id = 0;
+        while (current_sub_device_id < context.sub_device_count) {
+          context.reset_commandlist(context.cmd_list[current_sub_device_id]);
+          current_sub_device_id++;
+        }
+        current_sub_device_id = 0;
+      } else {
+        current_sub_device_id++;
+      }
+    } else {
+      context.reset_commandlist(context.command_list);
+    }
+  }
   return (timed / static_cast<long double>(iters));
 }
 
 //---------------------------------------------------------------------
-// Utility function to setup a kernel function with an input & output argument.
-// On error, an exception will be thrown describing the failure.
+// Utility function to setup a kernel function with an input & output
+// argument. On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
 void ZePeak::setup_function(L0Context &context, ze_kernel_handle_t &function,
                             const char *name, void *input, void *output,
@@ -880,10 +1060,20 @@ void ZePeak::setup_function(L0Context &context, ze_kernel_handle_t &function,
   function_description.flags = 0;
   function_description.pKernelName = name;
 
-  result = zeKernelCreate(context.module, &function_description, &function);
-  if (result) {
-    throw std::runtime_error("zeKernelCreate failed: " +
-                             std::to_string(result));
+  if (context.sub_device_count) {
+    for (auto module : context.subdevice_module) {
+      result = zeKernelCreate(module, &function_description, &function);
+      if (result) {
+        throw std::runtime_error("zeKernelCreate failed: " +
+                                 std::to_string(result));
+      }
+    }
+  } else {
+    result = zeKernelCreate(context.module, &function_description, &function);
+    if (result) {
+      throw std::runtime_error("zeKernelCreate failed: " +
+                               std::to_string(result));
+    }
   }
   if (verbose)
     std::cout << "Function created\n";
