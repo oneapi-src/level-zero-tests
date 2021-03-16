@@ -21,6 +21,7 @@
 #include "test_ipc_comm.hpp"
 
 #include <level_zero/ze_api.h>
+#include <math.h>
 
 namespace {
 #ifdef __linux__
@@ -331,7 +332,8 @@ class P2PIpcMemoryAccessTest : public ::testing::Test,
 TEST_P(
     P2PIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInDevice0ExportedToDevice1WhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDevice1Correctly) {
-  size_t size = GetParam();
+  size_t size = pow(2, GetParam());
+  LOG_DEBUG << "Buffer Size: " << size << "\n";
 
   pid_t pid = fork();
   if (pid < 0) {
@@ -361,7 +363,8 @@ TEST_P(
 TEST_P(
     P2PIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInDevice0AndDevice1ExportedToEachOtherSequentiallyWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDevice0AndDevice1Sequentially) {
-  size_t size = GetParam();
+  size_t size = pow(2, GetParam());
+  LOG_DEBUG << "Buffer Size: " << size << "\n";
 
   pid_t pid = fork();
   if (pid < 0) {
@@ -389,17 +392,21 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_CASE_P(AllocationSize, P2PIpcMemoryAccessTest,
-                        ::testing::Values(2048, 4096, 8192));
+                        ::testing::Values(3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+                                          14, 15, 16, 17, 18, 19, 20, 21, 22,
+                                          23, 24));
 
 class P2PConcurrencyIpcMemoryAccessTest
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<size_t, size_t>> {};
+      public ::testing::WithParamInterface<size_t> {};
 
 TEST_P(
     P2PConcurrencyIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInDevice0ExportedToDevice1WhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByBothDevice0AndDevice1Concurrently) {
-  size_t size = std::get<0>(GetParam());
-  size_t concurrency_offset = std::get<1>(GetParam());
+  size_t size = pow(2, GetParam());
+  size_t concurrency_offset = pow(2, (GetParam() - 1));
+  LOG_DEBUG << "Buffer Size: " << size
+            << " Concurrency Offset: " << concurrency_offset << "\n";
 
   pid_t pid = fork();
   if (pid < 0) {
@@ -427,9 +434,7 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_CASE_P(AllocationSize, P2PConcurrencyIpcMemoryAccessTest,
-                        ::testing::Values(std::make_tuple(2048, 1028),
-                                          std::make_tuple(4096, 2048),
-                                          std::make_tuple(8192, 4096)));
+                        ::testing::Values(3, 4, 5, 6, 7, 8, 9, 10, 11, 12));
 
 #endif
 
