@@ -333,7 +333,7 @@ TEST_P(
     P2PIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInDevice0ExportedToDevice1WhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDevice1Correctly) {
   size_t size = pow(2, GetParam());
-  LOG_DEBUG << "Buffer Size: " << size << "\n";
+  LOG_INFO << "Buffer Size: " << size;
 
   pid_t pid = fork();
   if (pid < 0) {
@@ -364,7 +364,7 @@ TEST_P(
     P2PIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInDevice0AndDevice1ExportedToEachOtherSequentiallyWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDevice0AndDevice1Sequentially) {
   size_t size = pow(2, GetParam());
-  LOG_DEBUG << "Buffer Size: " << size << "\n";
+  LOG_INFO << "Buffer Size: " << size;
 
   pid_t pid = fork();
   if (pid < 0) {
@@ -394,7 +394,7 @@ TEST_P(
 INSTANTIATE_TEST_CASE_P(AllocationSize, P2PIpcMemoryAccessTest,
                         ::testing::Values(3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
                                           14, 15, 16, 17, 18, 19, 20, 21, 22,
-                                          23, 24));
+                                          23, 24, 25, 26, 27, 28));
 
 class P2PConcurrencyIpcMemoryAccessTest
     : public ::testing::Test,
@@ -405,8 +405,8 @@ TEST_P(
     GivenL0MemoryAllocatedInDevice0ExportedToDevice1WhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByBothDevice0AndDevice1Concurrently) {
   size_t size = pow(2, GetParam());
   size_t concurrency_offset = pow(2, (GetParam() - 1));
-  LOG_DEBUG << "Buffer Size: " << size
-            << " Concurrency Offset: " << concurrency_offset << "\n";
+  LOG_INFO << "Buffer Size: " << size
+           << " Concurrency Offset: " << concurrency_offset;
 
   pid_t pid = fork();
   if (pid < 0) {
