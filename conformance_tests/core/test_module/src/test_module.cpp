@@ -817,8 +817,6 @@ TEST_F(
     zeKernelLaunchTests,
     GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully) {
 
-  const auto size = 4000001000;
-
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto context = lzt::create_context(driver);
@@ -835,34 +833,32 @@ TEST_F(
 
   auto device_properties = lzt::get_device_properties(device);
 
-  void *pNext = nullptr;
+  auto driver_extension_properties = lzt::get_extension_properties(driver);
+  bool supports_relaxed_allocations = false;
+  for (auto &extension : driver_extension_properties) {
+    if (!std::strcmp("ZE_experimental_relaxed_allocation_limits",
+                     extension.name)) {
+      supports_relaxed_allocations = true;
+      break;
+    }
+  }
+
+  if (!supports_relaxed_allocations) {
+    LOG_WARNING
+        << "size exceeds device max allocation size and driver does not "
+           "support relaxed allocations, skipping test";
+    return;
+  }
+
   ze_relaxed_allocation_limits_exp_desc_t relaxed_allocation_limits_desc = {};
   relaxed_allocation_limits_desc.stype =
       ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC;
   relaxed_allocation_limits_desc.flags =
       ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE;
+  void *pNext = &relaxed_allocation_limits_desc;
 
-  if (device_properties.maxMemAllocSize < size) {
-    auto driver_extension_properties = lzt::get_extension_properties(driver);
-
-    bool supports_relaxed_allocations = false;
-    for (auto &extension : driver_extension_properties) {
-      if (!std::strcmp("ZE_experimental_relaxed_allocation_limits",
-                       extension.name)) {
-        supports_relaxed_allocations = true;
-        break;
-      }
-    }
-
-    if (!supports_relaxed_allocations) {
-      LOG_WARNING
-          << "size exceeds device max allocation size and driver does not "
-             "support relaxed allocations, skipping test";
-      return;
-    }
-
-    pNext = &relaxed_allocation_limits_desc;
-  }
+  const auto head = 4096;
+  auto size = device_properties.maxMemAllocSize + head;
 
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, pNext, 0, nullptr,
                                               device, context);
@@ -887,7 +883,7 @@ TEST_F(
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
+  lzt::suggest_group_size(kernel, head, 1, 1, group_size_x, group_size_y,
                           group_size_z);
   if (group_size_x > device_compute_properties.maxGroupSizeX) {
     LOG_WARNING
@@ -897,12 +893,7 @@ TEST_F(
 
   lzt::set_group_size(kernel, group_size_x, 1, 1);
   ze_group_count_t group_count = {};
-  group_count.groupCountX = size / group_size_x;
-
-  if (group_count.groupCountX > device_compute_properties.maxGroupCountX) {
-    LOG_WARNING << "group count is larger than max group count, setting to max";
-    group_count.groupCountX = device_compute_properties.maxGroupCountX;
-  }
+  group_count.groupCountX = head / group_size_x;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -919,7 +910,8 @@ TEST_F(
   // validation
   for (size_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              static_cast<uint8_t>((i & 0xFF) + addval));
+              (i >= head) ? static_cast<uint8_t>(i & 0xFF)
+                          : static_cast<uint8_t>((i & 0xFF) + addval));
   }
 
   // cleanup
