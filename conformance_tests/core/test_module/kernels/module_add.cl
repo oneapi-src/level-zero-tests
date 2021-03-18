@@ -33,6 +33,17 @@ kernel void module_add_constant_2(global uchar *values, int addval) {
   values[xid] = values[xid] + addval;
 }
 
+kernel void module_add_constant_3(global uchar *values, int addval,
+                                  size_t x_stride, size_t y_stride) {
+
+  const size_t xid = get_global_id(0);
+  const size_t yid = get_global_id(1);
+  const size_t zid = get_global_id(2);
+
+  size_t id = xid + yid * x_stride + zid * y_stride * x_stride;
+  values[id] = values[id] + addval;
+}
+
 kernel void module_add_two_arrays(global int *output, global int *input) {
   const int tid = get_global_id(0);
   output[tid] = output[tid] + input[tid];

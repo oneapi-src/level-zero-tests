@@ -813,6 +813,17 @@ void zeKernelLaunchTests::test_kernel_execution() {
   }
 }
 
+TEST_P(
+    zeKernelLaunchTests,
+    GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecution) {
+  test_kernel_execution();
+}
+
+INSTANTIATE_TEST_CASE_P(
+    TestFunctionAndFunctionIndirectAndMultipleFunctionsIndirect,
+    zeKernelLaunchTests,
+    testing::Values(FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT));
+
 TEST_F(
     zeKernelLaunchTests,
     GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully) {
@@ -924,16 +935,135 @@ TEST_F(
   lzt::destroy_context(context);
 }
 
+class zeKernelLaunchTestsP : public ::testing::Test,
+                             public ::testing::WithParamInterface<
+                                 std::tuple<uint32_t, uint32_t, uint32_t>> {};
+
 TEST_P(
-    zeKernelLaunchTests,
-    GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecution) {
-  test_kernel_execution();
+    zeKernelLaunchTestsP,
+    GivenGlobalWorkOffsetWhenExecutingFunctionThenFunctionExecutesSuccessfully) {
+
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+  auto context = lzt::create_context(driver);
+
+  auto command_queue = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  auto command_list = lzt::create_command_list(context, device, 0, 0);
+  auto module = lzt::create_module(context, device, "module_add.spv",
+                                   ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
+  auto kernel = lzt::create_function(module, "module_add_constant_3");
+
+  auto supports_global_offset = false;
+  auto driver_extension_properties = lzt::get_extension_properties(driver);
+  for (auto &extension : driver_extension_properties) {
+    if (!std::strncmp("ZE_experimental_global_offset", extension.name,
+                      ZE_MAX_EXTENSION_NAME)) {
+      supports_global_offset = true;
+    }
+  }
+
+  if (!supports_global_offset) {
+    LOG_WARNING
+        << "Driver does not support global offsets in kernel, skipping test";
+    return;
+  }
+
+  auto base_size = 8;
+  auto size = base_size * base_size * base_size;
+
+  auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
+  auto buffer_b = lzt::allocate_device_memory(size, 0, 0, device, context);
+  std::memset(buffer_a, 0, size);
+  for (int x = 0; x < base_size; x++) {
+    for (int y = 0; y < base_size; y++) {
+      for (int z = 0; z < base_size; z++) {
+        auto index = x + base_size * y + base_size * base_size * z;
+        static_cast<uint8_t *>(buffer_a)[index] = (index & 0xFF);
+      }
+    }
+  }
+
+  const int addval = 4;
+
+  lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
+  lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
+  lzt::set_argument_value(kernel, 2, sizeof(base_size), &base_size);
+  lzt::set_argument_value(kernel, 3, sizeof(base_size), &base_size);
+
+  uint32_t offset_x = std::get<0>(GetParam());
+  uint32_t offset_y = std::get<1>(GetParam());
+  uint32_t offset_z = std::get<2>(GetParam());
+  zeKernelSetGlobalOffsetExp(kernel, offset_x, offset_y, offset_z);
+
+  uint32_t group_size_x = 1;
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  lzt::suggest_group_size(kernel, (base_size - offset_x),
+                          (base_size - offset_y), (base_size - offset_z),
+                          group_size_x, group_size_y, group_size_z);
+  lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
+
+  ze_group_count_t group_count = {};
+  group_count.groupCountX = (base_size - offset_x) / group_size_x;
+  group_count.groupCountY = (base_size - offset_y) / group_size_y;
+  group_count.groupCountZ = (base_size - offset_z) / group_size_z;
+
+  LOG_DEBUG << "Offsets : x-" << offset_x << " y-" << offset_y << " z-"
+            << offset_z;
+  LOG_DEBUG << "Group Info:";
+  LOG_DEBUG << "[X] Size: " << group_size_x
+            << " Count: " << group_count.groupCountX;
+  LOG_DEBUG << "[Y] Size: " << group_size_y
+            << " Count: " << group_count.groupCountY;
+  LOG_DEBUG << "[Z] Size: " << group_size_z
+            << " Count: " << group_count.groupCountZ;
+
+  lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
+  lzt::append_barrier(command_list);
+  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+                              nullptr);
+  lzt::append_barrier(command_list);
+  lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
+  lzt::close_command_list(command_list);
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+  lzt::synchronize(command_queue, UINT64_MAX);
+
+  // validation
+  for (int x = 0; x < base_size; x++) {
+    for (int y = 0; y < base_size; y++) {
+      for (int z = 0; z < base_size; z++) {
+
+        auto index = x + base_size * y + base_size * base_size * z;
+
+        uint8_t val = 0;
+        if (x >= offset_x && y >= offset_y && z >= offset_z) {
+          val = static_cast<uint8_t>((index & 0xFF) + addval);
+        } else {
+          val = static_cast<uint8_t>(index & 0xFF);
+        }
+        ASSERT_EQ(static_cast<uint8_t *>(buffer_a)[index], val);
+      }
+    }
+  }
+
+  // cleanup
+  lzt::free_memory(context, buffer_a);
+  lzt::free_memory(context, buffer_b);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
+  lzt::destroy_context(context);
 }
 
 INSTANTIATE_TEST_CASE_P(
-    TestFunctionAndFunctionIndirectAndMultipleFunctionsIndirect,
-    zeKernelLaunchTests,
-    testing::Values(FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT));
+    KernelOffsetTests, zeKernelLaunchTestsP,
+    ::testing::Combine(::testing::Values(0, 1, 4,
+                                         7), // 0, 1, base_size/2, base_size-1
+                       ::testing::Values(0, 1, 4, 7),
+                       ::testing::Values(0, 1, 4, 7)));
 
 class zeKernelLaunchSubDeviceTests : public zeKernelLaunchTests {
 protected:
