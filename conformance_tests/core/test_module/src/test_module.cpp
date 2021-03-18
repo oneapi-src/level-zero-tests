@@ -995,7 +995,8 @@ TEST_P(
   uint32_t offset_x = std::get<0>(GetParam());
   uint32_t offset_y = std::get<1>(GetParam());
   uint32_t offset_z = std::get<2>(GetParam());
-  zeKernelSetGlobalOffsetExp(kernel, offset_x, offset_y, offset_z);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSetGlobalOffsetExp(kernel, offset_x, offset_y, offset_z));
 
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
