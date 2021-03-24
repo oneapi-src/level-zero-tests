@@ -137,6 +137,7 @@ function(add_lzt_test_executable)
     is_test_group_member("/perf_tests" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" is_perf_test)
     is_test_group_member("/negative_tests" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" is_negative_test)
     is_test_group_member("/layer_tests" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" is_layer_test)
+    is_test_group_member("/stress_tests" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" is_stress_test)
     if(is_conformance_test)
         list(APPEND ADD_LZT_TEST_EXECUTABLE_LINK_LIBRARIES
           level_zero_tests::test_harness
@@ -163,6 +164,13 @@ function(add_lzt_test_executable)
           GTest::GTest
         )
         set(component "layer-tests")
+    elseif(is_stress_test)
+        list(APPEND ADD_LZT_TEST_EXECUTABLE_LINK_LIBRARIES
+          level_zero_tests::test_harness
+          GMock::GMock
+          GTest::GTest
+        )
+        set(component "stress-tests")
     endif()
 
     add_executable(${ADD_LZT_TEST_EXECUTABLE_NAME} ${ADD_LZT_TEST_EXECUTABLE_SOURCES})
@@ -269,6 +277,7 @@ add_subdirectory(perf_tests)
 add_subdirectory(conformance_tests)
 add_subdirectory(negative_tests)
 add_subdirectory(layer_tests)
+add_subdirectory(stress_tests)
 
 
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_BINARY_DIR}/out")

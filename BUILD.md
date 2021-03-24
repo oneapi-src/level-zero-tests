@@ -60,6 +60,7 @@ cmake flag. The following group specifiers are available:
     relating to system management.
   - `/conformance_tests/tools/pin`: ALl of the tools API conformance tests
     relating to Instrumenting of L0 applications.
+  - `/stress_tests`: All the stress tests.
 
 ```
 cmake
