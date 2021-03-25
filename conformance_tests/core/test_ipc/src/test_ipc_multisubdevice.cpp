@@ -178,7 +178,6 @@ void multi_sub_device_receiver(size_t size) {
   lzt::validate_data_pattern(buffer, size, 1);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
-  lzt::free_memory(context, memory);
   lzt::free_memory(context, buffer);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);

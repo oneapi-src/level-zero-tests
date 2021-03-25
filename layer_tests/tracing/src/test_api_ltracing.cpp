@@ -734,36 +734,11 @@ TEST_F(
 
   ze_result_t initial_result =
       zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem);
-  zeMemCloseIpcHandle(context, mem);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result,
             zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, mem));
-}
-
-TEST_F(
-    LTracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeDriverCloseMemIpcHandleCallbacksWhenCallingzeDriverCloseMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
-  prologues.Mem.pfnCloseIpcHandleCb = lzt::lprologue_callback;
-  epilogues.Mem.pfnCloseIpcHandleCb = lzt::lepilogue_callback;
-
-  init_ipc();
-
-  void *mem = nullptr;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
-
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
-
-  ze_result_t initial_result = zeMemCloseIpcHandle(context, memory);
-
-  ready_ltracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
-  ASSERT_EQ(initial_result, zeMemCloseIpcHandle(context, memory));
 }
 
 TEST_F(

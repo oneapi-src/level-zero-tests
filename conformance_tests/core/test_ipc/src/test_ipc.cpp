@@ -58,10 +58,7 @@ protected:
                                  ipc_mem_handle_, flags, &ipc_memory_));
   }
 
-  void TearDown() {
-    lzt::free_memory(memory_);
-    lzt::destroy_context(context_);
-  }
+  void TearDown() { lzt::destroy_context(context_); }
 };
 
 TEST_F(

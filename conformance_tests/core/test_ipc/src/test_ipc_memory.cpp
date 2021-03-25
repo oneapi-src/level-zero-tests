@@ -57,7 +57,6 @@ void run_child(int size) {
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
   lzt::free_memory(buffer);
-  lzt::free_memory(memory);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
   lzt::destroy_context(context);
