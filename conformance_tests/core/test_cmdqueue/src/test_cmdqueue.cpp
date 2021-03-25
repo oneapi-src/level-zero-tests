@@ -423,12 +423,13 @@ TEST(
   const ze_context_handle_t context = lzt::get_default_context();
   ze_event_pool_desc_t ep_time_desc = {};
   ep_time_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-  ep_time_desc.flags = ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP;
+  ep_time_desc.flags =
+      ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   ep_time_desc.count = 4;
   auto ep_time = lzt::create_event_pool(context, ep_time_desc);
   ze_event_pool_desc_t ep_sync_desc = {};
   ep_sync_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-  ep_sync_desc.flags = 0;
+  ep_sync_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   ep_sync_desc.count = 1;
   auto ep_sync = lzt::create_event_pool(context, ep_sync_desc);
   ze_event_desc_t event_desc = {};
