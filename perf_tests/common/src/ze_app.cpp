@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -54,7 +54,6 @@ ZeApp::ZeApp(std::string module_path) {
   SUCCESS_OR_TERMINATE(zeInit(0));
 
   _binary_file = load_binary_file(_module_path);
-  std::cout << std::endl;
 }
 
 void ZeApp::moduleCreate(ze_device_handle_t device,
@@ -119,6 +118,13 @@ void ZeApp::memoryAllocHost(size_t size, void **ptr) {
 
 void ZeApp::memoryFree(const void *ptr) {
   SUCCESS_OR_TERMINATE(zeMemFree(context, const_cast<void *>(ptr)));
+}
+
+void ZeApp::memoryOpenIpcHandle(const uint32_t device_index,
+                                ze_ipc_mem_handle_t pIpcHandle,
+                                void **zeIpcBuffer) {
+  SUCCESS_OR_TERMINATE(zeMemOpenIpcHandle(context, _devices[device_index],
+                                          pIpcHandle, 0u, zeIpcBuffer));
 }
 
 void ZeApp::functionCreate(ze_kernel_handle_t *function,

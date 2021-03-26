@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -28,6 +28,8 @@ public:
   void memoryAlloc(const uint32_t device_index, size_t size, void **ptr);
   void memoryAllocHost(size_t size, void **ptr);
   void memoryFree(const void *ptr);
+  void memoryOpenIpcHandle(const uint32_t device_index,
+                           ze_ipc_mem_handle_t pIpcHandle, void **zeIpcBuffer);
 
   void functionCreate(ze_kernel_handle_t *function, const char *pFunctionName);
   void functionCreate(const uint32_t device_index, ze_kernel_handle_t *function,
