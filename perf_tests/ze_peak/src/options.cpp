@@ -34,6 +34,8 @@ static const char *usage_str =
     "50]"
     "\n  -w                          set number of warmup iterations to "
     "run[default: 10]"
+    "\n  -x                          enable explicit scaling [default: "
+    "implicit scaling]"
     "\n  -h, --help                  display help message"
     "\n";
 
@@ -125,6 +127,8 @@ int ZePeak::parse_arguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-a") == 0) {
       run_global_bw = run_hp_compute = run_sp_compute = run_dp_compute =
           run_int_compute = run_transfer_bw = run_kernel_lat = true;
+    } else if (strcmp(argv[i], "-x") == 0) {
+      enable_explicit_scaling = true;
     } else {
       std::cout << usage_str;
       exit(-1);

@@ -61,7 +61,8 @@ struct L0Context {
   ze_device_compute_properties_t device_compute_property;
   bool verbose = false;
 
-  void init_xe(uint32_t specified_driver, uint32_t specified_device);
+  void init_xe(uint32_t specified_driver, uint32_t specified_device,
+               bool enable_explicit_scaling);
   void clean_xe();
   void print_ze_device_properties(const ze_device_properties_t &props);
   void reset_commandlist(ze_command_list_handle_t cmd_list);
@@ -88,6 +89,7 @@ public:
   bool run_int_compute = true;
   bool run_transfer_bw = true;
   bool run_kernel_lat = true;
+  bool enable_explicit_scaling = false;
   uint32_t specified_driver = 0;
   uint32_t specified_device = 0;
   uint32_t global_bw_max_size = 1 << 29;
@@ -123,11 +125,13 @@ public:
   void ze_peak_transfer_bw(L0Context &context);
 
 private:
-  void _transfer_bw_gpu_copy(L0Context &context, void *destination_buffer,
-                             void *source_buffer, size_t buffer_size);
-  void _transfer_bw_host_copy(L0Context &context, void *destination_buffer,
-                              void *source_buffer, size_t buffer_size,
-                              bool shared_is_dest);
+  long double _transfer_bw_gpu_copy(L0Context &context,
+                                    void *destination_buffer,
+                                    void *source_buffer, size_t buffer_size);
+  long double _transfer_bw_host_copy(L0Context &context,
+                                     void *destination_buffer,
+                                     void *source_buffer, size_t buffer_size,
+                                     bool shared_is_dest);
   void _transfer_bw_shared_memory(L0Context &context,
                                   std::vector<float> local_memory);
   TimingMeasurement is_bandwidth_with_event_timer(void);
