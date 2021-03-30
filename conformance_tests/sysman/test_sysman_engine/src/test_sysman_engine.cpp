@@ -38,15 +38,15 @@ TEST_F(
     GivenComponentCountZeroWhenRetrievingSysmanEngineHandlesThenNotNullEngineHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto engineHandles = lzt::get_engine_handles(device, count);
+    auto engine_handles = lzt::get_engine_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    ASSERT_EQ(engineHandles.size(), count);
-    for (auto engineHandle : engineHandles) {
-      EXPECT_NE(nullptr, engineHandle);
+    ASSERT_EQ(engine_handles.size(), count);
+    for (auto engine_handle : engine_handles) {
+      EXPECT_NE(nullptr, engine_handle);
     }
   }
 }
@@ -55,16 +55,16 @@ TEST_F(
     EngineModuleTest,
     GivenInvalidComponentCountWhenRetrievingSysmanEngineHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t actualCount = 0;
-    lzt::get_engine_handles(device, actualCount);
-    if (actualCount == 0) {
+    uint32_t actual_count = 0;
+    lzt::get_engine_handles(device, actual_count);
+    if (actual_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    uint32_t testCount = actualCount + 1;
-    lzt::get_engine_handles(device, testCount);
-    EXPECT_EQ(testCount, actualCount);
+    uint32_t test_count = actual_count + 1;
+    lzt::get_engine_handles(device, test_count);
+    EXPECT_EQ(test_count, actual_count);
   }
 }
 
@@ -73,22 +73,22 @@ TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarEngineHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto engineHandlesInitial = lzt::get_engine_handles(device, count);
+    auto engine_handles_initial = lzt::get_engine_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto engineHandle : engineHandlesInitial) {
-      EXPECT_NE(nullptr, engineHandle);
+    for (auto engine_handle : engine_handles_initial) {
+      EXPECT_NE(nullptr, engine_handle);
     }
 
     count = 0;
-    auto engineHandlesLater = lzt::get_engine_handles(device, count);
-    for (auto engineHandle : engineHandlesLater) {
-      EXPECT_NE(nullptr, engineHandle);
+    auto engine_handles_later = lzt::get_engine_handles(device, count);
+    for (auto engine_handle : engine_handles_later) {
+      EXPECT_NE(nullptr, engine_handle);
     }
-    EXPECT_EQ(engineHandlesInitial, engineHandlesLater);
+    EXPECT_EQ(engine_handles_initial, engine_handles_later);
   }
 }
 
@@ -98,15 +98,15 @@ TEST_F(
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
-    auto engineHandles = lzt::get_engine_handles(device, count);
+    auto engine_handles = lzt::get_engine_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto engineHandle : engineHandles) {
-      ASSERT_NE(nullptr, engineHandle);
-      auto properties = lzt::get_engine_properties(engineHandle);
+    for (auto engine_handle : engine_handles) {
+      ASSERT_NE(nullptr, engine_handle);
+      auto properties = lzt::get_engine_properties(engine_handle);
       EXPECT_GE(properties.type, ZES_ENGINE_GROUP_ALL);
       EXPECT_LE(properties.type, ZES_ENGINE_GROUP_COPY_SINGLE);
       if (properties.onSubdevice) {
@@ -121,20 +121,20 @@ TEST_F(
     GivenValidEngineHandleWhenRetrievingEnginePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto engineHandles = lzt::get_engine_handles(device, count);
+    auto engine_handles = lzt::get_engine_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto engineHandle : engineHandles) {
-      EXPECT_NE(nullptr, engineHandle);
-      auto propertiesInitial = lzt::get_engine_properties(engineHandle);
-      auto propertiesLater = lzt::get_engine_properties(engineHandle);
-      EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
-      EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
-        EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
+    for (auto engine_handle : engine_handles) {
+      EXPECT_NE(nullptr, engine_handle);
+      auto properties_initial = lzt::get_engine_properties(engine_handle);
+      auto properties_later = lzt::get_engine_properties(engine_handle);
+      EXPECT_EQ(properties_initial.type, properties_later.type);
+      EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
+      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
+        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
       }
     }
   }
@@ -145,15 +145,15 @@ TEST_F(
     GivenValidEngineHandleWhenRetrievingEngineActivityStatsThenValidStatsIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto engineHandles = lzt::get_engine_handles(device, count);
+    auto engine_handles = lzt::get_engine_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto engineHandle : engineHandles) {
-      ASSERT_NE(nullptr, engineHandle);
-      auto state = lzt::get_engine_activity(engineHandle);
+    for (auto engine_handle : engine_handles) {
+      ASSERT_NE(nullptr, engine_handle);
+      auto state = lzt::get_engine_activity(engine_handle);
       EXPECT_LT(state.activeTime, UINT32_MAX);
       EXPECT_LT(state.timestamp, UINT32_MAX);
     }
@@ -164,18 +164,18 @@ TEST_F(
     GivenValidEngineHandleWhenRetrievingEngineActivityStatsThenTimestampWillbeIncrementedInNextCalltoEngineActivity) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto engineHandles = lzt::get_engine_handles(device, count);
+    auto engine_handles = lzt::get_engine_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto engineHandle : engineHandles) {
-      ASSERT_NE(nullptr, engineHandle);
-      auto oldstate = lzt::get_engine_activity(engineHandle);
+    for (auto engine_handle : engine_handles) {
+      ASSERT_NE(nullptr, engine_handle);
+      auto oldstate = lzt::get_engine_activity(engine_handle);
       EXPECT_LT(oldstate.activeTime, UINT32_MAX);
       EXPECT_LT(oldstate.timestamp, UINT32_MAX);
-      auto newstate = lzt::get_engine_activity(engineHandle);
+      auto newstate = lzt::get_engine_activity(engine_handle);
       EXPECT_LT(newstate.activeTime, UINT32_MAX);
       EXPECT_LT(newstate.timestamp, UINT32_MAX);
       EXPECT_GT(newstate.timestamp, oldstate.timestamp);

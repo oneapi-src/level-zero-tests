@@ -27,10 +27,10 @@ std::vector<zes_psu_handle_t> get_psu_handles(zes_device_handle_t device,
   if (count == 0) {
     count = get_psu_handles_count(device);
   }
-  std::vector<zes_psu_handle_t> psuHandles(count, nullptr);
+  std::vector<zes_psu_handle_t> psu_handles(count, nullptr);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumPsus(device, &count, psuHandles.data()));
-  return psuHandles;
+            zesDeviceEnumPsus(device, &count, psu_handles.data()));
+  return psu_handles;
 }
 
 zes_psu_properties_t get_psu_properties(zes_psu_handle_t psuHandle) {

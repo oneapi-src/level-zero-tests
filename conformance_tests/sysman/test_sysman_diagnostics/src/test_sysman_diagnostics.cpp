@@ -19,11 +19,11 @@ namespace lzt = level_zero_tests;
 namespace {
 
 void validate_tests(std::vector<zes_diag_test_t> tests) {
-  uint32_t prevIndex = 0;
+  uint32_t prev_index = 0;
   for (auto test : tests) {
     if (test.index != 0) {
-      EXPECT_GT(test.index, prevIndex);
-      prevIndex = test.index;
+      EXPECT_GT(test.index, prev_index);
+      prev_index = test.index;
     }
     EXPECT_LE(std::strlen(test.name), ZES_STRING_PROPERTY_SIZE);
   }
@@ -44,15 +44,15 @@ TEST_F(
     GivenComponentCountZeroWhenRetrievingDiagnosticsHandlesThenNotNullDiagnosticsHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto diagHandles = lzt::get_diag_handles(device, count);
+    auto diag_handles = lzt::get_diag_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    ASSERT_EQ(diagHandles.size(), count);
-    for (auto diagHandle : diagHandles) {
-      EXPECT_NE(nullptr, diagHandle);
+    ASSERT_EQ(diag_handles.size(), count);
+    for (auto diag_handle : diag_handles) {
+      EXPECT_NE(nullptr, diag_handle);
     }
   }
 }
@@ -61,11 +61,11 @@ TEST_F(
     DiagnosticsTest,
     GivenInvalidComponentCountWhenRetrievingDiagnosticsHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t actualCount = 0;
-    lzt::get_diag_handles(device, actualCount);
-    uint32_t testCount = actualCount + 1;
-    lzt::get_diag_handles(device, testCount);
-    EXPECT_EQ(testCount, actualCount);
+    uint32_t actual_count = 0;
+    lzt::get_diag_handles(device, actual_count);
+    uint32_t test_count = actual_count + 1;
+    lzt::get_diag_handles(device, test_count);
+    EXPECT_EQ(test_count, actual_count);
   }
 }
 
@@ -74,22 +74,22 @@ TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarDiagHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto diagHandlesInitial = lzt::get_diag_handles(device, count);
+    auto diag_handles_initial = lzt::get_diag_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto diagHandle : diagHandlesInitial) {
-      EXPECT_NE(nullptr, diagHandle);
+    for (auto diag_handle : diag_handles_initial) {
+      EXPECT_NE(nullptr, diag_handle);
     }
 
     count = 0;
-    auto diagHandlesLater = lzt::get_diag_handles(device, count);
-    for (auto diagHandle : diagHandlesLater) {
-      EXPECT_NE(nullptr, diagHandle);
+    auto diag_handles_later = lzt::get_diag_handles(device, count);
+    for (auto diag_handle : diag_handles_later) {
+      EXPECT_NE(nullptr, diag_handle);
     }
-    EXPECT_EQ(diagHandlesInitial, diagHandlesLater);
+    EXPECT_EQ(diag_handles_initial, diag_handles_later);
   }
 }
 
@@ -99,15 +99,15 @@ TEST_F(
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
-    auto diagHandles = lzt::get_diag_handles(device, count);
+    auto diag_handles = lzt::get_diag_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto diagHandle : diagHandles) {
-      ASSERT_NE(nullptr, diagHandle);
-      auto properties = lzt::get_diag_properties(diagHandle);
+    for (auto diag_handle : diag_handles) {
+      ASSERT_NE(nullptr, diag_handle);
+      auto properties = lzt::get_diag_properties(diag_handle);
       if (properties.onSubdevice) {
         EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
@@ -121,23 +121,24 @@ TEST_F(
     GivenValidDiagHandleWhenRetrievingDiagPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto diagHandles = lzt::get_diag_handles(device, count);
+    auto diag_handles = lzt::get_diag_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto diagHandle : diagHandles) {
-      ASSERT_NE(nullptr, diagHandle);
-      auto propertiesInitial = lzt::get_diag_properties(diagHandle);
-      auto propertiesLater = lzt::get_diag_properties(diagHandle);
-      EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
-        EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
+    for (auto diag_handle : diag_handles) {
+      ASSERT_NE(nullptr, diag_handle);
+      auto properties_initial = lzt::get_diag_properties(diag_handle);
+      auto properties_later = lzt::get_diag_properties(diag_handle);
+      EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
+      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
+        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
       }
-      EXPECT_TRUE(0 == std::memcmp(propertiesInitial.name, propertiesLater.name,
-                                   sizeof(propertiesInitial.name)));
-      EXPECT_EQ(propertiesInitial.haveTests, propertiesLater.haveTests);
+      EXPECT_TRUE(0 == std::memcmp(properties_initial.name,
+                                   properties_later.name,
+                                   sizeof(properties_initial.name)));
+      EXPECT_EQ(properties_initial.haveTests, properties_later.haveTests);
     }
   }
 }
@@ -147,18 +148,18 @@ TEST_F(
     GivenValidDiagHandleWhenRetrievingDiagTestsThenExpectValidTestsToBeReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto diagHandles = lzt::get_diag_handles(device, count);
+    auto diag_handles = lzt::get_diag_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto diagHandle : diagHandles) {
-      ASSERT_NE(nullptr, diagHandle);
-      auto properties = lzt::get_diag_properties(diagHandle);
+    for (auto diag_handle : diag_handles) {
+      ASSERT_NE(nullptr, diag_handle);
+      auto properties = lzt::get_diag_properties(diag_handle);
       if (properties.haveTests == true) {
         count = 0;
-        auto tests = lzt::get_diag_tests(diagHandle, count);
+        auto tests = lzt::get_diag_tests(diag_handle, count);
         ASSERT_EQ(tests.size(), 0);
         validate_tests(tests);
       }
@@ -170,18 +171,18 @@ TEST_F(DiagnosticsTest,
        GivenValidDiagTestsWhenRunningAllDiagTestsThenExpectTestsToRunFine) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto diagHandles = lzt::get_diag_handles(device, count);
+    auto diag_handles = lzt::get_diag_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto diagHandle : diagHandles) {
-      ASSERT_NE(nullptr, diagHandle);
-      auto properties = lzt::get_diag_properties(diagHandle);
+    for (auto diag_handle : diag_handles) {
+      ASSERT_NE(nullptr, diag_handle);
+      auto properties = lzt::get_diag_properties(diag_handle);
       if (properties.haveTests == true) {
-        auto result = lzt::run_diag_tests(diagHandle, ZES_DIAG_FIRST_TEST_INDEX,
-                                          ZES_DIAG_LAST_TEST_INDEX);
+        auto result = lzt::run_diag_tests(
+            diag_handle, ZES_DIAG_FIRST_TEST_INDEX, ZES_DIAG_LAST_TEST_INDEX);
         EXPECT_GE(result, ZES_DIAG_RESULT_NO_ERRORS);
         EXPECT_LE(result, ZES_DIAG_RESULT_REBOOT_FOR_REPAIR);
       }
@@ -194,23 +195,24 @@ TEST_F(
     GivenValidDiagTestsWhenRunningIndividualDiagTestsThenExpectTestsToRunFine) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto diagHandles = lzt::get_diag_handles(device, count);
+    auto diag_handles = lzt::get_diag_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto diagHandle : diagHandles) {
-      ASSERT_NE(nullptr, diagHandle);
-      auto properties = lzt::get_diag_properties(diagHandle);
+    for (auto diag_handle : diag_handles) {
+      ASSERT_NE(nullptr, diag_handle);
+      auto properties = lzt::get_diag_properties(diag_handle);
       if (properties.haveTests == true) {
         count = 0;
-        auto tests = lzt::get_diag_tests(diagHandle, count);
+        auto tests = lzt::get_diag_tests(diag_handle, count);
         ASSERT_GT(tests.size(), 0);
         validate_tests(tests);
 
         for (auto test : tests) {
-          auto result = lzt::run_diag_tests(diagHandle, test.index, test.index);
+          auto result =
+              lzt::run_diag_tests(diag_handle, test.index, test.index);
           EXPECT_GE(result, ZES_DIAG_RESULT_NO_ERRORS);
           EXPECT_LE(result, ZES_DIAG_RESULT_REBOOT_FOR_REPAIR);
         }

@@ -31,14 +31,14 @@ TEST_F(
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFrequencyHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
     }
   }
 }
@@ -47,16 +47,16 @@ TEST_F(
     FrequencyModuleTest,
     GivenComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    lzt::get_freq_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    lzt::get_freq_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    uint32_t testCount = pCount + 1;
-    lzt::get_freq_handles(device, testCount);
-    EXPECT_EQ(testCount, pCount);
+    uint32_t test_count = p_count + 1;
+    lzt::get_freq_handles(device, test_count);
+    EXPECT_EQ(test_count, p_count);
   }
 }
 
@@ -65,21 +65,21 @@ TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFrequencyHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandlesInitial = lzt::get_freq_handles(device, count);
+    auto pfreq_handles_initial = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandlesInitial) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles_initial) {
+      EXPECT_NE(nullptr, pfreq_handle);
     }
     count = 0;
-    auto pFreqHandlesLater = lzt::get_freq_handles(device, count);
-    for (auto pFreqHandle : pFreqHandlesLater) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    auto pfreq_handles_later = lzt::get_freq_handles(device, count);
+    for (auto pfreq_handle : pfreq_handles_later) {
+      EXPECT_NE(nullptr, pfreq_handle);
     }
-    EXPECT_EQ(pFreqHandlesInitial, pFreqHandlesLater);
+    EXPECT_EQ(pfreq_handles_initial, pfreq_handles_later);
   }
 }
 
@@ -87,16 +87,16 @@ TEST_F(FrequencyModuleTest,
        GivenValidDeviceWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
-      zes_freq_state_t pState = lzt::get_freq_state(pFreqHandle);
-      lzt::validate_freq_state(pFreqHandle, pState);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
+      zes_freq_state_t pState = lzt::get_freq_state(pfreq_handle);
+      lzt::validate_freq_state(pfreq_handle, pState);
     }
   }
 }
@@ -105,24 +105,24 @@ TEST_F(
     FrequencyModuleTest,
     GivenValidFreqRangeWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
       zes_freq_range_t limits = {};
       zes_freq_properties_t properties = {};
-      properties = lzt::get_freq_properties(pFreqHandle);
+      properties = lzt::get_freq_properties(pfreq_handle);
       limits.min = properties.min;
       limits.max = properties.max;
-      lzt::set_freq_range(pFreqHandle, limits);
-      lzt::idle_check(pFreqHandle);
-      zes_freq_state_t state = lzt::get_freq_state(pFreqHandle);
-      lzt::validate_freq_state(pFreqHandle, state);
+      lzt::set_freq_range(pfreq_handle, limits);
+      lzt::idle_check(pfreq_handle);
+      zes_freq_state_t state = lzt::get_freq_state(pfreq_handle);
+      lzt::validate_freq_state(pfreq_handle, state);
       if (state.actual > 0) {
         EXPECT_LE(state.actual, limits.max);
         EXPECT_GE(state.actual, limits.min);
@@ -143,18 +143,18 @@ TEST_F(
     GivenValidFrequencyHandleWhenRetrievingAvailableClocksThenSuccessAndSameValuesAreReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
       uint32_t icount = 0;
       uint32_t lcount = 0;
-      auto pFrequencyInitial = lzt::get_available_clocks(pFreqHandle, icount);
-      auto pFrequencyLater = lzt::get_available_clocks(pFreqHandle, lcount);
+      auto pFrequencyInitial = lzt::get_available_clocks(pfreq_handle, icount);
+      auto pFrequencyLater = lzt::get_available_clocks(pfreq_handle, lcount);
       EXPECT_EQ(pFrequencyInitial, pFrequencyLater);
     }
   }
@@ -164,17 +164,17 @@ TEST_F(
     FrequencyModuleTest,
     GivenValidFrequencyHandleWhenRetrievingAvailableClocksThenPositiveAndValidValuesAreReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
       uint32_t count = 0;
-      auto pFrequency = lzt::get_available_clocks(pFreqHandle, count);
+      auto pFrequency = lzt::get_available_clocks(pfreq_handle, count);
 
       for (uint32_t i = 0; i < pFrequency.size(); i++) {
         EXPECT_GT(pFrequency[i], 0);
@@ -191,19 +191,19 @@ TEST_F(FrequencyModuleTest,
        GivenClocksCountWhenRetrievingAvailableClocksThenActualCountIsUpdated) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
-      uint32_t pCount = 0;
-      pCount = lzt::get_available_clock_count(pFreqHandle);
-      uint32_t tCount = pCount + 1;
-      lzt::get_available_clocks(pFreqHandle, tCount);
-      EXPECT_EQ(pCount, tCount);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
+      uint32_t p_count = 0;
+      p_count = lzt::get_available_clock_count(pfreq_handle);
+      uint32_t tCount = p_count + 1;
+      lzt::get_available_clocks(pfreq_handle, tCount);
+      EXPECT_EQ(p_count, tCount);
     }
   }
 }
@@ -213,16 +213,16 @@ TEST_F(
     GivenValidFrequencyHandleWhenRequestingDeviceGPUTypeThenExpectCanControlPropertyToBeTrue) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
       zes_freq_properties_t properties = {};
-      properties = lzt::get_freq_properties(pFreqHandle);
+      properties = lzt::get_freq_properties(pfreq_handle);
       if (properties.type == ZES_FREQ_DOMAIN_GPU)
         EXPECT_TRUE(properties.canControl);
       else if (properties.type == ZES_FREQ_DOMAIN_MEMORY)
@@ -238,16 +238,16 @@ TEST_F(
     GivenValidFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectPositiveFrequencyRange) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
       zes_freq_properties_t properties = {};
-      properties = lzt::get_freq_properties(pFreqHandle);
+      properties = lzt::get_freq_properties(pfreq_handle);
       EXPECT_GT(properties.max, 0);
       EXPECT_GT(properties.min, 0);
     }
@@ -259,19 +259,19 @@ TEST_F(
     GivenSameFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectSamePropertiesOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
     }
     std::vector<zes_freq_properties_t> properties(3);
 
     for (uint32_t i = 0; i < 3; i++)
-      properties[i] = lzt::get_freq_properties(pFreqHandles[0]);
+      properties[i] = lzt::get_freq_properties(pfreq_handles[0]);
 
     ASSERT_GT(properties.size(), 1);
     for (uint32_t i = 1; i < properties.size(); i++) {
@@ -293,17 +293,17 @@ TEST_F(
     GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnSuccessOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
       zes_freq_range_t freqRange = {};
       for (uint32_t i = 0; i < 3; i++)
-        freqRange = lzt::get_freq_range(pFreqHandle);
+        freqRange = lzt::get_freq_range(pfreq_handle);
     }
   }
 }
@@ -313,17 +313,17 @@ TEST_F(
     GivenSameFrequencyHandleWhenRequestingFrequencyRangeThenExpectSameRangeOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
       std::vector<zes_freq_range_t> freqRangeToCompare;
       for (uint32_t i = 0; i < 3; i++)
-        freqRangeToCompare.push_back(lzt::get_freq_range(pFreqHandle));
+        freqRangeToCompare.push_back(lzt::get_freq_range(pfreq_handle));
 
       for (uint32_t i = 1; i < freqRangeToCompare.size(); i++) {
         EXPECT_EQ(freqRangeToCompare[0].max, freqRangeToCompare[i].max);
@@ -338,15 +338,15 @@ TEST_F(
     GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnValidFrequencyRanges) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
     zes_freq_range_t freqRange = {};
-    for (auto pFreqHandle : pFreqHandles)
-      freqRange = lzt::get_and_validate_freq_range(pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles)
+      freqRange = lzt::get_and_validate_freq_range(pfreq_handle);
   }
 }
 
@@ -354,34 +354,34 @@ TEST_F(
     FrequencyModuleTest,
     GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectUpdatedFrequencyInGetFrequencyCall) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
 
       zes_freq_range_t freqRange = {};
       zes_freq_range_t freqRangeReset = {};
       uint32_t count = 0;
-      auto frequency = lzt::get_available_clocks(*pFreqHandles.data(), count);
+      auto frequency = lzt::get_available_clocks(*pfreq_handles.data(), count);
       ASSERT_GT(frequency.size(), 0);
       if (count == 1) {
         freqRange.min = frequency[0];
         freqRange.max = frequency[0];
-        lzt::set_freq_range(pFreqHandle, freqRange);
-        freqRangeReset = lzt::get_and_validate_freq_range(pFreqHandle);
+        lzt::set_freq_range(pfreq_handle, freqRange);
+        freqRangeReset = lzt::get_and_validate_freq_range(pfreq_handle);
         EXPECT_EQ(freqRange.max, freqRangeReset.max);
         EXPECT_EQ(freqRange.min, freqRangeReset.min);
       } else {
         for (uint32_t i = 1; i < count; i++) {
           freqRange.min = frequency[i - 1];
           freqRange.max = frequency[i];
-          lzt::set_freq_range(pFreqHandle, freqRange);
-          freqRangeReset = lzt::get_and_validate_freq_range(pFreqHandle);
+          lzt::set_freq_range(pfreq_handle, freqRange);
+          freqRangeReset = lzt::get_and_validate_freq_range(pfreq_handle);
           EXPECT_EQ(freqRange.max, freqRangeReset.max);
           EXPECT_EQ(freqRange.min, freqRangeReset.min);
         }
@@ -436,10 +436,10 @@ void load_for_gpu() {
   lzt::free_memory(c_buffer);
   lzt::destroy_module(module);
 }
-void get_throttle_time_init(zes_freq_handle_t pFreqHandle,
+void get_throttle_time_init(zes_freq_handle_t pfreq_handle,
                             zes_freq_throttle_time_t &throttletime) {
-  EXPECT_EQ(lzt::check_for_throttling(pFreqHandle), true);
-  throttletime = lzt::get_throttle_time(pFreqHandle);
+  EXPECT_EQ(lzt::check_for_throttling(pfreq_handle), true);
+  throttletime = lzt::get_throttle_time(pfreq_handle);
   EXPECT_GT(throttletime.throttleTime, 0);
   EXPECT_GT(throttletime.timestamp, 0);
 }
@@ -447,43 +447,43 @@ void get_throttle_time_init(zes_freq_handle_t pFreqHandle,
 TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pFreqHandles = lzt::get_freq_handles(device, count);
+    auto pfreq_handles = lzt::get_freq_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pFreqHandle : pFreqHandles) {
-      EXPECT_NE(nullptr, pFreqHandle);
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
       {
-        uint32_t pCount = 0;
-        auto pPowerHandles = lzt::get_power_handles(device, pCount);
-        if (pCount == 0) {
+        uint32_t p_count = 0;
+        auto p_power_handles = lzt::get_power_handles(device, p_count);
+        if (p_count == 0) {
           FAIL() << "No handles found: "
                  << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
         }
-        for (auto pPowerHandle : pPowerHandles) {
-          EXPECT_NE(nullptr, pPowerHandle);
+        for (auto p_power_handle : p_power_handles) {
+          EXPECT_NE(nullptr, p_power_handle);
           zes_power_sustained_limit_t power_sustained_limit_Initial;
-          lzt::get_power_limits(pPowerHandle, &power_sustained_limit_Initial,
+          lzt::get_power_limits(p_power_handle, &power_sustained_limit_Initial,
                                 nullptr, nullptr);
           zes_power_sustained_limit_t power_sustained_limit_set;
           power_sustained_limit_set.power = 0;
-          lzt::set_power_limits(pPowerHandle, &power_sustained_limit_set,
+          lzt::set_power_limits(p_power_handle, &power_sustained_limit_set,
                                 nullptr, nullptr);
-          auto before_throttletime = lzt::get_throttle_time(pFreqHandle);
+          auto before_throttletime = lzt::get_throttle_time(pfreq_handle);
           zes_freq_throttle_time_t throttletime;
           std::thread first(load_for_gpu);
-          std::thread second(get_throttle_time_init, pFreqHandle,
+          std::thread second(get_throttle_time_init, pfreq_handle,
                              std::ref(throttletime));
           first.join();
           second.join();
-          auto after_throttletime = lzt::get_throttle_time(pFreqHandle);
+          auto after_throttletime = lzt::get_throttle_time(pfreq_handle);
           EXPECT_LT(before_throttletime.throttleTime,
                     after_throttletime.throttleTime);
           EXPECT_NE(before_throttletime.timestamp,
                     after_throttletime.timestamp);
-          lzt::set_power_limits(pPowerHandle, &power_sustained_limit_Initial,
+          lzt::set_power_limits(p_power_handle, &power_sustained_limit_Initial,
                                 nullptr, nullptr);
         }
       }

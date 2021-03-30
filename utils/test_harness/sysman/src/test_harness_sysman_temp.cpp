@@ -26,10 +26,10 @@ std::vector<zes_temp_handle_t> get_temp_handles(ze_device_handle_t device,
   if (count == 0) {
     count = get_temp_handle_count(device);
   }
-  std::vector<zes_temp_handle_t> tempHandles(count, nullptr);
+  std::vector<zes_temp_handle_t> temp_handles(count, nullptr);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumTemperatureSensors(
-                                   device, &count, tempHandles.data()));
-  return tempHandles;
+                                   device, &count, temp_handles.data()));
+  return temp_handles;
 }
 
 zes_temp_properties_t get_temp_properties(zes_temp_handle_t tempHandle) {

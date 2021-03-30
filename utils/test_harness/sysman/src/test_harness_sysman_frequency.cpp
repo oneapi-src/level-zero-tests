@@ -19,20 +19,20 @@ namespace lzt = level_zero_tests;
 namespace level_zero_tests {
 
 uint32_t get_freq_handle_count(zes_device_handle_t device) {
-  uint32_t pCount = 0;
+  uint32_t p_count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumFrequencyDomains(device, &pCount, nullptr));
-  EXPECT_GE(pCount, 0);
-  return pCount;
+            zesDeviceEnumFrequencyDomains(device, &p_count, nullptr));
+  EXPECT_GE(p_count, 0);
+  return p_count;
 }
 
 std::vector<zes_freq_handle_t> get_freq_handles(zes_device_handle_t device,
-                                                uint32_t &pCount) {
-  if (pCount == 0)
-    pCount = get_freq_handle_count(device);
-  std::vector<zes_freq_handle_t> pFreqHandles(pCount);
+                                                uint32_t &p_count) {
+  if (p_count == 0)
+    p_count = get_freq_handle_count(device);
+  std::vector<zes_freq_handle_t> pFreqHandles(p_count);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumFrequencyDomains(
-                                   device, &pCount, pFreqHandles.data()));
+                                   device, &p_count, pFreqHandles.data()));
   return pFreqHandles;
 }
 

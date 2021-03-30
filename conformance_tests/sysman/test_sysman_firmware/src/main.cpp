@@ -19,13 +19,13 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
-  auto isSysmanEnabled = getenv("ZES_ENABLE_SYSMAN");
-  if (isSysmanEnabled == nullptr) {
+  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
+  if (is_sysman_enabled == nullptr) {
     LOG_INFO << "Sysman is not Enabled";
     exit(0);
   } else {
-    auto isSysmanEnabledInt = atoi(isSysmanEnabled);
-    if (isSysmanEnabledInt == 1) {
+    auto is_sysman_enabled_int = atoi(is_sysman_enabled);
+    if (is_sysman_enabled_int == 1) {
       ze_result_t result = zeInit(0);
       if (result) {
         throw std::runtime_error("zeInit failed: " +

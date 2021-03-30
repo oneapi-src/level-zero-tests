@@ -79,22 +79,22 @@ TEST_F(PciModuleTest,
 TEST_F(PciModuleTest,
        GivenSysmanHandleWhenRetrievingPCIBarsThenNonZeroCountValueIsReturned) {
   for (auto device : devices) {
-    auto pCount = lzt::get_pci_bar_count(device);
+    auto p_count = lzt::get_pci_bar_count(device);
   }
 }
 TEST_F(
     PciModuleTest,
     GivenSysmanHandleWhenRetrievingPCIBarsThenValidBarPropertiesAreReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pciBars = lzt::get_pci_bars(device, &pCount);
-    for (auto pciBar : pciBars) {
-      EXPECT_GE(pciBar.type, ZES_PCI_BAR_TYPE_MMIO);
-      EXPECT_LE(pciBar.type, ZES_PCI_BAR_TYPE_MEM);
-      EXPECT_GE((UINT64_MAX - pciBar.base), pciBar.size);
-      EXPECT_GE(pciBar.index, 0);
-      EXPECT_LE(pciBar.index, MAX_BARS); // Check for no. of PCI bars
-      EXPECT_GT(pciBar.size, 0);
+    uint32_t p_count = 0;
+    auto pci_bars = lzt::get_pci_bars(device, &p_count);
+    for (auto pci_bar : pci_bars) {
+      EXPECT_GE(pci_bar.type, ZES_PCI_BAR_TYPE_MMIO);
+      EXPECT_LE(pci_bar.type, ZES_PCI_BAR_TYPE_MEM);
+      EXPECT_GE((UINT64_MAX - pci_bar.base), pci_bar.size);
+      EXPECT_GE(pci_bar.index, 0);
+      EXPECT_LE(pci_bar.index, MAX_BARS); // Check for no. of PCI bars
+      EXPECT_GT(pci_bar.size, 0);
     }
   }
 }
@@ -102,14 +102,14 @@ TEST_F(PciModuleTest,
        GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
   for (auto device : devices) {
     auto pciProps = lzt::get_pci_properties(device);
-    auto pciStatsInitial = lzt::get_pci_stats(device);
-    EXPECT_LE(pciStatsInitial.txCounter, UINT64_MAX);
-    EXPECT_LE(pciStatsInitial.rxCounter, UINT64_MAX);
+    auto pci_stats_initial = lzt::get_pci_stats(device);
+    EXPECT_LE(pci_stats_initial.txCounter, UINT64_MAX);
+    EXPECT_LE(pci_stats_initial.rxCounter, UINT64_MAX);
     if (pciProps.haveReplayCounters == true)
-      EXPECT_LE(pciStatsInitial.replayCounter, UINT64_MAX);
+      EXPECT_LE(pci_stats_initial.replayCounter, UINT64_MAX);
     if (pciProps.havePacketCounters == true)
-      EXPECT_LE(pciStatsInitial.packetCounter, UINT64_MAX);
-    EXPECT_LE(pciStatsInitial.timestamp, UINT64_MAX);
+      EXPECT_LE(pci_stats_initial.packetCounter, UINT64_MAX);
+    EXPECT_LE(pci_stats_initial.timestamp, UINT64_MAX);
     ze_command_list_handle_t command_list = lzt::create_command_list();
     ze_command_queue_handle_t cq = lzt::create_command_queue();
     const size_t size = 4096;
@@ -131,23 +131,23 @@ TEST_F(PciModuleTest,
     lzt::free_memory(device_memory);
     lzt::destroy_command_queue(cq);
     lzt::destroy_command_list(command_list);
-    auto pciStatsLater = lzt::get_pci_stats(device);
-    EXPECT_LE(pciStatsLater.txCounter, UINT64_MAX);
-    EXPECT_LE(pciStatsLater.rxCounter, UINT64_MAX);
-    EXPECT_LE(pciStatsLater.replayCounter, UINT64_MAX);
-    EXPECT_LE(pciStatsLater.packetCounter, UINT64_MAX);
-    EXPECT_LE(pciStatsLater.timestamp, UINT64_MAX);
+    auto pci_stats_later = lzt::get_pci_stats(device);
+    EXPECT_LE(pci_stats_later.txCounter, UINT64_MAX);
+    EXPECT_LE(pci_stats_later.rxCounter, UINT64_MAX);
+    EXPECT_LE(pci_stats_later.replayCounter, UINT64_MAX);
+    EXPECT_LE(pci_stats_later.packetCounter, UINT64_MAX);
+    EXPECT_LE(pci_stats_later.timestamp, UINT64_MAX);
     if (pciProps.haveBandwidthCounters == true) {
-      EXPECT_GT(pciStatsLater.txCounter, pciStatsInitial.txCounter);
-      EXPECT_GT(pciStatsLater.rxCounter, pciStatsInitial.rxCounter);
+      EXPECT_GT(pci_stats_later.txCounter, pci_stats_initial.txCounter);
+      EXPECT_GT(pci_stats_later.rxCounter, pci_stats_initial.rxCounter);
     }
     if (pciProps.havePacketCounters == true) {
-      EXPECT_GT(pciStatsLater.packetCounter, pciStatsInitial.packetCounter);
+      EXPECT_GT(pci_stats_later.packetCounter, pci_stats_initial.packetCounter);
     }
     if (pciProps.haveReplayCounters == true) {
-      EXPECT_GE(pciStatsLater.replayCounter, pciStatsInitial.replayCounter);
+      EXPECT_GE(pci_stats_later.replayCounter, pci_stats_initial.replayCounter);
     }
-    EXPECT_NE(pciStatsLater.timestamp, pciStatsInitial.timestamp);
+    EXPECT_NE(pci_stats_later.timestamp, pci_stats_initial.timestamp);
   }
 }
 } // namespace

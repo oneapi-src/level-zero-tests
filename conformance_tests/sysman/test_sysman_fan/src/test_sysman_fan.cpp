@@ -33,15 +33,15 @@ TEST_F(
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFanHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
+    auto fan_handles = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    ASSERT_EQ(fanHandles.size(), count);
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
+    ASSERT_EQ(fan_handles.size(), count);
+    for (auto fan_handle : fan_handles) {
+      ASSERT_NE(nullptr, fan_handle);
     }
   }
 }
@@ -50,16 +50,16 @@ TEST_F(
     FanModuleTest,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t actualCount = 0;
-    lzt::get_fan_handles(device, actualCount);
-    if (actualCount == 0) {
+    uint32_t actual_count = 0;
+    lzt::get_fan_handles(device, actual_count);
+    if (actual_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    uint32_t testCount = actualCount + 1;
-    lzt::get_fan_handles(device, testCount);
-    EXPECT_EQ(testCount, actualCount);
+    uint32_t test_count = actual_count + 1;
+    lzt::get_fan_handles(device, test_count);
+    EXPECT_EQ(test_count, actual_count);
   }
 }
 
@@ -68,22 +68,22 @@ TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFanHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto fanHandlesInitial = lzt::get_fan_handles(device, count);
+    auto fan_handles_initial = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto fanHandle : fanHandlesInitial) {
-      ASSERT_NE(nullptr, fanHandle);
+    for (auto fan_handle : fan_handles_initial) {
+      ASSERT_NE(nullptr, fan_handle);
     }
 
     count = 0;
-    auto fanHandlesLater = lzt::get_fan_handles(device, count);
-    for (auto fanHandle : fanHandlesLater) {
-      ASSERT_NE(nullptr, fanHandle);
+    auto fan_handles_later = lzt::get_fan_handles(device, count);
+    for (auto fan_handle : fan_handles_later) {
+      ASSERT_NE(nullptr, fan_handle);
     }
-    EXPECT_EQ(fanHandlesInitial, fanHandlesLater);
+    EXPECT_EQ(fan_handles_initial, fan_handles_later);
   }
 }
 
@@ -93,15 +93,15 @@ TEST_F(
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
+    auto fan_handles = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
-      auto properties = lzt::get_fan_properties(fanHandle);
+    for (auto fan_handle : fan_handles) {
+      ASSERT_NE(nullptr, fan_handle);
+      auto properties = lzt::get_fan_properties(fan_handle);
       if (properties.onSubdevice) {
         EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
@@ -130,25 +130,25 @@ TEST_F(
     GivenValidFanHandleWhenRetrievingFanPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
+    auto fan_handles = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
-      auto propertiesInitial = lzt::get_fan_properties(fanHandle);
-      auto propertiesLater = lzt::get_fan_properties(fanHandle);
-      EXPECT_EQ(propertiesInitial.canControl, propertiesLater.canControl);
-      EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
-      EXPECT_EQ(propertiesInitial.maxRPM, propertiesLater.maxRPM);
-      EXPECT_EQ(propertiesInitial.maxPoints, propertiesLater.maxPoints);
-      EXPECT_EQ(propertiesInitial.supportedModes,
-                propertiesLater.supportedModes);
-      EXPECT_EQ(propertiesInitial.supportedUnits,
-                propertiesLater.supportedUnits);
+    for (auto fan_handle : fan_handles) {
+      ASSERT_NE(nullptr, fan_handle);
+      auto properties_initial = lzt::get_fan_properties(fan_handle);
+      auto properties_later = lzt::get_fan_properties(fan_handle);
+      EXPECT_EQ(properties_initial.canControl, properties_later.canControl);
+      EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
+      EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
+      EXPECT_EQ(properties_initial.maxRPM, properties_later.maxRPM);
+      EXPECT_EQ(properties_initial.maxPoints, properties_later.maxPoints);
+      EXPECT_EQ(properties_initial.supportedModes,
+                properties_later.supportedModes);
+      EXPECT_EQ(properties_initial.supportedUnits,
+                properties_later.supportedUnits);
     }
   }
 }
@@ -157,17 +157,17 @@ TEST_F(
     GivenValidFanHandleWhenRetrievingFanConfigurationThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
+    auto fan_handles = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
-      auto config = lzt::get_fan_configuration(fanHandle);
+    for (auto fan_handle : fan_handles) {
+      ASSERT_NE(nullptr, fan_handle);
+      auto config = lzt::get_fan_configuration(fan_handle);
       EXPECT_EQ(config.mode, ZES_FAN_SPEED_MODE_DEFAULT);
-      auto properties = lzt::get_fan_properties(fanHandle);
+      auto properties = lzt::get_fan_properties(fan_handle);
       if (config.speedFixed.speed == -1) {
         LOG_INFO << "No fixed fan speed setting ";
       }
@@ -188,19 +188,19 @@ TEST_F(FanModuleTest,
        GivenValidFanHandleWhenRetrievingFanStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
+    auto fan_handles = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
+    for (auto fan_handle : fan_handles) {
+      ASSERT_NE(nullptr, fan_handle);
       zes_fan_speed_units_t units = {};
       int32_t speed = {};
-      lzt::get_fan_state(fanHandle, units, speed);
-      auto properties = lzt::get_fan_properties(fanHandle);
-      auto config = lzt::get_fan_configuration(fanHandle);
+      lzt::get_fan_state(fan_handle, units, speed);
+      auto properties = lzt::get_fan_properties(fan_handle);
+      auto config = lzt::get_fan_configuration(fan_handle);
       if (config.speedFixed.units == ZES_FAN_SPEED_UNITS_RPM) {
         EXPECT_LE(config.speedFixed.speed, properties.maxRPM);
       }
@@ -215,16 +215,16 @@ TEST_F(
     GivenValidFanHandleWhenSettingFanToDefaultModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
+    auto fan_handles = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
-      lzt::set_fan_default_mode(fanHandle);
-      auto config = lzt::get_fan_configuration(fanHandle);
+    for (auto fan_handle : fan_handles) {
+      ASSERT_NE(nullptr, fan_handle);
+      lzt::set_fan_default_mode(fan_handle);
+      auto config = lzt::get_fan_configuration(fan_handle);
       EXPECT_EQ(config.mode, ZES_FAN_SPEED_MODE_DEFAULT);
     }
   }
@@ -235,19 +235,19 @@ TEST_F(
     GivenValidFanHandleWhenSettingFanToFixedSpeedModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
+    auto fan_handles = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
-      auto config = lzt::get_fan_configuration(fanHandle);
+    for (auto fan_handle : fan_handles) {
+      ASSERT_NE(nullptr, fan_handle);
+      auto config = lzt::get_fan_configuration(fan_handle);
       zes_fan_speed_t speed;
       speed.speed = 50;
       speed.units = ZES_FAN_SPEED_UNITS_RPM;
-      lzt::set_fan_fixed_speed_mode(fanHandle, speed);
+      lzt::set_fan_fixed_speed_mode(fan_handle, speed);
       EXPECT_EQ(config.mode, ZES_FAN_SPEED_MODE_FIXED);
       EXPECT_EQ(config.speedFixed.speed, speed.speed);
       EXPECT_EQ(config.speedFixed.units, speed.units);
@@ -260,22 +260,22 @@ TEST_F(
     GivenValidFanHandleWhenSettingFanToSpeedTableModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto fanHandles = lzt::get_fan_handles(device, count);
+    auto fan_handles = lzt::get_fan_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto fanHandle : fanHandles) {
-      ASSERT_NE(nullptr, fanHandle);
-      auto config = lzt::get_fan_configuration(fanHandle);
+    for (auto fan_handle : fan_handles) {
+      ASSERT_NE(nullptr, fan_handle);
+      auto config = lzt::get_fan_configuration(fan_handle);
       zes_fan_speed_table_t speedTable;
       speedTable.numPoints = 1;
       speedTable.table->temperature = 140;
       speedTable.table->speed.speed = 50;
       speedTable.table->speed.units = ZES_FAN_SPEED_UNITS_RPM;
-      lzt::set_fan_speed_table_mode(fanHandle, speedTable);
-      auto properties = lzt::get_fan_properties(fanHandle);
+      lzt::set_fan_speed_table_mode(fan_handle, speedTable);
+      auto properties = lzt::get_fan_properties(fan_handle);
       EXPECT_EQ(config.mode, ZES_FAN_SPEED_MODE_TABLE);
       EXPECT_LE(speedTable.numPoints, properties.maxPoints);
       for (int32_t i = 0; i < speedTable.numPoints; i++) {

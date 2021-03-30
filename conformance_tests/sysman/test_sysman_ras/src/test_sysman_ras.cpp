@@ -61,15 +61,15 @@ TEST_F(RASOperationsTest,
        GivenValidRASHandleWhenRetrievingConfigThenUpdatedConfigIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto rasHandles = lzt::get_ras_handles(device, count);
+    auto ras_handles = lzt::get_ras_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto rasHandle : rasHandles) {
-      ASSERT_NE(nullptr, rasHandle);
-      zes_ras_config_t rasConfig = lzt::get_ras_config(rasHandle);
+    for (auto ras_handle : ras_handles) {
+      ASSERT_NE(nullptr, ras_handle);
+      zes_ras_config_t rasConfig = lzt::get_ras_config(ras_handle);
       validate_ras_config(rasConfig);
     }
   }
@@ -80,17 +80,17 @@ TEST_F(
     GivenValidRASHandleAndSettingNewConfigWhenRetrievingConfigThenUpdatedConfigIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto rasHandles = lzt::get_ras_handles(device, count);
+    auto ras_handles = lzt::get_ras_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto rasHandle : rasHandles) {
-      ASSERT_NE(nullptr, rasHandle);
+    for (auto ras_handle : ras_handles) {
+      ASSERT_NE(nullptr, ras_handle);
       zes_ras_config_t rasConfigSet = {ZES_STRUCTURE_TYPE_RAS_CONFIG, nullptr};
       rasConfigSet.detailedThresholds = {ZES_STRUCTURE_TYPE_RAS_STATE, nullptr};
-      zes_ras_config_t rasConfigOriginal = lzt::get_ras_config(rasHandle);
+      zes_ras_config_t rasConfigOriginal = lzt::get_ras_config(ras_handle);
       validate_ras_config(rasConfigOriginal);
       rasConfigSet.totalThreshold = (UINT64_MAX - 1);
       rasConfigSet.detailedThresholds.category[ZES_RAS_ERROR_CAT_RESET] =
@@ -107,8 +107,8 @@ TEST_F(
           (UINT64_MAX - 1);
       rasConfigSet.detailedThresholds
           .category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS] = (UINT64_MAX - 1);
-      lzt::set_ras_config(rasHandle, rasConfigSet);
-      zes_ras_config_t rasConfigUpdated = lzt::get_ras_config(rasHandle);
+      lzt::set_ras_config(ras_handle, rasConfigSet);
+      zes_ras_config_t rasConfigUpdated = lzt::get_ras_config(ras_handle);
       validate_ras_config(rasConfigUpdated);
       EXPECT_EQ(rasConfigSet.totalThreshold, rasConfigUpdated.totalThreshold);
       EXPECT_EQ(
@@ -139,7 +139,7 @@ TEST_F(
                     .category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS],
                 rasConfigUpdated.detailedThresholds
                     .category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS]);
-      lzt::set_ras_config(rasHandle, rasConfigOriginal);
+      lzt::set_ras_config(ras_handle, rasConfigOriginal);
     }
   }
 }
@@ -148,16 +148,16 @@ TEST_F(RASOperationsTest,
        GivenValidRASHandleWhenRetrievingStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto rasHandles = lzt::get_ras_handles(device, count);
+    auto ras_handles = lzt::get_ras_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto rasHandle : rasHandles) {
-      ASSERT_NE(nullptr, rasHandle);
+    for (auto ras_handle : ras_handles) {
+      ASSERT_NE(nullptr, ras_handle);
       ze_bool_t clear = 0;
-      zes_ras_state_t rasState = lzt::get_ras_state(rasHandle, clear);
+      zes_ras_state_t rasState = lzt::get_ras_state(ras_handle, clear);
       validate_ras_state(rasState);
     }
   }
@@ -168,20 +168,21 @@ TEST_F(
     GivenValidRASHandleWhenRetrievingStateAfterClearThenUpdatedStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto rasHandles = lzt::get_ras_handles(device, count);
+    auto ras_handles = lzt::get_ras_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto rasHandle : rasHandles) {
-      ASSERT_NE(nullptr, rasHandle);
+    for (auto ras_handle : ras_handles) {
+      ASSERT_NE(nullptr, ras_handle);
       ze_bool_t clear = 0;
-      zes_ras_state_t rasState = lzt::get_ras_state(rasHandle, clear);
+      zes_ras_state_t rasState = lzt::get_ras_state(ras_handle, clear);
       validate_ras_state(rasState);
       uint64_t tErrorsinitial = lzt::sum_of_ras_errors(rasState);
       clear = 1;
-      zes_ras_state_t rasStateAfterClear = lzt::get_ras_state(rasHandle, clear);
+      zes_ras_state_t rasStateAfterClear =
+          lzt::get_ras_state(ras_handle, clear);
       validate_ras_state(rasStateAfterClear);
       uint64_t tErrorsAfterClear = lzt::sum_of_ras_errors(rasStateAfterClear);
       EXPECT_GE(tErrorsinitial, tErrorsAfterClear);
@@ -195,22 +196,22 @@ TEST_F(
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
-    auto rasHandles = lzt::get_ras_handles(device, count);
+    auto ras_handles = lzt::get_ras_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto rasHandle : rasHandles) {
-      ASSERT_NE(nullptr, rasHandle);
-      auto propertiesInitial = lzt::get_ras_properties(rasHandle);
-      auto propertiesLater = lzt::get_ras_properties(rasHandle);
-      validate_ras_properties(propertiesInitial, deviceProperties);
-      validate_ras_properties(propertiesLater, deviceProperties);
-      EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
-      EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
-        EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
+    for (auto ras_handle : ras_handles) {
+      ASSERT_NE(nullptr, ras_handle);
+      auto properties_initial = lzt::get_ras_properties(ras_handle);
+      auto properties_later = lzt::get_ras_properties(ras_handle);
+      validate_ras_properties(properties_initial, deviceProperties);
+      validate_ras_properties(properties_later, deviceProperties);
+      EXPECT_EQ(properties_initial.type, properties_later.type);
+      EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
+      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
+        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
       }
     }
   }
@@ -221,14 +222,14 @@ TEST_F(
     GivenComponentCountZeroWhenRetrievingRASHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto rasHandles = lzt::get_ras_handles(device, count);
+    auto ras_handles = lzt::get_ras_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto rasHandle : rasHandles) {
-      ASSERT_NE(nullptr, rasHandle);
+    for (auto ras_handle : ras_handles) {
+      ASSERT_NE(nullptr, ras_handle);
     }
   }
 }

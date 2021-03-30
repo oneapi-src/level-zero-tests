@@ -15,20 +15,20 @@ namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 uint32_t get_power_handle_count(zes_device_handle_t device) {
-  uint32_t pCount = 0;
+  uint32_t p_count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumPowerDomains(device, &pCount, nullptr));
-  EXPECT_GE(pCount, 0);
-  return pCount;
+            zesDeviceEnumPowerDomains(device, &p_count, nullptr));
+  EXPECT_GE(p_count, 0);
+  return p_count;
 }
 std::vector<zes_pwr_handle_t> get_power_handles(zes_device_handle_t device,
-                                                uint32_t &pCount) {
-  if (pCount == 0)
-    pCount = get_power_handle_count(device);
-  std::vector<zes_pwr_handle_t> pPowerHandles(pCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumPowerDomains(device, &pCount, pPowerHandles.data()));
-  return pPowerHandles;
+                                                uint32_t &p_count) {
+  if (p_count == 0)
+    p_count = get_power_handle_count(device);
+  std::vector<zes_pwr_handle_t> p_power_handles(p_count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumPowerDomains(
+                                   device, &p_count, p_power_handles.data()));
+  return p_power_handles;
 }
 zes_power_properties_t get_power_properties(zes_pwr_handle_t pPowerHandle) {
   zes_power_properties_t pProperties = {ZES_STRUCTURE_TYPE_POWER_PROPERTIES,

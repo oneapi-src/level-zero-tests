@@ -29,10 +29,10 @@ std::vector<zes_mem_handle_t> get_mem_handles(zes_device_handle_t device,
                                               uint32_t &count) {
   if (count == 0)
     count = get_mem_handle_count(device);
-  std::vector<zes_mem_handle_t> memHandles(count);
+  std::vector<zes_mem_handle_t> mem_handles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumMemoryModules(device, &count, memHandles.data()));
-  return memHandles;
+            zesDeviceEnumMemoryModules(device, &count, mem_handles.data()));
+  return mem_handles;
 }
 
 zes_mem_properties_t get_mem_properties(zes_mem_handle_t memHandle) {

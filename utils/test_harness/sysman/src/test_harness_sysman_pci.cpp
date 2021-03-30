@@ -27,23 +27,23 @@ zes_pci_properties_t get_pci_properties(zes_device_handle_t device) {
   return pciProps;
 }
 uint32_t get_pci_bar_count(zes_device_handle_t device) {
-  uint32_t pCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDevicePciGetBars(device, &pCount, nullptr));
-  EXPECT_GT(pCount, 0);
-  return pCount;
+  uint32_t p_count = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDevicePciGetBars(device, &p_count, nullptr));
+  EXPECT_GT(p_count, 0);
+  return p_count;
 }
 
 std::vector<zes_pci_bar_properties_t> get_pci_bars(zes_device_handle_t device,
-                                                   uint32_t *pCount) {
-  if (*pCount == 0)
-    *pCount = get_pci_bar_count(device);
-  std::vector<zes_pci_bar_properties_t> pciBarProps(*pCount);
-  for (uint32_t i = 0; i < *pCount; i++) {
+                                                   uint32_t *p_count) {
+  if (*p_count == 0)
+    *p_count = get_pci_bar_count(device);
+  std::vector<zes_pci_bar_properties_t> pciBarProps(*p_count);
+  for (uint32_t i = 0; i < *p_count; i++) {
     pciBarProps[i].stype = ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES;
     pciBarProps[i].pNext = nullptr;
   }
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDevicePciGetBars(device, pCount, pciBarProps.data()));
+            zesDevicePciGetBars(device, p_count, pciBarProps.data()));
   return pciBarProps;
 }
 zes_pci_stats_t get_pci_stats(zes_device_handle_t device) {

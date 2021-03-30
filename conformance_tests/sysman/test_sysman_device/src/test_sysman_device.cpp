@@ -68,50 +68,52 @@ TEST_F(
     SysmanDeviceTest,
     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
-    auto propertiesInitial = lzt::get_sysman_device_properties(device);
-    auto propertiesLater = lzt::get_sysman_device_properties(device);
-    EXPECT_EQ(propertiesInitial.core.type, propertiesLater.core.type);
-    if (propertiesInitial.core.flags <= ZE_DEVICE_PROPERTY_FLAG_INTEGRATED |
+    auto properties_initial = lzt::get_sysman_device_properties(device);
+    auto properties_later = lzt::get_sysman_device_properties(device);
+    EXPECT_EQ(properties_initial.core.type, properties_later.core.type);
+    if (properties_initial.core.flags <= ZE_DEVICE_PROPERTY_FLAG_INTEGRATED |
             ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE | ZE_DEVICE_PROPERTY_FLAG_ECC |
             ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING &&
-        propertiesInitial.core.flags <= ZE_DEVICE_PROPERTY_FLAG_INTEGRATED |
+        properties_initial.core.flags <= ZE_DEVICE_PROPERTY_FLAG_INTEGRATED |
             ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE | ZE_DEVICE_PROPERTY_FLAG_ECC |
             ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
-      EXPECT_EQ(propertiesInitial.core.flags, propertiesLater.core.flags);
-      if (propertiesInitial.core.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE &&
-          propertiesLater.core.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
-        EXPECT_EQ(propertiesInitial.core.subdeviceId,
-                  propertiesLater.core.subdeviceId);
+      EXPECT_EQ(properties_initial.core.flags, properties_later.core.flags);
+      if (properties_initial.core.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE &&
+          properties_later.core.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+        EXPECT_EQ(properties_initial.core.subdeviceId,
+                  properties_later.core.subdeviceId);
       }
     } else {
       FAIL();
     }
     EXPECT_TRUE(0 ==
-                std::memcmp(propertiesInitial.serialNumber,
-                            propertiesLater.serialNumber,
-                            get_prop_length(propertiesInitial.serialNumber)));
+                std::memcmp(properties_initial.serialNumber,
+                            properties_later.serialNumber,
+                            get_prop_length(properties_initial.serialNumber)));
     EXPECT_TRUE(0 ==
-                std::memcmp(propertiesInitial.boardNumber,
-                            propertiesLater.boardNumber,
-                            get_prop_length(propertiesInitial.boardNumber)));
-
-    EXPECT_TRUE(0 == std::memcmp(propertiesInitial.brandName,
-                                 propertiesLater.brandName,
-                                 get_prop_length(propertiesInitial.brandName)));
-
-    EXPECT_TRUE(0 == std::memcmp(propertiesInitial.modelName,
-                                 propertiesLater.modelName,
-                                 get_prop_length(propertiesInitial.modelName)));
+                std::memcmp(properties_initial.boardNumber,
+                            properties_later.boardNumber,
+                            get_prop_length(properties_initial.boardNumber)));
 
     EXPECT_TRUE(0 ==
-                std::memcmp(propertiesInitial.vendorName,
-                            propertiesLater.vendorName,
-                            get_prop_length(propertiesInitial.vendorName)));
+                std::memcmp(properties_initial.brandName,
+                            properties_later.brandName,
+                            get_prop_length(properties_initial.brandName)));
 
     EXPECT_TRUE(0 ==
-                std::memcmp(propertiesInitial.driverVersion,
-                            propertiesLater.driverVersion,
-                            get_prop_length(propertiesInitial.driverVersion)));
+                std::memcmp(properties_initial.modelName,
+                            properties_later.modelName,
+                            get_prop_length(properties_initial.modelName)));
+
+    EXPECT_TRUE(0 ==
+                std::memcmp(properties_initial.vendorName,
+                            properties_later.vendorName,
+                            get_prop_length(properties_initial.vendorName)));
+
+    EXPECT_TRUE(0 ==
+                std::memcmp(properties_initial.driverVersion,
+                            properties_later.driverVersion,
+                            get_prop_length(properties_initial.driverVersion)));
   }
 }
 
@@ -145,11 +147,11 @@ TEST_F(
     SysmanDeviceTest,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t actualCount = 0;
-    lzt::get_processes_state(device, actualCount);
-    uint32_t testCount = actualCount + 1;
-    lzt::get_processes_state(device, testCount);
-    EXPECT_EQ(testCount, actualCount);
+    uint32_t actual_count = 0;
+    lzt::get_processes_state(device, actual_count);
+    uint32_t test_count = actual_count + 1;
+    lzt::get_processes_state(device, test_count);
+    EXPECT_EQ(test_count, actual_count);
   }
 }
 

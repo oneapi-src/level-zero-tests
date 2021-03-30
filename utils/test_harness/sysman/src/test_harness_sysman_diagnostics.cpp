@@ -27,39 +27,39 @@ std::vector<zes_diag_handle_t> get_diag_handles(zes_device_handle_t device,
                                                 uint32_t &count) {
   if (count == 0)
     count = get_diag_handle_count(device);
-  std::vector<zes_diag_handle_t> diagHandles(count, nullptr);
+  std::vector<zes_diag_handle_t> diag_handles(count, nullptr);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumDiagnosticTestSuites(
-                                   device, &count, diagHandles.data()));
-  return diagHandles;
+                                   device, &count, diag_handles.data()));
+  return diag_handles;
 }
 
-zes_diag_properties_t get_diag_properties(zes_diag_handle_t diagHandle) {
+zes_diag_properties_t get_diag_properties(zes_diag_handle_t diag_handle) {
   zes_diag_properties_t properties = {ZES_STRUCTURE_TYPE_DIAG_PROPERTIES,
                                       nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDiagnosticsGetProperties(diagHandle, &properties));
+            zesDiagnosticsGetProperties(diag_handle, &properties));
   return properties;
 }
 
-std::vector<zes_diag_test_t> get_diag_tests(zes_diag_handle_t diagHandle,
+std::vector<zes_diag_test_t> get_diag_tests(zes_diag_handle_t diag_handle,
                                             uint32_t &count) {
   if (count == 0) {
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zesDiagnosticsGetTests(diagHandle, &count, nullptr));
+              zesDiagnosticsGetTests(diag_handle, &count, nullptr));
     EXPECT_GT(count, 0);
   }
   std::vector<zes_diag_test_t> diagTests(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDiagnosticsGetTests(diagHandle, &count, diagTests.data()));
+            zesDiagnosticsGetTests(diag_handle, &count, diagTests.data()));
   EXPECT_EQ(diagTests.size(), count);
   return diagTests;
 }
 
-zes_diag_result_t run_diag_tests(zes_diag_handle_t diagHandle, uint32_t start,
+zes_diag_result_t run_diag_tests(zes_diag_handle_t diag_handle, uint32_t start,
                                  uint32_t end) {
   zes_diag_result_t result = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDiagnosticsRunTests(diagHandle, start, end, &result));
+            zesDiagnosticsRunTests(diag_handle, start, end, &result));
   return result;
 }
 

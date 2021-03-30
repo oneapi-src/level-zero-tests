@@ -43,15 +43,15 @@ TEST_F(
     GivenComponentCountZeroWhenRetrievingFirmwareHandlesThenNotNullFirmwareHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto firmwareHandles = lzt::get_firmware_handles(device, count);
+    auto firmware_handles = lzt::get_firmware_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    ASSERT_EQ(firmwareHandles.size(), count);
-    for (auto firmwareHandle : firmwareHandles) {
-      ASSERT_NE(nullptr, firmwareHandle);
+    ASSERT_EQ(firmware_handles.size(), count);
+    for (auto firmware_handle : firmware_handles) {
+      ASSERT_NE(nullptr, firmware_handle);
     }
   }
 }
@@ -60,16 +60,16 @@ TEST_F(
     FirmwareTest,
     GivenInvalidComponentCountWhenRetrievingSysmanFirmwareHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t actualCount = 0;
-    auto firmwareHandles = lzt::get_firmware_handles(device, actualCount);
-    if (actualCount == 0) {
+    uint32_t actual_count = 0;
+    auto firmware_handles = lzt::get_firmware_handles(device, actual_count);
+    if (actual_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    uint32_t testCount = actualCount + 1;
-    firmwareHandles = lzt::get_firmware_handles(device, testCount);
-    EXPECT_EQ(testCount, actualCount);
+    uint32_t test_count = actual_count + 1;
+    firmware_handles = lzt::get_firmware_handles(device, test_count);
+    EXPECT_EQ(test_count, actual_count);
   }
 }
 TEST_F(
@@ -78,15 +78,15 @@ TEST_F(
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
-    auto firmwareHandles = lzt::get_firmware_handles(device, count);
+    auto firmware_handles = lzt::get_firmware_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto firmwareHandle : firmwareHandles) {
-      ASSERT_NE(nullptr, firmwareHandle);
-      auto properties = lzt::get_firmware_properties(firmwareHandle);
+    for (auto firmware_handle : firmware_handles) {
+      ASSERT_NE(nullptr, firmware_handle);
+      auto properties = lzt::get_firmware_properties(firmware_handle);
       if (properties.onSubdevice) {
         EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
@@ -102,27 +102,27 @@ TEST_F(
     GivenValidFirmwareHandleWhenRetrievingFirmwarePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto firmwareHandles = lzt::get_firmware_handles(device, count);
+    auto firmware_handles = lzt::get_firmware_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto firmwareHandle : firmwareHandles) {
-      ASSERT_NE(nullptr, firmwareHandle);
-      auto propertiesInitial = lzt::get_firmware_properties(firmwareHandle);
-      auto propertiesLater = lzt::get_firmware_properties(firmwareHandle);
-      EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
-        EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
+    for (auto firmware_handle : firmware_handles) {
+      ASSERT_NE(nullptr, firmware_handle);
+      auto properties_initial = lzt::get_firmware_properties(firmware_handle);
+      auto properties_later = lzt::get_firmware_properties(firmware_handle);
+      EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
+      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
+        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
       }
       EXPECT_TRUE(0 ==
-                  std::strcmp(reinterpret_cast<char *>(propertiesInitial.name),
-                              reinterpret_cast<char *>(propertiesLater.name)));
+                  std::strcmp(reinterpret_cast<char *>(properties_initial.name),
+                              reinterpret_cast<char *>(properties_later.name)));
       EXPECT_TRUE(
-          0 == std::strcmp(reinterpret_cast<char *>(propertiesInitial.version),
-                           reinterpret_cast<char *>(propertiesLater.version)));
-      EXPECT_EQ(propertiesInitial.canControl, propertiesLater.canControl);
+          0 == std::strcmp(reinterpret_cast<char *>(properties_initial.version),
+                           reinterpret_cast<char *>(properties_later.version)));
+      EXPECT_EQ(properties_initial.canControl, properties_later.canControl);
     }
   }
 }
@@ -137,15 +137,15 @@ TEST_F(FirmwareTest,
   std::string fwDir(fwDirEnv);
   for (auto device : devices) {
     uint32_t count = 0;
-    auto firmwareHandles = lzt::get_firmware_handles(device, count);
+    auto firmware_handles = lzt::get_firmware_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto firmwareHandle : firmwareHandles) {
-      ASSERT_NE(nullptr, firmwareHandle);
-      auto propFw = lzt::get_firmware_properties(firmwareHandle);
+    for (auto firmware_handle : firmware_handles) {
+      ASSERT_NE(nullptr, firmware_handle);
+      auto propFw = lzt::get_firmware_properties(firmware_handle);
       if (propFw.canControl == true) {
         std::string fwName(reinterpret_cast<char *>(propFw.name));
         std::string fwToLoad = fwDir + "/" + fwName;
@@ -155,7 +155,7 @@ TEST_F(FirmwareTest,
         testFwImage.resize(inFileStream.tellg());
         inFileStream.read(testFwImage.data(), testFwImage.size());
         EXPECT_TRUE(false) << "flashing firmware: " << fwName;
-        lzt::flash_firmware(firmwareHandle,
+        lzt::flash_firmware(firmware_handle,
                             static_cast<void *>(testFwImage.data()),
                             testFwImage.size());
       }

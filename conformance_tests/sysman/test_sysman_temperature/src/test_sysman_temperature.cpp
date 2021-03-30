@@ -37,15 +37,15 @@ TEST_F(
     GivenComponentCountZeroWhenRetrievingSysmanTempThenNotNullTempHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto tempHandles = lzt::get_temp_handles(device, count);
+    auto temp_handles = lzt::get_temp_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    ASSERT_EQ(tempHandles.size(), count);
-    for (auto tempHandle : tempHandles) {
-      ASSERT_NE(nullptr, tempHandle);
+    ASSERT_EQ(temp_handles.size(), count);
+    for (auto temp_handle : temp_handles) {
+      ASSERT_NE(nullptr, temp_handle);
     }
   }
 }
@@ -53,16 +53,16 @@ TEST_F(
     TempModuleTest,
     GivenInvalidComponentCountWhenRetrievingTempHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t actualCount = 0;
-    lzt::get_temp_handles(device, actualCount);
-    if (actualCount == 0) {
+    uint32_t actual_count = 0;
+    lzt::get_temp_handles(device, actual_count);
+    if (actual_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    uint32_t testCount = actualCount + 1;
-    lzt::get_temp_handles(device, testCount);
-    EXPECT_EQ(testCount, actualCount);
+    uint32_t test_count = actual_count + 1;
+    lzt::get_temp_handles(device, test_count);
+    EXPECT_EQ(test_count, actual_count);
   }
 }
 
@@ -71,22 +71,22 @@ TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarTempHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto tempHandlesInitial = lzt::get_temp_handles(device, count);
+    auto temp_handlesInitial = lzt::get_temp_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto tempHandle : tempHandlesInitial) {
-      ASSERT_NE(nullptr, tempHandle);
+    for (auto temp_handle : temp_handlesInitial) {
+      ASSERT_NE(nullptr, temp_handle);
     }
 
     count = 0;
-    auto tempHandlesLater = lzt::get_temp_handles(device, count);
-    for (auto tempHandle : tempHandlesLater) {
-      ASSERT_NE(nullptr, tempHandle);
+    auto temp_handlesLater = lzt::get_temp_handles(device, count);
+    for (auto temp_handle : temp_handlesLater) {
+      ASSERT_NE(nullptr, temp_handle);
     }
-    EXPECT_EQ(tempHandlesInitial, tempHandlesLater);
+    EXPECT_EQ(temp_handlesInitial, temp_handlesLater);
   }
 }
 TEST_F(
@@ -95,15 +95,15 @@ TEST_F(
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
-    auto tempHandles = lzt::get_temp_handles(device, count);
+    auto temp_handles = lzt::get_temp_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto tempHandle : tempHandles) {
-      ASSERT_NE(nullptr, tempHandle);
-      auto properties = lzt::get_temp_properties(tempHandle);
+    for (auto temp_handle : temp_handles) {
+      ASSERT_NE(nullptr, temp_handle);
+      auto properties = lzt::get_temp_properties(temp_handle);
       if (properties.onSubdevice) {
         EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
@@ -117,26 +117,26 @@ TEST_F(
     GivenValidTempHandleWhenRetrievingTempPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto tempHandles = lzt::get_temp_handles(device, count);
+    auto temp_handles = lzt::get_temp_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto tempHandle : tempHandles) {
-      ASSERT_NE(nullptr, tempHandle);
-      auto propertiesInitial = lzt::get_temp_properties(tempHandle);
-      auto propertiesLater = lzt::get_temp_properties(tempHandle);
-      EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
-      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
-        EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
+    for (auto temp_handle : temp_handles) {
+      ASSERT_NE(nullptr, temp_handle);
+      auto properties_initial = lzt::get_temp_properties(temp_handle);
+      auto properties_later = lzt::get_temp_properties(temp_handle);
+      EXPECT_EQ(properties_initial.type, properties_later.type);
+      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
+        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
       }
-      EXPECT_EQ(propertiesInitial.isThreshold1Supported,
-                propertiesLater.isThreshold1Supported);
-      EXPECT_EQ(propertiesInitial.isCriticalTempSupported,
-                propertiesLater.isCriticalTempSupported);
-      EXPECT_EQ(propertiesInitial.isThreshold2Supported,
-                propertiesLater.isThreshold2Supported);
+      EXPECT_EQ(properties_initial.isThreshold1Supported,
+                properties_later.isThreshold1Supported);
+      EXPECT_EQ(properties_initial.isCriticalTempSupported,
+                properties_later.isCriticalTempSupported);
+      EXPECT_EQ(properties_initial.isThreshold2Supported,
+                properties_later.isThreshold2Supported);
     }
   }
 }
@@ -146,16 +146,16 @@ TEST_F(
     GivenValidTempHandleWhenRetrievingTempConfigurationThenValidTempConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto tempHandles = lzt::get_temp_handles(device, count);
+    auto temp_handles = lzt::get_temp_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto tempHandle : tempHandles) {
-      ASSERT_NE(nullptr, tempHandle);
-      auto config = lzt::get_temp_config(tempHandle);
-      auto properties = lzt::get_temp_properties(tempHandle);
+    for (auto temp_handle : temp_handles) {
+      ASSERT_NE(nullptr, temp_handle);
+      auto config = lzt::get_temp_config(temp_handle);
+      auto properties = lzt::get_temp_properties(temp_handle);
       if (properties.isCriticalTempSupported == false) {
         ASSERT_EQ(config.enableCritical, false);
       }
@@ -175,61 +175,61 @@ TEST_F(
     GivenValidTempHandleWhenSettingTempConfigurationThenExpectzesSysmanTemperatureSetConfigFollowedByzesSysmanTemperatureGetConfigToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto tempHandles = lzt::get_temp_handles(device, count);
+    auto temp_handles = lzt::get_temp_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto tempHandle : tempHandles) {
-      ASSERT_NE(nullptr, tempHandle);
-      auto properties = lzt::get_temp_properties(tempHandle);
-      auto initialConfig = lzt::get_temp_config(tempHandle);
-      auto temp = lzt::get_temp_state(tempHandle);
+    for (auto temp_handle : temp_handles) {
+      ASSERT_NE(nullptr, temp_handle);
+      auto properties = lzt::get_temp_properties(temp_handle);
+      auto initial_config = lzt::get_temp_config(temp_handle);
+      auto temp = lzt::get_temp_state(temp_handle);
       zes_temp_config_t setConfig = {};
       if (properties.isCriticalTempSupported == true) {
         setConfig.enableCritical = true;
-        lzt::set_temp_config(tempHandle, setConfig);
-        auto getConfig = lzt::get_temp_config(tempHandle);
-        EXPECT_EQ(getConfig.enableCritical, setConfig.enableCritical);
-        EXPECT_EQ(getConfig.threshold1.enableLowToHigh, false);
-        EXPECT_EQ(getConfig.threshold1.enableHighToLow, false);
-        EXPECT_EQ(getConfig.threshold2.enableLowToHigh, false);
-        EXPECT_EQ(getConfig.threshold2.enableHighToLow, false);
+        lzt::set_temp_config(temp_handle, setConfig);
+        auto get_config = lzt::get_temp_config(temp_handle);
+        EXPECT_EQ(get_config.enableCritical, setConfig.enableCritical);
+        EXPECT_EQ(get_config.threshold1.enableLowToHigh, false);
+        EXPECT_EQ(get_config.threshold1.enableHighToLow, false);
+        EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
+        EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
       }
       if (properties.isThreshold1Supported == true) {
         setConfig.threshold1.enableLowToHigh = true;
         setConfig.threshold1.enableHighToLow = false;
         setConfig.threshold1.threshold = temp;
-        lzt::set_temp_config(tempHandle, setConfig);
-        auto getConfig = lzt::get_temp_config(tempHandle);
-        EXPECT_EQ(getConfig.threshold1.enableLowToHigh,
+        lzt::set_temp_config(temp_handle, setConfig);
+        auto get_config = lzt::get_temp_config(temp_handle);
+        EXPECT_EQ(get_config.threshold1.enableLowToHigh,
                   setConfig.threshold1.enableLowToHigh);
-        EXPECT_EQ(getConfig.threshold1.enableHighToLow,
+        EXPECT_EQ(get_config.threshold1.enableHighToLow,
                   setConfig.threshold1.enableHighToLow);
-        EXPECT_EQ(getConfig.threshold1.threshold,
+        EXPECT_EQ(get_config.threshold1.threshold,
                   setConfig.threshold1.threshold);
-        EXPECT_EQ(getConfig.enableCritical, false);
-        EXPECT_EQ(getConfig.threshold2.enableLowToHigh, false);
-        EXPECT_EQ(getConfig.threshold2.enableHighToLow, false);
+        EXPECT_EQ(get_config.enableCritical, false);
+        EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
+        EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
       }
       if (properties.isThreshold1Supported == true) {
         setConfig.threshold2.enableLowToHigh = true;
         setConfig.threshold2.enableHighToLow = false;
         setConfig.threshold2.threshold = temp;
-        lzt::set_temp_config(tempHandle, setConfig);
-        auto getConfig = lzt::get_temp_config(tempHandle);
-        EXPECT_EQ(getConfig.threshold2.enableLowToHigh,
+        lzt::set_temp_config(temp_handle, setConfig);
+        auto get_config = lzt::get_temp_config(temp_handle);
+        EXPECT_EQ(get_config.threshold2.enableLowToHigh,
                   setConfig.threshold2.enableLowToHigh);
-        EXPECT_EQ(getConfig.threshold2.enableHighToLow,
+        EXPECT_EQ(get_config.threshold2.enableHighToLow,
                   setConfig.threshold2.enableHighToLow);
-        EXPECT_EQ(getConfig.threshold2.threshold,
+        EXPECT_EQ(get_config.threshold2.threshold,
                   setConfig.threshold2.threshold);
-        EXPECT_EQ(getConfig.enableCritical, false);
-        EXPECT_EQ(getConfig.threshold1.enableLowToHigh, false);
-        EXPECT_EQ(getConfig.threshold1.enableHighToLow, false);
+        EXPECT_EQ(get_config.enableCritical, false);
+        EXPECT_EQ(get_config.threshold1.enableLowToHigh, false);
+        EXPECT_EQ(get_config.threshold1.enableHighToLow, false);
       }
-      lzt::set_temp_config(tempHandle, initialConfig);
+      lzt::set_temp_config(temp_handle, initial_config);
     }
   }
 }
@@ -238,15 +238,15 @@ TEST_F(TempModuleTest,
        GivenValidTempHandleWhenRetrievingTempStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto tempHandles = lzt::get_temp_handles(device, count);
+    auto temp_handles = lzt::get_temp_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto tempHandle : tempHandles) {
-      ASSERT_NE(nullptr, tempHandle);
-      auto temp = lzt::get_temp_state(tempHandle);
+    for (auto temp_handle : temp_handles) {
+      ASSERT_NE(nullptr, temp_handle);
+      auto temp = lzt::get_temp_state(temp_handle);
       EXPECT_GT(temp, 0);
     }
   }

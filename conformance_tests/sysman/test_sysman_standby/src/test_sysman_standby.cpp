@@ -23,9 +23,9 @@ TEST_F(
     GivenValidDeviceWhenRetrievingStandbyHandlesThenNonZeroCountAndValidStandbyHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pStandbyHandles = lzt::get_standby_handles(device, count);
-    for (auto pStandbyHandle : pStandbyHandles) {
-      EXPECT_NE(nullptr, pStandbyHandle);
+    auto p_standby_handles = lzt::get_standby_handles(device, count);
+    for (auto p_standby_handle : p_standby_handles) {
+      EXPECT_NE(nullptr, p_standby_handle);
     }
   }
 }
@@ -34,21 +34,21 @@ TEST_F(
     GivenValidDeviceWhenRetrievingStandbyHandlesThenSimilarHandlesAreReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pStandbyHandlesInitial = lzt::get_standby_handles(device, count);
+    auto p_standby_handles_initial = lzt::get_standby_handles(device, count);
     count = 0;
-    auto pStandbyHandlesLater = lzt::get_standby_handles(device, count);
-    EXPECT_EQ(pStandbyHandlesInitial, pStandbyHandlesLater);
+    auto p_standby_handles_later = lzt::get_standby_handles(device, count);
+    EXPECT_EQ(p_standby_handles_initial, p_standby_handles_later);
   }
 }
 TEST_F(
     StandbyModuleTest,
     GivenValidDeviceWhenRetrievingStandbyHandlesThenActualHandleCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    lzt::get_standby_handles(device, pCount);
-    uint32_t tCount = pCount + 1;
+    uint32_t p_count = 0;
+    lzt::get_standby_handles(device, p_count);
+    uint32_t tCount = p_count + 1;
     lzt::get_standby_handles(device, tCount);
-    EXPECT_EQ(tCount, pCount);
+    EXPECT_EQ(tCount, p_count);
   }
 }
 TEST_F(
@@ -56,11 +56,11 @@ TEST_F(
     GivenValidDeviceWhenRequestingModeThenExpectzesSysmanStandbyGetModeToReturnValidStandbyMode) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pHandles = lzt::get_standby_handles(device, count);
-    for (auto pHandle : pHandles) {
-      EXPECT_NE(nullptr, pHandle);
+    auto p_handles = lzt::get_standby_handles(device, count);
+    for (auto p_handle : p_handles) {
+      EXPECT_NE(nullptr, p_handle);
       zes_standby_promo_mode_t standByMode = {};
-      standByMode = lzt::get_standby_mode(pHandle);
+      standByMode = lzt::get_standby_mode(p_handle);
       switch (standByMode) {
       case ZES_STANDBY_PROMO_MODE_DEFAULT:
         SUCCEED();
@@ -79,18 +79,18 @@ TEST_F(
     GivenValidDeviceWhenSettingModeThenExpectzesSysmanStandbySetModeFollowedByzesSysmanStandbyGetModeToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pHandles = lzt::get_standby_handles(device, count);
-    for (auto pHandle : pHandles) {
-      EXPECT_NE(nullptr, pHandle);
+    auto p_handles = lzt::get_standby_handles(device, count);
+    for (auto p_handle : p_handles) {
+      EXPECT_NE(nullptr, p_handle);
       zes_standby_promo_mode_t standByMode = {};
       zes_standby_promo_mode_t standByMode1 = {};
       standByMode = ZES_STANDBY_PROMO_MODE_DEFAULT;
-      lzt::set_standby_mode(pHandle, standByMode);
-      standByMode1 = lzt::get_standby_mode(pHandle);
+      lzt::set_standby_mode(p_handle, standByMode);
+      standByMode1 = lzt::get_standby_mode(p_handle);
       EXPECT_EQ(standByMode, standByMode1);
       standByMode = ZES_STANDBY_PROMO_MODE_NEVER;
-      lzt::set_standby_mode(pHandle, standByMode);
-      standByMode1 = lzt::get_standby_mode(pHandle);
+      lzt::set_standby_mode(p_handle, standByMode);
+      standByMode1 = lzt::get_standby_mode(p_handle);
       EXPECT_EQ(standByMode, standByMode1);
     }
   }
@@ -102,10 +102,10 @@ TEST_F(
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
-    auto pStandbyHandles = lzt::get_standby_handles(device, count);
-    for (auto pStandbyHandle : pStandbyHandles) {
-      EXPECT_NE(nullptr, pStandbyHandle);
-      auto properties = lzt::get_standby_properties(pStandbyHandle);
+    auto p_standby_handles = lzt::get_standby_handles(device, count);
+    for (auto p_standby_handle : p_standby_handles) {
+      EXPECT_NE(nullptr, p_standby_handle);
+      auto properties = lzt::get_standby_properties(p_standby_handle);
       EXPECT_EQ(properties.type, ZES_STANDBY_TYPE_GLOBAL);
       if (properties.onSubdevice) {
         EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
@@ -118,16 +118,16 @@ TEST_F(
     GivenValidStandbyHandleWhenRetrievingStandbyPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pStandbyHandles = lzt::get_standby_handles(device, count);
-    for (auto pStandbyHandle : pStandbyHandles) {
-      EXPECT_NE(nullptr, pStandbyHandle);
-      auto propertiesInitial = lzt::get_standby_properties(pStandbyHandle);
-      auto propertiesLater = lzt::get_standby_properties(pStandbyHandle);
-      ASSERT_EQ(propertiesInitial.type, ZES_STANDBY_TYPE_GLOBAL);
-      EXPECT_EQ(propertiesInitial.type, propertiesLater.type);
-      EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice)
-        EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
+    auto p_standby_handles = lzt::get_standby_handles(device, count);
+    for (auto p_standby_handle : p_standby_handles) {
+      EXPECT_NE(nullptr, p_standby_handle);
+      auto properties_initial = lzt::get_standby_properties(p_standby_handle);
+      auto properties_later = lzt::get_standby_properties(p_standby_handle);
+      ASSERT_EQ(properties_initial.type, ZES_STANDBY_TYPE_GLOBAL);
+      EXPECT_EQ(properties_initial.type, properties_later.type);
+      EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
+      if (properties_initial.onSubdevice && properties_later.onSubdevice)
+        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
     }
   }
 }

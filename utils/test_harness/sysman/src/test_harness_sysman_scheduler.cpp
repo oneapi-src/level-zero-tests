@@ -16,20 +16,20 @@ namespace lzt = level_zero_tests;
 namespace level_zero_tests {
 
 uint32_t get_scheduler_handle_count(zes_device_handle_t device) {
-  uint32_t pCount = 0;
+  uint32_t p_count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumSchedulers(device, &pCount, nullptr));
-  EXPECT_GE(pCount, 0);
-  return pCount;
+            zesDeviceEnumSchedulers(device, &p_count, nullptr));
+  EXPECT_GE(p_count, 0);
+  return p_count;
 }
 
 std::vector<zes_sched_handle_t>
-get_scheduler_handles(zes_device_handle_t device, uint32_t &pCount) {
-  if (pCount == 0)
-    pCount = get_scheduler_handle_count(device);
-  std::vector<zes_sched_handle_t> pSchedHandles(pCount, nullptr);
+get_scheduler_handles(zes_device_handle_t device, uint32_t &p_count) {
+  if (p_count == 0)
+    p_count = get_scheduler_handle_count(device);
+  std::vector<zes_sched_handle_t> pSchedHandles(p_count, nullptr);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumSchedulers(device, &pCount, pSchedHandles.data()));
+            zesDeviceEnumSchedulers(device, &p_count, pSchedHandles.data()));
   return pSchedHandles;
 }
 

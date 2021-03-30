@@ -28,10 +28,10 @@ std::vector<zes_ras_handle_t> get_ras_handles(zes_device_handle_t device,
   if (count == 0) {
     count = get_ras_handles_count(device);
   }
-  std::vector<zes_ras_handle_t> rasHandles(count);
+  std::vector<zes_ras_handle_t> ras_handles(count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumRasErrorSets(device, &count, rasHandles.data()));
-  return rasHandles;
+            zesDeviceEnumRasErrorSets(device, &count, ras_handles.data()));
+  return ras_handles;
 }
 
 zes_ras_properties_t get_ras_properties(zes_ras_handle_t rasHandle) {

@@ -37,14 +37,14 @@ TEST_F(
     GivenComponentCountZeroWhenRetrievingSchedulerHandlesThenNotNullSchedulerHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, count);
+    auto p_sched_handles = lzt::get_scheduler_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
     }
   }
 }
@@ -53,16 +53,16 @@ TEST_F(
     SchedulerTest,
     GivenComponentCountWhenRetrievingSchedulerHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    uint32_t testCount = pCount + 1;
-    lzt::get_scheduler_handles(device, testCount);
-    EXPECT_EQ(testCount, pCount);
+    uint32_t test_count = p_count + 1;
+    lzt::get_scheduler_handles(device, test_count);
+    EXPECT_EQ(test_count, p_count);
   }
 }
 
@@ -71,37 +71,37 @@ TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarSchedulerHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pSchedHandlesInitial = lzt::get_scheduler_handles(device, count);
+    auto p_sched_handles_initial = lzt::get_scheduler_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandlesInitial) {
-      EXPECT_NE(nullptr, pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles_initial) {
+      EXPECT_NE(nullptr, p_sched_handle);
     }
     count = 0;
-    auto pSchedHandlesLater = lzt::get_scheduler_handles(device, count);
-    for (auto pSchedHandle : pSchedHandlesLater) {
-      EXPECT_NE(nullptr, pSchedHandle);
+    auto p_sched_handles_later = lzt::get_scheduler_handles(device, count);
+    for (auto p_sched_handle : p_sched_handles_later) {
+      EXPECT_NE(nullptr, p_sched_handle);
     }
-    EXPECT_EQ(pSchedHandlesInitial, pSchedHandlesLater);
+    EXPECT_EQ(p_sched_handles_initial, p_sched_handles_later);
   }
 }
 
 TEST_F(SchedulerTest,
        GivenValidSchedulerHandleWhenRetrievinCurrentModeThenSuccessIsReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       ASSERT_GE(cur_mode, ZES_SCHED_MODE_TIMEOUT);
       ASSERT_LE(cur_mode, ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG);
     }
@@ -111,17 +111,17 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenRetrievingCurrentModeTwiceThenSameModeIsReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
-      auto cur_mode_initial = lzt::get_scheduler_current_mode(pSchedHandle);
-      auto cur_mode_later = lzt::get_scheduler_current_mode(pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
+      auto cur_mode_initial = lzt::get_scheduler_current_mode(p_sched_handle);
+      auto cur_mode_later = lzt::get_scheduler_current_mode(p_sched_handle);
       EXPECT_EQ(cur_mode_initial, cur_mode_later);
     }
   }
@@ -131,19 +131,19 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeOutPropertiesThenSuccessIsReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       if (cur_mode == ZES_SCHED_MODE_TIMEOUT) {
         auto timeout_properties =
-            lzt::get_timeout_properties(pSchedHandle, false);
+            lzt::get_timeout_properties(p_sched_handle, false);
         EXPECT_GT(timeout_properties.watchdogTimeout, 0);
       }
     }
@@ -153,21 +153,21 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeOutPropertiesTwiceThenSamePropertiesAreReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       if (cur_mode == ZES_SCHED_MODE_TIMEOUT) {
         auto timeout_properties_initial =
-            lzt::get_timeout_properties(pSchedHandle, false);
+            lzt::get_timeout_properties(p_sched_handle, false);
         auto timeout_properties_later =
-            lzt::get_timeout_properties(pSchedHandle, false);
+            lzt::get_timeout_properties(p_sched_handle, false);
         EXPECT_EQ(timeout_properties_initial.watchdogTimeout,
                   timeout_properties_later.watchdogTimeout);
       }
@@ -178,19 +178,19 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeSlicePropertiesThenSuccessIsReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       if (cur_mode == ZES_SCHED_MODE_TIMESLICE) {
         auto timeslice_properties =
-            lzt::get_timeslice_properties(pSchedHandle, false);
+            lzt::get_timeslice_properties(p_sched_handle, false);
         EXPECT_GT(timeslice_properties.interval, 0);
         EXPECT_GE(timeslice_properties.yieldTimeout, 0);
       }
@@ -201,21 +201,21 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeSlicePropertiesTwiceThenSamePropertiesAreReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       if (cur_mode == ZES_SCHED_MODE_TIMESLICE) {
         auto timeslice_properties_initial =
-            lzt::get_timeslice_properties(pSchedHandle, false);
+            lzt::get_timeslice_properties(p_sched_handle, false);
         auto timeslice_properties_later =
-            lzt::get_timeslice_properties(pSchedHandle, false);
+            lzt::get_timeslice_properties(p_sched_handle, false);
         EXPECT_EQ(timeslice_properties_initial.interval,
                   timeslice_properties_later.interval);
         EXPECT_EQ(timeslice_properties_initial.yieldTimeout,
@@ -228,26 +228,26 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenSettingSchedulerTimeOutModeThenSuccessIsReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
       auto timeout_default_properties =
-          lzt::get_timeout_properties(pSchedHandle, true);
+          lzt::get_timeout_properties(p_sched_handle, true);
       zes_sched_timeout_properties_t timeout_set_properties = {
           ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES, nullptr};
       timeout_set_properties.watchdogTimeout =
           timeout_default_properties.watchdogTimeout;
-      lzt::set_timeout_mode(pSchedHandle, timeout_set_properties);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+      lzt::set_timeout_mode(p_sched_handle, timeout_set_properties);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       ASSERT_EQ(cur_mode, ZES_SCHED_MODE_TIMEOUT);
       auto timeout_get_properties =
-          lzt::get_timeout_properties(pSchedHandle, false);
+          lzt::get_timeout_properties(p_sched_handle, false);
       EXPECT_EQ(timeout_get_properties.watchdogTimeout,
                 timeout_set_properties.watchdogTimeout);
     }
@@ -258,27 +258,27 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenSettingSchedulerTimeSliceModeThenSuccessIsReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
       auto timeslice_default_properties =
-          lzt::get_timeslice_properties(pSchedHandle, true);
+          lzt::get_timeslice_properties(p_sched_handle, true);
       zes_sched_timeslice_properties_t timeslice_set_properties = {
           ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES, nullptr};
       timeslice_set_properties.interval = timeslice_default_properties.interval;
       timeslice_set_properties.yieldTimeout =
           timeslice_default_properties.yieldTimeout;
-      lzt::set_timeslice_mode(pSchedHandle, timeslice_set_properties);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+      lzt::set_timeslice_mode(p_sched_handle, timeslice_set_properties);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       ASSERT_EQ(cur_mode, ZES_SCHED_MODE_TIMESLICE);
       auto timeslice_get_properties =
-          lzt::get_timeslice_properties(pSchedHandle, false);
+          lzt::get_timeslice_properties(p_sched_handle, false);
       EXPECT_EQ(timeslice_get_properties.interval,
                 timeslice_set_properties.interval);
       EXPECT_EQ(timeslice_get_properties.yieldTimeout,
@@ -290,33 +290,33 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenSettingSchedulerExclusiveModeThenSuccesseReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
       auto timeout_default_properties =
-          lzt::get_timeout_properties(pSchedHandle, true);
+          lzt::get_timeout_properties(p_sched_handle, true);
       zes_sched_timeout_properties_t timeout_set_properties = {
           ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES, nullptr};
       timeout_set_properties.watchdogTimeout =
           timeout_default_properties.watchdogTimeout;
       auto timeslice_default_properties =
-          lzt::get_timeslice_properties(pSchedHandle, true);
+          lzt::get_timeslice_properties(p_sched_handle, true);
       zes_sched_timeslice_properties_t timeslice_set_properties = {
           ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES, nullptr};
       timeslice_set_properties.interval = timeslice_default_properties.interval;
       timeslice_set_properties.yieldTimeout =
           timeslice_default_properties.yieldTimeout;
-      lzt::set_exclusive_mode(pSchedHandle);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+      lzt::set_exclusive_mode(p_sched_handle);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       ASSERT_EQ(cur_mode, ZES_SCHED_MODE_EXCLUSIVE);
-      lzt::set_timeout_mode(pSchedHandle, timeout_set_properties);
-      lzt::set_timeslice_mode(pSchedHandle, timeslice_set_properties);
+      lzt::set_timeout_mode(p_sched_handle, timeout_set_properties);
+      lzt::set_timeslice_mode(p_sched_handle, timeslice_set_properties);
     }
   }
 }
@@ -325,17 +325,17 @@ TEST_F(
     SchedulerTest,
     GivenSchedulerHandleWhenSettingSchedulerComputeUnitDebugModeThenSuccessIsReturned) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
-      lzt::set_compute_unit_debug_mode(pSchedHandle);
-      auto cur_mode = lzt::get_scheduler_current_mode(pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
+      lzt::set_compute_unit_debug_mode(p_sched_handle);
+      auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       ASSERT_EQ(cur_mode, ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG);
     }
   }
@@ -345,16 +345,16 @@ TEST_F(
     GivenValidSchedulerHandleWhenRetrievingSchedulerPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      ASSERT_NE(nullptr, pSchedHandle);
-      auto properties = lzt::get_scheduler_properties(pSchedHandle);
+    for (auto p_sched_handle : p_sched_handles) {
+      ASSERT_NE(nullptr, p_sched_handle);
+      auto properties = lzt::get_scheduler_properties(p_sched_handle);
       EXPECT_GE(properties.engines, ZES_ENGINE_TYPE_FLAG_OTHER);
       EXPECT_LE(properties.engines, ZES_ENGINE_TYPE_FLAG_DMA);
       EXPECT_GE(properties.supportedModes, 1);
@@ -371,24 +371,24 @@ TEST_F(
     SchedulerTest,
     GivenValidSchedulerHandleWhenRetrievingSchedulerPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
-    uint32_t pCount = 0;
-    auto pSchedHandles = lzt::get_scheduler_handles(device, pCount);
-    if (pCount == 0) {
+    uint32_t p_count = 0;
+    auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
+    if (p_count == 0) {
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
-    for (auto pSchedHandle : pSchedHandles) {
-      EXPECT_NE(nullptr, pSchedHandle);
-      auto propertiesInitial = lzt::get_scheduler_properties(pSchedHandle);
-      auto propertiesLater = lzt::get_scheduler_properties(pSchedHandle);
-      EXPECT_EQ(propertiesInitial.engines, propertiesLater.engines);
-      EXPECT_EQ(propertiesInitial.supportedModes,
-                propertiesLater.supportedModes);
-      EXPECT_EQ(propertiesInitial.canControl, propertiesLater.canControl);
-      EXPECT_EQ(propertiesInitial.onSubdevice, propertiesLater.onSubdevice);
-      if (propertiesInitial.onSubdevice && propertiesLater.onSubdevice) {
-        EXPECT_EQ(propertiesInitial.subdeviceId, propertiesLater.subdeviceId);
+    for (auto p_sched_handle : p_sched_handles) {
+      EXPECT_NE(nullptr, p_sched_handle);
+      auto properties_initial = lzt::get_scheduler_properties(p_sched_handle);
+      auto properties_later = lzt::get_scheduler_properties(p_sched_handle);
+      EXPECT_EQ(properties_initial.engines, properties_later.engines);
+      EXPECT_EQ(properties_initial.supportedModes,
+                properties_later.supportedModes);
+      EXPECT_EQ(properties_initial.canControl, properties_later.canControl);
+      EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
+      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
+        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
       }
     }
   }
