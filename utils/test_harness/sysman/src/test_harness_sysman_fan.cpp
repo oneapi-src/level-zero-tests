@@ -17,7 +17,7 @@ namespace level_zero_tests {
 uint32_t get_fan_handle_count(ze_device_handle_t device) {
   uint32_t count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumFans(device, &count, nullptr));
-  EXPECT_GT(count, 0);
+  EXPECT_GE(count, 0);
   return count;
 }
 

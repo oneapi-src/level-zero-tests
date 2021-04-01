@@ -24,7 +24,12 @@ TEST_F(
     FanModuleTest,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
-    lzt::get_fan_handle_count(device);
+    uint32_t count = 0;
+    count = lzt::get_fan_handle_count(device);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
   }
 }
 
