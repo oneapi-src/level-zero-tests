@@ -81,10 +81,12 @@ ze_kernel_timestamp_result_t
 get_event_kernel_timestamp(ze_event_handle_t event);
 double
 get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
-                              const ze_device_handle_t &device);
+                              const ze_device_handle_t &device,
+                              const ze_driver_handle_t driver);
 double
 get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
-                               const ze_device_handle_t &device);
+                               const ze_device_handle_t &device,
+                               const ze_driver_handle_t driver);
 
 class zeEventPoolTests : public ::testing::Test {
 protected:

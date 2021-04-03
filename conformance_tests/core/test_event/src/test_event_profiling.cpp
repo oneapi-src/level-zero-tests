@@ -309,9 +309,9 @@ TEST_F(KernelEventProfilingCacheCoherencyTests,
   lzt::destroy_context(context);
 }
 
-static void
-kernel_timestamp_event_test(ze_context_handle_t context,
-                            std::vector<ze_device_handle_t> devices) {
+static void kernel_timestamp_event_test(ze_context_handle_t context,
+                                        std::vector<ze_device_handle_t> devices,
+                                        ze_driver_handle_t driver) {
   const size_t size = 1000;
   auto device0 = devices[0];
   auto device1 = devices[1];
@@ -411,9 +411,9 @@ kernel_timestamp_event_test(ze_context_handle_t context,
   // timeresutlt0 and timeresult1 should be populated with nonzero
   // durations
   auto global_duration_0 =
-      lzt::get_timestamp_global_duration(time_result0, device0);
+      lzt::get_timestamp_global_duration(time_result0, device0, driver);
   auto global_duration_1 =
-      lzt::get_timestamp_global_duration(time_result1, device1);
+      lzt::get_timestamp_global_duration(time_result1, device1, driver);
 
   EXPECT_GT(global_duration_0, 0);
   EXPECT_GT(global_duration_1, 0);
@@ -446,7 +446,7 @@ TEST_F(
     LOG_WARNING << "Less than 2 devices, skipping test";
   } else {
     auto context = lzt::create_context(driver);
-    kernel_timestamp_event_test(context, devices);
+    kernel_timestamp_event_test(context, devices, driver);
     lzt::destroy_context(context);
   }
 }
@@ -464,7 +464,7 @@ TEST_F(
     }
     test_run = true;
     auto context = lzt::create_context(driver);
-    kernel_timestamp_event_test(context, sub_devices);
+    kernel_timestamp_event_test(context, sub_devices, driver);
     lzt::destroy_context(context);
   }
 

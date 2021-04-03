@@ -90,42 +90,59 @@ get_event_kernel_timestamp(ze_event_handle_t event) {
 
 double
 get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
-                              const ze_device_handle_t &device) {
+                              const ze_device_handle_t &device,
+                              const ze_driver_handle_t driver) {
 
   double global_time_ns;
   auto device_properties = lzt::get_device_properties(device);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
       ~(-1 << device_properties.kernelTimestampValidBits);
+  ze_api_version_t api_version;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetApiVersion(driver, &api_version));
+  double timer_period;
+  if (api_version <= ZE_API_VERSION_1_0) {
+    timer_period = static_cast<double>(timestamp_freq);
+  } else {
+    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
+  }
 
   global_time_ns =
       (timestamp->global.kernelEnd >= timestamp->global.kernelStart)
           ? (timestamp->global.kernelEnd - timestamp->global.kernelStart) *
-                (double)timestamp_freq
+                timer_period
           : ((timestamp_max_val - timestamp->global.kernelStart) +
              timestamp->global.kernelEnd + 1) *
-                (double)timestamp_freq;
+                timer_period;
 
   return global_time_ns;
 }
 
 double
 get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
-                               const ze_device_handle_t &device) {
+                               const ze_device_handle_t &device,
+                               const ze_driver_handle_t driver) {
 
   double context_time_ns;
   auto device_properties = lzt::get_device_properties(device);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
       ~(-1 << device_properties.kernelTimestampValidBits);
-
+  ze_api_version_t api_version;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetApiVersion(driver, &api_version));
+  double timer_period;
+  if (api_version <= ZE_API_VERSION_1_0) {
+    timer_period = static_cast<double>(timestamp_freq);
+  } else {
+    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
+  }
   context_time_ns =
       (timestamp->context.kernelEnd >= timestamp->context.kernelStart)
           ? (timestamp->context.kernelEnd - timestamp->context.kernelStart) *
-                (double)timestamp_freq
+                timer_period
           : ((timestamp_max_val - timestamp->context.kernelStart) +
              timestamp->context.kernelEnd + 1) *
-                (double)timestamp_freq;
+                timer_period;
 
   return context_time_ns;
 }
