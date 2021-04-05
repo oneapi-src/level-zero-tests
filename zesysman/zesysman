@@ -1319,15 +1319,18 @@ def main():
                         else:
                             mW = "?"
                         node[0].setText(mW)
-                        zeCall(zesPowerGetEnergyThreshold(pwr, pwrThreshold))
-                        if pwrThreshold.enable:
-                            if pwrThreshold.processId != 0xffffffff:
-                                node[1].setText(pwrThreshold.processId)
+                        try:
+                            zeCall(zesPowerGetEnergyThreshold(pwr, pwrThreshold))
+                            if pwrThreshold.enable:
+                                if pwrThreshold.processId != 0xffffffff:
+                                    node[1].setText(pwrThreshold.processId)
+                                else:
+                                    node[1].setText("Unknown")
                             else:
-                                node[1].setText("Unknown")
-                        else:
-                            node[1].setText("None")
-                        node[2].setText(pwrThreshold.threshold)
+                                node[1].setText("None")
+                            node[2].setText(pwrThreshold.threshold)
+                        except NotImplementedError:
+                            pass
 
                     telemetryClosures.append(pwrTelemetry)
                     pollDelayRequired = True
