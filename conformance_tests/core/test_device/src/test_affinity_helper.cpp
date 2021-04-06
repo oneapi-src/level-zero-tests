@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -38,7 +38,9 @@ int main(int argc, char **argv) {
       std::cout << "zeDriverGetProperties failed";
       exit(1);
     }
-
+    // most significant 32-bits of UUID are timestamp, which can change, so
+    // zero-out least significant 32-bits are driver version
+    memset(&driver_properties.uuid.id[4], 0, 4);
     if (!strcmp(argv[1], lzt::to_string(driver_properties.uuid).c_str())) {
 
       uint32_t num_total_devices = 0;

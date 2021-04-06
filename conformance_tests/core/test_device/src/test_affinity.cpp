@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -138,6 +138,9 @@ TEST(
 
       // launch child process with constructed mask
       auto driver_properties = lzt::get_driver_properties(driver);
+      // most significant 32-bits of UUID are timestamp, which can change, so
+      // zero-out least significant 32-bits are driver version
+      memset(&driver_properties.uuid.id[4], 0, 4);
       run_child_process(lzt::to_string(driver_properties.uuid), affinity_mask,
                         num_devices_mask);
     }
@@ -166,6 +169,7 @@ TEST(TestAffinity,
   auto mask4 = "0,1";
 
   auto driver_properties = lzt::get_driver_properties(driver);
+  memset(&driver_properties.uuid.id[4], 0, 4);
   run_child_process(lzt::to_string(driver_properties.uuid), mask1,
                     num_total_devices);
   run_child_process(lzt::to_string(driver_properties.uuid), mask2,
@@ -194,6 +198,7 @@ TEST(
   auto mask4 = "0.1,0.0";
 
   auto driver_properties = lzt::get_driver_properties(driver);
+  memset(&driver_properties.uuid.id[4], 0, 4);
   run_child_process(lzt::to_string(driver_properties.uuid), mask1,
                     lzt::get_ze_sub_device_count(devices[0]));
   run_child_process(lzt::to_string(driver_properties.uuid), mask2, 1);
