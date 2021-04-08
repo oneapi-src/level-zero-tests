@@ -30,6 +30,9 @@ public:
   void memoryFree(const void *ptr);
   void memoryOpenIpcHandle(const uint32_t device_index,
                            ze_ipc_mem_handle_t pIpcHandle, void **zeIpcBuffer);
+  void deviceGetCommandQueueGroupProperties(
+      const uint32_t device_index, uint32_t *numQueueGroups,
+      ze_command_queue_group_properties_t *queueProperties);
 
   void functionCreate(ze_kernel_handle_t *function, const char *pFunctionName);
   void functionCreate(const uint32_t device_index, ze_kernel_handle_t *function,
@@ -43,6 +46,9 @@ public:
 
   void commandListCreate(ze_command_list_handle_t *phCommandList);
   void commandListCreate(uint32_t device_index,
+                         ze_command_list_handle_t *phCommandList);
+  void commandListCreate(uint32_t device_index,
+                         uint32_t command_queue_group_ordinal,
                          ze_command_list_handle_t *phCommandList);
   void commandListDestroy(ze_command_list_handle_t phCommandList);
   void commandListClose(ze_command_list_handle_t phCommandList);
@@ -81,7 +87,11 @@ public:
   void commandQueueCreate(const uint32_t command_queue_id,
                           ze_command_queue_handle_t *command_queue);
   void commandQueueCreate(const uint32_t device_index,
-                          const uint32_t command_queue_id,
+                          const uint32_t command_queue_group_ordinal,
+                          ze_command_queue_handle_t *command_queue);
+  void commandQueueCreate(const uint32_t device_index,
+                          const uint32_t command_queue_group_ordinal,
+                          const uint32_t command_queue_index,
                           ze_command_queue_handle_t *command_queue);
   void commandQueueDestroy(ze_command_queue_handle_t command_queue);
   void commandQueueExecuteCommandList(ze_command_queue_handle_t command_queue,

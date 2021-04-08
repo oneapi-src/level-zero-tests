@@ -33,12 +33,16 @@ static const char *usage_str =
     "\n      transfer_bw             selectively run transfer bandwidth test"
     "\n      latency                 selectively run latency test"
     "\n  -a                          run all above tests [default]"
+    "\n  -q                          query for number of engines available"
+    "\n  -g, number                  select engine group (default: 0)"
+    "\n  -i, number                  select engine index (default: 0)"
     "\n  -h, --help                  display help message"
     "\n";
 
 class ZePeer {
 public:
-  ZePeer() {
+  ZePeer(const uint32_t command_queue_group_ordinal,
+         const uint32_t command_queue_index) {
 
     benchmark = new ZeApp("ze_peer_benchmarks.spv");
 
@@ -69,10 +73,11 @@ public:
     }
 
     for (uint32_t i = 0; i < device_environs.size(); i++) {
-      benchmark->commandQueueCreate(device_environs[i].device_index,
-                                    0 /* command queue group ordinal */,
-                                    &device_environs[i].command_queue);
+      benchmark->commandQueueCreate(
+          device_environs[i].device_index, command_queue_group_ordinal,
+          command_queue_index, &device_environs[i].command_queue);
       benchmark->commandListCreate(device_environs[i].device_index,
+                                   command_queue_group_ordinal,
                                    &device_environs[i].command_list);
     }
   }
@@ -90,7 +95,10 @@ public:
   void latency(bool bidirectional, peer_transfer_t transfer_type);
   void ipc_bandwidth_latency(bool bidirectional, peer_test_t test_type,
                              peer_transfer_t transfer_type, bool is_server,
-                             int commSocket, int number_of_elements);
+                             int commSocket, int number_of_elements,
+                             int device_id);
+  void query_engines();
+
   int sendmsg_fd(int socket, int fd);
   int recvmsg_fd(int socket);
 
@@ -106,6 +114,42 @@ private:
                             uint32_t &group_size_z);
   void _copy_function_cleanup(ze_kernel_handle_t function);
 };
+
+void ZePeer::query_engines() {
+  for (auto device : device_environs) {
+    std::cout << "Device " << device.device_index << ":" << std::endl;
+
+    uint32_t numQueueGroups = 0;
+    benchmark->deviceGetCommandQueueGroupProperties(device.device_index,
+                                                    &numQueueGroups, nullptr);
+
+    if (numQueueGroups == 0) {
+      std::cout << " No queue groups found\n" << std::endl;
+      continue;
+    }
+
+    std::vector<ze_command_queue_group_properties_t> queueProperties(
+        numQueueGroups);
+    benchmark->deviceGetCommandQueueGroupProperties(
+        device.device_index, &numQueueGroups, queueProperties.data());
+
+    for (uint32_t i = 0; i < numQueueGroups; i++) {
+      if (queueProperties[i].flags &
+          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
+        std::cout << " Group " << i
+                  << " (compute): " << queueProperties[i].numQueues
+                  << " queues\n";
+      } else if ((queueProperties[i].flags &
+                  ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) == 0 &&
+                 (queueProperties[i].flags &
+                  ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY)) {
+        std::cout << " Group " << i
+                  << " (copy): " << queueProperties[i].numQueues << " queues\n";
+      }
+    }
+    std::cout << std::endl;
+  }
+}
 
 int ZePeer::sendmsg_fd(int socket, int fd) {
   char sendBuf[sizeof(ze_ipc_mem_handle_t)] = {};
@@ -478,19 +522,12 @@ void ZePeer::latency(bool bidirectional, peer_transfer_t transfer_type) {
 void ZePeer::ipc_bandwidth_latency(bool bidirectional, peer_test_t test_type,
                                    peer_transfer_t transfer_type,
                                    bool is_server, int commSocket,
-                                   int number_buffer_elements) {
+                                   int number_buffer_elements, int device_id) {
   int number_iterations;
-  int device_id;
   int warm_up_iterations = 5;
   void *zeBuffer = nullptr;
   void *zeIpcBuffer = nullptr;
   size_t element_size = sizeof(char);
-
-  if (is_server) {
-    device_id = 1;
-  } else {
-    device_id = 0;
-  }
 
   if (test_type == PEER_BANDWIDTH) {
     number_iterations = 5;
@@ -514,7 +551,6 @@ void ZePeer::ipc_bandwidth_latency(bool bidirectional, peer_test_t test_type,
   if (bidirectional) {
     // TODO: Add bidirectional path
   } else { /* unidirectional */
-
     if (is_server) {
       ze_ipc_mem_handle_t pIpcHandle;
       SUCCESS_OR_TERMINATE(
@@ -630,21 +666,8 @@ void ZePeer::ipc_bandwidth_latency(bool bidirectional, peer_test_t test_type,
       total_time_usec = timer.period_minus_overhead() /
                         static_cast<long double>(number_iterations);
 
-      if (bidirectional) {
-        std::cout << std::setprecision(8) << std::setw(8)
-                  << "Device(0)<-->Device(1): " << total_time_usec << " us "
-                  << std::endl;
-      } else {
-        if (transfer_type == PEER_WRITE) {
-          std::cout << std::setprecision(8) << std::setw(8)
-                    << "Device(0)-->Device(1): " << total_time_usec << " us "
-                    << std::endl;
-        } else {
-          std::cout << std::setprecision(8) << std::setw(8)
-                    << "Device(0)<--Device(1): " << total_time_usec << " us "
-                    << std::endl;
-        }
-      }
+      std::cout << std::setprecision(8) << std::setw(8)
+                << " Latency: " << total_time_usec << " us " << std::endl;
     }
   }
 
@@ -654,7 +677,9 @@ void ZePeer::ipc_bandwidth_latency(bool bidirectional, peer_test_t test_type,
 }
 
 void run_ipc_tests(size_t max_number_of_elements, bool run_ipc_bw,
-                   bool run_ipc_latency) {
+                   bool run_ipc_latency,
+                   const uint32_t command_queue_group_ordinal,
+                   const uint32_t command_queue_index) {
   pid_t pid;
   int sv[2];
   if (socketpair(PF_UNIX, SOCK_STREAM, 0, sv) < 0) {
@@ -663,117 +688,131 @@ void run_ipc_tests(size_t max_number_of_elements, bool run_ipc_bw,
   }
 
   if (run_ipc_bw) {
-    std::cout << "Unidirectional Bandwidth IPC P2P Write: Device(0)-->Device(1)"
-              << std::endl;
-    for (int number_of_elements = 8;
-         number_of_elements <= max_number_of_elements;
-         number_of_elements *= 2) {
-      pid = fork();
-      if (pid == 0) {
-        pid_t test_pid = fork();
-        if (test_pid == 0) {
-          ZePeer peer;
-          peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_BANDWIDTH,
-                                     PEER_WRITE, false /* client */, sv[1],
-                                     number_of_elements);
-        } else {
-          ZePeer peer;
-          peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_BANDWIDTH,
-                                     PEER_WRITE, true /* server */, sv[0],
-                                     number_of_elements);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        std::cout << "Unidirectional Bandwidth IPC P2P Write: Device(" << i
+                  << ")-->Device(" << j << ")" << std::endl;
+        for (int number_of_elements = 8;
+             number_of_elements <= max_number_of_elements;
+             number_of_elements *= 2) {
+          pid = fork();
+          if (pid == 0) {
+            pid_t test_pid = fork();
+            if (test_pid == 0) {
+              ZePeer peer(command_queue_group_ordinal, command_queue_index);
+              peer.ipc_bandwidth_latency(
+                  false /* unidirectional */, PEER_BANDWIDTH, PEER_WRITE,
+                  false /* client */, sv[1], number_of_elements, i);
+            } else {
+              ZePeer peer(command_queue_group_ordinal, command_queue_index);
+              peer.ipc_bandwidth_latency(
+                  false /* unidirectional */, PEER_BANDWIDTH, PEER_WRITE,
+                  true /* server */, sv[0], number_of_elements, j);
+            }
+          } else {
+            int child_status;
+            pid_t child_pid = wait(&child_status);
+            if (child_pid <= 0) {
+              std::cerr << "Client terminated abruptly with error code "
+                        << strerror(errno) << "\n";
+              std::terminate();
+            }
+          }
         }
-      } else {
-        int child_status;
-        pid_t child_pid = wait(&child_status);
-        if (child_pid <= 0) {
-          std::cerr << "Client terminated abruptly with error code "
-                    << strerror(errno) << "\n";
-          std::terminate();
-        }
-      }
-    }
-    std::cout << std::endl;
+        std::cout << std::endl;
 
-    std::cout << "Unidirectional Bandwidth IPC P2P Read: Device(0)<--Device(1)"
-              << std::endl;
-    for (int number_of_elements = 8;
-         number_of_elements <= max_number_of_elements;
-         number_of_elements *= 2) {
-      pid = fork();
-      if (pid == 0) {
-        pid_t test_pid = fork();
-        if (test_pid == 0) {
-          ZePeer peer;
-          peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_BANDWIDTH,
-                                     PEER_READ, false /* client */, sv[1],
-                                     number_of_elements);
-        } else {
-          ZePeer peer;
-          peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_BANDWIDTH,
-                                     PEER_READ, true /* server */, sv[0],
-                                     number_of_elements);
+        std::cout << "Unidirectional Bandwidth IPC P2P Read: Device(" << i
+                  << ")<--Device(" << j << ")" << std::endl;
+        for (int number_of_elements = 8;
+             number_of_elements <= max_number_of_elements;
+             number_of_elements *= 2) {
+          pid = fork();
+          if (pid == 0) {
+            pid_t test_pid = fork();
+            if (test_pid == 0) {
+              ZePeer peer(command_queue_group_ordinal, command_queue_index);
+              peer.ipc_bandwidth_latency(
+                  false /* unidirectional */, PEER_BANDWIDTH, PEER_READ,
+                  false /* client */, sv[1], number_of_elements, i);
+            } else {
+              ZePeer peer(command_queue_group_ordinal, command_queue_index);
+              peer.ipc_bandwidth_latency(
+                  false /* unidirectional */, PEER_BANDWIDTH, PEER_READ,
+                  true /* server */, sv[0], number_of_elements, j);
+            }
+          } else {
+            int child_status;
+            pid_t child_pid = wait(&child_status);
+            if (child_pid <= 0) {
+              std::cerr << "Client terminated abruptly with error code "
+                        << strerror(errno) << "\n";
+              std::terminate();
+            }
+          }
         }
-      } else {
-        int child_status;
-        pid_t child_pid = wait(&child_status);
-        if (child_pid <= 0) {
-          std::cerr << "Client terminated abruptly with error code "
-                    << strerror(errno) << "\n";
-          std::terminate();
-        }
+        std::cout << std::endl;
       }
     }
-    std::cout << std::endl;
   }
 
   if (run_ipc_latency) {
-    std::cout << "Unidirectional Latency IPC P2P Write" << std::endl;
-    pid = fork();
-    if (pid == 0) {
-      pid_t test_pid = fork();
-      if (test_pid == 0) {
-        ZePeer peer;
-        peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_LATENCY,
-                                   PEER_WRITE, false /* client */, sv[1], 1);
-      } else {
-        ZePeer peer;
-        peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_LATENCY,
-                                   PEER_WRITE, true /* server */, sv[0], 1);
-      }
-    } else {
-      int child_status;
-      pid_t child_pid = wait(&child_status);
-      if (child_pid <= 0) {
-        std::cerr << "Client terminated abruptly with error code "
-                  << strerror(errno) << "\n";
-        std::terminate();
-      }
-    }
-    std::cout << std::endl;
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        std::cout << "Unidirectional Latency IPC P2P Write: Device(" << i
+                  << ")-->Device(" << j << ")" << std::endl;
+        pid = fork();
+        if (pid == 0) {
+          pid_t test_pid = fork();
+          if (test_pid == 0) {
+            ZePeer peer(command_queue_group_ordinal, command_queue_index);
+            peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_LATENCY,
+                                       PEER_WRITE, false /* client */, sv[1],
+                                       1 /* number of elements */, i);
+          } else {
+            ZePeer peer(command_queue_group_ordinal, command_queue_index);
+            peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_LATENCY,
+                                       PEER_WRITE, true /* server */, sv[0],
+                                       1 /* number of elements */, j);
+          }
+        } else {
+          int child_status;
+          pid_t child_pid = wait(&child_status);
+          if (child_pid <= 0) {
+            std::cerr << "Client terminated abruptly with error code "
+                      << strerror(errno) << "\n";
+            std::terminate();
+          }
+        }
+        std::cout << std::endl;
 
-    std::cout << "Unidirectional Latency IPC P2P Read" << std::endl;
-    pid = fork();
-    if (pid == 0) {
-      pid_t test_pid = fork();
-      if (test_pid == 0) {
-        ZePeer peer;
-        peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_LATENCY,
-                                   PEER_READ, false /* client */, sv[1], 1);
-      } else {
-        ZePeer peer;
-        peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_LATENCY,
-                                   PEER_READ, true /* server */, sv[0], 1);
-      }
-    } else {
-      int child_status;
-      pid_t child_pid = wait(&child_status);
-      if (child_pid <= 0) {
-        std::cerr << "Client terminated abruptly with error code "
-                  << strerror(errno) << "\n";
-        std::terminate();
+        std::cout << "Unidirectional Latency IPC P2P Read: Device(" << i
+                  << ")<--Device(" << j << ")" << std::endl;
+        pid = fork();
+        if (pid == 0) {
+          pid_t test_pid = fork();
+          if (test_pid == 0) {
+            ZePeer peer(command_queue_group_ordinal, command_queue_index);
+            peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_LATENCY,
+                                       PEER_READ, false /* client */, sv[1],
+                                       1 /* number of elements */, i);
+          } else {
+            ZePeer peer(command_queue_group_ordinal, command_queue_index);
+            peer.ipc_bandwidth_latency(false /* unidirectional */, PEER_LATENCY,
+                                       PEER_READ, true /* server */, sv[0],
+                                       1 /* number of elements */, j);
+          }
+        } else {
+          int child_status;
+          pid_t child_pid = wait(&child_status);
+          if (child_pid <= 0) {
+            std::cerr << "Client terminated abruptly with error code "
+                      << strerror(errno) << "\n";
+            std::terminate();
+          }
+        }
+        std::cout << std::endl;
       }
     }
-    std::cout << std::endl;
   }
 
   close(sv[0]);
@@ -781,16 +820,39 @@ void run_ipc_tests(size_t max_number_of_elements, bool run_ipc_bw,
 }
 
 int main(int argc, char **argv) {
-  bool run_ipc_bw;
-  bool run_ipc_latency;
-  bool run_transfer_bw;
-  bool run_latency;
+  bool run_ipc_bw = true;
+  bool run_ipc_latency = true;
+  bool run_transfer_bw = true;
+  bool run_latency = true;
+  uint32_t command_queue_group_ordinal = 0;
+  uint32_t command_queue_index = 0;
+
   size_t max_number_of_elements = 1024 * 1024 * 256; /* 256 MB */
 
   for (int i = 1; i < argc; i++) {
     if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
       std::cout << usage_str;
       exit(0);
+    } else if ((strcmp(argv[i], "-q") == 0)) {
+      ZePeer peer(command_queue_group_ordinal, command_queue_index);
+      peer.query_engines();
+      exit(0);
+    } else if ((strcmp(argv[i], "-g") == 0)) {
+      if (isdigit(argv[i + 1][0])) {
+        command_queue_group_ordinal = atoi(argv[i + 1]);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      i++;
+    } else if ((strcmp(argv[i], "-i") == 0)) {
+      if (isdigit(argv[i + 1][0])) {
+        command_queue_index = atoi(argv[i + 1]);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      i++;
     } else if ((strcmp(argv[i], "-t") == 0)) {
       run_ipc_bw = false;
       run_ipc_latency = false;
@@ -829,10 +891,11 @@ int main(int argc, char **argv) {
   }
 
   if (run_ipc_bw || run_ipc_latency) {
-    run_ipc_tests(max_number_of_elements, run_ipc_bw, run_ipc_latency);
+    run_ipc_tests(max_number_of_elements, run_ipc_bw, run_ipc_latency,
+                  command_queue_group_ordinal, command_queue_index);
   }
 
-  ZePeer peer;
+  ZePeer peer(command_queue_group_ordinal, command_queue_index);
   if (run_transfer_bw) {
     std::cout << "Unidirectional Bandwidth P2P Write" << std::endl;
     peer.bandwidth(false /* unidirectional */, PEER_WRITE);

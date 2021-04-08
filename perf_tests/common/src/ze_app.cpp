@@ -127,6 +127,13 @@ void ZeApp::memoryOpenIpcHandle(const uint32_t device_index,
                                           pIpcHandle, 0u, zeIpcBuffer));
 }
 
+void ZeApp::deviceGetCommandQueueGroupProperties(
+    const uint32_t device_index, uint32_t *numQueueGroups,
+    ze_command_queue_group_properties_t *queueProperties) {
+  SUCCESS_OR_TERMINATE(zeDeviceGetCommandQueueGroupProperties(
+      _devices[device_index], numQueueGroups, queueProperties));
+}
+
 void ZeApp::functionCreate(ze_kernel_handle_t *function,
                            const char *pFunctionName) {
   functionCreate(0, function, pFunctionName);
@@ -203,6 +210,20 @@ void ZeApp::commandListCreate(uint32_t device_index,
                               ze_command_list_handle_t *phCommandList) {
   ze_command_list_desc_t command_list_description{};
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+  command_list_description.pNext = nullptr;
+
+  SUCCESS_OR_TERMINATE(zeCommandListCreate(context, _devices[device_index],
+                                           &command_list_description,
+                                           phCommandList));
+}
+
+void ZeApp::commandListCreate(uint32_t device_index,
+                              uint32_t command_queue_group_ordinal,
+                              ze_command_list_handle_t *phCommandList) {
+  ze_command_list_desc_t command_list_description{};
+  command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+  command_list_description.commandQueueGroupOrdinal =
+      command_queue_group_ordinal;
   command_list_description.pNext = nullptr;
 
   SUCCESS_OR_TERMINATE(zeCommandListCreate(context, _devices[device_index],
@@ -308,6 +329,22 @@ void ZeApp::commandQueueCreate(const uint32_t device_index,
   command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
   command_queue_description.pNext = nullptr;
   command_queue_description.ordinal = command_queue_group_ordinal;
+  command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+
+  SUCCESS_OR_TERMINATE(zeCommandQueueCreate(context, _devices[device_index],
+                                            &command_queue_description,
+                                            command_queue));
+}
+
+void ZeApp::commandQueueCreate(const uint32_t device_index,
+                               const uint32_t command_queue_group_ordinal,
+                               const uint32_t command_queue_index,
+                               ze_command_queue_handle_t *command_queue) {
+  ze_command_queue_desc_t command_queue_description{};
+  command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  command_queue_description.pNext = nullptr;
+  command_queue_description.ordinal = command_queue_group_ordinal;
+  command_queue_description.index = command_queue_index;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
   SUCCESS_OR_TERMINATE(zeCommandQueueCreate(context, _devices[device_index],
