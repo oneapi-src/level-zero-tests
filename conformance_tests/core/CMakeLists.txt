@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 add_subdirectory(test_barrier)
-#add_subdirectory(test_cl_interop)
 add_subdirectory(test_cmdlist)
 add_subdirectory(test_cmdqueue)
 add_subdirectory(test_copy)
+add_subdirectory(test_context)
 add_subdirectory(test_device)
 add_subdirectory(test_driver)
 add_subdirectory(test_event)
