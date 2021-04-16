@@ -120,7 +120,10 @@ def zeCall(rc):
             val = val[0]
     else:
         val = None
-    if rc == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
+    if (rc == ZE_RESULT_ERROR_NOT_AVAILABLE or
+        rc == ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE or
+        rc == ZE_RESULT_ERROR_UNSUPPORTED_VERSION or
+        rc == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE):
         raise NotImplementedError
     elif rc != ZE_RESULT_SUCCESS:
         raise ValueError(output.resultString(rc))
