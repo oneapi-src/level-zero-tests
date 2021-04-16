@@ -63,6 +63,7 @@ get_cache_properties(ze_device_handle_t device);
 ze_device_image_properties_t get_image_properties(ze_device_handle_t device);
 ze_device_module_properties_t
 get_device_module_properties(ze_device_handle_t device);
+std::tuple<uint64_t, uint64_t> get_global_timestamps(ze_device_handle_t device);
 
 ze_device_p2p_properties_t get_p2p_properties(ze_device_handle_t dev1,
                                               ze_device_handle_t dev2);

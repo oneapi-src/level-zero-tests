@@ -254,6 +254,17 @@ ze_device_p2p_properties_t get_p2p_properties(ze_device_handle_t dev1,
   return properties;
 }
 
+std::tuple<uint64_t, uint64_t>
+get_global_timestamps(ze_device_handle_t device) {
+
+  uint64_t host_timestamp = 0, device_timestamp = 0;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetGlobalTimestamps(
+                                   device, &host_timestamp, &device_timestamp));
+
+  return std::make_tuple(host_timestamp, device_timestamp);
+}
+
 ze_bool_t can_access_peer(ze_device_handle_t dev1, ze_device_handle_t dev2) {
   ze_bool_t can_access;
 
