@@ -29,7 +29,6 @@ get_firmware_handles(zes_device_handle_t device, uint32_t &count) {
   std::vector<zes_firmware_handle_t> firmwareHandles(count, nullptr);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zesDeviceEnumFirmwares(device, &count, firmwareHandles.data()));
-  EXPECT_EQ(firmwareHandles.size(), count);
   return firmwareHandles;
 }
 
