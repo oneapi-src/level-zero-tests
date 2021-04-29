@@ -7,6 +7,27 @@ Requires the `level-zero`, `level-zero-devel`, `opencl-headers`,
 `libpng-dev`, `ocl-icd-opencl-dev`, `libboost-all-dev`, & `libva-dev` packages
 to be installed.
 
+### SLES Dependencies
+On SLES distributions only:
+
+Requires the `level-zero`, `level-zero-devel`, `gcc-c++`, & `libpng-dev`
+packages to be installed.
+
+In addition to the above, the Boost C++ Library needs to be installed.
+It may be installed through the distro packages, however some versions
+have seen issues. Version 1.65 has been tested from source, with
+instructions below.
+
+Example below with Boost 1.65 (i.e. https://www.boost.org/users/history/version_1_65_0.html)
+
+```bash
+tar -xvf boost_1_65_0.tar.gz
+cd boost_1_65_0/
+./bootstrap.sh
+./b2
+sudo ./b2 install
+```
+
 ### Dependencies
 For building against level-zero, you can either build against the version you
 have installed on your system (automatic, Linux only), or specify an install
@@ -80,3 +101,4 @@ cmake flag to `yes`. Building zesysman requires the following additional depende
   - `cmake` >= 3.12
   - `swig`
   - `python3`
+  - `python3-devel` <-- On SLES only
