@@ -10,19 +10,20 @@
 
 void ZePeak::ze_peak_kernel_latency(L0Context &context) {
   uint64_t num_items = get_max_work_items(context) * FETCH_PER_WI;
-  num_items = (num_items / FETCH_PER_WI);
+  uint64_t global_size = (num_items / FETCH_PER_WI);
+
   struct ZeWorkGroups workgroup_info;
 
   if (context.sub_device_count) {
-    num_items = num_items - (num_items % context.sub_device_count);
+    global_size = global_size - (global_size % context.sub_device_count);
     if (verbose)
       std::cout << "splitting the total work items ::" << num_items
                 << "across subdevices ::" << context.sub_device_count
                 << std::endl;
-    num_items = set_workgroups(context, num_items / context.sub_device_count,
-                               &workgroup_info);
+    set_workgroups(context, global_size / context.sub_device_count,
+                   &workgroup_info);
   } else {
-    num_items = set_workgroups(context, num_items, &workgroup_info);
+    set_workgroups(context, global_size, &workgroup_info);
   }
 
   long double latency = 0;
@@ -45,10 +46,11 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
     dev_in_val.resize(context.sub_device_count);
     uint32_t i = 0;
     for (auto device : context.sub_devices) {
-      result =
-          zeMemAllocDevice(context.context, &in_device_desc,
-                           static_cast<size_t>((num_items * sizeof(float))), 1,
-                           device, &dev_in_val[i]);
+      result = zeMemAllocDevice(
+          context.context, &in_device_desc,
+          static_cast<size_t>(
+              ((num_items / context.sub_device_count) * sizeof(float))),
+          1, device, &dev_in_val[i]);
       if (result) {
         throw std::runtime_error("zeMemAllocDevice failed: " +
                                  std::to_string(result));
@@ -79,10 +81,11 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
     dev_out_buf.resize(context.sub_device_count);
     uint32_t i = 0;
     for (auto device : context.sub_devices) {
-      result =
-          zeMemAllocDevice(context.context, &out_device_desc,
-                           static_cast<size_t>((num_items * sizeof(float))), 1,
-                           device, &dev_out_buf[i]);
+      result = zeMemAllocDevice(
+          context.context, &out_device_desc,
+          static_cast<size_t>(
+              ((num_items / context.sub_device_count) * sizeof(float))),
+          1, device, &dev_out_buf[i]);
       if (result) {
         throw std::runtime_error("zeMemAllocDevice failed: " +
                                  std::to_string(result));
