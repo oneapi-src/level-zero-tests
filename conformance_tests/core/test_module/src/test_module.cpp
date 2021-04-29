@@ -868,25 +868,46 @@ TEST_F(
       ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE;
   void *pNext = &relaxed_allocation_limits_desc;
 
-  const auto head = 4096;
-  auto size = device_properties.maxMemAllocSize + head;
+  auto mem_properties = lzt::get_memory_properties(device);
+  auto total_mem = mem_properties[0].totalSize;
 
-  auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, pNext, 0, nullptr,
-                                              device, context);
-  auto buffer_b =
+  const auto head = 4096;
+  auto validation_buffer_size = head;
+  auto size = device_properties.maxMemAllocSize + head;
+  const auto scale = 1000; // copying bigger chunks will reduce test time
+
+  LOG_DEBUG << "Total available memory: " << total_mem;
+  if (total_mem <= (device_properties.maxMemAllocSize +
+                    validation_buffer_size * scale * 2 + head)) {
+    LOG_WARNING << "Insufficient memory resources for test, skipping";
+    return;
+  }
+  LOG_DEBUG << "Request device memory allocation size: " << size;
+
+  uint8_t *validation_buffer, *reference_buffer, *head_buffer;
+  try {
+    validation_buffer = new uint8_t[validation_buffer_size * scale];
+    reference_buffer = new uint8_t[validation_buffer_size * scale];
+    head_buffer =
+        new uint8_t[head]; // reference buffer for the first <head> bytes
+  } catch (std::bad_alloc &ba_exception) {
+    FAIL() << "Error allocating system memory: " << ba_exception.what();
+  }
+
+  uint8_t pattern = 0xAB;
+  memset(validation_buffer, 0, validation_buffer_size * scale);
+  memset(reference_buffer, pattern, validation_buffer_size * scale);
+  memset(head_buffer, 0xAE, head);
+
+  auto device_buffer =
       lzt::allocate_device_memory(size, 0, 0, pNext, 0, device, context);
 
   if (::testing::Test::HasFailure()) {
-    FAIL() << "Error allocating memory";
+    FAIL() << "Error allocating device memory";
   }
 
-  std::memset(buffer_a, 0, size);
-  for (size_t i = 0; i < size; i++) {
-    static_cast<uint8_t *>(buffer_a)[i] = (i & 0xFF);
-  }
   const int addval = 3;
-
-  lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
+  lzt::set_argument_value(kernel, 0, sizeof(device_buffer), &device_buffer);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
   auto device_compute_properties = lzt::get_compute_properties(device);
@@ -908,26 +929,55 @@ TEST_F(
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
-  lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
+  lzt::append_memory_fill(command_list, device_buffer, &pattern,
+                          sizeof(pattern), size, nullptr);
   lzt::append_barrier(command_list);
   lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
                               nullptr);
-  lzt::append_barrier(command_list);
-  lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
   lzt::synchronize(command_queue, UINT64_MAX);
 
-  // validation
-  for (size_t i = 0; i < size; i++) {
-    ASSERT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              (i >= head) ? static_cast<uint8_t>(i & 0xFF)
-                          : static_cast<uint8_t>((i & 0xFF) + addval));
+  // validate
+  size_t offset;
+  for (offset = 0; offset <= size - validation_buffer_size;
+       offset += validation_buffer_size) {
+    lzt::reset_command_list(command_list);
+    lzt::append_memory_copy(
+        command_list, validation_buffer,
+        static_cast<void *>(static_cast<uint8_t *>(device_buffer) + offset),
+        validation_buffer_size);
+    lzt::close_command_list(command_list);
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    lzt::synchronize(command_queue, UINT64_MAX);
+
+    if (offset) {
+      ASSERT_EQ(0, memcmp(validation_buffer, reference_buffer,
+                          validation_buffer_size));
+    } else {
+      ASSERT_EQ(0, memcmp(validation_buffer, head_buffer, head));
+      validation_buffer_size *= scale;
+    }
+  }
+
+  if (offset < size) {
+    lzt::reset_command_list(command_list);
+    lzt::append_memory_copy(
+        command_list, validation_buffer,
+        static_cast<void *>(static_cast<uint8_t *>(device_buffer) + offset),
+        size - offset);
+    lzt::close_command_list(command_list);
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    lzt::synchronize(command_queue, UINT64_MAX);
+
+    ASSERT_EQ(0, memcmp(validation_buffer, reference_buffer, (size - offset)));
   }
 
   // cleanup
-  lzt::free_memory(context, buffer_a);
-  lzt::free_memory(context, buffer_b);
+  delete[] reference_buffer;
+  delete[] validation_buffer;
+  delete[] head_buffer;
+  lzt::free_memory(context, device_buffer);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
   lzt::destroy_command_list(command_list);
