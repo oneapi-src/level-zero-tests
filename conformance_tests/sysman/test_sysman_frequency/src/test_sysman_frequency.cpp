@@ -400,10 +400,10 @@ void load_for_gpu() {
   void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
   void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
   ze_module_handle_t module =
-      lzt::create_module(device, "ze_matrix_multiplication.spv",
+      lzt::create_module(device, "sysman_matrix_multiplication.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
   ze_kernel_handle_t function =
-      lzt::create_function(module, "ze_matrix_multiplication");
+      lzt::create_function(module, "sysman_matrix_multiplication");
   lzt::set_group_size(function, 16, 16, 1);
   lzt::set_argument_value(function, 0, sizeof(a_buffer), &a_buffer);
   lzt::set_argument_value(function, 1, sizeof(b_buffer), &b_buffer);

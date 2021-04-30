@@ -11,5 +11,5 @@ add_lzt_test(
     level_zero_tests::logging
     level_zero_tests::utils
   KERNELS
-    ze_matrix_multiplication
+    sysman_matrix_multiplication
 )

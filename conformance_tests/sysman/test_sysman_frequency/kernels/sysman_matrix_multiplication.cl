@@ -12,7 +12,7 @@
 
 #define TILE_SIZE 16
 __attribute__((reqd_work_group_size(TILE_SIZE, TILE_SIZE, 1))) kernel void
-ze_matrix_multiplication(const global float *a, const global float *b,
+sysman_matrix_multiplication(const global float *a, const global float *b,
                          const int m, const int k, const int n,
                          global float *c) {
   const int2 global_id = {get_global_id(0), get_global_id(1)};
