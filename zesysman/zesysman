@@ -2049,7 +2049,7 @@ def main():
                         portConfig.beaconing = True
                     if i in disable_beacon:
                         portConfig.beaconing = False
-                    zeCall(zesFabricPortSetConfig,port, portConfig)
+                    zeCall(zesFabricPortSetConfig(port, portConfig))
 
         if args.show_fabric_ports:
             portTop = Node(devNode, "FabricPorts", None)
