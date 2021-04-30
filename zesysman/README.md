@@ -130,15 +130,37 @@ Option              | Output Control
 
 The tool allows various System Manager settings to be set as well. The process must have the appropriate privileges to change these:
 
-Option                     | Sets
----------------------------|--------------------------------
-`--set-power POW [TAU]`    | [sustained power limit][3]
-`--set-burst-power POW`    | [burst power limit][3]
-`--set-peak-power AC [DC]` | [peak power limit][3]
-`--set-freq MIN [MAX]`     | [frequency limits][4]
-`--set-standby enabled`    | [enables standby promotion][9]
-`--set-standby disabled`   | [disables standby promotion][9]
-`--set-scheduler MODE`     | [scheduler timeout mode][13]
+Option                               | Sets
+-------------------------------------|--------------------------------
+`--enable-critical-temp IDX`         | [critical temperature][2]
+`--disable-critical-temp IDX`        | [critical temperature][2]
+`--enable-t1-low-to-high IDX`        | [temperature threshold 1][2]
+`--disable-t1-low-to-high IDX`       | [temperature threshold 1][2]
+`--enable-t1-ligh-to-low IDX`        | [temperature threshold 1][2]
+`--disable-t1-ligh-to-low IDX`       | [temperature threshold 1][2]
+`--set-t1-threshold IDX C`           | [temperature threshold 1][2]
+`--enable-t2-low-to-high IDX`        | [temperature threshold 2][2]
+`--disable-t2-low-to-high IDX`       | [temperature threshold 2][2]
+`--enable-t2-ligh-to-low IDX`        | [temperature threshold 2][2]
+`--disable-t2-ligh-to-low IDX`       | [temperature threshold 2][2]
+`--set-t2-threshold IDX C`           | [temperature threshold 2][2]
+`--set-power POW [TAU]`              | [sustained power limit][3]
+`--enable-power`                     | [sustained power limit][3]
+`--disable-power`                    | [sustained power limit][3]
+`--set-burst-power POW`              | [burst power limit][3]
+`--enable-burst-power`               | [burst power limit][3]
+`--disable-burst-power`              | [burst power limit][3]
+`--set-peak-power AC [DC]`           | [peak power limit][3]
+`--set-energy-threshold J`           | [energy threshold][3]
+`--set-freq MIN [MAX]`               | [frequency limits][4]
+`--set-error-thresholds IDX N [...]` | [error thresholds][10]
+`--enable-fabric-ports IDX [...]`    | [enable fabric ports][8]
+`--disable-fabric-ports IDX [...]`   | [disable fabric ports][8]
+`--enable-beaconing IDX [...]`       | [enable port beaconing][8]
+`--disable-beaconing IDX [...]`      | [disable port beaconing][8]
+`--set-standby enabled`              | [enables standby promotion][9]
+`--set-standby disabled`             | [disables standby promotion][9]
+`--set-scheduler MODE`               | [scheduler timeout mode][13]
 
 for `--set-scheduler`, `MODE` may be one of the following:
 
@@ -159,6 +181,44 @@ Option                                    | Action
 `--reset`                                 | [reset specified device][15]
 
 If `--reset` or `--run-diag` is used and there is more than one supported device in the system, `--device` must be used to limit operation to a single device. Before resetting a device, the tool will ask for confirmation unless you also specify `-y` or `--yes` on the command line. To forcibly reset even if the device is in use, specify `--force` also.
+
+## Topology Map
+
+As an added-value feature, the tool supports a `--show-topo` option that uses fabric port queries to identify how the devices connect to Xe fabrics. It supports three different output modes. The desired mode must be explicitly specified:
+
+Option              | Output Mode
+--------------------|---------------------------------------------------
+`-show-topo matrix` | textual summary matrix of connected devices
+`-show-topo graph`  | graphviz-formatted representation of topology map
+`-show-topo info`   | attach points and interconnections in query format
+
+The `matrix` view summarizes which devices connect to each other via Xe fabric connections:
+
+```bash
+% zesysman --show-topo matrix
+	0	1	2	3	4	5	6	7	8	9	10	11
+0	X	x	x	x	x	x	-	-	-	-	-	-
+1	x	X	x	x	x	x	-	-	-	-	-	-
+2	x	x	X	x	x	x	-	-	-	-	-	-
+3	x	x	x	X	x	x	-	-	-	-	-	-
+4	x	x	x	x	X	x	-	-	-	-	-	-
+5	x	x	x	x	x	X	-	-	-	-	-	-
+6	-	-	-	-	-	-	X	x	x	x	x	x
+7	-	-	-	-	-	-	x	X	x	x	x	x
+8	-	-	-	-	-	-	x	x	X	x	x	x
+9	-	-	-	-	-	-	x	x	x	X	x	x
+10	-	-	-	-	-	-	x	x	x	x	X	x
+11	-	-	-	-	-	-	x	x	x	x	x	X
+```
+
+The `graph` view provides output intended for graphviz tools like dot, neato, twopi, fdp, or sfdp. These generate nicely-formatted graphical renditions in a variety of formats. For example:
+
+```bash
+% zesysman --show-topo graph | dot -Tpdf > fabric.pdf
+```
+
+The `info` view lists the fabric identifier and attach points for each device. For each attach point, it provides a list of ports, and for each port it identifies the remote fabric identifier, attach point, and port to which it is connected. As with component queries, the output defaults to `list` format and other formats may be specified by the `-f`/`--format` option.
+
 
 [1]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html
 [2]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#querying-temperature
