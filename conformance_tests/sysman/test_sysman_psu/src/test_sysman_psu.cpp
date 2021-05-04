@@ -146,7 +146,7 @@ TEST_F(PsuModuleTest,
     for (auto psu_handle : psu_handles) {
       ASSERT_NE(nullptr, psu_handle);
       auto state = lzt::get_psu_state(psu_handle);
-      EXPECT_GE(state.voltStatus, ZES_PSU_VOLTAGE_STATUS_NORMAL);
+      EXPECT_GE(state.voltStatus, ZES_PSU_VOLTAGE_STATUS_UNKNOWN);
       EXPECT_LE(state.voltStatus, ZES_PSU_VOLTAGE_STATUS_UNDER);
       EXPECT_LE(state.temperature, UINT32_MAX);
       EXPECT_LE(state.current, UINT32_MAX);

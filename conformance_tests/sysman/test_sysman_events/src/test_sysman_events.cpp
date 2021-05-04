@@ -70,7 +70,8 @@ TEST_F(
       ASSERT_EQ(ZE_RESULT_SUCCESS,
                 lzt::set_temp_config(temp_handle, temp_config));
       zes_event_type_flags_t setEvents = ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL |
-                                         ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1;
+                                         ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1 |
+                                         ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2;
     }
   }
   // If we registered to receive events on any devices, start listening now
@@ -86,6 +87,8 @@ TEST_F(
       LOG_INFO << "Event received as device crossed critical temperature";
     } else if (events[i] & ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1) {
       LOG_INFO << "Event received as device crossed threshold1 temperature";
+    } else if (events[i] & ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2) {
+      LOG_INFO << "Event received as device crossed threshold2 temperature";
     } else if (events[i] != 0) {
       LOG_INFO << "Spurious event for temperature received";
       FAIL();
