@@ -493,7 +493,7 @@ def api():
         fabricId = p // 10
         localIdx = p % 10
         portProps.model = "ANR"
-        portProps.onSubDevice = True
+        portProps.onSubdevice = True
         portProps.subdeviceId = localIdx // 5
         portProps.portId.fabricId = 0x10000 | fabricId
         portProps.portId.attachId = localIdx // 5

@@ -2003,53 +2003,80 @@ def main():
             ports = zes_fabric_port_handle_array(portCount.value())
             zeCall(zesDeviceEnumFabricPorts(device, portCount.cast(), ports.cast()))
 
+        try:
+            portNames = []
+            for i in range(portCount.value()):
+                port = ports[i]
+                portProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_PROPERTIES)
+                zeCall(zesFabricPortGetProperties(port, portProps))
+                portName = f"{portProps.portId.attachId}.{portProps.portId.portNumber}"
+                assert portName not in portNames
+                portNames.append(portName)
+        except:
+            portNames = list(range(portCount.value()))
+
         if (args.enable_fabric_ports is not None or args.disable_fabric_ports is not None or
             args.enable_beaconing is not None or args.disable_beaconing is not None):
 
             if args.enable_fabric_ports is None:
-                enable_ports = []
+                enable_ports = set()
             elif args.enable_fabric_ports == []:
-                enable_ports = list(range(portCount.value()))
+                enable_ports = set(range(portCount.value()))
             else:
-                enable_ports = args.enable_fabric_ports
+                enable_ports = arg.setPatternMatch(portNames, args.enable_fabric_ports)
 
             if args.disable_fabric_ports is None:
-                disable_ports = []
+                disable_ports = set()
             elif args.disable_fabric_ports == []:
-                disable_ports = list(range(portCount.value()))
+                disable_ports = set(range(portCount.value()))
             else:
-                disable_ports = args.disable_fabric_ports
+                disable_ports = arg.setPatternMatch(portNames, args.disable_fabric_ports)
 
             if args.enable_beaconing is None:
-                enable_beacon = []
+                enable_beacon = set()
             elif args.enable_beaconing == []:
-                enable_beacon = list(range(portCount.value()))
+                enable_beacon = set(range(portCount.value()))
             else:
-                enable_beacon = args.enable_beaconing
+                enable_beacon = arg.setPatternMatch(portNames, args.enable_beaconing)
 
             if args.disable_beaconing is None:
-                disable_beacon = []
+                disable_beacon = set()
             elif args.disable_beaconing == []:
-                disable_beacon = list(range(portCount.value()))
+                disable_beacon = set(range(portCount.value()))
             else:
-                disable_beacon = args.disable_beaconing
+                disable_beacon = arg.setPatternMatch(portNames, args.disable_beaconing)
 
-            affected_ports = enable_ports + disable_ports + enable_beacon + disable_beacon
+            enable_ports = {p for p in enable_ports if p not in disable_ports}
+            enable_beacon = {p for p in enable_beacon if p not in disable_beacon}
 
-            for i in range(portCount.value()):
-                if i in affected_ports:
-                    port = ports[i]
-                    portConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_CONFIG)
-                    zeCall(zesFabricPortGetConfig(port, portConfig))
-                    if i in enable_ports:
-                        portConfig.enabled = True
-                    if i in disable_ports:
-                        portConfig.enabled = False
-                    if i in enable_beacon:
-                        portConfig.beaconing = True
-                    if i in disable_beacon:
-                        portConfig.beaconing = False
-                    zeCall(zesFabricPortSetConfig(port, portConfig))
+            if enable_ports:
+                pr("Enabling fabric port(s): " + " ".join([portNames[i] for i in sorted(enable_ports)]))
+            if disable_ports:
+                pr("Disabling fabric port(s): " + " ".join([portNames[i] for i in sorted(disable_ports)]))
+            if enable_beacon:
+                pr("Enabling beaconing on port(s): " + " ".join([portNames[i] for i in sorted(enable_beacon)]))
+            if disable_beacon:
+                pr("Disabling beaconing on port(s): " + " ".join([portNames[i] for i in sorted(disable_beacon)]))
+
+            affected_ports = set.union(enable_ports, disable_ports, enable_beacon, disable_beacon)
+
+            if args.dry_run:
+                pr(dryRunMessage)
+            else:
+                for i in range(portCount.value()):
+                    if i in affected_ports:
+                        port = ports[i]
+                        portConfig = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_CONFIG)
+                        zeCall(zesFabricPortGetConfig(port, portConfig))
+                        if i in enable_ports:
+                            portConfig.enabled = True
+                        if i in disable_ports:
+                            portConfig.enabled = False
+                        if i in enable_beacon:
+                            portConfig.beaconing = True
+                        if i in disable_beacon:
+                            portConfig.beaconing = False
+                        zeCall(zesFabricPortSetConfig(port, portConfig))
 
         if args.show_fabric_ports:
             portTop = Node(devNode, "FabricPorts", None)
@@ -2059,11 +2086,7 @@ def main():
                 portProps = zes_typed_structure(ZES_STRUCTURE_TYPE_FABRIC_PORT_PROPERTIES)
                 zeCall(zesFabricPortGetProperties(port, portProps))
 
-                if portProps.onSubdevice:
-                    portNode = Node(portTop, "FabricPort", None, ("Index", i),
-                                    ("SubdeviceId", portProps.subdeviceId), heading="Port")
-                else:
-                    portNode = Node(portTop, "FabricPort", None, ("Index", i), heading="Port")
+                portNode = Node(portTop, "FabricPort", None, ("Index", portNames[i]), heading="Port")
 
                 if args.show_inventory:
                     portLinkType = zes_fabric_link_type_t()
@@ -2072,9 +2095,11 @@ def main():
                     zeCall(zesFabricPortGetLinkType(port, portLinkType))
                     zeCall(zesFabricPortGetConfig(port, portConfig))
 
+                    if portProps.onSubdevice:
+                        Node(portNode, "SubdeviceId", portProps.subdeviceId, join=".")
                     Node(portNode, "Model", portProps.model, join=".")
                     Node(portNode, "PhysicalAttachmentType", portLinkType.desc, join=".")
-                    Node(portNode, "FabricId", portProps.portId.fabricId, join=".")
+                    Node(portNode, "FabricId", hex(portProps.portId.fabricId), join=".")
                     Node(portNode, "AttachId", portProps.portId.attachId, join=".")
                     Node(portNode, "PortNumber", portProps.portId.portNumber, join=".")
                     Node(portNode, "MaxRxBitrate", portProps.maxRxSpeed.bitRate, ("Units", "bps"), join=".",

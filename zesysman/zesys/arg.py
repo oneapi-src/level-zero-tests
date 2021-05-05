@@ -3,9 +3,13 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import fnmatch
 import os.path
 import re
 import sys
+
+from functools import reduce
+from operator import add
 
 from . import logger
 from . import otree
@@ -234,6 +238,12 @@ def parseSchedulerMode(opts):
     return mode, rest
 
 #
+# Shell-style pattern match options against a list of names and return set of matches
+#
+def setPatternMatch(names, opts):
+    return {names.index(i) for i in reduce(add,[fnmatch.filter(names,f) for f in opts])}
+
+#
 # Parse arguments
 #
 def parse():
@@ -310,14 +320,10 @@ def parse():
     parser.add_argument("--clear-errors", action='store_true', help="clear error counters")
     parser.add_argument("--set-error-thresholds", nargs='+', type=int, metavar=('TYPE','N'),
                         help="set error thresholds")
-    parser.add_argument("--enable-fabric-ports", nargs='*', type=int, metavar='IDX',
-                        help="enable fabric ports")
-    parser.add_argument("--disable-fabric-ports", nargs='*', type=int, metavar='IDX',
-                        help="disable fabric ports")
-    parser.add_argument("--enable-beaconing", nargs='*', type=int, metavar='IDX',
-                        help="enable port beaconing")
-    parser.add_argument("--disable-beaconing", nargs='*', type=int, metavar='IDX',
-                        help="disable port beaconing")
+    parser.add_argument("--enable-fabric-ports", nargs='*', metavar='IDX', help="enable fabric ports")
+    parser.add_argument("--disable-fabric-ports", nargs='*', metavar='IDX', help="disable fabric ports")
+    parser.add_argument("--enable-beaconing", nargs='*', metavar='IDX', help="enable port beaconing")
+    parser.add_argument("--disable-beaconing", nargs='*', metavar='IDX', help="disable port beaconing")
     parser.add_argument("--set-standby", metavar='MODE', help="set sleep state promotion mode")
     parser.add_argument("--reset", action='store_true', help="reset specified device")
     parser.add_argument("--force", action='store_true', help="forcibly kill processes on reset")
