@@ -35,7 +35,12 @@ TEST_F(
     DiagnosticsTest,
     GivenComponentCountZeroWhenRetrievingDiagnosticsHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
-    lzt::get_diag_handle_count(device);
+    uint32_t count = 0;
+    count = lzt::get_diag_handle_count(device);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
   }
 }
 
@@ -63,6 +68,11 @@ TEST_F(
   for (auto device : devices) {
     uint32_t actual_count = 0;
     lzt::get_diag_handles(device, actual_count);
+    if (actual_count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
     uint32_t test_count = actual_count + 1;
     lzt::get_diag_handles(device, test_count);
     EXPECT_EQ(test_count, actual_count);
