@@ -145,12 +145,57 @@ void L0Context::print_ze_device_properties(
 }
 
 //---------------------------------------------------------------------
+// Utility function to query queue group properties
+//---------------------------------------------------------------------
+void L0Context::ze_peak_query_engines() {
+
+  uint32_t numQueueGroups = 0;
+  auto result =
+      zeDeviceGetCommandQueueGroupProperties(device, &numQueueGroups, nullptr);
+  if (result) {
+    throw std::runtime_error("zeDeviceGetCommandQueueGroupProperties failed: " +
+                             std::to_string(result));
+  }
+
+  if (numQueueGroups == 0) {
+    std::cout << " No queue groups found\n" << std::endl;
+    exit(0);
+  }
+
+  queueProperties.resize(numQueueGroups);
+  result = zeDeviceGetCommandQueueGroupProperties(device, &numQueueGroups,
+                                                  queueProperties.data());
+  if (result) {
+    throw std::runtime_error("zeDeviceGetCommandQueueGroupProperties failed: " +
+                             std::to_string(result));
+  }
+  for (uint32_t i = 0; i < numQueueGroups; i++) {
+    if (queueProperties[i].flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
+      std::cout << " Group " << i
+                << " (compute): " << queueProperties[i].numQueues
+                << " queues\n";
+    } else if ((queueProperties[i].flags &
+                ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) == 0 &&
+               (queueProperties[i].flags &
+                ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY)) {
+      std::cout << " Group " << i << " (copy): " << queueProperties[i].numQueues
+                << " queues\n";
+    }
+  }
+  std::cout << std::endl;
+}
+
+//---------------------------------------------------------------------
 // Utility function to initialize the ze driver, device, command list,
 // command queue, & device property information.
 // On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
 void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
-                        bool enable_explicit_scaling) {
+                        bool query_engines, bool enable_explicit_scaling,
+                        bool &enable_fixed_ordinal_index,
+                        uint32_t command_queue_group_ordinal,
+                        uint32_t command_queue_index) {
   ze_command_list_desc_t command_list_description{};
   ze_command_queue_desc_t command_queue_description{};
   ze_result_t result = ZE_RESULT_SUCCESS;
@@ -162,7 +207,8 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
   if (verbose)
     std::cout << "Driver initialized\n";
 
-  std::cout << "zeDriverGet...\n";
+  if (verbose)
+    std::cout << "zeDriverGet...\n";
   uint32_t driver_count = 0;
   result = zeDriverGet(&driver_count, nullptr);
   if (result || driver_count == 0) {
@@ -214,154 +260,197 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
   else
     device = devices[specified_device];
 
-  device_property.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
-  device_property.pNext = nullptr;
-  result = zeDeviceGetProperties(device, &device_property);
-  if (result) {
-    throw std::runtime_error("zeDeviceGetProperties failed: " +
-                             std::to_string(result));
+  if (query_engines || enable_fixed_ordinal_index) {
+    ze_peak_query_engines();
   }
-  if (verbose)
-    std::cout << "Device Properties retrieved\n";
 
-  print_ze_device_properties(device_property);
-
-  device_compute_property.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
-  result = zeDeviceGetComputeProperties(device, &device_compute_property);
-  if (result) {
-    throw std::runtime_error("zeDeviceGetComputeProperties failed: " +
-                             std::to_string(result));
-  }
-  if (verbose)
-    std::cout << "Device Compute Properties retrieved\n";
-
-  zeDeviceGetSubDevices(device, &sub_device_count, nullptr);
-  if (verbose)
-    std::cout << "Sub Device Count retrieved\n";
-
-  if (sub_device_count) {
-    if (enable_explicit_scaling) {
-      std::cout << "Enable explicit scaling as we have sub devices inside root "
-                   "device\n";
-
-      sub_devices.resize(sub_device_count);
-      result =
-          zeDeviceGetSubDevices(device, &sub_device_count, sub_devices.data());
-      if (verbose)
-        std::cout << "Sub Device Handles retrieved\n";
-    } else {
-      std::cout << "Enable implicit scaling by default\n";
-      sub_device_count = 0;
+  if (!query_engines) {
+    device_property.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+    device_property.pNext = nullptr;
+    result = zeDeviceGetProperties(device, &device_property);
+    if (result) {
+      throw std::runtime_error("zeDeviceGetProperties failed: " +
+                               std::to_string(result));
     }
-  }
+    if (verbose)
+      std::cout << "Device Properties retrieved\n";
 
-  command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
-  command_list_description.pNext = nullptr;
-  command_list_description.flags = ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY;
+    print_ze_device_properties(device_property);
 
-  if (sub_device_count) {
-    cmd_list.resize(sub_device_count);
-    uint32_t i = 0;
-    for (auto device : sub_devices) {
+    device_compute_property.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
+    result = zeDeviceGetComputeProperties(device, &device_compute_property);
+    if (result) {
+      throw std::runtime_error("zeDeviceGetComputeProperties failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "Device Compute Properties retrieved\n";
+
+    zeDeviceGetSubDevices(device, &sub_device_count, nullptr);
+    if (verbose)
+      std::cout << "Sub Device Count retrieved\n";
+
+    if (sub_device_count) {
+      if (enable_explicit_scaling) {
+        std::cout
+            << "Enable explicit scaling as we have sub devices inside root "
+               "device\n";
+
+        sub_devices.resize(sub_device_count);
+        result = zeDeviceGetSubDevices(device, &sub_device_count,
+                                       sub_devices.data());
+        if (verbose)
+          std::cout << "Sub Device Handles retrieved\n";
+      } else {
+        std::cout << "Enable implicit scaling by default\n";
+        sub_device_count = 0;
+      }
+    }
+
+    command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+    command_list_description.pNext = nullptr;
+    command_list_description.flags = ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY;
+    command_list_description.commandQueueGroupOrdinal = command_queue_id;
+
+    command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+    command_queue_description.pNext = nullptr;
+    command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+    command_queue_description.flags = ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY;
+    command_queue_description.ordinal = command_queue_id;
+    command_queue_description.index = command_queue_id;
+
+    bool fixed_compute_ordinal = false;
+
+    if (sub_device_count) {
+      cmd_list.resize(sub_device_count);
+      cmd_queue.resize(sub_device_count);
+      uint32_t i = 0;
+      for (auto device : sub_devices) {
+
+        result = zeCommandListCreate(context, device, &command_list_description,
+                                     &cmd_list[i]);
+        if (result) {
+          throw std::runtime_error("zeCommandListCreate failed: " +
+                                   std::to_string(result));
+        }
+
+        result = zeCommandQueueCreate(
+            context, device, &command_queue_description, &cmd_queue[i]);
+        if (result) {
+          throw std::runtime_error("zeCommandQueueCreate failed: " +
+                                   std::to_string(result));
+        }
+
+        i++;
+      }
+    } else {
+      if (enable_fixed_ordinal_index) {
+        if (queueProperties[command_queue_group_ordinal].flags &
+            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
+
+          if (verbose)
+            std::cout << "The ordianl provided matches COMPUTE engine, so "
+                         "fixed ordinal will be used\n";
+          fixed_compute_ordinal = true;
+          command_list_description.commandQueueGroupOrdinal =
+              command_queue_group_ordinal;
+          command_queue_description.ordinal = command_queue_group_ordinal;
+          if (command_queue_index <
+              queueProperties[command_queue_group_ordinal].numQueues) {
+            command_queue_description.index = command_queue_index;
+          }
+        }
+      }
       result = zeCommandListCreate(context, device, &command_list_description,
-                                   &cmd_list[i]);
+                                   &command_list);
       if (result) {
         throw std::runtime_error("zeCommandListCreate failed: " +
                                  std::to_string(result));
       }
-      i++;
-    }
-  } else {
-    result = zeCommandListCreate(context, device, &command_list_description,
-                                 &command_list);
-    if (result) {
-      throw std::runtime_error("zeCommandListCreate failed: " +
-                               std::to_string(result));
-    }
-  }
+      if (verbose)
+        std::cout << "compute command_list created\n";
 
-  if (verbose)
-    std::cout << "command_list created\n";
-
-  command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
-  command_queue_description.pNext = nullptr;
-  command_queue_description.ordinal = command_queue_id;
-  command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-  command_queue_description.flags = ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY;
-
-  if (sub_device_count) {
-    cmd_queue.resize(sub_device_count);
-    uint32_t i = 0;
-    for (auto device : sub_devices) {
       result = zeCommandQueueCreate(context, device, &command_queue_description,
-                                    &cmd_queue[i]);
+                                    &command_queue);
       if (result) {
         throw std::runtime_error("zeCommandQueueCreate failed: " +
                                  std::to_string(result));
       }
-      i++;
+      if (verbose)
+        std::cout << "compute command_queue created\n";
     }
-  } else {
-    result = zeCommandQueueCreate(context, device, &command_queue_description,
-                                  &command_queue);
-    if (result) {
-      throw std::runtime_error("zeCommandQueueCreate failed: " +
-                               std::to_string(result));
-    }
-  }
 
-  if (verbose)
-    std::cout << "Command queue created\n";
+    /* If device has copy engine, create corresponding resources */
 
-  /* If device has copy engine, create corresponding resources */
-  uint32_t command_queue_group_count = 0;
-  zeDeviceGetCommandQueueGroupProperties(device, &command_queue_group_count,
-                                         nullptr);
+    int copy_ordinal = -1;
+    bool fixed_copy_ordinal = false;
 
-  std::vector<ze_command_queue_group_properties_t>
-      command_queue_group_properties(command_queue_group_count);
+    for (uint32_t i = 0; i < queueProperties.size(); ++i) {
+      if ((queueProperties[i].flags &
+           ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
+          !(queueProperties[i].flags &
+            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
+          (queueProperties[i].numQueues > 0)) {
 
-  zeDeviceGetCommandQueueGroupProperties(device, &command_queue_group_count,
-                                         command_queue_group_properties.data());
-
-  uint32_t copy_ordinal = command_queue_group_count;
-  for (uint32_t i = 0; i < command_queue_group_count; ++i) {
-    if ((command_queue_group_properties[i].flags &
-         ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
-        !(command_queue_group_properties[i].flags &
-          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
-        (command_queue_group_properties[i].numQueues > 0)) {
-
-      copy_ordinal = i;
-      break;
-    }
-  }
-
-  if (copy_ordinal == command_queue_group_count) {
-    std::cout
-        << "No async copy engines detected, disabling blitter benchmark\n";
-  } else {
-    std::cout << "Async copy engine detected, enabling blitter benchmark\n";
-
-    command_list_description.commandQueueGroupOrdinal = copy_ordinal;
-
-    result = zeCommandListCreate(context, device, &command_list_description,
-                                 &copy_command_list);
-    if (result) {
-      throw std::runtime_error("zeCommandListCreate failed: " +
-                               std::to_string(result));
-    }
-    if (verbose)
-      std::cout << "copy command_list created\n";
-
-    command_queue_description.ordinal = copy_ordinal;
-
-    result = zeCommandQueueCreate(context, device, &command_queue_description,
-                                  &copy_command_queue);
-    if (result) {
-      if (verbose) {
-        std::cout << "Could not create copy-only command queue";
+        copy_ordinal = i;
+        break;
       }
+    }
+
+    if (copy_ordinal == -1) {
+      std::cout
+          << "No async copy engines detected, disabling blitter benchmark\n";
+    } else {
+      std::cout << "Async copy engine detected with ordinal " << copy_ordinal
+                << ", enabling blitter benchmark\n";
+      command_list_description.commandQueueGroupOrdinal = copy_ordinal;
+      command_queue_description.ordinal = copy_ordinal;
+      command_queue_description.index = command_queue_id;
+
+      if (enable_fixed_ordinal_index) {
+        if ((queueProperties[command_queue_group_ordinal].flags &
+             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
+            !(queueProperties[command_queue_group_ordinal].flags &
+              ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
+
+          if (verbose)
+            std::cout << "The ordianl provided matches COPY engine, so fixed "
+                         "ordinal will be used\n";
+          fixed_copy_ordinal = true;
+          command_list_description.commandQueueGroupOrdinal =
+              command_queue_group_ordinal;
+          command_queue_description.ordinal = command_queue_group_ordinal;
+          if (command_queue_index <
+              queueProperties[command_queue_group_ordinal].numQueues) {
+            command_queue_description.index = command_queue_index;
+          }
+        }
+      }
+      result = zeCommandListCreate(context, device, &command_list_description,
+                                   &copy_command_list);
+      if (result) {
+        throw std::runtime_error("zeCommandListCreate failed: " +
+                                 std::to_string(result));
+      }
+      if (verbose)
+        std::cout << "copy-only command_list created\n";
+
+      result = zeCommandQueueCreate(context, device, &command_queue_description,
+                                    &copy_command_queue);
+      if (result) {
+        throw std::runtime_error("zeCommandQueueCreate failed: " +
+                                 std::to_string(result));
+      }
+      if (verbose) {
+        std::cout << "copy-only command queue created\n";
+      }
+    }
+
+    if (!fixed_copy_ordinal && !fixed_compute_ordinal) {
+      if (verbose)
+        std::cout << "The ordianl provided neither matches COMPUTE nor COPY "
+                     "engine, so disabling fixed dispatch\n";
+      enable_fixed_ordinal_index = false;
     }
   }
 }
@@ -1293,8 +1382,15 @@ int main(int argc, char **argv) {
   context.verbose = peak_benchmark.verbose;
 
   context.init_xe(peak_benchmark.specified_driver,
-                  peak_benchmark.specified_device,
-                  peak_benchmark.enable_explicit_scaling);
+                  peak_benchmark.specified_device, peak_benchmark.query_engines,
+                  peak_benchmark.enable_explicit_scaling,
+                  peak_benchmark.enable_fixed_ordinal_index,
+                  peak_benchmark.command_queue_group_ordinal,
+                  peak_benchmark.command_queue_index);
+
+  if (peak_benchmark.query_engines) {
+    return 0;
+  }
 
   if (peak_benchmark.run_global_bw)
     peak_benchmark.ze_peak_global_bw(context);

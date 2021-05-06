@@ -60,15 +60,20 @@ struct L0Context {
   ze_device_properties_t device_property;
   ze_device_compute_properties_t device_compute_property;
   bool verbose = false;
+  std::vector<ze_command_queue_group_properties_t> queueProperties;
 
   void init_xe(uint32_t specified_driver, uint32_t specified_device,
-               bool enable_explicit_scaling);
+               bool query_engines, bool enable_explicit_scaling,
+               bool &enable_fixed_ordinal_index,
+               uint32_t command_queue_group_ordinal,
+               uint32_t command_queue_index);
   void clean_xe();
   void print_ze_device_properties(const ze_device_properties_t &props);
   void reset_commandlist(ze_command_list_handle_t cmd_list);
   void execute_commandlist_and_sync(bool use_copy_only_queue = false);
   std::vector<uint8_t> load_binary_file(const std::string &file_path);
   void create_module(std::vector<uint8_t> binary_file);
+  void ze_peak_query_engines();
 };
 
 struct ZeWorkGroups {
@@ -90,6 +95,8 @@ public:
   bool run_transfer_bw = true;
   bool run_kernel_lat = true;
   bool enable_explicit_scaling = false;
+  bool query_engines = false;
+  bool enable_fixed_ordinal_index = false;
   uint32_t specified_driver = 0;
   uint32_t specified_device = 0;
   uint32_t global_bw_max_size = 1 << 29;
@@ -97,6 +104,8 @@ public:
   uint32_t iters = 50;
   uint32_t warmup_iterations = 10;
   uint32_t current_sub_device_id = 0;
+  uint32_t command_queue_group_ordinal = 0;
+  uint32_t command_queue_index = 0;
 
   int parse_arguments(int argc, char **argv);
 

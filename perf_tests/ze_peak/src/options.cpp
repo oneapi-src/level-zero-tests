@@ -36,6 +36,9 @@ static const char *usage_str =
     "run[default: 10]"
     "\n  -x                          enable explicit scaling [default: "
     "implicit scaling]"
+    "\n  -q                          query for number of engines available"
+    "\n  -g, group                   select engine group (default: 0)"
+    "\n  -n, number                  select engine index (default: 0)"
     "\n  -h, --help                  display help message"
     "\n";
 
@@ -129,6 +132,27 @@ int ZePeak::parse_arguments(int argc, char **argv) {
           run_int_compute = run_transfer_bw = run_kernel_lat = true;
     } else if (strcmp(argv[i], "-x") == 0) {
       enable_explicit_scaling = true;
+      i++;
+    } else if ((strcmp(argv[i], "-q") == 0)) {
+      query_engines = true;
+      i++;
+    } else if ((strcmp(argv[i], "-g") == 0)) {
+      if (isdigit(argv[i + 1][0])) {
+        enable_fixed_ordinal_index = true;
+        command_queue_group_ordinal = atoi(argv[i + 1]);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      i++;
+    } else if ((strcmp(argv[i], "-n") == 0)) {
+      if (isdigit(argv[i + 1][0])) {
+        command_queue_index = atoi(argv[i + 1]);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      i++;
     } else {
       std::cout << usage_str;
       exit(-1);

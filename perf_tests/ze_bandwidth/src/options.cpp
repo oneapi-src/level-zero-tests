@@ -25,6 +25,9 @@ static const char *usage_str =
     "\n                            [default:  1]"
     "\n  -se                      select ending transfer size (bytes)"
     "\n                            [default: 2^30]"
+    "\n  -q                       query for number of engines available"
+    "\n  -g, group                select engine group (default: 0)"
+    "\n  -n, number               select engine index (default: 0)"
     "\n  -h, --help               display help message"
     "\n";
 
@@ -73,6 +76,26 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
         transfer_upper_limit = sanitize_ulong(argv[i + 1]);
         i++;
       }
+    } else if ((strcmp(argv[i], "-q") == 0)) {
+      query_engines = true;
+      i++;
+    } else if ((strcmp(argv[i], "-g") == 0)) {
+      if (isdigit(argv[i + 1][0])) {
+        enable_fixed_ordinal_index = true;
+        command_queue_group_ordinal = atoi(argv[i + 1]);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      i++;
+    } else if ((strcmp(argv[i], "-n") == 0)) {
+      if (isdigit(argv[i + 1][0])) {
+        command_queue_index = atoi(argv[i + 1]);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      i++;
     } else if ((strcmp(argv[i], "-t") == 0)) {
       run_host2dev = false;
       run_dev2host = false;

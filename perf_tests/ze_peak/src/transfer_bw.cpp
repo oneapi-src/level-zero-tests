@@ -43,6 +43,7 @@ long double ZePeak::_transfer_bw_gpu_copy(L0Context &context,
       }
     }
   }
+
   context.execute_commandlist_and_sync();
   if (context.copy_command_queue)
     context.execute_commandlist_and_sync(true);
@@ -67,6 +68,7 @@ long double ZePeak::_transfer_bw_gpu_copy(L0Context &context,
       }
     }
   }
+
   context.execute_commandlist_and_sync();
   timed = timer.stopAndTime();
   timed /= static_cast<long double>(iters);
@@ -114,9 +116,19 @@ long double ZePeak::_transfer_bw_host_copy(L0Context &context,
                                  context.sub_devices[current_sub_device_id],
                                  &cmd_q_desc, &temp_cmd_list);
   } else {
+    if (enable_fixed_ordinal_index) {
+      cmd_q_desc.ordinal = command_queue_group_ordinal;
+      if (command_queue_index <
+          context.queueProperties[command_queue_group_ordinal].numQueues) {
+        cmd_q_desc.index = command_queue_index;
+      } else {
+        cmd_q_desc.index = context.command_queue_id;
+      }
+    }
     zeCommandListCreateImmediate(context.context, context.device, &cmd_q_desc,
                                  &temp_cmd_list);
   }
+
   for (uint32_t i = 0; i < warmup_iterations; i++) {
     /*
 
