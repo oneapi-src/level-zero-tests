@@ -22,6 +22,7 @@ int main(int argc, char **argv) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
   }
+
   LOG_TRACE << "Driver initialized";
 
   return RUN_ALL_TESTS();
