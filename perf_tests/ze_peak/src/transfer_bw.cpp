@@ -193,7 +193,8 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
     uint32_t i = 0;
     for (auto device : context.sub_devices) {
       result = zeMemAllocShared(context.context, &device_desc, &host_desc,
-                                local_memory_size, 1, device, &shared_buf[i]);
+                                local_memory_size / context.sub_device_count, 1,
+                                device, &shared_buf[i]);
       if (result) {
         throw std::runtime_error("zeMemAllocShared failed: " +
                                  std::to_string(result));
@@ -219,6 +220,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
                                 local_memory_size / context.sub_device_count);
       current_sub_device_id++;
     }
+    gflops = gflops / context.sub_device_count;
   } else {
     gflops = _transfer_bw_gpu_copy(context, shared_memory_buffer,
                                    local_memory.data(), local_memory_size);
@@ -235,6 +237,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
                                 local_memory_size / context.sub_device_count);
       current_sub_device_id++;
     }
+    gflops = gflops / context.sub_device_count;
   } else {
     gflops = _transfer_bw_gpu_copy(context, local_memory.data(),
                                    shared_memory_buffer, local_memory_size);
@@ -251,6 +254,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
           local_memory_size / context.sub_device_count, true);
       current_sub_device_id++;
     }
+    gflops = gflops / context.sub_device_count;
   } else {
     gflops =
         _transfer_bw_host_copy(context, shared_memory_buffer,
@@ -268,6 +272,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
           local_memory_size / context.sub_device_count, false);
       current_sub_device_id++;
     }
+    gflops = gflops / context.sub_device_count;
   } else {
     gflops =
         _transfer_bw_host_copy(context, local_memory.data(),
@@ -364,6 +369,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
                                 local_memory_size / context.sub_device_count);
       current_sub_device_id++;
     }
+    gflops = gflops / context.sub_device_count;
   } else {
     gflops = _transfer_bw_gpu_copy(context, device_buffer, local_memory.data(),
                                    local_memory_size);
@@ -380,6 +386,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
                                 local_memory_size / context.sub_device_count);
       current_sub_device_id++;
     }
+    gflops = gflops / context.sub_device_count;
   } else {
     gflops = _transfer_bw_gpu_copy(context, local_memory.data(), device_buffer,
                                    local_memory_size);
