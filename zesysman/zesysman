@@ -2440,7 +2440,7 @@ def main():
 
                 if schedProps.onSubdevice:
                     schedNode = Node(schedTop, "Scheduler", None, ("Index", i),
-                                     ("SubdeviceId", rasProps.subdeviceId))
+                                     ("SubdeviceId", schedProps.subdeviceId))
                 else:
                     schedNode = Node(schedTop, "Scheduler", None, ("Index", i))
 
