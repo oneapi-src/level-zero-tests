@@ -356,7 +356,7 @@ TEST_F(
       ASSERT_NE(nullptr, p_sched_handle);
       auto properties = lzt::get_scheduler_properties(p_sched_handle);
       EXPECT_GE(properties.engines, ZES_ENGINE_TYPE_FLAG_OTHER);
-      EXPECT_LE(properties.engines, ZES_ENGINE_TYPE_FLAG_DMA);
+      EXPECT_LE(properties.engines, ZES_ENGINE_TYPE_FLAG_RENDER);
       EXPECT_GE(properties.supportedModes, 1);
       EXPECT_LE(properties.supportedModes,
                 (1 << ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG));
