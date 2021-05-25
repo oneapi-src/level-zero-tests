@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -26,5 +26,6 @@
 #include "../../tools/include/test_harness_api_ltracing.hpp"
 #include "../../sysman/include/test_harness_sysman.hpp"
 #include "../../tools/include/test_harness_metric.hpp"
+#include "../../tools/include/test_harness_debug.hpp"
 
 #endif

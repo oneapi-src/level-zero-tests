@@ -21,6 +21,7 @@ add_core_library(test_harness
     "src/test_harness_driver_info.cpp"
     "tools/src/test_harness_api_tracing.cpp"
     "tools/src/test_harness_api_ltracing.cpp"
+    "tools/src/test_harness_debug.cpp"
     "tools/src/test_harness_metric.cpp"
     "sysman/src/test_harness_sysman_frequency.cpp"
     "sysman/src/test_harness_sysman_standby.cpp"
