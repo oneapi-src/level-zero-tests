@@ -22,7 +22,7 @@ namespace {
 
 constexpr uint32_t thread_iters = 2000;
 constexpr size_t num_threads = 16;
-constexpr size_t num_events = 16;
+constexpr size_t num_events = 2;
 constexpr size_t size = 4096;
 
 void thread_create_destroy_command_list_default() {
@@ -54,7 +54,7 @@ void thread_create_destroy_command_list_valid_flags(
   LOG_DEBUG << "child thread done with ID ::" << std::this_thread::get_id();
 }
 
-void thread_append_memory_copy(const ze_command_queue_handle_t cq) {
+void thread_append_memory_copy() {
   std::thread::id thread_id = std::this_thread::get_id();
 
   LOG_DEBUG << "child thread spawned with ID :: " << thread_id;
@@ -67,70 +67,80 @@ void thread_append_memory_copy(const ze_command_queue_handle_t cq) {
   eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   eventPoolDesc.count = num_events;
 
-  for (uint32_t i = 0; i < thread_iters; i++) {
-    ze_event_pool_handle_t event_pool = lzt::create_event_pool(eventPoolDesc);
-    std::array<ze_event_handle_t, num_events> events;
-    std::array<ze_event_desc_t, num_events> eventDesc;
-    std::array<ze_command_list_handle_t, num_events> cmd_list;
-    std::array<uint8_t, size> host_memory1, host_memory2;
-    for (uint32_t j = 0; j < num_events; j++) {
-      eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
-      eventDesc[j].pNext = nullptr;
-      eventDesc[j].index = j;
-      eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
-      eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
-      events[j] = lzt::create_event(event_pool, eventDesc[j]);
-      cmd_list[j] = lzt::create_command_list();
-    }
+  ze_command_queue_handle_t cq = lzt::create_command_queue();
+  ze_fence_handle_t fence_ = lzt::create_fence(cq);
+  ze_event_pool_handle_t event_pool = lzt::create_event_pool(eventPoolDesc);
+  std::array<ze_event_handle_t, num_events> events;
+  std::array<ze_event_desc_t, num_events> eventDesc;
+  std::array<ze_command_list_handle_t, num_events> cmd_list;
+  for (uint32_t j = 0; j < num_events; j++) {
+    eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    eventDesc[j].pNext = nullptr;
+    eventDesc[j].index = j;
+    eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    events[j] = lzt::create_event(event_pool, eventDesc[j]);
+    cmd_list[j] = lzt::create_command_list();
+  }
 
+  void *device_memory = lzt::allocate_device_memory(size);
+  void *host_memory1 = lzt::allocate_host_memory(size);
+  void *host_memory2 = lzt::allocate_host_memory(size);
+  for (uint32_t i = 0; i < thread_iters; i++) {
     for (auto event : events) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
 
-    for (uint32_t j = 0; j < num_events; j++) {
-      void *device_memory = lzt::allocate_device_memory(size);
-      ze_fence_handle_t fence_ = lzt::create_fence(cq);
-      lzt::write_data_pattern(host_memory1.data(), size, 1);
-      EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));
+    lzt::write_data_pattern(host_memory1, size, 1);
+    EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));
 
-      lzt::append_wait_on_events(cmd_list[j], 1, &events[j]);
-      lzt::append_memory_copy(cmd_list[j], device_memory, host_memory1.data(),
-                              size, nullptr);
-      lzt::close_command_list(cmd_list[j]);
-      lzt::execute_command_lists(cq, 1, &cmd_list[j], fence_);
-      lzt::signal_event_from_host(events[j]);
-      lzt::query_event(events[j]);
-      lzt::sync_fence(fence_, UINT64_MAX);
-      lzt::query_fence(fence_);
+    lzt::append_wait_on_events(cmd_list[0], 1, &events[0]);
+    lzt::append_memory_copy(cmd_list[0], device_memory, host_memory1, size,
+                            nullptr);
+    lzt::close_command_list(cmd_list[0]);
+    lzt::execute_command_lists(cq, 1, &cmd_list[0], fence_);
+    lzt::signal_event_from_host(events[0]);
+    lzt::query_event(events[0]);
+    lzt::sync_fence(fence_, UINT64_MAX);
+    lzt::query_fence(fence_);
 
-      lzt::reset_fence(fence_);
-      EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));
-      lzt::event_host_reset(events[j]);
-      lzt::reset_command_list(cmd_list[j]);
+    lzt::reset_fence(fence_);
+    EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));
 
-      lzt::append_wait_on_events(cmd_list[j], 1, &events[j]);
-      lzt::append_memory_copy(cmd_list[j], host_memory2.data(), device_memory,
-                              size, nullptr);
-      lzt::close_command_list(cmd_list[j]);
-      lzt::execute_command_lists(cq, 1, &cmd_list[j], fence_);
-      lzt::signal_event_from_host(events[j]);
-      lzt::query_event(events[j]);
-      lzt::sync_fence(fence_, UINT64_MAX);
-      lzt::query_fence(fence_);
+    lzt::append_wait_on_events(cmd_list[1], 1, &events[1]);
+    lzt::append_memory_copy(cmd_list[1], host_memory2, device_memory, size,
+                            nullptr);
+    lzt::close_command_list(cmd_list[1]);
+    lzt::execute_command_lists(cq, 1, &cmd_list[1], fence_);
+    lzt::signal_event_from_host(events[1]);
+    lzt::query_event(events[1]);
+    lzt::sync_fence(fence_, UINT64_MAX);
+    lzt::query_fence(fence_);
 
-      lzt::validate_data_pattern(host_memory2.data(), size, 1);
+    lzt::reset_fence(fence_);
+    EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));
 
-      lzt::destroy_fence(fence_);
-      lzt::free_memory(device_memory);
-    }
+    lzt::validate_data_pattern(host_memory2, size, 1);
+
     for (auto event : events) {
-      lzt::destroy_event(event);
+      lzt::event_host_reset(event);
     }
     for (auto cl : cmd_list) {
-      lzt::destroy_command_list(cl);
+      lzt::reset_command_list(cl);
     }
-    lzt::destroy_event_pool(event_pool);
   }
+  for (auto event : events) {
+    lzt::destroy_event(event);
+  }
+  lzt::destroy_event_pool(event_pool);
+  for (auto cl : cmd_list) {
+    lzt::destroy_command_list(cl);
+  }
+  lzt::free_memory(device_memory);
+  lzt::free_memory(host_memory1);
+  lzt::free_memory(host_memory2);
+  lzt::destroy_fence(fence_);
+  lzt::destroy_command_queue(cq);
 }
 
 class zeCommandListMultithreadTest : public ::testing::Test {};
@@ -156,19 +166,15 @@ TEST(zeCommandListMultithreadTest,
      GivenMultipleThreadsWhenUsingCommandListsWithFenceThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 
-  ze_command_queue_handle_t cq = lzt::create_command_queue();
-
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
   for (uint32_t i = 0; i < num_threads; i++) {
-    threads[i] = std::make_unique<std::thread>(thread_append_memory_copy, cq);
+    threads[i] = std::make_unique<std::thread>(thread_append_memory_copy);
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {
     threads[i]->join();
   }
-
-  lzt::destroy_command_queue(cq);
 }
 
 class zeCommandListCreateDestroyValidFlagsMultithreadTest

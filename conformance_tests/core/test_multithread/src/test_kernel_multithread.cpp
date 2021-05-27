@@ -25,43 +25,53 @@ constexpr size_t output_size_ = output_count_ * sizeof(uint64_t);
 constexpr size_t pattern_memory_size = 512;
 constexpr size_t pattern_memory_count =
     pattern_memory_size >> 3; // array of uint64_t
-void run_functions(ze_command_queue_handle_t, ze_module_handle_t, void *,
-                   size_t, uint16_t, uint64_t *, uint64_t *, uint64_t *,
-                   uint64_t *, size_t);
+void run_functions(ze_command_queue_handle_t, ze_command_list_handle_t,
+                   ze_kernel_handle_t, ze_kernel_handle_t, void *, size_t,
+                   uint16_t, uint64_t *, uint64_t *, uint64_t *, uint64_t *,
+                   size_t);
 
-void thread_kernel_create_destroy(ze_command_queue_handle_t command_queue,
-                                  ze_module_handle_t module_handle) {
+void thread_kernel_create_destroy(ze_module_handle_t module_handle) {
+  ze_command_queue_handle_t command_queue = lzt::create_command_queue();
+  ze_command_list_handle_t command_list = lzt::create_command_list();
+
+  ze_kernel_flags_t flag = 0;
+  /* Prepare the fill function */
+  ze_kernel_handle_t fill_function =
+      lzt::create_function(module_handle, flag, "fill_device_memory");
+  /* Prepare the test function */
+  ze_kernel_handle_t test_function =
+      lzt::create_function(module_handle, flag, "test_device_memory");
+
+  // create pattern buffer on which device  will perform writes using the
+  // compute kernel, create found and expected/gold buffers which are used to
+  // validate the data written by device
+  uint64_t *gpu_pattern_buffer;
+  gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
+      pattern_memory_size, 8);
+  uint64_t *gpu_expected_output_buffer;
+  gpu_expected_output_buffer =
+      (uint64_t *)level_zero_tests::allocate_device_memory(output_size_, 8);
+  uint64_t *gpu_found_output_buffer;
+  gpu_found_output_buffer =
+      (uint64_t *)level_zero_tests::allocate_device_memory(output_size_, 8);
+  uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
+  uint64_t *host_found_output_buffer = new uint64_t[output_size_];
+
   for (uint32_t i = 0; i < num_iterations; i++) {
-
-    // create pattern buffer on which device  will perform writes using the
-    // compute kernel, create found and expected/gold buffers which are used to
-    // validate the data written by device
-    uint64_t *gpu_pattern_buffer;
-    gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
-        pattern_memory_size, 8);
-    uint64_t *gpu_expected_output_buffer;
-    gpu_expected_output_buffer =
-        (uint64_t *)level_zero_tests::allocate_device_memory(output_size_, 8);
-    uint64_t *gpu_found_output_buffer;
-    gpu_found_output_buffer =
-        (uint64_t *)level_zero_tests::allocate_device_memory(output_size_, 8);
-    uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
     std::fill(host_expected_output_buffer,
               host_expected_output_buffer + output_count_, 0);
-    uint64_t *host_found_output_buffer = new uint64_t[output_size_];
     std::fill(host_found_output_buffer,
               host_found_output_buffer + output_count_, 0);
-    uint16_t pattern_base = std::rand() % 0xFFFF;
-    uint16_t pattern_base_1 = std::rand() % 0xFFFF;
-
     // Access to pattern buffer from host.
     std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count,
               0x0);
-
-    run_functions(
-        command_queue, module_handle, gpu_pattern_buffer, pattern_memory_count,
-        pattern_base, host_expected_output_buffer, gpu_expected_output_buffer,
-        host_found_output_buffer, gpu_found_output_buffer, output_count_);
+    uint16_t pattern_base = std::rand() % 0xFFFF;
+    uint16_t pattern_base_1 = std::rand() % 0xFFFF;
+    run_functions(command_queue, command_list, fill_function, test_function,
+                  gpu_pattern_buffer, pattern_memory_count, pattern_base,
+                  host_expected_output_buffer, gpu_expected_output_buffer,
+                  host_found_output_buffer, gpu_found_output_buffer,
+                  output_count_);
 
     bool memory_test_failure = false;
     for (uint32_t i = 0; i < output_count_; i++) {
@@ -90,26 +100,30 @@ void thread_kernel_create_destroy(ze_command_queue_handle_t command_queue,
     }
 
     EXPECT_EQ(false, host_test_failure);
-
-    level_zero_tests::free_memory(gpu_pattern_buffer);
-    level_zero_tests::free_memory(gpu_expected_output_buffer);
-    level_zero_tests::free_memory(gpu_found_output_buffer);
-    delete host_expected_output_buffer;
-    delete host_found_output_buffer;
   }
+
+  lzt::synchronize(command_queue, UINT64_MAX);
+
+  delete host_expected_output_buffer;
+  delete host_found_output_buffer;
+  level_zero_tests::free_memory(gpu_pattern_buffer);
+  level_zero_tests::free_memory(gpu_expected_output_buffer);
+  level_zero_tests::free_memory(gpu_found_output_buffer);
+  lzt::destroy_function(fill_function);
+  lzt::destroy_function(test_function);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
 }
 
 void run_functions(ze_command_queue_handle_t command_queue,
-                   ze_module_handle_t module, void *pattern_memory,
+                   ze_command_list_handle_t command_list,
+                   ze_kernel_handle_t fill_function,
+                   ze_kernel_handle_t test_function, void *pattern_memory,
                    size_t pattern_memory_count, uint16_t sub_pattern,
                    uint64_t *host_expected_output_buffer,
                    uint64_t *gpu_expected_output_buffer,
                    uint64_t *host_found_output_buffer,
                    uint64_t *gpu_found_output_buffer, size_t output_count) {
-  ze_kernel_flags_t flag = 0;
-  /* Prepare the fill function */
-  ze_kernel_handle_t fill_function =
-      lzt::create_function(module, flag, "fill_device_memory");
 
   // set the thread group size to make sure all the device threads are
   // occupied
@@ -133,9 +147,6 @@ void run_functions(ze_command_queue_handle_t command_queue,
 
   lzt::set_argument_value(fill_function, 2, sizeof(sub_pattern), &sub_pattern);
 
-  /* Prepare the test function */
-  ze_kernel_handle_t test_function =
-      lzt::create_function(module, flag, "test_device_memory");
   lzt::set_group_size(test_function, groupSizeX, groupSizeY, groupSizeZ);
 
   lzt::set_argument_value(test_function, 0, sizeof(pattern_memory),
@@ -154,8 +165,6 @@ void run_functions(ze_command_queue_handle_t command_queue,
 
   lzt::set_argument_value(test_function, 5, sizeof(output_count),
                           &output_count);
-
-  ze_command_list_handle_t command_list = lzt::create_command_list();
 
   // if groupSize is greater then memory count, then at least one thread group
   // should be dispatched
@@ -194,9 +203,7 @@ void run_functions(ze_command_queue_handle_t command_queue,
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
   lzt::synchronize(command_queue, UINT64_MAX);
 
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_function(fill_function);
-  lzt::destroy_function(test_function);
+  lzt::reset_command_list(command_list);
 }
 
 void thread_module_create_destroy() {
@@ -229,18 +236,17 @@ TEST(
 
 TEST(zeKernelSubmissionMultithreadTest,
      GivenMultipleThreadsWhenPerformingKernelSubmissionsThenSuccessIsReturned) {
-  ze_command_queue_handle_t command_queue = lzt::create_command_queue();
+  LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
+  std::array<std::unique_ptr<std::thread>, num_threads> threads;
+
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   ze_module_handle_t module_handle =
       lzt::create_module(device, "test_fill_device_memory.spv");
 
-  LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
-  std::array<std::unique_ptr<std::thread>, num_threads> threads;
-
   for (uint32_t i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
-                                               command_queue, module_handle);
+                                               module_handle);
   }
 
   for (int i = 0; i < num_threads; i++) {
@@ -248,7 +254,6 @@ TEST(zeKernelSubmissionMultithreadTest,
   }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
-  lzt::destroy_command_queue(command_queue);
 }
 
 } // namespace

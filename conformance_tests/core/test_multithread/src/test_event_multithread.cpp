@@ -89,43 +89,47 @@ void ThreadEventCreate() {
   LOG_DEBUG << "child thread done with ID ::" << std::this_thread::get_id();
 }
 
-void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
+void ThreadEventSync() {
   std::thread::id thread_id = std::this_thread::get_id();
   LOG_DEBUG << "child thread spawned with ID ::" << thread_id;
 
   // Each thread creates event pool,events and uses them to sync
   // and later destroy events
 
+  ze_command_queue_handle_t cmd_queue = lzt::create_command_queue();
+
   ze_event_pool_desc_t eventPoolDesc = {};
   eventPoolDesc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
   eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   eventPoolDesc.count = num_events;
 
+  ze_event_pool_handle_t event_pool = lzt::create_event_pool(eventPoolDesc);
+  std::array<ze_event_handle_t, num_events> events;
+  std::array<ze_event_desc_t, num_events> eventDesc;
+  std::array<ze_command_list_handle_t, num_events> cmd_list;
+  for (uint32_t j = 0; j < num_events; j++) {
+    eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    eventDesc[j].pNext = nullptr;
+    eventDesc[j].index = j;
+    eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    events[j] = lzt::create_event(event_pool, eventDesc[j]);
+    cmd_list[j] = lzt::create_command_list();
+  }
+  for (auto event : events) {
+    EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
+  }
+
+  // As per the spec, index could be re-used after destroy
+  for (uint32_t j = 0; j < num_events; j++) {
+    lzt::destroy_event(events[j]);
+    events[j] = lzt::create_event(event_pool, eventDesc[j]);
+  }
+
   for (uint32_t i = 0; i < num_iterations; i++) {
-    ze_event_pool_handle_t event_pool = lzt::create_event_pool(eventPoolDesc);
-    std::array<ze_event_handle_t, num_events> events;
-    std::array<ze_event_desc_t, num_events> eventDesc;
-    std::array<ze_command_list_handle_t, num_events> cmd_list;
-    for (uint32_t j = 0; j < num_events; j++) {
-      eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
-      eventDesc[j].pNext = nullptr;
-      eventDesc[j].index = j;
-      eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
-      eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
-      events[j] = lzt::create_event(event_pool, eventDesc[j]);
-      cmd_list[j] = lzt::create_command_list();
-    }
     for (auto event : events) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
-
-    // As per the spec, index could be re-used after destroy
-    for (uint32_t j = 0; j < num_events; j++) {
-      lzt::destroy_event(events[j]);
-      events[j] = lzt::create_event(event_pool, eventDesc[j]);
-      EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[j]));
-    }
-
     for (uint32_t j = 0; j < num_events; j++) {
       lzt::signal_event_from_host(events[j]);
       lzt::close_command_list(cmd_list[j]);
@@ -168,64 +172,51 @@ void ThreadEventSync(const ze_command_queue_handle_t cmd_queue) {
 
       lzt::synchronize(cmd_queue, UINT64_MAX);
       lzt::reset_command_list(cmd_list[j]);
-
-      lzt::destroy_event(events[j]);
-      events[j] = lzt::create_event(event_pool, eventDesc[j]);
-      EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[j]));
-
-      lzt::signal_event_from_host(events[j]);
-      lzt::close_command_list(cmd_list[j]);
-      lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
-      lzt::event_host_synchronize(events[j], UINT64_MAX);
-
-      lzt::query_event(events[j]);
       lzt::event_host_reset(events[j]);
     }
-
-    lzt::synchronize(cmd_queue, UINT64_MAX);
-
-    for (auto event : events) {
-      EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
-    }
-
-    for (auto event : events) {
-      lzt::destroy_event(event);
-    }
-    for (auto cl : cmd_list) {
-      lzt::destroy_command_list(cl);
-    }
-    lzt::destroy_event_pool(event_pool);
   }
+  lzt::synchronize(cmd_queue, UINT64_MAX);
+
+  for (auto event : events) {
+    lzt::destroy_event(event);
+  }
+  lzt::destroy_event_pool(event_pool);
+  for (auto cl : cmd_list) {
+    lzt::destroy_command_list(cl);
+  }
+  lzt::destroy_command_queue(cmd_queue);
   LOG_DEBUG << "child thread done with ID ::" << std::this_thread::get_id();
 }
 
-void ThreadMultipleEventsSync(const ze_command_queue_handle_t cmd_queue) {
+void ThreadMultipleEventsSync() {
   std::thread::id thread_id = std::this_thread::get_id();
   LOG_DEBUG << "child thread spawned with ID ::" << thread_id;
 
   // Each thread creates event pool,events and uses them to sync
   // and later destroy events
 
+  ze_command_queue_handle_t cmd_queue = lzt::create_command_queue();
+
   ze_event_pool_desc_t eventPoolDesc = {};
   eventPoolDesc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
   eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   eventPoolDesc.count = num_events;
 
-  for (uint32_t i = 0; i < num_iterations; i++) {
-    ze_event_pool_handle_t event_pool = lzt::create_event_pool(eventPoolDesc);
-    std::array<ze_event_handle_t, num_events> events;
-    std::array<ze_event_desc_t, num_events> eventDesc;
-    std::array<ze_command_list_handle_t, num_events> cmd_list;
-    for (uint32_t j = 0; j < num_events; j++) {
-      eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
-      eventDesc[j].pNext = nullptr;
-      eventDesc[j].index = j;
-      eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
-      eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
-      events[j] = lzt::create_event(event_pool, eventDesc[j]);
-      cmd_list[j] = lzt::create_command_list();
-    }
+  ze_event_pool_handle_t event_pool = lzt::create_event_pool(eventPoolDesc);
+  std::array<ze_event_handle_t, num_events> events;
+  std::array<ze_event_desc_t, num_events> eventDesc;
+  std::array<ze_command_list_handle_t, num_events> cmd_list;
+  for (uint32_t j = 0; j < num_events; j++) {
+    eventDesc[j].stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    eventDesc[j].pNext = nullptr;
+    eventDesc[j].index = j;
+    eventDesc[j].signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    eventDesc[j].wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    events[j] = lzt::create_event(event_pool, eventDesc[j]);
+    cmd_list[j] = lzt::create_command_list();
+  }
 
+  for (uint32_t i = 0; i < num_iterations; i++) {
     for (auto event : events) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
@@ -266,10 +257,10 @@ void ThreadMultipleEventsSync(const ze_command_queue_handle_t cmd_queue) {
 
     for (uint32_t j = num_events / 2; j < num_events; j++) {
       lzt::reset_command_list(cmd_list[j]);
-      lzt::append_wait_on_events(cmd_list[j], 1, &events[j]);
+      lzt::append_signal_event(cmd_list[j], events[j]);
       lzt::close_command_list(cmd_list[j]);
       lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
-      lzt::signal_event_from_host(events[j]);
+      lzt::event_host_synchronize(events[j], UINT64_MAX);
       lzt::query_event(events[j]);
     }
 
@@ -278,18 +269,21 @@ void ThreadMultipleEventsSync(const ze_command_queue_handle_t cmd_queue) {
     for (auto event : events) {
       lzt::event_host_reset(event);
     }
-    for (auto event : events) {
-      EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
-    }
-
-    for (auto event : events) {
-      lzt::destroy_event(event);
-    }
     for (auto cl : cmd_list) {
-      lzt::destroy_command_list(cl);
+      lzt::reset_command_list(cl);
     }
-    lzt::destroy_event_pool(event_pool);
   }
+
+  lzt::synchronize(cmd_queue, UINT64_MAX);
+
+  for (auto event : events) {
+    lzt::destroy_event(event);
+  }
+  for (auto cl : cmd_list) {
+    lzt::destroy_command_list(cl);
+  }
+  lzt::destroy_event_pool(event_pool);
+  lzt::destroy_command_queue(cmd_queue);
   LOG_DEBUG << "child thread done with ID ::" << std::this_thread::get_id();
 }
 
@@ -398,13 +392,11 @@ TEST(
     zeEventSynchronizeTests,
     GivenMultipleThreadsUsingSharedCommandQueueAndHavingTheirOwnCommandListAndEventsToSynchronizeThenSuccessIsReturned) {
 
-  ze_command_queue_handle_t cmd_queue = lzt::create_command_queue();
-
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 
   std::array<std::thread *, num_threads> threads;
   for (uint32_t i = 0; i < num_threads; i++) {
-    threads[i] = new std::thread(ThreadEventSync, cmd_queue);
+    threads[i] = new std::thread(ThreadEventSync);
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {
@@ -412,7 +404,7 @@ TEST(
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {
-    threads[i] = new std::thread(ThreadMultipleEventsSync, cmd_queue);
+    threads[i] = new std::thread(ThreadMultipleEventsSync);
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {
@@ -422,8 +414,6 @@ TEST(
   for (auto thread : threads) {
     delete thread;
   }
-
-  lzt::destroy_command_queue(cmd_queue);
 }
 
 TEST(
