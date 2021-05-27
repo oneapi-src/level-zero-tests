@@ -222,15 +222,15 @@ TEST_F(
       zes_power_sustained_limit_t pSustainedSet = {};
       zes_power_burst_limit_t pBurstSet = {};
       zes_power_peak_limit_t pPeakSet = {};
-      if (pSustainedInitial.enabled != true)
-        pSustainedSet.enabled = false;
+      if (pSustainedInitial.enabled)
+        pSustainedSet.enabled = 1;
       else
-        pSustainedSet.enabled = true;
+        pSustainedSet.enabled = 0;
       pSustainedSet.interval = pSustainedInitial.interval;
-      if (pBurstInitial.enabled == true)
-        pBurstSet.enabled = false;
+      if (pBurstInitial.enabled)
+        pBurstSet.enabled = 1;
       else
-        pBurstSet.enabled = true;
+        pBurstSet.enabled = 0;
       if (pProperties.maxLimit != -1) {
         pSustainedSet.power = pProperties.maxLimit;
         pBurstSet.power = pProperties.maxLimit;
