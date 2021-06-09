@@ -3,11 +3,12 @@
 oneAPI Level Zero test source repository contains:
  * Conformance test content for validating all features of a oneAPI Level Zero driver.
  * Performance Benchmarks implemented using the oneAPI Level Zero Specification.
+ * Tests for validation Level Zero Loader Layers
 
 ## Getting Started
 
 **Prerequisites:**
- * oneAPI Level Zero
+ * oneAPI Level Zero Loader v1.3.6 
  * Compiler with C++11 support
  * GCC 5.4 or newer
  * Clang 3.8 or newer

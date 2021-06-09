@@ -3,8 +3,7 @@
 ## Dependencies
 
 ### Linux Dependencies
-Requires the `level-zero`, `level-zero-devel`, `opencl-headers`, 
-`libpng-dev`, `ocl-icd-opencl-dev`, `libboost-all-dev`, & `libva-dev` packages
+Requires the `level-zero`, `level-zero-devel`, `libpng-dev`, `libboost-all-dev` packages
 to be installed.
 
 ### SLES Dependencies
@@ -29,11 +28,13 @@ sudo ./b2 install
 ```
 
 ### Dependencies
-For building against level-zero, you can either build against the version you
-have installed on your system (automatic, Linux only), or specify an install
-prefix with the `CMAKE_PREFIX_PATH` cmake flag during configuration.
+
+The top of LevelZeroTests repo is compatible with the latest Level Zero Loader release. 
+You can either build against the version you have installed on your system (automatic, Linux only), 
+or specify an installprefix with the `CMAKE_PREFIX_PATH` cmake flag during configuration.
 This `CMAKE_PREFIX_PATH` must point to the top-level install directory where level-zero was installed.
 for example: `-DCMAKE_PREFIX_PATH=/home/username/level-zero/build/output/`.
+
 
 Some benchmarks written against OpenCL are included to enable easy performance
 comparisons. These benchmarks will be built automatically if OpenCL is available
