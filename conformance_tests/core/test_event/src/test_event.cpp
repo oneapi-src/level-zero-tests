@@ -116,7 +116,7 @@ TEST_F(
       lzt::create_command_list(context, device, 0);
   std::vector<ze_event_handle_t> events(event_count, nullptr);
 
-  ep.create_events(events, event_count);
+  ep.create_events(events, event_count, 0, 0);
   auto events_initial = events;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendWaitOnEvents(
                                    cmd_list, event_count, events.data()));
@@ -210,7 +210,7 @@ TEST_F(
   std::vector<ze_event_handle_t> host_event(num_event, nullptr);
 
   ep.InitEventPool(num_event);
-  ep.create_events(host_event, num_event);
+  ep.create_events(host_event, num_event, 0, 0);
   for (uint32_t i = 0; i < num_event; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(host_event[i]));
     for (uint32_t j = 0; j < num_event; j++) {
@@ -243,7 +243,7 @@ TEST_F(
   void *src_buff = lzt::allocate_host_memory(copy_size, 1, context);
   void *dst_buff =
       lzt::allocate_shared_memory(copy_size, 1, 0, 0, device, context);
-  ep.create_events(device_event, num_event);
+  ep.create_events(device_event, num_event, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   lzt::write_data_pattern(src_buff, copy_size, 1);
   lzt::write_data_pattern(dst_buff, copy_size, 0);
@@ -303,7 +303,7 @@ TEST_F(
   void *dst_buff =
       lzt::allocate_shared_memory(copy_size, 1, 0, 0, device, context);
 
-  ep.create_events(device_event, num_event);
+  ep.create_events(device_event, num_event, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   lzt::write_data_pattern(src_buff, copy_size, 1);
   lzt::write_data_pattern(dst_buff, copy_size, 0);
@@ -358,7 +358,7 @@ TEST_F(zeEventSignalingTests,
   void *dst_buff = lzt::allocate_shared_memory(copy_size);
   uint8_t *src_char = static_cast<uint8_t *>(src_buff);
   uint8_t *dst_char = static_cast<uint8_t *>(dst_buff);
-  ep.create_events(device_event, num_event);
+  ep.create_events(device_event, num_event, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   lzt::write_data_pattern(src_buff, copy_size, 1);
   lzt::write_data_pattern(dst_buff, copy_size, 0);
