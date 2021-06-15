@@ -119,7 +119,7 @@ endfunction()
 
 function(add_lzt_test_executable)
     set(options "")
-    set(oneValueArgs NAME PREFIX GROUP)
+    set(oneValueArgs NAME PREFIX GROUP EXTENDED)
     set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS MEDIA)
     cmake_parse_arguments(ADD_LZT_TEST_EXECUTABLE
       "${options}" "${oneValueArgs}" "${multiValueArgs}"
@@ -127,6 +127,13 @@ function(add_lzt_test_executable)
     )
 
     assert_valid_test_group_name("${ADD_LZT_TEST_EXECUTABLE_GROUP}")
+  
+    if(DEFINED EXTENDED_BUILD)
+        if(NOT DEFINED ADD_LZT_TEST_EXECUTABLE_EXTENDED)
+          message(STATUS "Ignoring ${ADD_LZT_TEST_EXECUTABLE_NAME} because it is not an extended test")
+          return()
+        endif()
+    endif()
 
     is_test_group_member("${GROUP}" "${ADD_LZT_TEST_EXECUTABLE_GROUP}" in_scope)
     if(NOT in_scope)
@@ -218,11 +225,13 @@ function(add_lzt_test_executable)
     endif()
 endfunction()
 
-set(MANIFEST_BUILD_PATH "${PROJECT_BINARY_DIR}/manifest.txt")
+if(NOT DEFINED MANIFEST_BUILD_PATH)
+  set(MANIFEST_BUILD_PATH "${PROJECT_BINARY_DIR}/manifest.txt")
+endif()
 install(FILES "${MANIFEST_BUILD_PATH}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 
 function(add_lzt_test)
-    set(oneValueArgs NAME GROUP)
+    set(oneValueArgs NAME GROUP EXTENDED)
     set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS MEDIA)
     cmake_parse_arguments(ADD_LZT_TEST
       "${options}" "${oneValueArgs}" "${multiValueArgs}"
@@ -230,6 +239,13 @@ function(add_lzt_test)
     )
 
     assert_valid_test_group_name("${ADD_LZT_TEST_GROUP}")
+
+    if(DEFINED EXTENDED_BUILD)
+      if(NOT DEFINED ADD_LZT_TEST_EXTENDED)
+        message(STATUS "Ignoring ${ADD_LZT_TEST_NAME} because it is not an extended test")
+        return()
+      endif()
+    endif()
 
     is_test_group_member("${GROUP}" "${ADD_LZT_TEST_GROUP}" in_scope)
     if(NOT in_scope)
@@ -239,6 +255,7 @@ function(add_lzt_test)
         message(STATUS "Adding ${ADD_LZT_TEST_NAME}")
     endif()
 
+
     add_lzt_test_executable(
       NAME ${ADD_LZT_TEST_NAME}
       GROUP ${ADD_LZT_TEST_GROUP}
@@ -247,6 +264,7 @@ function(add_lzt_test)
       LINK_LIBRARIES ${ADD_LZT_TEST_LINK_LIBRARIES}
       KERNELS ${ADD_LZT_TEST_KERNELS}
       MEDIA ${ADD_LZT_TEST_MEDIA}
+      EXTENDED  ${ADD_LZT_TEST_EXTENDED}
     )
 
     file(APPEND
