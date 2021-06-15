@@ -11,6 +11,8 @@
 #include "utils/utils.hpp"
 
 int main(int argc, char **argv) {
+  static char sys_env[] = "ZET_ENABLE_PROGRAM_DEBUGGING=1";
+  putenv(sys_env);
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);

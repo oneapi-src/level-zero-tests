@@ -10,4 +10,19 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
+    rt
+  KERNELS
+    debug_add
+)
+
+add_lzt_test_executable(
+  NAME test_debug_helper
+  GROUP "/conformance_tests/tools/debug"
+  PREFIX "debug"  # install to prefix so it's not confused for a test
+  SOURCES
+    src/test_debug_helper.cpp
+  LINK_LIBRARIES
+    level_zero_tests::logging
+    level_zero_tests::utils
+    rt
 )

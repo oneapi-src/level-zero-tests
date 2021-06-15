@@ -78,10 +78,11 @@ void set_exclusive_mode(zes_sched_handle_t hScheduler) {
             zesSchedulerSetExclusiveMode(hScheduler, &reload));
 }
 
-void set_compute_unit_debug_mode(zes_sched_handle_t hScheduler) {
+ze_bool_t set_compute_unit_debug_mode(zes_sched_handle_t hScheduler) {
   ze_bool_t reload = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zesSchedulerSetComputeUnitDebugMode(hScheduler, &reload));
+  return reload;
 }
 
 zes_sched_properties_t get_scheduler_properties(zes_sched_handle_t hScheduler) {

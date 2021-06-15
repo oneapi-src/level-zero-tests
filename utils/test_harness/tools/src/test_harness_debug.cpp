@@ -26,4 +26,18 @@ zet_device_debug_properties_t get_debug_properties(ze_device_handle_t device) {
   return properties;
 }
 
+zet_debug_session_handle_t
+debug_attach(const ze_device_handle_t &device,
+             const zet_debug_config_t &debug_config) {
+  zet_debug_session_handle_t debug_session = {};
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetDebugAttach(device, &debug_config, &debug_session));
+  return debug_session;
+}
+
+void debug_detach(const zet_debug_session_handle_t &debug_session) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugDetach(debug_session));
+}
+
 } // namespace level_zero_tests
