@@ -1,6 +1,11 @@
 # Copyright (C) 2021 Intel Corporation
 # SPDX-License-Identifier: MIT
 
+
+if (UNIX)
+  list(APPEND debug_libraries rt)
+endif()
+
 add_lzt_test(
   NAME test_debug
   GROUP "/conformance_tests/tools/debug"
@@ -10,7 +15,7 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
-    rt
+    ${debug_libraries}
   KERNELS
     debug_add
 )
@@ -24,5 +29,5 @@ add_lzt_test_executable(
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
-    rt
+    ${debug_libraries}
 )
