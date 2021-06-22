@@ -231,9 +231,9 @@ protected:
   ze_image_region_t image_region;
 
   ze_event_pool_handle_t event_pool = nullptr;
-  ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
-                                          nullptr,
-                                          ZE_EVENT_POOL_FLAG_HOST_VISIBLE, 1};
+  ze_event_pool_desc_t event_pool_desc = {
+      ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
+      ZE_EVENT_POOL_FLAG_HOST_VISIBLE | ZE_EVENT_POOL_FLAG_IPC, 1};
   ze_event_handle_t event = nullptr;
   ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr};
 
@@ -1439,10 +1439,21 @@ TEST_F(
 
   init_event_pool();
 
-  ze_result_t initial_result = zeEventPoolCloseIpcHandle(event_pool);
+  ze_ipc_event_pool_handle_t handle;
+  ze_event_pool_handle_t event_pool2;
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
+
+  ze_result_t initial_result = zeEventPoolCloseIpcHandle(event_pool2);
+
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeEventPoolCloseIpcHandle(event_pool));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
+
+  ASSERT_EQ(initial_result, zeEventPoolCloseIpcHandle(event_pool2));
 }
 
 TEST_F(
