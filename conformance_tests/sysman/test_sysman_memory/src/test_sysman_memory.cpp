@@ -111,6 +111,7 @@ TEST_F(
         EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
       }
       EXPECT_LT(properties.physicalSize, UINT64_MAX);
+      EXPECT_GT(properties.physicalSize, 0u);
       EXPECT_GE(properties.location, ZES_MEM_LOC_SYSTEM);
       EXPECT_LE(properties.location, ZES_MEM_LOC_DEVICE);
       EXPECT_LE(properties.busWidth, INT32_MAX);
