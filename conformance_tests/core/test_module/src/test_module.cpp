@@ -715,6 +715,7 @@ TEST_F(
   for (auto mod : module_) {
     function = lzt::create_function(mod, "module_add_constant");
     ze_kernel_properties_t kernel_properties;
+    kernel_properties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeKernelGetProperties(function, &kernel_properties));
     EXPECT_LE(kernel_properties.requiredGroupSizeX,
@@ -731,6 +732,28 @@ TEST_F(
              << kernel_properties.requiredGroupSizeY;
     LOG_INFO << "Group Size in Z dim = "
              << kernel_properties.requiredGroupSizeZ;
+    lzt::destroy_function(function);
+  }
+}
+
+TEST_F(
+    zeKernelCreateTests,
+    GivenValidFunctionWhenGettingPreferredGroupSizePropertiesThenReturnSuccessful) {
+
+  ze_kernel_handle_t function;
+
+  for (auto mod : module_) {
+    function = lzt::create_function(mod, "module_add_constant");
+    ze_kernel_properties_t kernel_properties;
+    kernel_properties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
+    ze_kernel_preferred_group_size_properties_t
+        preferred_group_size_properties = {};
+    preferred_group_size_properties.stype =
+        ZE_STRUCTURE_TYPE_KERNEL_PREFERRED_GROUP_SIZE_PROPERTIES;
+    kernel_properties.pNext = &preferred_group_size_properties;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeKernelGetProperties(function, &kernel_properties));
+
     lzt::destroy_function(function);
   }
 }
