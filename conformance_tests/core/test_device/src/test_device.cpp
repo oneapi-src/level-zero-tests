@@ -40,9 +40,30 @@ TEST(zeDeviceGetDevicePropertiesTests,
      GivenValidDeviceWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
 
   auto devices = lzt::get_ze_devices();
+  ze_structure_type_t stype;
   for (auto device : devices) {
-    auto properties = lzt::get_device_properties(device);
-    EXPECT_EQ(ZE_DEVICE_TYPE_GPU, properties.type);
+    ze_device_properties_t properties1 =
+        lzt::get_device_properties(device, ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES);
+    ze_device_properties_t properties2 = lzt::get_device_properties(
+        device, ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2);
+    EXPECT_EQ(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, properties1.stype);
+    EXPECT_LT(0, properties1.timerResolution);
+    EXPECT_EQ(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2, properties2.stype);
+    EXPECT_LT(0, properties2.timerResolution);
+    EXPECT_NE(properties2.timerResolution, properties1.timerResolution);
+    uint64_t tres1 = properties1.timerResolution;
+    uint64_t tres2 = properties2.timerResolution;
+    properties1 = lzt::get_device_properties(
+        device, ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2);
+    properties2 =
+        lzt::get_device_properties(device, ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES);
+    EXPECT_EQ(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2, properties1.stype);
+    EXPECT_LT(0, properties1.timerResolution);
+    EXPECT_EQ(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, properties2.stype);
+    EXPECT_LT(0, properties2.timerResolution);
+    EXPECT_NE(properties1.timerResolution, properties2.timerResolution);
+    EXPECT_EQ(tres1, properties2.timerResolution);
+    EXPECT_EQ(tres2, properties1.timerResolution);
   }
 }
 

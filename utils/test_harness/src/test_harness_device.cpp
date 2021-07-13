@@ -100,9 +100,19 @@ std::vector<ze_device_handle_t> get_ze_sub_devices(ze_device_handle_t device,
 }
 
 ze_device_properties_t get_device_properties(ze_device_handle_t device) {
-  ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+  ze_structure_type_t stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+  return get_device_properties(device, stype);
+}
 
+ze_device_properties_t get_device_properties(ze_device_handle_t device,
+                                             ze_structure_type_t stype) {
   auto device_initial = device;
+  ze_device_properties_t properties;
+  if (stype == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
+    properties.stype = stype;
+  } else {
+    properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
   EXPECT_EQ(device, device_initial);
   return properties;
