@@ -1433,7 +1433,7 @@ TEST_F(
 
 TEST_F(
     LTracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultSucceed) {
+    GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultUnchanged) {
   prologues.EventPool.pfnCloseIpcHandleCb = lzt::lprologue_callback;
   epilogues.EventPool.pfnCloseIpcHandleCb = lzt::lepilogue_callback;
 

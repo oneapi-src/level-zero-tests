@@ -1599,7 +1599,7 @@ TEST_F(
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultSucceed) {
+    GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventPoolCloseIpcHandleRegisterCallback(
       tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
   zelTracerEventPoolCloseIpcHandleRegisterCallback(
