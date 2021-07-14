@@ -1599,7 +1599,7 @@ TEST_F(
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultUnchanged) {
+    GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultSucceed) {
   zelTracerEventPoolCloseIpcHandleRegisterCallback(
       tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
   zelTracerEventPoolCloseIpcHandleRegisterCallback(
@@ -1613,15 +1613,10 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
 
-  ze_result_t initial_result = zeEventPoolCloseIpcHandle(event_pool2);
-
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCloseIpcHandle(event_pool2));
 
-  ASSERT_EQ(initial_result, zeEventPoolCloseIpcHandle(event_pool2));
 }
 
 TEST_F(

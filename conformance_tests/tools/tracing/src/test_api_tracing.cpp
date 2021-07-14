@@ -1442,15 +1442,9 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
 
-  ze_result_t initial_result = zeEventPoolCloseIpcHandle(event_pool2);
-
   ready_tracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
-
-  ASSERT_EQ(initial_result, zeEventPoolCloseIpcHandle(event_pool2));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCloseIpcHandle(event_pool2));
 }
 
 TEST_F(
