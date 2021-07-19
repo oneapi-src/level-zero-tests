@@ -184,8 +184,10 @@ void L0Context::print_ze_device_properties(
 
   std::cout << "Device : \n"
             << " * name                    : " << props.name << "\n"
-            << " * vendorId                : " << props.vendorId << "\n"
-            << " * deviceId                : " << props.deviceId << "\n"
+            << " * vendorId                : " << std::hex << std::setfill('0')
+            << std::setw(4) << props.vendorId << "\n"
+            << " * deviceId                : " << std::hex << std::setfill('0')
+            << std::setw(4) << props.deviceId << "\n"
             << " * subdeviceId             : " << props.subdeviceId << "\n"
             << " * isSubdevice             : "
             << ((props.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) ? "TRUE"
