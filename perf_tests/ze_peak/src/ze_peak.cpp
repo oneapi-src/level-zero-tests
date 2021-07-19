@@ -305,7 +305,6 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
         if (verbose)
           std::cout << "Sub Device Handles retrieved\n";
       } else {
-        std::cout << "Enable implicit scaling by default\n";
         sub_device_count = 0;
       }
     }
