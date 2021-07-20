@@ -80,20 +80,14 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       query_engines = true;
       i++;
     } else if ((strcmp(argv[i], "-g") == 0)) {
-      if (isdigit(argv[i + 1][0])) {
-        enable_fixed_ordinal_index = true;
+      enable_fixed_ordinal_index = true;
+      if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
         command_queue_group_ordinal = atoi(argv[i + 1]);
-      } else {
-        std::cout << usage_str;
-        exit(-1);
       }
       i++;
     } else if ((strcmp(argv[i], "-n") == 0)) {
-      if (isdigit(argv[i + 1][0])) {
+      if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
         command_queue_index = atoi(argv[i + 1]);
-      } else {
-        std::cout << usage_str;
-        exit(-1);
       }
       i++;
     } else if ((strcmp(argv[i], "-t") == 0)) {

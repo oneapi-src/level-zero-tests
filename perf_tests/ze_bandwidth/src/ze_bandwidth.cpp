@@ -324,6 +324,10 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
       benchmark->commandListCreate(&command_list_verify);
     }
     std::cout << std::endl;
+  } else {
+    benchmark->commandQueueCreate(0, &command_queue);
+    benchmark->commandListCreate(&command_list);
+    benchmark->commandListCreate(&command_list_verify);
   }
 }
 
@@ -334,9 +338,7 @@ int main(int argc, char **argv) {
 
   bw.parse_arguments(argc, argv);
 
-  if (bw.query_engines || bw.enable_fixed_ordinal_index) {
-    bw.ze_bandwidth_query_engines();
-  }
+  bw.ze_bandwidth_query_engines();
 
   if (!bw.query_engines) {
     default_size = bw.transfer_lower_limit;
