@@ -159,7 +159,7 @@ class zeDriverAllocSharedMemTests
                      size_t, size_t>> {};
 TEST_P(
     zeDriverAllocSharedMemTests,
-    GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryThenCanAccessFromHostAndDevice) {
+    GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryThenNotNullPointerIsReturned) {
   const ze_device_mem_alloc_flag_t dev_flags = std::get<0>(GetParam());
   const ze_host_mem_alloc_flag_t host_flags = std::get<1>(GetParam());
   const size_t size = std::get<2>(GetParam());
