@@ -55,6 +55,7 @@ void ZeSobel::build_program() {
 
 void ZeSobel::create_buffers() {
   ze_device_mem_alloc_desc_t device_desc = {};
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_desc.ordinal = 0;
   device_desc.flags = 0;
   ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc, image_buffer_size, 1,

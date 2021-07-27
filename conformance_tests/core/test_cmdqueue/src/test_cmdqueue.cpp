@@ -52,8 +52,7 @@ TEST_P(zeCommandQueueCreateTests,
   const ze_driver_handle_t driver = lzt::get_default_driver();
   const ze_context_handle_t context = lzt::get_default_context();
 
-  ze_device_properties_t properties;
-
+  ze_device_properties_t properties = {};
   properties.pNext = nullptr;
   properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));

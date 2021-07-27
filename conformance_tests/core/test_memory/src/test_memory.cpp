@@ -358,7 +358,7 @@ TEST_P(
   const size_t size = std::get<0>(GetParam());
   const size_t alignment = std::get<1>(GetParam());
   void *memory = lzt::allocate_host_memory(size, alignment);
-  ze_memory_allocation_properties_t mem_properties;
+  ze_memory_allocation_properties_t mem_properties = {};
   auto context = lzt::get_default_context();
 
   mem_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;

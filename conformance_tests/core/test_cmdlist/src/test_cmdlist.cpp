@@ -578,9 +578,11 @@ TEST(
   uint32_t idxMemorySize = arraySize * sizeof(uint32_t);
 
   ze_device_mem_alloc_desc_t deviceDesc = {};
+  deviceDesc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   deviceDesc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED;
   deviceDesc.ordinal = 0;
   ze_host_mem_alloc_desc_t hostDesc = {};
+  hostDesc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
   hostDesc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
   void *srcBuffer = lzt::allocate_host_memory(srcMemorySize);
   void *dstBuffer = lzt::allocate_host_memory(expectedMemorySize);
@@ -614,6 +616,7 @@ TEST(
   ze_kernel_handle_t scratch_function =
       lzt::create_function(module_handle, flag, "scratch_kernel");
   ze_kernel_properties_t kernelProperties = {};
+  kernelProperties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
   zeKernelGetProperties(scratch_function, &kernelProperties);
   EXPECT_NE(kernelProperties.spillMemSize, 0);
   std::cout << "Scratch size = " << kernelProperties.spillMemSize << "\n";

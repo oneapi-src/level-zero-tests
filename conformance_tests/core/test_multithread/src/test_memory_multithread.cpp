@@ -162,7 +162,7 @@ void perform_memory_manipulation() {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_handle_t device_test = device;
 
-  ze_memory_allocation_properties_t memory_properties;
+  ze_memory_allocation_properties_t memory_properties = {};
   memory_properties.pNext = nullptr;
   memory_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   lzt::get_mem_alloc_properties(context, device_ptr, &memory_properties,

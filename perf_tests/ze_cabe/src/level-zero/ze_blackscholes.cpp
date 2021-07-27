@@ -60,6 +60,7 @@ template <class T> void ZeBlackScholes<T>::build_program() {
 
 template <class T> void ZeBlackScholes<T>::create_buffers() {
   ze_device_mem_alloc_desc_t device_desc = {};
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_desc.ordinal = 0;
   device_desc.flags = 0;
   ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc, buffer_size, 1,

@@ -115,7 +115,8 @@ inline void init_process(ze_context_handle_t &context,
   }
 
   if (concurrency_offset > 0) {
-    ze_device_p2p_properties_t peerProperties;
+    ze_device_p2p_properties_t peerProperties = {};
+    peerProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
 
     zeDeviceGetP2PProperties(devices[device_x], devices[device_y],
                              &peerProperties);
@@ -145,6 +146,7 @@ inline void init_process(ze_context_handle_t &context,
 
   for (uint32_t ordinal : ordinals) {
     ze_command_queue_desc_t cmdQueueDesc = {};
+    cmdQueueDesc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
     cmdQueueDesc.ordinal = ordinal;
     cmdQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
@@ -155,6 +157,7 @@ inline void init_process(ze_context_handle_t &context,
       queues.push_back(queue);
 
       ze_command_list_desc_t listDesc = {};
+      listDesc.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
       listDesc.commandQueueGroupOrdinal = ordinal;
       ze_command_list_handle_t list;
       zeCommandListCreate(context, device, &listDesc, &list);

@@ -204,19 +204,19 @@ protected:
   ze_driver_handle_t driver;
 
   ze_device_handle_t device;
-  ze_device_properties_t properties;
-  ze_device_compute_properties_t compute_properties;
+  ze_device_properties_t properties = {};
+  ze_device_compute_properties_t compute_properties = {};
 
-  ze_device_memory_properties_t memory_properties;
+  ze_device_memory_properties_t memory_properties = {};
 
-  ze_device_memory_access_properties_t memory_access_properties;
+  ze_device_memory_access_properties_t memory_access_properties = {};
 
-  ze_device_cache_properties_t cache_properties;
-  ze_device_image_properties_t device_image_properties;
-  ze_device_p2p_properties_t p2p_properties;
+  ze_device_cache_properties_t cache_properties = {};
+  ze_device_image_properties_t device_image_properties = {};
+  ze_device_p2p_properties_t p2p_properties = {};
 
   ze_api_version_t api_version;
-  ze_driver_ipc_properties_t ipc_properties;
+  ze_driver_ipc_properties_t ipc_properties = {};
 
   ze_command_queue_desc_t command_queue_desc = {
       ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC, nullptr};
@@ -267,11 +267,11 @@ protected:
                                 0,
                                 0};
   ze_image_handle_t image = nullptr;
-  ze_image_properties_t image_properties;
+  ze_image_properties_t image_properties = {};
 
   void *device_memory, *host_memory, *shared_memory, *memory = nullptr;
 
-  ze_memory_allocation_properties_t mem_alloc_properties;
+  ze_memory_allocation_properties_t mem_alloc_properties = {};
 
   std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file("module_add.spv");
@@ -295,7 +295,7 @@ protected:
   ze_sampler_handle_t sampler = nullptr;
 
   uint32_t num = 0, version;
-  ze_driver_properties_t driver_properties;
+  ze_driver_properties_t driver_properties = {};
   ze_bool_t can_access;
 };
 
@@ -2012,6 +2012,7 @@ TEST_F(
   init_kernel();
 
   ze_kernel_properties_t kernel_properties = {};
+  kernel_properties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
   ze_result_t initial_result =
       zeKernelGetProperties(kernel, &kernel_properties);
 

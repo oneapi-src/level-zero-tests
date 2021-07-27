@@ -59,9 +59,6 @@ ze_command_queue_handle_t create_command_queue(
   descriptor.flags = flags;
   descriptor.mode = mode;
   descriptor.priority = priority;
-  ze_device_properties_t properties;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
-
   descriptor.ordinal = ordinal;
   descriptor.index = index;
   ze_command_queue_handle_t command_queue = nullptr;

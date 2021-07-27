@@ -217,7 +217,7 @@ TEST_P(
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
-  ze_device_properties_t device_properties;
+  ze_device_properties_t device_properties = {};
   device_properties.pNext = nullptr;
   device_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
   EXPECT_EQ(ZE_RESULT_SUCCESS,

@@ -66,10 +66,10 @@ protected:
     get_devices_ = devices.size();
     LOG_INFO << "Detected " << get_devices_ << " devices";
 
-    ze_device_compute_properties_t dev_compute_properties;
+    ze_device_compute_properties_t dev_compute_properties = {};
 
     for (auto device : devices) {
-      DevAccess instance;
+      DevAccess instance = {};
       instance.dev = device;
       instance.dev_grp = driver;
       instance.device_mem_local = nullptr;

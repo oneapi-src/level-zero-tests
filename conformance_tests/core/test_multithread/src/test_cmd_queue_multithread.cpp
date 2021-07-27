@@ -115,7 +115,8 @@ TEST_P(
   ze_command_queue_mode_t mode = std::get<1>(GetParam());         // mode
   ze_command_queue_priority_t priority = std::get<2>(GetParam()); // priority
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_device_properties_t properties;
+  ze_device_properties_t properties = {};
+  properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
 
   uint32_t ordinal = 0;

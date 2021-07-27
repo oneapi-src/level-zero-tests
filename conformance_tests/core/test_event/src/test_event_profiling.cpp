@@ -119,6 +119,7 @@ TEST_F(EventProfilingTests,
   auto ep_no_timestamps =
       lzt::create_event_pool(context, 10, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
   ze_event_desc_t regular_event_desc = {};
+  regular_event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
   regular_event_desc.index = 1;
   regular_event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
   regular_event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;

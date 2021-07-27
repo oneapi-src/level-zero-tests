@@ -720,7 +720,7 @@ std::string to_string(const ze_native_kernel_uuid_t uuid) {
 }
 
 void print_driver_version(ze_driver_handle_t driver) {
-  ze_driver_properties_t properties;
+  ze_driver_properties_t properties = {};
 
   properties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
   properties.pNext = nullptr;
@@ -735,7 +735,7 @@ void print_driver_version(ze_driver_handle_t driver) {
 void print_driver_overview(const ze_driver_handle_t driver) {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  ze_device_properties_t device_properties;
+  ze_device_properties_t device_properties = {};
   device_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
   device_properties.pNext = nullptr;
   auto devices = get_devices(driver);

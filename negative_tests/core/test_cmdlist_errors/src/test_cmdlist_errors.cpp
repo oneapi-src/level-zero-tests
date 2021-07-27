@@ -56,8 +56,8 @@ TEST(
     CommandListCreateImmediateNegativeTests,
     GivenInvalidDeviceHandleWhileCreatingCommandListImmediateThenInvalidNullHandleIsReturned) {
   ze_command_queue_desc_t descriptor = {};
+  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
   descriptor.flags = 0;
-
   descriptor.pNext = nullptr;
   descriptor.ordinal = 0;
   descriptor.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;

@@ -46,6 +46,7 @@ void ZeMandelbrot::build_program() {
 
 void ZeMandelbrot::create_buffers() {
   ze_device_mem_alloc_desc_t device_desc = {};
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_desc.ordinal = 0;
   device_desc.flags = 0;
   ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc,
@@ -66,7 +67,7 @@ void ZeMandelbrot::create_cmdlist() {
   ZE_CHECK_RESULT(zeKernelSetArgumentValue(function, 2, sizeof(int), &width));
 
   ze_command_list_desc_t command_list_description = {};
-
+  command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
   ZE_CHECK_RESULT(zeCommandListCreate(
       context, device, &command_list_description, &command_list));

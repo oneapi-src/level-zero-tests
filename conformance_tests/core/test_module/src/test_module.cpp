@@ -703,8 +703,8 @@ TEST_F(zeKernelCreateTests,
 TEST_F(
     zeKernelCreateTests,
     GivenValidFunctionWhenGettingPropertiesThenReturnSuccessfulAndPropertiesAreValid) {
-  ze_device_compute_properties_t dev_compute_properties;
-
+  ze_device_compute_properties_t dev_compute_properties = {};
+  dev_compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
   dev_compute_properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetComputeProperties(device_, &dev_compute_properties));
@@ -782,8 +782,8 @@ protected:
 };
 
 void zeKernelLaunchTests::test_kernel_execution() {
-  ze_device_compute_properties_t dev_compute_properties;
-
+  ze_device_compute_properties_t dev_compute_properties = {};
+  dev_compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
   dev_compute_properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetComputeProperties(device_, &dev_compute_properties));
