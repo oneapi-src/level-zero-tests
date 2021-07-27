@@ -766,6 +766,7 @@ TEST(ConcurrentCommandQueueExecutionTests,
   for (auto queue : queues) {
     lzt::append_memory_set(queue.cmdlist, queue.src_buff, &queue.data,
                            buff_size);
+    lzt::append_barrier(queue.cmdlist);
     lzt::append_memory_copy(queue.cmdlist, queue.dst_buff, queue.src_buff,
                             buff_size);
     lzt::close_command_list(queue.cmdlist);
