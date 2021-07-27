@@ -430,7 +430,7 @@ protected:
               zeKernelSetGroupSize(function, group_size_x, group_size_y,
                                    group_size_z));
 
-    ze_kernel_properties_t kernel_properties;
+    ze_kernel_properties_t kernel_properties = {};
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeKernelGetProperties(function, &kernel_properties));
 
@@ -714,7 +714,7 @@ TEST_F(
 
   for (auto mod : module_) {
     function = lzt::create_function(mod, "module_add_constant");
-    ze_kernel_properties_t kernel_properties;
+    ze_kernel_properties_t kernel_properties = {};
     kernel_properties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeKernelGetProperties(function, &kernel_properties));
@@ -744,7 +744,7 @@ TEST_F(
 
   for (auto mod : module_) {
     function = lzt::create_function(mod, "module_add_constant");
-    ze_kernel_properties_t kernel_properties;
+    ze_kernel_properties_t kernel_properties = {};
     kernel_properties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
     ze_kernel_preferred_group_size_properties_t
         preferred_group_size_properties = {};

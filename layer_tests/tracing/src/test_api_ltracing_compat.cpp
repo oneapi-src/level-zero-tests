@@ -1616,7 +1616,6 @@ TEST_F(
   lzt::enable_ltracer(tracer_handle);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCloseIpcHandle(event_pool2));
-
 }
 
 TEST_F(
@@ -2012,7 +2011,7 @@ TEST_F(
 
   init_kernel();
 
-  ze_kernel_properties_t kernel_properties;
+  ze_kernel_properties_t kernel_properties = {};
   ze_result_t initial_result =
       zeKernelGetProperties(kernel, &kernel_properties);
 

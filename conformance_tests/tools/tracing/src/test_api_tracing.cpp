@@ -1784,7 +1784,7 @@ TEST_F(
 
   init_kernel();
 
-  ze_kernel_properties_t kernel_properties;
+  ze_kernel_properties_t kernel_properties = {};
   ze_result_t initial_result =
       zeKernelGetProperties(kernel, &kernel_properties);
   ready_tracer(tracer_handle, prologues, epilogues);
