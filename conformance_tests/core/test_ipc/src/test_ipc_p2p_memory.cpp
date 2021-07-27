@@ -236,6 +236,7 @@ void run_server(int size, uint32_t device_x, uint32_t device_y,
       matched_expected_buffer = false;
     }
 
+    delete[] expected_buffer;
     free(buffer);
     lzt::free_memory(memory);
   }
@@ -335,6 +336,7 @@ void run_client(int size, uint32_t device_x, uint32_t device_y,
       if (0 != memcmp(expected_buffer, bi_host_buffer, size)) {
         matched_expected_buffer = false;
       }
+      delete[] expected_buffer;
 
       free(bi_host_buffer);
     }

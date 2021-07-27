@@ -104,8 +104,8 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle) {
 
   lzt::synchronize(command_queue, UINT64_MAX);
 
-  delete host_expected_output_buffer;
-  delete host_found_output_buffer;
+  delete[] host_expected_output_buffer;
+  delete[] host_found_output_buffer;
   level_zero_tests::free_memory(gpu_pattern_buffer);
   level_zero_tests::free_memory(gpu_expected_output_buffer);
   level_zero_tests::free_memory(gpu_found_output_buffer);
