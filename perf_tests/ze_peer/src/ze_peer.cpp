@@ -200,6 +200,10 @@ int ZePeer::recvmsg_fd(int socket) {
   }
 
   struct cmsghdr *controlHeader = CMSG_FIRSTHDR(&msgHeader);
+  if (!controlHeader) {
+    std::cerr << "Error receiving ipc handle";
+    std::terminate();
+  }
   memmove(&fd, CMSG_DATA(controlHeader), sizeof(int));
   return fd;
 }

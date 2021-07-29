@@ -44,7 +44,7 @@ void multi_device_sender(size_t size) {
   auto select = memcmp(&dev_properties_0.uuid, &dev_properties_1.uuid,
                        ZE_MAX_DEVICE_UUID_SIZE);
 
-  ze_device_handle_t device;
+  ze_device_handle_t device = device_0;
   if (select < 0) {
     device = device_1;
     LOG_DEBUG << "Sender Selected device 1" << std::endl;
@@ -101,7 +101,7 @@ void multi_device_receiver(size_t size) {
   auto select = memcmp(&dev_properties_0.uuid, &dev_properties_1.uuid,
                        ZE_MAX_DEVICE_UUID_SIZE);
 
-  ze_device_handle_t device;
+  ze_device_handle_t device = device_0;
   if (select < 0) {
     device = device_0;
     LOG_DEBUG << "Receiver Selected device 0" << std::endl;

@@ -926,6 +926,9 @@ TEST_F(
       lzt::allocate_device_memory(size, 0, 0, pNext, 0, device, context);
 
   if (::testing::Test::HasFailure()) {
+    delete[] reference_buffer;
+    delete[] validation_buffer;
+    delete[] head_buffer;
     FAIL() << "Error allocating device memory";
   }
 
@@ -980,6 +983,7 @@ TEST_F(
     } else {
       ASSERT_EQ(0, memcmp(validation_buffer, head_buffer, head));
       validation_buffer_size *= scale;
+      delete[] head_buffer;
     }
   }
 
@@ -999,7 +1003,6 @@ TEST_F(
   // cleanup
   delete[] reference_buffer;
   delete[] validation_buffer;
-  delete[] head_buffer;
   lzt::free_memory(context, device_buffer);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);

@@ -347,8 +347,13 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
       }
     } else {
       if (enable_fixed_ordinal_index) {
-        if (queueProperties[command_queue_group_ordinal].flags &
-            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
+        if (command_queue_group_ordinal >= queueProperties.size()) {
+          std::cout << "Specified command queue group "
+                    << command_queue_group_ordinal
+                    << " is not valid, defaulting to first group" << std::endl;
+          command_queue_group_ordinal = 0;
+        } else if (queueProperties[command_queue_group_ordinal].flags &
+                   ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
 
           if (verbose)
             std::cout << "The ordianl provided matches COMPUTE engine, so "

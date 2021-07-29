@@ -285,8 +285,15 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
   }
 
   if (enable_fixed_ordinal_index) {
-    if (queueProperties[command_queue_group_ordinal].flags &
-        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
+    if (command_queue_group_ordinal >= numQueueGroups) {
+      std::cout << "Specified command queue group "
+                << command_queue_group_ordinal
+                << " is not valid, defaulting to first group" << std::endl;
+      benchmark->commandQueueCreate(0, &command_queue);
+      benchmark->commandListCreate(&command_list);
+      benchmark->commandListCreate(&command_list_verify);
+    } else if (queueProperties[command_queue_group_ordinal].flags &
+               ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
       std::cout << "The ordinal provided matches COMPUTE engine, so "
                    "fixed ordinal will be used\n";
       if (command_queue_index >=

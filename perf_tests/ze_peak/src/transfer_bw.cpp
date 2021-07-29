@@ -117,12 +117,18 @@ long double ZePeak::_transfer_bw_host_copy(L0Context &context,
                                  &cmd_q_desc, &temp_cmd_list);
   } else {
     if (enable_fixed_ordinal_index) {
-      cmd_q_desc.ordinal = command_queue_group_ordinal;
-      if (command_queue_index <
-          context.queueProperties[command_queue_group_ordinal].numQueues) {
-        cmd_q_desc.index = command_queue_index;
+      if (command_queue_group_ordinal >= context.queueProperties.size()) {
+        std::cout << "Specified command queue group "
+                  << command_queue_group_ordinal
+                  << " is not valid, defaulting to first group" << std::endl;
       } else {
-        cmd_q_desc.index = context.command_queue_id;
+        cmd_q_desc.ordinal = command_queue_group_ordinal;
+        if (command_queue_index <
+            context.queueProperties[command_queue_group_ordinal].numQueues) {
+          cmd_q_desc.index = command_queue_index;
+        } else {
+          cmd_q_desc.index = context.command_queue_id;
+        }
       }
     }
     zeCommandListCreateImmediate(context.context, context.device, &cmd_q_desc,
