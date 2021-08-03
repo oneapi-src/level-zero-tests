@@ -22,7 +22,7 @@
 namespace {
 #ifdef __linux__
 
-void run_child(int size) {
+void run_child(int size, ze_ipc_memory_flags_t flags) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -43,7 +43,7 @@ void run_child(int size) {
          sizeof(ipc_descriptor));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &memory));
+            zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
 
   void *buffer = lzt::allocate_host_memory(size);
   memset(buffer, 0, size);
@@ -126,7 +126,21 @@ TEST(
   } else if (pid > 0) {
     run_parent(size);
   } else {
-    run_child(size);
+    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
+  }
+}
+
+TEST(
+    IpcMemoryAccessTest,
+    GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
+  const auto size = 4096;
+  pid_t pid = fork();
+  if (pid < 0) {
+    throw std::runtime_error("Failed to fork child process");
+  } else if (pid > 0) {
+    run_parent(size);
+  } else {
+    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
   }
 }
 #endif

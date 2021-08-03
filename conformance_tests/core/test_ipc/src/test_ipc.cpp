@@ -50,12 +50,6 @@ protected:
     context_ = lzt::create_context();
     lzt::allocate_mem_and_get_ipc_handle(context_, &ipc_mem_handle_, &memory_,
                                          ZE_MEMORY_TYPE_DEVICE);
-
-    ze_ipc_memory_flags_t flags = 0;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemOpenIpcHandle(context_,
-                                 lzt::zeDevice::get_instance()->get_device(),
-                                 ipc_mem_handle_, flags, &ipc_memory_));
   }
 
   void TearDown() { lzt::destroy_context(context_); }
@@ -64,6 +58,23 @@ protected:
 TEST_F(
     zeIpcMemHandleCloseTests,
     GivenValidPointerToDeviceMemoryAllocationWhenClosingIpcHandleThenSuccessIsReturned) {
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemOpenIpcHandle(context_,
+                               lzt::zeDevice::get_instance()->get_device(),
+                               ipc_mem_handle_,
+                               ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, &ipc_memory_));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context_, ipc_memory_));
+}
+
+TEST_F(
+    zeIpcMemHandleCloseTests,
+    GivenValidPointerToDeviceMemoryAllocationBiasCachedWhenClosingIpcHandleThenSuccessIsReturned) {
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemOpenIpcHandle(
+                context_, lzt::zeDevice::get_instance()->get_device(),
+                ipc_mem_handle_, ZE_IPC_MEMORY_FLAG_BIAS_CACHED, &ipc_memory_));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context_, ipc_memory_));
 }
 
