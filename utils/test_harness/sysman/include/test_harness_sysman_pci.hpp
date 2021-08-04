@@ -26,6 +26,8 @@ zes_pci_properties_t get_pci_properties(zes_device_handle_t device);
 uint32_t get_pci_bar_count(zes_device_handle_t device);
 std::vector<zes_pci_bar_properties_t> get_pci_bars(zes_device_handle_t device,
                                                    uint32_t *pCount);
+std::vector<zes_pci_bar_properties_t>
+get_pci_bars_extension(zes_device_handle_t device, uint32_t *pCount);
 zes_pci_stats_t get_pci_stats(zes_device_handle_t device);
 } // namespace level_zero_tests
 #endif

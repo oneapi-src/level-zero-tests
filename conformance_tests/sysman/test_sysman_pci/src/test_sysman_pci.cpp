@@ -98,6 +98,28 @@ TEST_F(
     }
   }
 }
+TEST_F(
+    PciModuleTest,
+    GivenSysmanHandleWhenRetrievingPCIBarsExtensionThenValidBarPropertiesAreReturned) {
+  for (auto device : devices) {
+    uint32_t p_count = 0;
+    auto pci_bars = lzt::get_pci_bars_extension(device, &p_count);
+    for (auto pci_bar : pci_bars) {
+      EXPECT_GE(pci_bar.type, ZES_PCI_BAR_TYPE_MMIO);
+      EXPECT_LE(pci_bar.type, ZES_PCI_BAR_TYPE_MEM);
+      EXPECT_GE((UINT64_MAX - pci_bar.base), pci_bar.size);
+      EXPECT_GE(pci_bar.index, 0);
+      EXPECT_LE(pci_bar.index, MAX_BARS); // Check for no. of PCI bars
+      EXPECT_GT(pci_bar.size, 0);
+      zes_pci_bar_properties_1_2_t *pBarPropsExt =
+          static_cast<zes_pci_bar_properties_1_2_t *>(pci_bar.pNext);
+      EXPECT_GE(pBarPropsExt->resizableBarSupported, 0);
+      EXPECT_LE(pBarPropsExt->resizableBarSupported, 1);
+      EXPECT_GE(pBarPropsExt->resizableBarEnabled, 0);
+      EXPECT_LE(pBarPropsExt->resizableBarEnabled, 1);
+    }
+  }
+}
 TEST_F(PciModuleTest,
        GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
   for (auto device : devices) {
