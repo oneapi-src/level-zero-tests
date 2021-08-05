@@ -35,7 +35,7 @@ static const char *usage_str =
     "\n  -w                          set number of warmup iterations to "
     "run[default: 10]"
     "\n  -x                          enable explicit scaling [default: "
-    "implicit scaling]"
+    "Disabled]"
     "\n  -q                          query for number of engines available"
     "\n  -g, group                   select engine group (default: 0)"
     "\n  -n, number                  select engine index (default: 0)"
