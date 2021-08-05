@@ -902,10 +902,20 @@ int main(int argc, char **argv) {
     } else if (strcmp(argv[i], "-a") == 0) {
       run_ipc_bw = run_ipc_latency = run_transfer_bw = run_latency = true;
     } else if (strcmp(argv[i], "-d") == 0) {
-      dst_device = atoi(argv[i + 1]);
+      if (isdigit(argv[i + 1][0])) {
+        dst_device = atoi(argv[i + 1]);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
       i++;
     } else if (strcmp(argv[i], "-s") == 0) {
-      src_device = atoi(argv[i + 1]);
+      if (isdigit(argv[i + 1][0])) {
+        src_device = atoi(argv[i + 1]);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
       i++;
     } else {
       std::cout << usage_str;
