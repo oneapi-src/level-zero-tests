@@ -97,9 +97,9 @@ TEST_P(
   uint64_t prev_val = 1;
   uint64_t val = 1;
   for (int i = 0; i <= row_num / 2; i++) {
-    val = i ? prev_val * ((row_num + 1 - i) / i) : 1;
-    EXPECT_EQ(static_cast<uint64_t *>(input_data)[i], val);
-    EXPECT_EQ(static_cast<uint64_t *>(input_data)[row_num - i], val);
+    val = i ? (prev_val * (row_num + 1 - i)) / i : 1;
+    ASSERT_EQ(static_cast<uint64_t *>(input_data)[i], val);
+    ASSERT_EQ(static_cast<uint64_t *>(input_data)[row_num - i], val);
     prev_val = val;
   }
 
@@ -109,7 +109,10 @@ TEST_P(
   lzt::destroy_context(context);
 }
 
-INSTANTIATE_TEST_CASE_P(GroupNumbers, CooperativeKernelTests,
-                        ::testing::Values(0, 1, 5, 10, 100, 500));
+INSTANTIATE_TEST_CASE_P(
+    GroupNumbers, CooperativeKernelTests,
+    ::testing::Values(0, 1, 5, 10, 50,
+                      62)); // 62 is the max row such that no calculation will
+                            // overflow max uint64 value
 
 } // namespace

@@ -6,6 +6,7 @@
  *
  */
 
+// compute the n'th row of Pascal's triangle and store in buffer
 kernel void module_cooperative_pascal(global ulong *buffer, const int n) {
 
   const int work_group_id = get_group_id(0);
