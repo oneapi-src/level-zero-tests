@@ -128,11 +128,11 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
                             TimingMeasurement::KERNEL_LAUNCH_LATENCY, true);
       i++;
     }
-    std::cout << latency << " (uS)\n";
+    std::cout << latency << " (us)\n";
   } else {
     latency = run_kernel(context, local_offset_v1, workgroup_info,
                          TimingMeasurement::KERNEL_LAUNCH_LATENCY, true);
-    std::cout << latency << " (uS)\n";
+    std::cout << latency << " (us)\n";
   }
 
   latency = 0;
@@ -145,11 +145,11 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
                             TimingMeasurement::KERNEL_COMPLETE_RUNTIME, true);
       i++;
     }
-    std::cout << latency << " (uS)\n";
+    std::cout << latency << " (us)\n";
   } else {
     latency = run_kernel(context, local_offset_v1, workgroup_info,
                          TimingMeasurement::KERNEL_COMPLETE_RUNTIME, false);
-    std::cout << latency << " (uS)\n";
+    std::cout << latency << " (us)\n";
   }
 
   if (context.sub_device_count) {

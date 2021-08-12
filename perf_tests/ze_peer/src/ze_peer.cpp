@@ -388,7 +388,8 @@ void ZePeer::ipc_bandwidth_latency(bool bidirectional, peer_test_t test_type,
       total_time_usec = timer.period_minus_overhead() /
                         static_cast<long double>(number_iterations);
 
-      std::cout << std::setprecision(8) << std::setw(8)
+      std::cout << " Size: " << std::fixed << std::setw(4) << buffer_size
+                << " B"
                 << " Latency: " << std::fixed << std::setprecision(10)
                 << total_time_usec << " us " << std::endl;
     }
@@ -741,7 +742,7 @@ void ZePeer::bandwidth_latency(bool bidirectional, peer_test_t test_type,
     total_time_usec = timer.period_minus_overhead() /
                       static_cast<long double>(number_iterations);
 
-    std::cout << std::setprecision(8) << std::setw(8)
+    std::cout << " Size: " << std::fixed << std::setw(4) << buffer_size << " B"
               << " Latency: " << std::fixed << std::setprecision(10)
               << total_time_usec << " us " << std::endl;
   }
@@ -771,7 +772,7 @@ void run_tests(size_t max_number_of_elements, bool run_transfer_bw,
     }
     std::cout << std::endl;
 
-    std::cout << "Unidirectional Bandwidth IPC P2P Read: Device(" << src_device
+    std::cout << "Unidirectional Bandwidth P2P Read: Device(" << src_device
               << ")<--Device(" << dst_device << ")" << std::endl;
     for (int number_of_elements = 8;
          number_of_elements <= max_number_of_elements;
@@ -784,7 +785,7 @@ void run_tests(size_t max_number_of_elements, bool run_transfer_bw,
     }
     std::cout << std::endl;
 
-    std::cout << "Bidirectional Bandwidth IPC P2P: Device(" << src_device
+    std::cout << "Bidirectional Bandwidth P2P: Device(" << src_device
               << ")<-->Device(" << dst_device << ")" << std::endl;
     for (int number_of_elements = 8;
          number_of_elements <= max_number_of_elements;
@@ -799,7 +800,7 @@ void run_tests(size_t max_number_of_elements, bool run_transfer_bw,
   }
 
   if (run_latency) {
-    std::cout << "Unidirectional Latency IPC P2P Write: Device(" << src_device
+    std::cout << "Unidirectional Latency P2P Write: Device(" << src_device
               << ")-->Device(" << dst_device << ")" << std::endl;
     {
       ZePeer peer(command_queue_group_ordinal, command_queue_index, dst_device,
@@ -810,7 +811,7 @@ void run_tests(size_t max_number_of_elements, bool run_transfer_bw,
     }
     std::cout << std::endl;
 
-    std::cout << "Unidirectional Latency IPC P2P Read: Device(" << src_device
+    std::cout << "Unidirectional Latency P2P Read: Device(" << src_device
               << ")<--Device(" << dst_device << ")" << std::endl;
     {
       ZePeer peer(command_queue_group_ordinal, command_queue_index, dst_device,
@@ -821,7 +822,7 @@ void run_tests(size_t max_number_of_elements, bool run_transfer_bw,
     }
     std::cout << std::endl;
 
-    std::cout << "Bidirectional Latency IPC P2P: Device(" << src_device
+    std::cout << "Bidirectional Latency P2P: Device(" << src_device
               << ")<-->Device(" << dst_device << ")" << std::endl;
     {
       ZePeer peer(command_queue_group_ordinal, command_queue_index, dst_device,
