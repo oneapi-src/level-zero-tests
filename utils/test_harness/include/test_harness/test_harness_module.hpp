@@ -71,6 +71,11 @@ void create_and_execute_function(ze_device_handle_t device,
 
 char *get_kernel_source_attribute(ze_kernel_handle_t hKernel);
 
+#ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
+void set_kernel_scheduling_hint(ze_kernel_handle_t kernel,
+                                ze_scheduling_hint_exp_flags_t hints);
+#endif
+
 } // namespace level_zero_tests
 
 #endif

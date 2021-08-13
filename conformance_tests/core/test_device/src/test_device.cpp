@@ -243,6 +243,28 @@ TEST(
     LOG_DEBUG << "Max Argument Size: " << properties.maxArgumentsSize;
     LOG_DEBUG << "Print Buffer Size: " << properties.printfBufferSize;
   }
+
+#ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
+  auto driver_extension_properties =
+      lzt::get_extension_properties(lzt::get_default_driver());
+  bool supports_kernel_hints_ext = false;
+  for (auto &extension : driver_extension_properties) {
+    if (!std::strcmp(ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME, extension.name)) {
+      supports_kernel_hints_ext = true;
+      break;
+    }
+  }
+
+  if (!supports_kernel_hints_ext) {
+    LOG_WARNING << "Kernel Hints Ext not supported";
+    return;
+  }
+
+  for (auto device : devices) {
+    auto hints = lzt::get_device_kernel_schedule_hints(device);
+    LOG_DEBUG << "Scheduling Hint Flags: " << hints.schedulingHintFlags;
+  }
+#endif
 }
 
 typedef struct DeviceHandlesBySku_ {

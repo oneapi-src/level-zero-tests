@@ -250,6 +250,24 @@ get_device_module_properties(ze_device_handle_t device) {
   return properties;
 }
 
+#ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
+ze_scheduling_hint_exp_properties_t
+get_device_kernel_schedule_hints(ze_device_handle_t device) {
+  ze_device_module_properties_t properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES};
+
+  ze_scheduling_hint_exp_properties_t hints = {};
+  properties.pNext = &hints;
+  hints.stype = ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_PROPERTIES;
+
+  auto device_initial = device;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetModuleProperties(device, &properties));
+  EXPECT_EQ(device, device_initial);
+  return hints;
+}
+#endif
+
 ze_device_p2p_properties_t get_p2p_properties(ze_device_handle_t dev1,
                                               ze_device_handle_t dev2) {
   ze_device_p2p_properties_t properties = {

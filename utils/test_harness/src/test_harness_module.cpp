@@ -263,4 +263,16 @@ void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
   EXPECT_EQ(hKernel, kernel_initial);
 }
 
+#ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
+void set_kernel_scheduling_hint(ze_kernel_handle_t kernel,
+                                ze_scheduling_hint_exp_flags_t hints) {
+  ze_scheduling_hint_exp_desc_t desc = {};
+  desc.flags = hints;
+  desc.stype = ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_DESC;
+  auto kernel_initial = kernel;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelSchedulingHintExp(kernel, &desc));
+  EXPECT_EQ(kernel, kernel_initial);
+}
+#endif
+
 } // namespace level_zero_tests
