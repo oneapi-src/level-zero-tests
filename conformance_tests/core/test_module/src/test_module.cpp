@@ -308,37 +308,6 @@ TEST_F(
 
 TEST_F(
     zeModuleCreateTests,
-    GivenInvalidDeviceAndBinaryFileWhenCreatingModuleThenFailsAndOutputBuildReturnsErrorString) {
-  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  ze_module_build_log_handle_t build_log_error;
-  ze_module_desc_t module_description = {};
-  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
-  size_t build_log_size;
-  std::string build_log_str;
-  ze_module_handle_t module_error = nullptr;
-  const std::vector<uint8_t> binary_file =
-      level_zero_tests::load_binary_file("module_build_error.spv");
-
-  module_description.pNext = nullptr;
-  module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
-  module_description.inputSize = static_cast<uint32_t>(binary_file.size());
-  module_description.pInputModule = binary_file.data();
-  module_description.pBuildFlags = nullptr;
-  EXPECT_EQ(ZE_RESULT_ERROR_MODULE_BUILD_FAILURE,
-            zeModuleCreate(lzt::get_default_context(), device,
-                           &module_description, &module_error,
-                           &build_log_error));
-  EXPECT_EQ(nullptr, module_error);
-  build_log_size = lzt::get_build_log_size(build_log_error);
-  build_log_str = lzt::get_build_log_string(build_log_error);
-  EXPECT_GT(build_log_size, 1);
-  EXPECT_NE('\0', build_log_str[0]);
-  LOG_INFO << "Build Log Size = " << build_log_size;
-  LOG_INFO << "Build Log String = " << build_log_str;
-}
-
-TEST_F(
-    zeModuleCreateTests,
     GivenValidModuleWhenGettingNativeBinaryFileThenRetrieveFileAndReturnSuccessful) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   size_t size = 0;

@@ -25,6 +25,5 @@ add_lzt_test(
     multiple_global_variables
     update_variable_on_device
     module_add
-    module_build_error
     update_variable_with_spec_constant
 )
