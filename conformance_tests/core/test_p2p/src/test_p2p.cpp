@@ -41,8 +41,8 @@ protected:
       if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
         instance.src_region = lzt::allocate_device_memory(
             mem_size_ + offset_, 1, 0, device, context);
-        instance.dst_region =
-            lzt::allocate_device_memory(mem_size_, 1, 0, device, context);
+        instance.dst_region = lzt::allocate_device_memory(
+            mem_size_ + offset_, 1, 0, device, context);
       } else if (memory_type == ZE_MEMORY_TYPE_SHARED) {
         instance.src_region =
             lzt::allocate_shared_memory(mem_size_ + offset_, 1, 0, 0, device);
@@ -70,7 +70,6 @@ protected:
               mem_size_ + offset_, 1, 0, 0, sub_device);
           sub_device_instance.dst_region = lzt::allocate_shared_memory(
               mem_size_ + offset_, 1, 0, 0, sub_device);
-
         } else {
           FAIL() << "Unexpected memory type";
         }
@@ -125,8 +124,8 @@ TEST_P(
     GivenP2PDevicesWhenCopyingDeviceMemoryToAndFromRemoteDeviceThenSuccessIsReturned) {
 
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
-  void *verification_memory1 = lzt::allocate_host_memory(mem_size_);
-  void *verification_memory2 = lzt::allocate_host_memory(mem_size_);
+  void *verification_memory1 = lzt::allocate_host_memory(mem_size_ + offset_);
+  void *verification_memory2 = lzt::allocate_host_memory(mem_size_ + offset_);
 
   uint8_t *src = static_cast<uint8_t *>(initial_pattern_memory);
   for (uint32_t i = 0; i < mem_size_ + offset_; i++) {
@@ -224,8 +223,8 @@ TEST_P(
     GivenP2PSubDevicesWhenCopyingDeviceMemoryToAndFromRemoteSubDeviceThenSuccessIsReturned) {
 
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
-  void *verification_memory1 = lzt::allocate_host_memory(mem_size_);
-  void *verification_memory2 = lzt::allocate_host_memory(mem_size_);
+  void *verification_memory1 = lzt::allocate_host_memory(mem_size_ + offset_);
+  void *verification_memory2 = lzt::allocate_host_memory(mem_size_ + offset_);
 
   uint8_t *src = static_cast<uint8_t *>(initial_pattern_memory);
   for (uint32_t i = 0; i < mem_size_ + offset_; i++) {
@@ -348,8 +347,8 @@ TEST_P(
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
       continue;
     }
-    uint8_t *shr_mem = static_cast<uint8_t *>(
-        lzt::allocate_shared_memory(mem_size_, 1, 0, 0, dev_instance_[i].dev));
+    uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
+        mem_size_ + offset_, 1, 0, 0, dev_instance_[i].dev));
     uint8_t value_before = rand() & 0xff;
     uint8_t value_after = rand() & 0xff;
 
@@ -405,7 +404,7 @@ TEST_P(
         continue;
       }
       uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
-          mem_size_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
+          mem_size_ + offset_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
       uint8_t value_before = rand() & 0xff;
       uint8_t value_after = rand() & 0xff;
       // Set memory region on device i - 1 and copy to device i
@@ -468,7 +467,7 @@ TEST_P(
   const size_t num_regions = 3;
 
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
-  void *verification_memory = lzt::allocate_host_memory(mem_size_);
+  void *verification_memory = lzt::allocate_host_memory(mem_size_ + offset_);
 
   lzt::write_data_pattern(initial_pattern_memory, mem_size_ + offset_, 1);
 
@@ -592,7 +591,7 @@ TEST_P(
   const size_t num_regions = 3;
 
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
-  void *verification_memory = lzt::allocate_host_memory(mem_size_);
+  void *verification_memory = lzt::allocate_host_memory(mem_size_ + offset_);
 
   lzt::write_data_pattern(initial_pattern_memory, mem_size_ + offset_, 1);
 
@@ -724,7 +723,7 @@ TEST_P(
   const size_t num_regions = 3;
 
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
-  void *verification_memory = lzt::allocate_host_memory(mem_size_);
+  void *verification_memory = lzt::allocate_host_memory(mem_size_ + offset_);
 
   lzt::write_data_pattern(initial_pattern_memory, mem_size_ + offset_, 1);
 
@@ -863,8 +862,8 @@ TEST_P(zeP2PTests,
     }
     ze_module_handle_t module =
         lzt::create_module(dev_instance_[i - 1].dev, module_name);
-    uint8_t *shr_mem = static_cast<uint8_t *>(
-        lzt::allocate_shared_memory(mem_size_, 1, 0, 0, dev_instance_[i].dev));
+    uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
+        mem_size_ + offset_, 1, 0, 0, dev_instance_[i].dev));
 
     // random memory region on device i. Allow "space" for increment.
     uint8_t value_before = rand() & 0x7f;
@@ -930,7 +929,7 @@ TEST_P(
       ze_module_handle_t module = lzt::create_module(
           dev_instance_[i].sub_devices[j - 1].dev, module_name);
       uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
-          mem_size_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
+          mem_size_ + offset_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
 
       // random memory region on device i. Allow "space" for increment.
       uint8_t value_before = rand() & 0x7f;
