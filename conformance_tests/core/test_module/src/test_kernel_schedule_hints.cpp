@@ -84,7 +84,7 @@ TEST(zeKernelScheduleHintsTests,
     lzt::destroy_command_list(cmdlist);
     lzt::destroy_command_queue(cmdqueue);
 
-    for (size_t i; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
       ASSERT_EQ(((uint8_t *)buffer)[i], addval);
     }
   }
