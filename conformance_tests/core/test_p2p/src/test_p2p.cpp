@@ -886,11 +886,20 @@ TEST_P(zeP2PTests,
     lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
     lzt::reset_command_list(dev_instance_[i].cmd_list);
 
+    lzt::FunctionArg arg;
+    std::vector<lzt::FunctionArg> args;
+
+    arg.arg_size = sizeof(uint8_t *);
+    arg.arg_value = &dev_instance_[i].src_region;
+    args.push_back(arg);
+    arg.arg_size = sizeof(int);
+    int offset = static_cast<int>(offset_);
+    arg.arg_value = &offset;
+    args.push_back(arg);
+
     // device (i - 1) will modify memory allocated for device i
-    lzt::create_and_execute_function(
-        dev_instance_[i - 1].dev, module, func_name, 1,
-        static_cast<void *>(
-            static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_));
+    lzt::create_and_execute_function(dev_instance_[i - 1].dev, module,
+                                     func_name, 1, args);
 
     // copy memory to shared region and verify it is correct
     lzt::append_memory_copy(
@@ -955,12 +964,20 @@ TEST_P(
       lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
       lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
 
+      lzt::FunctionArg arg;
+      std::vector<lzt::FunctionArg> args;
+
+      arg.arg_size = sizeof(uint8_t *);
+      arg.arg_value = &dev_instance_[i].sub_devices[j].src_region;
+      args.push_back(arg);
+      arg.arg_size = sizeof(int);
+      int offset = static_cast<int>(offset_);
+      arg.arg_value = &offset;
+      args.push_back(arg);
+
       // device (i - 1) will modify memory allocated for device i
-      lzt::create_and_execute_function(
-          dev_instance_[i].sub_devices[j - 1].dev, module, func_name, 1,
-          static_cast<void *>(static_cast<uint8_t *>(
-                                  dev_instance_[i].sub_devices[j].src_region) +
-                              offset_));
+      lzt::create_and_execute_function(dev_instance_[i].sub_devices[j - 1].dev,
+                                       module, func_name, 1, args);
 
       // copy memory to shared region and verify it is correct
       lzt::append_memory_copy(
