@@ -572,11 +572,13 @@ TEST_F(
   const std::vector<char> host_memory(size, 123);
   void *memory = allocate_device_memory(size_in_bytes(host_memory));
   ze_event_handle_t hEvent = nullptr;
+  ze_copy_region_t dstRegion = {};
+  ze_copy_region_t srcRegion = {};
 
   ep.create_event(hEvent);
   auto hEvent_before = hEvent;
-  append_memory_copy_region(cl.command_list_, memory, nullptr, 0, 0,
-                            host_memory.data(), nullptr, 0, 0, nullptr, 1,
+  append_memory_copy_region(cl.command_list_, memory, &dstRegion, 0, 0,
+                            host_memory.data(), &srcRegion, 0, 0, nullptr, 1,
                             &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
   ep.destroy_event(hEvent);
