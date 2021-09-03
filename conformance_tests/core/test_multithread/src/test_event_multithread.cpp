@@ -404,6 +404,7 @@ TEST(
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {
+    delete threads[i];
     threads[i] = new std::thread(ThreadMultipleEventsSync);
   }
 
