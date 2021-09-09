@@ -7,13 +7,13 @@
  */
 struct node {
   uint value;
-  struct node *next;
+  global struct node *next;
 };
 
 kernel void residency_function(global struct node *node_data, int size) {
   const int tid = get_global_id(0);
 
-  struct node *item = node_data;
+  global struct node *item = node_data;
   if (tid == 0) {
     item = node_data;
     for (int i = 0; i < size + 1; i++) {
