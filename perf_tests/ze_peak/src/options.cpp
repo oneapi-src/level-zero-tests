@@ -132,10 +132,8 @@ int ZePeak::parse_arguments(int argc, char **argv) {
           run_int_compute = run_transfer_bw = run_kernel_lat = true;
     } else if (strcmp(argv[i], "-x") == 0) {
       enable_explicit_scaling = true;
-      i++;
     } else if ((strcmp(argv[i], "-q") == 0)) {
       query_engines = true;
-      i++;
     } else if ((strcmp(argv[i], "-g") == 0)) {
       enable_fixed_ordinal_index = true;
       if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
