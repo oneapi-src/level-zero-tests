@@ -68,7 +68,7 @@ TEST(zeKernelScheduleHintsTests,
     auto cmdlist = lzt::create_command_list(context, device, 0);
     auto cmdqueue = lzt::create_command_queue(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 1, 1);
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
 
     lzt::set_group_size(kernel, 256, 1, 1);
     ze_group_count_t group_count = {};
