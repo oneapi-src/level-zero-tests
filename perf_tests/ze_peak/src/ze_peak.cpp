@@ -143,7 +143,7 @@ void L0Context::print_ze_device_properties(
                                                                   : "FALSE")
             << "\n"
             << " * UUID : " << id << "\n"
-            << " * coreClockRate : " << props.coreClockRate << "\n"
+            << " * coreClockRate : " << std::dec << props.coreClockRate << "\n"
             << std::endl;
 }
 
