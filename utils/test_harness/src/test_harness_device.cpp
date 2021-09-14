@@ -259,11 +259,14 @@ get_device_kernel_schedule_hints(ze_device_handle_t device) {
   ze_scheduling_hint_exp_properties_t hints = {};
   properties.pNext = &hints;
   hints.stype = ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_PROPERTIES;
+  hints.schedulingHintFlags = ZE_SCHEDULING_HINT_EXP_FLAG_FORCE_UINT32;
 
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetModuleProperties(device, &properties));
   EXPECT_EQ(device, device_initial);
+  EXPECT_NE(hints.schedulingHintFlags,
+            ZE_SCHEDULING_HINT_EXP_FLAG_FORCE_UINT32);
   return hints;
 }
 #endif
