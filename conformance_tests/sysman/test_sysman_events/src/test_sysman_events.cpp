@@ -708,13 +708,4 @@ TEST_F(
   }
 }
 
-TEST_F(
-    EventsTest,
-    GivenValidDeviceHandleWhenListeningForAListOfEventsThenEventRegisterAPIReturnsProperErrorCodeInCaseEventsAreInvalid) {
-  for (auto device : devices) {
-    zes_event_type_flags_t events = ZES_EVENT_TYPE_FLAG_FORCE_UINT32;
-    register_unknown_event(device, events);
-  }
-}
-
 } // namespace
