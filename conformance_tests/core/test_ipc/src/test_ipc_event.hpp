@@ -24,7 +24,6 @@ typedef enum {
 typedef struct {
   parent_test_t parent_type;
   child_test_t child_type;
-  ze_ipc_event_pool_handle_t hIpcEventPool;
   bool multi_device;
 } shared_data_t;
 

@@ -10,6 +10,7 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 #include "test_ipc_event.hpp"
+#include "test_ipc_comm.hpp"
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -20,10 +21,11 @@
 namespace lzt = level_zero_tests;
 namespace bipc = boost::interprocess;
 
+#ifdef __linux__
 static const ze_event_desc_t defaultEventDesc = {
     ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
-    ZE_EVENT_SCOPE_FLAG_HOST, // ensure memory coherency across device
-                              // and Host after event signalled
+    ZE_EVENT_SCOPE_FLAG_HOST // ensure memory coherency across device
+                             // and Host after event signalled
 };
 
 ze_event_pool_desc_t defaultEventPoolDesc = {
@@ -45,6 +47,7 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool) {
   auto cmdlist = lzt::create_command_list();
   auto cmdqueue = lzt::create_command_queue();
   lzt::append_wait_on_events(cmdlist, 1, &hEvent);
+  lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
   lzt::synchronize(cmdqueue, UINT64_MAX);
 
@@ -95,37 +98,51 @@ static void child_multi_device_reads(ze_event_pool_handle_t hEventPool) {
 int main() {
 
   ze_result_t result;
-  if (zeInit(0) != ZE_RESULT_SUCCESS)
+  if (zeInit(0) != ZE_RESULT_SUCCESS) {
+    LOG_DEBUG << "Child exit due to zeInit failure";
     exit(1);
-
+  }
   shared_data_t shared_data;
   bipc::shared_memory_object shm(bipc::open_only, "ipc_event_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));
   bipc::mapped_region region(shm, bipc::read_only);
   std::memcpy(&shared_data, region.get_address(), sizeof(shared_data_t));
-  ze_event_pool_handle_t hEventPool = 0;
-  lzt::open_ipc_event_handle(lzt::get_default_context(),
-                             shared_data.hIpcEventPool, &hEventPool);
 
-  if (!hEventPool)
+  int ipc_descriptor = lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>();
+  ze_ipc_event_pool_handle_t hIpcEventPool = {};
+  memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
+         sizeof(ipc_descriptor));
+
+  ze_event_pool_handle_t hEventPool = 0;
+  lzt::open_ipc_event_handle(lzt::get_default_context(), hIpcEventPool,
+                             &hEventPool);
+
+  if (!hEventPool) {
+    LOG_DEBUG << "Child exit due to null event pool";
     exit(1);
+  }
   switch (shared_data.child_type) {
-  CHILD_TEST_HOST_READS:
+
+  case CHILD_TEST_HOST_READS:
     child_host_reads(hEventPool);
     break;
-  CHILD_TEST_DEVICE_READS:
+  case CHILD_TEST_DEVICE_READS:
     child_device_reads(hEventPool);
     break;
-  CHILD_TEST_DEVICE2_READS:
+  case CHILD_TEST_DEVICE2_READS:
     child_device2_reads(hEventPool);
     break;
-  CHILD_TEST_MULTI_DEVICE_READS:
+  case CHILD_TEST_MULTI_DEVICE_READS:
     child_multi_device_reads(hEventPool);
     break;
   default:
+    LOG_DEBUG << "Unrecognized test case";
     exit(1);
   }
   lzt::close_ipc_event_handle(hEventPool);
   exit(0);
 }
+#else // windows
+int main() { exit(0); }
+#endif

@@ -11,6 +11,7 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 #include "test_ipc_event.hpp"
+#include "test_ipc_comm.hpp"
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -24,8 +25,8 @@ namespace {
 
 static const ze_event_desc_t defaultEventDesc = {
     ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
-    ZE_EVENT_SCOPE_FLAG_HOST, // ensure memory coherency across device
-                              // and Host after event signalled
+    ZE_EVENT_SCOPE_FLAG_HOST // ensure memory coherency across device
+                             // and Host after event signalled
 };
 
 ze_event_pool_desc_t defaultEventPoolDesc = {
@@ -53,6 +54,7 @@ static void parent_device_signals(ze_event_handle_t hEvent) {
   auto cmdlist = lzt::create_command_list();
   auto cmdqueue = lzt::create_command_queue();
   lzt::append_signal_event(cmdlist, hEvent);
+  lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
   lzt::synchronize(cmdqueue, UINT64_MAX);
 
@@ -63,6 +65,7 @@ static void parent_device_signals(ze_event_handle_t hEvent) {
 
 static void run_ipc_event_test(parent_test_t parent_test,
                                child_test_t child_test, bool multi_device) {
+#ifdef __linux__
   auto ep = get_event_pool(multi_device);
   ze_ipc_event_pool_handle_t hIpcEventPool;
   ep.get_ipc_handle(&hIpcEventPool);
@@ -71,8 +74,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
 
   ze_event_handle_t hEvent;
   ep.create_event(hEvent, defaultEventDesc);
-  shared_data_t test_data = {parent_test, child_test, hIpcEventPool,
-                             multi_device};
+  shared_data_t test_data = {parent_test, child_test, multi_device};
   bipc::shared_memory_object::remove("ipc_event_test");
   bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
                                  bipc::read_write);
@@ -82,6 +84,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
 
   // launch child
   boost::process::child c("./ipc/test_ipc_event_helper");
+  lzt::send_ipc_handle(hIpcEventPool);
 
   switch (parent_test) {
   case PARENT_TEST_HOST_SIGNALS:
@@ -100,6 +103,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
   // cleanup
   bipc::shared_memory_object::remove("ipc_event_test");
   ep.destroy_event(hEvent);
+#endif // linux
 }
 
 TEST(

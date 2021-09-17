@@ -290,7 +290,7 @@ void run_client(int size, uint32_t device_x, uint32_t device_y,
     void *memory = nullptr;
     ze_ipc_mem_handle_t ipc_handle;
 
-    int ipc_descriptor = lzt::receive_ipc_handle();
+    int ipc_descriptor = lzt::receive_ipc_handle<ze_ipc_mem_handle_t>();
     memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
            sizeof(ipc_descriptor));
     lzt::open_ipc_handle(context, device, ipc_handle, &memory);

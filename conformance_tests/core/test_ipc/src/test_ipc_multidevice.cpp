@@ -116,7 +116,7 @@ void multi_device_receiver(size_t size) {
   auto cq = lzt::create_command_queue(context, device, 0,
                                       ZE_COMMAND_QUEUE_MODE_DEFAULT,
                                       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto ipc_descriptor = lzt::receive_ipc_handle();
+  auto ipc_descriptor = lzt::receive_ipc_handle<ze_ipc_mem_handle_t>();
   memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));
 

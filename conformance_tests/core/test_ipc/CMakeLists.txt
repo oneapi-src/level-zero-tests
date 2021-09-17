@@ -70,6 +70,7 @@ add_lzt_test_executable(
   PREFIX "ipc"  # install to prefix so it's not confused for a test
   SOURCES
     src/test_ipc_event_helper.cpp
+    src/test_ipc_comm.cpp
   LINK_LIBRARIES
     ${ipc_libraries}
     ${ipc_event_libraries}
