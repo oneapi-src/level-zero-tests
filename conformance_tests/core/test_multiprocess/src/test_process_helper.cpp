@@ -23,12 +23,13 @@ int main(int argc, char **argv) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
-
-  auto device = devices[proc_number % devices.size()];
+  int deviceIndex = proc_number % devices.size();
+  auto device = devices[deviceIndex];
   auto command_list = lzt::create_command_list(device);
   auto command_queue = lzt::create_command_queue(device);
 
-  auto module = lzt::create_module(devices[0], "multi_process_add.spv");
+  auto module =
+      lzt::create_module(devices[deviceIndex], "multi_process_add.spv");
   auto kernel = lzt::create_function(module, "add_two_arrays");
 
   auto constexpr memory_size = 8192;
