@@ -310,9 +310,9 @@ void append_wait_on_events(ze_command_list_handle_t hCommandList,
   }
 }
 
-void query_event(ze_event_handle_t event) {
+void query_event(ze_event_handle_t event, ze_result_t result) {
   auto event_initial = event;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event));
+  EXPECT_EQ(result, zeEventQueryStatus(event));
   EXPECT_EQ(event, event_initial);
 }
 

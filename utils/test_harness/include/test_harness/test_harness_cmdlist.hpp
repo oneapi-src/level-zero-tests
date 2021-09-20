@@ -120,7 +120,8 @@ void append_signal_event(ze_command_list_handle_t hCommandList,
                          ze_event_handle_t hEvent);
 void append_wait_on_events(ze_command_list_handle_t hCommandList,
                            uint32_t numEvents, ze_event_handle_t *phEvents);
-void query_event(ze_event_handle_t event);
+void query_event(ze_event_handle_t event,
+                 ze_result_t result = ZE_RESULT_SUCCESS);
 void append_reset_event(ze_command_list_handle_t hCommandList,
                         ze_event_handle_t hEvent);
 
