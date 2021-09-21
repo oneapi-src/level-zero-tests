@@ -35,9 +35,8 @@ void driver_thread_test() {
     ASSERT_EQ(driver_version, lzt::get_driver_version(driver));
     ASSERT_EQ(driver_api_version, lzt::get_api_version(driver));
     auto new_driver_ipc_props = lzt::get_ipc_properties(driver);
-    ASSERT_EQ(driver_ipc_props.stype, new_driver_ipc_props.stype);
-    ASSERT_EQ(driver_ipc_props.pNext, new_driver_ipc_props.pNext);
-    ASSERT_EQ(driver_ipc_props.flags, new_driver_ipc_props.flags);
+    ASSERT_EQ(0, memcmp(&driver_ipc_props, &new_driver_ipc_props,
+                        sizeof(driver_ipc_props)));
   }
 
   LOG_DEBUG << "child thread done with ID ::" << std::this_thread::get_id();

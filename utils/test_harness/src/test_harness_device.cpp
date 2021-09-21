@@ -108,6 +108,7 @@ ze_device_properties_t get_device_properties(ze_device_handle_t device,
                                              ze_structure_type_t stype) {
   auto device_initial = device;
   ze_device_properties_t properties = {};
+  memset(&properties, 0, sizeof(properties));
   if (stype == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
     properties.stype = stype;
   } else {
@@ -120,8 +121,9 @@ ze_device_properties_t get_device_properties(ze_device_handle_t device,
 
 ze_device_compute_properties_t
 get_compute_properties(ze_device_handle_t device) {
-  ze_device_compute_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES};
+  ze_device_compute_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES};
 
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -147,8 +149,11 @@ get_memory_properties(ze_device_handle_t device) {
 
 std::vector<ze_device_memory_properties_t>
 get_memory_properties(ze_device_handle_t device, uint32_t count) {
-  std::vector<ze_device_memory_properties_t> properties(
-      count, {ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES});
+  std::vector<ze_device_memory_properties_t> properties(count);
+  memset(properties.data(), 0, sizeof(ze_device_memory_properties_t) * count);
+  for (auto &prop : properties) {
+    prop.stype = ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
+  }
 
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -159,8 +164,9 @@ get_memory_properties(ze_device_handle_t device, uint32_t count) {
 
 ze_device_external_memory_properties_t
 get_external_memory_properties(ze_device_handle_t device) {
-  ze_device_external_memory_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_EXTERNAL_MEMORY_PROPERTIES};
+  ze_device_external_memory_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DEVICE_EXTERNAL_MEMORY_PROPERTIES};
 
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -172,8 +178,9 @@ get_external_memory_properties(ze_device_handle_t device) {
 
 ze_device_memory_access_properties_t
 get_memory_access_properties(ze_device_handle_t device) {
-  ze_device_memory_access_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES};
+  ze_device_memory_access_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES};
 
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -196,10 +203,12 @@ uint32_t get_command_queue_group_properties_count(ze_device_handle_t device) {
 std::vector<ze_command_queue_group_properties_t>
 get_command_queue_group_properties(ze_device_handle_t device, uint32_t count) {
   std::vector<ze_command_queue_group_properties_t> properties(count);
-
-  for (auto properties_item : properties) {
+  memset(properties.data(), 0,
+         sizeof(ze_command_queue_group_properties_t) * count);
+  for (auto &properties_item : properties) {
     properties_item.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES;
   }
+
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCommandQueueGroupProperties(
                                    device, &count, properties.data()));
@@ -222,6 +231,11 @@ get_cache_properties(ze_device_handle_t device) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetCacheProperties(device, &count, nullptr));
   properties.resize(count);
+  memset(properties.data(), 0, sizeof(ze_device_cache_properties_t) * count);
+  for (auto &prop : properties) {
+    prop.stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
+  }
+
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetCacheProperties(device, &count, properties.data()));
   EXPECT_EQ(device, device_initial);
@@ -229,8 +243,9 @@ get_cache_properties(ze_device_handle_t device) {
 }
 
 ze_device_image_properties_t get_image_properties(ze_device_handle_t device) {
-  ze_device_image_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES};
+  ze_device_image_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES};
 
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetImageProperties(device, &properties));
@@ -240,8 +255,9 @@ ze_device_image_properties_t get_image_properties(ze_device_handle_t device) {
 
 ze_device_module_properties_t
 get_device_module_properties(ze_device_handle_t device) {
-  ze_device_module_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES};
+  ze_device_module_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES};
 
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -253,8 +269,9 @@ get_device_module_properties(ze_device_handle_t device) {
 #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
 ze_scheduling_hint_exp_properties_t
 get_device_kernel_schedule_hints(ze_device_handle_t device) {
-  ze_device_module_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES};
+  ze_device_module_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES};
 
   ze_scheduling_hint_exp_properties_t hints = {};
   properties.pNext = &hints;
@@ -273,8 +290,9 @@ get_device_kernel_schedule_hints(ze_device_handle_t device) {
 
 ze_device_p2p_properties_t get_p2p_properties(ze_device_handle_t dev1,
                                               ze_device_handle_t dev2) {
-  ze_device_p2p_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES};
+  ze_device_p2p_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES};
 
   auto dev1_initial = dev1;
   auto dev2_initial = dev2;

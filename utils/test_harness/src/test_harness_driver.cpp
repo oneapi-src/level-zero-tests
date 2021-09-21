@@ -54,8 +54,9 @@ ze_api_version_t get_api_version(ze_driver_handle_t driver) {
 }
 
 ze_driver_ipc_properties_t get_ipc_properties(ze_driver_handle_t driver) {
-  ze_driver_ipc_properties_t properties = {
-      ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES};
+  ze_driver_ipc_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES};
 
   auto driver_initial = driver;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetIpcProperties(driver, &properties));
@@ -73,6 +74,8 @@ get_extension_properties(ze_driver_handle_t driver) {
   EXPECT_EQ(driver, driver_initial);
 
   std::vector<ze_driver_extension_properties_t> properties(count);
+  memset(properties.data(), 0,
+         sizeof(ze_driver_extension_properties_t) * count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDriverGetExtensionProperties(driver, &count, properties.data()));
   EXPECT_EQ(driver, driver_initial);
