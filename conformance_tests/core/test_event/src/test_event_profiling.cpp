@@ -474,4 +474,104 @@ TEST_F(
   }
 }
 
+#ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
+TEST_F(
+    KernelEventProfilingCacheCoherencyTests,
+    GivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsThenSuccessReturned) {
+
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+
+  auto driver_extension_properties = lzt::get_extension_properties(driver);
+  bool supports_extended_timestamps = false;
+  for (auto &extension : driver_extension_properties) {
+    if (!std::strcmp(ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME, extension.name)) {
+      supports_extended_timestamps = true;
+      break;
+    }
+  }
+
+  if (!supports_extended_timestamps) {
+    LOG_WARNING << "driver does not support experimental timestamps query, "
+                   "skipping test";
+    return;
+  }
+
+  auto sub_device_count = lzt::get_ze_sub_device_count(device);
+
+  if (!sub_device_count) {
+    LOG_WARNING << "Device does not have any sub-devices";
+    return;
+  }
+
+  auto context = lzt::create_context(driver);
+  const size_t size = 1000;
+
+  ze_event_pool_desc_t event_pool_desc = {};
+  event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  event_pool_desc.flags = ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP;
+  event_pool_desc.count = 1;
+  auto event_pool = lzt::create_event_pool(context, event_pool_desc);
+
+  auto command_queue = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  auto command_list = lzt::create_command_list(context, device, 0, 0);
+
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
+  auto event = lzt::create_event(event_pool, event_desc);
+
+  auto module = lzt::create_module(context, device, "profile_add.spv",
+                                   ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+
+  auto kernel = lzt::create_function(module, "profile_add_constant");
+
+  ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+  const int addval = 1;
+
+  void *src_buffer =
+      lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+  void *dst_buffer =
+      lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+
+  lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
+  lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
+  lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
+  lzt::append_launch_function(command_list, kernel, &args, event, 0, nullptr);
+  lzt::close_command_list(command_list);
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+
+  lzt::synchronize(command_queue, UINT64_MAX);
+
+  auto timestamp_results = lzt::get_event_timestamps_exp(event, device);
+
+  LOG_INFO << "Timestamp results returned: " << timestamp_results.size();
+
+  for (auto &result : timestamp_results) {
+    auto duration = lzt::get_timestamp_global_duration(&result, device, driver);
+    EXPECT_GT(duration, 0);
+  }
+
+  // cleanup
+  lzt::free_memory(context, src_buffer);
+  lzt::free_memory(context, dst_buffer);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
+  lzt::destroy_event_pool(event_pool);
+  lzt::destroy_context(context);
+}
+#else
+#ifdef __linux__
+#warning                                                                       \
+    "ZE_EVENT_QUERY_TIMESTAMPS_EXP support not found, not building tests for it"
+#else
+#pragma message(                                                               \
+    "warning: ZE_EVENT_QUERY_TIMESTAMPS_EXP support not found, not building tests for it")
+#endif
+#endif // ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
 } // namespace

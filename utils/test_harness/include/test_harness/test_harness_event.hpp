@@ -88,6 +88,17 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
                                const ze_device_handle_t &device,
                                const ze_driver_handle_t driver);
 
+#ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
+uint32_t get_timestamp_count(const ze_event_handle_t &event,
+                             const ze_device_handle_t &device);
+std::vector<ze_kernel_timestamp_result_t>
+get_event_timestamps_exp(const ze_event_handle_t &event,
+                         const ze_device_handle_t &device);
+std::vector<ze_kernel_timestamp_result_t>
+get_event_timestamps_exp(const ze_event_handle_t &event,
+                         const ze_device_handle_t &device, uint32_t count);
+#endif // ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
+
 class zeEventPoolTests : public ::testing::Test {
 protected:
   zeEventPool ep;

@@ -147,6 +147,38 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
   return context_time_ns;
 }
 
+#ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
+uint32_t get_timestamp_count(const ze_event_handle_t &event,
+                             const ze_device_handle_t &device) {
+  uint32_t count = 0;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventQueryTimestampsExp(event, device, &count, nullptr));
+
+  return count;
+}
+
+std::vector<ze_kernel_timestamp_result_t>
+get_event_timestamps_exp(const ze_event_handle_t &event,
+                         const ze_device_handle_t &device) {
+
+  return get_event_timestamps_exp(event, device,
+                                  get_timestamp_count(event, device));
+}
+
+std::vector<ze_kernel_timestamp_result_t>
+get_event_timestamps_exp(const ze_event_handle_t &event,
+                         const ze_device_handle_t &device, uint32_t count) {
+
+  std::vector<ze_kernel_timestamp_result_t> timestamp_results(count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventQueryTimestampsExp(event, device, &count,
+                                      timestamp_results.data()));
+  return timestamp_results;
+}
+
+#endif // ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
+
 void zeEventPool::InitEventPool() { InitEventPool(32); }
 
 void zeEventPool::InitEventPool(uint32_t count) {
