@@ -18,7 +18,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
-#include "test_ipc_comm.hpp"
+#include "net/test_ipc_comm.hpp"
 
 #include <level_zero/ze_api.h>
 #include <math.h>

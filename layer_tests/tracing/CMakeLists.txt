@@ -1,4 +1,4 @@
-# Copyright (C) 2020 Intel Corporation
+# Copyright (C) 2020-2021 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 add_lzt_test(
@@ -12,4 +12,25 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
+    level_zero_tests::net
+)
+
+add_lzt_test_executable(
+  NAME test_ltracing_ipc_event_helper
+  GROUP "/layer_tests/ltracing"
+  PREFIX "tracing"  # install to prefix so it's not confused for a test
+  SOURCES
+    src/test_ltracing_ipc_event_helper.cpp
+  LINK_LIBRARIES
+    level_zero_tests::net
+)
+
+add_lzt_test_executable(
+  NAME test_ltracing_compat_ipc_event_helper
+  GROUP "/layer_tests/ltracing"
+  PREFIX "tracing"  # install to prefix so it's not confused for a test
+  SOURCES
+    src/test_ltracing_compat_ipc_event_helper.cpp
+  LINK_LIBRARIES
+    level_zero_tests::net
 )

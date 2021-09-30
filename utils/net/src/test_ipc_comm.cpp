@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -11,10 +11,8 @@
 #ifdef __linux__
 #include <sys/socket.h>
 #endif
-#include "test_ipc_comm.hpp"
+#include "net/test_ipc_comm.hpp"
 #include "logging/logging.hpp"
-#include "gtest/gtest.h"
-#include "test_harness/test_harness.hpp"
 
 namespace level_zero_tests {
 

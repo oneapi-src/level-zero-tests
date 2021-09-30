@@ -11,7 +11,7 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 #include "test_ipc_event.hpp"
-#include "test_ipc_comm.hpp"
+#include "net/test_ipc_comm.hpp"
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>

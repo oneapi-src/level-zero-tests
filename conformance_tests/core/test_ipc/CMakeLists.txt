@@ -18,8 +18,8 @@ add_lzt_test(
     src/test_ipc.cpp
     src/test_ipc_event.cpp
     src/main.cpp
-    src/test_ipc_comm.cpp
   LINK_LIBRARIES
+    level_zero_tests::net
     ${ipc_libraries}
     ${ipc_event_libraries}
 )
@@ -29,8 +29,8 @@ add_lzt_test(
   GROUP "/conformance_tests/core"
   SOURCES
     src/test_ipc_memory.cpp
-    src/test_ipc_comm.cpp
   LINK_LIBRARIES
+    level_zero_tests::net
     ${ipc_libraries}
 )
 
@@ -39,8 +39,8 @@ add_lzt_test(
   GROUP "/conformance_tests/core"
   SOURCES
     src/test_ipc_multidevice.cpp
-    src/test_ipc_comm.cpp
   LINK_LIBRARIES
+    level_zero_tests::net
     ${ipc_libraries}
 )
 
@@ -49,8 +49,8 @@ add_lzt_test(
   GROUP "/conformance_tests/core"
   SOURCES
     src/test_ipc_multisubdevice.cpp
-    src/test_ipc_comm.cpp
   LINK_LIBRARIES
+    level_zero_tests::net
     ${ipc_libraries}
 )
 
@@ -59,8 +59,8 @@ add_lzt_test(
   GROUP "/conformance_tests/core"
   SOURCES
     src/test_ipc_p2p_memory.cpp
-    src/test_ipc_comm.cpp
   LINK_LIBRARIES
+    level_zero_tests::net
     ${ipc_libraries}
 )
 
@@ -70,8 +70,8 @@ add_lzt_test_executable(
   PREFIX "ipc"  # install to prefix so it's not confused for a test
   SOURCES
     src/test_ipc_event_helper.cpp
-    src/test_ipc_comm.cpp
   LINK_LIBRARIES
     ${ipc_libraries}
     ${ipc_event_libraries}
+    level_zero_tests::net
 )

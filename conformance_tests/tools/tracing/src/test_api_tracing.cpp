@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2021 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -8,8 +8,11 @@
 
 #include "gtest/gtest.h"
 
+#include "net/test_ipc_comm.hpp"
 #include "logging/logging.hpp"
 #include "test_harness/test_harness.hpp"
+#include <boost/process.hpp>
+#include <string>
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 
@@ -104,6 +107,52 @@ protected:
 
     tracer_desc.pUserData = &user_data;
     tracer_handle = lzt::create_tracer_handle(tracer_desc);
+  }
+
+  void run_tracing_ipc_event_test(std::string test_type_name) {
+#ifdef __linux__
+
+    lzt::zeEventPool ep;
+    ze_device_handle_t device =
+        lzt::get_default_device(lzt::get_default_driver());
+
+    ze_event_pool_desc_t defaultEventPoolDesc = {
+        ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
+        (ZE_EVENT_POOL_FLAG_HOST_VISIBLE | ZE_EVENT_POOL_FLAG_IPC), 10};
+    ep.InitEventPool(defaultEventPoolDesc);
+
+    ze_ipc_event_pool_handle_t hIpcEventPool;
+    ep.get_ipc_handle(&hIpcEventPool);
+    if (testing::Test::HasFatalFailure())
+      exit(EXIT_FAILURE); // Abort test if IPC Event handle failed
+
+    static const ze_event_desc_t defaultEventDesc = {
+        ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
+        ZE_EVENT_SCOPE_FLAG_HOST // ensure memory coherency across device
+                                 // and Host after event signalled
+    };
+    ze_event_handle_t hEvent;
+    ep.create_event(hEvent, defaultEventDesc);
+
+    // launch child
+    boost::process::child c("./tracing/test_tracing_ipc_event_helper",
+                            test_type_name.c_str());
+    lzt::send_ipc_handle(hIpcEventPool);
+
+    c.wait(); // wait for the process to exit
+
+    // cleanup
+    ep.destroy_event(hEvent);
+
+    // hack to be able to use this class for ipc event test
+    if (c.exit_code() == EXIT_SUCCESS) {
+      user_data.prologue_called = true;
+      user_data.epilogue_called = true;
+    }
+#else
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+#endif /* __linux__ */
   }
 
   void init_command_queue() {
@@ -202,6 +251,11 @@ protected:
   lzt::test_api_tracing_user_data user_data = {};
   ze_callbacks_t prologues = {};
   ze_callbacks_t epilogues = {};
+
+  void set_user_data_true() {
+    user_data.prologue_called = 1;
+    user_data.epilogue_called = 1;
+  }
 
   ze_driver_handle_t driver;
 
@@ -1408,43 +1462,15 @@ TEST_F(
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeEventPoolOpenIpcHandleCallbacksWhenCallingzeEventPoolOpenIpcHandleThenUserDataIsSetAndResultUnchanged) {
-  prologues.EventPool.pfnOpenIpcHandleCb = lzt::prologue_callback;
-  epilogues.EventPool.pfnOpenIpcHandleCb = lzt::epilogue_callback;
 
-  init_event_pool();
-
-  ze_ipc_event_pool_handle_t handle;
-  ze_event_pool_handle_t event_pool2;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
-  ze_result_t initial_result =
-      zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2);
-
-  zeEventPoolCloseIpcHandle(event_pool2);
-
-  ready_tracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
-  ASSERT_EQ(initial_result,
-            zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
+  run_tracing_ipc_event_test("TEST_OPEN_IPC_EVENT");
 }
 
 TEST_F(
     TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultUnchanged) {
-  prologues.EventPool.pfnCloseIpcHandleCb = lzt::prologue_callback;
-  epilogues.EventPool.pfnCloseIpcHandleCb = lzt::epilogue_callback;
 
-  init_event_pool();
-
-  ze_ipc_event_pool_handle_t handle;
-  ze_event_pool_handle_t event_pool2;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeEventPoolOpenIpcHandle(context, ipc_event, &event_pool2));
-
-  ready_tracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCloseIpcHandle(event_pool2));
+  run_tracing_ipc_event_test("TEST_CLOSE_IPC_EVENT");
 }
 
 TEST_F(
