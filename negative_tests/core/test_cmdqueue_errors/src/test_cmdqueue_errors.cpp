@@ -46,7 +46,7 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_command_queue_handle_t command_queue = nullptr;
 
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
+  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
             uint64_t(zeCommandQueueCreate(lzt::get_default_context(), device,
                                           nullptr, &command_queue)));
 }
@@ -64,7 +64,7 @@ TEST_F(
   descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
+  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
             uint64_t(zeCommandQueueCreate(lzt::get_default_context(), device,
                                           &descriptor, nullptr)));
 }
