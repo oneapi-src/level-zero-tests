@@ -14,6 +14,18 @@
 
 namespace level_zero_tests {
 
+#ifdef ZE_MODULE_PROGRAM_EXP_NAME
+struct module_program_modules_t {
+  std::string filename;
+  char *pBuildFlags;
+  ze_module_constants_t *pConstants;
+};
+
+ze_module_handle_t
+create_program_module(ze_context_handle_t context, ze_device_handle_t device,
+                      std::vector<module_program_modules_t> modules_in);
+#endif
+
 ze_module_handle_t create_module(ze_device_handle_t device,
                                  const std::string filename);
 ze_module_handle_t create_module(ze_device_handle_t device,

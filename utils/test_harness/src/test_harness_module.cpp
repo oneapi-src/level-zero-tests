@@ -13,8 +13,65 @@
 #include <level_zero/ze_api.h>
 #include <thread>
 #include <chrono>
+#include <string>
 
 namespace level_zero_tests {
+
+#ifdef ZE_MODULE_PROGRAM_EXP_NAME
+ze_module_handle_t
+create_program_module(ze_context_handle_t context, ze_device_handle_t device,
+                      std::vector<module_program_modules_t> modules_in) {
+
+  ze_module_program_exp_desc_t module_program_desc = {};
+  module_program_desc.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
+  module_program_desc.count = modules_in.size();
+
+  std::vector<size_t> input_sizes;
+  std::vector<char *> build_flags;
+  std::vector<ze_module_constants_t *> constants;
+  std::vector<uint8_t *> module_data;
+
+  for (auto module : modules_in) {
+    const std::vector<uint8_t> binary_file =
+        level_zero_tests::load_binary_file(module.filename);
+
+    auto binary_data = new uint8_t[binary_file.size()];
+    memcpy(binary_data, binary_file.data(), binary_file.size());
+
+    module_data.push_back(binary_data);
+    input_sizes.push_back(size_t(binary_file.size()));
+    build_flags.push_back(module.pBuildFlags);
+    constants.push_back(module.pConstants);
+  }
+
+  module_program_desc.inputSizes = input_sizes.data();
+  module_program_desc.pInputModules = (const uint8_t **)module_data.data();
+  module_program_desc.pBuildFlags = (const char **)build_flags.data();
+  module_program_desc.pConstants =
+      (const ze_module_constants_t **)constants.data();
+
+  ze_module_desc_t module_description = {};
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+  module_description.pNext = &module_program_desc;
+  module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
+
+  auto device_initial = device;
+  auto context_initial = context;
+
+  ze_module_handle_t module;
+  EXPECT_EQ(
+      ZE_RESULT_SUCCESS,
+      zeModuleCreate(context, device, &module_description, &module, nullptr));
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(device, device_initial);
+
+  for (auto data : module_data)
+    delete[] data;
+
+  return module;
+}
+
+#endif
 
 ze_module_handle_t create_module(ze_device_handle_t device,
                                  const std::string filename) {

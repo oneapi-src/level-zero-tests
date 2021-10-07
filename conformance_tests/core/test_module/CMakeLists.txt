@@ -10,6 +10,7 @@ add_lzt_test(
     src/test_cooperative_kernel.cpp
     src/test_kernel_schedule_hints.cpp
     src/main.cpp
+    src/test_module_program_exp.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
@@ -26,4 +27,6 @@ add_lzt_test(
     update_variable_on_device
     module_add
     update_variable_with_spec_constant
+    import_kernel
+    export_kernel
 )
