@@ -177,6 +177,31 @@ def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
     fail_log.close()
     return results, num_passed, num_failed, num_skipped
 
+def write_test_plan(test_plan: [], plan_name: str):
+    testplan_filename = plan_name + ".csv"
+
+    with open(testplan_filename, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(test_plan)
+
+    return 0
+
+def read_test_plan(plan_name: str):
+    testplan_filename = plan_name + ".csv"
+    test_plan = []
+
+    try:
+        file = open(testplan_filename, 'r', newline='')
+    except OSError:
+        print("Could not open/read Test Plan: ", testplan_filename)
+        sys.exit()
+
+    with file:
+        reader = csv.reader(file)
+        test_plan = [tuple(row) for row in reader]
+
+    return test_plan
+
 def run_test_report(test_plan: [], test_run_timeout: int, log_prefix: str):
     report_log_name = log_prefix + "_results.csv"
     fail_log_name = log_prefix + "_failure_log.txt"
@@ -316,6 +341,8 @@ if __name__ == '__main__':
     parser.add_argument('--exclude_regex', type = str, help = 'Regular Expression to exclude tests that match either in the name or filter: GivenBarrier*', default = None)
     parser.add_argument('--test_run_timeout', type = int, help = 'Adjust the timeout for test binary execution, this is for each call to the binary with the filter', default = 15)
     parser.add_argument('--log_prefix', type = str, help = 'Change the prefix name for the results such that the output is <prefix>_results.csv & <prefix>_failure_log.txt', default = "level_zero_tests")
+    parser.add_argument('--export_test_plan', type = str, help = 'Name of the Generated Test Plan to export as <arg>.csv without execution. The name provided is combined with .csv appended.', default = None)
+    parser.add_argument('--import_test_plan', type = str, help = 'Name of the Imported Test Plan as <arg>.csv for execution. The name provided is combined with .csv appended.', default = None)
     args = parser.parse_args()
 
     run_test_types = args.run_test_types
@@ -330,31 +357,43 @@ if __name__ == '__main__':
     exclude_features = args.exclude_features
     exclude_regex = args.exclude_regex
     exit_code = -1
+    export_test_plan = args.export_test_plan
+    import_test_plan = args.import_test_plan
 
     print("Level Zero Test Report Generator\n")
-    print("Executing Tests which match Test Type(s):" + run_test_types + " ", end = '')
-    if run_test_features:
-        print(" Test Feature(s):" + run_test_features, end = '')
-    if run_test_regex:
-        print(" Test Regex:" + run_test_regex, end = '')
-    if exclude_features:
-        print(" Excluding Feature(s):" + exclude_features, end = '')
-    if exclude_regex:
-        print(" Excluding Regex:" + exclude_regex, end = '')
-    print("\n")
 
-    generate_test_cases_from_binaries(
-      binary_dir = args.binary_dir,
-      requested_types = run_test_types,
-      requested_features = run_test_features,
-      requested_regex = run_test_regex,
-      exclude_features = exclude_features,
-      exclude_regex = exclude_regex
-      )
-    print("Generated Test List\n")
+    if import_test_plan:
+        print("Importing Test plan: " + import_test_plan)
+        test_plan_generated = read_test_plan(plan_name = import_test_plan)
+    else:
+        print("Generating Plan to Execute Tests which match Test Type(s):" + run_test_types + " ", end = '')
+        if run_test_features:
+            print(" Test Feature(s):" + run_test_features, end = '')
+        if run_test_regex:
+            print(" Test Regex:" + run_test_regex, end = '')
+        if exclude_features:
+            print(" Excluding Feature(s):" + exclude_features, end = '')
+        if exclude_regex:
+            print(" Excluding Regex:" + exclude_regex, end = '')
+        print("\n")
+
+        generate_test_cases_from_binaries(
+        binary_dir = args.binary_dir,
+        requested_types = run_test_types,
+        requested_features = run_test_features,
+        requested_regex = run_test_regex,
+        exclude_features = exclude_features,
+        exclude_regex = exclude_regex
+        )
+        print("Generated Test List\n")
 
     if len(test_plan_generated) > 0:
-        exit_code = run_test_report(test_plan = test_plan_generated, test_run_timeout = test_run_timeout, log_prefix = log_prefix)
+        if export_test_plan:
+            print("Generated Test plan Being Exported to CSV.\n")
+            exit_code = write_test_plan(test_plan = test_plan_generated, plan_name = export_test_plan)
+            print("Generated Test plan: " + export_test_plan)
+        else:
+            exit_code = run_test_report(test_plan = test_plan_generated, test_run_timeout = test_run_timeout, log_prefix = log_prefix)
     else:
-        print("Test Filters set are invalid, no tests that match all requirements.")
+        print("Test Filters set are invalid or test plan imported is invalid, no tests that match all requirements.")
     exit(exit_code)

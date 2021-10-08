@@ -90,6 +90,10 @@
    * Adjust the timeout for test binary execution, this is for each call to the binary with the filter
  * --log_prefix LOG_PREFIX
    * Change the prefix name for the results such that the output is `<prefix>_results.csv` & `<prefix>_failure_log.txt`
+* --export_test_plan EXPORT_TEST_PLAN
+   * Export the Test Plan generated thru the filters provided as `<name>.csv`
+* --import_test_plan IMPORT_TEST_PLAN
+   * Import a Test Plan generated previously thru this tool as `<name>.csv`
 
 ## Execution
  * **Required: Ensure the oneAPI Level Zero Loader Library & your desired oneAPI Level Zero Driver are in your library path before execution.**
