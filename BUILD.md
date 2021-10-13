@@ -95,6 +95,11 @@ cmake --build . --config Release --target install
 The group that any particular test executable belongs to can be seen by looking
 in its `CMakeLists.txt` file at the `add_lzt_test()` call.
 
+### Building performance tests
+
+Level Zero Performance tests can be built alone with `BUILD_ZE_PERF_TEST_ONLY` cmake
+flag.
+
 ### Building Zesysman
 
 `zesysman` is an optional component that can be built by setting the `ENABLE_ZESYSMAN` 
