@@ -32,13 +32,10 @@ struct FunctionData {
 };
 
 std::vector<ze_module_handle_t> create_module_vector_and_log(
-    ze_device_handle_t device, const std::string filename_prefix,
+    ze_device_handle_t device, std::vector<const char *> build_flag,
+    const std::string filename_prefix,
     std::vector<ze_module_build_log_handle_t> *build_log) {
   std::vector<ze_module_handle_t> module;
-
-  std::vector<const char *> build_flag = {
-      nullptr, "-ze-opt-disable", "-ze-opt-greater-than-4GB-buffer-required",
-      "-ze-opt-large-register-file"};
 
   auto start = std::chrono::system_clock::now();
   auto end = std::chrono::system_clock::now();
@@ -84,8 +81,10 @@ std::vector<ze_module_handle_t> create_module_vector_and_log(
 
 std::vector<ze_module_handle_t>
 create_module_vector(ze_device_handle_t device,
+                     std::vector<const char *> build_flag,
                      const std::string filename_prefix) {
-  return (create_module_vector_and_log(device, filename_prefix, nullptr));
+  return (create_module_vector_and_log(device, build_flag, filename_prefix,
+                                       nullptr));
 }
 class zeModuleCreateTests : public ::testing::Test {};
 
@@ -94,8 +93,9 @@ TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerThenPointerPointsToValidGlobalVariable) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
-      create_module_vector(device, "single_global_variable");
+      create_module_vector(device, build_flag, "single_global_variable");
 
   const std::string global_name = "global_variable";
   void *global_pointer;
@@ -118,8 +118,9 @@ TEST_F(
     zeModuleCreateTests,
     WhenRetrievingMultipleGlobalPointersFromTheSameVariableThenAllPointersAreTheSame) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
-      create_module_vector(device, "single_global_variable");
+      create_module_vector(device, build_flag, "single_global_variable");
 
   const std::string global_name = "global_variable";
   void *previous_pointer;
@@ -149,8 +150,9 @@ TEST_F(
     GivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointersThenAllPointersPointToValidGlobalVariable) {
 
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
-      create_module_vector(device, "multiple_global_variables");
+      create_module_vector(device, build_flag, "multiple_global_variables");
 
   const int global_count = 5;
   void *global_pointer;
@@ -176,8 +178,9 @@ TEST_F(
     zeModuleCreateTests,
     GivenGlobalPointerWhenUpdatingGlobalVariableOnDeviceThenGlobalPointerPointsToUpdatedVariable) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
-      create_module_vector(device, "update_variable_on_device");
+      create_module_vector(device, build_flag, "update_variable_on_device");
 
   const std::string global_name = "global_variable";
   void *global_pointer;
@@ -250,8 +253,9 @@ TEST_F(
     zeModuleCreateTests,
     GivenModuleWithFunctionWhenRetrievingFunctionPointerThenPointerPointsToValidFunction) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
-      create_module_vector(device, "module_add");
+      create_module_vector(device, build_flag, "module_add");
 
   const std::string function_name = "module_add_constant";
   void *function_pointer;
@@ -270,8 +274,23 @@ TEST_F(
     zeModuleCreateTests,
     GivenValidDeviceAndBinaryFileWhenCreatingModuleThenReturnSuccessfulAndDestroyModule) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {nullptr, "-ze-opt-level=0",
+                                          "-ze-opt-level=1", "-ze-opt-level=2"};
   std::vector<ze_module_handle_t> module =
-      create_module_vector(device, "module_add");
+      create_module_vector(device, build_flag, "module_add");
+  for (auto mod : module) {
+    lzt::destroy_module(mod);
+  }
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenValidDeviceAndBinaryFileWhenCreatingStatelessKernelModuleThenReturnSuccessfulAndDestroyModule) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {
+      "-ze-opt-greater-than-4GB-buffer-required"};
+  std::vector<ze_module_handle_t> module =
+      create_module_vector(device, build_flag, "module_add");
   for (auto mod : module) {
     lzt::destroy_module(mod);
   }
@@ -283,8 +302,12 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
   std::vector<ze_module_build_log_handle_t> build_log;
-  std::vector<ze_module_handle_t> module =
-      create_module_vector_and_log(device, "module_add", &build_log);
+  std::vector<const char *> build_flag = {
+      nullptr, "-ze-opt-disable", "-ze-opt-greater-than-4GB-buffer-required",
+      "-ze-opt-large-register-file"};
+
+  std::vector<ze_module_handle_t> module = create_module_vector_and_log(
+      device, build_flag, "module_add", &build_log);
 
   size_t build_log_size;
   std::string build_log_str;
@@ -339,11 +362,90 @@ TEST_F(
   lzt::destroy_module(module);
 }
 
+TEST_F(
+    zeModuleCreateTests,
+    GivenValidModuleWhenGettingNativeBinaryForOptimizationLevelsFilesAreDifferent) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  const char *build_opt0 = "-ze-opt-level=0";
+  const char *build_opt1 = "-ze-opt-level=1";
+  const char *build_opt2 = "-ze-opt-level=2";
+  std::string igc_opt0 = "-ze-opt-level=O0";
+  std::string igc_opt1 = "-ze-opt-level=O1";
+  std::string igc_opt2 = "-ze-opt-level=O2";
+
+  ze_module_handle_t module0 = lzt::create_module(
+      device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV, build_opt0, nullptr);
+  size_t size0 = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetNativeBinary(module0, &size0, nullptr));
+
+  std::vector<uint8_t> buffer0(size0);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetNativeBinary(module0, &size0, buffer0.data()));
+
+  ze_module_handle_t module1 = lzt::create_module(
+      device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV, build_opt1, nullptr);
+
+  size_t size1 = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetNativeBinary(module1, &size1, nullptr));
+
+  std::vector<uint8_t> buffer1(size1);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetNativeBinary(module1, &size1, buffer1.data()));
+
+  ze_module_handle_t module2 = lzt::create_module(
+      device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV, build_opt2, nullptr);
+
+  size_t size2 = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetNativeBinary(module2, &size2, nullptr));
+
+  std::vector<uint8_t> buffer2(size2);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetNativeBinary(module2, &size2, buffer2.data()));
+  std::string native0(buffer0.begin(), buffer0.end());
+  std::string native1(buffer1.begin(), buffer1.end());
+  std::string native2(buffer2.begin(), buffer2.end());
+
+  size_t offset0 = native0.find(igc_opt0);
+  size_t offset1 = native1.find(igc_opt1);
+  size_t offset2 = native2.find(igc_opt2);
+  EXPECT_EQ(offset0, offset1);
+  EXPECT_EQ(offset0, offset2);
+  EXPECT_EQ(offset1, offset2);
+  EXPECT_GT(offset0, 0);
+  EXPECT_LT(offset0, native0.length() - igc_opt0.length());
+  EXPECT_GT(offset1, 0);
+  EXPECT_LT(offset1, native1.length() - igc_opt1.length());
+  EXPECT_GT(offset2, 0);
+  EXPECT_LT(offset2, native2.length() - igc_opt2.length());
+  offset0 = offset0 + igc_opt0.length();
+  offset1 = offset1 + igc_opt1.length();
+  offset2 = offset2 + igc_opt2.length();
+
+  if (size0 == size1) {
+    // Kernel code should be different
+    EXPECT_NE(memcmp(&buffer0[offset0], &buffer1[offset1], size0 - offset0), 0);
+  }
+  if (size0 == size2) {
+    EXPECT_NE(memcmp(&buffer0[offset0], &buffer2[offset2], size0 - offset0), 0);
+  }
+  if (size1 == size2) {
+    EXPECT_NE(memcmp(&buffer1[offset1], &buffer2[offset2], size1 - offset1), 0);
+  }
+
+  lzt::destroy_module(module0);
+  lzt::destroy_module(module1);
+  lzt::destroy_module(module2);
+}
+
 class zeKernelCreateTests : public lzt::zeEventPoolTests {
 protected:
   void SetUp() override {
     device_ = lzt::zeDevice::get_instance()->get_device();
-    module_ = create_module_vector(device_, "module_add");
+    std::vector<const char *> build_flag = {nullptr};
+    module_ = create_module_vector(device_, build_flag, "module_add");
   }
 
   void run_test(ze_module_handle_t mod, ze_group_count_t th_group_dim,
@@ -1117,7 +1219,7 @@ protected:
 
     auto driver = lzt::get_default_driver();
     auto devices = lzt::get_devices(driver);
-
+    std::vector<const char *> build_flag = {nullptr};
     for (auto device : devices) {
       auto subdevices = lzt::get_ze_sub_devices(device);
 
@@ -1125,7 +1227,7 @@ protected:
         continue;
       }
       device_ = subdevices[0];
-      module_ = create_module_vector(device_, "module_add");
+      module_ = create_module_vector(device_, build_flag, "module_add");
       break;
     }
   }
