@@ -83,4 +83,15 @@ get_extension_properties(ze_driver_handle_t driver) {
   return properties;
 }
 
+bool check_if_extension_supported(ze_driver_handle_t driver,
+                                  const char *check_extension_name) {
+  auto driver_extension_properties = get_extension_properties(driver);
+  for (auto &extension : driver_extension_properties) {
+    if (strcmp(extension.name, check_extension_name) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }; // namespace level_zero_tests

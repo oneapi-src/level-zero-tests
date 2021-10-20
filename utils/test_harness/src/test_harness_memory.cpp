@@ -44,6 +44,25 @@ void *allocate_host_memory(const size_t size, const size_t alignment,
   return memory;
 }
 
+void *allocate_host_memory(const size_t size, const size_t alignment,
+                           const ze_host_mem_alloc_flags_t flags, void *pNext,
+                           ze_context_handle_t context) {
+
+  ze_host_mem_alloc_desc_t host_desc = {};
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+  host_desc.flags = flags;
+  host_desc.pNext = pNext;
+
+  void *memory = nullptr;
+  auto context_initial = context;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemAllocHost(context, &host_desc, size, alignment, &memory));
+  EXPECT_EQ(context, context_initial);
+  EXPECT_NE(nullptr, memory);
+
+  return memory;
+}
+
 void *allocate_device_memory(const size_t size) {
   return (allocate_device_memory(size, 1));
 }

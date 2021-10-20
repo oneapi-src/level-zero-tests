@@ -24,6 +24,9 @@ void *allocate_host_memory(const size_t size);
 void *allocate_host_memory(const size_t size, const size_t alignment);
 void *allocate_host_memory(const size_t size, const size_t alignment,
                            const ze_context_handle_t context);
+void *allocate_host_memory(const size_t size, const size_t alignment,
+                           const ze_host_mem_alloc_flags_t flags, void *pNext,
+                           ze_context_handle_t context);
 void *allocate_device_memory(const size_t size);
 void *allocate_device_memory(const size_t size, const size_t alignment);
 void *allocate_device_memory(const size_t size, const size_t alignment,
