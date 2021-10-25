@@ -13,6 +13,10 @@ add_lzt_test(
   SOURCES
     ../common/src/ze_app.cpp
     src/ze_peer.cpp
+    src/ze_peer_ipc.cpp
+    src/ze_peer_unidirectional.cpp
+    src/ze_peer_bidirectional.cpp
+    src/ze_peer_common.cpp
   LINK_LIBRARIES ${OS_SPECIFIC_LIBS}
   KERNELS ze_peer_benchmarks
 )

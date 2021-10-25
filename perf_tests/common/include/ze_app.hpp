@@ -53,6 +53,8 @@ public:
   void commandListDestroy(ze_command_list_handle_t phCommandList);
   void commandListClose(ze_command_list_handle_t phCommandList);
   void commandListReset(ze_command_list_handle_t phCommandList);
+  void getIpcHandle(void *ptr, ze_ipc_mem_handle_t *pIpcHandle);
+  void closeIpcHandle(void *ipc_ptr);
   void commandListAppendImageCopyFromMemory(
       ze_command_list_handle_t command_list, ze_image_handle_t image,
       uint8_t *srcBuffer, ze_image_region_t *Region);
@@ -114,9 +116,9 @@ public:
   void allDevicesCleanup(void);
 
   ze_context_handle_t context; // This is used directly by some perf_tests.
+  std::vector<ze_device_handle_t> _devices;
 
 private:
-  std::vector<ze_device_handle_t> _devices;
   std::vector<ze_module_handle_t> _modules;
   std::string _module_path;
   std::vector<uint8_t> _binary_file;

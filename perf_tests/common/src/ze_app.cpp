@@ -243,6 +243,14 @@ void ZeApp::commandListReset(ze_command_list_handle_t command_list) {
   SUCCESS_OR_TERMINATE(zeCommandListReset(command_list));
 }
 
+void ZeApp::getIpcHandle(void *ptr, ze_ipc_mem_handle_t *pIpcHandle) {
+  SUCCESS_OR_TERMINATE(zeMemGetIpcHandle(context, ptr, pIpcHandle));
+}
+
+void ZeApp::closeIpcHandle(void *ipc_ptr) {
+  SUCCESS_OR_TERMINATE(zeMemCloseIpcHandle(context, ipc_ptr));
+}
+
 void ZeApp::commandListAppendImageCopyFromMemory(
     ze_command_list_handle_t command_list, ze_image_handle_t image,
     uint8_t *srcBuffer, ze_image_region_t *Region) {
