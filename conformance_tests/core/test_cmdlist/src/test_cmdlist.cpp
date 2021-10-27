@@ -570,12 +570,11 @@ TEST(
     GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned) {
   // Create buffers for scratch kernel
   uint32_t arraySize = 32;
-  uint32_t vectorSize = 16;
   uint32_t typeSize = sizeof(uint32_t);
-  uint32_t srcAdditionalMul = 3u;
-  uint32_t expectedMemorySize = arraySize * vectorSize * typeSize;
-  uint32_t srcMemorySize = expectedMemorySize * srcAdditionalMul;
-  uint32_t idxMemorySize = arraySize * sizeof(uint32_t);
+  uint32_t expectedMemorySize = (arraySize * 2 + 1) * typeSize - 4;
+  uint32_t inMemorySize = expectedMemorySize;
+  uint32_t outMemorySize = expectedMemorySize;
+  uint32_t offsetMemorySize = 128 * arraySize;
 
   ze_device_mem_alloc_desc_t deviceDesc = {};
   deviceDesc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
@@ -584,9 +583,9 @@ TEST(
   ze_host_mem_alloc_desc_t hostDesc = {};
   hostDesc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
   hostDesc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
-  void *srcBuffer = lzt::allocate_host_memory(srcMemorySize);
-  void *dstBuffer = lzt::allocate_host_memory(expectedMemorySize);
-  void *idxBuffer = lzt::allocate_host_memory(idxMemorySize);
+  void *srcBuffer = lzt::allocate_host_memory(inMemorySize);
+  void *dstBuffer = lzt::allocate_host_memory(outMemorySize);
+  void *offsetBuffer = lzt::allocate_host_memory(offsetMemorySize);
   void *expectedMemory = lzt::allocate_host_memory(expectedMemorySize);
 
   // create two buffers for append fill/ copy kernel
@@ -614,7 +613,7 @@ TEST(
   ze_kernel_flags_t flag = 0;
   /* Prepare the fill function */
   ze_kernel_handle_t scratch_function =
-      lzt::create_function(module_handle, flag, "scratch_kernel");
+      lzt::create_function(module_handle, flag, "spill_test");
   ze_kernel_properties_t kernelProperties = {};
   kernelProperties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
   zeKernelGetProperties(scratch_function, &kernelProperties);
@@ -628,7 +627,8 @@ TEST(
   lzt::set_group_size(scratch_function, groupSizeX, groupSizeY, groupSizeZ);
   lzt::set_argument_value(scratch_function, 2, sizeof(dstBuffer), &dstBuffer);
   lzt::set_argument_value(scratch_function, 1, sizeof(srcBuffer), &srcBuffer);
-  lzt::set_argument_value(scratch_function, 0, sizeof(idxBuffer), &idxBuffer);
+  lzt::set_argument_value(scratch_function, 0, sizeof(offsetBuffer),
+                          &offsetBuffer);
   // if groupSize is greater then memory count, then at least one thread group
   // should be dispatched
   uint32_t threadGroup = arraySize / groupSize > 1 ? arraySize / groupSize : 1;
@@ -636,25 +636,20 @@ TEST(
 
   for (uint32_t i = 0; i < num_iterations; i++) {
     // Initialize memory
-    constexpr uint8_t val = 0;
-    memset(srcBuffer, val, srcMemorySize);
-    memset(idxBuffer, 0, idxMemorySize);
-    memset(dstBuffer, 0, expectedMemorySize);
+    memset(srcBuffer, 0, inMemorySize);
+    memset(dstBuffer, 0, outMemorySize);
+    memset(offsetBuffer, 0, offsetMemorySize);
     memset(expectedMemory, 0, expectedMemorySize);
 
-    auto srcBufferLong = static_cast<uint64_t *>(srcBuffer);
-    auto expectedMemoryLong = static_cast<uint64_t *>(expectedMemory);
+    auto srcBufferInt = static_cast<uint32_t *>(srcBuffer);
+    auto expectedMemoryInt = static_cast<uint32_t *>(expectedMemory);
+    constexpr int expectedVal1 = 16256;
+    constexpr int expectedVal2 = 512;
 
     for (uint32_t i = 0; i < arraySize; ++i) {
-      static_cast<uint32_t *>(idxBuffer)[i] = 2;
-      for (uint32_t vecIdx = 0; vecIdx < vectorSize; ++vecIdx) {
-        for (uint32_t srcMulIdx = 0; srcMulIdx < srcAdditionalMul;
-             ++srcMulIdx) {
-          srcBufferLong[(i * vectorSize * srcAdditionalMul) +
-                        srcMulIdx * vectorSize + vecIdx] = 1l;
-        }
-        expectedMemoryLong[i * vectorSize + vecIdx] = 2l;
-      }
+      srcBufferInt[i] = 2;
+      expectedMemoryInt[i * 2] = expectedVal1;
+      expectedMemoryInt[i * 2 + 1] = expectedVal2;
     }
 
     memset(host_memory, 0, size);
@@ -715,7 +710,7 @@ TEST(
   lzt::free_memory(device_memory);
   lzt::free_memory(dstBuffer);
   lzt::free_memory(srcBuffer);
-  lzt::free_memory(idxBuffer);
+  lzt::free_memory(offsetBuffer);
   lzt::free_memory(expectedMemory);
 }
 
