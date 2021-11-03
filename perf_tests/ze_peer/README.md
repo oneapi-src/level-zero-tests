@@ -28,14 +28,22 @@ To run, use the following command options.
 
  OPTIONS:
   -t, string                  selectively run a particular test
-      ipc                     selectively run IPC tests
-      ipc_bw                  selectively run IPC bandwidth test
-      ipc_latency             selectively run IPC latency test
       transfer_bw             selectively run transfer bandwidth test
       latency                 selectively run latency test
   -a                          run all above tests [default]
+  -b                          run birectional mode
+  -o, string                  operation to perform
+      read                    read from remote
+      write                   write to remote
+  -m                          run tests in multiprocess
+  -d                          destination device
+  -s                          source device
+  -z                          size to run
+  -v                          validate data (only 1 iteration is execute)
   -q                          query for number of engines available
   -g, number                  select engine group (default: 0)
   -i, number                  select engine index (default: 0)
+  -e                          run concurrently using all compute engines (each size is evenly distributed among engines)
+  -l                          run concurrently using all copy engines (each size is evenly distributed among engines)
   -h, --help                  display help message
 ```
