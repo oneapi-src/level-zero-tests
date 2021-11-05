@@ -31,7 +31,7 @@ To run, use the following command options.
       transfer_bw             selectively run transfer bandwidth test
       latency                 selectively run latency test
   -a                          run all above tests [default]
-  -b                          run birectional mode
+  -b                          run bidirectional mode
   -o, string                  operation to perform
       read                    read from remote
       write                   write to remote
@@ -39,7 +39,7 @@ To run, use the following command options.
   -d                          destination device
   -s                          source device
   -z                          size to run
-  -v                          validate data (only 1 iteration is execute)
+  -v                          validate data (only 1 iteration is executed)
   -q                          query for number of engines available
   -g, number                  select engine group (default: 0)
   -i, number                  select engine index (default: 0)
