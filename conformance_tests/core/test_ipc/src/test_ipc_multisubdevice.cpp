@@ -188,13 +188,29 @@ TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCMultiDeviceThenParentProcessReadsMemoryCorrectly) {
   size_t size = 4096;
+
   pid_t pid = fork();
   if (pid < 0) {
     throw std::runtime_error("Failed to fork child process");
   } else if (pid > 0) {
-    multi_sub_device_receiver(size);
+    int child_status;
+    pid_t client_pid = wait(&child_status);
+    if (client_pid <= 0) {
+      std::cerr << "Client terminated abruptly with error code "
+                << strerror(errno) << "\n";
+      std::terminate();
+    }
+    EXPECT_EQ(true, WIFEXITED(child_status));
   } else {
-    multi_sub_device_sender(size);
+    pid_t ppid = getpid();
+    pid_t pid = fork();
+    if (pid < 0) {
+      throw std::runtime_error("Failed to fork child process");
+    } else if (pid > 0) {
+      multi_sub_device_receiver(size);
+    } else {
+      multi_sub_device_sender(size);
+    }
   }
 }
 #endif
