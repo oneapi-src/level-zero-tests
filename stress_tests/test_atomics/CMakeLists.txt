@@ -21,9 +21,10 @@
 #
 
 add_lzt_test(
-  NAME test_atomics
+  NAME test_stress_atomics
   GROUP "/stress_tests"
   SOURCES
+    ../common/src/stress_common_func.cpp
     src/test_atomics.cpp
     src/main.cpp
   LINK_LIBRARIES

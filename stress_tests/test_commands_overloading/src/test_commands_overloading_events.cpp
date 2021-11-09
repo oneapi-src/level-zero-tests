@@ -12,6 +12,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "stress_common_func.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -22,7 +23,8 @@ namespace {
 
 class zeDriverMultiplyEventsStressTest
     : public ::testing::Test,
-      public ::testing::WithParamInterface<uint64_t> {
+      public ::testing::WithParamInterface<
+          std::tuple<float, float, uint64_t, enum memory_test_type>> {
 protected:
   ze_kernel_handle_t create_kernel(ze_module_handle_t module,
                                    const std::string &kernel_name,
@@ -47,64 +49,51 @@ protected:
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
     LOG_INFO << "call synchronize command queue";
     lzt::synchronize(command_queue, UINT64_MAX);
+    // can be used in next iteration. Need to be recycled
+    lzt::reset_command_list(command_list);
   };
 
-  typedef struct TestArguments {
-    uint64_t multiplier;
-
-  } TestArguments_t;
-
   uint32_t workgroup_size_x_ = 8;
-  uint32_t number_of_kernel_args_ = 1;
-  uint32_t init_value_ = 0;
   uint32_t set_value_ = 0xFFFEFEFF;
-  uint32_t requested_allocation_size_ = 32 * sizeof(uint32_t);
 }; // namespace
 
 TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
-
-  TestArguments_t test_arguments = {GetParam()};
+  TestArguments_t test_arguments = {
+      std::get<0>(GetParam()), // total memory size limit
+      std::get<1>(GetParam()), // one allocation size limit
+      std::get<2>(GetParam()), // dispatch multiplier
+      std::get<3>(GetParam())  // memory type
+  };
 
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
   ze_device_properties_t device_properties = lzt::get_device_properties(device);
+  test_arguments.print_test_arguments(device_properties);
 
-  LOG_INFO << "TESTING on device: " << device_properties.name;
-  LOG_INFO << "TESTING user ARGS: single allocation size: "
-           << requested_allocation_size_ << " Bytes"
-           << " | Events multiplication = " << test_arguments.multiplier;
+  std::vector<ze_device_memory_properties_t> device_memory_properties =
+      lzt::get_memory_properties(device);
 
-  LOG_INFO << "Device max available memory allocation size: "
-           << device_properties.maxMemAllocSize / (1024 * 1024) << "MB";
+  const uint64_t number_of_all_allocations = 2 * test_arguments.multiplier;
 
-  uint64_t number_of_requested_dispatches = test_arguments.multiplier;
+  uint64_t test_single_allocation_memory_size = 0;
+  uint64_t test_total_memory_size = 0;
+  bool relax_memory_capability;
+  adjust_max_memory_allocation(
+      driver, device_properties, device_memory_properties,
+      test_total_memory_size, test_single_allocation_memory_size,
+      number_of_all_allocations, test_arguments.total_memory_size_limit,
+      test_arguments.one_allocation_size_limit, relax_memory_capability);
+
+  uint64_t tmp_count = test_single_allocation_memory_size / sizeof(uint32_t);
+  uint64_t test_single_allocation_count =
+      tmp_count - tmp_count % workgroup_size_x_;
+  LOG_INFO << "Test one allocation data count: "
+           << test_single_allocation_count;
+  LOG_INFO << "Test number of allocations: " << number_of_all_allocations;
+  LOG_INFO << "Test kernel dispatches count: " << test_arguments.multiplier;
   bool memory_test_failure = false;
-
-  uint64_t full_test_requested_allocation_size =
-      requested_allocation_size_ * number_of_requested_dispatches *
-      number_of_kernel_args_;
-
-  uint64_t requested_dispatch_allocation_size =
-      requested_allocation_size_ * number_of_kernel_args_;
-
-  ASSERT_GE(device_properties.maxMemAllocSize,
-            full_test_requested_allocation_size)
-      << "Too small memory on the device to run this test!";
-
-  size_t one_case_data_count =
-      requested_dispatch_allocation_size / sizeof(uint32_t);
-
-  LOG_INFO << "One case data allocation size: "
-           << requested_dispatch_allocation_size << " Bytes";
-  LOG_INFO << "Number of data elements for one allocation: "
-           << one_case_data_count;
-  LOG_INFO << "Number of kernel dispatches: " << number_of_requested_dispatches;
-  LOG_INFO << "Total max memory used by test: "
-           << number_of_requested_dispatches *
-                  requested_dispatch_allocation_size
-           << " Bytes";
 
   std::vector<uint32_t *> output_allocations;
   std::vector<std::vector<uint32_t>> data_for_all_dispatches;
@@ -112,14 +101,15 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
 
   // prepare memory allaction and kernels names
   LOG_INFO << "call allocation memory... ";
-  for (uint64_t dispatch_id = 0; dispatch_id < number_of_requested_dispatches;
+  for (uint64_t dispatch_id = 0; dispatch_id < test_arguments.multiplier;
        dispatch_id++) {
     uint32_t *output_allocation;
-    output_allocation = (uint32_t *)lzt::allocate_host_memory(
-        requested_dispatch_allocation_size, 32, context);
+    output_allocation = allocate_memory<uint32_t>(
+        context, device, test_arguments.memory_type,
+        test_single_allocation_memory_size, relax_memory_capability);
     output_allocations.push_back(output_allocation);
 
-    std::vector<uint32_t> data_out(one_case_data_count, init_value_);
+    std::vector<uint32_t> data_out(test_single_allocation_count, 0);
     data_for_all_dispatches.push_back(data_out);
   }
 
@@ -182,13 +172,12 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
            << test_arguments.multiplier << " of steps";
   for (uint32_t data_idx = 0; data_idx < test_arguments.multiplier;
        data_idx++) {
-    uint32_t group_count_x = one_case_data_count / workgroup_size_x_;
+    uint32_t group_count_x = test_single_allocation_count / workgroup_size_x_;
     ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
-    init_value_ = data_idx;
 
     lzt::append_memory_fill(command_list, output_allocations[dispatch_id],
-                            &init_value_, sizeof(uint32_t),
-                            one_case_data_count * sizeof(uint32_t),
+                            &data_idx, sizeof(uint32_t),
+                            test_single_allocation_count * sizeof(uint32_t),
                             set_memory_events[data_idx]);
 
     lzt::append_launch_function(
@@ -231,7 +220,7 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
   uint64_t data_id = 0;
   for (auto each_data_out : data_for_all_dispatches) {
 
-    for (uint32_t i = 0; i < one_case_data_count; i++) {
+    for (uint32_t i = 0; i < test_single_allocation_count; i++) {
       if (data_id + dispatch_id != each_data_out[i]) {
         LOG_ERROR << "Results for dispatch ==  " << dispatch_id << " failed."
                   << " The index " << i << " found = " << each_data_out[i]
@@ -250,36 +239,67 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
 
 TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
 
-  TestArguments_t test_arguments = {GetParam()};
+  TestArguments_t test_arguments = {
+      std::get<0>(GetParam()), // total memory size limit
+      std::get<1>(GetParam()), // one allocation size limit
+      std::get<2>(GetParam()), // dispatch multiplier
+      std::get<3>(GetParam())  // memory type
+  };
 
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
   ze_device_properties_t device_properties = lzt::get_device_properties(device);
+  test_arguments.print_test_arguments(device_properties);
 
-  LOG_INFO << "TESTING on device: " << device_properties.name;
-  LOG_INFO << "TESTING user ARGS: Events multiplication = "
-           << test_arguments.multiplier;
+  std::vector<ze_device_memory_properties_t> device_memory_properties =
+      lzt::get_memory_properties(device);
 
-  LOG_INFO << "Device max available memory allocation size: "
-           << device_properties.maxMemAllocSize / (1024 * 1024) << "MB";
+  const uint64_t number_of_all_allocations = 4;
 
-  uint64_t max_allocation_size = device_properties.maxMemAllocSize;
-  uint64_t requested_copy_bytes = test_arguments.multiplier * sizeof(uint32_t);
+  uint64_t test_single_allocation_memory_size =
+      test_arguments.multiplier * sizeof(uint32_t);
+
+  uint64_t test_total_memory_size = number_of_all_allocations *
+                                    test_single_allocation_memory_size *
+                                    test_arguments.total_memory_size_limit;
+  bool relax_memory_capability;
+  adjust_max_memory_allocation(
+      driver, device_properties, device_memory_properties,
+      test_total_memory_size, test_single_allocation_memory_size,
+      number_of_all_allocations, test_arguments.total_memory_size_limit,
+      test_arguments.one_allocation_size_limit, relax_memory_capability);
+  uint64_t test_single_allocation_count =
+      test_single_allocation_memory_size / sizeof(uint32_t);
+
+  // We have relation between single allocation size and events/multiplier
+  // Need to override single allocation size/count to multiplier value
+  // if these calculated values are bigger than requested
+  // No need to adjust run with user event multiplier request
+  if (test_single_allocation_count > test_arguments.multiplier) {
+    test_single_allocation_count = test_arguments.multiplier;
+    test_single_allocation_memory_size =
+        sizeof(uint32_t) * test_single_allocation_count;
+    LOG_INFO << "Test choose single allocation memory size: "
+             << (float)test_single_allocation_memory_size / (1024 * 1024)
+             << "MB";
+  }
+  uint32_t final_events_count = 2 * test_single_allocation_count;
+
+  LOG_INFO << "Test one allocation data count: "
+           << test_single_allocation_count;
+  LOG_INFO << "Test number of allocations: " << number_of_all_allocations;
+  LOG_INFO << "Test events count: " << final_events_count;
   bool memory_test_failure = false;
-
-  ASSERT_GE(max_allocation_size, requested_copy_bytes)
-      << "Too small memory on the device to run this test!";
-
-  LOG_INFO << "Allocation size to copy: " << requested_copy_bytes << " Bytes";
 
   LOG_INFO << "call allocation memory... ";
   uint32_t *output_allocation;
-  output_allocation =
-      (uint32_t *)lzt::allocate_host_memory(requested_copy_bytes, 32, context);
+  output_allocation = allocate_memory<uint32_t>(
+      context, device, test_arguments.memory_type,
+      test_single_allocation_memory_size, relax_memory_capability);
 
-  std::vector<uint32_t> data_out(test_arguments.multiplier, init_value_);
+  std::vector<uint32_t> data_out(test_single_allocation_count, 0);
 
   LOG_INFO << "call create command queues... ";
   ze_command_queue_handle_t command_queue = lzt::create_command_queue(
@@ -289,22 +309,22 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
   LOG_INFO << "call create command lists... ";
   ze_command_list_handle_t command_list =
       lzt::create_command_list(context, device, 0);
-  ;
 
-  uint32_t final_events_count = 2 * test_arguments.multiplier;
   ze_event_pool_desc_t event_pool_desc = {
       ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
       ZE_EVENT_POOL_FLAG_HOST_VISIBLE, final_events_count};
-  std::vector<ze_event_handle_t> set_memory_events(test_arguments.multiplier);
-  std::vector<ze_event_handle_t> read_memory_events(test_arguments.multiplier);
+  std::vector<ze_event_handle_t> set_memory_events(
+      test_single_allocation_count);
+  std::vector<ze_event_handle_t> read_memory_events(
+      test_single_allocation_count);
   std::vector<ze_event_desc_t> event_descriptions;
 
   ze_event_pool_handle_t memory_pool =
       lzt::create_event_pool(context, event_pool_desc);
 
-  LOG_INFO << "call create event in number of " << test_arguments.multiplier
+  LOG_INFO << "call create event in number of " << test_single_allocation_count
            << " to memory set and read";
-  for (uint32_t data_idx = 0; data_idx < test_arguments.multiplier;
+  for (uint32_t data_idx = 0; data_idx < test_single_allocation_count;
        data_idx++) {
     ze_event_desc_t event_desc_set = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
                                       2 * data_idx, 0,
@@ -323,8 +343,8 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
   }
 
   LOG_INFO << "call commands to copy memory in number == "
-           << test_arguments.multiplier << " of steps";
-  for (uint32_t data_idx = 0; data_idx < test_arguments.multiplier;
+           << test_single_allocation_count << " of steps";
+  for (uint32_t data_idx = 0; data_idx < test_single_allocation_count;
        data_idx++) {
     lzt::append_memory_fill(command_list, &output_allocation[data_idx],
                             &set_value_, sizeof(uint32_t), sizeof(uint32_t),
@@ -368,7 +388,7 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
   lzt::destroy_context(context);
 
   LOG_INFO << "call verification output";
-  for (uint64_t byte_idx = 0; byte_idx < test_arguments.multiplier;
+  for (uint64_t byte_idx = 0; byte_idx < test_single_allocation_count;
        byte_idx++) {
     if (data_out[byte_idx] != set_value_) {
       LOG_ERROR << "Results for byte offset ==  " << byte_idx << " failed. "
@@ -386,7 +406,7 @@ struct CombinationsTestNameSuffix {
   template <class ParamType>
   std::string operator()(const testing::TestParamInfo<ParamType> &info) const {
     std::stringstream ss;
-    ss << "events_" << info.param;
+    ss << "events_" << std::get<2>(info.param);
     return ss.str();
   }
 };
@@ -394,8 +414,19 @@ struct CombinationsTestNameSuffix {
 std::vector<uint64_t> multiple_events = {
     1, 32, 1024, 5000, 9000, 10000, 100000, 1000000, 2000000, 10000000};
 
-INSTANTIATE_TEST_CASE_P(TestEventsMatrix, zeDriverMultiplyEventsStressTest,
-                        testing::ValuesIn(multiple_events),
+INSTANTIATE_TEST_CASE_P(TestEventsMatrixMinMemory,
+                        zeDriverMultiplyEventsStressTest,
+                        ::testing::Combine(::testing::Values(hundred_percent),
+                                           ::testing::Values(one_percent),
+                                           testing::ValuesIn(multiple_events),
+                                           testing::Values(MTT_DEVICE)),
+                        CombinationsTestNameSuffix());
+INSTANTIATE_TEST_CASE_P(TestEventsMatrixMaxMemory,
+                        zeDriverMultiplyEventsStressTest,
+                        ::testing::Combine(::testing::Values(hundred_percent),
+                                           ::testing::Values(hundred_percent),
+                                           testing::ValuesIn(multiple_events),
+                                           testing::Values(MTT_DEVICE)),
                         CombinationsTestNameSuffix());
 
 } // namespace

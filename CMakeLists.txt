@@ -179,6 +179,9 @@ function(add_lzt_test_executable)
           GMock::GMock
           GTest::GTest
         )
+        list(APPEND ADD_LZT_TEST_EXECUTABLE_INCLUDE_DIRECTORIES
+        ${CMAKE_CURRENT_LIST_DIR}/../common/include
+        )
         set(component "stress-tests")
     endif()
 

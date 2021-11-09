@@ -12,7 +12,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
-
+#include "stress_common_func.hpp"
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
@@ -22,8 +22,8 @@ namespace {
 
 class zeDriverSpreadKernelsStressTest
     : public ::testing::Test,
-      public ::testing::WithParamInterface<
-          std::tuple<uint64_t, bool, bool, bool>> {
+      public ::testing::WithParamInterface<std::tuple<
+          float, float, uint32_t, enum memory_test_type, bool, bool, bool>> {
 protected:
   void dispatch_kernels(const ze_device_handle_t device,
                         const std::vector<ze_module_handle_t> &module,
@@ -91,10 +91,8 @@ protected:
 
       uint32_t group_count_x = one_case_data_count / workgroup_size_x_;
       ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
-      init_value_ = dispatch_id;
-
       lzt::append_memory_fill(
-          current_command_list, memory_allocations[dispatch_id], &init_value_,
+          current_command_list, memory_allocations[dispatch_id], &dispatch_id,
           sizeof(uint32_t), one_case_data_count * sizeof(uint32_t), nullptr);
 
       lzt::append_barrier(current_command_list, nullptr);
@@ -164,96 +162,75 @@ protected:
     }
   }
 
-  typedef struct TestArguments {
-    uint64_t requested_dispatches;
+  typedef struct OverloadingTestArguments {
+    TestArguments base_arguments;
     bool separate_modules;
     bool separate_command_lists;
     bool separate_command_queues;
-
-  } TestArguments_t;
+  } OverloadingTestArguments_t;
 
   uint32_t workgroup_size_x_ = 8;
-  uint32_t number_of_kernel_args_ = 1;
   uint32_t number_of_kernels_in_module_ = 1;
-  uint32_t init_value_ = 0;
-  uint32_t requested_allocation_size_ = 32 * sizeof(uint32_t);
 }; // namespace
 
 TEST_P(
     zeDriverSpreadKernelsStressTest,
     MultiplyKernelDispatchesSpreadAmongModulesCommandsListsAndCommandQueues) {
 
-  TestArguments_t test_arguments = {
-      std::get<0>(GetParam()), // dispatches
-      std::get<1>(GetParam()), // separated modules mode
-      std::get<2>(GetParam()), // separated command lists mode
-      std::get<3>(GetParam())  // separated command queues mode
-
+  OverloadingTestArguments test_arguments = {
+      std::get<0>(GetParam()), // total memory size limit
+      std::get<1>(GetParam()), // one allocation size limit
+      std::get<2>(GetParam()), // dispatch multiplier
+      std::get<3>(GetParam()), // memory type
+      std::get<4>(GetParam()), // separated modules mode
+      std::get<5>(GetParam()), // separated command lists mode
+      std::get<6>(GetParam())  // separated command queues mode
   };
 
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
-  ze_device_properties_t device_properties;
-  device_properties.pNext = nullptr;
-  device_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetProperties(device, &device_properties));
-
-  LOG_INFO << "TESTING on device: " << device_properties.name;
-  LOG_INFO << "TESTING user ARGS: DISPATCHES AMOUNT: "
-           << test_arguments.requested_dispatches
-           << " | SINGLE ALLOCATION SIZE: " << requested_allocation_size_
-           << " Bytes"
-           << " | MULTIPLE COMMAND QUEUES = "
+  ze_device_properties_t device_properties = lzt::get_device_properties(device);
+  test_arguments.base_arguments.print_test_arguments(device_properties);
+  LOG_INFO << " | MULTIPLE COMMAND QUEUES = "
            << (test_arguments.separate_command_queues ? "yes" : "no")
            << " | MULTIPLE COMMAND LISTS = "
            << (test_arguments.separate_command_lists ? "yes" : "no")
            << " | MULTIPLE MODULES = "
            << (test_arguments.separate_modules ? "yes" : "no");
 
-  LOG_INFO << "Device max available memory allocation size: "
-           << device_properties.maxMemAllocSize / (1024 * 1024) << "MB";
+  std::vector<ze_device_memory_properties_t> device_memory_properties =
+      lzt::get_memory_properties(device);
+
+  const uint32_t multiplier = test_arguments.base_arguments.multiplier;
+  const uint64_t number_of_all_allocations = 2 * multiplier;
+  float total_memory_size_limit =
+      test_arguments.base_arguments.total_memory_size_limit;
+  float one_allocation_size_limit =
+      test_arguments.base_arguments.one_allocation_size_limit;
+  uint64_t test_single_allocation_memory_size = 0;
+  uint64_t test_total_memory_size = 0;
+  bool relax_memory_capability;
+  adjust_max_memory_allocation(
+      driver, device_properties, device_memory_properties,
+      test_total_memory_size, test_single_allocation_memory_size,
+      number_of_all_allocations, total_memory_size_limit,
+      one_allocation_size_limit, relax_memory_capability);
+
+  uint64_t tmp_count = test_single_allocation_memory_size / sizeof(uint32_t);
+  uint64_t test_single_allocation_count =
+      tmp_count - tmp_count % workgroup_size_x_;
 
   uint64_t max_allocation_size = device_properties.maxMemAllocSize;
-  uint64_t number_of_requested_dispatches = test_arguments.requested_dispatches;
+  uint32_t number_of_requested_dispatches = multiplier;
   bool memory_test_failure = false;
 
-  uint64_t full_test_requested_allocation_size =
-      requested_allocation_size_ * number_of_requested_dispatches *
-      number_of_kernel_args_;
-
-  uint64_t requested_dispatch_allocation_size =
-      requested_allocation_size_ * number_of_kernel_args_;
-
-  while (full_test_requested_allocation_size > max_allocation_size) {
-    number_of_requested_dispatches -= 1;
-    full_test_requested_allocation_size = number_of_requested_dispatches *
-                                          test_arguments.requested_dispatches *
-                                          number_of_kernel_args_;
-    ASSERT_NE(0, number_of_requested_dispatches)
-        << "Too small memory on the device to run this test!";
-  }
-
-  if (number_of_requested_dispatches != test_arguments.requested_dispatches) {
-    LOG_INFO << "Number of dispatches has beed decresed from"
-             << test_arguments.requested_dispatches
-             << " to value : " << number_of_requested_dispatches;
-  }
-
-  size_t one_case_data_count =
-      requested_dispatch_allocation_size / sizeof(uint32_t);
-
-  LOG_INFO << "One case data allocation size: "
-           << requested_dispatch_allocation_size << " Bytes";
-  LOG_INFO << "Number of data elements for one allocation: "
-           << one_case_data_count;
-  LOG_INFO << "Number of kernel dispatches: " << number_of_requested_dispatches;
-  LOG_INFO << "Total max memory used by test: "
-           << number_of_requested_dispatches *
-                  requested_dispatch_allocation_size
-           << " Bytes";
+  LOG_INFO << "Test one allocation data count: "
+           << test_single_allocation_count;
+  LOG_INFO << "Test number of allocations: " << number_of_all_allocations;
+  LOG_INFO << "Test kernel dispatches count: "
+           << number_of_requested_dispatches;
 
   std::vector<uint32_t *> output_allocations;
   std::vector<std::vector<uint32_t>> data_for_all_dispatches;
@@ -262,15 +239,15 @@ TEST_P(
   std::string kernel_file_name = "test_commands_overloading.spv";
 
   LOG_INFO << "call allocation memory... ";
-  for (uint64_t dispatch_id = 0; dispatch_id < number_of_requested_dispatches;
+  for (uint32_t dispatch_id = 0; dispatch_id < number_of_requested_dispatches;
        dispatch_id++) {
     uint32_t *output_allocation;
-
-    output_allocation = (uint32_t *)lzt::allocate_host_memory(
-        requested_dispatch_allocation_size, 32, context);
+    output_allocation = allocate_memory<uint32_t>(
+        context, device, test_arguments.base_arguments.memory_type,
+        test_single_allocation_memory_size, relax_memory_capability);
     output_allocations.push_back(output_allocation);
 
-    std::vector<uint32_t> data_out(one_case_data_count, init_value_);
+    std::vector<uint32_t> data_out(test_single_allocation_count, 0);
     data_for_all_dispatches.push_back(data_out);
 
     std::string kernel_name = "test_device_memory1";
@@ -292,8 +269,8 @@ TEST_P(
   LOG_INFO << "call dispatch_kernels";
   dispatch_kernels(device, multiple_module_handle, output_allocations,
                    data_for_all_dispatches, test_kernel_names,
-                   number_of_requested_dispatches, one_case_data_count, context,
-                   test_arguments.separate_command_lists,
+                   number_of_requested_dispatches, test_single_allocation_count,
+                   context, test_arguments.separate_command_lists,
                    test_arguments.separate_command_queues,
                    test_arguments.separate_modules);
 
@@ -316,9 +293,10 @@ TEST_P(
   uint64_t dispatch_id = 0;
   uint64_t data_id = 0;
   for (auto each_data_out : data_for_all_dispatches) {
-    for (uint32_t i = 0; i < one_case_data_count; i++) {
+    for (uint64_t i = 0; i < test_single_allocation_count; i++) {
       if (data_id + dispatch_id != each_data_out[i]) {
         LOG_ERROR << "Index of difference " << i
+                  << " dispatch id = " << dispatch_id
                   << " found = " << each_data_out[i]
                   << " expected = " << data_id + dispatch_id;
         memory_test_failure = true;
@@ -337,24 +315,36 @@ struct CombinationsTestNameSuffix {
   template <class ParamType>
   std::string operator()(const testing::TestParamInfo<ParamType> &info) const {
     std::stringstream ss;
-    ss << "dispatches_" << std::get<0>(info.param) << "_spread_modules_"
-       << std::get<1>(info.param) << "_spread_cmd_lists_"
-       << std::get<2>(info.param) << "_spread_cmd_queues_"
-       << std::get<3>(info.param);
+    ss << "dispatches_" << std::get<2>(info.param) << "_spread_modules_"
+       << std::get<4>(info.param) << "_spread_cmd_lists_"
+       << std::get<5>(info.param) << "_spread_cmd_queues_"
+       << std::get<6>(info.param);
     return ss.str();
   }
 };
 
-std::vector<uint64_t> input_values = {1,     4,     100,   1000,
-                                      10000, 40000, 80000, 1000000};
-std::vector<uint64_t> dispatches = input_values;
+std::vector<uint32_t> dispatches = {1,     4,     100,   1000,
+                                    10000, 40000, 80000, 100000};
 std::vector<bool> use_separate_modules = {true, false};
 std::vector<bool> use_separate_command_lists = {true, false};
 std::vector<bool> use_separate_command_queues = {true, false};
 
 INSTANTIATE_TEST_CASE_P(
-    TestKernelsModulsCmdListsCmdQueuesMatrix, zeDriverSpreadKernelsStressTest,
-    ::testing::Combine(::testing::ValuesIn(dispatches),
+    zeDriverSpreadKernelsStressTestMaxMemory, zeDriverSpreadKernelsStressTest,
+    ::testing::Combine(::testing::Values(hundred_percent),
+                       ::testing::Values(hundred_percent),
+                       ::testing::ValuesIn(dispatches),
+                       testing::Values(MTT_DEVICE),
+                       ::testing::ValuesIn(use_separate_command_lists),
+                       ::testing::ValuesIn(use_separate_command_queues),
+                       ::testing::ValuesIn(use_separate_modules)),
+    CombinationsTestNameSuffix());
+INSTANTIATE_TEST_CASE_P(
+    zeDriverSpreadKernelsStressTestMinMemory, zeDriverSpreadKernelsStressTest,
+    ::testing::Combine(::testing::Values(hundred_percent),
+                       ::testing::Values(five_percent),
+                       ::testing::ValuesIn(dispatches),
+                       testing::Values(MTT_DEVICE),
                        ::testing::ValuesIn(use_separate_command_lists),
                        ::testing::ValuesIn(use_separate_command_queues),
                        ::testing::ValuesIn(use_separate_modules)),

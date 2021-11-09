@@ -21,9 +21,10 @@
 #
 
 add_lzt_test(
-  NAME test_memory_allocation
+  NAME test_stress_memory_allocation
   GROUP "/stress_tests"
   SOURCES
+    ../common/src/stress_common_func.cpp
     src/test_memory_allocation.cpp
     src/main.cpp
   LINK_LIBRARIES

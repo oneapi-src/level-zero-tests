@@ -21,9 +21,10 @@
 #
 
 add_lzt_test(
-  NAME test_commands_overloading
+  NAME test_stress_commands_overloading
   GROUP "/stress_tests"
   SOURCES
+    ../common/src/stress_common_func.cpp
     src/test_commands_overloading.cpp
     src/test_commands_overloading_multiplication.cpp
     src/test_commands_overloading_events.cpp
