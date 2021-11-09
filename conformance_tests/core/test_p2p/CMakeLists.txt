@@ -36,4 +36,5 @@ add_lzt_test(
     atomic_access
     concurrent_access
     p2p_test
+    p2p_test_offset_pointer
 )

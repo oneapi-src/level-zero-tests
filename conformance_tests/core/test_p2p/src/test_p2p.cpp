@@ -848,6 +848,143 @@ TEST_P(
   lzt::free_memory(initial_pattern_memory);
 }
 
+TEST_P(
+    zeP2PTests,
+    GivenP2PDevicesWhenKernelReadsRemoteDeviceMemoryWithDevicePointerOffsetThenCorrectDataIsRead) {
+
+  std::string module_name = "p2p_test_offset_pointer.spv";
+  std::string func_name = "multi_device_function";
+
+  uint32_t dev_instance_size = dev_instance_.size();
+
+  for (uint32_t i = 1; i < dev_instance_.size(); i++) {
+    if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
+      continue;
+    }
+    ze_module_handle_t module =
+        lzt::create_module(dev_instance_[i - 1].dev, module_name);
+    uint8_t *shr_mem = static_cast<uint8_t *>(
+        lzt::allocate_shared_memory(mem_size_, 1, 0, 0, dev_instance_[i].dev));
+
+    // random memory region on device i. Allow "space" for increment.
+    uint8_t value_before = rand() & 0x7f;
+    uint8_t value_after = rand() & 0x7f;
+
+    lzt::append_memory_set(
+        dev_instance_[i].cmd_list,
+        static_cast<void *>(
+            static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
+        &value_after, mem_size_);
+    if (offset_ > 0) {
+      lzt::append_memory_set(dev_instance_[i].cmd_list,
+                             dev_instance_[i].src_region, &value_before,
+                             offset_);
+    }
+    lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
+    lzt::close_command_list(dev_instance_[i].cmd_list);
+    lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
+                               &dev_instance_[i].cmd_list, nullptr);
+    lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
+    lzt::reset_command_list(dev_instance_[i].cmd_list);
+
+    // device (i - 1) will modify memory allocated for device i
+    lzt::create_and_execute_function(
+        dev_instance_[i - 1].dev, module, func_name, 1,
+        static_cast<void *>(
+            static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_));
+
+    // copy memory to shared region and verify it is correct
+    lzt::append_memory_copy(
+        dev_instance_[i].cmd_list, shr_mem,
+        static_cast<void *>(
+            static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
+        mem_size_, nullptr);
+    lzt::close_command_list(dev_instance_[i].cmd_list);
+    lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
+                               &dev_instance_[i].cmd_list, nullptr);
+    lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
+    lzt::reset_command_list(dev_instance_[i].cmd_list);
+    ASSERT_EQ(shr_mem[0], value_after + 1)
+        << "Memory Copied from Device did not match.";
+
+    lzt::destroy_module(module);
+  }
+}
+
+TEST_P(
+    zeP2PTests,
+    GivenP2PSubDevicesWhenKernelReadsRemoteSubDeviceMemoryWithSubDevicePointerOffsetThenCorrectDataIsRead) {
+
+  std::string module_name = "p2p_test_offset_pointer.spv";
+  std::string func_name = "multi_device_function";
+
+  uint32_t dev_instance_size = dev_instance_.size();
+
+  for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+    for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
+      if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
+                                dev_instance_[i].sub_devices[j].dev)) {
+        continue;
+      }
+
+      ze_module_handle_t module = lzt::create_module(
+          dev_instance_[i].sub_devices[j - 1].dev, module_name);
+      uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
+          mem_size_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
+
+      // random memory region on device i. Allow "space" for increment.
+      uint8_t value_before = rand() & 0x7f;
+      uint8_t value_after = rand() & 0x7f;
+
+      lzt::append_memory_set(
+          dev_instance_[i].sub_devices[j].cmd_list,
+          static_cast<void *>(static_cast<uint8_t *>(
+                                  dev_instance_[i].sub_devices[j].src_region) +
+                              offset_),
+          &value_after, mem_size_);
+      if (offset_ > 0) {
+        lzt::append_memory_set(dev_instance_[i].sub_devices[j].cmd_list,
+                               dev_instance_[i].sub_devices[j].src_region,
+                               &value_before, offset_);
+      }
+      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
+                          nullptr);
+      lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+      lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
+                                 &dev_instance_[i].sub_devices[j].cmd_list,
+                                 nullptr);
+      lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+
+      // device (i - 1) will modify memory allocated for device i
+      lzt::create_and_execute_function(
+          dev_instance_[i].sub_devices[j - 1].dev, module, func_name, 1,
+          static_cast<void *>(static_cast<uint8_t *>(
+                                  dev_instance_[i].sub_devices[j].src_region) +
+                              offset_));
+
+      // copy memory to shared region and verify it is correct
+      lzt::append_memory_copy(
+          dev_instance_[i].sub_devices[j].cmd_list, shr_mem,
+          static_cast<void *>(static_cast<uint8_t *>(
+                                  dev_instance_[i].sub_devices[j].src_region) +
+                              offset_),
+          mem_size_, nullptr);
+      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
+                          nullptr);
+      lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+      lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
+                                 &dev_instance_[i].sub_devices[j].cmd_list,
+                                 nullptr);
+      lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+      ASSERT_EQ(shr_mem[0], value_after + 1)
+          << "Memory Copied from SubDevice did not match.";
+      lzt::destroy_module(module);
+    }
+  }
+}
+
 TEST_P(zeP2PTests,
        GivenP2PDevicesWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead) {
 
