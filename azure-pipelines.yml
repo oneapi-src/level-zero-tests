@@ -56,7 +56,7 @@ jobs:
     inputs:
       source: specific
       project: $(System.TeamProjectId)
-      pipeline: 2
+      pipeline: 6
       runVersion: latestFromBranch
       artifact: level-zero-$(buildPlatform)-install
       path: $(Build.Repository.LocalPath)/level-zero
