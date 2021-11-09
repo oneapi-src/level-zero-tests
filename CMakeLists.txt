@@ -45,6 +45,9 @@ if(NOT BUILD_ZE_PERF_TESTS_ONLY)
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_MULTITHREADED ON)
   set(Boost_USE_STATIC_RUNTIME OFF)
+  # Workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/20638
+  set(_Boost_LOG_SETUP_DEPENDENCIES log)
+  set(_Boost_LOG_DEPENDENCIES "")
   find_package(Boost 1.65 REQUIRED COMPONENTS log program_options timer chrono system)
 endif()
 
