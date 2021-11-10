@@ -189,13 +189,10 @@ TEST_F(DiagnosticsTest,
 
     for (auto diag_handle : diag_handles) {
       ASSERT_NE(nullptr, diag_handle);
-      auto properties = lzt::get_diag_properties(diag_handle);
-      if (properties.haveTests == true) {
-        auto result = lzt::run_diag_tests(
-            diag_handle, ZES_DIAG_FIRST_TEST_INDEX, ZES_DIAG_LAST_TEST_INDEX);
-        EXPECT_GE(result, ZES_DIAG_RESULT_NO_ERRORS);
-        EXPECT_LE(result, ZES_DIAG_RESULT_REBOOT_FOR_REPAIR);
-      }
+      auto result = lzt::run_diag_tests(diag_handle, ZES_DIAG_FIRST_TEST_INDEX,
+                                        ZES_DIAG_LAST_TEST_INDEX);
+      EXPECT_GE(result, ZES_DIAG_RESULT_NO_ERRORS);
+      EXPECT_LE(result, ZES_DIAG_RESULT_REBOOT_FOR_REPAIR);
     }
   }
 }
@@ -226,9 +223,13 @@ TEST_F(
           EXPECT_GE(result, ZES_DIAG_RESULT_NO_ERRORS);
           EXPECT_LE(result, ZES_DIAG_RESULT_REBOOT_FOR_REPAIR);
         }
+      } else {
+        auto result = lzt::run_diag_tests(
+            diag_handle, ZES_DIAG_FIRST_TEST_INDEX, ZES_DIAG_LAST_TEST_INDEX);
+        EXPECT_GE(result, ZES_DIAG_RESULT_NO_ERRORS);
+        EXPECT_LE(result, ZES_DIAG_RESULT_REBOOT_FOR_REPAIR);
       }
     }
   }
 }
-
 } // namespace
