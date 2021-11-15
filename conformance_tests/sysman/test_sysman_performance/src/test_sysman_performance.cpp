@@ -161,12 +161,11 @@ TEST_F(
     for (auto performance_handle : performance_handles) {
       ASSERT_NE(nullptr, performance_handle);
       auto initialFactor = lzt::get_performance_config(performance_handle);
-      double factor =
-          50; // Checking with a random factor value within its range
+      double factor = 50; // Check with a random factor value within its range
       lzt::set_performance_config(performance_handle, factor);
       auto getFactor = lzt::get_performance_config(performance_handle);
-      EXPECT_GT(getFactor, 0);
-      EXPECT_LT(getFactor, 100);
+      EXPECT_GE(getFactor, 0);
+      EXPECT_LE(getFactor, 100);
       lzt::set_performance_config(performance_handle, initialFactor);
     }
   }
@@ -186,8 +185,8 @@ TEST_F(
     for (auto performance_handle : performance_handles) {
       ASSERT_NE(nullptr, performance_handle);
       auto getFactor = lzt::get_performance_config(performance_handle);
-      EXPECT_GT(getFactor, 0);
-      EXPECT_LT(getFactor, 100);
+      EXPECT_GE(getFactor, 0);
+      EXPECT_LE(getFactor, 100);
     }
   }
 }
