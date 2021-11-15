@@ -86,15 +86,21 @@ TEST_F(
       EXPECT_NE(nullptr, p_power_handle);
       auto pProperties = lzt::get_power_properties(p_power_handle);
       if (pProperties.maxLimit == -1) {
-        LOG_INFO << "maxlimit unsupported: ";
+        FAIL() << "maxlimit unsupported: "
+               << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
       }
       if (pProperties.maxLimit != -1) {
         EXPECT_GT(pProperties.maxLimit, 0);
         EXPECT_LE(pProperties.maxLimit, INT32_MAX);
         EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
       }
-      EXPECT_GE(pProperties.minLimit, 0);
-      EXPECT_LT(pProperties.minLimit, INT32_MAX);
+      if (pProperties.minLimit == -1) {
+        LOG_INFO << "minLimit unsupported: ";
+      }
+      if (pProperties.minLimit != -1) {
+        EXPECT_GE(pProperties.minLimit, 0);
+        EXPECT_LT(pProperties.minLimit, INT32_MAX);
+      }
     }
   }
 }
