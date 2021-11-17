@@ -31,10 +31,13 @@ protected:
     ze_kernel_handle_t test_function;
   } KernelFunctions_t;
 
+  typedef uint32_t kernel_copy_unit_t;
+  const size_t kernel_copy_unit_size = sizeof(kernel_copy_unit_t);
+
   void dispatch_kernels(const ze_device_handle_t device,
                         ze_module_handle_t module_handle,
-                        std::vector<uint8_t *> src_allocations,
-                        std::vector<uint8_t *> dst_allocations,
+                        std::vector<kernel_copy_unit_t *> src_allocations,
+                        std::vector<kernel_copy_unit_t *> dst_allocations,
                         std::vector<std::vector<uint8_t>> &data_out,
                         const std::vector<std::string> &test_kernel_names,
                         uint32_t number_of_dispatch,
@@ -47,8 +50,8 @@ protected:
     for (uint64_t dispatch_id = 0; dispatch_id < number_of_dispatch;
          dispatch_id++) {
 
-      uint8_t *src_allocation = src_allocations[dispatch_id];
-      uint8_t *dst_allocation = dst_allocations[dispatch_id];
+      kernel_copy_unit_t *src_allocation = src_allocations[dispatch_id];
+      kernel_copy_unit_t *dst_allocation = dst_allocations[dispatch_id];
 
       ze_kernel_handle_t kernel_handle =
           lzt::create_function(module_handle, test_kernel_names[dispatch_id]);
@@ -63,25 +66,30 @@ protected:
       ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
 
       lzt::append_memory_fill(
-          command_list, src_allocation, &init_value_2_, sizeof(uint8_t),
-          one_case_allocation_count * sizeof(uint8_t), nullptr);
+          command_list, src_allocation, &init_value_2_, sizeof(init_value_2_),
+          one_case_allocation_count * kernel_copy_unit_size, nullptr);
 
       lzt::append_memory_fill(
-          command_list, dst_allocation, &init_value_3_, sizeof(uint8_t),
-          one_case_allocation_count * sizeof(uint8_t), nullptr);
+          command_list, dst_allocation, &init_value_3_, sizeof(init_value_3_),
+          one_case_allocation_count * kernel_copy_unit_size, nullptr);
+
+      lzt::append_barrier(command_list, nullptr);
 
       lzt::append_launch_function(command_list, kernel_handle,
                                   &thread_group_dimensions, nullptr, 0,
                                   nullptr);
+
       lzt::append_barrier(command_list, nullptr);
 
       lzt::append_memory_copy(
           command_list, data_out[dispatch_id].data(), dst_allocation,
           data_out[dispatch_id].size() * sizeof(uint8_t), nullptr);
+
       lzt::append_barrier(command_list, nullptr);
 
       test_functions.push_back(kernel_handle);
     }
+
 
     ze_command_queue_handle_t command_queue = lzt::create_command_queue(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
@@ -140,47 +148,71 @@ TEST_P(
       number_of_all_allocations, test_arguments.total_memory_size_limit,
       test_arguments.one_allocation_size_limit, relax_memory_capability);
 
-  uint64_t tmp_count = test_single_allocation_memory_size / sizeof(uint8_t);
+  if (test_single_allocation_memory_size > (16ull * 1024ull * 1024ull * 1024ull)) {
+      LOG_WARNING << "Single size allocation " << test_single_allocation_memory_size
+          << " exceeds 16GB, adjusting it to 16GB";
+      test_single_allocation_memory_size = (16ull * 1024ull * 1024ull * 1024ull);
+  }
+  if(test_single_allocation_memory_size < kernel_copy_unit_size) {
+      LOG_WARNING << "Single size allocation " << test_single_allocation_memory_size
+          << "is smaller than the copy unit size "<< kernel_copy_unit_size
+          << ", skipping the test.";
+      return;
+  }
+
+  uint64_t tmp_count = test_single_allocation_memory_size / kernel_copy_unit_size;
   uint64_t test_single_allocation_count =
       tmp_count - tmp_count % workgroup_size_x_;
-
+  test_single_allocation_memory_size = test_single_allocation_count * kernel_copy_unit_size;
   LOG_INFO << "Test one allocation data count: "
            << test_single_allocation_count;
   LOG_INFO << "Test number of allocations: " << number_of_all_allocations;
   LOG_INFO << "Test kernel dispatches count: " << number_of_dispatches;
+  LOG_INFO << "Adjusted Allocation size: " << test_single_allocation_memory_size;
 
-  std::vector<uint8_t *> input_allocations;
-  std::vector<uint8_t *> output_allocations;
+  std::vector<kernel_copy_unit_t *> input_allocations;
+  std::vector<kernel_copy_unit_t *> output_allocations;
   std::vector<std::vector<uint8_t>> data_out_vector;
   std::vector<std::string> test_kernel_names;
 
   LOG_INFO << "call allocation memory... ";
   for (uint32_t dispatch_id = 0; dispatch_id < number_of_dispatches;
        dispatch_id++) {
-    uint8_t *input_allocation = allocate_memory<uint8_t>(
+    kernel_copy_unit_t *input_allocation = allocate_memory<kernel_copy_unit_t>(
         context, device, test_arguments.memory_type,
         test_single_allocation_memory_size, relax_memory_capability);
-    uint8_t *output_allocation = allocate_memory<uint8_t>(
+    kernel_copy_unit_t *output_allocation = allocate_memory<kernel_copy_unit_t>(
         context, device, test_arguments.memory_type,
         test_single_allocation_memory_size, relax_memory_capability);
-
+    if(input_allocation == nullptr || output_allocation == nullptr) {
+        LOG_WARNING << "Cannot allocate "<< ((input_allocation ==nullptr)? "input":"output")
+            << " memory for dispatch id " << dispatch_id << ", terminating";
+        for(auto each_allocation : input_allocations) {
+            lzt::free_memory(context, each_allocation);
+        }
+        for(auto each_allocation : output_allocations) {
+            lzt::free_memory(context, each_allocation);
+        }
+        return;
+    }
     input_allocations.push_back(input_allocation);
     output_allocations.push_back(output_allocation);
 
-    std::vector<uint8_t> data_out(test_single_allocation_count, init_value_1_);
+    std::vector<uint8_t> data_out(test_single_allocation_count * kernel_copy_unit_size, init_value_1_);
     data_out_vector.push_back(data_out);
 
     std::string kernel_name;
     kernel_name =
         "test_device_memory" +
-        std::to_string((dispatch_id % number_of_kernels_in_module_) + 1);
+        std::to_string((dispatch_id % number_of_kernels_in_module_) + 1) +
+        "_unit_size" + std::to_string(kernel_copy_unit_size);
     test_kernel_names.push_back(kernel_name);
   }
 
   LOG_INFO << "call create module";
   ze_module_handle_t module_handle = lzt::create_module(
       context, device, "test_multiple_memory_allocations.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required", nullptr);
 
   LOG_INFO << "call dispatch_kernels";
   dispatch_kernels(device, module_handle, input_allocations, output_allocations,
@@ -202,10 +234,12 @@ TEST_P(
 
   LOG_INFO << "call verification output";
   bool memory_test_failure = false;
-  for (auto each_data_out : data_out_vector) {
-    for (uint32_t i = 0; i < test_single_allocation_count; i++) {
+  for (size_t v = 0; v < data_out_vector.size(); v++) {
+        auto each_data_out = data_out_vector[v];
+    for (uint64_t i = 0; i < test_single_allocation_count * kernel_copy_unit_size; i++) {
       if (init_value_2_ != each_data_out[i]) {
-        LOG_INFO << "Index of difference " << i << " found = 0x"
+        LOG_INFO << "dispatch "<< v
+                 <<", index of difference " << i << " found = 0x"
                  << std::bitset<8>(each_data_out[i]) << " expected = 0x"
                  << std::bitset<8>(init_value_2_);
         memory_test_failure = true;
@@ -227,7 +261,8 @@ struct CombinationsTestNameSuffix {
   }
 };
 
-std::vector<uint32_t> multiple_dispatches = {1, 10, 1000, 5000, 10000, 20000};
+//std::vector<uint32_t> multiple_dispatches = {1, 10, 1000, 5000, 10000, 20000};
+std::vector<uint32_t> multiple_dispatches = {1, 10, 1000, 5000, 10000};
 
 INSTANTIATE_TEST_CASE_P(
     TestAllocationMemoryMatrixMaxMemory, zeDriverMemoryAllocationStressTest,
