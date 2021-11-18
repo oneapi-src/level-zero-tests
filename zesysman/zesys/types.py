@@ -121,6 +121,7 @@ def zeCall(rc):
     else:
         val = None
     if (rc == ZE_RESULT_ERROR_NOT_AVAILABLE or
+        rc == ZE_RESULT_ERROR_UNINITIALIZED or
         rc == ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE or
         rc == ZE_RESULT_ERROR_UNSUPPORTED_VERSION or
         rc == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE):

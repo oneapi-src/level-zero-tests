@@ -1891,25 +1891,19 @@ def main():
                         Node(barNode, "Base", "0x%016x" % bar.base, join=".")
                         Node(barNode, "Size", "0x%016x" % bar.size, join=".")
 
-            showPciTelemetry = False
             if args.show_telemetry:
-                tmp = zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_STATE)
-                try:
-                    zeCall(zesDevicePciGetState(device, tmp))
-                except NotImplementedError:
-                    pass
-                except ValueError:
-                    logger.reportZeException()
-                else:
-                    showPciTelemetry = True
-                del tmp
-
-            if showPciTelemetry:
                 have = { 'bw': pciProps.haveBandwidthCounters, 'pkt' : pciProps.havePacketCounters,
                          'replay' : pciProps.haveReplayCounters }
                 pciState = zes_typed_structure(ZES_STRUCTURE_TYPE_PCI_STATE)
+                try:
+                    zeCall(zesDevicePciGetState(device, pciState))
+                except:
+                    pciState = None
                 pciCounter = zes_pci_stats_t()
-                zeCall(zesDevicePciGetStats(device, pciCounter))
+                try:
+                    zeCall(zesDevicePciGetStats(device, pciCounter))
+                except:
+                    pciCounter = None
 
                 nodes = []
                 nodes.append(Node(pciTop, "Status", "?", join="."))
@@ -1931,18 +1925,22 @@ def main():
 
                 def pciTelemetry(device=device, have=have, pciState=pciState, pciCounter=pciCounter,
                                  node=nodes):
-                    oldRx, oldTx = pciCounter.rxCounter, pciCounter.txCounter
-                    oldPacket = pciCounter.packetCounter
-                    oldReplay = pciCounter.replayCounter
-                    oldTimestamp = pciCounter.timestamp
-                    zeCall(zesDevicePciGetState(device, pciState))
-                    zeCall(zesDevicePciGetStats(device, pciCounter))
-                    deltaRx = pciCounter.rxCounter - oldRx
-                    deltaTx = pciCounter.txCounter - oldTx
-                    deltaPacket = pciCounter.packetCounter - oldPacket
-                    deltaReplay = pciCounter.replayCounter - oldReplay
-                    deltaT = pciCounter.timestamp - oldTimestamp
-                    maxBW = 1.0 * pciCounter.speed.maxBandwidth
+                    if pciState:
+                        zeCall(zesDevicePciGetState(device, pciState))
+                    if pciCounter:
+                        oldRx, oldTx = pciCounter.rxCounter, pciCounter.txCounter
+                        oldPacket = pciCounter.packetCounter
+                        oldReplay = pciCounter.replayCounter
+                        oldTimestamp = pciCounter.timestamp
+                        zeCall(zesDevicePciGetStats(device, pciCounter))
+                        deltaRx = pciCounter.rxCounter - oldRx
+                        deltaTx = pciCounter.txCounter - oldTx
+                        deltaPacket = pciCounter.packetCounter - oldPacket
+                        deltaReplay = pciCounter.replayCounter - oldReplay
+                        deltaT = pciCounter.timestamp - oldTimestamp
+                        maxBW = 1.0 * pciCounter.speed.maxBandwidth
+                    else:
+                        deltaT = 0
                     if deltaT > 0:
                         rxThroughput = 1e6 * deltaRx / deltaT
                         txThroughput = 1e6 * deltaTx / deltaT
@@ -1965,18 +1963,20 @@ def main():
                         packetRate = "?"
                         replayRate = "?"
 
-                    if (pciState.speed.gen != pciCounter.speed.gen or
-                        pciState.speed.width != pciCounter.speed.width or
-                        pciState.speed.maxBandwidth != pciCounter.speed.maxBandwidth):
-
+                    if (pciState and pciCounter and
+                            (pciState.speed.gen != pciCounter.speed.gen or
+                             pciState.speed.width != pciCounter.speed.width or
+                             pciState.speed.maxBandwidth != pciCounter.speed.maxBandwidth)):
                         pr.err("WARNING: speed mismatch between PCI state/stats")
 
-                    node[0].setText(pciLinkStatusString(pciState.status))
-                    node[1].setText(pciQualityIssuesString(pciState.qualityIssues))
-                    node[2].setText(pciStabilityIssuesString(pciState.stabilityIssues))
-                    node[3].setText(knownvalue(pciCounter.speed.gen))
-                    node[4].setText(knownvalue(pciCounter.speed.width))
-                    node[5].setText(pciCounter.speed.maxBandwidth)
+                    if pciState:
+                        node[0].setText(pciLinkStatusString(pciState.status))
+                        node[1].setText(pciQualityIssuesString(pciState.qualityIssues))
+                        node[2].setText(pciStabilityIssuesString(pciState.stabilityIssues))
+                    if pciCounter:
+                        node[3].setText(knownvalue(pciCounter.speed.gen))
+                        node[4].setText(knownvalue(pciCounter.speed.width))
+                        node[5].setText(pciCounter.speed.maxBandwidth)
                     i = 6
                     if have['bw']:
                         node[i].setText(rxThroughput)
