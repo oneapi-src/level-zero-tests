@@ -7,6 +7,6 @@
  */
 
 kernel void test_device_memory1(__global uint *out) {
-    int  tid = get_global_id(0);
+    size_t tid = get_global_id(0);
     out[tid] = out[tid] + tid;
 }
