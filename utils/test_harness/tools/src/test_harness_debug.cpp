@@ -41,13 +41,28 @@ void debug_detach(const zet_debug_session_handle_t &debug_session) {
 }
 
 zet_debug_event_t
+debug_read_event(const zet_debug_session_handle_t &debug_session) {
+
+  zet_debug_event_t debug_event = {};
+
+  auto timeout = std::numeric_limits<uint64_t>::max();
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetDebugReadEvent(debug_session, timeout, &debug_event));
+
+  return debug_event;
+}
+
+zet_debug_event_t
 debug_read_event(const zet_debug_session_handle_t &debug_session,
                  uint64_t timeout) {
 
   zet_debug_event_t debug_event = {};
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDebugReadEvent(debug_session, timeout, &debug_event));
+  auto result = zetDebugReadEvent(debug_session, timeout, &debug_event);
+
+  if (ZE_RESULT_SUCCESS != result) {
+    debug_event = {};
+  }
 
   return debug_event;
 }

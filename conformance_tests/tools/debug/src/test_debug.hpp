@@ -21,7 +21,6 @@ typedef enum {
   MULTIPLE_MODULES_CREATED,        // multiple modules created
   ATTACH_AFTER_MODULE_DESTROYED,   // attach after module created and destroyed
   LONG_RUNNING_KERNEL_INTERRUPTED, // long running kernel interrupted
-  BREAKPOINTS,
   KERNEL_RESUME,
   THREAD_STOPPED,
   THREAD_UNAVAILABLE,

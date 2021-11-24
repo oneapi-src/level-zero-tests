@@ -18,6 +18,7 @@ add_lzt_test(
     ${debug_libraries}
   KERNELS
     debug_add
+    debug_loop
 )
 
 add_lzt_test_executable(

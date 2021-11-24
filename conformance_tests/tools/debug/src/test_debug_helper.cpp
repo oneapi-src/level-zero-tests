@@ -346,6 +346,8 @@ void attach_after_module_destroyed_test(
   lzt::free_memory(context, buffer_b);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
 
   mutex->lock();
   *condvar = true;
@@ -355,23 +357,52 @@ void attach_after_module_destroyed_test(
   LOG_INFO << "Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar; });
   LOG_INFO << "Debugged process proceeding";
+}
 
+// ******************************************************************************
+void run_print_kernel(ze_context_handle_t &context, ze_driver_handle_t &driver,
+                      ze_device_handle_t &device,
+                      bi::named_condition *condition, bool *condvar,
+                      bi::scoped_lock<bi::named_mutex> *lock) {
+
+  LOG_INFO << "Waiting for debugger to attach";
+  condition->wait(*lock, [&] { return *condvar; });
+  LOG_INFO << "Debugged process proceeding";
+
+  auto command_list = lzt::create_command_list(device);
+  auto command_queue = lzt::create_command_queue(device);
+
+  auto module =
+      lzt::create_module(device, "debug_loop", ZE_MODULE_FORMAT_IL_SPIRV,
+                         "-g" /* include debug symbols*/, nullptr);
+
+  auto kernel = lzt::create_function(module, "debug_print_forever");
+
+  lzt::set_group_size(kernel, 1, 1, 1);
+  ze_group_count_t group_count = {};
+  group_count.groupCountX = 1;
+  group_count.groupCountY = 1;
+  group_count.groupCountZ = 1;
+
+  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+                              nullptr);
+  lzt::close_command_list(command_list);
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+  lzt::synchronize(command_queue, 30000000000); // wait 30 seconds
+
+  // cleanup
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
 }
 
-void long_running_kernel_interrupted_test() {}
-
-void breakpoints_test() {
-
-  // lzt::debug_write_memory(debug_session, device_thread, desc, size, buffer);
-}
-
-void kernel_resume_test() {}
-
+// ***************************************************************************************
+// Uses the existing residency test case to create a page fault
 void page_fault_test(ze_context_handle_t context, ze_driver_handle_t driver,
                      ze_device_handle_t device, bi::named_condition *condition,
                      bool *condvar, bi::scoped_lock<bi::named_mutex> *lock) {
+
   LOG_INFO << "Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar; });
   LOG_INFO << "Debugged process proceeding";
@@ -606,13 +637,12 @@ int main(int argc, char **argv) {
                                            debugger_signal, &lock, &mutex);
         break;
       case LONG_RUNNING_KERNEL_INTERRUPTED:
-        long_running_kernel_interrupted_test();
-        break;
-      case BREAKPOINTS:
-        breakpoints_test();
+        run_print_kernel(context, driver, device, &condition, debugger_signal,
+                         &lock);
         break;
       case KERNEL_RESUME:
-        kernel_resume_test();
+        run_print_kernel(context, driver, device, &condition, debugger_signal,
+                         &lock);
         break;
       case THREAD_STOPPED:
         device_lost_test(device, &condition, debugger_signal, &lock);

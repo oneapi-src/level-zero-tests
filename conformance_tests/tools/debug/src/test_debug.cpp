@@ -291,9 +291,9 @@ void zetDebugEventReadTest::run_advanced_test(
 
     std::vector<zet_debug_event_type_t> events = {};
     auto event_num = 0;
+    auto timeout = std::numeric_limits<uint64_t>::max();
     while (true) {
-      auto debug_event = lzt::debug_read_event(
-          debug_session, std::numeric_limits<uint64_t>::max());
+      auto debug_event = lzt::debug_read_event(debug_session, timeout);
 
       events.push_back(debug_event.type);
 
@@ -301,14 +301,73 @@ void zetDebugEventReadTest::run_advanced_test(
         lzt::debug_ack_event(debug_session, &debug_event);
       }
 
+      if (test_type == KERNEL_RESUME &&
+          ZET_DEBUG_EVENT_TYPE_INVALID == debug_event.type) {
+        // kernel did not complete
+        ADD_FAILURE() << "Kernel failed to complete after resuming";
+      }
+
+      if (test_type == KERNEL_RESUME &&
+          ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED == debug_event.type) {
+        // resume kernel
+        ze_device_thread_t all_device_threads = {};
+        all_device_threads.slice = UINT32_MAX;
+        all_device_threads.subslice = UINT32_MAX;
+        all_device_threads.eu = UINT32_MAX;
+        all_device_threads.thread = UINT32_MAX;
+
+        lzt::debug_resume(debug_session, all_device_threads);
+
+        timeout = 45000000000; // wait 45 seconds
+      }
+
       if (ZET_DEBUG_EVENT_TYPE_DETACHED == debug_event.type) {
         EXPECT_EQ(debug_event.info.detached.reason,
                   ZET_DEBUG_DETACH_REASON_HOST_EXIT);
         break;
       }
+
+      if (test_type == LONG_RUNNING_KERNEL_INTERRUPTED &&
+          ZET_DEBUG_EVENT_TYPE_INVALID == debug_event.type) {
+        // test unsuccessful, exit
+        lzt::debug_detach(debug_session);
+        debug_helper.terminate();
+        ADD_FAILURE() << "Did not receive interrupt events after interrupting";
+      }
+
+      if (test_type == LONG_RUNNING_KERNEL_INTERRUPTED &&
+          ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
+        // interrupt all threads on the device
+        ze_device_thread_t all_device_threads = {};
+        all_device_threads.slice = UINT32_MAX;
+        all_device_threads.subslice = UINT32_MAX;
+        all_device_threads.eu = UINT32_MAX;
+        all_device_threads.thread = UINT32_MAX;
+
+        lzt::debug_interrupt(debug_session, all_device_threads);
+
+        // expect that we will get an interrupt event next
+        timeout = std::numeric_limits<uint32_t>::max();
+      }
+
+      if (test_type == LONG_RUNNING_KERNEL_INTERRUPTED &&
+          ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED == debug_event.type) {
+        // test successful, exit
+        lzt::debug_detach(debug_session);
+        debug_helper.terminate();
+        return;
+      }
+
+      if (ZET_DEBUG_EVENT_TYPE_INVALID == debug_event.type) {
+        ADD_FAILURE() << "Received Invalid Event";
+      }
     }
 
     switch (test_type) {
+    case MULTIPLE_MODULES_CREATED:
+      ASSERT_TRUE(std::count(events.begin(), events.end(),
+                             ZET_DEBUG_EVENT_TYPE_MODULE_LOAD) == 2);
+      break;
     case THREAD_STOPPED:
       ASSERT_TRUE(std::find(events.begin(), events.end(),
                             ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) !=
@@ -428,38 +487,12 @@ TEST_F(zetDebugEventReadTest,
 }
 
 TEST_F(zetDebugEventReadTest,
-       GivenKernelWithBreakpointsWhenDebugAttachedThenStoppedEventReceived) {
-
-  auto driver = lzt::get_default_driver();
-  auto devices = lzt::get_devices(driver);
-
-  run_advanced_test(devices, false, BREAKPOINTS);
-}
-
-TEST_F(zetDebugEventReadTest,
-       GivenDebugAttachedWhenCallingResumeThenKernelCompletes) {
-
-  /*
-   *after stopped event, call resume - kernel should finish
-   */
-}
-
-TEST_F(zetDebugEventReadTest,
        GivenCalledInterruptAndResumeWhenKernelExecutingThenKernelCompletes) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
   run_advanced_test(devices, false, KERNEL_RESUME);
-}
-
-TEST_F(zetDebugEventReadTest,
-       GivenDebugEnabledWhenCallingInterruptTwiceSecondInterruptIsBlocked) {
-  /*
-  *call interrupt , call second interrupt for the second time - second
-  interrupt should be blocked until thread stopped/thread unavailable
-  events are available.
-  */
 }
 
 TEST_F(zetDebugEventReadTest,

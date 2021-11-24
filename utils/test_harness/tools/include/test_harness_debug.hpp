@@ -41,7 +41,7 @@ void debug_read_memory(const zet_debug_session_handle_t &debug_session,
                        void *buffer);
 void debug_write_memory(const zet_debug_session_handle_t &debug_session,
                         const ze_device_thread_t &device_thread,
-                        const zet_debug_memory_space_desc_t desc, size_t size,
+                        const zet_debug_memory_space_desc_t &desc, size_t size,
                         const void *buffer);
 
 }; // namespace level_zero_tests
