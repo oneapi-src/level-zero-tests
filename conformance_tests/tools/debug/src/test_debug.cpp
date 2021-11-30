@@ -73,8 +73,15 @@ protected:
     shm = new bi::shared_memory_object(bi::create_only, "debug_bool",
                                        bi::read_write);
 
+    if (!shm) {
+      FAIL() << "Could not create condition variable for debug tests";
+    }
+
     shm->truncate(sizeof(debug_signals_t));
     region = new bi::mapped_region(*shm, bi::read_write);
+    if (!region) {
+      FAIL() << "Could not create signal variables for debug tests";
+    }
     static_cast<debug_signals_t *>(region->get_address())->debugger_signal =
         false;
     static_cast<debug_signals_t *>(region->get_address())->debugee_signal =
