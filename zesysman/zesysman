@@ -1881,6 +1881,14 @@ def main():
                     barCount = uint32_ptr()
                     zeCall(zesDevicePciGetBars(device, barCount.cast(), None))
                     bars = zes_typed_array(ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES, barCount.value())
+                    try:
+                        driverIndex = int(devID[devID.index(".")+1:])
+                    except:
+                        driverIndex = 0
+                    api_version = zeCall(zeDriverGetApiVersion(drivers[driverIndex]))
+                    if api_version >= ZE_API_VERSION_1_2:
+                        bars_1_2 = zes_typed_array(ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES_1_2, barCount.value())
+                        add_pci_bar_properties_1_2_array(bars.cast(), bars_1_2.cast(), barCount.value())
                     zeCall(zesDevicePciGetBars(device, barCount.cast(), bars.cast()))
 
                     for i in range(barCount.value()):
@@ -1890,6 +1898,10 @@ def main():
                         Node(barNode, "Index", bar.index, join=".")
                         Node(barNode, "Base", "0x%016x" % bar.base, join=".")
                         Node(barNode, "Size", "0x%016x" % bar.size, join=".")
+                        if api_version >= ZE_API_VERSION_1_2:
+                            bar_1_2 = bars_1_2[i]
+                            Node(barNode, "ResizableBarSupported", bool(bar_1_2.resizableBarSupported), join=".")
+                            Node(barNode, "ResizableBarEnabled", bool(bar_1_2.resizableBarEnabled), join=".")
 
             if args.show_telemetry:
                 have = { 'bw': pciProps.haveBandwidthCounters, 'pkt' : pciProps.havePacketCounters,

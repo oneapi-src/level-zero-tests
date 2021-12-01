@@ -84,7 +84,8 @@ def zes_typed_structure(stype):
                  ZES_STRUCTURE_TYPE_BASE_STATE : zes_base_state_t,
                  ZES_STRUCTURE_TYPE_RAS_CONFIG : zes_ras_config_t,
                  ZES_STRUCTURE_TYPE_RAS_STATE : zes_ras_state_t,
-                 ZES_STRUCTURE_TYPE_TEMP_CONFIG : zes_temp_config_t }
+                 ZES_STRUCTURE_TYPE_TEMP_CONFIG : zes_temp_config_t,
+                 ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES_1_2 : zes_pci_bar_properties_1_2_t }
     init_map = { ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES : zes_device_properties_init }
 
     ctor = ctor_map.get(stype, zes_base_properties_t)
@@ -93,6 +94,7 @@ def zes_typed_structure(stype):
 
 def zes_typed_array(stype, count):
     ctor_map = { ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES : zes_pci_bar_properties_array,
+                 ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES_1_2 : zes_pci_bar_properties_1_2_array,
                  ZES_STRUCTURE_TYPE_PROCESS_STATE : zes_process_state_array }
     init_map = { }
 

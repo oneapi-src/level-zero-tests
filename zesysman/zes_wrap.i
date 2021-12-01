@@ -257,6 +257,17 @@ uint64_t ras_category(zes_ras_state_t *state, unsigned int idx)
     else
         return ~0ULL;
 }
+
+void add_pci_bar_properties_1_2_array(zes_pci_bar_properties_t *baseArray, zes_pci_bar_properties_1_2_t *extArray, uint32_t arraySize)
+{
+    uint32_t i;
+    for (i=0; i < arraySize; ++i)
+    {
+        baseArray[i].stype = ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES;
+        baseArray[i].pNext = &extArray[i];
+        extArray[i].stype = ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES_1_2;
+    }
+}
 %}
 
 %pointer_class(int32_t, int32_ptr)
@@ -280,6 +291,7 @@ uint64_t ras_category(zes_ras_state_t *state, unsigned int idx)
 %array_class(zes_diag_handle_t, zes_diag_handle_array);
 %array_class(double, double_array);
 %array_class(zes_pci_bar_properties_t, zes_pci_bar_properties_array);
+%array_class(zes_pci_bar_properties_1_2_t, zes_pci_bar_properties_1_2_array);
 %array_class(zes_process_state_t, zes_process_state_array);
 %array_class(zes_diag_test_t, zes_diag_test_array);
 %array_class(zes_event_type_flags_t, zes_event_type_flags_array);
