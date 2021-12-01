@@ -127,11 +127,14 @@ TEST_F(
   }
 }
 
-TEST_F(FirmwareTest,
-       GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectUpdatedChecksum) {
-  char *fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+TEST_F(
+    FirmwareTest,
+    GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectFirmwareFlashingSuccess) {
+  auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
   if (nullptr == fwDirEnv) {
-    FAIL() << "ZE_LZT_FIRMWARE_DIRECTORY is not set..";
+    SUCCEED();
+    LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY  not set";
+    return;
   }
   std::vector<char> testFwImage;
   std::string fwDir(fwDirEnv);
@@ -148,13 +151,16 @@ TEST_F(FirmwareTest,
       auto propFw = lzt::get_firmware_properties(firmware_handle);
       if (propFw.canControl == true) {
         std::string fwName(reinterpret_cast<char *>(propFw.name));
-        std::string fwToLoad = fwDir + "/" + fwName;
+        std::string fwToLoad = fwDir + "/" + fwName + ".bin";
         std::ifstream inFileStream(fwToLoad, std::ios::binary | std::ios::ate);
-        ASSERT_EQ(true, inFileStream.is_open())
-            << "unable to find firmware image " << fwName;
+        if (!inFileStream.is_open()) {
+          SUCCEED();
+          LOG_INFO << "Skipping test as firmware image not found";
+          return;
+        }
         testFwImage.resize(inFileStream.tellg());
+        inFileStream.seekg(0, inFileStream.beg);
         inFileStream.read(testFwImage.data(), testFwImage.size());
-        EXPECT_TRUE(false) << "flashing firmware: " << fwName;
         lzt::flash_firmware(firmware_handle,
                             static_cast<void *>(testFwImage.data()),
                             testFwImage.size());
