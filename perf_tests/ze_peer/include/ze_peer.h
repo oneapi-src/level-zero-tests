@@ -17,6 +17,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
+#include <algorithm>
 #include "common.hpp"
 #include "ze_app.hpp"
 #include <level_zero/ze_api.h>
@@ -52,6 +53,8 @@ static const char *usage_str =
     "\n  -m                          run tests in multiprocess"
     "\n  -d                          destination device"
     "\n  -s                          source device"
+    "\n  -n                          max number of devices to use to run all "
+    "to all. By default, only devices 0 and 1 are used "
     "\n  -z                          size to run"
     "\n  -v                          validate data (only 1 iteration is "
     "execute)"

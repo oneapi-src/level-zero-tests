@@ -5,7 +5,7 @@
 ```
 mkdir build
 cd build
-cmake ..
+cmake ../ -DBUILD_ZE_PERF_TESTS_ONLY=1
 cd perf_tests
 make -j`nproc`
 make install

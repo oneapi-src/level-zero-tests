@@ -38,6 +38,7 @@ To run, use the following command options.
   -m                          run tests in multiprocess
   -d                          destination device
   -s                          source device
+  -n                          max number of devices to use to run all to all. By default, only devices 0 and 1 are used
   -z                          size to run
   -v                          validate data (only 1 iteration is executed)
   -q                          query for number of engines available

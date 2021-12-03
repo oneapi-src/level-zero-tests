@@ -151,6 +151,7 @@ int main(int argc, char **argv) {
   bool validate = false;
   peer_transfer_t transfer_type_to_run = PEER_TRANSFER_MAX;
   peer_test_t test_type_to_run = PEER_TEST_MAX;
+  int max_number_of_devices = 2;
 
   size_t max_number_of_elements = 1024 * 1024 * 256; /* 256 MB */
 
@@ -222,6 +223,8 @@ int main(int argc, char **argv) {
     } else if (strcmp(argv[i], "-d") == 0) {
       if (isdigit(argv[i + 1][0])) {
         dst_device_id = atoi(argv[i + 1]);
+        max_number_of_devices =
+            std::max(max_number_of_devices, dst_device_id + 1);
       } else {
         std::cout << usage_str;
         exit(-1);
@@ -230,6 +233,16 @@ int main(int argc, char **argv) {
     } else if (strcmp(argv[i], "-s") == 0) {
       if (isdigit(argv[i + 1][0])) {
         src_device_id = atoi(argv[i + 1]);
+        max_number_of_devices =
+            std::max(max_number_of_devices, src_device_id + 1);
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      i++;
+    } else if (strcmp(argv[i], "-n") == 0) {
+      if (isdigit(argv[i + 1][0])) {
+        max_number_of_devices = atoi(argv[i + 1]);
       } else {
         std::cout << usage_str;
         exit(-1);
@@ -268,12 +281,13 @@ int main(int argc, char **argv) {
                  "===================\n";
   }
 
-  for (uint32_t local_device_id = 0; local_device_id < 2; local_device_id++) {
+  for (uint32_t local_device_id = 0; local_device_id < max_number_of_devices;
+       local_device_id++) {
     if (src_device_id != -1 && local_device_id != src_device_id) {
       continue;
     }
-    for (uint32_t remote_device_id = 0; remote_device_id < 2;
-         remote_device_id++) {
+    for (uint32_t remote_device_id = 0;
+         remote_device_id < max_number_of_devices; remote_device_id++) {
       if (local_device_id == remote_device_id) {
         continue;
       }
