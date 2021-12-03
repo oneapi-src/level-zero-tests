@@ -21,8 +21,15 @@ namespace {
 class FabricPortsOperationsTest : public lzt::SysmanCtsClass {};
 
 void validate_fabric_port_speed(zes_fabric_port_speed_t speed) {
-  EXPECT_LT(speed.bitRate, UINT64_MAX);
-  EXPECT_LT(speed.width, UINT32_MAX);
+
+  if ((speed.bitRate == -1) || (speed.width == -1)) {
+
+    return;
+  }
+
+  EXPECT_LT(speed.bitRate, INT64_MAX);
+
+  EXPECT_LT(speed.width, INT32_MAX);
 }
 
 TEST_F(
