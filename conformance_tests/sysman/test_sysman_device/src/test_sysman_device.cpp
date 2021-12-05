@@ -179,7 +179,7 @@ TEST_F(
 TEST_F(
     SysmanDeviceTest,
     GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceded) {
-  int number_iterations = 10;
+  int number_iterations = 2;
   for (int i = 0; i < number_iterations; i++) {
     for (auto device : devices) {
       lzt::sysman_device_reset(device);
