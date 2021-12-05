@@ -250,9 +250,11 @@ TEST_F(
           state.status == ZES_FABRIC_PORT_STATUS_DEGRADED ||
           state.status == ZES_FABRIC_PORT_STATUS_FAILED) {
         auto properties = lzt::get_fabric_port_properties(fabric_port_handle);
-        EXPECT_EQ(state.remotePortId.fabricId, properties.portId.fabricId);
-        EXPECT_EQ(state.remotePortId.attachId, properties.portId.attachId);
-        EXPECT_EQ(state.remotePortId.portNumber, properties.portId.portNumber);
+        bool loopback =
+            (state.remotePortId.fabricId == properties.portId.fabricId) &&
+            (state.remotePortId.attachId == properties.portId.attachId) &&
+            (state.remotePortId.portNumber == properties.portId.portNumber);
+        EXPECT_FALSE(loopback);
       }
       validate_fabric_port_speed(state.rxSpeed);
       validate_fabric_port_speed(state.txSpeed);
