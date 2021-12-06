@@ -243,27 +243,33 @@ TEST_F(
         pPeakSet.powerAC = pProperties.maxLimit;
       }
       pPeakSet.powerDC = pPeakInitial.powerDC;
-      lzt::set_power_limits(p_power_handle, &pSustainedSet, &pBurstSet,
-                            &pPeakSet); // Set power values
-      zes_power_sustained_limit_t pSustainedGet = {};
-      zes_power_burst_limit_t pBurstGet = {};
-      zes_power_peak_limit_t pPeakGet = {};
-      lzt::get_power_limits(p_power_handle, &pSustainedGet, &pBurstGet,
-                            &pPeakGet); // Get power values
-      EXPECT_EQ(pSustainedGet.enabled, pSustainedSet.enabled);
-      EXPECT_EQ(pSustainedGet.power, pSustainedSet.power);
-      EXPECT_EQ(pSustainedGet.interval, pSustainedSet.interval);
-      EXPECT_EQ(pBurstGet.enabled, pBurstSet.enabled);
-      EXPECT_EQ(pBurstGet.power, pBurstSet.power);
-      if (pPeakGet.powerAC != -1) {
-        EXPECT_EQ(pPeakGet.powerAC, pPeakSet.powerAC);
+      if (pBurstSet.enabled && pSustainedSet.enabled) {
+        lzt::set_power_limits(p_power_handle, &pSustainedSet, &pBurstSet,
+                              &pPeakSet); // Set power values
+        zes_power_sustained_limit_t pSustainedGet = {};
+        zes_power_burst_limit_t pBurstGet = {};
+        zes_power_peak_limit_t pPeakGet = {};
+        lzt::get_power_limits(p_power_handle, &pSustainedGet, &pBurstGet,
+                              &pPeakGet); // Get power values
+        EXPECT_EQ(pSustainedGet.enabled, pSustainedSet.enabled);
+        EXPECT_EQ(pSustainedGet.power, pSustainedSet.power);
+        EXPECT_EQ(pSustainedGet.interval, pSustainedSet.interval);
+        EXPECT_EQ(pBurstGet.enabled, pBurstSet.enabled);
+        EXPECT_EQ(pBurstGet.power, pBurstSet.power);
+        if (pPeakGet.powerAC != -1) {
+          EXPECT_EQ(pPeakGet.powerAC, pPeakSet.powerAC);
+        }
+        if (pPeakGet.powerDC != -1) {
+          EXPECT_EQ(pPeakGet.powerDC,
+                    pPeakSet.powerDC); // Verify whether values match or not
+        }
+        lzt::set_power_limits(p_power_handle, &pSustainedInitial,
+                              &pBurstInitial,
+                              &pPeakInitial); // Set values to default
+      } else {
+        LOG_INFO << "Set limit not supported due to burst and sustained "
+                    "enabled flag is false";
       }
-      if (pPeakGet.powerDC != -1) {
-        EXPECT_EQ(pPeakGet.powerDC,
-                  pPeakSet.powerDC); // Verify whether values match or not
-      }
-      lzt::set_power_limits(p_power_handle, &pSustainedInitial, &pBurstInitial,
-                            &pPeakInitial); // Set values to default
     }
   }
 }
