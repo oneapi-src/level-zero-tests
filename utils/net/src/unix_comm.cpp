@@ -32,8 +32,8 @@ int read_fd_from_socket(int unix_socket) {
   msg_header.msg_control = cmsg_buff;
   msg_header.msg_controllen = CMSG_LEN(sizeof(fd));
 
-  size_t bytes = recvmsg(unix_socket, &msg_header, 0);
-  if (bytes < 0) {
+  auto bytes = recvmsg(unix_socket, &msg_header, 0);
+  if (bytes == -1) {
     throw std::runtime_error("Client: Error receiving fd");
   }
 
