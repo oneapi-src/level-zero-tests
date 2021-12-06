@@ -17,10 +17,10 @@ constexpr auto test_type_string = "test_type";
 
 typedef enum {
   BASIC,
-  ATTACH_AFTER_MODULE_CREATED,     // attach after module created
-  MULTIPLE_MODULES_CREATED,        // multiple modules created
-  ATTACH_AFTER_MODULE_DESTROYED,   // attach after module created and destroyed
-  LONG_RUNNING_KERNEL_INTERRUPTED, // long running kernel interrupted
+  ATTACH_AFTER_MODULE_CREATED,
+  MULTIPLE_MODULES_CREATED,
+  ATTACH_AFTER_MODULE_DESTROYED,
+  LONG_RUNNING_KERNEL_INTERRUPTED,
   KERNEL_RESUME,
   THREAD_STOPPED,
   THREAD_UNAVAILABLE,
@@ -31,5 +31,7 @@ typedef struct {
   bool debugger_signal;
   bool debugee_signal;
 } debug_signals_t;
+
+typedef enum { SINGLE_THREAD, GROUP_OF_THREADS, ALL_THREADS } num_threads_t;
 
 #endif // TEST_DEBUG_HPP

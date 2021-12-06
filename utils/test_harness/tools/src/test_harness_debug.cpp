@@ -60,8 +60,10 @@ debug_read_event(const zet_debug_session_handle_t &debug_session,
 
   auto result = zetDebugReadEvent(debug_session, timeout, &debug_event);
 
+  // Expect that timeout expired if not successful
   if (ZE_RESULT_SUCCESS != result) {
     debug_event = {};
+    EXPECT_EQ(ZE_RESULT_NOT_READY, result);
   }
 
   return debug_event;

@@ -51,7 +51,7 @@ void basic(ze_context_handle_t context, ze_driver_handle_t driver,
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
-  auto size = 100000001234U;
+  auto size = 8192;
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
 
@@ -98,10 +98,10 @@ void basic(ze_context_handle_t context, ze_driver_handle_t driver,
   // cleanup
   lzt::free_memory(context, buffer_a);
   lzt::free_memory(context, buffer_b);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
 }
 
 // Debugger attaches after module created
@@ -112,6 +112,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
                                       bool *condvar_1, bool *condvar_2,
                                       bi::scoped_lock<bi::named_mutex> *lock,
                                       bi::named_mutex *mutex) {
+  LOG_INFO << "[Child]: Attach After Module Created Test";
 
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -122,7 +123,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
-  auto size = 100000001234U;
+  auto size = 8192;
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
 
@@ -146,6 +147,8 @@ void attach_after_module_created_test(ze_context_handle_t context,
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
+  LOG_INFO << "[Child]: Appending commands";
+
   lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
   lzt::append_barrier(command_list);
   lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
@@ -153,10 +156,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
   lzt::append_barrier(command_list);
   lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
   lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
 
-  mutex->lock();
   *condvar_2 = true;
   mutex->unlock();
   condition->notify_all();
@@ -164,6 +164,9 @@ void attach_after_module_created_test(ze_context_handle_t context,
   LOG_INFO << "Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar_1; });
   LOG_INFO << "Debugged process proceeding";
+
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+  lzt::synchronize(command_queue, UINT64_MAX);
 
   // validation
   for (size_t i = 0; i < size; i++) {
@@ -178,16 +181,23 @@ void attach_after_module_created_test(ze_context_handle_t context,
   // cleanup
   lzt::free_memory(context, buffer_a);
   lzt::free_memory(context, buffer_b);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
 }
 
 // debuggee process creates multiple modules
 void multiple_modules_created_test(ze_context_handle_t context,
                                    ze_driver_handle_t driver,
-                                   ze_device_handle_t device) {
+                                   ze_device_handle_t device,
+                                   bi::named_condition *condition,
+                                   bool *condvar,
+                                   bi::scoped_lock<bi::named_mutex> *lock) {
+
+  LOG_INFO << "Waiting for debugger to attach";
+  condition->wait(*lock, [&] { return *condvar; });
+  LOG_INFO << "Debugged process proceeding";
 
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -207,7 +217,7 @@ void multiple_modules_created_test(ze_context_handle_t context,
   lzt::append_launch_function(command_list, kernel2, &group_count, nullptr, 0,
                               nullptr);
 
-  auto size = 100000001234U;
+  auto size = 8192;
   const int addval = 3;
 
   auto kernels = std::vector<ze_kernel_handle_t>(num_kernels);
@@ -274,9 +284,9 @@ void multiple_modules_created_test(ze_context_handle_t context,
 
     lzt::destroy_function(kernels[k]);
   }
+  lzt::destroy_module(module);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
-  lzt::destroy_module(module);
 }
 
 // debugger waits and attaches after module created and destroyed
@@ -296,7 +306,7 @@ void attach_after_module_destroyed_test(
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
-  auto size = 100000001234U;
+  auto size = 8192;
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
 
@@ -344,12 +354,11 @@ void attach_after_module_destroyed_test(
   // cleanup
   lzt::free_memory(context, buffer_a);
   lzt::free_memory(context, buffer_b);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
 
-  mutex->lock();
   *condvar = true;
   mutex->unlock();
   condition->notify_all();
@@ -405,7 +414,8 @@ void thread_unavailable_test(bi::named_condition *condition, bool *condvar,
   condition->wait(*lock, [&] { return *condvar; });
   LOG_INFO << "Debugged process proceeding";
 
-  exit(0);
+  // do nothing
+  std::this_thread::sleep_for(std::chrono::minutes(10));
 }
 
 int main(int argc, char **argv) {
@@ -454,15 +464,18 @@ int main(int argc, char **argv) {
     {
       if (variables_map.count(test_type_string)) {
         LOG_INFO << "test type: "
-                 << variables_map[test_type_string].as<std::string>() << " "
-                 << test_selected;
+                 << variables_map[test_type_string].as<uint32_t>() << " "
+                 << test_selected_int;
 
         if (test_selected_int >= BASIC && test_selected_int <= PAGE_FAULT) {
-          test_selected = (debug_test_type_t)test_selected;
+          test_selected = static_cast<debug_test_type_t>(test_selected_int);
+          LOG_INFO << "TEST TYPE: " << test_selected;
+
         } else {
           LOG_WARNING << "invalid test type selected, performing basic test";
         }
       }
+
       if (variables_map.count(device_id_string)) {
         LOG_INFO << "device ID: "
                  << variables_map[device_id_string].as<std::string>() << " "
@@ -494,6 +507,8 @@ int main(int argc, char **argv) {
     ze_device_handle_t device = nullptr;
     for (auto &root_device : lzt::get_devices(driver)) {
       if (use_sub_devices) {
+        LOG_INFO << "Using subdevices";
+
         for (auto &sub_device : lzt::get_ze_sub_devices(root_device)) {
           auto device_properties = lzt::get_device_properties(sub_device);
           if (strncmp(device_id_in.c_str(),
@@ -508,16 +523,19 @@ int main(int argc, char **argv) {
         if (!device)
           continue;
       } else {
+        LOG_INFO << "Using root device";
+
         auto device_properties = lzt::get_device_properties(root_device);
 
-        if (device_id_in.c_str(),
-            lzt::to_string(device_properties.uuid).c_str(),
-            ZE_MAX_DEVICE_NAME) {
+        if (strncmp(device_id_in.c_str(),
+                    lzt::to_string(device_properties.uuid).c_str(),
+                    ZE_MAX_DEVICE_NAME)) {
           continue;
         }
         device = root_device;
       }
 
+      LOG_INFO << "Proceeding with test";
       switch (test_selected) {
       case BASIC:
         basic(context, driver, device, &condition, debugger_signal, &lock);
@@ -528,7 +546,8 @@ int main(int argc, char **argv) {
                                          &mutex);
         break;
       case MULTIPLE_MODULES_CREATED:
-        multiple_modules_created_test(context, driver, device);
+        multiple_modules_created_test(context, driver, device, &condition,
+                                      debugger_signal, &lock);
         break;
       case ATTACH_AFTER_MODULE_DESTROYED:
         attach_after_module_destroyed_test(context, driver, device, &condition,
