@@ -398,108 +398,6 @@ void run_print_kernel(ze_context_handle_t &context, ze_driver_handle_t &driver,
 }
 
 // ***************************************************************************************
-// Uses the existing residency test case to create a page fault
-void page_fault_test(ze_context_handle_t context, ze_driver_handle_t driver,
-                     ze_device_handle_t device, bi::named_condition *condition,
-                     bool *condvar, bi::scoped_lock<bi::named_mutex> *lock) {
-
-  LOG_INFO << "Waiting for debugger to attach";
-  condition->wait(*lock, [&] { return *condvar; });
-  LOG_INFO << "Debugged process proceeding";
-
-  const size_t size = 5;
-  ze_module_handle_t module;
-  ze_kernel_handle_t kernel;
-
-  auto properties = lzt::get_device_properties(device);
-
-  if (properties.flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
-    LOG_INFO << "[" << properties.name << "] "
-             << "Device has on demand page fault support - skipping";
-    return;
-  }
-
-  // set up
-  auto command_list = lzt::create_command_list(device);
-  auto command_queue = lzt::create_command_queue(device);
-
-  module = lzt::create_module(device, "residency_tests.spv");
-  kernel = lzt::create_function(module, "residency_function");
-
-  auto device_flags = 0;
-  auto host_flags = 0;
-
-  typedef struct _node {
-    uint32_t value;
-    struct _node *next;
-  } node;
-
-  node *data = static_cast<node *>(lzt::allocate_shared_memory(
-      sizeof(node), 1, device_flags, host_flags, device, context));
-  data->value = 0;
-  node *temp = data;
-  for (int i = 0; i < size; i++) {
-    temp->next = static_cast<node *>(lzt::allocate_shared_memory(
-        sizeof(node), 1, device_flags, host_flags, device, context));
-    temp = temp->next;
-    temp->value = i + 1;
-  }
-
-  ze_group_count_t group_count;
-  group_count.groupCountX = 1;
-  group_count.groupCountY = 1;
-  group_count.groupCountZ = 1;
-
-  lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
-  lzt::set_argument_value(kernel, 1, sizeof(size_t), &size);
-  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
-                              nullptr);
-  lzt::close_command_list(command_list);
-
-  temp = data->next;
-  node *temp2;
-  for (int i = 0; i < size; i++) {
-    temp2 = temp->next;
-    lzt::make_memory_resident(device, temp, sizeof(node));
-    temp = temp2;
-  }
-
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
-
-  temp = data->next;
-  for (int i = 0; i < size; i++) {
-    lzt::evict_memory(device, temp, sizeof(node));
-    temp = temp->next;
-  }
-
-  // cleanup
-  temp = data;
-  // total of size elements linked *after* initial element
-  for (int i = 0; i < size + 1; i++) {
-    // the kernel increments each node's value by 1
-    ASSERT_EQ(temp->value, i + 1);
-
-    temp2 = temp->next;
-    lzt::free_memory(temp);
-    temp = temp2;
-  }
-
-  lzt::destroy_function(kernel);
-  lzt::destroy_module(module);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
-}
-
-void device_lost_test(ze_device_handle_t device, bi::named_condition *condition,
-                      bool *condvar, bi::scoped_lock<bi::named_mutex> *lock) {
-  LOG_INFO << "Waiting for debugger to attach";
-  condition->wait(*lock, [&] { return *condvar; });
-  LOG_INFO << "Debugged process proceeding";
-
-  lzt::sysman_device_reset(device);
-}
-
 void thread_unavailable_test(bi::named_condition *condition, bool *condvar,
                              bi::scoped_lock<bi::named_mutex> *lock) {
 
@@ -644,15 +542,8 @@ int main(int argc, char **argv) {
         run_print_kernel(context, driver, device, &condition, debugger_signal,
                          &lock);
         break;
-      case THREAD_STOPPED:
-        device_lost_test(device, &condition, debugger_signal, &lock);
-        break;
       case THREAD_UNAVAILABLE:
         thread_unavailable_test(&condition, debugger_signal, &lock);
-        break;
-      case PAGE_FAULT:
-        page_fault_test(context, driver, device, &condition, debugger_signal,
-                        &lock);
         break;
       default:
         LOG_ERROR << "Unrecognized test type: " << test_selected;

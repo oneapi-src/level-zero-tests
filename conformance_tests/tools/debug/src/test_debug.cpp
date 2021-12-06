@@ -79,7 +79,7 @@ protected:
 
     shm->truncate(sizeof(debug_signals_t));
     region = new bi::mapped_region(*shm, bi::read_write);
-    if (!region) {
+    if (!region || !(region->get_address())) {
       FAIL() << "Could not create signal variables for debug tests";
     }
     static_cast<debug_signals_t *>(region->get_address())->debugger_signal =
@@ -166,8 +166,8 @@ TEST_F(
   std::vector<ze_device_handle_t> all_sub_devices = {};
   for (auto &device : devices) {
     auto sub_devices = lzt::get_ze_sub_devices(device);
-    sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
-                       sub_devices.end());
+    all_sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
+                           sub_devices.end());
   }
 
   run_test(all_sub_devices, true);
@@ -256,8 +256,8 @@ TEST_F(
   std::vector<ze_device_handle_t> all_sub_devices = {};
   for (auto &device : devices) {
     auto sub_devices = lzt::get_ze_sub_devices(device);
-    sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
-                       sub_devices.end());
+    all_sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
+                           sub_devices.end());
   }
 
   run_test(all_sub_devices, true);
@@ -375,19 +375,11 @@ void zetDebugEventReadTest::run_advanced_test(
       ASSERT_TRUE(std::count(events.begin(), events.end(),
                              ZET_DEBUG_EVENT_TYPE_MODULE_LOAD) == 2);
       break;
-    case THREAD_STOPPED:
-      ASSERT_TRUE(std::find(events.begin(), events.end(),
-                            ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) !=
-                  events.end());
-      break;
+
     case THREAD_UNAVAILABLE:
       ASSERT_TRUE(std::find(events.begin(), events.end(),
                             ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE) !=
                   events.end());
-      break;
-    case PAGE_FAULT:
-      ASSERT_TRUE(std::find(events.begin(), events.end(),
-                            ZET_DEBUG_EVENT_TYPE_PAGE_FAULT) != events.end());
       break;
     default:
       break;
@@ -503,30 +495,12 @@ TEST_F(zetDebugEventReadTest,
 }
 
 TEST_F(zetDebugEventReadTest,
-       GivenDeviceExceptionOccursWhenAttachedThenThreadStoppedEventReceived) {
-
-  auto driver = lzt::get_default_driver();
-  auto devices = lzt::get_devices(driver);
-
-  run_advanced_test(devices, false, THREAD_STOPPED);
-}
-
-TEST_F(zetDebugEventReadTest,
        GivenThreadUnavailableWhenDebugEnabledThenThreadUnavailableEventRead) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
   run_advanced_test(devices, false, THREAD_UNAVAILABLE);
-}
-
-TEST_F(zetDebugEventReadTest,
-       GivenPageFaultInHelperWhenDebugEnabledThenPageFaultEventRead) {
-
-  auto driver = lzt::get_default_driver();
-  auto devices = lzt::get_devices(driver);
-
-  run_advanced_test(devices, false, PAGE_FAULT);
 }
 
 } // namespace
