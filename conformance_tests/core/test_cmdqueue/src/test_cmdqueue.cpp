@@ -702,6 +702,7 @@ TEST_P(CommandQueueCopyOnlyTest,
   lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
   lzt::append_image_copy_to_mem(cmdlist, png_img_dest.raw_data(), ze_img_dest,
                                 nullptr);
+  lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
   lzt::synchronize(cmdqueue, UINT64_MAX);
 
