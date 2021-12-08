@@ -217,7 +217,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
         ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD,
         ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT};
     auto event_num = 0;
-    while (true) {
+    while (event_num < expected_event.size()) {
       auto debug_event = lzt::debug_read_event(
           debug_session, std::numeric_limits<uint64_t>::max());
 
