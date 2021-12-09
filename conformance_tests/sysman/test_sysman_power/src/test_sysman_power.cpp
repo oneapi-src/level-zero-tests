@@ -73,7 +73,7 @@ TEST_F(
 }
 TEST_F(
     PowerModuleTest,
-    GivenSamePowerHandleWhenRequestingPowerPropertiesThenExpectValidMaxLimit) {
+    GivenSamePowerHandleWhenRequestingPowerPropertiesThenCheckMaxAndMinLimitInRange) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto p_power_handles = lzt::get_power_handles(device, count);
@@ -86,8 +86,7 @@ TEST_F(
       EXPECT_NE(nullptr, p_power_handle);
       auto pProperties = lzt::get_power_properties(p_power_handle);
       if (pProperties.maxLimit == -1) {
-        FAIL() << "maxlimit unsupported: "
-               << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+        LOG_INFO << "maxlimit unsupported: ";
       }
       if (pProperties.maxLimit != -1) {
         EXPECT_GT(pProperties.maxLimit, 0);
