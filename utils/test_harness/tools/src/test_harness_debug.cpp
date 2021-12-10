@@ -104,4 +104,12 @@ void debug_write_memory(const zet_debug_session_handle_t &debug_session,
                                                    &desc, size, buffer));
 }
 
+void debug_clean_assert_true(bool condition,
+                             boost::process::child &debug_helper) {
+  if (!condition) {
+    debug_helper.terminate();
+    ASSERT_TRUE(false);
+  }
+}
+
 } // namespace level_zero_tests

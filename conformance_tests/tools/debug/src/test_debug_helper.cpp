@@ -38,9 +38,9 @@ void basic(ze_context_handle_t context, ze_driver_handle_t driver,
            ze_device_handle_t device, bi::named_condition *condition,
            bool *condvar, bi::scoped_lock<bi::named_mutex> *lock) {
 
-  LOG_INFO << "Waiting for debugger to attach";
+  LOG_INFO << "[Application] Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar; });
-  LOG_INFO << "Debugged process proceeding";
+  LOG_INFO << "[Application] Debugged process proceeding";
 
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -112,7 +112,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
                                       bool *condvar_1, bool *condvar_2,
                                       bi::scoped_lock<bi::named_mutex> *lock,
                                       bi::named_mutex *mutex) {
-  LOG_INFO << "[Child]: Attach After Module Created Test";
+  LOG_INFO << "[Application] Attach After Module Created Test";
 
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -147,7 +147,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
-  LOG_INFO << "[Child]: Appending commands";
+  LOG_INFO << "[Application] Appending commands";
 
   lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
   lzt::append_barrier(command_list);
@@ -163,7 +163,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
 
   LOG_INFO << "Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar_1; });
-  LOG_INFO << "Debugged process proceeding";
+  LOG_INFO << "[Application] process proceeding";
 
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
   lzt::synchronize(command_queue, UINT64_MAX);
@@ -195,9 +195,9 @@ void multiple_modules_created_test(ze_context_handle_t context,
                                    bool *condvar,
                                    bi::scoped_lock<bi::named_mutex> *lock) {
 
-  LOG_INFO << "Waiting for debugger to attach";
+  LOG_INFO << "[Application] Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar; });
-  LOG_INFO << "Debugged process proceeding";
+  LOG_INFO << "[Application] process proceeding";
 
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -363,9 +363,9 @@ void attach_after_module_destroyed_test(
   mutex->unlock();
   condition->notify_all();
 
-  LOG_INFO << "Waiting for debugger to attach";
+  LOG_INFO << "[Application] Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar; });
-  LOG_INFO << "Debugged process proceeding";
+  LOG_INFO << "[Application] process proceeding";
 }
 
 // ******************************************************************************
@@ -374,9 +374,9 @@ void run_print_kernel(ze_context_handle_t &context, ze_driver_handle_t &driver,
                       bi::named_condition *condition, bool *condvar,
                       bi::scoped_lock<bi::named_mutex> *lock) {
 
-  LOG_INFO << "Waiting for debugger to attach";
+  LOG_INFO << "[Application] Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar; });
-  LOG_INFO << "Debugged process proceeding";
+  LOG_INFO << "[Application] process proceeding";
 
   auto command_list = lzt::create_command_list(device);
   auto command_queue = lzt::create_command_queue(device);
@@ -410,9 +410,9 @@ void run_print_kernel(ze_context_handle_t &context, ze_driver_handle_t &driver,
 void thread_unavailable_test(bi::named_condition *condition, bool *condvar,
                              bi::scoped_lock<bi::named_mutex> *lock) {
 
-  LOG_INFO << "Waiting for debugger to attach";
+  LOG_INFO << "[Application] Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar; });
-  LOG_INFO << "Debugged process proceeding";
+  LOG_INFO << "[Application] process proceeding";
 
   // do nothing
   std::this_thread::sleep_for(std::chrono::minutes(10));
@@ -469,36 +469,37 @@ int main(int argc, char **argv) {
 
         if (test_selected_int >= BASIC && test_selected_int <= PAGE_FAULT) {
           test_selected = static_cast<debug_test_type_t>(test_selected_int);
-          LOG_INFO << "TEST TYPE: " << test_selected;
+          LOG_INFO << "[Application] TEST TYPE: " << test_selected;
 
         } else {
-          LOG_WARNING << "invalid test type selected, performing basic test";
+          LOG_WARNING << "[Application] invalid test type selected, performing "
+                         "basic test";
         }
       }
 
       if (variables_map.count(device_id_string)) {
-        LOG_INFO << "device ID: "
+        LOG_INFO << "[Application] device ID: "
                  << variables_map[device_id_string].as<std::string>() << " "
                  << device_id_in;
       }
       if (variables_map.count(use_sub_devices_string)) {
-        LOG_INFO << "Using sub devices ";
+        LOG_INFO << "[Application] Using sub devices ";
         use_sub_devices = 1;
       }
       if (variables_map.count(kernel_string)) {
-        LOG_INFO << "Kernel:  "
+        LOG_INFO << "[Application] Kernel:  "
                  << variables_map[kernel_string].as<std::string>() << " "
                  << kernel_name_in;
       }
       if (variables_map.count(num_kernels_string)) {
-        LOG_INFO << "Number of kernels: "
+        LOG_INFO << "[Application] Number of kernels: "
                  << variables_map[num_kernels_string].as<uint32_t>();
       }
     }
 
     ze_result_t result = zeInit(0);
     if (result != ZE_RESULT_SUCCESS) {
-      LOG_ERROR << "zeInit failed";
+      LOG_ERROR << "[Application] zeInit failed";
       exit(1);
     }
 
@@ -507,7 +508,7 @@ int main(int argc, char **argv) {
     ze_device_handle_t device = nullptr;
     for (auto &root_device : lzt::get_devices(driver)) {
       if (use_sub_devices) {
-        LOG_INFO << "Using subdevices";
+        LOG_INFO << "[Application] Using subdevices";
 
         for (auto &sub_device : lzt::get_ze_sub_devices(root_device)) {
           auto device_properties = lzt::get_device_properties(sub_device);
@@ -523,7 +524,7 @@ int main(int argc, char **argv) {
         if (!device)
           continue;
       } else {
-        LOG_INFO << "Using root device";
+        LOG_INFO << "[Application] Using root device";
 
         auto device_properties = lzt::get_device_properties(root_device);
 
@@ -535,7 +536,7 @@ int main(int argc, char **argv) {
         device = root_device;
       }
 
-      LOG_INFO << "Proceeding with test";
+      LOG_INFO << "[Application] Proceeding with test";
       switch (test_selected) {
       case BASIC:
         basic(context, driver, device, &condition, debugger_signal, &lock);
@@ -565,7 +566,7 @@ int main(int argc, char **argv) {
         thread_unavailable_test(&condition, debugger_signal, &lock);
         break;
       default:
-        LOG_ERROR << "Unrecognized test type: " << test_selected;
+        LOG_ERROR << "[Application] Unrecognized test type: " << test_selected;
         exit(1);
       }
     }

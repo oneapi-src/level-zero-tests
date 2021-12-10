@@ -9,6 +9,8 @@
 #ifndef TEST_HARNESS_DEBUG_HPP
 #define TEST_HARNESS_DEBUG_HPP
 
+#include <boost/process.hpp>
+
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 #include "gtest/gtest.h"
@@ -37,13 +39,16 @@ void debug_resume(const zet_debug_session_handle_t &debug_session,
 
 void debug_read_memory(const zet_debug_session_handle_t &debug_session,
                        const ze_device_thread_t &device_thread,
-                       const zet_debug_memory_space_desc_t desc, size_t size,
+                       const zet_debug_memory_space_desc_t &desc, size_t size,
                        void *buffer);
+
 void debug_write_memory(const zet_debug_session_handle_t &debug_session,
                         const ze_device_thread_t &device_thread,
                         const zet_debug_memory_space_desc_t &desc, size_t size,
                         const void *buffer);
 
+void debug_clean_assert_true(bool condition,
+                             boost::process::child &debug_helper);
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_DEBUG_HPP */
