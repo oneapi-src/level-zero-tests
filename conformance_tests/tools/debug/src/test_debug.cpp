@@ -176,7 +176,7 @@ TEST_F(
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
-  std::vector<ze_device_handle_t> all_sub_devices = {};
+  std::vector<ze_device_handle_t> all_sub_devices;
   for (auto &device : devices) {
     auto sub_devices = lzt::get_ze_sub_devices(device);
     all_sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
@@ -822,6 +822,24 @@ TEST_F(zetDebugMemAccessTest,
 
     lzt::debug_detach(debug_session);
     debug_helper.terminate();
+  }
+}
+
+TEST(zetDebugRegisterSetTest,
+     GivenDeviceWhenGettingRegisterSetPropertiesThenValidPropertiesReturned) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  for (auto &device : devices) {
+    auto properties = lzt::get_register_set_properties(device);
+
+    zet_debug_regset_properties_t empty_properties = {};
+    for (auto &property : properties) {
+      EXPECT_NE(memcmp(&property, &empty_properties,
+                       sizeof(zet_debug_regset_properties_t)),
+                0);
+    }
   }
 }
 

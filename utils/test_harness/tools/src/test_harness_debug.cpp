@@ -104,6 +104,28 @@ void debug_write_memory(const zet_debug_session_handle_t &debug_session,
                                                    &desc, size, buffer));
 }
 
+uint32_t get_register_set_properties_count(const ze_device_handle_t &device) {
+  uint32_t count = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetDebugGetRegisterSetProperties(device, &count, nullptr));
+
+  return count;
+}
+
+std::vector<zet_debug_regset_properties_t>
+get_register_set_properties(const ze_device_handle_t &device) {
+
+  auto count = get_register_set_properties_count(device);
+  std::vector<zet_debug_regset_properties_t> properties(
+      count, {ZET_STRUCTURE_TYPE_DEBUG_REGSET_PROPERTIES});
+
+  auto device_initial = device;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugGetRegisterSetProperties(
+                                   device, &count, properties.data()));
+  EXPECT_EQ(device, device_initial);
+  return properties;
+}
+
 void debug_clean_assert_true(bool condition,
                              boost::process::child &debug_helper) {
   if (!condition) {
