@@ -125,10 +125,10 @@ TEST_F(
 }
 
 class zetMetricQueryLoadTest
-    : public ::testing::Test,
-      public ::testing::WithParamInterface<std::string> {
+    : public ::testing::TestWithParam<
+          std::tuple<ze_device_handle_t, std::string>> {
 public:
-  ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  ze_device_handle_t device;
   zet_metric_group_handle_t matchedGroupHandle;
   zet_metric_query_pool_handle_t metricQueryPoolHandle;
   zet_metric_query_handle_t metricQueryHandle;
@@ -136,14 +136,16 @@ public:
   ze_command_queue_handle_t commandQueue;
 
   zetMetricQueryLoadTest() {
-    std::string metricGroupName = GetParam();
+    device = std::get<0>(GetParam());
+    std::string metricGroupName = std::get<1>(GetParam());
     commandList = lzt::create_command_list(device);
     commandQueue = lzt::create_command_queue(device);
     matchedGroupHandle =
         lzt::find_metric_group(device, metricGroupName,
                                ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED);
-    metricQueryPoolHandle = lzt::create_metric_query_pool(
-        1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE, matchedGroupHandle);
+    metricQueryPoolHandle = lzt::create_metric_query_pool_for_device(
+        device, 1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE,
+        matchedGroupHandle);
     EXPECT_NE(nullptr, metricQueryPoolHandle);
     metricQueryHandle = lzt::metric_query_create(metricQueryPoolHandle);
   }
@@ -192,10 +194,12 @@ TEST_P(
   lzt::free_memory(c_buffer);
 }
 
-INSTANTIATE_TEST_CASE_P(parameterizedMetricQueryTests, zetMetricQueryLoadTest,
-                        ::testing::ValuesIn(lzt::get_metric_group_name_list(
-                            lzt::zeDevice::get_instance()->get_device(),
-                            ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED)));
+INSTANTIATE_TEST_CASE_P(
+    parameterizedMetricQueryTests, zetMetricQueryLoadTest,
+    ::testing::Combine(::testing::ValuesIn(lzt::get_metric_test_device_list()),
+                       ::testing::ValuesIn(lzt::get_metric_group_name_list(
+                           lzt::zeDevice::get_instance()->get_device(),
+                           ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED))));
 
 class zetMetricStreamerTest : public ::testing::Test {
 protected:
@@ -229,20 +233,21 @@ TEST_F(zetMetricStreamerTest,
 }
 
 class zetMetricStreamerLoadTest
-    : public ::testing::Test,
-      public ::testing::WithParamInterface<std::string> {
+    : public ::testing::TestWithParam<
+          std::tuple<ze_device_handle_t, std::string>> {
 protected:
   uint32_t notifyEveryNReports = 30000;
   uint32_t samplingPeriod = 1000000;
   ze_event_handle_t eventHandle;
   lzt::zeEventPool eventPool;
-  ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  ze_device_handle_t device;
   zet_metric_group_handle_t matchedGroupHandle;
   zet_command_list_handle_t commandList;
   ze_command_queue_handle_t commandQueue;
 
   zetMetricStreamerLoadTest() {
-    std::string groupName = GetParam();
+    device = std::get<0>(GetParam());
+    std::string groupName = std::get<1>(GetParam());
     commandList = lzt::create_command_list(device);
     commandQueue = lzt::create_command_queue(device);
     matchedGroupHandle = lzt::find_metric_group(
@@ -262,8 +267,10 @@ TEST_P(
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
 
   lzt::activate_metric_groups(device, 1, matchedGroupHandle);
-  zet_metric_streamer_handle_t metricStreamerHandle = lzt::metric_streamer_open(
-      matchedGroupHandle, eventHandle, notifyEveryNReports, samplingPeriod);
+  zet_metric_streamer_handle_t metricStreamerHandle =
+      lzt::metric_streamer_open_for_device(device, matchedGroupHandle,
+                                           eventHandle, notifyEveryNReports,
+                                           samplingPeriod);
 
   void *a_buffer, *b_buffer, *c_buffer;
   ze_group_count_t tg;
@@ -297,10 +304,11 @@ TEST_P(
   lzt::free_memory(c_buffer);
 }
 
-INSTANTIATE_TEST_CASE_P(parameterizedMetricStreamerTests,
-                        zetMetricStreamerLoadTest,
-                        ::testing::ValuesIn(lzt::get_metric_group_name_list(
-                            lzt::zeDevice::get_instance()->get_device(),
-                            ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED)));
+INSTANTIATE_TEST_CASE_P(
+    parameterizedMetricStreamerTests, zetMetricStreamerLoadTest,
+    ::testing::Combine(::testing::ValuesIn(lzt::get_metric_test_device_list()),
+                       ::testing::ValuesIn(lzt::get_metric_group_name_list(
+                           lzt::zeDevice::get_instance()->get_device(),
+                           ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED))));
 
 } // namespace

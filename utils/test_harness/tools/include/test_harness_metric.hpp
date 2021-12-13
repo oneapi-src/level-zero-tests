@@ -21,18 +21,24 @@ std::vector<zet_metric_group_properties_t>
 get_metric_group_properties(std::vector<zet_metric_group_handle_t> metricGroup);
 std::vector<zet_metric_group_properties_t>
 get_metric_group_properties(ze_device_handle_t device);
+std::vector<ze_device_handle_t>
+get_metric_test_device_list(uint32_t testSubDeviceCount = 1);
 std::vector<std::string>
 get_metric_group_name_list(ze_device_handle_t device,
                            zet_metric_group_sampling_type_flags_t samplingType);
 zet_metric_group_handle_t find_metric_group(ze_device_handle_t device,
                                             std::string metricGroupToFind,
                                             uint32_t samplingType);
-zet_metric_query_pool_handle_t
-create_metric_query_pool(zet_metric_query_pool_desc_t metricQueryPoolDesc,
-                         zet_metric_group_handle_t metricGroup);
+zet_metric_query_pool_handle_t create_metric_query_pool_for_device(
+    zet_metric_query_pool_desc_t metricQueryPoolDesc,
+    zet_metric_group_handle_t metricGroup);
 zet_metric_query_pool_handle_t
 create_metric_query_pool(uint32_t count, zet_metric_query_pool_type_t type,
                          zet_metric_group_handle_t metricGroup);
+zet_metric_query_pool_handle_t
+create_metric_query_pool_for_device(ze_device_handle_t device, uint32_t count,
+                                    zet_metric_query_pool_type_t type,
+                                    zet_metric_group_handle_t metricGroup);
 void destroy_metric_query_pool(
     zet_metric_query_pool_handle_t metric_query_pool_handle);
 
@@ -44,6 +50,10 @@ void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle);
 size_t metric_query_get_data_size(zet_metric_query_handle_t metricQueryHandle);
 void metric_query_get_data(zet_metric_query_handle_t metricQueryHandle,
                            std::vector<uint8_t> *metricData);
+zet_metric_streamer_handle_t metric_streamer_open_for_device(
+    ze_device_handle_t device, zet_metric_group_handle_t matchedGroupHandle,
+    ze_event_handle_t eventHandle, uint32_t notifyEveryNReports,
+    uint32_t samplingPeriod);
 zet_metric_streamer_handle_t
 metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
                      ze_event_handle_t eventHandle,
