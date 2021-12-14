@@ -290,7 +290,7 @@ TEST_F(
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
-  std::vector<ze_device_handle_t> all_sub_devices = {};
+  std::vector<ze_device_handle_t> all_sub_devices;
   for (auto &device : devices) {
     auto sub_devices = lzt::get_ze_sub_devices(device);
     all_sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
@@ -454,7 +454,7 @@ void zetDebugEventReadTest::run_advanced_test(
     mutex->unlock();
     condition->notify_all();
 
-    std::vector<zet_debug_event_type_t> events = {};
+    std::vector<zet_debug_event_type_t> events;
     auto event_num = 0;
     uint64_t timeout = std::numeric_limits<uint64_t>::max();
 
