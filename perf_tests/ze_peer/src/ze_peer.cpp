@@ -281,6 +281,7 @@ int main(int argc, char **argv) {
                  "===================\n";
   }
 
+  max_number_of_devices = std::min(max_number_of_devices, 32);
   for (uint32_t local_device_id = 0; local_device_id < max_number_of_devices;
        local_device_id++) {
     if (src_device_id != -1 && local_device_id != src_device_id) {
