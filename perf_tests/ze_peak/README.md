@@ -38,7 +38,7 @@ To run all benchmarks, use the following command. Additional Options and filteri
         -d, --device num            choose device   (num starts with 0)
         -e                          time using ze events instead of std chrono timer
                                     hide driver latencies [default: No]
-        -t, string                  selectively run a particular test
+        -t, string                  selectively run particular tests
             global_bw               selectively run global bandwidth test
             hp_compute              selectively run half precision compute test
             sp_compute              selectively run single precision compute test
@@ -54,7 +54,7 @@ To run all benchmarks, use the following command. Additional Options and filteri
 
 ```
 
-* Example: Run only the global_bw benchmark:
+* Example: Run the global_bw benchmark and half precision compute:
 ```
-      $ ./ze_peak -t global_bw
+      $ ./ze_peak -t global_bw hp_compute
 ```

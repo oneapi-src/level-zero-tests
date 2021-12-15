@@ -17,7 +17,7 @@ static const char *usage_str =
     "\n  -e                          time using ze events instead of std "
     "chrono timer"
     "\n                              hide driver latencies [default: No]"
-    "\n  -t, string                  selectively run a particular test"
+    "\n  -t, string                  selectively run particular tests"
     "\n      global_bw               selectively run global bandwidth test"
     "\n      hp_compute              selectively run half precision compute "
     "test"
@@ -60,94 +60,97 @@ static uint32_t sanitize_ulong(char *in) {
 // with the correct environment.
 //---------------------------------------------------------------------
 int ZePeak::parse_arguments(int argc, char **argv) {
+  bool stage = 0;
+
   for (int i = 1; i < argc; i++) {
-    if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
-      std::cout << usage_str;
-      exit(0);
-    } else if ((strcmp(argv[i], "-r") == 0) ||
-               (strcmp(argv[i], "--driver") == 0)) {
-      if ((i + 1) < argc) {
-        specified_driver = sanitize_ulong(argv[i + 1]);
-        i++;
-      }
-    } else if ((strcmp(argv[i], "-d") == 0) ||
-               (strcmp(argv[i], "--device") == 0)) {
-      if ((i + 1) < argc) {
-        specified_device = sanitize_ulong(argv[i + 1]);
-        i++;
-      }
-    } else if (strcmp(argv[i], "-e") == 0) {
-      use_event_timer = true;
-    } else if (strcmp(argv[i], "-v") == 0) {
-      verbose = true;
-    } else if (strcmp(argv[i], "-i") == 0) {
-      if ((i + 1) < argc) {
-        iters = sanitize_ulong(argv[i + 1]);
-        i++;
-      }
-    } else if (strcmp(argv[i], "-w") == 0) {
-      if ((i + 1) < argc) {
-        warmup_iterations = sanitize_ulong(argv[i + 1]);
-        i++;
-      }
-    } else if ((strcmp(argv[i], "-t") == 0)) {
-      run_global_bw = false;
-      run_hp_compute = false;
-      run_sp_compute = false;
-      run_dp_compute = false;
-      run_int_compute = false;
-      run_transfer_bw = false;
-      run_kernel_lat = false;
-      if ((i + 1) >= argc) {
-        std::cout << usage_str;
-        exit(-1);
-      }
-      if (strcmp(argv[i + 1], "global_bw") == 0) {
+
+    if (stage == 1) {
+      if (strcmp(argv[i], "global_bw") == 0) {
         run_global_bw = true;
-        i++;
-      } else if (strcmp(argv[i + 1], "hp_compute") == 0) {
+      } else if (strcmp(argv[i], "hp_compute") == 0) {
         run_hp_compute = true;
-        i++;
-      } else if (strcmp(argv[i + 1], "sp_compute") == 0) {
+      } else if (strcmp(argv[i], "sp_compute") == 0) {
         run_sp_compute = true;
-        i++;
-      } else if (strcmp(argv[i + 1], "dp_compute") == 0) {
+      } else if (strcmp(argv[i], "dp_compute") == 0) {
         run_dp_compute = true;
-        i++;
-      } else if (strcmp(argv[i + 1], "int_compute") == 0) {
+      } else if (strcmp(argv[i], "int_compute") == 0) {
         run_int_compute = true;
-        i++;
-      } else if (strcmp(argv[i + 1], "transfer_bw") == 0) {
+      } else if (strcmp(argv[i], "transfer_bw") == 0) {
         run_transfer_bw = true;
-        i++;
-      } else if (strcmp(argv[i + 1], "kernel_lat") == 0) {
+      } else if (strcmp(argv[i], "kernel_lat") == 0) {
         run_kernel_lat = true;
+      } else {
+        if (run_global_bw || run_hp_compute || run_sp_compute ||
+            run_dp_compute || run_int_compute || run_transfer_bw ||
+            run_kernel_lat) {
+          stage = 0;
+        } else {
+          std::cout << usage_str;
+          exit(-1);
+        }
+      }
+    }
+
+    if (stage == 0) {
+      if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
+        std::cout << usage_str;
+        exit(0);
+      } else if ((strcmp(argv[i], "-r") == 0) ||
+                 (strcmp(argv[i], "--driver") == 0)) {
+        if ((i + 1) < argc) {
+          specified_driver = sanitize_ulong(argv[i + 1]);
+          i++;
+        }
+      } else if ((strcmp(argv[i], "-d") == 0) ||
+                 (strcmp(argv[i], "--device") == 0)) {
+        if ((i + 1) < argc) {
+          specified_device = sanitize_ulong(argv[i + 1]);
+          i++;
+        }
+      } else if (strcmp(argv[i], "-e") == 0) {
+        use_event_timer = true;
+      } else if (strcmp(argv[i], "-v") == 0) {
+        verbose = true;
+      } else if (strcmp(argv[i], "-i") == 0) {
+        if ((i + 1) < argc) {
+          iters = sanitize_ulong(argv[i + 1]);
+          i++;
+        }
+      } else if (strcmp(argv[i], "-w") == 0) {
+        if ((i + 1) < argc) {
+          warmup_iterations = sanitize_ulong(argv[i + 1]);
+          i++;
+        }
+      } else if ((strcmp(argv[i], "-t") == 0)) {
+        if ((i + 1) >= argc) {
+          std::cout << usage_str;
+          exit(-1);
+        }
+        stage = 1;
+        run_global_bw = run_hp_compute = run_sp_compute = run_dp_compute =
+            run_int_compute = run_transfer_bw = run_kernel_lat = false;
+      } else if (strcmp(argv[i], "-a") == 0) {
+        run_global_bw = run_hp_compute = run_sp_compute = run_dp_compute =
+            run_int_compute = run_transfer_bw = run_kernel_lat = true;
+      } else if (strcmp(argv[i], "-x") == 0) {
+        enable_explicit_scaling = true;
+      } else if ((strcmp(argv[i], "-q") == 0)) {
+        query_engines = true;
+      } else if ((strcmp(argv[i], "-g") == 0)) {
+        enable_fixed_ordinal_index = true;
+        if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
+          command_queue_group_ordinal = atoi(argv[i + 1]);
+        }
+        i++;
+      } else if ((strcmp(argv[i], "-n") == 0)) {
+        if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
+          command_queue_index = atoi(argv[i + 1]);
+        }
         i++;
       } else {
         std::cout << usage_str;
         exit(-1);
       }
-    } else if (strcmp(argv[i], "-a") == 0) {
-      run_global_bw = run_hp_compute = run_sp_compute = run_dp_compute =
-          run_int_compute = run_transfer_bw = run_kernel_lat = true;
-    } else if (strcmp(argv[i], "-x") == 0) {
-      enable_explicit_scaling = true;
-    } else if ((strcmp(argv[i], "-q") == 0)) {
-      query_engines = true;
-    } else if ((strcmp(argv[i], "-g") == 0)) {
-      enable_fixed_ordinal_index = true;
-      if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
-        command_queue_group_ordinal = atoi(argv[i + 1]);
-      }
-      i++;
-    } else if ((strcmp(argv[i], "-n") == 0)) {
-      if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
-        command_queue_index = atoi(argv[i + 1]);
-      }
-      i++;
-    } else {
-      std::cout << usage_str;
-      exit(-1);
     }
   }
   return 0;
