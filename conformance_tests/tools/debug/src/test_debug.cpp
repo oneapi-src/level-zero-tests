@@ -115,7 +115,8 @@ protected:
     delete condition;
   }
 
-  void run_test(std::vector<ze_device_handle_t> devices, bool use_sub_devices);
+  void run_test(std::vector<ze_device_handle_t> devices, bool use_sub_devices,
+                bool reattach);
 
   bi::shared_memory_object *shm;
   bi::mapped_region *region;
@@ -124,7 +125,7 @@ protected:
 };
 
 void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
-                                        bool use_sub_devices) {
+                                        bool use_sub_devices, bool reattach) {
 
   for (auto &device : devices) {
     auto device_properties = lzt::get_device_properties(device);
@@ -154,9 +155,24 @@ void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
     mutex->unlock();
     condition->notify_all();
 
-    debug_helper.wait(); // we don't care about the child processes exit code at
-                         // the moment
-    lzt::debug_detach(debug_session);
+    if (!reattach) {
+      debug_helper.wait(); // we don't care about the child processes exit code
+                           // at the moment
+      lzt::debug_detach(debug_session);
+    } else {
+      // tell the application we are detaching
+      LOG_INFO << "[Debugger] Detaching";
+      lzt::debug_detach(debug_session);
+
+      // re-attach to the application
+      LOG_INFO << "[Debugger] Re-attaching";
+      lzt::debug_attach(device, debug_config);
+
+      // wait for attach to succeed or fail
+      std::this_thread::sleep_for(std::chrono::seconds(5));
+
+      debug_helper.terminate();
+    }
   }
 }
 
@@ -166,7 +182,7 @@ TEST_F(
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
-  run_test(devices, false);
+  run_test(devices, false, false);
 }
 
 TEST_F(
@@ -183,7 +199,16 @@ TEST_F(
                            sub_devices.end());
   }
 
-  run_test(all_sub_devices, true);
+  run_test(all_sub_devices, true, false);
+}
+
+TEST_F(zetDebugAttachDetachTest,
+       GivenPreviousDebugSessionDetachedWenAttachingThenReAttachIsSuccessful) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  run_test(devices, false, true);
 }
 
 class zetDebugEventReadTest : public zetDebugAttachDetachTest {
