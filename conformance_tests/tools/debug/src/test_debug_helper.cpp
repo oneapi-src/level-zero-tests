@@ -287,8 +287,6 @@ void attach_after_module_destroyed_test(
   auto module = lzt::create_module(context, device, "debug_add.spv",
                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
 
-  //  auto kernels = std::vector<ze_kernel_handle_t>(num_kernels);
-
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto size = 8192;
@@ -367,7 +365,7 @@ void run_print_kernel(ze_context_handle_t &context, ze_driver_handle_t &driver,
   auto command_queue = lzt::create_command_queue(device);
 
   auto module =
-      lzt::create_module(device, "debug_loop", ZE_MODULE_FORMAT_IL_SPIRV,
+      lzt::create_module(device, "debug_loop.spv", ZE_MODULE_FORMAT_IL_SPIRV,
                          "-g" /* include debug symbols*/, nullptr);
 
   auto kernel = lzt::create_function(module, "debug_print_forever");

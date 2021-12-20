@@ -26,7 +26,7 @@ void debug_detach(const zet_debug_session_handle_t &debug_session);
 
 zet_debug_event_t
 debug_read_event(const zet_debug_session_handle_t &debug_session,
-                 uint64_t timeout);
+                 uint64_t timeout, bool allowTimeout);
 
 void debug_ack_event(const zet_debug_session_handle_t &debug_session,
                      const zet_debug_event_t *debug_event);

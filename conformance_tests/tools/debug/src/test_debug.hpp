@@ -34,4 +34,12 @@ typedef struct {
 
 typedef enum { SINGLE_THREAD, GROUP_OF_THREADS, ALL_THREADS } num_threads_t;
 
+#define CLEAN_AND_ASSERT(condition, helper)                                    \
+  do {                                                                         \
+    if (!condition) {                                                          \
+      helper.terminate();                                                      \
+      ASSERT_TRUE(false);                                                      \
+    }                                                                          \
+  } while (0)
+
 #endif // TEST_DEBUG_HPP

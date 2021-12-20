@@ -54,16 +54,19 @@ debug_read_event(const zet_debug_session_handle_t &debug_session) {
 
 zet_debug_event_t
 debug_read_event(const zet_debug_session_handle_t &debug_session,
-                 uint64_t timeout) {
+                 uint64_t timeout, bool allowTimeout) {
 
   zet_debug_event_t debug_event = {};
 
   auto result = zetDebugReadEvent(debug_session, timeout, &debug_event);
 
   // Expect that timeout expired if not successful
-  if (ZE_RESULT_SUCCESS != result) {
+  if (allowTimeout && ZE_RESULT_SUCCESS != result) {
     debug_event = {};
+    LOG_INFO << "[Debugger]  zetDebugReadEvent timed out";
     EXPECT_EQ(ZE_RESULT_NOT_READY, result);
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
   }
 
   return debug_event;
@@ -124,14 +127,6 @@ get_register_set_properties(const ze_device_handle_t &device) {
                                    device, &count, properties.data()));
   EXPECT_EQ(device, device_initial);
   return properties;
-}
-
-void debug_clean_assert_true(bool condition,
-                             boost::process::child &debug_helper) {
-  if (!condition) {
-    debug_helper.terminate();
-    ASSERT_TRUE(false);
-  }
 }
 
 } // namespace level_zero_tests

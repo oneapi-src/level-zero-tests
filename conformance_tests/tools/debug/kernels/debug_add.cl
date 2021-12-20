@@ -34,7 +34,7 @@ kernel void debug_add_constant_2(global uchar *values, int addval) {
 }
 
 kernel void debug_add_constant_3(global uchar *values, int addval,
-                                 size_t x_stride, size_t y_stride) {
+                                 uint x_stride, uint y_stride) {
 
   const size_t xid = get_global_id(0);
   const size_t yid = get_global_id(1);

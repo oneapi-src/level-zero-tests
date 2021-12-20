@@ -258,29 +258,36 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
     uint16_t eventNum = 0;
     uint16_t moduleLoadCount = 0;
     uint16_t moduleUnloadCount = 0;
+    bool gotProcEntry = false;
+    bool gotProcExit = false;
 
     std::chrono::time_point<std::chrono::system_clock> start, checkpoint;
     start = std::chrono::system_clock::now();
 
     zet_debug_event_t debug_event;
     do {
-      debug_event = lzt::debug_read_event(debug_session,
-                                          std::numeric_limits<uint64_t>::max());
+      debug_event = lzt::debug_read_event(debug_session, 30000, false);
       LOG_INFO << "[Debugger] received event: "
                << eventTypeString[debug_event.type];
+      eventNum++;
 
       if (ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY == debug_event.type) {
-        EXPECT_EQ(eventNum, 0);
+        EXPECT_EQ(eventNum, 1);
+        gotProcEntry = true;
       } else if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
-        EXPECT_NE(eventNum, 0);
+        EXPECT_GT(eventNum, 1);
         moduleLoadCount++;
         EXPECT_TRUE(debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK);
         if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
           lzt::debug_ack_event(debug_session, &debug_event);
         }
       } else if (ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD == debug_event.type) {
-        EXPECT_NE(eventNum, 0);
+        EXPECT_GT(eventNum, 1);
         moduleUnloadCount++;
+      } else if (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) {
+        EXPECT_GT(eventNum, 1);
+        gotProcExit = true;
+        break;
       }
 
       checkpoint = std::chrono::system_clock::now();
@@ -289,10 +296,12 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
         LOG_ERROR << "[Debugger] Timed out waiting for events";
         break;
       }
+    } while (ZET_DEBUG_EVENT_TYPE_INVALID != debug_event.type);
 
-      eventNum++;
-    } while (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT != debug_event.type);
+    EXPECT_GE(moduleLoadCount, 1);
     EXPECT_EQ(moduleLoadCount, moduleUnloadCount);
+    EXPECT_TRUE(gotProcEntry);
+    EXPECT_TRUE(gotProcExit);
 
     lzt::debug_detach(debug_session);
     debug_helper.wait();
@@ -482,10 +491,12 @@ void zetDebugEventReadTest::run_advanced_test(
     std::vector<zet_debug_event_type_t> events;
     auto event_num = 0;
     uint64_t timeout = std::numeric_limits<uint64_t>::max();
+    std::chrono::time_point<std::chrono::system_clock> start, checkpoint;
+    start = std::chrono::system_clock::now();
 
     // debug event loop
     while (true) {
-      auto debug_event = lzt::debug_read_event(debug_session, timeout);
+      auto debug_event = lzt::debug_read_event(debug_session, timeout, false);
       events.push_back(debug_event.type);
 
       if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
@@ -539,6 +550,12 @@ void zetDebugEventReadTest::run_advanced_test(
         }
         break;
       }
+        checkpoint = std::chrono::system_clock::now();
+        std::chrono::duration<double> secondsLooping = checkpoint - start;
+        if (secondsLooping.count() > 30) {
+          LOG_ERROR << "[Debugger] Timed out waiting for events";
+          break;
+        }
       }
 
       if (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) {
@@ -601,8 +618,7 @@ TEST_F(zetDebugEventReadTest,
 
     auto event_found = false;
     while (true) {
-      auto debug_event = lzt::debug_read_event(
-          debug_session, std::numeric_limits<uint64_t>::max());
+      auto debug_event = lzt::debug_read_event(debug_session, 10000, false);
 
       if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
         event_found = true;
@@ -705,7 +721,7 @@ class zetDebugMemAccessTest : public zetDebugAttachDetachTest {
 protected:
   void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
   void TearDown() override { zetDebugAttachDetachTest::TearDown(); }
-  void attachAndGetModuleEvent(uint32_t pid, ze_device_handle_t &device,
+  void attachAndGetModuleEvent(uint32_t pid, ze_device_handle_t device,
                                zet_debug_event_t &module_event);
   void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
                              const ze_device_thread_t &thread,
@@ -716,13 +732,19 @@ protected:
 };
 
 void zetDebugMemAccessTest::attachAndGetModuleEvent(
-    uint32_t pid, ze_device_handle_t &device, zet_debug_event_t &module_event) {
+    uint32_t pid, ze_device_handle_t device, zet_debug_event_t &module_event) {
 
+  module_event = {};
   zet_debug_config_t debug_config = {};
   debug_config.pid = pid;
   debug_session = lzt::debug_attach(device, debug_config);
+  if (!debug_session) {
+    LOG_ERROR << "[Debugger] Failed to attach to start a debug session";
+    return;
+  }
 
   LOG_INFO << "[Debugger] Notifying application after attaching";
+  // Application should not run if module load is not acknowledged.
   mutex->lock();
   static_cast<debug_signals_t *>(region->get_address())->debugger_signal = true;
   mutex->unlock();
@@ -732,16 +754,27 @@ void zetDebugMemAccessTest::attachAndGetModuleEvent(
   std::chrono::time_point<std::chrono::system_clock> start, checkpoint;
   start = std::chrono::system_clock::now();
 
+  LOG_INFO << "[Debugger] Listening for events";
+
   while (!module_loaded) {
-    auto debug_event = lzt::debug_read_event(debug_session, 5000);
+    auto debug_event = lzt::debug_read_event(debug_session, 10000, false);
+    LOG_INFO << "[Debugger] received event: "
+             << eventTypeString[debug_event.type];
 
     if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
-      module_loaded = true;
-      module_event = debug_event;
+      LOG_INFO << "[Debugger] ZET_DEBUG_EVENT_TYPE_MODULE_LOAD."
+               << " ISA load address: " << debug_event.info.module.load
+               << " ELF begin: " << debug_event.info.module.moduleBegin
+               << " ELF end: " << debug_event.info.module.moduleEnd;
+      EXPECT_TRUE(debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK);
+      if (debug_event.info.module.load) {
+        module_loaded = true;
+        module_event = debug_event;
+      }
     }
     checkpoint = std::chrono::system_clock::now();
     std::chrono::duration<double> secondsLooping = checkpoint - start;
-    if (secondsLooping.count() > 5) {
+    if (secondsLooping.count() > 20) {
       LOG_ERROR << "[Debugger] Timed out waiting for module event";
       break;
     }
@@ -783,26 +816,28 @@ void zetDebugMemAccessTest::readWriteModuleMemory(
       memcmp(bufferCopy, buffer, bufferSize)); // memcmp retruns 0 on equal
 
   // Access ELF
-  desc.address = module_event.info.module.moduleBegin;
-  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
-  for (int i = 0; i < bufferSize; i++) {
-    EXPECT_NE(static_cast<char>(0xaa), buffer[i]);
-  }
-  memset(buffer, 0xaa, bufferSize);
+  if (module_event.info.module.moduleBegin) {
+    desc.address = module_event.info.module.moduleBegin;
+    lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
+    for (int i = 0; i < bufferSize; i++) {
+      EXPECT_NE(static_cast<char>(0xaa), buffer[i]);
+    }
+    memset(buffer, 0xaa, bufferSize);
 
-  desc.address += 0xF; // add intentional missalignment
-  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
-  for (int i = 0; i < bufferSize; i++) {
-    EXPECT_NE(static_cast<char>(0xaa), buffer[i]);
+    desc.address += 0xF; // add intentional missalignment
+    lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
+    for (int i = 0; i < bufferSize; i++) {
+      EXPECT_NE(static_cast<char>(0xaa), buffer[i]);
+    }
+    // NO writing allowed to ELF
   }
-  // NO writing allowed to ELF
 }
 
 TEST_F(zetDebugMemAccessTest,
        GivenDebuggerAttachedAndModuleLoadedAccessISAAndELFMemory) {
-
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
+
   for (auto &device : devices) {
 
     auto device_properties = lzt::get_device_properties(device);
@@ -819,15 +854,10 @@ TEST_F(zetDebugMemAccessTest,
         helper, "--device_id=" + lzt::to_string(device_properties.uuid),
         (use_sub_devices ? "--use_sub_devices" : ""),
         "--test_type=" + std::to_string(BASIC), bp::std_in < child_input);
+
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);
-
-    lzt::debug_clean_assert_true(module_event.info.module.load,
-                                 debug_helper); // ISA
-    lzt::debug_clean_assert_true(module_event.info.module.moduleBegin,
-                                 debug_helper); // ELF start
-    lzt::debug_clean_assert_true(module_event.info.module.moduleEnd,
-                                 debug_helper); // ELF end
+    CLEAN_AND_ASSERT(module_event.info.module.load, debug_helper);
 
     // ALL threads
     ze_device_thread_t thread;
@@ -842,7 +872,7 @@ TEST_F(zetDebugMemAccessTest,
     thread.subslice = 0;
     thread.eu = 0;
     thread.thread = 0;
-    readWriteModuleMemory(debug_session, thread, module_event);
+    //    readWriteModuleMemory(debug_session, thread, module_event);
 
     lzt::debug_detach(debug_session);
     debug_helper.terminate();
