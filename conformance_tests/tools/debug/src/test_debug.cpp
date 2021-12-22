@@ -266,7 +266,11 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
 
     zet_debug_event_t debug_event;
     do {
-      debug_event = lzt::debug_read_event(debug_session, 30000, false);
+      ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
+                                                 eventsTimeoutMS, false);
+      if (ZE_RESULT_SUCCESS != result) {
+        break;
+      }
       LOG_INFO << "[Debugger] received event: "
                << eventTypeString[debug_event.type];
       eventNum++;
@@ -292,7 +296,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
 
       checkpoint = std::chrono::system_clock::now();
       std::chrono::duration<double> secondsLooping = checkpoint - start;
-      if (secondsLooping.count() > 100) {
+      if (secondsLooping.count() > eventsTimeoutS) {
         LOG_ERROR << "[Debugger] Timed out waiting for events";
         break;
       }
@@ -489,14 +493,19 @@ void zetDebugEventReadTest::run_advanced_test(
     condition->notify_all();
 
     std::vector<zet_debug_event_type_t> events;
-    auto event_num = 0;
     uint64_t timeout = std::numeric_limits<uint64_t>::max();
+    auto event_num = 0;
     std::chrono::time_point<std::chrono::system_clock> start, checkpoint;
     start = std::chrono::system_clock::now();
 
     // debug event loop
     while (true) {
-      auto debug_event = lzt::debug_read_event(debug_session, timeout, false);
+      zet_debug_event_t debug_event;
+      ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
+                                                 eventsTimeoutMS, false);
+      if (ZE_RESULT_SUCCESS != result) {
+        break;
+      }
       events.push_back(debug_event.type);
 
       if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
@@ -618,7 +627,12 @@ TEST_F(zetDebugEventReadTest,
 
     auto event_found = false;
     while (true) {
-      auto debug_event = lzt::debug_read_event(debug_session, 10000, false);
+      zet_debug_event_t debug_event;
+      ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
+                                                 eventsTimeoutMS, false);
+      if (ZE_RESULT_SUCCESS != result) {
+        break;
+      }
 
       if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
         event_found = true;
@@ -757,7 +771,12 @@ void zetDebugMemAccessTest::attachAndGetModuleEvent(
   LOG_INFO << "[Debugger] Listening for events";
 
   while (!module_loaded) {
-    auto debug_event = lzt::debug_read_event(debug_session, 10000, false);
+    zet_debug_event_t debug_event;
+    ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
+                                               eventsTimeoutMS, false);
+    if (ZE_RESULT_SUCCESS != result) {
+      break;
+    }
     LOG_INFO << "[Debugger] received event: "
              << eventTypeString[debug_event.type];
 
@@ -774,7 +793,7 @@ void zetDebugMemAccessTest::attachAndGetModuleEvent(
     }
     checkpoint = std::chrono::system_clock::now();
     std::chrono::duration<double> secondsLooping = checkpoint - start;
-    if (secondsLooping.count() > 20) {
+    if (secondsLooping.count() > eventsTimeoutS) {
       LOG_ERROR << "[Debugger] Timed out waiting for module event";
       break;
     }

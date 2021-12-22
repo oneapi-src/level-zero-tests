@@ -52,24 +52,24 @@ debug_read_event(const zet_debug_session_handle_t &debug_session) {
   return debug_event;
 }
 
-zet_debug_event_t
-debug_read_event(const zet_debug_session_handle_t &debug_session,
-                 uint64_t timeout, bool allowTimeout) {
+ze_result_t debug_read_event(const zet_debug_session_handle_t &debug_session,
+                             zet_debug_event_t &debugEvent, uint64_t timeout,
+                             bool allowTimeout) {
 
-  zet_debug_event_t debug_event = {};
+  zet_debug_event_t event = {};
 
-  auto result = zetDebugReadEvent(debug_session, timeout, &debug_event);
+  ze_result_t result = zetDebugReadEvent(debug_session, timeout, &event);
 
   // Expect that timeout expired if not successful
   if (allowTimeout && ZE_RESULT_SUCCESS != result) {
-    debug_event = {};
     LOG_INFO << "[Debugger]  zetDebugReadEvent timed out";
     EXPECT_EQ(ZE_RESULT_NOT_READY, result);
   } else {
     EXPECT_EQ(ZE_RESULT_SUCCESS, result);
   }
 
-  return debug_event;
+  debugEvent = event;
+  return result;
 }
 
 void debug_ack_event(const zet_debug_session_handle_t &debug_session,

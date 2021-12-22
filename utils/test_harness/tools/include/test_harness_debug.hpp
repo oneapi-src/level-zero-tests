@@ -24,9 +24,9 @@ zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,
 
 void debug_detach(const zet_debug_session_handle_t &debug_session);
 
-zet_debug_event_t
-debug_read_event(const zet_debug_session_handle_t &debug_session,
-                 uint64_t timeout, bool allowTimeout);
+ze_result_t debug_read_event(const zet_debug_session_handle_t &debug_session,
+                             zet_debug_event_t &debugEvent, uint64_t timeout,
+                             bool allowTimeout);
 
 void debug_ack_event(const zet_debug_session_handle_t &debug_session,
                      const zet_debug_event_t *debug_event);
