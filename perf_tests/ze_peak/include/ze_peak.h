@@ -142,7 +142,8 @@ private:
                                      void *source_buffer, size_t buffer_size,
                                      bool shared_is_dest);
   void _transfer_bw_shared_memory(L0Context &context,
-                                  std::vector<float> local_memory);
+                                    size_t local_memory_size,
+                                    void *local_memory);
   TimingMeasurement is_bandwidth_with_event_timer(void);
   long double calculate_gbps(long double period, long double buffer_size);
   long double context_time_in_us(L0Context &context, ze_event_handle_t &event);

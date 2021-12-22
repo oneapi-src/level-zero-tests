@@ -39,9 +39,18 @@ bool ZeImageCopy::is_json_output_enabled(void) {
   return JsonFileName.size() != 0;
 }
 
+uint64_t roundToMultipleOf(uint64_t number, uint64_t base, uint64_t maxValue) {
+  uint64_t n = (number > maxValue) ? maxValue : number;
+  return (n / base) * base;
+}
+
 void ZeImageCopy::test_initialize(void) {
-  buffer_size = level_zero_tests::num_bytes_per_pixel(Imagelayout) * width *
-                height * depth;
+  size_t buffer_size_tmp = level_zero_tests::num_bytes_per_pixel(Imagelayout) *
+                           width * height * depth;
+  buffer_size = roundToMultipleOf(buffer_size_tmp, 8, SIZE_MAX);
+  if (buffer_size == 0 && buffer_size_tmp > 0) {
+    buffer_size = buffer_size_tmp;
+  }
   region = {xOffset, yOffset, zOffset, width, height, depth};
   formatDesc = {Imagelayout,
                 Imageformat,
@@ -61,8 +70,14 @@ void ZeImageCopy::test_initialize(void) {
   imageDesc.arraylevels = 0;
   imageDesc.miplevels = 0;
 
-  srcBuffer = new uint8_t[buffer_size];
-  dstBuffer = new uint8_t[buffer_size];
+#ifdef _WIN32
+  srcBuffer = static_cast<uint8_t *>(_aligned_malloc(buffer_size, 64));
+  dstBuffer = static_cast<uint8_t *>(_aligned_malloc(buffer_size, 64));
+#else
+  srcBuffer = static_cast<uint8_t *>(aligned_alloc(64, buffer_size));
+  dstBuffer = static_cast<uint8_t *>(aligned_alloc(64, buffer_size));
+#endif
+
   for (size_t i = 0; i < this->buffer_size; ++i) {
     srcBuffer[i] = static_cast<uint8_t>(i);
     dstBuffer[i] = 0xff;
@@ -83,8 +98,13 @@ void ZeImageCopy::test_initialize(void) {
 }
 
 void ZeImageCopy::test_cleanup(void) {
-  delete[] srcBuffer;
-  delete[] dstBuffer;
+#ifdef _WIN32
+  _aligned_free(srcBuffer);
+  _aligned_free(dstBuffer);
+#else
+  free(srcBuffer);
+  free(dstBuffer);
+#endif
   benchmark->imageDestroy(this->image);
   image = nullptr;
   for (int i = 0; i < num_wait_events; i++)
