@@ -175,6 +175,29 @@ void append_memory_copy(ze_command_list_handle_t cl, void *dstptr,
   }
 }
 
+void append_memory_copy(ze_context_handle_t src_context,
+                        ze_command_list_handle_t cl, void *dstptr,
+                        const void *srcptr, size_t size,
+                        ze_event_handle_t hSignalEvent,
+                        uint32_t num_wait_events,
+                        ze_event_handle_t *wait_events) {
+
+  auto command_list_initial = cl;
+  auto signal_event_initial = hSignalEvent;
+  std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
+  std::memcpy(wait_events_initial.data(), wait_events,
+              sizeof(ze_event_handle_t) * num_wait_events);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendMemoryCopyFromContext(
+                                   cl, dstptr, src_context, srcptr, size,
+                                   hSignalEvent, num_wait_events, wait_events));
+
+  EXPECT_EQ(cl, command_list_initial);
+  EXPECT_EQ(hSignalEvent, signal_event_initial);
+  for (int i = 0; i < num_wait_events; i++) {
+    EXPECT_EQ(wait_events[i], wait_events_initial[i]);
+  }
+}
+
 void append_memory_copy_region(ze_command_list_handle_t hCommandList,
                                void *dstptr, const ze_copy_region_t *dstRegion,
                                uint32_t dstPitch, uint32_t dstSlicePitch,

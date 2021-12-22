@@ -79,6 +79,12 @@ void append_memory_copy(ze_command_list_handle_t cl, void *dstptr,
                         ze_event_handle_t hSignalEvent,
                         uint32_t num_wait_events,
                         ze_event_handle_t *wait_events);
+void append_memory_copy(ze_context_handle_t src_context,
+                        ze_command_list_handle_t cl, void *dstptr,
+                        const void *srcptr, size_t size,
+                        ze_event_handle_t hSignalEvent,
+                        uint32_t num_wait_events,
+                        ze_event_handle_t *wait_events);
 
 void append_memory_copy_region(ze_command_list_handle_t hCommandList,
                                void *dstptr, const ze_copy_region_t *dstRegion,

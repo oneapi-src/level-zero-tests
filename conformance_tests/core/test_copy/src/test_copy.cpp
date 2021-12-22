@@ -350,6 +350,100 @@ TEST_F(
   free_memory(device_memory);
 }
 
+class zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests
+    : public zeCommandListCommandQueueTests {};
+
+TEST_F(
+    zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
+    GivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+  const size_t size = 4 * 1024;
+  ze_context_handle_t src_context = lzt::create_context();
+  ze_context_handle_t dflt_context = lzt::get_default_context();
+
+  EXPECT_NE(src_context, dflt_context);
+
+  void *host_memory_src_ctx = lzt::allocate_host_memory(size, 1, src_context);
+  void *host_memory_dflt_ctx = lzt::allocate_host_memory(size);
+  void *shared_memory_src_ctx = lzt::allocate_shared_memory(
+      size, 1, 0, 0, zeDevice::get_instance()->get_device(), src_context);
+  void *shared_memory_dflt_ctx = lzt::allocate_shared_memory(size);
+  void *device_memory_src_ctx = lzt::allocate_device_memory(
+      size, 1, 0, 0, zeDevice::get_instance()->get_device(), src_context);
+  void *device_memory_dflt_ctx = lzt::allocate_device_memory(size);
+
+  lzt::write_data_pattern(host_memory_src_ctx, size, 1);
+
+  append_memory_copy(src_context, cl.command_list_, device_memory_dflt_ctx,
+                     host_memory_src_ctx, size, nullptr, 0, nullptr);
+  append_barrier(cl.command_list_, nullptr, 0, nullptr);
+  append_memory_copy(dflt_context, cl.command_list_, device_memory_src_ctx,
+                     device_memory_dflt_ctx, size, nullptr, 0, nullptr);
+  append_barrier(cl.command_list_, nullptr, 0, nullptr);
+  append_memory_copy(src_context, cl.command_list_, shared_memory_dflt_ctx,
+                     device_memory_src_ctx, size, nullptr, 0, nullptr);
+  append_barrier(cl.command_list_, nullptr, 0, nullptr);
+  append_memory_copy(dflt_context, cl.command_list_, shared_memory_src_ctx,
+                     device_memory_dflt_ctx, size, nullptr, 0, nullptr);
+  append_barrier(cl.command_list_, nullptr, 0, nullptr);
+  append_memory_copy(src_context, cl.command_list_, host_memory_dflt_ctx,
+                     shared_memory_src_ctx, size, nullptr, 0, nullptr);
+  append_barrier(cl.command_list_, nullptr, 0, nullptr);
+  close_command_list(cl.command_list_);
+  execute_command_lists(cq.command_queue_, 1, &cl.command_list_, nullptr);
+  synchronize(cq.command_queue_, UINT64_MAX);
+
+  lzt::validate_data_pattern(host_memory_dflt_ctx, size, 1);
+  free_memory(src_context, host_memory_src_ctx);
+  free_memory(host_memory_dflt_ctx);
+  free_memory(src_context, shared_memory_src_ctx);
+  free_memory(shared_memory_dflt_ctx);
+  free_memory(src_context, device_memory_src_ctx);
+  free_memory(device_memory_dflt_ctx);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
+    GivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsThenSuccessIsReturnedAndCopyIsCorrect) {
+  const size_t size = 4 * 1024;
+  ze_context_handle_t src_context = lzt::create_context();
+  ze_context_handle_t dflt_context = lzt::get_default_context();
+  EXPECT_NE(src_context, dflt_context);
+  ze_event_handle_t hEvent1 = nullptr;
+  ze_event_handle_t hEvent2 = nullptr;
+  lzt::zeEventPool ep;
+  ep.create_event(hEvent1);
+  ep.create_event(hEvent2);
+
+  void *host_memory_src_ctx = lzt::allocate_host_memory(size, 1, src_context);
+  void *host_memory_dflt_ctx = lzt::allocate_host_memory(size);
+  void *device_memory_src_ctx = lzt::allocate_device_memory(
+      size, 1, 0, 0, zeDevice::get_instance()->get_device(), src_context);
+  void *device_memory_dflt_ctx = lzt::allocate_device_memory(size);
+
+  lzt::write_data_pattern(host_memory_src_ctx, size, 1);
+
+  append_memory_copy(src_context, cl.command_list_, device_memory_dflt_ctx,
+                     host_memory_src_ctx, size, hEvent1, 0, nullptr);
+  append_barrier(cl.command_list_, hEvent2, 1, &hEvent1);
+  append_memory_copy(dflt_context, cl.command_list_, device_memory_src_ctx,
+                     device_memory_dflt_ctx, size, hEvent1, 1, &hEvent2);
+  append_barrier(cl.command_list_, hEvent2, 1, &hEvent1);
+  append_memory_copy(src_context, cl.command_list_, host_memory_dflt_ctx,
+                     device_memory_src_ctx, size, hEvent1, 0, &hEvent2);
+  append_barrier(cl.command_list_, nullptr, 1, &hEvent1);
+  close_command_list(cl.command_list_);
+  execute_command_lists(cq.command_queue_, 1, &cl.command_list_, nullptr);
+  synchronize(cq.command_queue_, UINT64_MAX);
+
+  lzt::validate_data_pattern(host_memory_dflt_ctx, size, 1);
+  ep.destroy_event(hEvent1);
+  ep.destroy_event(hEvent2);
+  free_memory(src_context, host_memory_src_ctx);
+  free_memory(host_memory_dflt_ctx);
+  free_memory(src_context, device_memory_src_ctx);
+  free_memory(device_memory_dflt_ctx);
+}
+
 class zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<
