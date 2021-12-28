@@ -60,6 +60,14 @@ static uint32_t sanitize_ulong(char *in) {
 // with the correct environment.
 //---------------------------------------------------------------------
 int ZePeak::parse_arguments(int argc, char **argv) {
+  bool  __run_global_bw = false;
+  bool  __run_hp_compute = false;
+  bool  __run_sp_compute = false;
+  bool  __run_dp_compute = false;
+  bool  __run_int_compute = false;
+  bool  __run_transfer_bw = false;
+  bool  __run_kernel_lat = false;
+
   for (int i = 1; i < argc; i++) {
     if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
       std::cout << usage_str;
@@ -91,45 +99,38 @@ int ZePeak::parse_arguments(int argc, char **argv) {
         i++;
       }
     } else if ((strcmp(argv[i], "-t") == 0)) {
-      run_global_bw = false;
-      run_hp_compute = false;
-      run_sp_compute = false;
-      run_dp_compute = false;
-      run_int_compute = false;
-      run_transfer_bw = false;
-      run_kernel_lat = false;
       if ((i + 1) >= argc) {
         std::cout << usage_str;
         exit(-1);
       }
       if (strcmp(argv[i + 1], "global_bw") == 0) {
-        run_global_bw = true;
+        __run_global_bw = true;
         i++;
       } else if (strcmp(argv[i + 1], "hp_compute") == 0) {
-        run_hp_compute = true;
+        __run_hp_compute = true;
         i++;
       } else if (strcmp(argv[i + 1], "sp_compute") == 0) {
-        run_sp_compute = true;
+        __run_sp_compute = true;
         i++;
       } else if (strcmp(argv[i + 1], "dp_compute") == 0) {
-        run_dp_compute = true;
+        __run_dp_compute = true;
         i++;
       } else if (strcmp(argv[i + 1], "int_compute") == 0) {
-        run_int_compute = true;
+        __run_int_compute = true;
         i++;
       } else if (strcmp(argv[i + 1], "transfer_bw") == 0) {
-        run_transfer_bw = true;
+        __run_transfer_bw = true;
         i++;
       } else if (strcmp(argv[i + 1], "kernel_lat") == 0) {
-        run_kernel_lat = true;
+        __run_kernel_lat = true;
         i++;
       } else {
         std::cout << usage_str;
         exit(-1);
       }
     } else if (strcmp(argv[i], "-a") == 0) {
-      run_global_bw = run_hp_compute = run_sp_compute = run_dp_compute =
-          run_int_compute = run_transfer_bw = run_kernel_lat = true;
+      __run_global_bw = __run_hp_compute = __run_sp_compute = __run_dp_compute =
+          __run_int_compute = __run_transfer_bw = __run_kernel_lat = true;
     } else if (strcmp(argv[i], "-x") == 0) {
       enable_explicit_scaling = true;
     } else if ((strcmp(argv[i], "-q") == 0)) {
@@ -150,5 +151,12 @@ int ZePeak::parse_arguments(int argc, char **argv) {
       exit(-1);
     }
   }
+  run_global_bw = __run_global_bw;
+  run_hp_compute = __run_hp_compute;
+  run_sp_compute = __run_sp_compute;
+  run_dp_compute = __run_dp_compute;
+  run_int_compute = __run_int_compute;
+  run_transfer_bw = __run_transfer_bw;
+  run_kernel_lat = __run_kernel_lat;
   return 0;
 }
