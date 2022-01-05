@@ -28,6 +28,7 @@ static const char *usage_str =
     "\n  -q                       query for number of engines available"
     "\n  -g, group                select engine group (default: 0)"
     "\n  -n, number               select engine index (default: 0)"
+    "\n  --csv                    output in csv format (default: disabled)"
     "\n  -h, --help               display help message"
     "\n";
 
@@ -84,6 +85,9 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
         command_queue_group_ordinal = atoi(argv[i + 1]);
       }
+      i++;
+    } else if ((strcmp(argv[i], "--csv") == 0)) {
+      csv_output = true;
       i++;
     } else if ((strcmp(argv[i], "-n") == 0)) {
       if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {

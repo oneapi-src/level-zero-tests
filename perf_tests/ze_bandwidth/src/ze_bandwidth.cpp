@@ -50,19 +50,29 @@ void ZeBandwidth::calculate_metrics(
 void ZeBandwidth::print_results_host2device(size_t buffer_size,
                                             long double total_bandwidth,
                                             long double total_latency) {
-  std::cout << "Host->Device[" << std::fixed << std::setw(10) << buffer_size
-            << "]:  BW = " << std::setw(9) << std::setprecision(6)
-            << total_bandwidth << " GBPS  Latency = " << std::setw(9)
-            << std::setprecision(2) << total_latency << " usec" << std::endl;
+  if (csv_output) {
+    std::cout << buffer_size << "," << std::setprecision(6) << total_bandwidth
+              << "," << std::setprecision(2) << total_latency << std::endl;
+  } else {
+    std::cout << "Host->Device[" << std::fixed << std::setw(10) << buffer_size
+              << "]:  BW = " << std::setw(9) << std::setprecision(6)
+              << total_bandwidth << " GBPS  Latency = " << std::setw(9)
+              << std::setprecision(2) << total_latency << " usec" << std::endl;
+  }
 }
 
 void ZeBandwidth::print_results_device2host(size_t buffer_size,
                                             long double total_bandwidth,
                                             long double total_latency) {
-  std::cout << "Device->Host[" << std::fixed << std::setw(10) << buffer_size
-            << "]:  BW = " << std::setw(9) << std::setprecision(6)
-            << total_bandwidth << " GBPS  Latency = " << std::setw(9)
-            << std::setprecision(2) << total_latency << " usec" << std::endl;
+  if (csv_output) {
+    std::cout << buffer_size << "," << std::setprecision(6) << total_bandwidth
+              << "," << std::setprecision(2) << total_latency << std::endl;
+  } else {
+    std::cout << "Device->Host[" << std::fixed << std::setw(10) << buffer_size
+              << "]:  BW = " << std::setw(9) << std::setprecision(6)
+              << total_bandwidth << " GBPS  Latency = " << std::setw(9)
+              << std::setprecision(2) << total_latency << " usec" << std::endl;
+  }
 }
 
 void ZeBandwidth::measure_transfer_verify(size_t buffer_size,
@@ -160,6 +170,9 @@ void ZeBandwidth::test_host2device(void) {
   if (verify) {
     std::cout << "HOST-TO-DEVICE BANDWIDTH AND LATENCY WITH VERIFICATION"
               << std::endl;
+    if (csv_output) {
+      std::cout << "Transfer_size,Bandwidth_(GBPS),Latency_(usec)" << std::endl;
+    }
     for (auto size : transfer_size) {
       long double host2dev_time_nsec;
       long double dev2host_time_nsec;
@@ -183,6 +196,9 @@ void ZeBandwidth::test_host2device(void) {
     }
   } else {
     std::cout << "HOST-TO-DEVICE BANDWIDTH AND LATENCY" << std::endl;
+    if (csv_output) {
+      std::cout << "Transfer_size,Bandwidth_(GBPS),Latency_(usec)" << std::endl;
+    }
     for (auto size : transfer_size) {
       long double total_time_nsec;
 
@@ -210,6 +226,9 @@ void ZeBandwidth::test_device2host(void) {
   if (verify) {
     std::cout << "DEVICE-TO-HOST BANDWIDTH AND LATENCY WITH VERIFICATION"
               << std::endl;
+    if (csv_output) {
+      std::cout << "Transfer_size,Bandwidth_(GBPS),Latency_(usec)" << std::endl;
+    }
     for (auto size : transfer_size) {
       long double host2dev_time_nsec;
       long double dev2host_time_nsec;
@@ -233,6 +252,9 @@ void ZeBandwidth::test_device2host(void) {
     }
   } else {
     std::cout << "DEVICE-TO-HOST BANDWIDTH AND LATENCY" << std::endl;
+    if (csv_output) {
+      std::cout << "Transfer_size,Bandwidth_(GBPS),Latency_(usec)" << std::endl;
+    }
     for (auto size : transfer_size) {
       long double total_time_nsec;
 

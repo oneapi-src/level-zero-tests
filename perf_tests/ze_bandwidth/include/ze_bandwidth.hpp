@@ -30,6 +30,7 @@ public:
   bool enable_fixed_ordinal_index = false;
   uint32_t command_queue_group_ordinal = 0;
   uint32_t command_queue_index = 0;
+  bool csv_output = false;
 
 private:
   void transfer_size_test(size_t size, void *destination_buffer,
