@@ -49,6 +49,7 @@ driverInfo_t *collect_driver_info(uint32_t &driverInfoCount_) {
     /* one ze_device_properties_t for each device in the driver */
     driver_info[i].device_properties = new ze_device_properties_t[device_count];
     for (uint32_t j = 0; j < device_count; j++) {
+      driver_info[i].device_properties[j] = {};
       driver_info[i].device_properties[j].stype =
           ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     }

@@ -356,7 +356,7 @@ protected:
   void *device_buffer;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   uint8_t *char_input;
-  ze_device_properties_t properties;
+  ze_device_properties_t properties = {};
 
   CommandQueueFlagTest() {
     host_buffer = lzt::allocate_shared_memory(buff_size_bytes);

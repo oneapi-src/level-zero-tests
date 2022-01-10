@@ -57,8 +57,8 @@ struct L0Context {
   std::vector<ze_device_handle_t> sub_devices;
   const uint32_t default_device = 0;
   const uint32_t command_queue_id = 0;
-  ze_device_properties_t device_property;
-  ze_device_compute_properties_t device_compute_property;
+  ze_device_properties_t device_property = {};
+  ze_device_compute_properties_t device_compute_property = {};
   bool verbose = false;
   std::vector<ze_command_queue_group_properties_t> queueProperties;
 
@@ -141,9 +141,8 @@ private:
                                      void *destination_buffer,
                                      void *source_buffer, size_t buffer_size,
                                      bool shared_is_dest);
-  void _transfer_bw_shared_memory(L0Context &context,
-                                    size_t local_memory_size,
-                                    void *local_memory);
+  void _transfer_bw_shared_memory(L0Context &context, size_t local_memory_size,
+                                  void *local_memory);
   TimingMeasurement is_bandwidth_with_event_timer(void);
   long double calculate_gbps(long double period, long double buffer_size);
   long double context_time_in_us(L0Context &context, ze_event_handle_t &event);

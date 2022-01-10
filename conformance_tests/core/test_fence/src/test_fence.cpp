@@ -160,7 +160,7 @@ TEST_P(
     GivenMultipleCommandQueuesWhenFenceAndEventSetThenVerifyAllSignaledSuccessful) {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_context_handle_t context = lzt::create_context();
-  ze_device_properties_t properties;
+  ze_device_properties_t properties = {};
 
   properties.pNext = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
