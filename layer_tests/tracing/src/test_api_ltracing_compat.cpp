@@ -433,6 +433,45 @@ TEST_F(
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDeviceGetModulePropertiesCallbacksWhenCallingzeDeviceGetModulePropertiesThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerDeviceGetModulePropertiesRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDeviceGetModulePropertiesRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_device_module_properties_t moduleProperties = {};
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result =
+      zeDeviceGetModuleProperties(device, &moduleProperties);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDeviceGetCommandQueueGroupPropertieszeDeviceGetCommandQueueGroupPropertiesThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerDeviceGetCommandQueueGroupPropertiesRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDeviceGetCommandQueueGroupPropertiesRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  uint32_t count = 0;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result =
+      zeDeviceGetCommandQueueGroupProperties(device, &count, nullptr);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceGetMemoryPropertiesCallbacksWhenCallingzeDeviceGetMemoryPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceGetMemoryPropertiesRegisterCallback(
       tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
@@ -502,6 +541,25 @@ TEST_F(
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDeviceGetExternalMemoryPropertiesCallbacksWhenCallingzeDeviceGetExternalMemoryPropertiesThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerDeviceGetExternalMemoryPropertiesRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDeviceGetExternalMemoryPropertiesRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_device_external_memory_properties_t externalMemoryProperties;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeDeviceGetExternalMemoryProperties(device, &externalMemoryProperties);
+
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceGetP2PPropertiesCallbacksWhenCallingzeDeviceGetP2PPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceGetP2PPropertiesRegisterCallback(
       tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
@@ -531,6 +589,186 @@ TEST_F(
   lzt::enable_ltracer(tracer_handle);
 
   ASSERT_EQ(initial_result, zeDeviceCanAccessPeer(device, device, &can_access));
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDeviceGetStatusCallbacksWhenCallingzeDeviceGetStatusThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerDeviceGetStatusRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDeviceGetStatusRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeDeviceGetStatus(device);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDeviceGetGlobalTimestampsCallbacksWhenCallingzeDeviceGetGlobalTimestampsThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerDeviceGetGlobalTimestampsRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDeviceGetGlobalTimestampsRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  uint64_t hostTimestamp, deviceTimestamp;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeDeviceGetGlobalTimestamps(device, &hostTimestamp, &deviceTimestamp);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDeviceReserveCacheExtCallbacksWhenCallingzeDeviceReserveCacheExtThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerDeviceReserveCacheExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDeviceReserveCacheExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeDeviceReserveCacheExt(device, 0, 0);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDeviceSetCacheAdviceExtCallbacksWhenCallingzeDeviceSetCacheAdviceExtThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerDeviceSetCacheAdviceExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDeviceSetCacheAdviceExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_cache_ext_region_t cacheRegion = {ZE_CACHE_EXT_REGION_ZE_CACHE_REGION_DEFAULT};
+
+  lzt::enable_ltracer(tracer_handle);
+
+  const size_t memoryRegionSize = 8192;
+  void *memoryRegion = lzt::allocate_device_memory(memoryRegionSize);
+
+  ze_result_t result = zeDeviceSetCacheAdviceExt(device, memoryRegion, memoryRegionSize, cacheRegion);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  lzt::free_memory(memoryRegion);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDevicePciGetPropertiesExtCallbacksWhenCallingzeDevicePciGetPropertiesExtThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerDevicePciGetPropertiesExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDevicePciGetPropertiesExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_pci_ext_properties_t devicePciProperties = {ZE_STRUCTURE_TYPE_PCI_EXT_PROPERTIES, nullptr};
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeDevicePciGetPropertiesExt(device, &devicePciProperties);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeContextCreateCallbacksWhenCallingzeContextCreateThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerContextCreateRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerContextCreateRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_context_desc_t contextDescriptor = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+  ze_context_handle_t context;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeContextCreate(driver, &contextDescriptor, &context);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  result = zeContextDestroy(context);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeContextCreateExCallbacksWhenCallingzeContextCreateExThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerContextCreateExRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerContextCreateExRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_context_desc_t contextDescriptor = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+  ze_context_handle_t context;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeContextCreateEx(driver, &contextDescriptor, 0, nullptr, &context);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  result = zeContextDestroy(context);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeContextDestroyCallbacksWhenCallingzeContextDestroyThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerContextDestroyRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerContextDestroyRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_context_desc_t contextDescriptor = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+  ze_context_handle_t context;
+
+  ze_result_t result = zeContextCreate(driver, &contextDescriptor, &context);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  lzt::enable_ltracer(tracer_handle);
+
+  result = zeContextDestroy(context);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeContextGetStatusCallbacksWhenCallingzeContextGetStatusThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerContextGetStatusRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerContextGetStatusRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_context_desc_t contextDescriptor = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+  ze_context_handle_t context;
+
+  ze_result_t result = zeContextCreate(driver, &contextDescriptor, &context);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  lzt::enable_ltracer(tracer_handle);
+
+  result = zeContextGetStatus(context);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  result = zeContextDestroy(context);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
 }
 
 TEST_F(
@@ -635,6 +873,21 @@ TEST_F(
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDriverGetApiVersionCallbacksWhenCallingzeDriverGetApiVersionThenUserDataIsSetAndResultUnchanged) {
+  zelTracerDriverGetApiVersionRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDriverGetApiVersionRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_result_t initial_result = zeDriverGetApiVersion(driver, &api_version);
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ASSERT_EQ(initial_result, zeDriverGetApiVersion(driver, &api_version));
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverGetPropertiesCallbacksWhenCallingzeDriverGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDriverGetPropertiesRegisterCallback(
       tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
@@ -651,21 +904,6 @@ TEST_F(
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeDriverGetApiVersionCallbacksWhenCallingzeDriverGetApiVersionThenUserDataIsSetAndResultUnchanged) {
-  zelTracerDriverGetApiVersionRegisterCallback(
-      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
-  zelTracerDriverGetApiVersionRegisterCallback(
-      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
-
-  ze_result_t initial_result = zeDriverGetApiVersion(driver, &api_version);
-
-  lzt::enable_ltracer(tracer_handle);
-
-  ASSERT_EQ(initial_result, zeDriverGetApiVersion(driver, &api_version));
-}
-
-TEST_F(
-    LCTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDriverGetIPCPropertiesCallbacksWhenCallingzeDriverGetIPCPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDriverGetIpcPropertiesRegisterCallback(
       tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
@@ -678,6 +916,41 @@ TEST_F(
   lzt::enable_ltracer(tracer_handle);
 
   ASSERT_EQ(initial_result, zeDriverGetIpcProperties(driver, &ipc_properties));
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDriverzeDriverGetExtensionPropertiesCallbacksWhenCallingzeDriverGetExtensionPropertiesThenUserDataIsSetAndResultUnchanged) {
+  zelTracerDriverGetExtensionPropertiesRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDriverGetExtensionPropertiesRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  lzt::enable_ltracer(tracer_handle);
+
+  uint32_t count = 0;
+
+  ze_result_t result = zeDriverGetExtensionProperties(driver, &count, nullptr);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeDriverzeDriverGetExtensionFunctionAddressCallbacksWhenCallingzeDriverGetExtensionFunctionAddressThenUserDataIsSetAndResultUnchanged) {
+  zelTracerDriverGetExtensionFunctionAddressRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerDriverGetExtensionFunctionAddressRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  typedef ze_result_t (*pFnzexDriverImportExternalPointer)(ze_driver_handle_t, void *, size_t);
+  pFnzexDriverImportExternalPointer zexDriverImportExternalPointer = nullptr;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeDriverGetExtensionFunctionAddress(driver, "zexDriverImportExternalPointer", reinterpret_cast<void **>(&zexDriverImportExternalPointer));
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
 }
 
 TEST_F(
@@ -786,6 +1059,29 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeMemAllocHost(context, &host_desc, 1, 0, &host_memory));
   ASSERT_EQ(initial_result, zeMemFree(context, host_memory));
+}
+
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeMemFreeExtCallbacksWhenCallingzeMemFreeExtThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerMemFreeExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerMemFreeExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_memory_free_ext_desc_t memFreeDesc = {ZE_STRUCTURE_TYPE_MEMORY_FREE_EXT_DESC, nullptr, ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE};
+
+  init_memory();
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeMemFreeExt(context, &memFreeDesc, memory);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  memory = nullptr;
 }
 
 TEST_F(
@@ -1171,6 +1467,37 @@ TEST_F(
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeCommandListappendWriteGlobalTImestampCallbacksWhenCallingzeCommandListappendWriteGlobalTImestampThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerCommandListAppendWriteGlobalTimestampRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerCommandListAppendWriteGlobalTimestampRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_event_handle_t event = nullptr;
+  ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr, 0, 1};
+  ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, ZE_EVENT_SCOPE_FLAG_HOST, ZE_EVENT_SCOPE_FLAG_HOST};
+  lzt::zeEventPool ep;
+  ep.InitEventPool(event_pool_desc);
+  ep.create_event(event, event_desc);
+
+  auto command_list = lzt::create_command_list();
+  uint64_t dst_timestamp;
+  ze_event_handle_t wait_event_before, wait_event_after;
+  auto wait_event_initial = event;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeCommandListAppendWriteGlobalTimestamp(command_list, &dst_timestamp, nullptr, 1, &event);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_EQ(event, wait_event_initial);
+
+  ep.destroy_event(event);
+  lzt::destroy_command_list(command_list);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeCommandListAppendImageCopyCallbacksWhenCallingzeCommandListAppendImageCopyThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendImageCopyRegisterCallback(
       tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
@@ -1275,6 +1602,111 @@ TEST_F(
   ASSERT_EQ(initial_result,
             zeCommandListAppendImageCopyToMemory(command_list, memory, image,
                                                  nullptr, nullptr, 0, nullptr));
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeCommandListAppendImageCopyToMemoryExtCallbacksWhenCallingzezeCommandListAppendImageCopyToMemoryExtThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerCommandListAppendImageCopyToMemoryExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerCommandListAppendImageCopyToMemoryExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  init_command_list();
+  init_memory();
+  init_image();
+
+  uint32_t destRowPitch = 0;
+  uint32_t destSlicePitch = 0;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeCommandListAppendImageCopyToMemoryExt(command_list, memory, image, nullptr, destRowPitch, destSlicePitch, nullptr, 0, 0);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeCommandListAppendImageCopyFromMemoryExtCallbacksWhenCallingzeCommandListAppendImageCopyFromMemoryExtThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerCommandListAppendImageCopyFromMemoryExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerCommandListAppendImageCopyFromMemoryExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  init_command_list();
+  init_image();
+
+  uint32_t srcRowPitch = 0;
+  uint32_t srcSlicePitch = 0;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeCommandListAppendImageCopyFromMemoryExt(command_list, image, memory, nullptr, srcRowPitch, srcSlicePitch, nullptr, 0, nullptr);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeImageGetAllocPropertiesExtCallbacksWhenCallingzeDriverGetApiVersionThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerImageGetAllocPropertiesExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerImageGetAllocPropertiesExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_image_allocation_ext_properties_t imageAllocProperties = {ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES, nullptr};
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeImageGetAllocPropertiesExt(context, image, &imageAllocProperties);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeImageGetMemoryPropertiesExpCallbacksWhenCallingzeImageGetMemoryPropertiesExpThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerImageGetMemoryPropertiesExpRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerImageGetMemoryPropertiesExpRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  init_image();
+
+  ze_image_memory_properties_exp_t imageMemoryProperties = {ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES, nullptr};
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeImageGetMemoryPropertiesExp(image, &imageMemoryProperties);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeImageViewCreateExpCallbacksWhenCallingzeImageViewCreateExpThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerImageViewCreateExpRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerImageViewCreateExpRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  init_image();
+
+  ze_image_handle_t imageView;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeImageViewCreateExp(context, device, &image_desc, image, &imageView);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  zeImageDestroy(imageView);
 }
 
 TEST_F(
@@ -1897,6 +2329,28 @@ TEST_F(
             zeModuleBuildLogGetString(build_log, &log_size, nullptr));
 }
 
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeModuleInspectLinkageExtCallbacksWhenCallingzeModuleInspectLinkageExtThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerModuleInspectLinkageExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerModuleInspectLinkageExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_linkage_inspection_ext_desc_t linkageInspectDesc = {ZE_STRUCTURE_TYPE_LINKAGE_INSPECTION_EXT_DESC, nullptr, 0};
+  uint32_t numModules = 1;
+
+  init_module();
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeModuleInspectLinkageExt(&linkageInspectDesc, numModules, &module, &build_log);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
 TEST_F(
     LCTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeKernelCreateCallbacksWhenCallingzeKernelCreateThenUserDataIsSetAndResultUnchanged) {
@@ -1974,6 +2428,47 @@ TEST_F(
   lzt::enable_ltracer(tracer_handle);
 
   ASSERT_EQ(initial_result, zeKernelSetGroupSize(kernel, 1, 1, 1));
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeKernelSetGlobalOffsetExpCallbacksWhenCallingzeKernelSetGlobalOffsetExpThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerKernelSetGlobalOffsetExpRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerKernelSetGlobalOffsetExpRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  init_kernel();
+  uint32_t offsetX = 0;
+  uint32_t offsetY = 0;
+  uint32_t offsetZ = 0;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeKernelSetGlobalOffsetExp(kernel, offsetX, offsetY, offsetZ);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeKernelSchedulingHintExpCallbacksWhenCallingzeKernelSchedulingHintExpThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerKernelSchedulingHintExpRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerKernelSchedulingHintExpRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  ze_scheduling_hint_exp_desc_t schedulingHint = {ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_DESC, nullptr, ZE_SCHEDULING_HINT_EXP_FLAG_OLDEST_FIRST};
+
+  init_kernel();
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result = zeKernelSchedulingHintExp(kernel, &schedulingHint);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
 }
 
 TEST_F(
