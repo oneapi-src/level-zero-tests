@@ -898,6 +898,92 @@ TEST_F(zetDebugMemAccessTest,
   }
 }
 
+TEST_F(
+    zetDebugMemAccessTest,
+    GivenDebuggerAttachedAndModuleLoadedWhenThreadStoppedThenDebuggerCanReadWriteToAllocatedBuffersInTheContextOfThread) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  for (auto &device : devices) {
+
+    auto device_properties = lzt::get_device_properties(device);
+    auto debug_properties = lzt::get_debug_properties(device);
+    ASSERT_TRUE(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & debug_properties.flags);
+
+    fs::path helper_path(fs::current_path() / "debug");
+    std::vector<fs::path> paths;
+    paths.push_back(helper_path);
+    fs::path helper = bp::search_path("test_debug_helper", paths);
+    bp::opstream child_input;
+    bool use_sub_devices = false;
+    bp::child debug_helper(
+        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
+        (use_sub_devices ? "--use_sub_devices" : ""),
+        "--test_type=" + std::to_string(BASIC), bp::std_in < child_input);
+
+    zet_debug_event_t module_event;
+    attachAndGetModuleEvent(debug_helper.id(), device, module_event);
+    CLEAN_AND_ASSERT(module_event.info.module.load, debug_helper);
+
+    if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
+      lzt::debug_ack_event(debug_session, &module_event);
+    }
+
+    // Interrupt the thread
+    // ALL threads
+    ze_device_thread_t thread;
+    thread.slice = UINT32_MAX;
+    thread.subslice = UINT32_MAX;
+    thread.eu = UINT32_MAX;
+    thread.thread = UINT32_MAX;
+    LOG_INFO << "Delay interrupt";
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    LOG_INFO << "sending INTERRUPT";
+    // interrupt threads on the device
+    lzt::debug_interrupt(debug_session, thread);
+
+    // Allocate some buffer on device
+    auto device_mem = lzt::allocate_device_memory(bufferSize);
+
+    // Read buffer contents on device
+    zet_debug_memory_space_desc_t desc;
+    desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+    desc.address = reinterpret_cast<uint64_t>(device_mem);
+    uint8_t firstBufferRead[bufferSize];
+    memset(firstBufferRead, 0xaa, bufferSize);
+    lzt::debug_read_memory(debug_session, thread, desc, bufferSize,
+                           firstBufferRead);
+
+    // create new buffer
+    uint8_t firstBufferWrite[bufferSize];
+    memset(firstBufferWrite, 0xaa, bufferSize);
+    uint8_t buffer_val = '0';
+    for (uint32_t i = 0; i < bufferSize; i++) {
+      firstBufferWrite[i] = buffer_val;
+      buffer_val++;
+    }
+
+    EXPECT_TRUE(
+        memcmp(firstBufferWrite, firstBufferRead,
+               bufferSize)); // memcmp retruns non-zero on being not equal
+
+    // Write the modified buffer on device
+    lzt::debug_write_memory(debug_session, thread, desc, bufferSize,
+                            firstBufferWrite);
+
+    // Confirm reading again returns the written content
+    uint8_t secondBufferRead[bufferSize];
+    memset(secondBufferRead, 0xaa, bufferSize);
+    lzt::debug_read_memory(debug_session, thread, desc, bufferSize,
+                           secondBufferRead);
+    EXPECT_FALSE(memcmp(firstBufferWrite, secondBufferRead,
+                        bufferSize)); // memcmp retruns 0 on equal
+
+    lzt::debug_detach(debug_session);
+    debug_helper.terminate();
+  }
+}
+
 TEST(zetDebugRegisterSetTest,
      GivenDeviceWhenGettingRegisterSetPropertiesThenValidPropertiesReturned) {
 
