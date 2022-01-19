@@ -1,0 +1,47 @@
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    if: github.repository_owner == 'oneapi-src'
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        with:
+          repository: oneapi-src/level-zero
+          path: level-zero
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libboost-all-dev \
+            libpapi-dev \
+            libpng-dev \
+            libva-dev
+      - uses: hendrikmuhs/ccache-action@v1
+      - name: Build Loader
+        working-directory: level-zero
+        run: |
+          mkdir build
+          cd build
+          cmake \
+            -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+            -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -D CMAKE_BUILD_TYPE=Release \
+            ..
+          make -j$(nproc)
+          sudo make install
+      - name: Build Tests
+        run: |
+          mkdir build
+          cd build
+          cmake \
+            -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+            -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -D CMAKE_BUILD_TYPE=Release \
+            ..
+          make -j$(nproc)
