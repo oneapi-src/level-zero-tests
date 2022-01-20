@@ -26,13 +26,38 @@ zet_device_debug_properties_t get_debug_properties(ze_device_handle_t device) {
   return properties;
 }
 
-zet_debug_session_handle_t
-debug_attach(const ze_device_handle_t &device,
-             const zet_debug_config_t &debug_config) {
+zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,
+                                        const zet_debug_config_t &debug_config,
+                                        uint32_t timeout) {
+
   zet_debug_session_handle_t debug_session = {};
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDebugAttach(device, &debug_config, &debug_session));
+  ze_result_t result;
+  std::chrono::high_resolution_clock::time_point startTime =
+      std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point loopTime =
+      std::chrono::high_resolution_clock::now();
+  do {
+    result = zetDebugAttach(device, &debug_config, &debug_session);
+
+    if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE ||
+        result == ZE_RESULT_ERROR_DEVICE_LOST) {
+      break;
+    }
+
+    if (result != ZE_RESULT_SUCCESS) {
+      LOG_DEBUG << "Attach failed, sleeping and retrying...";
+      std::this_thread::sleep_for(std::chrono::milliseconds(350));
+      loopTime = std::chrono::high_resolution_clock::now();
+    }
+
+  } while (result != ZE_RESULT_SUCCESS &&
+           (std::chrono::duration_cast<std::chrono::duration<double>>(loopTime -
+                                                                      startTime)
+                .count() < timeout));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+
   return debug_session;
 }
 
