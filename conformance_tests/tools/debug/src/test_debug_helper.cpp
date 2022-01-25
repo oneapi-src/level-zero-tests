@@ -372,7 +372,7 @@ void run_print_kernel(ze_context_handle_t &context, ze_driver_handle_t &driver,
 
   lzt::set_group_size(kernel, 1, 1, 1);
   ze_group_count_t group_count = {};
-  group_count.groupCountX = 1;
+  group_count.groupCountX = 16;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -380,7 +380,7 @@ void run_print_kernel(ze_context_handle_t &context, ze_driver_handle_t &driver,
                               nullptr);
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, 30000000000); // wait 30 seconds
+  lzt::synchronize(command_queue, UINT64_MAX);
 
   // cleanup
   lzt::destroy_function(kernel);

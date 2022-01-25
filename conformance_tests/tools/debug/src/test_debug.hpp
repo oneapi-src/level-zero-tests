@@ -17,6 +17,7 @@ constexpr auto test_type_string = "test_type";
 
 const uint16_t eventsTimeoutMS = 30000;
 const uint16_t eventsTimeoutS = 30;
+const uint16_t timeoutThreshold = 4;
 
 typedef enum {
   BASIC,

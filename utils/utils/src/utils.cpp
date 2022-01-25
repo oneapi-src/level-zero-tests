@@ -894,3 +894,14 @@ bool operator==(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b) {
 bool operator!=(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b) {
   return memcmp(id_a.id, id_b.id, ZE_MAX_DEVICE_UUID_SIZE);
 }
+
+bool operator==(const ze_device_thread_t &a, const ze_device_thread_t &b) {
+
+  return ((a.slice == b.slice) && (a.subslice == b.subslice) &&
+          (a.eu == b.eu) && (a.thread == b.thread));
+}
+bool operator!=(const ze_device_thread_t &a, const ze_device_thread_t &b) {
+
+  return ((a.slice != b.slice) || (a.subslice != b.subslice) ||
+          (a.eu != b.eu) || (a.thread != b.thread));
+}

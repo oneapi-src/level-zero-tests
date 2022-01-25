@@ -93,4 +93,7 @@ std::ostream &operator<<(std::ostream &os, const ze_native_kernel_uuid_t &x);
 bool operator==(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b);
 bool operator!=(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b);
 
+bool operator==(const ze_device_thread_t &a, const ze_device_thread_t &b);
+bool operator!=(const ze_device_thread_t &a, const ze_device_thread_t &b);
+
 #endif
