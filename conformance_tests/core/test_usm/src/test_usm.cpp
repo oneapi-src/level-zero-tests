@@ -653,32 +653,25 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
   auto memory = lzt::allocate_shared_memory(memory_size, 1, 0, 0, devices[0]);
 
   const int pattern_size = 1;
-  uint8_t *pattern = static_cast<uint8_t *>(
-      lzt::allocate_shared_memory(pattern_size, 1, 0, 0, devices[0]));
-
-  *pattern = 0x01;
+  uint8_t pattern = 0x01;
 
   for (int i = 0; i < devices.size(); i++) {
     auto command_list = lzt::create_command_list(devices[i]);
     auto command_queue = lzt::create_command_queue(devices[i]);
-
-    lzt::append_memory_fill(command_list, memory, pattern, pattern_size,
+    lzt::append_memory_fill(command_list, memory, &pattern, pattern_size,
                             memory_size, nullptr);
     lzt::close_command_list(command_list);
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
     lzt::synchronize(command_queue, UINT64_MAX);
-
-    *pattern++;
-
     lzt::destroy_command_list(command_list);
     lzt::destroy_command_queue(command_queue);
+
+    for (int i = 0; i < memory_size; i++) {
+      ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern);
+    }
+    pattern++;
   }
 
-  for (int i = 0; i < memory_size; i++) {
-    ASSERT_EQ(static_cast<uint8_t *>(memory)[i], devices.size());
-  }
-
-  lzt::free_memory(pattern);
   lzt::free_memory(memory);
 }
 
