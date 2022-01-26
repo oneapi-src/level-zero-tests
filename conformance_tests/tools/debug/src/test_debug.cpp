@@ -363,7 +363,7 @@ typedef enum {
 
 bool read_register(const zet_debug_session_handle_t &debug_session,
                    const ze_device_thread_t &device_thread,
-                   const zet_debug_regset_properties_t &regset) {
+                   const zet_debug_regset_properties_t &regset, bool printerr) {
 
   uint32_t data[32] = {};
 
@@ -377,7 +377,7 @@ bool read_register(const zet_debug_session_handle_t &debug_session,
               << ") read successfully";
 
     return true;
-  } else {
+  } else if (printerr) {
     LOG_WARNING
         << "[Debugger] Error reading register to determine thread state: "
         << result;
@@ -406,7 +406,8 @@ get_stopped_threads(const zet_debug_session_handle_t &debug_session,
           device_thread.eu = eu;
           device_thread.thread = thread;
 
-          if (read_register(debug_session, device_thread, regset_properties)) {
+          if (read_register(debug_session, device_thread, regset_properties,
+                            false)) {
             threads.push_back(device_thread);
           }
         }
@@ -480,7 +481,8 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
         lzt::debug_resume(debug_session, stopped_threads_initial[0]);
 
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        if (read_register(debug_session, saved_thread, regset_properties)) {
+        if (read_register(debug_session, saved_thread, regset_properties,
+                          true)) {
           LOG_DEBUG << "[Debugger] Thread Still Stopped";
         } else {
           LOG_DEBUG << "[Debugger] Thread was resumed";
@@ -871,8 +873,11 @@ void zetDebugEventReadTest::run_advanced_test(
       ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
                                                  eventsTimeoutMS / 10, true);
       if (ZE_RESULT_SUCCESS != result) {
-        LOG_INFO << "[Debugger] Event Read Timeout";
-        timeout_count++;
+        if (ZE_RESULT_NOT_READY == result) {
+          timeout_count++;
+        } else {
+          break;
+        }
       } else {
         LOG_INFO << "[Debugger] received event: "
                  << eventTypeString[debug_event.type];
@@ -1020,7 +1025,7 @@ TEST_F(zetDebugEventReadTest,
 
 TEST_F(
     zetDebugEventReadTest,
-    GivenDebugEnabledDeviceWhenAttachingAfterCreatingAndDestroyingModuleThenNoEventReceived) {
+    GivenDebugEnabledDeviceWhenAttachingAfterCreatingAndDestroyingModuleThenNoModuleEventReceived) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);

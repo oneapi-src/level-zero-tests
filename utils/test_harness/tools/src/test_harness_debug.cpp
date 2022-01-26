@@ -87,7 +87,7 @@ ze_result_t debug_read_event(const zet_debug_session_handle_t &debug_session,
 
   // Expect that timeout expired if not successful
   if (allowTimeout && ZE_RESULT_SUCCESS != result) {
-    LOG_INFO << "[Debugger]  zetDebugReadEvent timed out";
+    LOG_INFO << "[Debugger] zetDebugReadEvent timed out";
     EXPECT_EQ(ZE_RESULT_NOT_READY, result);
   } else {
     EXPECT_EQ(ZE_RESULT_SUCCESS, result);

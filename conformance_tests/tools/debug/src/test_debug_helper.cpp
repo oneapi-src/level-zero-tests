@@ -346,9 +346,13 @@ void attach_after_module_destroyed_test(
   mutex->unlock();
   condition->notify_all();
 
-  LOG_INFO << "[Application] Waiting for debugger to attach";
+  LOG_INFO
+      << "[Application] All resouces freed. Waiting for debugger to attach";
   condition->wait(*lock, [&] { return *condvar; });
   LOG_INFO << "[Application] process proceeding";
+
+  // Allow debugger to attach
+  std::this_thread::sleep_for(std::chrono::seconds(10));
 }
 
 // ******************************************************************************
