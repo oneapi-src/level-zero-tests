@@ -673,6 +673,7 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
     default:
       break;
     }
+    interrupt_test_state = SAVING_SINGLE_THREAD;
   }
 
   switch (debug_event.type) {
@@ -867,7 +868,8 @@ void zetDebugEventReadTest::run_advanced_test(
 
     // debug event loop
     uint32_t timeout_count = 0;
-    auto break_timeout = false;
+    auto end_test = false;
+    uint32_t thread_unavailable_event_count = 0;
     while (true) {
       zet_debug_event_t debug_event;
       ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
@@ -905,12 +907,13 @@ void zetDebugEventReadTest::run_advanced_test(
                                        debug_helper, timeout, timeout_count,
                                        device_properties, regset_properties[2]);
           if (result) {
-            return;
+            end_test = true;
           }
-          break;
         }
+        break;
       }
       case THREAD_UNAVAILABLE: {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
         // attempt to stop a thread that is not running
         ze_device_thread_t device_thread = {};
         device_thread.slice = 0;
@@ -919,10 +922,9 @@ void zetDebugEventReadTest::run_advanced_test(
         device_thread.thread = 0;
         lzt::debug_interrupt(debug_session, device_thread);
         switch (debug_event.type) {
-        case ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT:
-          ASSERT_TRUE(std::find(events.begin(), events.end(),
-                                ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE) !=
-                      events.end());
+        case ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE:
+          thread_unavailable_event_count++;
+          end_test = true;
           break;
         }
       }
@@ -931,21 +933,24 @@ void zetDebugEventReadTest::run_advanced_test(
         std::chrono::duration<double> secondsLooping = checkpoint - start;
         if (secondsLooping.count() > 30) {
           LOG_ERROR << "[Debugger] Timed out waiting for events";
-          break_timeout = true;
+          end_test = true;
+          break;
         }
       }
       }
 
-      if ((ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) ||
-          break_timeout) {
+      if ((ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) || end_test) {
         break;
       }
     }
 
     // cleanup
-    if (test_type != LONG_RUNNING_KERNEL_INTERRUPTED) {
-      lzt::debug_detach(debug_session);
-      debug_helper.wait();
+    lzt::debug_detach(debug_session);
+    debug_helper.terminate();
+    if (test_type == THREAD_UNAVAILABLE) {
+      ASSERT_EQ(thread_unavailable_event_count, 1)
+          << "Number of ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE events is not "
+             "1";
     }
   }
 }

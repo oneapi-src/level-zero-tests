@@ -402,7 +402,7 @@ void thread_unavailable_test(bi::named_condition *condition, bool *condvar,
   LOG_INFO << "[Application] process proceeding";
 
   // do nothing
-  std::this_thread::sleep_for(std::chrono::minutes(10));
+  std::this_thread::sleep_for(std::chrono::seconds(30));
 }
 
 int main(int argc, char **argv) {
