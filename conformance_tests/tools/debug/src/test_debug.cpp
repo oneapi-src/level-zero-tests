@@ -173,8 +173,8 @@ void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
       LOG_INFO << "[Debugger] Re-attaching";
       lzt::debug_attach(device, debug_config);
 
-      // wait for attach to succeed or fail
-      std::this_thread::sleep_for(std::chrono::seconds(5));
+      LOG_INFO << "[Debugger] Re-Detaching";
+      lzt::debug_detach(debug_session);
 
       debug_helper.terminate();
     }
