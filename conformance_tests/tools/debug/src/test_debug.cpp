@@ -52,9 +52,13 @@ TEST(
     auto device_properties = lzt::get_device_properties(device);
     auto properties = lzt::get_debug_properties(device);
 
-    ASSERT_TRUE((ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & properties.flags))
-        << "[Debugger] Device " << device_properties.name
-        << " does not support debug";
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & properties.flags) {
+      LOG_INFO << "[Debugger] Device " << device_properties.name
+               << " has debug support";
+    } else {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+    }
   }
 }
 
@@ -68,9 +72,13 @@ TEST(
       auto device_properties = lzt::get_device_properties(sub_device);
       auto properties = lzt::get_debug_properties(sub_device);
 
-      ASSERT_TRUE((ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & properties.flags))
-          << "[Debugger] Device " << device_properties.name
-          << " does not support debug";
+      if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & properties.flags) {
+        LOG_INFO << "[Debugger] Sub-Device " << device_properties.name
+                 << " has debug support";
+      } else {
+        LOG_WARNING << "[Debugger] Sub-Device " << device_properties.name
+                    << " does not support debug";
+      }
     }
   }
 }
@@ -135,7 +143,13 @@ void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
   for (auto &device : devices) {
     auto device_properties = lzt::get_device_properties(device);
     auto debug_properties = lzt::get_debug_properties(device);
-    ASSERT_TRUE(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & debug_properties.flags);
+
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
+        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+      continue;
+    }
 
     fs::path helper_path(fs::current_path() / "debug");
     std::vector<fs::path> paths;
@@ -233,7 +247,12 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
   for (auto &device : devices) {
     auto device_properties = lzt::get_device_properties(device);
     auto debug_properties = lzt::get_debug_properties(device);
-    ASSERT_TRUE(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & debug_properties.flags);
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
+        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+      continue;
+    }
 
     fs::path helper_path(fs::current_path() / "debug");
     std::vector<fs::path> paths;
@@ -833,7 +852,13 @@ void zetDebugEventReadTest::run_advanced_test(
   for (auto &device : devices) {
     auto device_properties = lzt::get_device_properties(device);
     auto debug_properties = lzt::get_debug_properties(device);
-    ASSERT_TRUE(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & debug_properties.flags);
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
+        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+      continue;
+    }
+
     auto regset_properties = lzt::get_register_set_properties(device);
 
     fs::path helper_path(fs::current_path() / "debug");
@@ -964,7 +989,12 @@ TEST_F(zetDebugEventReadTest,
   for (auto &device : devices) {
     auto device_properties = lzt::get_device_properties(device);
     auto debug_properties = lzt::get_debug_properties(device);
-    ASSERT_TRUE(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & debug_properties.flags);
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
+        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+      continue;
+    }
 
     fs::path helper_path(fs::current_path() / "debug");
     std::vector<fs::path> paths;
@@ -1210,7 +1240,12 @@ TEST_F(zetDebugMemAccessTest,
 
     auto device_properties = lzt::get_device_properties(device);
     auto debug_properties = lzt::get_debug_properties(device);
-    ASSERT_TRUE(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & debug_properties.flags);
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
+        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+      continue;
+    }
 
     fs::path helper_path(fs::current_path() / "debug");
     std::vector<fs::path> paths;
@@ -1257,7 +1292,12 @@ TEST_F(
 
     auto device_properties = lzt::get_device_properties(device);
     auto debug_properties = lzt::get_debug_properties(device);
-    ASSERT_TRUE(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & debug_properties.flags);
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
+        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+      continue;
+    }
 
     fs::path helper_path(fs::current_path() / "debug");
     std::vector<fs::path> paths;
