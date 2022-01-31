@@ -407,10 +407,11 @@ bool read_register(const zet_debug_session_handle_t &debug_session,
 // return a list of stopped threads
 std::vector<ze_device_thread_t>
 get_stopped_threads(const zet_debug_session_handle_t &debug_session,
-                    const ze_device_properties_t &device_properties,
-                    const zet_debug_regset_properties_t &regset_properties) {
+                    const ze_device_handle_t &device) {
+  std::vector<ze_device_thread_t> threads = {};
 
-  std::vector<ze_device_thread_t> threads;
+  auto device_properties = lzt::get_device_properties(device);
+  auto regset_properties = lzt::get_register_set_properties(device);
 
   for (uint32_t slice = 0; slice < device_properties.numSlices; slice++) {
     for (uint32_t subslice = 0;
@@ -425,7 +426,7 @@ get_stopped_threads(const zet_debug_session_handle_t &debug_session,
           device_thread.eu = eu;
           device_thread.thread = thread;
 
-          if (read_register(debug_session, device_thread, regset_properties,
+          if (read_register(debug_session, device_thread, regset_properties[2],
                             false)) {
             threads.push_back(device_thread);
           }
@@ -437,14 +438,45 @@ get_stopped_threads(const zet_debug_session_handle_t &debug_session,
   return threads;
 }
 
-void print_thread(const ze_device_thread_t &device_thread) {
-  LOG_DEBUG << "(SLICE " << device_thread.slice << ")  (SUBSLICE "
-            << device_thread.subslice << ")  (EU " << device_thread.eu
-            << ")  (THREAD " << device_thread.thread << ")";
+void print_thread(const char *entry_message,
+                  const ze_device_thread_t &device_thread) {
+  LOG_DEBUG << entry_message << "SLICE:" << device_thread.slice
+            << " SUBSLICE: " << device_thread.subslice
+            << " EU: " << device_thread.eu
+            << " THREAD: " << device_thread.thread;
+}
+
+// wait for stopped thread event and retunrn stopped threads
+bool find_stopped_threads(const zet_debug_session_handle_t &debug_session,
+                          const ze_device_handle_t &device,
+                          std::vector<ze_device_thread_t> &threads) {
+  uint8_t attempts = 0;
+  zet_debug_event_t debug_event = {};
+  threads = {};
+  do {
+    lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS / 10,
+                          true);
+    LOG_INFO << "[Debugger] received event: "
+             << eventTypeString[debug_event.type];
+
+    if (debug_event.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
+      print_thread("[Debugger] Stopped thread event for ",
+                   debug_event.info.thread.thread);
+      threads = get_stopped_threads(debug_session, device);
+      break;
+    }
+    attempts++;
+  } while (attempts < 5);
+
+  if (threads.size() > 0) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool unique_thread(const ze_device_thread_t &device_thread) {
-  print_thread(device_thread);
+  print_thread("[Debugger] is thread unique: ", device_thread);
   return (device_thread.slice != UINT32_MAX &&
           device_thread.subslice != UINT32_MAX &&
           device_thread.eu != UINT32_MAX && device_thread.thread != UINT32_MAX);
@@ -453,9 +485,8 @@ bool unique_thread(const ze_device_thread_t &device_thread) {
 int interrupt_test(zet_debug_session_handle_t &debug_session,
                    zet_debug_event_t &debug_event, num_threads_t threads,
                    bp::child &debug_helper, uint64_t &timeout,
-                   uint32_t &timeout_count,
-                   const ze_device_properties_t &device_properties,
-                   const zet_debug_regset_properties_t &regset_properties) {
+                   uint32_t &timeout_count, const ze_device_handle_t &device) {
+
   int result = 0;
   static interrupt_test_state_t interrupt_test_state = SAVING_SINGLE_THREAD;
   static ze_device_thread_t saved_thread = {};
@@ -468,8 +499,7 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
     if (TIMEOUT_SAVE_THREADS == interrupt_test_state) {
       LOG_DEBUG << "New State: TIMEOUT_VERIFY_THREADS";
       interrupt_test_state = TIMEOUT_VERIFY_THREADS;
-      stopped_threads_final = get_stopped_threads(
-          debug_session, device_properties, regset_properties);
+      stopped_threads_final = get_stopped_threads(debug_session, device);
     } else if (TIMEOUT_VERIFY_THREADS == interrupt_test_state) {
       ADD_FAILURE() << "Test failed due to time outs";
       result = 1;
@@ -478,8 +508,7 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
       LOG_DEBUG << "[Debugger] New State: TIMEOUT_SAVE_THREADS";
       interrupt_test_state = TIMEOUT_SAVE_THREADS;
       timeout_count = 0;
-      stopped_threads_initial = get_stopped_threads(
-          debug_session, device_properties, regset_properties);
+      stopped_threads_initial = get_stopped_threads(debug_session, device);
       LOG_DEBUG << "[Debugger] Stopped Threads: "
                 << stopped_threads_initial.size();
     }
@@ -493,14 +522,14 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
       switch (threads) {
       case SINGLE_THREAD: {
         // resume thread from list of stopped threads
-        print_thread(stopped_threads_initial[0]);
-        LOG_DEBUG << "[Debugger] Updating Saved Thread";
+        print_thread("[Debugger] Updating and resuming thread ",
+                     stopped_threads_initial[0]);
         saved_thread = stopped_threads_initial[0];
-        LOG_DEBUG << "[Debugger] Resuming thread...";
         lzt::debug_resume(debug_session, stopped_threads_initial[0]);
 
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        if (read_register(debug_session, saved_thread, regset_properties,
+        auto regset_properties = lzt::get_register_set_properties(device);
+        if (read_register(debug_session, saved_thread, regset_properties[2],
                           true)) {
           LOG_DEBUG << "[Debugger] Thread Still Stopped";
         } else {
@@ -859,8 +888,6 @@ void zetDebugEventReadTest::run_advanced_test(
       continue;
     }
 
-    auto regset_properties = lzt::get_register_set_properties(device);
-
     fs::path helper_path(fs::current_path() / "debug");
     std::vector<fs::path> paths;
     paths.push_back(helper_path);
@@ -910,11 +937,14 @@ void zetDebugEventReadTest::run_advanced_test(
                  << eventTypeString[debug_event.type];
 
         if (debug_event.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
-          print_thread(debug_event.info.thread.thread);
+          print_thread("[Debugger] Stopped thread event for ",
+                       debug_event.info.thread.thread);
         }
         events.push_back(debug_event.type);
 
         if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
+          LOG_DEBUG << "[Debugger] Acking event: "
+                    << eventTypeString[debug_event.type];
           lzt::debug_ack_event(debug_session, &debug_event);
         }
       }
@@ -928,9 +958,9 @@ void zetDebugEventReadTest::run_advanced_test(
                     "result after "
                     "interrupting threads";
         } else {
-          auto result = interrupt_test(debug_session, debug_event, threads,
-                                       debug_helper, timeout, timeout_count,
-                                       device_properties, regset_properties[2]);
+          auto result =
+              interrupt_test(debug_session, debug_event, threads, debug_helper,
+                             timeout, timeout_count, device);
           if (result) {
             end_test = true;
           }
@@ -1260,7 +1290,8 @@ TEST_F(zetDebugMemAccessTest,
 
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);
-    CLEAN_AND_ASSERT(module_event.info.module.load, debug_helper);
+    CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
+                     debug_helper);
 
     // ALL threads
     ze_device_thread_t thread;
@@ -1269,13 +1300,6 @@ TEST_F(zetDebugMemAccessTest,
     thread.eu = UINT32_MAX;
     thread.thread = UINT32_MAX;
     readWriteModuleMemory(debug_session, thread, module_event);
-
-    // Single thread
-    thread.slice = 0;
-    thread.subslice = 0;
-    thread.eu = 0;
-    thread.thread = 0;
-    //    readWriteModuleMemory(debug_session, thread, module_event);
 
     lzt::debug_detach(debug_session);
     debug_helper.terminate();
@@ -1308,65 +1332,45 @@ TEST_F(
     bp::child debug_helper(
         helper, "--device_id=" + lzt::to_string(device_properties.uuid),
         (use_sub_devices ? "--use_sub_devices" : ""),
-        "--test_type=" + std::to_string(BASIC), bp::std_in < child_input);
+        "--test_type=" + std::to_string(LONG_RUNNING_KERNEL_INTERRUPTED),
+        bp::std_in < child_input);
 
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);
-    CLEAN_AND_ASSERT(module_event.info.module.load, debug_helper);
+    CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
+                     debug_helper);
 
     if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
+      LOG_DEBUG << "[Debugger] Acking event: "
+                << eventTypeString[module_event.type];
       lzt::debug_ack_event(debug_session, &module_event);
     }
 
-    // Interrupt the thread
-    // ALL threads
     ze_device_thread_t thread;
     thread.slice = UINT32_MAX;
     thread.subslice = UINT32_MAX;
     thread.eu = UINT32_MAX;
     thread.thread = UINT32_MAX;
-    LOG_INFO << "Delay interrupt";
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    LOG_INFO << "sending INTERRUPT";
-    // interrupt threads on the device
+
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    LOG_INFO << "[Debugger] Interrupting all threads";
     lzt::debug_interrupt(debug_session, thread);
+    std::vector<ze_device_thread_t> stopped_threads;
+    if (find_stopped_threads(debug_session, device, stopped_threads)) {
 
-    // Allocate some buffer on device
-    auto device_mem = lzt::allocate_device_memory(bufferSize);
-
-    // Read buffer contents on device
-    zet_debug_memory_space_desc_t desc;
-    desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
-    desc.address = reinterpret_cast<uint64_t>(device_mem);
-    uint8_t firstBufferRead[bufferSize];
-    memset(firstBufferRead, 0xaa, bufferSize);
-    lzt::debug_read_memory(debug_session, thread, desc, bufferSize,
-                           firstBufferRead);
-
-    // create new buffer
-    uint8_t firstBufferWrite[bufferSize];
-    memset(firstBufferWrite, 0xaa, bufferSize);
-    uint8_t buffer_val = '0';
-    for (uint32_t i = 0; i < bufferSize; i++) {
-      firstBufferWrite[i] = buffer_val;
-      buffer_val++;
+      LOG_INFO << "[Debugger] Reading/Writing from interrupted threads";
+      for (auto &stopped_thread : stopped_threads) {
+        print_thread("[Debugger] Reading and writting from Stopped thread ",
+                     stopped_thread);
+        thread.slice = stopped_thread.slice;
+        thread.subslice = stopped_thread.subslice;
+        thread.eu = stopped_thread.eu;
+        thread.thread = stopped_thread.thread;
+        readWriteModuleMemory(debug_session, thread, module_event);
+      }
+    } else {
+      FAIL() << "[Debugger] Could not find a stopped thread";
     }
-
-    EXPECT_TRUE(
-        memcmp(firstBufferWrite, firstBufferRead,
-               bufferSize)); // memcmp retruns non-zero on being not equal
-
-    // Write the modified buffer on device
-    lzt::debug_write_memory(debug_session, thread, desc, bufferSize,
-                            firstBufferWrite);
-
-    // Confirm reading again returns the written content
-    uint8_t secondBufferRead[bufferSize];
-    memset(secondBufferRead, 0xaa, bufferSize);
-    lzt::debug_read_memory(debug_session, thread, desc, bufferSize,
-                           secondBufferRead);
-    EXPECT_FALSE(memcmp(firstBufferWrite, secondBufferRead,
-                        bufferSize)); // memcmp retruns 0 on equal
 
     lzt::debug_detach(debug_session);
     debug_helper.terminate();

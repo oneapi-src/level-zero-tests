@@ -38,9 +38,10 @@ typedef struct {
 
 typedef enum { SINGLE_THREAD, GROUP_OF_THREADS, ALL_THREADS } num_threads_t;
 
-#define CLEAN_AND_ASSERT(condition, helper)                                    \
+#define CLEAN_AND_ASSERT(condition, debug_session, helper)                     \
   do {                                                                         \
     if (!condition) {                                                          \
+      lzt::debug_detach(debug_session);                                        \
       helper.terminate();                                                      \
       ASSERT_TRUE(false);                                                      \
     }                                                                          \
