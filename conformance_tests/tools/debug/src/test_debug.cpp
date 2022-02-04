@@ -984,14 +984,14 @@ TEST_F(zetDebugEventReadTest,
       return (static_cast<debug_signals_t *>(region->get_address())
                   ->debugee_signal);
     });
-    LOG_INFO << "[Debugger] Debugged process proceeding";
+    LOG_INFO << "[Debugger] Application proceeding";
 
     auto debug_session = lzt::debug_attach(device, debug_config);
     if (!debug_session) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    // notify debugged process that this process has attached
+    LOG_INFO << "[Debugger] Notifying application after attaching";
     mutex->lock();
     static_cast<debug_signals_t *>(region->get_address())->debugger_signal =
         true;
@@ -1330,6 +1330,129 @@ TEST(zetDebugRegisterSetTest,
                        sizeof(zet_debug_regset_properties_t)),
                 0);
     }
+  }
+}
+
+class zetDebugReadWriteRegistersTest : public zetDebugMemAccessTest {
+protected:
+  void SetUp() override { zetDebugMemAccessTest::SetUp(); }
+  void TearDown() override { zetDebugMemAccessTest::TearDown(); }
+};
+
+TEST_F(
+    zetDebugReadWriteRegistersTest,
+    GivenActiveDebugSessionWhenReadingAndWritingRegistersThenValidDataReadAndDataWrittenSuccessfully) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  for (auto &device : devices) {
+    auto device_properties = lzt::get_device_properties(device);
+    auto debug_properties = lzt::get_debug_properties(device);
+
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
+        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+      continue;
+    }
+
+    fs::path helper_path(fs::current_path() / "debug");
+    std::vector<fs::path> paths;
+    paths.push_back(helper_path);
+    fs::path helper = bp::search_path("test_debug_helper", paths);
+    bp::opstream child_input;
+    bp::child debug_helper(
+        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
+        "--test_type=" + std::to_string(LONG_RUNNING_KERNEL_INTERRUPTED),
+        bp::std_in < child_input);
+
+    zet_debug_event_t module_event;
+    attachAndGetModuleEvent(debug_helper.id(), device, module_event);
+    CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
+                     debug_helper);
+
+    if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
+      LOG_DEBUG << "[Debugger] Acking event: "
+                << lzt::debuggerEventTypeString[module_event.type];
+      lzt::debug_ack_event(debug_session, &module_event);
+    }
+
+    LOG_INFO << "[Debugger] Stopping all device threads";
+    ze_device_thread_t device_threads = {};
+    device_threads.slice = UINT32_MAX;
+    device_threads.subslice = UINT32_MAX;
+    device_threads.eu = UINT32_MAX;
+    device_threads.thread = UINT32_MAX;
+
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    lzt::debug_interrupt(debug_session, device_threads);
+
+    std::vector<ze_device_thread_t> stopped_threads;
+    if (!find_stopped_threads(debug_session, device, stopped_threads)) {
+      FAIL() << "Failed to stop device thread";
+    }
+    LOG_INFO << "[Debugger] Stopped device thread";
+
+    auto register_set_properties = lzt::get_register_set_properties(device);
+    for (auto &stopped_thread : stopped_threads) {
+      for (auto &register_set : register_set_properties) {
+        auto buffer_size = register_set.byteSize * register_set.count;
+        void *buffer = lzt::allocate_host_memory(register_set.byteSize *
+                                                 register_set.count);
+        void *buffer_copy = lzt::allocate_host_memory(register_set.byteSize *
+                                                      register_set.count);
+
+        std::memset(buffer, 0xaa, buffer_size);
+
+        auto can_verify_write = false;
+        if (register_set.generalFlags & ZET_DEBUG_REGSET_FLAG_READABLE) {
+          LOG_INFO << "[Debugger] Register set is readable";
+          can_verify_write = true;
+          // read all registers in this register set
+          lzt::debug_read_registers(debug_session, stopped_thread,
+                                    register_set.type, 0, register_set.count,
+                                    register_set.byteSize, buffer);
+
+          // save the contents for write test
+          std::memcpy(buffer_copy, buffer, buffer_size);
+        } else {
+          LOG_INFO << "[Debugger] Register set not readable";
+        }
+
+        if (register_set.generalFlags & ZET_DEBUG_REGSET_FLAG_WRITEABLE) {
+          LOG_INFO << "[Debugger] Register set is writeable";
+          std::memset(buffer, 0xaa, buffer_size);
+
+          lzt::debug_write_registers(debug_session, stopped_thread,
+                                     register_set.type, 0, register_set.count,
+                                     buffer);
+
+          if (can_verify_write) {
+            LOG_INFO << "[Debugger] Validating register written successfully";
+            lzt::debug_read_registers(debug_session, stopped_thread,
+                                      register_set.type, 0, register_set.count,
+                                      register_set.byteSize, buffer);
+
+            for (int i = 0; i < buffer_size; i++) {
+              ASSERT_EQ(static_cast<char>(0xaa),
+                        static_cast<char *>(buffer)[i]);
+            }
+
+            // write back the original contents
+            lzt::debug_write_registers(debug_session, stopped_thread,
+                                       register_set.type, 0, register_set.count,
+                                       buffer_copy);
+          }
+        } else {
+          LOG_INFO << "[Debugger] Register set not writeable";
+        }
+
+        lzt::free_memory(buffer);
+        lzt::free_memory(buffer_copy);
+      }
+    }
+
+    lzt::debug_resume(debug_session, device_threads);
   }
 }
 

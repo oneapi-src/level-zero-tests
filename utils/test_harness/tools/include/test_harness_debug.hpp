@@ -58,6 +58,16 @@ get_register_set_properties(const ze_device_handle_t &device);
 void debug_clean_assert_true(bool condition,
                              boost::process::child &debug_helper);
 
+void debug_read_registers(const zet_debug_session_handle_t &debug_session,
+                          const ze_device_thread_t &device_thread,
+                          const uint32_t type, const uint32_t start,
+                          const uint32_t count, const uint32_t byte_size,
+                          void *buffer);
+void debug_write_registers(const zet_debug_session_handle_t &debug_session,
+                           const ze_device_thread_t &device_thread,
+                           const uint32_t type, const uint32_t start,
+                           const uint32_t count, void *buffer);
+
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_DEBUG_HPP */

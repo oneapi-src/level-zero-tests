@@ -168,4 +168,25 @@ get_register_set_properties(const ze_device_handle_t &device) {
   return properties;
 }
 
+void debug_read_registers(const zet_debug_session_handle_t &debug_session,
+                          const ze_device_thread_t &device_thread,
+                          const uint32_t type, const uint32_t start,
+                          const uint32_t count, const uint32_t byte_size,
+                          void *buffer) {
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetDebugReadRegisters(debug_session, device_thread, type, start,
+                                  count, buffer));
+}
+
+void debug_write_registers(const zet_debug_session_handle_t &debug_session,
+                           const ze_device_thread_t &device_thread,
+                           const uint32_t type, const uint32_t start,
+                           const uint32_t count, void *buffer) {
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetDebugWriteRegisters(debug_session, device_thread, type, start,
+                                   count, buffer));
+}
+
 } // namespace level_zero_tests
