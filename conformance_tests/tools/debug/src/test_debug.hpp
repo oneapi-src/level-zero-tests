@@ -44,7 +44,8 @@ typedef enum {
   THREAD_STOPPED,
   THREAD_UNAVAILABLE,
   PAGE_FAULT,
-  MAX_DEBUG_TEST_TYPE_VALUE = 0xff // Values greater than 0xFF are reserved
+  MAX_DEBUG_TEST_TYPE_VALUE = 0xff, // Values greater than 0xFF are reserved
+  DEBUG_TEST_TYPE_FORCE_UINT32 = 0x7fffffff
 } debug_test_type_t;
 
 typedef struct {

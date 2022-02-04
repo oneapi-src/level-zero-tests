@@ -455,14 +455,8 @@ int main(int argc, char **argv) {
                  << variables_map[test_type_string].as<uint32_t>() << " "
                  << test_selected_int;
 
-        if (test_selected_int >= BASIC && test_selected_int <= PAGE_FAULT) {
-          test_selected = static_cast<debug_test_type_t>(test_selected_int);
-          LOG_INFO << "[Application] TEST TYPE: " << test_selected;
-
-        } else {
-          LOG_WARNING << "[Application] invalid test type selected, performing "
-                         "basic test";
-        }
+        test_selected = static_cast<debug_test_type_t>(test_selected_int);
+        LOG_INFO << "[Application] TEST TYPE: " << test_selected;
       }
 
       if (variables_map.count(device_id_string)) {
@@ -557,9 +551,9 @@ int main(int argc, char **argv) {
 #ifdef EXTENDED_TESTS
         if (is_extended_debugger_test(test_selected)) {
 
-          run_extended_debugger_test(test_selected, context, driver, device, &condition,
-                                         debugger_signal, debugee_signal, &lock,
-                                         &mutex));
+          run_extended_debugger_test(test_selected, context, driver, device,
+                                     &condition, debugger_signal,
+                                     debugee_signal, &lock, &mutex);
           break;
         }
 #endif
