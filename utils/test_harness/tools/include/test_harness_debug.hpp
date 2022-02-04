@@ -17,6 +17,8 @@
 
 namespace level_zero_tests {
 
+extern std::map<zet_debug_event_type_t, std::string> debuggerEventTypeString;
+
 zet_device_debug_properties_t get_debug_properties(ze_device_handle_t device);
 
 zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,

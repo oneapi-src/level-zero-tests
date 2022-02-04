@@ -21,18 +21,13 @@
 #include "logging/logging.hpp"
 #include "test_debug.hpp"
 
+#ifdef EXTENDED_TESTS
+#include "test_debug_extended.hpp"
+#endif
+
 namespace bi = boost::interprocess;
 namespace po = boost::program_options;
 namespace lzt = level_zero_tests;
-
-auto use_sub_devices = 0;
-uint32_t num_kernels = 1;
-std::string device_id_in = "";
-std::string kernel_name_in = "";
-debug_test_type_t test_selected = BASIC;
-
-bool *debugger_signal;
-bool *debugee_signal;
 
 void basic(ze_context_handle_t context, ze_driver_handle_t driver,
            ze_device_handle_t device, bi::named_condition *condition,
@@ -407,6 +402,12 @@ void thread_unavailable_test(bi::named_condition *condition, bool *condvar,
 
 int main(int argc, char **argv) {
 
+  auto use_sub_devices = 0;
+  uint32_t num_kernels = 1;
+  std::string device_id_in = "";
+  std::string kernel_name_in = "";
+  debug_test_type_t test_selected = BASIC;
+
   // Open already created shared memory object.
   bi::shared_memory_object shm(bi::open_only, "debug_bool", bi::read_write);
   bi::mapped_region region(shm, bi::read_write);
@@ -415,9 +416,9 @@ int main(int argc, char **argv) {
   bi::named_condition condition(bi::open_only, "debug_bool_set");
 
   bi::scoped_lock<bi::named_mutex> lock(mutex);
-  debugger_signal =
+  bool *debugger_signal =
       &(static_cast<debug_signals_t *>(region.get_address())->debugger_signal);
-  debugee_signal =
+  bool *debugee_signal =
       &(static_cast<debug_signals_t *>(region.get_address())->debugee_signal);
 
   {
@@ -553,6 +554,15 @@ int main(int argc, char **argv) {
         thread_unavailable_test(&condition, debugger_signal, &lock);
         break;
       default:
+#ifdef EXTENDED_TESTS
+        if (is_extended_debugger_test(test_selected)) {
+
+          run_extended_debugger_test(test_selected, context, driver, device, &condition,
+                                         debugger_signal, debugee_signal, &lock,
+                                         &mutex));
+          break;
+        }
+#endif
         LOG_ERROR << "[Application] Unrecognized test type: " << test_selected;
         exit(1);
       }

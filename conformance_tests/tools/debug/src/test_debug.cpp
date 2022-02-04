@@ -29,20 +29,6 @@ namespace bi = boost::interprocess;
 
 namespace {
 
-std::map<zet_debug_event_type_t, std::string> eventTypeString = {
-    {ZET_DEBUG_EVENT_TYPE_INVALID, "ZET_DEBUG_EVENT_TYPE_INVALID"},
-    {ZET_DEBUG_EVENT_TYPE_DETACHED, "ZET_DEBUG_EVENT_TYPE_DETACHED"},
-    {ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, "ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY"},
-    {ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT, "ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT"},
-    {ZET_DEBUG_EVENT_TYPE_MODULE_LOAD, "ZET_DEBUG_EVENT_TYPE_MODULE_LOAD"},
-    {ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD, "ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD"},
-    {ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED,
-     "ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED"},
-    {ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE,
-     "ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE"},
-    {ZET_DEBUG_EVENT_TYPE_PAGE_FAULT, "ZET_DEBUG_EVENT_TYPE_PAGE_FAULT"},
-    {ZET_DEBUG_EVENT_TYPE_FORCE_UINT32, "ZET_DEBUG_EVENT_TYPE_FORCE_UINT32 "}};
-
 TEST(
     zetDeviceGetDebugPropertiesTest,
     GivenValidDeviceWhenGettingDebugPropertiesThenPropertiesReturnedSuccessfully) {
@@ -83,58 +69,10 @@ TEST(
   }
 }
 
-class zetDebugAttachDetachTest : public ::testing::Test {
+class zetDebugAttachDetachTest : public zetDebugBaseSetup {
 protected:
-  void SetUp() override {
-    bi::shared_memory_object::remove("debug_bool");
-    shm = new bi::shared_memory_object(bi::create_only, "debug_bool",
-                                       bi::read_write);
-
-    LOG_DEBUG << "[Debugger] Created shared memory object";
-    if (!shm) {
-      FAIL()
-          << "[Debugger] Could not create condition variable for debug tests";
-    }
-
-    shm->truncate(sizeof(debug_signals_t));
-    region = new bi::mapped_region(*shm, bi::read_write);
-    if (!region || !(region->get_address())) {
-      FAIL() << "[Debugger] Could not create signal variables for debug tests";
-    }
-    LOG_DEBUG << "[Debugger] Created region";
-
-    static_cast<debug_signals_t *>(region->get_address())->debugger_signal =
-        false;
-    static_cast<debug_signals_t *>(region->get_address())->debugee_signal =
-        false;
-
-    bi::named_mutex::remove("debugger_mutex");
-    mutex = new bi::named_mutex(bi::create_only, "debugger_mutex");
-    LOG_DEBUG << "[Debugger] Created debugger mutex";
-
-    bi::named_condition::remove("debug_bool_set");
-    condition = new bi::named_condition(bi::create_only, "debug_bool_set");
-    LOG_DEBUG << "[Debugger] Created debug bool set";
-  }
-
-  void TearDown() override {
-    bi::shared_memory_object::remove("debug_bool");
-    bi::named_mutex::remove("debugger_mutex");
-    bi::named_condition::remove("debug_bool_set");
-
-    delete shm;
-    delete region;
-    delete mutex;
-    delete condition;
-  }
-
   void run_test(std::vector<ze_device_handle_t> devices, bool use_sub_devices,
                 bool reattach);
-
-  bi::shared_memory_object *shm;
-  bi::mapped_region *region;
-  bi::named_mutex *mutex;
-  bi::named_condition *condition;
 };
 
 void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
@@ -296,7 +234,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
         break;
       }
       LOG_INFO << "[Debugger] received event: "
-               << eventTypeString[debug_event.type];
+               << lzt::debuggerEventTypeString[debug_event.type];
       eventNum++;
 
       if (ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY == debug_event.type) {
@@ -457,7 +395,7 @@ bool find_stopped_threads(const zet_debug_session_handle_t &debug_session,
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS / 10,
                           true);
     LOG_INFO << "[Debugger] received event: "
-             << eventTypeString[debug_event.type];
+             << lzt::debuggerEventTypeString[debug_event.type];
 
     if (debug_event.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
       print_thread("[Debugger] Stopped thread event for ",
@@ -934,7 +872,7 @@ void zetDebugEventReadTest::run_advanced_test(
         }
       } else {
         LOG_INFO << "[Debugger] received event: "
-                 << eventTypeString[debug_event.type];
+                 << lzt::debuggerEventTypeString[debug_event.type];
 
         if (debug_event.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
           print_thread("[Debugger] Stopped thread event for ",
@@ -944,7 +882,7 @@ void zetDebugEventReadTest::run_advanced_test(
 
         if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
           LOG_DEBUG << "[Debugger] Acking event: "
-                    << eventTypeString[debug_event.type];
+                    << lzt::debuggerEventTypeString[debug_event.type];
           lzt::debug_ack_event(debug_session, &debug_event);
         }
       }
@@ -1187,7 +1125,7 @@ void zetDebugMemAccessTest::attachAndGetModuleEvent(
       break;
     }
     LOG_INFO << "[Debugger] received event: "
-             << eventTypeString[debug_event.type];
+             << lzt::debuggerEventTypeString[debug_event.type];
 
     if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
       LOG_INFO << "[Debugger] ZET_DEBUG_EVENT_TYPE_MODULE_LOAD."
@@ -1342,7 +1280,7 @@ TEST_F(
 
     if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
       LOG_DEBUG << "[Debugger] Acking event: "
-                << eventTypeString[module_event.type];
+                << lzt::debuggerEventTypeString[module_event.type];
       lzt::debug_ack_event(debug_session, &module_event);
     }
 
