@@ -346,7 +346,7 @@ bool read_register(const zet_debug_session_handle_t &debug_session,
 std::vector<ze_device_thread_t>
 get_stopped_threads(const zet_debug_session_handle_t &debug_session,
                     const ze_device_handle_t &device) {
-  std::vector<ze_device_thread_t> threads = {};
+  std::vector<ze_device_thread_t> threads;
 
   auto device_properties = lzt::get_device_properties(device);
   auto regset_properties = lzt::get_register_set_properties(device);
@@ -390,7 +390,7 @@ bool find_stopped_threads(const zet_debug_session_handle_t &debug_session,
                           std::vector<ze_device_thread_t> &threads) {
   uint8_t attempts = 0;
   zet_debug_event_t debug_event = {};
-  threads = {};
+  threads.clear();
   do {
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS / 10,
                           true);
