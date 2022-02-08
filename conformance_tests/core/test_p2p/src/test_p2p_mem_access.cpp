@@ -361,17 +361,23 @@ TEST_P(zeP2PMemAccessTestsAtomicAccess,
                                                    dev_access_scan_[j].dev);
       if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
           (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS)) {
-        dev_access_.push_back(dev_access_scan_[i]);
-        dev_access_.push_back(dev_access_scan_[j]);
-        break;
+        if (lzt::can_access_peer(dev_access_scan_[i].dev,
+                                 dev_access_scan_[j].dev)) {
+          dev_access_.push_back(dev_access_scan_[i]);
+          dev_access_.push_back(dev_access_scan_[j]);
+          break;
+        }
       }
       dev_p2p_properties = lzt::get_p2p_properties(dev_access_scan_[j].dev,
                                                    dev_access_scan_[i].dev);
       if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
           (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS)) {
-        dev_access_.push_back(dev_access_scan_[j]);
-        dev_access_.push_back(dev_access_scan_[i]);
-        break;
+        if (lzt::can_access_peer(dev_access_scan_[j].dev,
+                                 dev_access_scan_[i].dev)) {
+          dev_access_.push_back(dev_access_scan_[j]);
+          dev_access_.push_back(dev_access_scan_[i]);
+          break;
+        }
       }
     }
     if (dev_access_.size() >= 2)
