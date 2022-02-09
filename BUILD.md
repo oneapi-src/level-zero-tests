@@ -97,7 +97,7 @@ in its `CMakeLists.txt` file at the `add_lzt_test()` call.
 
 ### Building performance tests
 
-Level Zero Performance tests can be built alone with `BUILD_ZE_PERF_TEST_ONLY` cmake
+Level Zero Performance tests can be built alone with `BUILD_ZE_PERF_TESTS_ONLY` cmake
 flag.
 
 ### Building Zesysman
