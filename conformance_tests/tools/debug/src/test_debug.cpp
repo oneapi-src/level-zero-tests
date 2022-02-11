@@ -35,16 +35,7 @@ TEST(
   auto driver = lzt::get_default_driver();
 
   for (auto device : lzt::get_devices(driver)) {
-    auto device_properties = lzt::get_device_properties(device);
-    auto properties = lzt::get_debug_properties(device);
-
-    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & properties.flags) {
-      LOG_INFO << "[Debugger] Device " << device_properties.name
-               << " has debug support";
-    } else {
-      LOG_WARNING << "[Debugger] Device " << device_properties.name
-                  << " does not support debug";
-    }
+    zetDebugBaseSetup::is_debug_supported(device);
   }
 }
 
@@ -55,16 +46,7 @@ TEST(
 
   for (auto &device : lzt::get_devices(driver)) {
     for (auto &sub_device : lzt::get_ze_sub_devices(device)) {
-      auto device_properties = lzt::get_device_properties(sub_device);
-      auto properties = lzt::get_debug_properties(sub_device);
-
-      if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & properties.flags) {
-        LOG_INFO << "[Debugger] Sub-Device " << device_properties.name
-                 << " has debug support";
-      } else {
-        LOG_WARNING << "[Debugger] Sub-Device " << device_properties.name
-                    << " does not support debug";
-      }
+      zetDebugBaseSetup::is_debug_supported(device);
     }
   }
 }
@@ -79,25 +61,10 @@ void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
                                         bool use_sub_devices, bool reattach) {
 
   for (auto &device : devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    auto debug_properties = lzt::get_debug_properties(device);
-
-    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
-        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
-      LOG_WARNING << "[Debugger] Device " << device_properties.name
-                  << " does not support debug";
+    if (!is_debug_supported(device))
       continue;
-    }
 
-    fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path("test_debug_helper", paths);
-    bp::opstream child_input;
-    bp::child debug_helper(
-        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
-        (use_sub_devices ? "--use_sub_devices" : ""), bp::std_in < child_input);
-
+    auto debug_helper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
     debug_config.pid = debug_helper.id();
     auto debug_session = lzt::debug_attach(device, debug_config);
@@ -105,12 +72,7 @@ void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    LOG_INFO << "[Debugger] Notifying application after attaching";
-    mutex->lock();
-    static_cast<debug_signals_t *>(region->get_address())->debugger_signal =
-        true;
-    mutex->unlock();
-    condition->notify_all();
+    synchro->notify_attach();
 
     if (!reattach) {
       debug_helper.wait(); // we don't care about the child processes exit code
@@ -183,24 +145,10 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
                                      bool use_sub_devices,
                                      debug_test_type_t test_type) {
   for (auto &device : devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    auto debug_properties = lzt::get_debug_properties(device);
-    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
-        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
-      LOG_WARNING << "[Debugger] Device " << device_properties.name
-                  << " does not support debug";
-      continue;
-    }
 
-    fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path("test_debug_helper", paths);
-    bp::opstream child_input;
-    bp::child debug_helper(
-        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
-        (use_sub_devices ? "--use_sub_devices" : ""),
-        "--test_type=" + std::to_string(test_type), bp::std_in < child_input);
+    if (!is_debug_supported(device))
+      continue;
+    auto debug_helper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
     debug_config.pid = debug_helper.id();
@@ -209,12 +157,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    LOG_INFO << "[Debugger] Notifying application after attaching";
-    mutex->lock();
-    static_cast<debug_signals_t *>(region->get_address())->debugger_signal =
-        true;
-    mutex->unlock();
-    condition->notify_all();
+    synchro->notify_attach();
     LOG_INFO << "[Debugger] Listening for events";
 
     uint16_t eventNum = 0;
@@ -817,24 +760,9 @@ void zetDebugEventReadTest::run_advanced_test(
   std::string test_options = "";
 
   for (auto &device : devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    auto debug_properties = lzt::get_debug_properties(device);
-    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
-        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
-      LOG_WARNING << "[Debugger] Device " << device_properties.name
-                  << " does not support debug";
+    if (!is_debug_supported(device))
       continue;
-    }
-
-    fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path("test_debug_helper", paths);
-    bp::opstream child_input;
-    bp::child debug_helper(
-        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
-        (use_sub_devices ? "--use_sub_devices" : ""),
-        "--test_type=" + std::to_string(test_type), bp::std_in < child_input);
+    auto debug_helper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
     debug_config.pid = debug_helper.id();
@@ -843,12 +771,7 @@ void zetDebugEventReadTest::run_advanced_test(
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    LOG_INFO << "[Debugger] Notifying application after attaching";
-    mutex->lock();
-    (static_cast<debug_signals_t *>(region->get_address()))->debugger_signal =
-        true;
-    mutex->unlock();
-    condition->notify_all();
+    synchro->notify_attach();
 
     std::vector<zet_debug_event_type_t> events;
     uint64_t timeout = std::numeric_limits<uint64_t>::max();
@@ -955,48 +878,23 @@ TEST_F(zetDebugEventReadTest,
   auto devices = lzt::get_devices(driver);
 
   for (auto &device : devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    auto debug_properties = lzt::get_debug_properties(device);
-    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
-        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
-      LOG_WARNING << "[Debugger] Device " << device_properties.name
-                  << " does not support debug";
+
+    if (!is_debug_supported(device))
       continue;
-    }
 
-    fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path("test_debug_helper", paths);
-    bp::opstream child_input;
-    bp::child debug_helper(
-        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
-        "--test_type=" + std::to_string(ATTACH_AFTER_MODULE_CREATED),
-        bp::std_in < child_input);
-
+    auto debug_helper =
+        launch_process(ATTACH_AFTER_MODULE_CREATED, device, false);
     zet_debug_config_t debug_config = {};
     debug_config.pid = debug_helper.id();
 
-    bi::scoped_lock<bi::named_mutex> lock(*mutex);
-    // wait until child says module created
-    LOG_INFO << "[Debugger] Waiting for Child to create module";
-    condition->wait(lock, [&] {
-      return (static_cast<debug_signals_t *>(region->get_address())
-                  ->debugee_signal);
-    });
-    LOG_INFO << "[Debugger] Application proceeding";
+    synchro->wait_for_application();
 
     auto debug_session = lzt::debug_attach(device, debug_config);
     if (!debug_session) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    LOG_INFO << "[Debugger] Notifying application after attaching";
-    mutex->lock();
-    static_cast<debug_signals_t *>(region->get_address())->debugger_signal =
-        true;
-    mutex->unlock();
-    condition->notify_all();
+    synchro->notify_attach();
 
     auto event_found = false;
     while (true) {
@@ -1104,12 +1002,7 @@ void zetDebugMemAccessTest::attachAndGetModuleEvent(
     return;
   }
 
-  LOG_INFO << "[Debugger] Notifying application after attaching";
-  // Application should not run if module load is not acknowledged.
-  mutex->lock();
-  static_cast<debug_signals_t *>(region->get_address())->debugger_signal = true;
-  mutex->unlock();
-  condition->notify_all();
+  synchro->notify_attach();
 
   bool module_loaded = false;
   std::chrono::time_point<std::chrono::system_clock> start, checkpoint;
@@ -1206,26 +1099,10 @@ TEST_F(zetDebugMemAccessTest,
 
   for (auto &device : devices) {
 
-    auto device_properties = lzt::get_device_properties(device);
-    auto debug_properties = lzt::get_debug_properties(device);
-    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
-        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
-      LOG_WARNING << "[Debugger] Device " << device_properties.name
-                  << " does not support debug";
+    if (!is_debug_supported(device))
       continue;
-    }
 
-    fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path("test_debug_helper", paths);
-    bp::opstream child_input;
-    bool use_sub_devices = false;
-    bp::child debug_helper(
-        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
-        (use_sub_devices ? "--use_sub_devices" : ""),
-        "--test_type=" + std::to_string(BASIC), bp::std_in < child_input);
-
+    auto debug_helper = launch_process(BASIC, device, false);
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);
     CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
@@ -1251,28 +1128,11 @@ TEST_F(
   auto devices = lzt::get_devices(driver);
 
   for (auto &device : devices) {
-
-    auto device_properties = lzt::get_device_properties(device);
-    auto debug_properties = lzt::get_debug_properties(device);
-    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
-        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
-      LOG_WARNING << "[Debugger] Device " << device_properties.name
-                  << " does not support debug";
+    if (!is_debug_supported(device))
       continue;
-    }
 
-    fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path("test_debug_helper", paths);
-    bp::opstream child_input;
-    bool use_sub_devices = false;
-    bp::child debug_helper(
-        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
-        (use_sub_devices ? "--use_sub_devices" : ""),
-        "--test_type=" + std::to_string(LONG_RUNNING_KERNEL_INTERRUPTED),
-        bp::std_in < child_input);
-
+    auto debug_helper =
+        launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device, false);
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);
     CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
@@ -1346,25 +1206,11 @@ TEST_F(
   auto devices = lzt::get_devices(driver);
 
   for (auto &device : devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    auto debug_properties = lzt::get_debug_properties(device);
 
-    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
-        debug_properties.flags != ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH) {
-      LOG_WARNING << "[Debugger] Device " << device_properties.name
-                  << " does not support debug";
+    if (!is_debug_supported(device))
       continue;
-    }
-
-    fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path("test_debug_helper", paths);
-    bp::opstream child_input;
-    bp::child debug_helper(
-        helper, "--device_id=" + lzt::to_string(device_properties.uuid),
-        "--test_type=" + std::to_string(LONG_RUNNING_KERNEL_INTERRUPTED),
-        bp::std_in < child_input);
+    auto debug_helper =
+        launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device, false);
 
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);

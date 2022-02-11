@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2022 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,40 +18,18 @@
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "test_debug_common.hpp"
 
 namespace lzt = level_zero_tests;
 namespace fs = boost::filesystem;
 namespace bp = boost::process;
 namespace bi = boost::interprocess;
 
-constexpr auto device_id_string = "device_id";
-constexpr auto use_sub_devices_string = "use_sub_devices";
-constexpr auto kernel_string = "kernel";
-constexpr auto num_kernels_string = "num_kernels";
-constexpr auto test_type_string = "test_type";
-
 const uint16_t eventsTimeoutMS = 30000;
 const uint16_t eventsTimeoutS = 30;
 const uint16_t timeoutThreshold = 4;
 
-typedef enum {
-  BASIC,
-  ATTACH_AFTER_MODULE_CREATED,
-  MULTIPLE_MODULES_CREATED,
-  ATTACH_AFTER_MODULE_DESTROYED,
-  LONG_RUNNING_KERNEL_INTERRUPTED,
-  KERNEL_RESUME,
-  THREAD_STOPPED,
-  THREAD_UNAVAILABLE,
-  PAGE_FAULT,
-  MAX_DEBUG_TEST_TYPE_VALUE = 0xff, // Values greater than 0xFF are reserved
-  DEBUG_TEST_TYPE_FORCE_UINT32 = 0x7fffffff
-} debug_test_type_t;
-
-typedef struct {
-  bool debugger_signal;
-  bool debugee_signal;
-} debug_signals_t;
+namespace lzt = level_zero_tests;
 
 typedef enum { SINGLE_THREAD, GROUP_OF_THREADS, ALL_THREADS } num_threads_t;
 
@@ -66,54 +44,55 @@ typedef enum { SINGLE_THREAD, GROUP_OF_THREADS, ALL_THREADS } num_threads_t;
 
 class zetDebugBaseSetup : public ::testing::Test {
 protected:
-  void SetUp() override {
-    bi::shared_memory_object::remove("debug_bool");
-    shm = new bi::shared_memory_object(bi::create_only, "debug_bool",
-                                       bi::read_write);
+  void SetUp() override { synchro = new process_synchro(true, true); }
 
-    LOG_DEBUG << "[Debugger] Created shared memory object";
-    if (!shm) {
-      FAIL()
-          << "[Debugger] Could not create condition variable for debug tests";
-    }
+  void TearDown() override { delete synchro; }
 
-    shm->truncate(sizeof(debug_signals_t));
-    region = new bi::mapped_region(*shm, bi::read_write);
-    if (!region || !(region->get_address())) {
-      FAIL() << "[Debugger] Could not create signal variables for debug tests";
-    }
-    LOG_DEBUG << "[Debugger] Created region";
+  bp::child launch_process(debug_test_type_t test_type,
+                           ze_device_handle_t device, bool use_sub_devices,
+                           std::string module_name) {
+    auto device_properties = lzt::get_device_properties(device);
+    std::string device_id = lzt::to_string(device_properties.uuid);
+    fs::path helper_path(fs::current_path() / "debug");
+    std::vector<fs::path> paths;
+    paths.push_back(helper_path);
+    fs::path helper = bp::search_path(bin_name, paths);
+    bp::opstream child_input;
+    std::string module_name_option = "";
+    if (!module_name.empty())
+      module_name_option = "--module=" + module_name;
 
-    static_cast<debug_signals_t *>(region->get_address())->debugger_signal =
-        false;
-    static_cast<debug_signals_t *>(region->get_address())->debugee_signal =
-        false;
+    bp::child debug_helper(helper, "--test_type=" + std::to_string(test_type),
+                           "--device_id=" + device_id, module_name_option,
+                           (use_sub_devices ? "--use_sub_devices=1" : ""),
+                           bp::std_in < child_input);
 
-    bi::named_mutex::remove("debugger_mutex");
-    mutex = new bi::named_mutex(bi::create_only, "debugger_mutex");
-    LOG_DEBUG << "[Debugger] Created debugger mutex";
-
-    bi::named_condition::remove("debug_bool_set");
-    condition = new bi::named_condition(bi::create_only, "debug_bool_set");
-    LOG_DEBUG << "[Debugger] Created debug bool set";
+    return debug_helper;
   }
 
-  void TearDown() override {
-    bi::shared_memory_object::remove("debug_bool");
-    bi::named_mutex::remove("debugger_mutex");
-    bi::named_condition::remove("debug_bool_set");
-
-    delete shm;
-    delete region;
-    delete mutex;
-    delete condition;
+  bp::child launch_process(debug_test_type_t test_type,
+                           ze_device_handle_t device, bool use_sub_devices) {
+    return launch_process(test_type, device, use_sub_devices, "");
   }
 
-  bp::child debug_helper;
-  bi::shared_memory_object *shm;
-  bi::mapped_region *region;
-  bi::named_mutex *mutex;
-  bi::named_condition *condition;
+  std::string bin_name = "test_debug_helper";
+  process_synchro *synchro;
+
+public:
+  static bool is_debug_supported(ze_device_handle_t device) {
+    auto device_properties = lzt::get_device_properties(device);
+    auto properties = lzt::get_debug_properties(device);
+
+    if (ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH & properties.flags) {
+      LOG_INFO << "[Debugger] Device " << device_properties.name
+               << " has debug support";
+      return true;
+    } else {
+      LOG_WARNING << "[Debugger] Device " << device_properties.name
+                  << " does not support debug";
+      return false;
+    }
+  }
 };
 
 #endif // TEST_DEBUG_HPP
