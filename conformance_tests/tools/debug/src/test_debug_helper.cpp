@@ -448,8 +448,8 @@ int main(int argc, char **argv) {
 #ifdef EXTENDED_TESTS
       if (is_extended_debugger_test(options.test_selected)) {
 
-        run_extended_debugger_test(options.test_selected, context, device, synchro,
-                                   options);
+        run_extended_debugger_test(options.test_selected, context, device,
+                                   synchro, options);
         break;
       }
 #endif
