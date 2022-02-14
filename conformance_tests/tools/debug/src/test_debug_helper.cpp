@@ -446,9 +446,9 @@ int main(int argc, char **argv) {
       break;
     default:
 #ifdef EXTENDED_TESTS
-      if (is_extended_debugger_test(test_selected)) {
+      if (is_extended_debugger_test(options.test_selected)) {
 
-        run_extended_debugger_test(test_selected, context, device, synchro,
+        run_extended_debugger_test(options.test_selected, context, device, synchro,
                                    options);
         break;
       }

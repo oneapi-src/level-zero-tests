@@ -19,26 +19,13 @@
 #include "logging/logging.hpp"
 #include "test_debug_common.hpp"
 
-#ifdef EXTENDED_TESTS
-#include "test_debug_extended.hpp"
-#endif
-
 namespace po = boost::program_options;
 namespace lzt = level_zero_tests;
 
 struct debug_options {
 public:
-  void parse_options(int argc, char **argv);
 
-  bool use_sub_devices = false;
-  std::string device_id_in = "";
-  std::string module_name_in = "";
-  bool use_custom_module = false;
-  debug_test_type_t test_selected = BASIC;
-  bool enable_synchro = true;
-};
-
-void debug_options::parse_options(int argc, char **argv) {
+void parse_options(int argc, char **argv) {
 
   po::options_description desc("Allowed Options");
   auto options = desc.add_options();
@@ -85,5 +72,19 @@ void debug_options::parse_options(int argc, char **argv) {
     enable_synchro = false;
   }
 }
+
+  bool use_sub_devices = false;
+  std::string device_id_in = "";
+  std::string module_name_in = "";
+  bool use_custom_module = false;
+  debug_test_type_t test_selected = BASIC;
+  bool enable_synchro = true;
+};
+
+
+
+#ifdef EXTENDED_TESTS
+#include "test_debug_extended.hpp"
+#endif
 
 #endif // TEST_DEBUG_HPP
