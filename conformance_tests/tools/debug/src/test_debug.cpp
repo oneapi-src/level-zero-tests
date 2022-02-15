@@ -67,30 +67,40 @@ void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
     auto debug_helper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
     debug_config.pid = debug_helper.id();
-    auto debug_session = lzt::debug_attach(device, debug_config);
-    if (!debug_session) {
-      FAIL() << "[Debugger] Failed to attach to start a debug session";
-    }
-
-    synchro->notify_attach();
 
     if (!reattach) {
-      debug_helper.wait(); // we don't care about the child processes exit code
-                           // at the moment
-      lzt::debug_detach(debug_session);
-    } else {
-      // tell the application we are detaching
+      auto debug_session = lzt::debug_attach(device, debug_config);
+      if (!debug_session) {
+        FAIL() << "[Debugger] Failed to attach to start a debug session";
+      }
+      synchro->notify_attach();
       LOG_INFO << "[Debugger] Detaching";
       lzt::debug_detach(debug_session);
-
-      // re-attach to the application
-      LOG_INFO << "[Debugger] Re-attaching";
-      lzt::debug_attach(device, debug_config);
-
-      LOG_INFO << "[Debugger] Re-Detaching";
-      lzt::debug_detach(debug_session);
-
-      debug_helper.terminate();
+      debug_helper.wait(); // we don't care about the child processes exit code
+                           // at the moment
+    } else {
+      int loop = 1;
+      for (loop = 1; loop < 11; loop++) {
+        LOG_INFO << "[Debugger] Attaching. Loop " << loop;
+        auto debug_session = lzt::debug_attach(device, debug_config);
+        if (!debug_session) {
+          FAIL()
+              << "[Debugger] Failed to attach to start a debug session. Loop "
+              << loop;
+        }
+        // delay last detach to happen after application finishes
+        if (loop < 10) {
+          LOG_INFO << "[Debugger] Detaching. Loop " << loop;
+          lzt::debug_detach(debug_session);
+        } else {
+          synchro->notify_attach();
+          debug_helper
+              .wait(); // we don't care about the child processes exit code
+          LOG_INFO << "[Debugger] LAST Detach after aplication finished. Loop "
+                   << loop;
+          lzt::debug_detach(debug_session);
+        }
+      }
     }
   }
 }

@@ -459,4 +459,6 @@ int main(int argc, char **argv) {
     }
   }
   lzt::destroy_context(context);
+
+  LOG_INFO << "[Application] Done, exiting";
 }
