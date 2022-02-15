@@ -56,7 +56,7 @@ T *allocate_memory(const ze_context_handle_t &context,
 typedef struct TestArguments {
   float total_memory_size_limit;
   float one_allocation_size_limit;
-  uint32_t multiplier;
+  uint64_t multiplier;
   memory_test_type memory_type;
 
   void print_test_arguments(const ze_device_properties_t &device_properties) {
