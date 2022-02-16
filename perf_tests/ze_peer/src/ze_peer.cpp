@@ -147,7 +147,8 @@ int main(int argc, char **argv) {
   bool run_bidirectional = false;
   uint32_t command_queue_group_ordinal = 0;
   uint32_t command_queue_index = 0;
-  int src_device_id = -1, dst_device_id = -1;
+  int src_device_id = -1;
+  std::vector<uint32_t> dst_device_ids{};
   int size_to_run = -1;
   bool validate = false;
   peer_transfer_t transfer_type_to_run = PEER_TRANSFER_MAX;
@@ -222,12 +223,29 @@ int main(int argc, char **argv) {
     } else if (strcmp(argv[i], "-l") == 0) {
       run_using_all_copy_engines = true;
     } else if (strcmp(argv[i], "-d") == 0) {
-      if (isdigit(argv[i + 1][0])) {
-        dst_device_id = atoi(argv[i + 1]);
-      } else {
-        std::cout << usage_str;
-        exit(-1);
+      std::string dst_device_ids_string = argv[i + 1];
+      const std::string comma = ",";
+
+      size_t pos = 0;
+      size_t start = 0;
+      std::string device_id_string = "";
+      auto search_for_device_id = [&]() {
+        if (isdigit(device_id_string[0])) {
+          dst_device_ids.push_back(atoi(device_id_string.c_str()));
+        } else {
+          std::cout << usage_str;
+          exit(-1);
+        }
+      };
+      while ((pos = dst_device_ids_string.find(comma, start)) !=
+             std::string::npos) {
+        device_id_string = dst_device_ids_string.substr(start, pos);
+        start = pos + 1;
+        search_for_device_id();
       }
+      device_id_string =
+          dst_device_ids_string.substr(start, dst_device_ids_string.length());
+      search_for_device_id();
       i++;
     } else if (strcmp(argv[i], "-s") == 0) {
       if (isdigit(argv[i + 1][0])) {
@@ -280,7 +298,9 @@ int main(int argc, char **argv) {
       if (local_device_id == remote_device_id) {
         continue;
       }
-      if (dst_device_id != -1 && remote_device_id != dst_device_id) {
+      if (!dst_device_ids.empty() &&
+          std::find(dst_device_ids.begin(), dst_device_ids.end(),
+                    remote_device_id) == dst_device_ids.end()) {
         continue;
       }
       for (uint32_t test_type = 0;
