@@ -41,7 +41,7 @@ void run_ipc_test(size_t max_number_of_elements, int size_to_run,
                   const uint32_t command_queue_index, uint32_t remote_device_id,
                   uint32_t local_device_id, bool bidirectional,
                   peer_test_t test_type, peer_transfer_t transfer_type,
-                  bool validate) {
+                  bool validate, uint32_t *num_devices) {
   pid_t pid;
   int sv[2];
   if (socketpair(PF_UNIX, SOCK_STREAM, 0, sv) < 0) {
@@ -63,7 +63,8 @@ void run_ipc_test(size_t max_number_of_elements, int size_to_run,
       if (test_pid == 0) {
         ZePeer peer(command_queue_group_ordinal, command_queue_index,
                     local_device_id, remote_device_id,
-                    run_using_all_compute_engines, run_using_all_copy_engines);
+                    run_using_all_compute_engines, run_using_all_copy_engines,
+                    num_devices);
         peer.bandwidth_latency_ipc(bidirectional, test_type, transfer_type,
                                    false /* is_server */, sv[1],
                                    number_of_elements, local_device_id,
@@ -101,8 +102,7 @@ void run_test(size_t max_number_of_elements, int size_to_run,
               const uint32_t command_queue_index, uint32_t remote_device_id,
               uint32_t local_device_id, bool bidirectional,
               peer_test_t test_type, peer_transfer_t transfer_type,
-              bool validate) {
-
+              bool validate, uint32_t *num_devices) {
   print_results_header(remote_device_id, local_device_id, test_type,
                        transfer_type);
 
@@ -113,7 +113,8 @@ void run_test(size_t max_number_of_elements, int size_to_run,
     }
     ZePeer peer(command_queue_group_ordinal, command_queue_index,
                 remote_device_id, local_device_id,
-                run_using_all_compute_engines, run_using_all_copy_engines);
+                run_using_all_compute_engines, run_using_all_copy_engines,
+                num_devices);
     if (bidirectional) {
       peer.bidirectional_bandwidth_latency(test_type, transfer_type,
                                            number_of_elements, remote_device_id,
@@ -151,7 +152,7 @@ int main(int argc, char **argv) {
   bool validate = false;
   peer_transfer_t transfer_type_to_run = PEER_TRANSFER_MAX;
   peer_test_t test_type_to_run = PEER_TEST_MAX;
-  int max_number_of_devices = 2;
+  uint32_t num_devices = 32;
 
   size_t max_number_of_elements = 1024 * 1024 * 256; /* 256 MB */
 
@@ -223,8 +224,6 @@ int main(int argc, char **argv) {
     } else if (strcmp(argv[i], "-d") == 0) {
       if (isdigit(argv[i + 1][0])) {
         dst_device_id = atoi(argv[i + 1]);
-        max_number_of_devices =
-            std::max(max_number_of_devices, dst_device_id + 1);
       } else {
         std::cout << usage_str;
         exit(-1);
@@ -233,16 +232,6 @@ int main(int argc, char **argv) {
     } else if (strcmp(argv[i], "-s") == 0) {
       if (isdigit(argv[i + 1][0])) {
         src_device_id = atoi(argv[i + 1]);
-        max_number_of_devices =
-            std::max(max_number_of_devices, src_device_id + 1);
-      } else {
-        std::cout << usage_str;
-        exit(-1);
-      }
-      i++;
-    } else if (strcmp(argv[i], "-n") == 0) {
-      if (isdigit(argv[i + 1][0])) {
-        max_number_of_devices = atoi(argv[i + 1]);
       } else {
         std::cout << usage_str;
         exit(-1);
@@ -281,14 +270,13 @@ int main(int argc, char **argv) {
                  "===================\n";
   }
 
-  max_number_of_devices = std::min(max_number_of_devices, 32);
-  for (uint32_t local_device_id = 0; local_device_id < max_number_of_devices;
+  for (uint32_t local_device_id = 0; local_device_id < num_devices;
        local_device_id++) {
     if (src_device_id != -1 && local_device_id != src_device_id) {
       continue;
     }
-    for (uint32_t remote_device_id = 0;
-         remote_device_id < max_number_of_devices; remote_device_id++) {
+    for (uint32_t remote_device_id = 0; remote_device_id < num_devices;
+         remote_device_id++) {
       if (local_device_id == remote_device_id) {
         continue;
       }
@@ -317,7 +305,8 @@ int main(int argc, char **argv) {
                          remote_device_id, local_device_id,
                          false, // run_bidirectional
                          static_cast<peer_test_t>(test_type),
-                         static_cast<peer_transfer_t>(transfer_type), validate);
+                         static_cast<peer_transfer_t>(transfer_type), validate,
+                         &num_devices);
             std::cout << "-----------------------------------------------------"
                          "---------------------------\n";
           } else {
@@ -327,7 +316,8 @@ int main(int argc, char **argv) {
                      command_queue_group_ordinal, command_queue_index,
                      remote_device_id, local_device_id, run_bidirectional,
                      static_cast<peer_test_t>(test_type),
-                     static_cast<peer_transfer_t>(transfer_type), validate);
+                     static_cast<peer_transfer_t>(transfer_type), validate,
+                     &num_devices);
             std::cout << "-----------------------------------------------------"
                          "---------------------------\n";
           }
