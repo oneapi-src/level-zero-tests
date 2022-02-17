@@ -48,7 +48,7 @@ if(NOT BUILD_ZE_PERF_TESTS_ONLY)
   # Workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/20638
   set(_Boost_LOG_SETUP_DEPENDENCIES log)
   set(_Boost_LOG_DEPENDENCIES "")
-  find_package(Boost 1.65 REQUIRED COMPONENTS log program_options timer chrono system)
+  find_package(Boost 1.65 REQUIRED COMPONENTS log program_options timer chrono system serialization)
 endif()
 
 find_package(LevelZero REQUIRED COMPONENTS ${LevelZero_COMPONENTS})
