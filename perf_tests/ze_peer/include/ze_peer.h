@@ -72,7 +72,7 @@ public:
   ZePeer(const uint32_t command_queue_group_ordinal,
          const uint32_t command_queue_index, uint32_t dst_device_id,
          uint32_t src_device_id, bool run_using_all_compute_engines,
-         bool run_using_all_copy_engines, uint32_t *num_devices = 0) {
+         bool run_using_all_copy_engines, uint32_t *num_devices) {
 
     benchmark = new ZeApp();
 
@@ -80,7 +80,9 @@ public:
     this->run_using_all_copy_engines = run_using_all_copy_engines;
 
     uint32_t device_count = benchmark->allDevicesInit();
-    *num_devices = device_count;
+    if (num_devices) {
+      *num_devices = device_count;
+    }
 
     if (!benchmark->canAccessPeer(dst_device_id, src_device_id)) {
       std::cerr << "Devices " << src_device_id << " and " << dst_device_id

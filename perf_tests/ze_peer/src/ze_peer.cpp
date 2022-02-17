@@ -72,7 +72,8 @@ void run_ipc_test(size_t max_number_of_elements, int size_to_run,
       } else {
         ZePeer peer(command_queue_group_ordinal, command_queue_index,
                     local_device_id, remote_device_id,
-                    run_using_all_compute_engines, run_using_all_copy_engines);
+                    run_using_all_compute_engines, run_using_all_copy_engines,
+                    nullptr);
         peer.bandwidth_latency_ipc(bidirectional, test_type, transfer_type,
                                    true /* is_server */, sv[0],
                                    number_of_elements, remote_device_id,
@@ -163,7 +164,7 @@ int main(int argc, char **argv) {
       exit(0);
     } else if ((strcmp(argv[i], "-q") == 0)) {
       ZePeer peer(command_queue_group_ordinal, command_queue_index, 0, 1, false,
-                  false);
+                  false, nullptr);
       peer.query_engines();
       exit(0);
     } else if ((strcmp(argv[i], "-g") == 0)) {
