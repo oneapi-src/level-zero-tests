@@ -1,5 +1,5 @@
 #
-#Copyright(c) 2020 Intel Corporation
+#Copyright(c) 2020-2022 Intel Corporation
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files(the "Software"), to deal
@@ -21,14 +21,16 @@
 #
 
 add_lzt_test(
-    NAME test_usm 
-    GROUP "/conformance_tests/core" 
-    SOURCES 
-      src/test_usm.cpp 
-      src/main.cpp 
-    LINK_LIBRARIES 
-      level_zero_tests::logging 
+    NAME test_usm
+    GROUP "/conformance_tests/core"
+    SOURCES
+      src/test_usm.cpp
+      src/test_usm_atomic.cpp
+      src/main.cpp
+    LINK_LIBRARIES
+      level_zero_tests::logging
       level_zero_tests::utils
-      level_zero_tests::utils 
-    KERNELS 
-      test_fill_device_memory)
+      level_zero_tests::utils
+    KERNELS
+      test_fill_device_memory
+      test_usm_atomic)
