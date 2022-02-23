@@ -27,6 +27,7 @@ def add_to_test_list(test_name: str,
                     binary_and_path: str,
                     test_filter: str,
                     test_feature_tag: str,
+                    test_section: str,
                     test_feature: str,
                     requested_types: str,
                     requested_features: str,
@@ -40,6 +41,15 @@ def add_to_test_list(test_name: str,
         test_type_list = requested_types.split(",")
         for test_type in test_type_list:
             if re.search(test_type, test_feature_tag, re.IGNORECASE):
+                for i in range(len(test_plan_generated)):
+                    if test_name.__eq__(test_plan_generated[i][0]) != 0:
+                        already_exists = True
+                if not already_exists:
+                    checks_passed = True
+                    break
+                else:
+                    checks_passed = False
+            elif re.search(test_type, test_section, re.IGNORECASE):
                 for i in range(len(test_plan_generated)):
                     if test_name.__eq__(test_plan_generated[i][0]) != 0:
                         already_exists = True
@@ -94,7 +104,7 @@ def add_to_test_list(test_name: str,
             checks_passed = True
 
     if checks_passed == True:
-        test_plan_generated.append((test_name, test_filter, binary_and_path, test_feature_tag, test_feature))
+        test_plan_generated.append((test_name, test_filter, binary_and_path, test_feature_tag, test_section, test_feature))
 
 def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
     results = []
@@ -281,7 +291,7 @@ def generate_test_case(binary_and_path: str,
         if (test_section == "None"):
             test_section= test_section_by_feature
         test_feature_tag = level_zero_report_utils.assign_test_feature_tag(test_feature, test_name, test_section)
-        add_to_test_list(test_name, binary_and_path, test_filter, test_feature_tag, test_feature, requested_types, requested_features, requested_regex, exclude_features, exclude_regex)
+        add_to_test_list(test_name, binary_and_path, test_filter, test_feature_tag, test_section, test_feature, requested_types, requested_features, requested_regex, exclude_features, exclude_regex)
 
 def generate_test_items_for_binary(binary_dir: str,
                                 test_binary: str,
@@ -324,7 +334,7 @@ def generate_test_cases_from_binaries(binary_dir: str,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='''Standalone Level Zero Test Runner for Reports''',
     epilog="""example:\n
-        python3 run_all_tests.py \n
+        python3 run_test_report.py \n
             --binary_dir /build/out/conformance_tests/
             --run_test_types \"basic\"
             --run_test_features \"barrier\"
@@ -334,7 +344,7 @@ if __name__ == '__main__':
             --test_run_timeout 15
             --log_prefix \"level_zero_tests_1234\"\n""", formatter_class=RawTextHelpFormatter)
     parser.add_argument('--binary_dir', type = IsListableDirPath, help = 'Directory containing gtest binaries and SPVs.', required = True)
-    parser.add_argument('--run_test_types', type = str, help = 'List of Test types to include Comma Separated: basic,advanced,discrete,tools,negative,stress,all NOTE:all sets all types', default = "basic")
+    parser.add_argument('--run_test_types', type = str, help = 'List of Test types to include Comma Separated: basic,advanced,discrete,core,tools,negative,stress,all NOTE:all sets all types', default = "basic")
     parser.add_argument('--run_test_features', type = str, help = 'List of Test Features to include Comma Separated: barrier,...', default = None)
     parser.add_argument('--run_test_regex', type = str, help = 'Regular Expression to filter tests that match either in the name or filter: GivenBarrier*', default = None)
     parser.add_argument('--exclude_features', type = str, help = 'List of Test Features to exclude Comma Separated: barrier,...', default = None)
@@ -348,7 +358,7 @@ if __name__ == '__main__':
     run_test_types = args.run_test_types
 
     if re.search(run_test_types, "all", re.IGNORECASE):
-        run_test_types = "basic,advanced,discrete,tools,negative,stress"
+        run_test_types = "basic,advanced,discrete,core,tools,negative,stress"
 
     run_test_features = args.run_test_features
     run_test_regex = args.run_test_regex

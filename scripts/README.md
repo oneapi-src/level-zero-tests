@@ -28,6 +28,7 @@
    * `tools` = Tests spanning all oneAPI Level Zero Tools
    * `negative` = Tests exercising support for handling negative/invalid user input, expected to be run with a validation layer ie ZE_ENABLE_VALIDATION_LAYER=1
    * `stress` = Tests tests which exercise the maximum limits of a given oneAPI Level Zero Driver
+   * `core` = Tests spanning all oneAPI Level Zero Core
    * `all` = Run all test types
      * **NOTE: all sets all types**
      * **NOTE: Default is `basic` if this argument is unset**
