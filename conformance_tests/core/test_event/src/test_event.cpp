@@ -145,7 +145,21 @@ class zeHostEventSyncPermuteTimeoutTests
       public ::testing::WithParamInterface<uint32_t> {};
 
 void child_thread_function(ze_event_handle_t event, uint32_t timeout) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event, timeout));
+  int retries = 10000;
+  ze_result_t result = ZE_RESULT_NOT_READY;
+  if (timeout == 0) {
+    while (retries > 0) {
+      result = zeEventHostSynchronize(event, timeout);
+      if (result != ZE_RESULT_NOT_READY) {
+        break;
+      }
+      retries--;
+      std::this_thread::yield();
+    }
+    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event, timeout));
+  }
 }
 
 TEST_P(zeHostEventSyncPermuteTimeoutTests,
