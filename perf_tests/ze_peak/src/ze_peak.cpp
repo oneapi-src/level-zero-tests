@@ -404,10 +404,7 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
       }
     }
 
-    if (copy_ordinal == -1) {
-      std::cout
-          << "No async copy engines detected, disabling blitter benchmark\n";
-    } else {
+    if (copy_ordinal != -1) {
       std::cout << "Async copy engine detected with ordinal " << copy_ordinal
                 << ", enabling blitter benchmark\n";
       command_list_description.commandQueueGroupOrdinal = copy_ordinal;
@@ -1051,14 +1048,14 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
       result = zeCommandListAppendSignalEvent(
           context.cmd_list[current_sub_device_id], kernel_launch_event);
       if (result) {
-        throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
+        throw std::runtime_error("zeCommandListAppendSignalEvent failed: " +
                                  std::to_string(result));
       }
     } else {
       result = zeCommandListAppendSignalEvent(context.command_list,
                                               kernel_launch_event);
       if (result) {
-        throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
+        throw std::runtime_error("zeCommandListAppendSignalEvent failed: " +
                                  std::to_string(result));
       }
     }
