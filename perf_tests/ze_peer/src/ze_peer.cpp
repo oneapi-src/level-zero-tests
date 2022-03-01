@@ -11,8 +11,8 @@ bool run_using_all_compute_engines = false;
 bool run_using_all_copy_engines = false;
 
 void print_results_header(uint32_t remote_device_id, uint32_t local_device_id,
-                          peer_test_t test_type,
-                          peer_transfer_t transfer_type) {
+                          peer_test_t test_type, peer_transfer_t transfer_type,
+                          bool bidirectional) {
   std::string test_type_string = "Bandwidth";
   if (test_type == PEER_LATENCY) {
     test_type_string = "Latency";
@@ -23,6 +23,9 @@ void print_results_header(uint32_t remote_device_id, uint32_t local_device_id,
   if (transfer_type == PEER_WRITE) {
     transfer_type_string = "Write";
     test_arrow = "--->";
+  }
+  if (bidirectional) {
+    test_arrow = "<--->";
   }
 
   std::cout << test_type_string << " " << transfer_type_string << " : "
@@ -50,7 +53,7 @@ void run_ipc_test(size_t max_number_of_elements, int size_to_run,
   }
 
   print_results_header(remote_device_id, local_device_id, test_type,
-                       transfer_type);
+                       transfer_type, bidirectional);
 
   for (int number_of_elements = 8; number_of_elements <= max_number_of_elements;
        number_of_elements *= 2) {
@@ -105,7 +108,7 @@ void run_test(size_t max_number_of_elements, int size_to_run,
               peer_test_t test_type, peer_transfer_t transfer_type,
               bool validate, uint32_t *num_devices) {
   print_results_header(remote_device_id, local_device_id, test_type,
-                       transfer_type);
+                       transfer_type, bidirectional);
 
   for (int number_of_elements = 8; number_of_elements <= max_number_of_elements;
        number_of_elements *= 2) {
@@ -278,16 +281,15 @@ int main(int argc, char **argv) {
               << "IPC tests\n"
               << "============================================================="
                  "===================\n";
-  } else {
-    std::cout << "============================================================="
-                 "===================\n"
-              << "Single Process "
-              << ((run_bidirectional == 0) ? "Unidirectional "
-                                           : "Bidirectional ")
-              << "tests\n"
-              << "============================================================="
-                 "===================\n";
   }
+
+  std::cout << "============================================================="
+               "===================\n"
+            << "Single Process "
+            << ((run_bidirectional == 0) ? "Unidirectional " : "Bidirectional ")
+            << "tests\n"
+            << "============================================================="
+               "===================\n";
 
   for (uint32_t local_device_id = 0; local_device_id < num_devices;
        local_device_id++) {
@@ -318,30 +320,25 @@ int main(int argc, char **argv) {
                   transfer_type_to_run) {
             continue;
           }
+          std::cout << "-----------------------------------------------------"
+                       "---------------------------\n";
           if (run_ipc) {
-            std::cout << "-----------------------------------------------------"
-                         "---------------------------\n";
             run_ipc_test(max_number_of_elements, size_to_run,
                          command_queue_group_ordinal, command_queue_index,
-                         remote_device_id, local_device_id,
-                         false, // run_bidirectional
+                         remote_device_id, local_device_id, run_bidirectional,
                          static_cast<peer_test_t>(test_type),
                          static_cast<peer_transfer_t>(transfer_type), validate,
                          &num_devices);
-            std::cout << "-----------------------------------------------------"
-                         "---------------------------\n";
           } else {
-            std::cout << "-----------------------------------------------------"
-                         "---------------------------\n";
             run_test(max_number_of_elements, size_to_run,
                      command_queue_group_ordinal, command_queue_index,
                      remote_device_id, local_device_id, run_bidirectional,
                      static_cast<peer_test_t>(test_type),
                      static_cast<peer_transfer_t>(transfer_type), validate,
                      &num_devices);
-            std::cout << "-----------------------------------------------------"
-                         "---------------------------\n";
           }
+          std::cout << "-----------------------------------------------------"
+                       "---------------------------\n";
         }
       }
     }
