@@ -16,20 +16,36 @@ namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
-uint32_t get_metric_group_handles_count(ze_device_handle_t device) {
-  uint32_t metricCount = 0;
+uint32_t get_metric_group_count(ze_device_handle_t device) {
+  uint32_t metricGroupCount = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupGet(device, &metricCount, nullptr));
-  EXPECT_GT(metricCount, 0);
-  return metricCount;
+            zetMetricGroupGet(device, &metricGroupCount, nullptr));
+  EXPECT_GT(metricGroupCount, 0);
+  return metricGroupCount;
 }
 std::vector<zet_metric_group_handle_t>
 get_metric_group_handles(ze_device_handle_t device) {
-  auto metricCount = get_metric_group_handles_count(device);
-  std::vector<zet_metric_group_handle_t> metricGroup(metricCount);
+  auto metricGroupCount = get_metric_group_count(device);
+  std::vector<zet_metric_group_handle_t> phMetricGroups(metricGroupCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGet(device, &metricGroupCount,
+                                                 phMetricGroups.data()));
+  return phMetricGroups;
+}
+
+uint32_t get_metric_count(zet_metric_group_handle_t metricGroup) {
+  uint32_t metricCount = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupGet(device, &metricCount, metricGroup.data()));
-  return metricGroup;
+            zetMetricGet(metricGroup, &metricCount, nullptr));
+  EXPECT_GT(metricCount, 0);
+  return metricCount;
+}
+std::vector<zet_metric_handle_t>
+get_metric_handles(zet_metric_group_handle_t metricGroup) {
+  uint32_t metricCount = get_metric_count(metricGroup);
+  std::vector<zet_metric_handle_t> phMetric(metricCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(metricGroup, &metricCount, phMetric.data()));
+  return phMetric;
 }
 
 std::vector<ze_device_handle_t>
@@ -49,6 +65,25 @@ get_metric_test_device_list(uint32_t testSubDeviceCount) {
   return testDevices;
 }
 
+bool check_metric_type_ip_exp(
+    ze_device_handle_t device, std::string groupName,
+    zet_metric_group_sampling_type_flags_t samplingType) {
+  zet_metric_group_handle_t groupHandle;
+  groupHandle = lzt::find_metric_group(device, groupName, samplingType);
+  std::vector<zet_metric_handle_t> metricHandles =
+      get_metric_handles(groupHandle);
+  for (auto metric : metricHandles) {
+    zet_metric_properties_t MetricProp = {};
+    MetricProp.stype = ZET_STRUCTURE_TYPE_METRIC_PROPERTIES;
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGetProperties(metric, &MetricProp));
+
+    if (MetricProp.metricType == ZET_METRIC_TYPE_IP_EXP) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::vector<std::string> get_metric_group_name_list(
     ze_device_handle_t device,
     zet_metric_group_sampling_type_flags_t samplingType) {
@@ -62,21 +97,27 @@ std::vector<std::string> get_metric_group_name_list(
   std::vector<std::string> groupPropName;
   for (auto propItem : groupProp) {
     std::string strItem(propItem.name);
-    if (propItem.samplingType == samplingType)
-      groupPropName.push_back(strItem);
+    if (propItem.samplingType != samplingType)
+      continue;
+    if (check_metric_type_ip_exp(device, strItem, samplingType)) {
+      LOG_WARNING
+          << "Test includes ZET_METRIC_TYPE_IP_EXP Metric Type - Skipped...";
+      continue;
+    }
+    groupPropName.push_back(strItem);
   }
   return groupPropName;
 }
+
 std::vector<zet_metric_group_properties_t> get_metric_group_properties(
     std::vector<zet_metric_group_handle_t> metricGroup) {
   std::vector<zet_metric_group_properties_t> metricGroupProp;
-  for (auto mGrpoup : metricGroup) {
-    zet_metric_group_properties_t *GroupProp =
-        new zet_metric_group_properties_t;
-    std::memset(GroupProp, 0, sizeof(zet_metric_group_properties_t));
+  for (auto mGroup : metricGroup) {
+    zet_metric_group_properties_t GroupProp = {};
+    GroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGroupGetProperties(mGrpoup, GroupProp));
-    metricGroupProp.push_back(*GroupProp);
+              zetMetricGroupGetProperties(mGroup, &GroupProp));
+    metricGroupProp.push_back(GroupProp);
   }
   return metricGroupProp;
 }
