@@ -871,8 +871,11 @@ void zetDebugEventReadTest::run_advanced_test(
     }
 
     // cleanup
-    lzt::debug_detach(debug_session);
+    LOG_INFO << "[Debugger] terminating application to finish";
     debug_helper.terminate();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    LOG_INFO << "[Debugger] detaching";
+    lzt::debug_detach(debug_session);
     if (test_type == THREAD_UNAVAILABLE) {
       ASSERT_EQ(thread_unavailable_event_count, 1)
           << "Number of ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE events is not "

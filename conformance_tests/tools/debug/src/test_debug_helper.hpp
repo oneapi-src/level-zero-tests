@@ -77,6 +77,7 @@ public:
   bool use_sub_devices = false;
   std::string device_id_in = "";
   std::string module_name_in = "";
+  std::string kernel_name_in = "";
   bool use_custom_module = false;
   debug_test_type_t test_selected = BASIC;
   bool enable_synchro = true;

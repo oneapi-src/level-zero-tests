@@ -5,22 +5,21 @@
  * SPDX-License-Identifier: MIT
  *
  */
+kernel void long_kernel(global uchar *dst, global uchar *src) {
+  uint gid = get_global_id(0);
+  bool exit_flag = false;
 
-kernel void debug_print_forever() {
+  ulong max = 99900000;
+  ulong loop = 0;
+  while (loop < max && src[0] != 0x00) {
+    dst[gid] = (char)(gid + 2 & 0xff);
+    loop++;
+  }
+  dst[gid] = src[gid];
 
-  const int xid = get_global_id(0);
-  const int yid = get_global_id(1);
-  const int zid = get_global_id(2);
-  const int xdim = get_global_size(0);
-  const int ydim = get_global_size(1);
-  const int zdim = get_global_size(2);
-
-  uint count = 0;
-  while (1) {
-    count++;
-
-    if (!(count % 500)) {
-      printf("debug print\n");
-    }
+  if (gid == 0) {
+    printf(
+        "[GPU kernel] Gid:%d Hello src[gid] %d, after looping %lu out of %lu\n",
+        gid, src[gid], loop, max);
   }
 }
