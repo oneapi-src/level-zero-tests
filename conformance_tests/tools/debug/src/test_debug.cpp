@@ -95,7 +95,7 @@ void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
         } else {
           synchro->notify_attach();
           debug_helper
-              .wait(); // we don't care about the child processes exit code
+              .terminate(); // we don't care about the child processes exit code
           LOG_INFO << "[Debugger] LAST Detach after aplication finished. Loop "
                    << loop;
           lzt::debug_detach(debug_session);
