@@ -74,7 +74,7 @@ class zeMemGetAllocPropertiesTests : public zeDriverAllocDeviceMemTests {};
 TEST_P(
     zeMemGetAllocPropertiesTests,
     GivenValidDeviceMemoryPointerWhenGettingPropertiesThenVersionAndTypeReturned) {
-  ze_memory_allocation_properties_t memory_properties;
+  ze_memory_allocation_properties_t memory_properties = {};
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_handle_t device_test = device;
@@ -104,7 +104,7 @@ TEST_P(
     GivenPointerToDeviceHandleIsSetToNullWhenGettingMemoryPropertiesThenSuccessIsReturned) {
 
   auto context = lzt::get_default_context();
-  ze_memory_allocation_properties_t memory_properties;
+  ze_memory_allocation_properties_t memory_properties = {};
 
   memory_properties.pNext = nullptr;
   memory_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
@@ -282,7 +282,7 @@ TEST_P(zeSharedMemGetPropertiesTests,
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_handle_t device_test = device;
-  ze_memory_allocation_properties_t mem_properties;
+  ze_memory_allocation_properties_t mem_properties = {};
   mem_properties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   void *memory = lzt::allocate_shared_memory(size, alignment, 0, 0, device);
   lzt::get_mem_alloc_properties(context, memory, &mem_properties, &device_test);
