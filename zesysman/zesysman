@@ -2294,10 +2294,11 @@ def main():
                     telemetryClosures.append(rasTelemetry)
 
         if args.clear_errors and not args.show_telemetry:
+            rasState = zes_typed_structure(ZES_STRUCTURE_TYPE_RAS_STATE)
             for i in range(edomCount.value()):
                 ras = edoms[i]
                 try:
-                    zeCall(zesRasGetState(ras, True, None))
+                    zeCall(zesRasGetState(ras, True, rasState))
                 except ValueError as err:
                     pr.err("workaround... ERROR: zesRasGetState returned error, ignoring...", err)
 
