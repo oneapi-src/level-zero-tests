@@ -188,8 +188,12 @@ public:
 
   ~ZePeer() {
     for (auto &device : ze_peer_devices) {
-      benchmark->commandQueueDestroy(device.command_queues[0]);
-      benchmark->commandListDestroy(device.command_lists[0]);
+      for (auto queue: device.command_queues) {
+        benchmark->commandQueueDestroy(queue);
+      }
+      for (auto list: device.command_lists) {
+        benchmark->commandListDestroy(list);
+      }
     }
     benchmark->allDevicesCleanup();
     delete benchmark;
