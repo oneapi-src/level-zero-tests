@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
   uint32_t command_queue_group_ordinal = 0;
   uint32_t command_queue_index = 0;
   int src_device_id = -1;
-  std::vector<uint32_t> dst_device_ids{};
+  std::vector<uint32_t> dst_device_ids;
   int size_to_run = -1;
   bool validate = false;
   peer_transfer_t transfer_type_to_run = PEER_TRANSFER_MAX;
