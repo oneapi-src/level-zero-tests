@@ -333,8 +333,6 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
 void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
                      process_synchro &synchro, debug_options &options) {
 
-  synchro.wait_for_attach();
-
   auto command_list = lzt::create_command_list(device);
   auto command_queue = lzt::create_command_queue(device);
   std::string module_name = (options.use_custom_module == true)
@@ -344,13 +342,14 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   std::string kernel_name = (options.use_custom_module == true)
                                 ? options.kernel_name_in
                                 : "long_kernel";
+  synchro.wait_for_attach();
   auto module =
       lzt::create_module(device, module_name, ZE_MODULE_FORMAT_IL_SPIRV,
                          "-g" /* include debug symbols*/, nullptr);
 
   auto kernel = lzt::create_function(module, kernel_name);
 
-  auto size = 8192;
+  auto size = 512;
 
   auto dest_buffer_d =
       lzt::allocate_device_memory(size, size, 0, 0, device, context);
@@ -361,19 +360,31 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   auto src_buffer_s =
       lzt::allocate_shared_memory(size, size, 0, 0, device, context);
 
-  LOG_DEBUG << "[Application] Allocated device memory at: " << std::hex
-            << dest_buffer_d;
-  LOG_DEBUG << "[Application] Allocated device memory at: " << std::hex
+  unsigned long loop_max = 100000000;
+  auto loop_counter_d = lzt::allocate_device_memory(
+      sizeof(unsigned long), sizeof(unsigned long), 0, 0, device, context);
+  auto loop_counter_s = lzt::allocate_shared_memory(
+      sizeof(unsigned long), sizeof(unsigned long), 0, 0, device, context);
+
+  LOG_DEBUG << "[Application] Allocated source device memory at: " << std::hex
             << src_buffer_d;
+  LOG_DEBUG << "[Application] Allocated destination device memory at: "
+            << std::hex << dest_buffer_d;
+
+  synchro.update_gpu_buffer_address(reinterpret_cast<uint64_t>(src_buffer_d));
+  synchro.notify_debugger();
 
   std::memset(dest_buffer_s, 1, size);
   std::memset(src_buffer_s, 0, size);
+  std::memset(loop_counter_s, 0, sizeof(loop_counter_s));
   for (size_t i = 0; i < size; i++) {
     static_cast<uint8_t *>(src_buffer_s)[i] = (i + 1 & 0xFF);
   }
 
   lzt::set_argument_value(kernel, 0, sizeof(dest_buffer_d), &dest_buffer_d);
   lzt::set_argument_value(kernel, 1, sizeof(src_buffer_d), &src_buffer_d);
+  lzt::set_argument_value(kernel, 2, sizeof(loop_counter_d), &loop_counter_d);
+  lzt::set_argument_value(kernel, 3, sizeof(loop_max), &loop_max);
 
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
@@ -392,6 +403,8 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
                               nullptr);
   lzt::append_barrier(command_list);
   lzt::append_memory_copy(command_list, dest_buffer_s, dest_buffer_d, size);
+  lzt::append_memory_copy(command_list, loop_counter_s, loop_counter_d,
+                          sizeof(loop_counter_d));
   lzt::close_command_list(command_list);
 
   LOG_DEBUG << "[Application] launching execution long_kernel";
@@ -399,15 +412,21 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   lzt::synchronize(command_queue, UINT64_MAX);
 
   // validation
-  for (size_t i = 0; i < size; i++) {
+  // skip buffer[0] since some tests force it to 0 to break the loop
+  for (size_t i = 1; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(dest_buffer_s)[i],
               static_cast<uint8_t *>(src_buffer_s)[i]);
-
-    if (::testing::Test::HasFailure()) {
-      exit(1);
-    }
   }
-  std::cout << std::endl;
+
+  EXPECT_LT(*(static_cast<unsigned long *>(loop_counter_s)), loop_max);
+  LOG_DEBUG << "[Application] GPU Kernel looped "
+            << *(static_cast<unsigned long *>(loop_counter_s)) << " out of "
+            << loop_max;
+
+  if (::testing::Test::HasFailure()) {
+    FAIL() << "[Application] Sanity check did not pass";
+    exit(1);
+  }
 
   // cleanup
   lzt::free_memory(context, dest_buffer_s);

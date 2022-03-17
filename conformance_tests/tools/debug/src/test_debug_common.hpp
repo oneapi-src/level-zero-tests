@@ -47,6 +47,7 @@ typedef enum {
 typedef struct {
   bool debugger_signal;
   bool debugee_signal;
+  uint64_t gpu_buffer_address;
 } debug_signals_t;
 
 class process_synchro {
@@ -70,9 +71,13 @@ public:
                               ->debugger_signal);
       debugee_signal = &(static_cast<debug_signals_t *>(region->get_address())
                              ->debugee_signal);
+      gpu_buffer_address =
+          &(static_cast<debug_signals_t *>(region->get_address())
+                ->gpu_buffer_address);
 
       *debugger_signal = false;
       *debugee_signal = false;
+      *gpu_buffer_address = 0;
 
       bi::named_mutex::remove("debugger_mutex");
       mutex = new bi::named_mutex(bi::create_only, "debugger_mutex");
@@ -94,6 +99,9 @@ public:
                               ->debugger_signal);
       debugee_signal = &(static_cast<debug_signals_t *>(region->get_address())
                              ->debugee_signal);
+      gpu_buffer_address =
+          &(static_cast<debug_signals_t *>(region->get_address())
+                ->gpu_buffer_address);
     }
   }
 
@@ -126,6 +134,17 @@ public:
     condition->notify_all();
   }
 
+  // To be used by application only:
+  void update_gpu_buffer_address(const uint64_t &gpu_address) {
+    if (!enabled)
+      return;
+    LOG_DEBUG << "[Application] Updating gpu buffer address:" << std::hex
+              << gpu_address;
+    mutex->lock();
+    *gpu_buffer_address = gpu_address;
+    mutex->unlock();
+  }
+
   // To be used by Debugger only:
   void notify_attach() {
     if (!enabled)
@@ -144,6 +163,17 @@ public:
     LOG_INFO << "[Debugger] Waiting for Application to notify";
     bi::scoped_lock<bi::named_mutex> lock(*mutex);
     condition->wait(lock, [&] { return *debugee_signal; });
+    LOG_INFO << "[Debugger] Received Application notification proceeding";
+  }
+
+  // To be used by Debugger only:
+  bool get_app_gpu_buffer_address(uint64_t &gpu_address) {
+    if ((!enabled) || (*gpu_buffer_address == 0))
+      return false;
+    mutex->lock();
+    gpu_address = *gpu_buffer_address;
+    mutex->unlock();
+    return true;
   }
 
 private:
@@ -152,6 +182,7 @@ private:
   bi::named_condition *condition;
   bool *debugger_signal;
   bool *debugee_signal;
+  uint64_t *gpu_buffer_address;
   bool enabled;
 };
 

@@ -5,11 +5,12 @@
  * SPDX-License-Identifier: MIT
  *
  */
-kernel void long_kernel(global uchar *dst, global uchar *src) {
+kernel void long_kernel(global uchar *dst, global uchar *src,
+                        global ulong *loop_count, ulong max) {
   uint gid = get_global_id(0);
-  bool exit_flag = false;
+  uint gsize = get_global_size(0);
+  int mid = gsize / 2;
 
-  ulong max = 99900000;
   ulong loop = 0;
   while (loop < max && src[0] != 0x00) {
     dst[gid] = (char)(gid + 2 & 0xff);
@@ -17,9 +18,11 @@ kernel void long_kernel(global uchar *dst, global uchar *src) {
   }
   dst[gid] = src[gid];
 
-  if (gid == 0) {
-    printf(
-        "[GPU kernel] Gid:%d Hello src[gid] %d, after looping %lu out of %lu\n",
-        gid, src[gid], loop, max);
+  *loop_count = loop;
+
+  if ((gid == 0) || (gid == mid) || (gid == (gsize - 1))) {
+    printf("[GPU kernel] Gid:%d src[%d]=%d size=%d , after looping %lu out of "
+           "%lu\n",
+           gid, gid, src[gid], gsize, loop, max);
   }
 }

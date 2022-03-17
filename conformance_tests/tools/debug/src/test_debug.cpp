@@ -710,9 +710,10 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
           temp_thread.subslice == saved_thread.subslice &&
           temp_thread.eu == saved_thread.eu &&
           temp_thread.thread == saved_thread.thread) {
+
+        debug_helper.terminate();
         // test successful, exit
         lzt::debug_detach(debug_session);
-        debug_helper.terminate();
         result = 1;
       }
       break;
@@ -728,8 +729,8 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
         if (saved_threads.empty()) {
           LOG_DEBUG
               << "[Debugger] All previously saved threads were stopped again";
-          lzt::debug_detach(debug_session);
           debug_helper.terminate();
+          lzt::debug_detach(debug_session);
           result = 1;
         }
       }
@@ -823,8 +824,8 @@ void zetDebugEventReadTest::run_advanced_test(
       switch (test_type) {
       case LONG_RUNNING_KERNEL_INTERRUPTED: {
         if (::testing::Test::HasFailure()) {
-          lzt::debug_detach(debug_session);
           debug_helper.terminate();
+          lzt::debug_detach(debug_session);
           FAIL() << "[Debugger] Failed to receive either stop or unavailable "
                     "result after "
                     "interrupting threads";
@@ -1035,9 +1036,10 @@ void zetDebugMemAccessTest::attachAndGetModuleEvent(
 
     if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
       LOG_INFO << "[Debugger] ZET_DEBUG_EVENT_TYPE_MODULE_LOAD."
-               << " ISA load address: " << debug_event.info.module.load
-               << " ELF begin: " << debug_event.info.module.moduleBegin
-               << " ELF end: " << debug_event.info.module.moduleEnd;
+               << " ISA load address: " << std::hex
+               << debug_event.info.module.load << " ELF begin: " << std::hex
+               << debug_event.info.module.moduleBegin
+               << " ELF end: " << std::hex << debug_event.info.module.moduleEnd;
       EXPECT_TRUE(debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK);
       if (debug_event.info.module.load) {
         module_loaded = true;
@@ -1157,34 +1159,61 @@ TEST_F(
       lzt::debug_ack_event(debug_session, &module_event);
     }
 
+    uint64_t gpu_buffer_va = 0;
+    synchro->wait_for_application();
+    if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
+      FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
+      debug_helper.terminate();
+      lzt::debug_detach(debug_session);
+    }
+    LOG_INFO << "[Debugger] Accessing application GPU buffer VA: " << std::hex
+             << gpu_buffer_va;
+
     ze_device_thread_t thread;
     thread.slice = UINT32_MAX;
     thread.subslice = UINT32_MAX;
     thread.eu = UINT32_MAX;
     thread.thread = UINT32_MAX;
 
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(5));
     LOG_INFO << "[Debugger] Interrupting all threads";
     lzt::debug_interrupt(debug_session, thread);
     std::vector<ze_device_thread_t> stopped_threads;
     if (find_stopped_threads(debug_session, device, stopped_threads)) {
 
-      LOG_INFO << "[Debugger] Reading/Writing from interrupted threads";
+      zet_debug_memory_space_desc_t desc;
+      desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+      uint64_t sizeToRead = 512;
+      uint8_t *buffer = (uint8_t *)malloc(sizeToRead);
+
+      desc.address = gpu_buffer_va;
+
+      LOG_INFO << "[Debugger] Reading/Writing on interrupted threads";
       for (auto &stopped_thread : stopped_threads) {
         print_thread("[Debugger] Reading and writting from Stopped thread ",
                      stopped_thread);
-        thread.slice = stopped_thread.slice;
-        thread.subslice = stopped_thread.subslice;
-        thread.eu = stopped_thread.eu;
-        thread.thread = stopped_thread.thread;
-        readWriteModuleMemory(debug_session, thread, module_event);
+
+        readWriteModuleMemory(debug_session, stopped_thread, module_event);
+
+        lzt::debug_read_memory(debug_session, stopped_thread, desc, sizeToRead,
+                               buffer);
+
+        // set buffer[0] to 0 to break the loop. Seel debug_loop.cl
+        buffer[0] = 0;
+        lzt::debug_write_memory(debug_session, thread, desc, sizeToRead,
+                                buffer);
       }
+
+      LOG_INFO << "[Debugger] resuming interrupted threads";
+      lzt::debug_resume(debug_session, thread);
+      free(buffer);
     } else {
       FAIL() << "[Debugger] Could not find a stopped thread";
     }
 
+    debug_helper.wait();
+    ASSERT_EQ(debug_helper.exit_code(), 0);
     lzt::debug_detach(debug_session);
-    debug_helper.terminate();
   }
 }
 
