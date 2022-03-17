@@ -1183,7 +1183,7 @@ TEST_F(
 
       zet_debug_memory_space_desc_t desc;
       desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
-      uint64_t sizeToRead = 512;
+      int sizeToRead = 512;
       uint8_t *buffer = (uint8_t *)malloc(sizeToRead);
 
       desc.address = gpu_buffer_va;
@@ -1198,7 +1198,15 @@ TEST_F(
         lzt::debug_read_memory(debug_session, stopped_thread, desc, sizeToRead,
                                buffer);
 
-        // set buffer[0] to 0 to break the loop. Seel debug_loop.cl
+        // Skip the first byte since the first thread read will
+        // see it 1 and others will see 0 after setting buffer[0]=0 below
+        int i = 1;
+        for (i = 1; i < sizeToRead; i++) {
+          // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
+          EXPECT_EQ(buffer[i], (i + 1 & 0xFF));
+        }
+
+        // set buffer[0] to 0 to break the loop. See debug_loop.cl
         buffer[0] = 0;
         lzt::debug_write_memory(debug_session, thread, desc, sizeToRead,
                                 buffer);
