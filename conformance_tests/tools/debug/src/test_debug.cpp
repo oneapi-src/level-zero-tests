@@ -53,12 +53,13 @@ TEST(
 
 class zetDebugAttachDetachTest : public zetDebugBaseSetup {
 protected:
-  void run_test(std::vector<ze_device_handle_t> devices, bool use_sub_devices,
+  void run_test(std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
                 bool reattach);
 };
 
-void zetDebugAttachDetachTest::run_test(std::vector<ze_device_handle_t> devices,
-                                        bool use_sub_devices, bool reattach) {
+void zetDebugAttachDetachTest::run_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
+    bool reattach) {
 
   for (auto &device : devices) {
     if (!is_debug_supported(device))
@@ -117,17 +118,7 @@ TEST_F(
 TEST_F(
     zetDebugAttachDetachTest,
     GivenSubDeviceSupportsDebugAttachWhenAttachingThenAttachAndDetachIsSuccessful) {
-
-  auto driver = lzt::get_default_driver();
-  auto devices = lzt::get_devices(driver);
-
-  std::vector<ze_device_handle_t> all_sub_devices;
-  for (auto &device : devices) {
-    auto sub_devices = lzt::get_ze_sub_devices(device);
-    all_sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
-                           sub_devices.end());
-  }
-
+  auto all_sub_devices = lzt::get_all_sub_devices();
   run_test(all_sub_devices, true, false);
 }
 
@@ -140,18 +131,29 @@ TEST_F(zetDebugAttachDetachTest,
   run_test(devices, false, true);
 }
 
+TEST_F(
+    zetDebugAttachDetachTest,
+    GivenSubDevicePreviousDebugSessionDetachedWhenAttachingThenReAttachIsSuccessful) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_test(all_sub_devices, true, true);
+}
+
 class zetDebugEventReadTest : public zetDebugAttachDetachTest {
 protected:
   void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
   void TearDown() override { zetDebugAttachDetachTest::TearDown(); }
-  void run_test(std::vector<ze_device_handle_t> devices, bool use_sub_devices,
+  void run_test(std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
                 debug_test_type_t test_type);
-  void run_advanced_test(std::vector<ze_device_handle_t> devices,
+  void run_advanced_test(std::vector<ze_device_handle_t> &devices,
                          bool use_sub_devices, debug_test_type_t test_type,
                          num_threads_t threads = SINGLE_THREAD);
+
+  void
+  run_attach_after_module_created_test(std::vector<ze_device_handle_t> &devices,
+                                       bool use_sub_devices);
 };
 
-void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> devices,
+void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
                                      bool use_sub_devices,
                                      debug_test_type_t test_type) {
   for (auto &device : devices) {
@@ -239,17 +241,7 @@ TEST_F(
 TEST_F(
     zetDebugEventReadTest,
     GivenDebugCapableSubDeviceWhenProcessIsBeingDebuggedThenCorrectEventsAreRead) {
-
-  auto driver = lzt::get_default_driver();
-  auto devices = lzt::get_devices(driver);
-
-  std::vector<ze_device_handle_t> all_sub_devices;
-  for (auto &device : devices) {
-    auto sub_devices = lzt::get_ze_sub_devices(device);
-    all_sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
-                           sub_devices.end());
-  }
-
+  auto all_sub_devices = lzt::get_all_sub_devices();
   run_test(all_sub_devices, true, BASIC);
 }
 
@@ -259,6 +251,12 @@ TEST_F(zetDebugEventReadTest,
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
   run_test(devices, false, MULTIPLE_MODULES_CREATED);
+}
+
+TEST_F(zetDebugEventReadTest,
+       GivenSubDeviceWhenCreatingMultipleModulesThenMultipleEventsReceived) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_test(all_sub_devices, true, MULTIPLE_MODULES_CREATED);
 }
 
 typedef enum {
@@ -765,7 +763,7 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
 }
 
 void zetDebugEventReadTest::run_advanced_test(
-    std::vector<ze_device_handle_t> devices, bool use_sub_devices,
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
     debug_test_type_t test_type, num_threads_t threads) {
 
   std::string test_options = "";
@@ -885,19 +883,15 @@ void zetDebugEventReadTest::run_advanced_test(
   }
 }
 
-TEST_F(zetDebugEventReadTest,
-       GivenDeviceWhenThenAttachingAfterModuleCreatedThenEventReceived) {
-
-  auto driver = lzt::get_default_driver();
-  auto devices = lzt::get_devices(driver);
-
+void zetDebugEventReadTest::run_attach_after_module_created_test(
+    std::vector<zet_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
 
     if (!is_debug_supported(device))
       continue;
 
     auto debug_helper =
-        launch_process(ATTACH_AFTER_MODULE_CREATED, device, false);
+        launch_process(ATTACH_AFTER_MODULE_CREATED, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
     debug_config.pid = debug_helper.id();
 
@@ -938,6 +932,21 @@ TEST_F(zetDebugEventReadTest,
   }
 }
 
+TEST_F(zetDebugEventReadTest,
+       GivenDeviceWhenThenAttachingAfterModuleCreatedThenEventReceived) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  run_attach_after_module_created_test(devices, false);
+}
+
+TEST_F(zetDebugEventReadTest,
+       GivenSubDeviceWhenThenAttachingAfterModuleCreatedThenEventReceived) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_attach_after_module_created_test(all_sub_devices, true);
+}
+
 TEST_F(
     zetDebugEventReadTest,
     GivenDebugEnabledDeviceWhenAttachingAfterCreatingAndDestroyingModuleThenNoModuleEventReceived) {
@@ -950,12 +959,27 @@ TEST_F(
 
 TEST_F(
     zetDebugEventReadTest,
+    GivenDebugEnabledSubDeviceWhenAttachingAfterCreatingAndDestroyingModuleThenNoModuleEventReceived) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_advanced_test(all_sub_devices, true, ATTACH_AFTER_MODULE_DESTROYED);
+}
+
+TEST_F(
+    zetDebugEventReadTest,
     GivenDebugAttachedWhenResumingAndInterruptingKernelSingleThreadThenStopEventReceivedAndThreadStopped) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
   run_advanced_test(devices, false, LONG_RUNNING_KERNEL_INTERRUPTED,
+                    SINGLE_THREAD);
+}
+
+TEST_F(
+    zetDebugEventReadTest,
+    GivenSubDeviceDebugAttachedWhenResumingAndInterruptingKernelSingleThreadThenStopEventReceivedAndThreadStopped) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_advanced_test(all_sub_devices, true, LONG_RUNNING_KERNEL_INTERRUPTED,
                     SINGLE_THREAD);
 }
 
@@ -972,12 +996,28 @@ TEST_F(
 
 TEST_F(
     zetDebugEventReadTest,
+    GivenSubDeviceDebugAttachedWhenResumingAndInterruptingKernelGroupOfThreadsThenStopEventReceivedAndThreadsStopped) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_advanced_test(all_sub_devices, true, LONG_RUNNING_KERNEL_INTERRUPTED,
+                    GROUP_OF_THREADS);
+}
+
+TEST_F(
+    zetDebugEventReadTest,
     GivenDebugAttachedWhenResumingAndInterruptingKernelAllThreadsThenStopEventReceivedAndThreadsStopped) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
   run_advanced_test(devices, false, LONG_RUNNING_KERNEL_INTERRUPTED,
+                    ALL_THREADS);
+}
+
+TEST_F(
+    zetDebugEventReadTest,
+    GivenSubDeviceDebugAttachedWhenResumingAndInterruptingKernelAllThreadsThenStopEventReceivedAndThreadsStopped) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_advanced_test(all_sub_devices, true, LONG_RUNNING_KERNEL_INTERRUPTED,
                     ALL_THREADS);
 }
 
@@ -990,6 +1030,13 @@ TEST_F(zetDebugEventReadTest,
   run_advanced_test(devices, false, THREAD_UNAVAILABLE);
 }
 
+TEST_F(
+    zetDebugEventReadTest,
+    GivenSubDeviceThreadUnavailableWhenDebugEnabledThenThreadUnavailableEventRead) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_advanced_test(all_sub_devices, true, THREAD_UNAVAILABLE);
+}
+
 class zetDebugMemAccessTest : public zetDebugAttachDetachTest {
 protected:
   void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
@@ -999,6 +1046,11 @@ protected:
   void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
                              const ze_device_thread_t &thread,
                              zet_debug_event_t &module_event);
+  void run_module_isa_elf_test(std::vector<ze_device_handle_t> &devices,
+                               bool use_sub_devices);
+  void
+  run_module_read_write_buffer_test(std::vector<ze_device_handle_t> &devices,
+                                    bool use_sub_devices);
 
   zet_debug_session_handle_t debug_session;
   static constexpr uint8_t bufferSize = 16;
@@ -1107,17 +1159,14 @@ void zetDebugMemAccessTest::readWriteModuleMemory(
   }
 }
 
-TEST_F(zetDebugMemAccessTest,
-       GivenDebuggerAttachedAndModuleLoadedAccessISAAndELFMemory) {
-  auto driver = lzt::get_default_driver();
-  auto devices = lzt::get_devices(driver);
-
+void zetDebugMemAccessTest::run_module_isa_elf_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
 
     if (!is_debug_supported(device))
       continue;
 
-    auto debug_helper = launch_process(BASIC, device, false);
+    auto debug_helper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);
     CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
@@ -1136,18 +1185,27 @@ TEST_F(zetDebugMemAccessTest,
   }
 }
 
-TEST_F(
-    zetDebugMemAccessTest,
-    GivenDebuggerAttachedAndModuleLoadedWhenThreadStoppedThenDebuggerCanReadWriteToAllocatedBuffersInTheContextOfThread) {
+TEST_F(zetDebugMemAccessTest,
+       GivenDebuggerAttachedAndModuleLoadedAccessISAAndELFMemory) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
+  run_module_isa_elf_test(devices, false);
+}
 
+TEST_F(zetDebugMemAccessTest,
+       GivenDebuggerAttachedSubDeviceAndModuleLoadedAccessISAAndELFMemory) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_module_isa_elf_test(all_sub_devices, true);
+}
+
+void zetDebugMemAccessTest::run_module_read_write_buffer_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
     if (!is_debug_supported(device))
       continue;
 
-    auto debug_helper =
-        launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device, false);
+    auto debug_helper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
+                                       use_sub_devices);
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);
     CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
@@ -1225,12 +1283,22 @@ TEST_F(
   }
 }
 
-TEST(zetDebugRegisterSetTest,
-     GivenDeviceWhenGettingRegisterSetPropertiesThenValidPropertiesReturned) {
-
+TEST_F(
+    zetDebugMemAccessTest,
+    GivenDebuggerAttachedAndModuleLoadedWhenThreadStoppedThenDebuggerCanReadWriteToAllocatedBuffersInTheContextOfThread) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
+  run_module_read_write_buffer_test(devices, false);
+}
 
+TEST_F(
+    zetDebugMemAccessTest,
+    GivenDebuggerAttachedSubDeviceAndModuleLoadedWhenThreadStoppedThenDebuggerCanReadWriteToAllocatedBuffersInTheContextOfThread) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_module_read_write_buffer_test(all_sub_devices, true);
+}
+
+void run_register_set_properties_test(std::vector<ze_device_handle_t> devices) {
   for (auto &device : devices) {
     auto properties = lzt::get_register_set_properties(device);
 
@@ -1243,24 +1311,35 @@ TEST(zetDebugRegisterSetTest,
   }
 }
 
+TEST(zetDebugRegisterSetTest,
+     GivenDeviceWhenGettingRegisterSetPropertiesThenValidPropertiesReturned) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  run_register_set_properties_test(devices);
+}
+
+TEST(
+    zetDebugRegisterSetTest,
+    GivenSubDeviceWhenGettingRegisterSetPropertiesThenValidPropertiesReturned) {
+  run_register_set_properties_test(lzt::get_all_sub_devices());
+}
+
 class zetDebugReadWriteRegistersTest : public zetDebugMemAccessTest {
 protected:
   void SetUp() override { zetDebugMemAccessTest::SetUp(); }
   void TearDown() override { zetDebugMemAccessTest::TearDown(); }
+  void run_read_write_registers_test(std::vector<ze_device_handle_t> &devices,
+                                     bool use_sub_devices);
 };
 
-TEST_F(
-    zetDebugReadWriteRegistersTest,
-    GivenActiveDebugSessionWhenReadingAndWritingRegistersThenValidDataReadAndDataWrittenSuccessfully) {
-  auto driver = lzt::get_default_driver();
-  auto devices = lzt::get_devices(driver);
-
+void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
 
     if (!is_debug_supported(device))
       continue;
-    auto debug_helper =
-        launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device, false);
+    auto debug_helper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
+                                       use_sub_devices);
 
     zet_debug_event_t module_event;
     attachAndGetModuleEvent(debug_helper.id(), device, module_event);
@@ -1350,6 +1429,21 @@ TEST_F(
 
     lzt::debug_resume(debug_session, device_threads);
   }
+}
+
+TEST_F(
+    zetDebugReadWriteRegistersTest,
+    GivenActiveDebugSessionWhenReadingAndWritingRegistersThenValidDataReadAndDataWrittenSuccessfully) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  run_read_write_registers_test(devices, false);
+}
+
+TEST_F(
+    zetDebugReadWriteRegistersTest,
+    GivenActiveDebugSessionWhenReadingAndWritingSubDeviceRegistersThenValidDataReadAndDataWrittenSuccessfully) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_read_write_registers_test(all_sub_devices, true);
 }
 
 } // namespace

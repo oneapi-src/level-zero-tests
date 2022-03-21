@@ -30,6 +30,7 @@ ze_context_handle_t create_context_ex(ze_driver_handle_t driver);
 void destroy_context(ze_context_handle_t context);
 std::vector<ze_device_handle_t> get_devices(ze_driver_handle_t driver);
 std::vector<ze_driver_handle_t> get_all_driver_handles();
+std::vector<ze_device_handle_t> get_all_sub_devices();
 
 uint32_t get_device_count(ze_driver_handle_t driver);
 uint32_t get_driver_handle_count();

@@ -216,6 +216,20 @@ std::vector<ze_device_handle_t> get_devices(ze_driver_handle_t driver) {
   return devices;
 }
 
+std::vector<ze_device_handle_t> get_all_sub_devices() {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  std::vector<ze_device_handle_t> all_sub_devices;
+  for (auto &device : devices) {
+    auto sub_devices = lzt::get_ze_sub_devices(device);
+    all_sub_devices.insert(all_sub_devices.end(), sub_devices.begin(),
+                           sub_devices.end());
+  }
+
+  return all_sub_devices;
+}
+
 std::string to_string(const ze_api_version_t version) {
   std::stringstream ss;
   ss << ZE_MAJOR_VERSION(version) << "." << ZE_MINOR_VERSION(version);
