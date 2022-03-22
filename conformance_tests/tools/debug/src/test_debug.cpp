@@ -1242,7 +1242,7 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
       zet_debug_memory_space_desc_t desc;
       desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
       int sizeToRead = 512;
-      uint8_t *buffer = (uint8_t *)malloc(sizeToRead);
+      uint8_t *buffer = new uint8_t[sizeToRead];
 
       desc.address = gpu_buffer_va;
 
@@ -1272,7 +1272,7 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
 
       LOG_INFO << "[Debugger] resuming interrupted threads";
       lzt::debug_resume(debug_session, thread);
-      free(buffer);
+      delete[] buffer;
     } else {
       FAIL() << "[Debugger] Could not find a stopped thread";
     }
