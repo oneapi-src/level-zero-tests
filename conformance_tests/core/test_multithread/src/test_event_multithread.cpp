@@ -21,7 +21,7 @@ namespace {
 
 constexpr size_t num_threads = 16;
 constexpr size_t num_events = 16;
-constexpr size_t num_iterations = 2000;
+constexpr size_t num_iterations = 200;
 bool signal_device_event = true;
 bool signal_host_event = true;
 uint32_t thread_count = 0;
