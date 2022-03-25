@@ -24,7 +24,7 @@ namespace {
 
 constexpr size_t size_ = 1024;
 constexpr size_t num_threads = 16;
-constexpr size_t thread_iters = 2000;
+constexpr size_t thread_iters = 200;
 constexpr size_t size = 5;
 std::condition_variable cv;
 size_t num_count = 0;
