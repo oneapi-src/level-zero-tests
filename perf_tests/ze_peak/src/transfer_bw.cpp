@@ -317,6 +317,9 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
 #else
   local_memory_optimized = aligned_alloc(64, local_memory_size);
 #endif
+  if (!local_memory_optimized) {
+    throw std::runtime_error("Failed to allocate aligned memory");
+  }
   float *local_memory = reinterpret_cast<float *>(local_memory_optimized);
   for (uint32_t i = 0; i < static_cast<uint32_t>(number_of_items); i++) {
     local_memory[i] = static_cast<float>(i);

@@ -78,6 +78,12 @@ void ZeImageCopy::test_initialize(void) {
   dstBuffer = static_cast<uint8_t *>(aligned_alloc(64, buffer_size));
 #endif
 
+  if (!srcBuffer || !dstBuffer) {
+    std::cerr << "ERROR : " << __FILE__ << ":" << __LINE__
+              << " Failed to allocate aligned memory" << std::endl;
+    std::terminate();
+  }
+
   for (size_t i = 0; i < this->buffer_size; ++i) {
     srcBuffer[i] = static_cast<uint8_t>(i);
     dstBuffer[i] = 0xff;
