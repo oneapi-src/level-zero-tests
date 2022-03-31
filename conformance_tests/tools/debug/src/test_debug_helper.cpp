@@ -433,6 +433,8 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   lzt::free_memory(context, dest_buffer_d);
   lzt::free_memory(context, src_buffer_s);
   lzt::free_memory(context, src_buffer_d);
+  lzt::free_memory(context, loop_counter_s);
+  lzt::free_memory(context, loop_counter_d);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
   lzt::destroy_command_list(command_list);
