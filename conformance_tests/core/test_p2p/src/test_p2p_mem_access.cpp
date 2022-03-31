@@ -19,9 +19,10 @@ namespace lzt = level_zero_tests;
 namespace {
 enum MemAccessTestType { ATOMIC, CONCURRENT, CONCURRENT_ATOMIC };
 
-class zeP2PMemAccessTests : public lzt::zeEventPoolTests,
-                            public ::testing::WithParamInterface<
-                                std::tuple<std::string, ze_memory_type_t>> {
+class zeP2PMemAccessTests
+    : public lzt::zeEventPoolTests,
+      public ::testing::WithParamInterface<
+          std::tuple<std::string, ze_memory_type_t, int>> {
 protected:
   void SetUp() override {
 
@@ -74,7 +75,7 @@ protected:
       instance.dev_grp = driver;
       instance.device_mem_local = nullptr;
       instance.device_mem_remote = nullptr;
-      instance.shared_mem = nullptr;
+      instance.device_mem_validation = nullptr;
       instance.cmd_list = nullptr;
       instance.cmd_q = nullptr;
       instance.module = nullptr;
@@ -143,12 +144,12 @@ protected:
 
     if ((num > 1) && (i == (num - 1))) {
       lzt::append_memory_copy(dev_access_[i].cmd_list,
-                              dev_access_[i].device_mem_local, p_init_val,
-                              sizeof(int), nullptr);
+                              (int *)dev_access_[i].device_mem_local,
+                              p_init_val, sizeof(int), nullptr);
     } else if (type != CONCURRENT_ATOMIC) {
       lzt::append_memory_copy(dev_access_[i].cmd_list,
-                              dev_access_[i].device_mem_remote, p_init_val,
-                              sizeof(int), nullptr);
+                              (int *)dev_access_[i].device_mem_remote,
+                              p_init_val, sizeof(int), nullptr);
     }
 
     if (sync) {
@@ -193,12 +194,16 @@ protected:
     }
     if (i == 0) {
       lzt::append_memory_copy(
-          dev_access_[i].cmd_list, dev_access_[i].shared_mem,
+          dev_access_[i].cmd_list, dev_access_[i].device_mem_validation,
           dev_access_[i].device_mem_remote, num * sizeof(int), nullptr);
 
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeCommandListAppendBarrier(dev_access_[i].cmd_list, nullptr, 0,
                                            nullptr));
+
+      lzt::append_memory_copy(dev_access_[i].cmd_list, host_mem_validation,
+                              dev_access_[i].device_mem_validation,
+                              num * sizeof(int), nullptr);
     }
 
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(dev_access_[i].cmd_list));
@@ -236,13 +241,14 @@ protected:
     } else {
       FAIL() << "Unexpected memory type";
     }
-    dev_access_[0].shared_mem = lzt::allocate_shared_memory(
-        (num * sizeof(int)), 1, 0, 0, dev_access_[0].dev);
-    memset(dev_access_[0].shared_mem, 0xff, num * sizeof(int));
+    dev_access_[0].device_mem_validation = lzt::allocate_device_memory(
+        (num * sizeof(int)), 1, 0, dev_access_[0].dev,
+        lzt::get_default_context());
+    host_mem_validation = lzt::allocate_host_memory(num * sizeof(int), 1);
     dev_access_[0].module = lzt::create_module(dev_access_[0].dev, module_path);
     if (type == CONCURRENT) {
       dev_access_[0].group_size_x = 1;
-      dev_access_[0].group_count_x = 100;
+      dev_access_[0].group_count_x = 1;
     }
     dev_access_[0].function = create_function(
         dev_access_[0].module, kernel_name_, dev_access_[0].group_size_x,
@@ -274,14 +280,14 @@ protected:
             static_cast<void *>(static_cast<uint8_t *>(char_src));
         dev_access_[i].function = create_function(
             dev_access_[i].module, kernel_name_, dev_access_[i].group_size_x,
-            (int *)dev_access_[i].device_mem_remote,
+            static_cast<int *>(dev_access_[i].device_mem_remote),
             dev_access_[i].kernel_add_val);
       } else {
         dev_access_[i].device_mem_local =
             static_cast<void *>(static_cast<uint8_t *>(char_src));
         dev_access_[i].function = create_function(
             dev_access_[i].module, kernel_name_, dev_access_[i].group_size_x,
-            (int *)dev_access_[i].device_mem_local,
+            static_cast<int *>(dev_access_[i].device_mem_local),
             dev_access_[i].kernel_add_val);
       }
 
@@ -323,7 +329,7 @@ protected:
     ze_driver_handle_t dev_grp;
     void *device_mem_local;
     void *device_mem_remote;
-    void *shared_mem;
+    void *device_mem_validation;
     int init_val;
     int kernel_add_val;
     uint32_t group_size_x;
@@ -339,6 +345,7 @@ protected:
   std::vector<DevAccess> dev_access_;
   std::vector<DevAccess> dev_access_scan_;
   std::string kernel_name_;
+  void *host_mem_validation;
   uint32_t get_devices_;
   ze_memory_type_t memory_type_;
   bool skip = false;
@@ -398,21 +405,21 @@ TEST_P(zeP2PMemAccessTestsAtomicAccess,
 
   run_test(1, false, ATOMIC);
 
-  int *dev0_int = (static_cast<int *>(dev_access_[0].shared_mem));
+  int *dev0_int = (static_cast<int *>(dev_access_[0].device_mem_validation));
   LOG_INFO << "OUTPUT = " << dev0_int[0];
   EXPECT_EQ(dev_access_[0].init_val + dev_access_[0].group_count_x *
                                           dev_access_[0].group_size_x *
                                           dev_access_[0].kernel_add_val,
             dev0_int[0]);
   dev_access_.clear();
-  lzt::free_memory(dev_access_[0].shared_mem);
+  lzt::free_memory(dev_access_[0].device_mem_validation);
 }
 
-INSTANTIATE_TEST_CASE_P(
-    TestP2PAtomicAccess, zeP2PMemAccessTestsAtomicAccess,
-    testing::Combine(testing::Values("atomic_access"),
-                     testing::Values(ZE_MEMORY_TYPE_DEVICE,
-                                     ZE_MEMORY_TYPE_SHARED)));
+INSTANTIATE_TEST_CASE_P(TestP2PAtomicAccess, zeP2PMemAccessTestsAtomicAccess,
+                        testing::Combine(testing::Values("atomic_access"),
+                                         testing::Values(ZE_MEMORY_TYPE_DEVICE,
+                                                         ZE_MEMORY_TYPE_SHARED),
+                                         testing::Range(2, 2)));
 
 class zeP2PMemAccessTestsConcurrentAccess : public zeP2PMemAccessTests {};
 
@@ -423,6 +430,8 @@ TEST_P(zeP2PMemAccessTestsConcurrentAccess,
   }
   kernel_name_ = std::get<0>(GetParam());
   memory_type_ = std::get<1>(GetParam());
+  int num_concurrent_devices = std::get<2>(GetParam());
+
   uint32_t base_index = 0;
   uint32_t concurrent_index = 0;
   // Search for compatible access
@@ -432,7 +441,7 @@ TEST_P(zeP2PMemAccessTestsConcurrentAccess,
       if ((lzt::can_access_peer(dev_access_scan_[j].dev,
                                 dev_access_scan_[i].dev) &&
            (dev_access_scan_[i]
-                .dev_mem_access_properties.deviceAllocCapabilities &
+                .dev_mem_access_properties.sharedCrossDeviceAllocCapabilities &
             ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT))) {
         dev_access_.push_back(dev_access_scan_[j]);
         dev_access_.push_back(dev_access_scan_[i]);
@@ -463,27 +472,35 @@ TEST_P(zeP2PMemAccessTestsConcurrentAccess,
     }
   }
 
-  for (uint32_t num_concurrent = 2; num_concurrent <= dev_access_.size();
-       num_concurrent++) {
-    LOG_INFO << "Testing " << num_concurrent << " concurrent device access";
-
-    run_test(num_concurrent, true, CONCURRENT);
-    int *dev0_int = (static_cast<int *>(dev_access_[0].shared_mem));
-    for (uint32_t i = 0; i < num_concurrent; i++) {
-      LOG_INFO << "OUTPUT[" << i << "] = " << dev0_int[i];
-      EXPECT_EQ(dev_access_[i].init_val + dev_access_[i].group_count_x *
-                                              dev_access_[i].kernel_add_val,
-                dev0_int[i]);
-    }
-    lzt::free_memory(dev_access_[0].shared_mem);
+  if (dev_access_.size() < num_concurrent_devices) {
+    LOG_INFO << "WARNING:  Exiting as requested " << num_concurrent_devices
+             << "number of concurrent devices not available";
+    SUCCEED();
+    return;
   }
+
+  LOG_INFO << "Testing " << num_concurrent_devices
+           << " concurrent device access";
+
+  run_test(num_concurrent_devices, true, CONCURRENT);
+  int *dev0_int = (static_cast<int *>(host_mem_validation));
+  for (uint32_t i = 0; i < num_concurrent_devices; i++) {
+    LOG_INFO << "OUTPUT[" << i << "] = " << dev0_int[i];
+    EXPECT_EQ(dev_access_[i].init_val +
+                  dev_access_[i].group_count_x * dev_access_[i].kernel_add_val,
+              dev0_int[i]);
+  }
+
+  lzt::free_memory(host_mem_validation);
+  lzt::free_memory(dev_access_[0].device_mem_validation);
 }
 
-INSTANTIATE_TEST_CASE_P(
-    TestP2PConcurrentAccess, zeP2PMemAccessTestsConcurrentAccess,
-    testing::Combine(testing::Values("concurrent_access"),
-                     testing::Values(ZE_MEMORY_TYPE_DEVICE,
-                                     ZE_MEMORY_TYPE_SHARED)));
+INSTANTIATE_TEST_CASE_P(TestP2PConcurrentAccess,
+                        zeP2PMemAccessTestsConcurrentAccess,
+                        testing::Combine(testing::Values("concurrent_access"),
+                                         testing::Values(ZE_MEMORY_TYPE_DEVICE,
+                                                         ZE_MEMORY_TYPE_SHARED),
+                                         testing::Range(2, 20)));
 
 class zeP2PMemAccessTestsAtomicAndConcurrentAccess
     : public zeP2PMemAccessTests {};
@@ -498,6 +515,8 @@ TEST_P(
 
   kernel_name_ = std::get<0>(GetParam());
   memory_type_ = std::get<1>(GetParam());
+  int num_concurrent_devices = std::get<2>(GetParam());
+
   uint32_t base_index = 0;
   uint32_t concurrent_index = 0;
   // Search for compatible access
@@ -509,7 +528,7 @@ TEST_P(
       if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
           (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS) &&
           (dev_access_scan_[i]
-               .dev_mem_access_properties.deviceAllocCapabilities &
+               .dev_mem_access_properties.sharedCrossDeviceAllocCapabilities &
            ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC)) {
         dev_access_.push_back(dev_access_scan_[j]);
         dev_access_.push_back(dev_access_scan_[i]);
@@ -542,28 +561,33 @@ TEST_P(
     }
   }
 
-  for (uint32_t num_concurrent = 2; num_concurrent <= dev_access_.size();
-       num_concurrent++) {
-    LOG_INFO << "Testing " << num_concurrent
-             << " atomic concurrent device access";
-
-    run_test(num_concurrent, true, CONCURRENT_ATOMIC);
-    int *dev0_int = (static_cast<int *>(dev_access_[0].shared_mem));
-    // Concurrent Atomic test has all devices writing to same dev mem integer
-
-    LOG_INFO << "OUTPUT[0] = " << dev0_int[0];
-    EXPECT_EQ(num_concurrent * dev_access_[0].group_count_x *
-                  dev_access_[0].group_size_x * dev_access_[0].kernel_add_val,
-              dev0_int[0]);
-
-    lzt::free_memory(dev_access_[0].shared_mem);
+  if (dev_access_.size() < num_concurrent_devices) {
+    LOG_INFO << "WARNING:  Exiting as requested " << num_concurrent_devices
+             << "number of concurrent devices not available";
+    SUCCEED();
+    return;
   }
+
+  LOG_INFO << "Testing " << num_concurrent_devices
+           << " atomic concurrent device access";
+
+  run_test(num_concurrent_devices, true, CONCURRENT_ATOMIC);
+  int *dev0_int = (static_cast<int *>(host_mem_validation));
+  // Concurrent Atomic test has all devices writing to same dev mem integer
+
+  LOG_INFO << "OUTPUT[0] = " << dev0_int[0];
+  EXPECT_EQ(num_concurrent_devices * dev_access_[0].group_count_x *
+                dev_access_[0].group_size_x * dev_access_[0].kernel_add_val,
+            dev0_int[0]);
+
+  lzt::free_memory(host_mem_validation);
+  lzt::free_memory(dev_access_[0].device_mem_validation);
 }
 
-INSTANTIATE_TEST_CASE_P(
-    TestP2PAtomicAndConcurrentAccess,
-    zeP2PMemAccessTestsAtomicAndConcurrentAccess,
-    testing::Combine(testing::Values("atomic_access"),
-                     testing::Values(ZE_MEMORY_TYPE_DEVICE,
-                                     ZE_MEMORY_TYPE_SHARED)));
+INSTANTIATE_TEST_CASE_P(TestP2PAtomicAndConcurrentAccess,
+                        zeP2PMemAccessTestsAtomicAndConcurrentAccess,
+                        testing::Combine(testing::Values("atomic_access"),
+                                         testing::Values(ZE_MEMORY_TYPE_DEVICE,
+                                                         ZE_MEMORY_TYPE_SHARED),
+                                         testing::Range(2, 20)));
 } // namespace
