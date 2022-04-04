@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "test_harness/test_harness_fence.hpp"
+#include <thread>
 
 namespace level_zero_tests {
 
@@ -48,7 +49,16 @@ ze_result_t sync_fence(ze_fence_handle_t fence, uint64_t timeout) {
 
   ze_result_t result;
   auto fence_initial = fence;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, result = zeFenceHostSynchronize(fence, timeout));
+  int retry_count = 5;
+  while (retry_count > 0) {
+    result = zeFenceHostSynchronize(fence, timeout);
+    if (result != ZE_RESULT_NOT_READY) {
+      break;
+    }
+    retry_count--;
+    std::this_thread::yield();
+  }
+  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
   EXPECT_EQ(fence, fence_initial);
   return result;
 }
