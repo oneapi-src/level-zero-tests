@@ -15,6 +15,7 @@ import signal
 import level_zero_report_utils
 
 test_plan_generated = []
+binary_cwd = ""
 
 def IsListableDirPath(path: str):
     try:
@@ -29,7 +30,7 @@ def add_to_test_list(test_name: str,
                     test_feature_tag: str,
                     test_section: str,
                     test_feature: str,
-                    requested_types: str,
+                    requested_sections: str,
                     requested_features: str,
                     requested_regex: str,
                     exclude_features: str,
@@ -37,19 +38,10 @@ def add_to_test_list(test_name: str,
     already_exists = False
     checks_passed = True
 
-    if requested_types and checks_passed:
-        test_type_list = requested_types.split(",")
-        for test_type in test_type_list:
-            if re.search(test_type, test_feature_tag, re.IGNORECASE):
-                for i in range(len(test_plan_generated)):
-                    if test_name.__eq__(test_plan_generated[i][0]) != 0:
-                        already_exists = True
-                if not already_exists:
-                    checks_passed = True
-                    break
-                else:
-                    checks_passed = False
-            elif re.search(test_type, test_section, re.IGNORECASE):
+    if requested_sections and checks_passed:
+        test_section_list = requested_sections.split(",")
+        for test_section_requested in test_section_list:
+            if re.search(test_section_requested, test_section, re.IGNORECASE):
                 for i in range(len(test_plan_generated)):
                     if test_name.__eq__(test_plan_generated[i][0]) != 0:
                         already_exists = True
@@ -65,6 +57,15 @@ def add_to_test_list(test_name: str,
         feature_list = requested_features.split(",")
         for feature in feature_list:
             if re.search(feature, test_feature, re.IGNORECASE):
+                for i in range(len(test_plan_generated)):
+                    if test_name.__eq__(test_plan_generated[i][0]) != 0:
+                        already_exists = True
+                if not already_exists:
+                    checks_passed = True
+                    break
+                else:
+                    checks_passed = False
+            elif re.search(feature, test_feature_tag, re.IGNORECASE):
                 for i in range(len(test_plan_generated)):
                     if test_name.__eq__(test_plan_generated[i][0]) != 0:
                         already_exists = True
@@ -120,7 +121,7 @@ def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
         stderr_log = "_stderr.log"
         fout = open(stdout_log, 'a+')
         ferr = open(stderr_log, 'a+')
-        test_run = subprocess.Popen([test_plan[i][2], test_plan[i][1]], stdout=fout, stderr=ferr, start_new_session=True)
+        test_run = subprocess.Popen([test_plan[i][2], test_plan[i][1]], stdout=fout, stderr=ferr, start_new_session=True, cwd=binary_cwd)
         try:
             failed = 0
             unsupported = 0
@@ -277,7 +278,7 @@ def generate_test_case(binary_and_path: str,
                     suite_name: str,
                     test_binary: str,
                     line: str,
-                    requested_types: str,
+                    requested_sections: str,
                     requested_features: str,
                     requested_regex: str,
                     exclude_features: str,
@@ -291,11 +292,11 @@ def generate_test_case(binary_and_path: str,
         if (test_section == "None"):
             test_section= test_section_by_feature
         test_feature_tag = level_zero_report_utils.assign_test_feature_tag(test_feature, test_name, test_section)
-        add_to_test_list(test_name, binary_and_path, test_filter, test_feature_tag, test_section, test_feature, requested_types, requested_features, requested_regex, exclude_features, exclude_regex)
+        add_to_test_list(test_name, binary_and_path, test_filter, test_feature_tag, test_section, test_feature, requested_sections, requested_features, requested_regex, exclude_features, exclude_regex)
 
 def generate_test_items_for_binary(binary_dir: str,
                                 test_binary: str,
-                                requested_types: str,
+                                requested_sections: str,
                                 requested_features: str,
                                 requested_regex: str,
                                 exclude_features: str,
@@ -313,10 +314,10 @@ def generate_test_items_for_binary(binary_dir: str,
             if line[0] != ' ':  # test suite
                 current_suite = line.split('.')[0]
             else:  # test case
-                generate_test_case(test_binary_path, current_suite, test_binary, line, requested_types, requested_features, requested_regex, exclude_features, exclude_regex)
+                generate_test_case(test_binary_path, current_suite, test_binary, line, requested_sections, requested_features, requested_regex, exclude_features, exclude_regex)
 
 def generate_test_cases_from_binaries(binary_dir: str,
-                                    requested_types: str,
+                                    requested_sections: str,
                                     requested_features: str,
                                     requested_regex: str,
                                     exclude_features: str,
@@ -328,7 +329,7 @@ def generate_test_cases_from_binaries(binary_dir: str,
       os.path.isfile(os.path.join(binary_dir, filename))]
 
     for binary in test_binaries:
-        generate_test_items_for_binary(binary_dir, binary, requested_types, requested_features, requested_regex, exclude_features, exclude_regex)
+        generate_test_items_for_binary(binary_dir, binary, requested_sections, requested_features, requested_regex, exclude_features, exclude_regex)
 
 
 if __name__ == '__main__':
@@ -336,29 +337,29 @@ if __name__ == '__main__':
     epilog="""example:\n
         python3 run_test_report.py \n
             --binary_dir /build/out/conformance_tests/
-            --run_test_types \"basic\"
+            --run_test_sections \"core\"
             --run_test_features \"barrier\"
             --run_test_regex \"GivenEvent*\"
             --exclude_features \"image\"
             --exclude_regex \"events*\"
-            --test_run_timeout 15
+            --test_run_timeout 1200
             --log_prefix \"level_zero_tests_1234\"\n""", formatter_class=RawTextHelpFormatter)
     parser.add_argument('--binary_dir', type = IsListableDirPath, help = 'Directory containing gtest binaries and SPVs.', required = True)
-    parser.add_argument('--run_test_types', type = str, help = 'List of Test types to include Comma Separated: basic,advanced,discrete,core,tools,negative,stress,all NOTE:all sets all types', default = "basic")
-    parser.add_argument('--run_test_features', type = str, help = 'List of Test Features to include Comma Separated: barrier,...', default = None)
+    parser.add_argument('--run_test_sections', type = str, help = 'List of Sections of Tests to include Comma Separated: core,tools,negative,stress,all NOTE:all sets all types', default = "core")
+    parser.add_argument('--run_test_features', type = str, help = 'List of Test Features to include Comma Separated: Sets of Features (basic, advanced, discrete), individual features ie barrier,...', default = None)
     parser.add_argument('--run_test_regex', type = str, help = 'Regular Expression to filter tests that match either in the name or filter: GivenBarrier*', default = None)
     parser.add_argument('--exclude_features', type = str, help = 'List of Test Features to exclude Comma Separated: barrier,...', default = None)
     parser.add_argument('--exclude_regex', type = str, help = 'Regular Expression to exclude tests that match either in the name or filter: GivenBarrier*', default = None)
-    parser.add_argument('--test_run_timeout', type = int, help = 'Adjust the timeout for test binary execution, this is for each call to the binary with the filter', default = 15)
+    parser.add_argument('--test_run_timeout', type = int, help = 'Adjust the timeout for test binary execution, this is for each call to the binary with the filter', default = 1200)
     parser.add_argument('--log_prefix', type = str, help = 'Change the prefix name for the results such that the output is <prefix>_results.csv & <prefix>_failure_log.txt', default = "level_zero_tests")
     parser.add_argument('--export_test_plan', type = str, help = 'Name of the Generated Test Plan to export as <arg>.csv without execution. The name provided is combined with .csv appended.', default = None)
     parser.add_argument('--import_test_plan', type = str, help = 'Name of the Imported Test Plan as <arg>.csv for execution. The name provided is combined with .csv appended.', default = None)
     args = parser.parse_args()
 
-    run_test_types = args.run_test_types
+    run_test_sections = args.run_test_sections
 
-    if re.search(run_test_types, "all", re.IGNORECASE):
-        run_test_types = "basic,advanced,discrete,core,tools,negative,stress"
+    if re.search(run_test_sections, "all", re.IGNORECASE):
+        run_test_sections = "core,tools,negative,stress"
 
     run_test_features = args.run_test_features
     run_test_regex = args.run_test_regex
@@ -376,7 +377,7 @@ if __name__ == '__main__':
         print("Importing Test plan: " + import_test_plan)
         test_plan_generated = read_test_plan(plan_name = import_test_plan)
     else:
-        print("Generating Plan to Execute Tests which match Test Type(s):" + run_test_types + " ", end = '')
+        print("Generating Plan to Execute Tests which match Test Section(s):" + run_test_sections + " ", end = '')
         if run_test_features:
             print(" Test Feature(s):" + run_test_features, end = '')
         if run_test_regex:
@@ -387,9 +388,10 @@ if __name__ == '__main__':
             print(" Excluding Regex:" + exclude_regex, end = '')
         print("\n")
 
+        binary_cwd = args.binary_dir
         generate_test_cases_from_binaries(
         binary_dir = args.binary_dir,
-        requested_types = run_test_types,
+        requested_sections = run_test_sections,
         requested_features = run_test_features,
         requested_regex = run_test_regex,
         exclude_features = exclude_features,

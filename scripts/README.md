@@ -20,20 +20,21 @@
 ### Optional Arguments
  * -h, --help
    * Display usage help for `run_test_report.py`
- * --run_test_types RUN_TEST_TYPES
-   * List of Test types to include Comma Separated: basic,advanced,discrete,tools,negative,stress,all
-   * `basic` = Standardized tests for verifying Core Level Zero functionality
-   * `advanced` = Tests spanning features not commonly used or expanded Standardized tests
-   * `discrete` = Tests spanning features designed for discrete accelerator devices
+ * --run_test_sections RUN_TEST_SECTIONS
+   * List of Sections of Tests to include Comma Separated: core,tools,negative,stress,all
    * `tools` = Tests spanning all oneAPI Level Zero Tools
    * `negative` = Tests exercising support for handling negative/invalid user input, expected to be run with a validation layer ie ZE_ENABLE_VALIDATION_LAYER=1
    * `stress` = Tests tests which exercise the maximum limits of a given oneAPI Level Zero Driver
-   * `core` = Tests spanning all oneAPI Level Zero Core
-   * `all` = Run all test types
-     * **NOTE: all sets all types**
-     * **NOTE: Default is `basic` if this argument is unset**
+   * `core` = Tests spanning all oneAPI Level Zero Core Features, this is the oneAPI Level Zero Certification for Production Stability of an L0 Stack
+   * `all` = Run all test sections
+     * **NOTE: all sets all Sections**
+     * **NOTE: Default is `core` if this argument is unset**
  * --run_test_features RUN_TEST_FEATURES
    * List of Test Features to include Comma Separated: barrier,... NOTE: each test has one Feature assigned, it is the "primary" feature being tested
+   * **oneAPI Level Zero Feature Sets**
+     * `basic` = Standardized tests for verifying minimum v1.0 Level Zero functionality
+     * `advanced` = Tests spanning features not commonly used or expanded Standardized tests
+     * `discrete` = Tests spanning features designed for discrete accelerator devices
    * **oneAPI Level Zero Core Features**
      * `Driver Handles`
      * `Device Handling`
@@ -99,7 +100,7 @@
 ## Execution
  * **Required: Ensure the oneAPI Level Zero Loader Library & your desired oneAPI Level Zero Driver are in your library path before execution.**
  * `python3 scripts/run_test_report.py <options>`
- * **Example:** `python3 scripts/run_test_report.py --run_test_type="basic" --binary_dir build/out/`
+ * **Example:** `python3 scripts/run_test_report.py --run_test_sections="core" --binary_dir build/out/`
 
 ## Output
 
@@ -107,7 +108,7 @@ example command line output:
 
     Level Zero Test Report Generator
 
-    Executing Tests which match Test Type(s):basic
+    Executing Tests which match Test Sections(s):core
 
     Generated Test List
 
