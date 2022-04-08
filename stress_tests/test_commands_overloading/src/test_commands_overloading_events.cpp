@@ -188,11 +188,24 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
         command_list, data_for_all_dispatches[data_idx].data(),
         output_allocations[dispatch_id],
         data_for_all_dispatches[data_idx].size() * sizeof(uint32_t),
-        read_memory_events[data_idx], 1, &set_memory_events[data_idx]);
+        read_memory_events[data_idx], 1, &exec_memory_events[data_idx]);
+  }
+
+  lzt::append_wait_on_events(command_list, read_memory_events.size(),
+                             read_memory_events.data());
+
+  for (auto each_event : read_memory_events) {
+    lzt::query_event(each_event, ZE_RESULT_NOT_READY);
   }
 
   LOG_INFO << "call send command queue to execution.";
   send_command_to_execution(command_list, command_queue);
+
+  LOG_INFO << "call query event to verify if read memory events status "
+              "is completed ";
+  for (auto each_event : read_memory_events) {
+    lzt::query_event(each_event);
+  }
 
   LOG_INFO << "call free test memory objects";
   for (auto next_allocation : output_allocations) {
@@ -412,7 +425,8 @@ struct CombinationsTestNameSuffix {
 };
 
 std::vector<uint64_t> multiple_events = {
-    1, 32, 1024, 5000, 9000, 10000, 100000, 1000000, 2000000, 10000000};
+    1,    32,   64,    128,    256,     512,     1024,
+    5000, 9000, 10000, 100000, 1000000, 2000000, 10000000};
 
 INSTANTIATE_TEST_CASE_P(TestEventsMatrixMinMemory,
                         zeDriverMultiplyEventsStressTest,
