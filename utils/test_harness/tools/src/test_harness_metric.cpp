@@ -67,7 +67,8 @@ get_metric_test_device_list(uint32_t testSubDeviceCount) {
 
 bool check_metric_type_ip_exp(
     ze_device_handle_t device, std::string groupName,
-    zet_metric_group_sampling_type_flags_t samplingType) {
+    zet_metric_group_sampling_type_flags_t samplingType,
+    bool includeExpFeature) {
   zet_metric_group_handle_t groupHandle;
   groupHandle = lzt::find_metric_group(device, groupName, samplingType);
   std::vector<zet_metric_handle_t> metricHandles =
@@ -77,16 +78,17 @@ bool check_metric_type_ip_exp(
     MetricProp.stype = ZET_STRUCTURE_TYPE_METRIC_PROPERTIES;
     EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGetProperties(metric, &MetricProp));
 
-    if (MetricProp.metricType == ZET_METRIC_TYPE_IP_EXP) {
+    if (MetricProp.metricType == ZET_METRIC_TYPE_IP_EXP && !includeExpFeature) {
       return true;
     }
   }
   return false;
 }
 
-std::vector<std::string> get_metric_group_name_list(
-    ze_device_handle_t device,
-    zet_metric_group_sampling_type_flags_t samplingType) {
+std::vector<std::string>
+get_metric_group_name_list(ze_device_handle_t device,
+                           zet_metric_group_sampling_type_flags_t samplingType,
+                           bool includeExpFeature = true) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -99,7 +101,8 @@ std::vector<std::string> get_metric_group_name_list(
     std::string strItem(propItem.name);
     if (propItem.samplingType != samplingType)
       continue;
-    if (check_metric_type_ip_exp(device, strItem, samplingType)) {
+    if (check_metric_type_ip_exp(device, strItem, samplingType,
+                                 includeExpFeature)) {
       LOG_WARNING
           << "Test includes ZET_METRIC_TYPE_IP_EXP Metric Type - Skipped...";
       continue;
