@@ -148,6 +148,8 @@ int compare_data_pattern(
     const lzt::ImagePNG32Bit &expected_fg, // expected foreground
     const lzt::ImagePNG32Bit &expected_bg  // expected background
 );
+// Check if the functionality being testing is unsupported
+bool check_unsupported(ze_result_t result);
 
 }; // namespace level_zero_tests
 

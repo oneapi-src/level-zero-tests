@@ -382,4 +382,23 @@ int compare_data_pattern(
   return errCnt;
 }
 
+bool check_unsupported(ze_result_t result) {
+  bool unsupported = false;
+  if (result != ZE_RESULT_SUCCESS) {
+    if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE ||
+        result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT ||
+        result == ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION ||
+        result == ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT ||
+        result == ZE_RESULT_ERROR_UNSUPPORTED_SIZE) {
+      auto res_string = lzt::to_string(result);
+      std::size_t pos = res_string.find("UNSUPPORTED");
+      std::string unsupported_type_string = res_string.substr(pos + 12);
+      LOG_INFO << "[" << unsupported_type_string
+               << " not supported on this device or driver]";
+      unsupported = true;
+    }
+  }
+  return unsupported;
+}
+
 }; // namespace level_zero_tests

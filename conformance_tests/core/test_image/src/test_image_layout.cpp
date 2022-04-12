@@ -29,6 +29,12 @@ protected:
                 ze_image_format_layout_t base_layout,
                 ze_image_format_layout_t convert_layout,
                 ze_image_format_type_t format_type, enum TestType test) {
+    LOG_INFO << "RUN_TEST";
+    LOG_INFO << "image type " << image_type;
+    LOG_INFO << "base layout " << base_layout;
+    LOG_INFO << "conver layout " << convert_layout;
+    LOG_INFO << "format type " << format_type;
+    ze_result_t result;
     command_list = lzt::create_command_list();
     command_queue = lzt::create_command_queue();
     std::string kernel_name = get_kernel(format_type);
@@ -91,16 +97,22 @@ protected:
     } else {
       // call kernel to copy image_in -> image_convert
       uint32_t group_size_x, group_size_y, group_size_z;
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeKernelSuggestGroupSize(kernel, image_width, image_height,
-                                         image_depth, &group_size_x,
-                                         &group_size_y, &group_size_z));
+      result = zeKernelSuggestGroupSize(kernel, image_width, image_height,
+                                        image_depth, &group_size_x,
+                                        &group_size_y, &group_size_z);
+      if (lzt::check_unsupported(result)) {
+        return;
+      }
       lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelSetArgumentValue(
-                                       kernel, 0, sizeof(image_in), &image_in));
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeKernelSetArgumentValue(kernel, 1, sizeof(image_convert),
-                                         &image_convert));
+      result = zeKernelSetArgumentValue(kernel, 0, sizeof(image_in), &image_in);
+      if (lzt::check_unsupported(result)) {
+        return;
+      }
+      result = zeKernelSetArgumentValue(kernel, 1, sizeof(image_convert),
+                                        &image_convert);
+      if (lzt::check_unsupported(result)) {
+        return;
+      }
 
       ze_group_count_t group_dems = {
           static_cast<uint32_t>(image_width / group_size_x),
@@ -118,17 +130,23 @@ protected:
       } else {
         LOG_DEBUG << "TWO_KERNEL_CONVERT";
         // call kernel to copy image_convert -> image_out
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeKernelSuggestGroupSize(kernel, image_width, image_height,
-                                           image_depth, &group_size_x,
-                                           &group_size_y, &group_size_z));
+        result = zeKernelSuggestGroupSize(kernel, image_width, image_height,
+                                          image_depth, &group_size_x,
+                                          &group_size_y, &group_size_z);
+        if (lzt::check_unsupported(result)) {
+          return;
+        }
         lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeKernelSetArgumentValue(kernel, 0, sizeof(image_convert),
-                                           &image_convert));
-        EXPECT_EQ(
-            ZE_RESULT_SUCCESS,
-            zeKernelSetArgumentValue(kernel, 1, sizeof(image_out), &image_out));
+        result = zeKernelSetArgumentValue(kernel, 0, sizeof(image_convert),
+                                          &image_convert);
+        if (lzt::check_unsupported(result)) {
+          return;
+        }
+        result =
+            zeKernelSetArgumentValue(kernel, 1, sizeof(image_out), &image_out);
+        if (lzt::check_unsupported(result)) {
+          return;
+        }
 
         group_dems = {static_cast<uint32_t>(image_width / group_size_x),
                       static_cast<uint32_t>(image_height / group_size_y),
