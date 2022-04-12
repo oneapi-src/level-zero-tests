@@ -362,82 +362,59 @@ TEST_F(
   lzt::destroy_module(module);
 }
 
-TEST_F(
-    zeModuleCreateTests,
-    GivenValidModuleWhenGettingNativeBinaryForOptimizationLevelsFilesAreDifferent) {
-  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  const char *build_opt0 = "-ze-opt-level=0";
-  const char *build_opt1 = "-ze-opt-level=1";
-  const char *build_opt2 = "-ze-opt-level=2";
-  std::string igc_opt0 = "-ze-opt-level=O0";
-  std::string igc_opt1 = "-ze-opt-level=O1";
-  std::string igc_opt2 = "-ze-opt-level=O2";
+TEST_F(zeModuleCreateTests,
+       GivenModuleCompiledWithOptimizationsWhenExecutingThenResultIsCorrect) {
+  std::string l0_opt[3] = {"-ze-opt-level=0", "-ze-opt-level=1",
+                           "-ze-opt-level=2"};
+  std::string igc_opt[3] = {"-ze-opt-level=O0", "-ze-opt-level=O1",
+                            "-ze-opt-level=O2"};
+  auto device = lzt::get_default_device(lzt::get_default_driver());
 
-  ze_module_handle_t module0 = lzt::create_module(
-      device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV, build_opt0, nullptr);
-  size_t size0 = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module0, &size0, nullptr));
+  // Note: L0 Spec does not gaurantee if/how optimization is applied to module.
+  // Test
+  // can only ensure module is still valid and correct after optimization.
 
-  std::vector<uint8_t> buffer0(size0);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module0, &size0, buffer0.data()));
+  for (int i = 0; i < 3; i++) {
+    ze_module_handle_t module =
+        lzt::create_module(device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV,
+                           l0_opt[i].c_str(), nullptr);
+    size_t bin_size = 0;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeModuleGetNativeBinary(module, &bin_size, nullptr));
 
-  ze_module_handle_t module1 = lzt::create_module(
-      device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV, build_opt1, nullptr);
+    std::vector<uint8_t> buffer(bin_size);
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeModuleGetNativeBinary(module, &bin_size, buffer.data()));
+    std::string native(buffer.begin(), buffer.end());
+    ASSERT_NE(native.find(igc_opt[i]), std::string::npos);
+    auto kernel = lzt::create_function(module, "module_add_constant");
+    ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
+    ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+    int *input =
+        (int *)lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device);
+    memset(input, 0, 16 * sizeof(int));
+    const int addval = 10;
 
-  size_t size1 = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module1, &size1, nullptr));
+    lzt::set_group_size(kernel, 1, 1, 1);
+    lzt::set_argument_value(kernel, 0, sizeof(input), &input);
+    lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
-  std::vector<uint8_t> buffer1(size1);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module1, &size1, buffer1.data()));
+    ze_group_count_t group_dim = {1, 1, 1};
+    lzt::append_launch_function(cmd_list, kernel, &group_dim, nullptr, 0,
+                                nullptr);
 
-  ze_module_handle_t module2 = lzt::create_module(
-      device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV, build_opt2, nullptr);
+    lzt::close_command_list(cmd_list);
+    lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
+    lzt::synchronize(cmd_q, UINT64_MAX);
 
-  size_t size2 = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module2, &size2, nullptr));
+    EXPECT_EQ(input[0], addval);
 
-  std::vector<uint8_t> buffer2(size2);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module2, &size2, buffer2.data()));
-  std::string native0(buffer0.begin(), buffer0.end());
-  std::string native1(buffer1.begin(), buffer1.end());
-  std::string native2(buffer2.begin(), buffer2.end());
-
-  size_t offset0 = native0.find(igc_opt0);
-  size_t offset1 = native1.find(igc_opt1);
-  size_t offset2 = native2.find(igc_opt2);
-  EXPECT_EQ(offset0, offset1);
-  EXPECT_EQ(offset0, offset2);
-  EXPECT_EQ(offset1, offset2);
-  EXPECT_GT(offset0, 0);
-  EXPECT_LT(offset0, native0.length() - igc_opt0.length());
-  EXPECT_GT(offset1, 0);
-  EXPECT_LT(offset1, native1.length() - igc_opt1.length());
-  EXPECT_GT(offset2, 0);
-  EXPECT_LT(offset2, native2.length() - igc_opt2.length());
-  offset0 = offset0 + igc_opt0.length();
-  offset1 = offset1 + igc_opt1.length();
-  offset2 = offset2 + igc_opt2.length();
-
-  if (size0 == size1) {
-    // Kernel code should be different
-    EXPECT_NE(memcmp(&buffer0[offset0], &buffer1[offset1], size0 - offset0), 0);
+    lzt::free_memory(input);
+    lzt::destroy_function(kernel);
+    lzt::destroy_module(module);
+    lzt::destroy_command_list(cmd_list);
+    lzt::destroy_command_queue(cmd_q);
   }
-  if (size0 == size2) {
-    EXPECT_NE(memcmp(&buffer0[offset0], &buffer2[offset2], size0 - offset0), 0);
-  }
-  if (size1 == size2) {
-    EXPECT_NE(memcmp(&buffer1[offset1], &buffer2[offset2], size1 - offset1), 0);
-  }
-
-  lzt::destroy_module(module0);
-  lzt::destroy_module(module1);
-  lzt::destroy_module(module2);
 }
 
 class zeKernelCreateTests : public lzt::zeEventPoolTests {
