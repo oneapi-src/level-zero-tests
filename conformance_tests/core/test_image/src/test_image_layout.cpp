@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include <complex>
 
 namespace lzt = level_zero_tests;
 
@@ -79,11 +80,27 @@ protected:
     auto buffer_in = lzt::allocate_host_memory(buffer_size);
     auto buffer_out = lzt::allocate_host_memory(buffer_size);
 
-    uint8_t *ptr1 = static_cast<uint8_t *>(buffer_in);
-    uint8_t *ptr2 = static_cast<uint8_t *>(buffer_out);
-    for (size_t i = 0; i < buffer_size; ++i) {
-      ptr1[i] = static_cast<uint8_t>((0xff) - (i & 0xff));
-      ptr2[i] = 0xff;
+    if (format_type == ZE_IMAGE_FORMAT_TYPE_FLOAT) {
+      float *ptr1 = static_cast<float *>(buffer_in);
+      float *ptr2 = static_cast<float *>(buffer_out);
+      for (size_t i = 0; i < buffer_size / sizeof(float); ++i) {
+        ptr1[i] = static_cast<float>((0xff) - (i & 0xff));
+        ptr2[i] = 0xff;
+      }
+    } else if (format_type == ZE_IMAGE_FORMAT_TYPE_SNORM) {
+      int *ptr1 = static_cast<int *>(buffer_in);
+      int *ptr2 = static_cast<int *>(buffer_out);
+      for (size_t i = 0; i < buffer_size / sizeof(int); ++i) {
+        ptr1[i] = std::norm((0xff) - (i & 0xff));
+        ptr2[i] = 0xff;
+      }
+    } else {
+      uint8_t *ptr1 = static_cast<uint8_t *>(buffer_in);
+      uint8_t *ptr2 = static_cast<uint8_t *>(buffer_out);
+      for (size_t i = 0; i < buffer_size / sizeof(uint8_t); ++i) {
+        ptr1[i] = static_cast<uint8_t>((0xff) - (i & 0xff));
+        ptr2[i] = 0xff;
+      }
     }
 
     // copy input buff to image_in object
