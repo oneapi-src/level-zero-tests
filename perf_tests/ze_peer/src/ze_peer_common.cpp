@@ -91,9 +91,10 @@ void ZePeer::print_results(bool bidirectional, peer_test_t test_type,
   }
 }
 
-void ZePeer::set_up(int number_buffer_elements, uint32_t remote_device_id,
-                    uint32_t local_device_id, size_t &buffer_size,
-                    bool validate) {
+void ZePeer::set_up(int number_buffer_elements,
+                    std::vector<uint32_t> &remote_device_ids,
+                    std::vector<uint32_t> &local_device_ids,
+                    size_t &buffer_size, bool validate) {
 
   if (validate) {
     warm_up_iterations = 0;
@@ -103,21 +104,25 @@ void ZePeer::set_up(int number_buffer_elements, uint32_t remote_device_id,
   size_t element_size = sizeof(char);
   buffer_size = element_size * number_buffer_elements;
 
-  void *ze_buffer = nullptr;
-  benchmark->memoryAlloc(remote_device_id, buffer_size, &ze_buffer);
-  ze_src_buffers[remote_device_id] = ze_buffer;
+  for (auto local_device_id : local_device_ids) {
+    void *ze_buffer = nullptr;
+    benchmark->memoryAlloc(local_device_id, buffer_size, &ze_buffer);
+    ze_src_buffers[local_device_id] = ze_buffer;
 
-  ze_buffer = nullptr;
-  benchmark->memoryAlloc(local_device_id, buffer_size, &ze_buffer);
-  ze_src_buffers[local_device_id] = ze_buffer;
+    ze_buffer = nullptr;
+    benchmark->memoryAlloc(local_device_id, buffer_size, &ze_buffer);
+    ze_dst_buffers[local_device_id] = ze_buffer;
+  }
 
-  ze_buffer = nullptr;
-  benchmark->memoryAlloc(remote_device_id, buffer_size, &ze_buffer);
-  ze_dst_buffers[remote_device_id] = ze_buffer;
+  for (auto remote_device_id : remote_device_ids) {
+    void *ze_buffer = nullptr;
+    benchmark->memoryAlloc(remote_device_id, buffer_size, &ze_buffer);
+    ze_src_buffers[remote_device_id] = ze_buffer;
 
-  ze_buffer = nullptr;
-  benchmark->memoryAlloc(local_device_id, buffer_size, &ze_buffer);
-  ze_dst_buffers[local_device_id] = ze_buffer;
+    ze_buffer = nullptr;
+    benchmark->memoryAlloc(remote_device_id, buffer_size, &ze_buffer);
+    ze_dst_buffers[remote_device_id] = ze_buffer;
+  }
 
   void **host_buffer = reinterpret_cast<void **>(&ze_host_buffer);
   benchmark->memoryAllocHost(buffer_size, host_buffer);
@@ -126,12 +131,30 @@ void ZePeer::set_up(int number_buffer_elements, uint32_t remote_device_id,
   benchmark->memoryAllocHost(buffer_size, host_validate_buffer);
 }
 
-void ZePeer::tear_down(uint32_t remote_device_id, uint32_t local_device_id) {
+void ZePeer::tear_down(std::vector<uint32_t> &remote_device_ids,
+                       std::vector<uint32_t> &local_device_ids) {
 
-  benchmark->memoryFree(ze_dst_buffers[local_device_id]);
-  benchmark->memoryFree(ze_dst_buffers[remote_device_id]);
-  benchmark->memoryFree(ze_src_buffers[local_device_id]);
-  benchmark->memoryFree(ze_src_buffers[remote_device_id]);
+  for (auto local_device_id : local_device_ids) {
+    if (ze_dst_buffers[local_device_id]) {
+      benchmark->memoryFree(ze_dst_buffers[local_device_id]);
+      ze_dst_buffers[local_device_id] = nullptr;
+    }
+    if (ze_src_buffers[local_device_id]) {
+      benchmark->memoryFree(ze_src_buffers[local_device_id]);
+      ze_src_buffers[local_device_id] = nullptr;
+    }
+  }
+
+  for (auto remote_device_id : remote_device_ids) {
+    if (ze_dst_buffers[remote_device_id]) {
+      benchmark->memoryFree(ze_dst_buffers[remote_device_id]);
+      ze_dst_buffers[remote_device_id] = nullptr;
+    }
+    if (ze_src_buffers[remote_device_id]) {
+      benchmark->memoryFree(ze_src_buffers[remote_device_id]);
+      ze_src_buffers[remote_device_id] = nullptr;
+    }
+  }
 
   benchmark->memoryFree(ze_host_buffer);
   benchmark->memoryFree(ze_host_validate_buffer);
@@ -169,9 +192,9 @@ void ZePeer::initialize_buffers(ze_command_list_handle_t command_list,
   }
 }
 
-void ZePeer::initialize_buffers(uint32_t remote_device_id,
-                                uint32_t local_device_id, char *host_buffer,
-                                size_t buffer_size) {
+void ZePeer::initialize_buffers(std::vector<uint32_t> &remote_device_ids,
+                                std::vector<uint32_t> &local_device_ids,
+                                char *host_buffer, size_t buffer_size) {
   // fibonacci
   host_buffer[0] = 1;
   host_buffer[1] = 2;
@@ -179,19 +202,25 @@ void ZePeer::initialize_buffers(uint32_t remote_device_id,
     host_buffer[k] = host_buffer[k - 2] + host_buffer[k - 1];
   }
 
-  ze_command_list_handle_t command_list =
-      ze_peer_devices[remote_device_id].command_lists[0];
-  ze_command_queue_handle_t command_queue =
-      ze_peer_devices[remote_device_id].command_queues[0];
-  void *src_buffer = ze_src_buffers[remote_device_id];
-  initialize_src_buffer(command_list, command_queue, src_buffer, host_buffer,
-                        buffer_size);
+  for (auto remote_device_id : remote_device_ids) {
+    ze_command_list_handle_t command_list =
+        ze_peer_devices[remote_device_id].command_lists[0];
+    ze_command_queue_handle_t command_queue =
+        ze_peer_devices[remote_device_id].command_queues[0];
+    void *src_buffer = ze_src_buffers[remote_device_id];
+    initialize_src_buffer(command_list, command_queue, src_buffer, host_buffer,
+                          buffer_size);
+  }
 
-  command_list = ze_peer_devices[local_device_id].command_lists[0];
-  command_queue = ze_peer_devices[local_device_id].command_queues[0];
-  src_buffer = ze_src_buffers[local_device_id];
-  initialize_src_buffer(command_list, command_queue, src_buffer, host_buffer,
-                        buffer_size);
+  for (auto local_device_id : local_device_ids) {
+    ze_command_list_handle_t command_list =
+        ze_peer_devices[local_device_id].command_lists[0];
+    ze_command_queue_handle_t command_queue =
+        ze_peer_devices[local_device_id].command_queues[0];
+    void *src_buffer = ze_src_buffers[local_device_id];
+    initialize_src_buffer(command_list, command_queue, src_buffer, host_buffer,
+                          buffer_size);
+  }
 }
 
 void ZePeer::validate_buffer(ze_command_list_handle_t command_list,
@@ -239,18 +268,170 @@ void ZePeer::perform_copy(peer_test_t test_type,
         command_queue, std::numeric_limits<uint64_t>::max()));
   }
 
-  timer.start();
-  for (int i = 0; i < number_iterations; i++) {
-    SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
-        command_queue, 1, &command_list, nullptr));
-    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
-        command_queue, std::numeric_limits<uint64_t>::max()));
-  }
-  timer.end();
+  do {
+    timer.start();
+    for (int i = 0; i < number_iterations; i++) {
+      SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
+          command_queue, 1, &command_list, nullptr));
+      SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
+          command_queue, std::numeric_limits<uint64_t>::max()));
+    }
+    timer.end();
 
-  print_results(false, test_type, buffer_size, timer);
+    print_results(false, test_type, buffer_size, timer);
+  } while (run_continuously);
 
   SUCCESS_OR_TERMINATE(zeCommandListReset(command_list));
+}
+
+void ZePeer::perform_parallel_copy(peer_test_t test_type,
+                                   peer_transfer_t transfer_type,
+                                   std::vector<uint32_t> &remote_device_ids,
+                                   std::vector<uint32_t> &local_device_ids,
+                                   size_t buffer_size) {
+
+  for (auto local_device_id : local_device_ids) {
+    for (auto remote_device_id : remote_device_ids) {
+
+      uint32_t remote_device_id_modulus_device_size =
+          remote_device_id %
+          ze_peer_devices[local_device_id].command_lists.size();
+
+      ze_command_list_handle_t command_list{};
+      if (use_queue_in_destination) {
+        command_list = ze_peer_devices[remote_device_id_modulus_device_size]
+                           .command_lists[local_device_id];
+      } else {
+        command_list = ze_peer_devices[local_device_id]
+                           .command_lists[remote_device_id_modulus_device_size];
+      }
+
+      ze_command_queue_handle_t command_queue{};
+      if (use_queue_in_destination) {
+        command_queue = ze_peer_devices[remote_device_id_modulus_device_size]
+                            .command_queues[local_device_id];
+      } else {
+        command_queue =
+            ze_peer_devices[local_device_id]
+                .command_queues[remote_device_id_modulus_device_size];
+      }
+
+      void *dst_buffer = ze_dst_buffers[remote_device_id];
+      void *src_buffer = ze_src_buffers[local_device_id];
+      if (transfer_type == PEER_READ) {
+        dst_buffer = ze_dst_buffers[local_device_id];
+        src_buffer = ze_src_buffers[remote_device_id];
+      }
+
+      SUCCESS_OR_TERMINATE(
+          zeCommandListAppendMemoryCopy(command_list, dst_buffer, src_buffer,
+                                        buffer_size, nullptr, 0, nullptr));
+      SUCCESS_OR_TERMINATE(zeCommandListClose(command_list));
+    }
+  }
+
+  /* Warm up */
+  for (int i = 0; i < warm_up_iterations; i++) {
+    for (auto local_device_id : local_device_ids) {
+      for (auto remote_device_id : remote_device_ids) {
+        uint32_t remote_device_id_modulus_device_size =
+            remote_device_id %
+            ze_peer_devices[local_device_id].command_lists.size();
+
+        ze_command_list_handle_t command_list{};
+        if (use_queue_in_destination) {
+          command_list = ze_peer_devices[remote_device_id_modulus_device_size]
+                             .command_lists[local_device_id];
+        } else {
+          command_list =
+              ze_peer_devices[local_device_id]
+                  .command_lists[remote_device_id_modulus_device_size];
+        }
+
+        ze_command_queue_handle_t command_queue{};
+        if (use_queue_in_destination) {
+          command_queue = ze_peer_devices[remote_device_id_modulus_device_size]
+                              .command_queues[local_device_id];
+        } else {
+          command_queue =
+              ze_peer_devices[local_device_id]
+                  .command_queues[remote_device_id_modulus_device_size];
+        }
+
+        SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
+            command_queue, 1, &command_list, nullptr));
+        SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
+            command_queue, std::numeric_limits<uint64_t>::max()));
+      }
+    }
+  }
+
+  Timer<std::chrono::microseconds::period> timer;
+  do {
+    timer.start();
+    for (int i = 0; i < number_iterations; i++) {
+      for (auto local_device_id : local_device_ids) {
+        for (auto remote_device_id : remote_device_ids) {
+          uint32_t remote_device_id_modulus_device_size =
+              remote_device_id %
+              ze_peer_devices[local_device_id].command_lists.size();
+
+          ze_command_list_handle_t command_list{};
+          if (use_queue_in_destination) {
+            command_list = ze_peer_devices[remote_device_id_modulus_device_size]
+                               .command_lists[local_device_id];
+          } else {
+            command_list =
+                ze_peer_devices[local_device_id]
+                    .command_lists[remote_device_id_modulus_device_size];
+          }
+
+          ze_command_queue_handle_t command_queue{};
+          if (use_queue_in_destination) {
+            command_queue =
+                ze_peer_devices[remote_device_id_modulus_device_size]
+                    .command_queues[local_device_id];
+          } else {
+            command_queue =
+                ze_peer_devices[local_device_id]
+                    .command_queues[remote_device_id_modulus_device_size];
+          }
+          SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
+              command_queue, 1, &command_list, nullptr));
+        }
+      }
+
+      for (auto local_device_id : local_device_ids) {
+        for (auto remote_device_id : remote_device_ids) {
+          uint32_t remote_device_id_modulus_device_size =
+              remote_device_id %
+              ze_peer_devices[local_device_id].command_lists.size();
+          ze_command_queue_handle_t command_queue{};
+          if (use_queue_in_destination) {
+            command_queue =
+                ze_peer_devices[remote_device_id_modulus_device_size]
+                    .command_queues[local_device_id];
+          } else {
+            command_queue =
+                ze_peer_devices[local_device_id]
+                    .command_queues[remote_device_id_modulus_device_size];
+          }
+          SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
+              command_queue, std::numeric_limits<uint64_t>::max()));
+        }
+      }
+    }
+    timer.end();
+
+    print_results(false, test_type, buffer_size * remote_device_ids.size(),
+                  timer);
+  } while (run_continuously);
+
+  for (auto local_device_id : local_device_ids) {
+    for (auto command_list : ze_peer_devices[local_device_id].command_lists) {
+      SUCCESS_OR_TERMINATE(zeCommandListReset(command_list));
+    }
+  }
 }
 
 void ZePeer::perform_copy_all_engines(peer_test_t test_type,

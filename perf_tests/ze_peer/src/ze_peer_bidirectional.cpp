@@ -82,10 +82,13 @@ void ZePeer::bidirectional_bandwidth_latency(peer_test_t test_type,
 
   size_t buffer_size = 0;
 
-  set_up(number_buffer_elements, remote_device_id, local_device_id, buffer_size,
-         validate);
+  std::vector<uint32_t> remote_device_ids = {remote_device_id};
+  std::vector<uint32_t> local_device_ids = {local_device_id};
 
-  initialize_buffers(remote_device_id, local_device_id, ze_host_buffer,
+  set_up(number_buffer_elements, remote_device_ids, local_device_ids,
+         buffer_size, validate);
+
+  initialize_buffers(remote_device_ids, local_device_ids, ze_host_buffer,
                      buffer_size);
 
   bidirectional_perform_copy(remote_device_id, local_device_id, test_type,
@@ -107,5 +110,5 @@ void ZePeer::bidirectional_bandwidth_latency(peer_test_t test_type,
                     ze_host_buffer, buffer_size);
   }
 
-  tear_down(remote_device_id, local_device_id);
+  tear_down(remote_device_ids, local_device_ids);
 }

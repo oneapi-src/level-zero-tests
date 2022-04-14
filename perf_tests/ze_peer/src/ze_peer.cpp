@@ -9,6 +9,10 @@
 
 bool run_using_all_compute_engines = false;
 bool run_using_all_copy_engines = false;
+bool run_continuously = false;
+bool use_queue_in_destination = false;
+
+void stress_handler(int signal) { exit(1); }
 
 void print_results_header(uint32_t remote_device_id, uint32_t local_device_id,
                           peer_test_t test_type, peer_transfer_t transfer_type,
@@ -104,9 +108,11 @@ void run_ipc_test(size_t max_number_of_elements, int size_to_run,
 void run_test(size_t max_number_of_elements, int size_to_run,
               const uint32_t command_queue_group_ordinal,
               const uint32_t command_queue_index, uint32_t remote_device_id,
-              uint32_t local_device_id, bool bidirectional,
-              peer_test_t test_type, peer_transfer_t transfer_type,
-              bool validate, uint32_t *num_devices) {
+              std::vector<uint32_t> &remote_device_ids,
+              uint32_t local_device_id, std::vector<uint32_t> &local_device_ids,
+              bool bidirectional, peer_test_t test_type,
+              peer_transfer_t transfer_type, bool validate,
+              uint32_t *num_devices) {
   print_results_header(remote_device_id, local_device_id, test_type,
                        transfer_type, bidirectional);
 
@@ -119,12 +125,26 @@ void run_test(size_t max_number_of_elements, int size_to_run,
                 remote_device_id, local_device_id,
                 run_using_all_compute_engines, run_using_all_copy_engines,
                 num_devices);
+    peer.run_continuously = run_continuously;
+    peer.use_queue_in_destination = use_queue_in_destination;
+    if (peer.run_continuously) {
+      struct sigaction sigIntHandler;
+      sigIntHandler.sa_handler = stress_handler;
+      sigemptyset(&sigIntHandler.sa_mask);
+      sigIntHandler.sa_flags = 0;
+      sigaction(SIGINT, &sigIntHandler, NULL);
+    }
+
     if (bidirectional) {
       peer.bidirectional_bandwidth_latency(test_type, transfer_type,
                                            number_of_elements, remote_device_id,
                                            local_device_id, validate);
     } else {
-      if (run_using_all_compute_engines || run_using_all_copy_engines) {
+      if (!remote_device_ids.empty() || !local_device_ids.empty()) {
+        peer.parallel_bandwidth_latency(test_type, transfer_type,
+                                        number_of_elements, remote_device_ids,
+                                        local_device_ids, validate);
+      } else if (run_using_all_compute_engines || run_using_all_copy_engines) {
         if (bidirectional) {
           std::cout
               << "All-engines tests only available for unidirectional test\n";
@@ -149,10 +169,12 @@ int main(int argc, char **argv) {
   bool run_all = false;
   bool run_ipc = false;
   bool run_bidirectional = false;
+  bool run_parallel_copies = false;
   uint32_t command_queue_group_ordinal = 0;
   uint32_t command_queue_index = 0;
   int src_device_id = -1;
-  std::vector<uint32_t> dst_device_ids;
+  std::vector<uint32_t> remote_device_ids;
+  std::vector<uint32_t> local_device_ids;
   int size_to_run = -1;
   bool validate = false;
   peer_transfer_t transfer_type_to_run = PEER_TRANSFER_MAX;
@@ -218,6 +240,8 @@ int main(int argc, char **argv) {
       }
     } else if (strcmp(argv[i], "-m") == 0) {
       run_ipc = true;
+    } else if (strcmp(argv[i], "-c") == 0) {
+      run_continuously = true;
     } else if (strcmp(argv[i], "-a") == 0) {
       run_all = true;
     } else if (strcmp(argv[i], "-b") == 0) {
@@ -226,8 +250,39 @@ int main(int argc, char **argv) {
       run_using_all_compute_engines = true;
     } else if (strcmp(argv[i], "-l") == 0) {
       run_using_all_copy_engines = true;
+    } else if ((strcmp(argv[i], "-p") == 0)) {
+      if ((i + 1) >= argc) {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      run_parallel_copies = true;
+      if (strcmp(argv[i + 1], "parallel_compute") == 0) {
+        run_using_all_compute_engines = true;
+        i++;
+      } else if (strcmp(argv[i + 1], "parallel_copy") == 0) {
+        run_using_all_copy_engines = true;
+        i++;
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
+    } else if ((strcmp(argv[i], "-x") == 0)) {
+      if ((i + 1) >= argc) {
+        std::cout << usage_str;
+        exit(-1);
+      }
+      if (strcmp(argv[i + 1], "src") == 0) {
+        use_queue_in_destination = false;
+        i++;
+      } else if (strcmp(argv[i + 1], "dst") == 0) {
+        use_queue_in_destination = true;
+        i++;
+      } else {
+        std::cout << usage_str;
+        exit(-1);
+      }
     } else if (strcmp(argv[i], "-d") == 0) {
-      std::string dst_device_ids_string = argv[i + 1];
+      std::string remote_device_ids_string = argv[i + 1];
       const std::string comma = ",";
 
       size_t pos = 0;
@@ -235,29 +290,46 @@ int main(int argc, char **argv) {
       std::string device_id_string = "";
       auto search_for_device_id = [&]() {
         if (isdigit(device_id_string[0])) {
-          dst_device_ids.push_back(atoi(device_id_string.c_str()));
+          remote_device_ids.push_back(atoi(device_id_string.c_str()));
         } else {
           std::cout << usage_str;
           exit(-1);
         }
       };
-      while ((pos = dst_device_ids_string.find(comma, start)) !=
+      while ((pos = remote_device_ids_string.find(comma, start)) !=
              std::string::npos) {
-        device_id_string = dst_device_ids_string.substr(start, pos);
+        device_id_string = remote_device_ids_string.substr(start, pos);
         start = pos + 1;
         search_for_device_id();
       }
-      device_id_string =
-          dst_device_ids_string.substr(start, dst_device_ids_string.length());
+      device_id_string = remote_device_ids_string.substr(
+          start, remote_device_ids_string.length());
       search_for_device_id();
       i++;
     } else if (strcmp(argv[i], "-s") == 0) {
-      if (isdigit(argv[i + 1][0])) {
-        src_device_id = atoi(argv[i + 1]);
-      } else {
-        std::cout << usage_str;
-        exit(-1);
+      std::string local_device_ids_string = argv[i + 1];
+      const std::string comma = ",";
+
+      size_t pos = 0;
+      size_t start = 0;
+      std::string device_id_string = "";
+      auto search_for_device_id = [&]() {
+        if (isdigit(device_id_string[0])) {
+          local_device_ids.push_back(atoi(device_id_string.c_str()));
+        } else {
+          std::cout << usage_str;
+          exit(-1);
+        }
+      };
+      while ((pos = local_device_ids_string.find(comma, start)) !=
+             std::string::npos) {
+        device_id_string = local_device_ids_string.substr(start, pos);
+        start = pos + 1;
+        search_for_device_id();
       }
+      device_id_string = local_device_ids_string.substr(
+          start, local_device_ids_string.length());
+      search_for_device_id();
       i++;
     } else if (strcmp(argv[i], "-z") == 0) {
       if (isdigit(argv[i + 1][0])) {
@@ -291,54 +363,89 @@ int main(int argc, char **argv) {
             << "============================================================="
                "===================\n";
 
-  for (uint32_t local_device_id = 0; local_device_id < num_devices;
-       local_device_id++) {
-    if (src_device_id != -1 && local_device_id != src_device_id) {
-      continue;
-    }
-    for (uint32_t remote_device_id = 0; remote_device_id < num_devices;
-         remote_device_id++) {
-      if (local_device_id == remote_device_id) {
+  if (run_parallel_copies) {
+    for (uint32_t test_type = 0;
+         test_type < static_cast<uint32_t>(PEER_TEST_MAX); test_type++) {
+      if (test_type_to_run != PEER_TEST_MAX &&
+          static_cast<peer_test_t>(test_type) != test_type_to_run) {
         continue;
       }
-      if (!dst_device_ids.empty() &&
-          std::find(dst_device_ids.begin(), dst_device_ids.end(),
-                    remote_device_id) == dst_device_ids.end()) {
-        continue;
-      }
-      for (uint32_t test_type = 0;
-           test_type < static_cast<uint32_t>(PEER_TEST_MAX); test_type++) {
-        if (test_type_to_run != PEER_TEST_MAX &&
-            static_cast<peer_test_t>(test_type) != test_type_to_run) {
+      for (uint32_t transfer_type = 0;
+           transfer_type < static_cast<uint32_t>(PEER_TRANSFER_MAX);
+           transfer_type++) {
+        if (transfer_type_to_run != PEER_TRANSFER_MAX &&
+            static_cast<peer_transfer_t>(transfer_type) !=
+                transfer_type_to_run) {
           continue;
         }
-        for (uint32_t transfer_type = 0;
-             transfer_type < static_cast<uint32_t>(PEER_TRANSFER_MAX);
-             transfer_type++) {
-          if (transfer_type_to_run != PEER_TRANSFER_MAX &&
-              static_cast<peer_transfer_t>(transfer_type) !=
-                  transfer_type_to_run) {
+        std::cout << "-----------------------------------------------------"
+                     "---------------------------\n";
+        run_test(max_number_of_elements, size_to_run,
+                 command_queue_group_ordinal, command_queue_index, 0u,
+                 remote_device_ids, src_device_id, local_device_ids,
+                 run_bidirectional, static_cast<peer_test_t>(test_type),
+                 static_cast<peer_transfer_t>(transfer_type), validate,
+                 &num_devices);
+        std::cout << "-----------------------------------------------------"
+                     "---------------------------\n";
+      }
+    }
+  } else {
+    for (uint32_t local_device_id = 0; local_device_id < num_devices;
+         local_device_id++) {
+      if (src_device_id != -1 && local_device_id != src_device_id) {
+        continue;
+      }
+      if (!local_device_ids.empty() &&
+          std::find(local_device_ids.begin(), local_device_ids.end(),
+                    local_device_id) == local_device_ids.end()) {
+        continue;
+      }
+      for (uint32_t remote_device_id = 0; remote_device_id < num_devices;
+           remote_device_id++) {
+        if (local_device_id == remote_device_id) {
+          continue;
+        }
+        if (!remote_device_ids.empty() &&
+            std::find(remote_device_ids.begin(), remote_device_ids.end(),
+                      remote_device_id) == remote_device_ids.end()) {
+          continue;
+        }
+        for (uint32_t test_type = 0;
+             test_type < static_cast<uint32_t>(PEER_TEST_MAX); test_type++) {
+          if (test_type_to_run != PEER_TEST_MAX &&
+              static_cast<peer_test_t>(test_type) != test_type_to_run) {
             continue;
           }
-          std::cout << "-----------------------------------------------------"
-                       "---------------------------\n";
-          if (run_ipc) {
-            run_ipc_test(max_number_of_elements, size_to_run,
-                         command_queue_group_ordinal, command_queue_index,
-                         remote_device_id, local_device_id, run_bidirectional,
-                         static_cast<peer_test_t>(test_type),
-                         static_cast<peer_transfer_t>(transfer_type), validate,
-                         &num_devices);
-          } else {
-            run_test(max_number_of_elements, size_to_run,
-                     command_queue_group_ordinal, command_queue_index,
-                     remote_device_id, local_device_id, run_bidirectional,
-                     static_cast<peer_test_t>(test_type),
-                     static_cast<peer_transfer_t>(transfer_type), validate,
-                     &num_devices);
+          for (uint32_t transfer_type = 0;
+               transfer_type < static_cast<uint32_t>(PEER_TRANSFER_MAX);
+               transfer_type++) {
+            if (transfer_type_to_run != PEER_TRANSFER_MAX &&
+                static_cast<peer_transfer_t>(transfer_type) !=
+                    transfer_type_to_run) {
+              continue;
+            }
+            std::cout << "-----------------------------------------------------"
+                         "---------------------------\n";
+            if (run_ipc) {
+              run_ipc_test(max_number_of_elements, size_to_run,
+                           command_queue_group_ordinal, command_queue_index,
+                           remote_device_id, local_device_id, run_bidirectional,
+                           static_cast<peer_test_t>(test_type),
+                           static_cast<peer_transfer_t>(transfer_type),
+                           validate, &num_devices);
+            } else {
+              run_test(max_number_of_elements, size_to_run,
+                       command_queue_group_ordinal, command_queue_index,
+                       remote_device_id, remote_device_ids, local_device_id,
+                       local_device_ids, run_bidirectional,
+                       static_cast<peer_test_t>(test_type),
+                       static_cast<peer_transfer_t>(transfer_type), validate,
+                       &num_devices);
+            }
+            std::cout << "-----------------------------------------------------"
+                         "---------------------------\n";
           }
-          std::cout << "-----------------------------------------------------"
-                       "---------------------------\n";
         }
       }
     }

@@ -20,6 +20,10 @@
 #include <algorithm>
 #include "common.hpp"
 #include "ze_app.hpp"
+#include <unistd.h>
+#include <iostream>
+#include <cstdlib>
+#include <signal.h>
 #include <level_zero/ze_api.h>
 
 typedef enum _peer_transfer_t {
@@ -55,6 +59,8 @@ static const char *usage_str =
     "\n      latency                 selectively run latency test"
     "\n  -a                          run all above tests "
     "[deprecated]"
+    "\n  -c                          run continuously until hitting CTRL+C. "
+    "Specially useful for stressing the system."
     "\n  -b                          run bidirectional mode"
     "\n  -o, string                  operation to perform"
     "\n      read                    read from remote"
@@ -62,7 +68,7 @@ static const char *usage_str =
     "\n  -m                          run tests in multiprocess"
     "\n  -d                          comma separated list of destination "
     "devices"
-    "\n  -s                          source device"
+    "\n  -s                          comma separated list of source devices"
     "\n  -z                          size to run"
     "\n  -v                          validate data (only 1 iteration is "
     "executed)"
@@ -70,9 +76,19 @@ static const char *usage_str =
     "\n  -g, number                  select engine group (default: 0)"
     "\n  -i, number                  select engine index (default: 0)"
     "\n  -e                          run concurrently using all compute "
-    "engines (each size is evenly distributed among engines) "
+    "engines targeting a single GPU (each size is evenly distributed among "
+    "engines) "
     "\n  -l                          run concurrently using all copy engines "
-    "(each size is evenly distributed among engines) "
+    "targeting a single GPU (each size is evenly distributed among engines) "
+    "\n  -p, string                  run concurrently using several engines "
+    "targeting separate targets (each engine is used to target a different GPU "
+    "passed with option d) "
+    "\n      parallel_compute        use compute engines"
+    "\n      parallel_copy           use copy engines"
+    "\n  -x, string                  for parallel tests, select where to place "
+    "the queue"
+    "\n      src                     use queue in source"
+    "\n      dst                     use queue in source"
     "\n  -h, --help                  display help message"
     "\n";
 
@@ -188,10 +204,10 @@ public:
 
   ~ZePeer() {
     for (auto &device : ze_peer_devices) {
-      for (auto queue: device.command_queues) {
+      for (auto queue : device.command_queues) {
         benchmark->commandQueueDestroy(queue);
       }
-      for (auto list: device.command_lists) {
+      for (auto list : device.command_lists) {
         benchmark->commandListDestroy(list);
       }
     }
@@ -208,6 +224,13 @@ public:
   void bandwidth_latency(peer_test_t test_type, peer_transfer_t transfer_type,
                          int number_buffer_elements, uint32_t remote_device_id,
                          uint32_t local_device_id, bool validate);
+
+  void parallel_bandwidth_latency(peer_test_t test_type,
+                                  peer_transfer_t transfer_type,
+                                  int number_buffer_elements,
+                                  std::vector<uint32_t> &remote_device_ids,
+                                  std::vector<uint32_t> &local_device_ids,
+                                  bool validate);
 
   void bidirectional_bandwidth_latency(peer_test_t test_type,
                                        peer_transfer_t transfer_type,
@@ -228,6 +251,11 @@ public:
                     ze_command_list_handle_t command_list,
                     ze_command_queue_handle_t command_queue, void *dst_buffer,
                     void *src_buffer, size_t buffer_size);
+  void perform_parallel_copy(peer_test_t test_type,
+                             peer_transfer_t transfer_type,
+                             std::vector<uint32_t> &remote_device_ids,
+                             std::vector<uint32_t> &local_device_ids,
+                             size_t buffer_size);
   void bidirectional_perform_copy(uint32_t dst_device_id,
                                   uint32_t src_device_id, peer_test_t test_type,
                                   peer_transfer_t transfer_type,
@@ -240,7 +268,8 @@ public:
                           ze_command_queue_handle_t command_queue,
                           void *src_buffer, char *host_buffer,
                           size_t buffer_size);
-  void initialize_buffers(uint32_t dst_device_id, uint32_t src_device_id,
+  void initialize_buffers(std::vector<uint32_t> &remote_device_ids,
+                          std::vector<uint32_t> &local_device_ids,
                           char *host_buffer, size_t buffer_size);
   void validate_buffer(ze_command_list_handle_t command_list,
                        ze_command_queue_handle_t command_queue,
@@ -249,10 +278,13 @@ public:
   void set_up_ipc(int number_buffer_elements, uint32_t device_id,
                   size_t &buffer_size, ze_command_queue_handle_t &command_queue,
                   ze_command_list_handle_t &command_list, bool validate);
-  void set_up(int number_buffer_elements, uint32_t remote_device_id,
-              uint32_t local_device_id, size_t &buffer_size, bool validate);
+  void set_up(int number_buffer_elements,
+              std::vector<uint32_t> &remote_device_ids,
+              std::vector<uint32_t> &local_device_ids, size_t &buffer_size,
+              bool validate);
 
-  void tear_down(uint32_t dst_device_id, uint32_t src_device_id);
+  void tear_down(std::vector<uint32_t> &dst_device_ids,
+                 std::vector<uint32_t> &src_device_ids);
   void print_results(bool bidirectional, peer_test_t test_type,
                      size_t buffer_size,
                      Timer<std::chrono::microseconds::period> &timer);
@@ -260,6 +292,7 @@ public:
   int recvmsg_fd(int socket);
 
   ZeApp *benchmark;
+  bool run_continuously = false;
   int number_iterations = 5;
   int warm_up_iterations = 1;
   std::vector<void *> ze_buffers;
@@ -275,4 +308,6 @@ public:
 
   bool run_using_all_compute_engines = false;
   bool run_using_all_copy_engines = false;
+
+  bool use_queue_in_destination = false;
 };
