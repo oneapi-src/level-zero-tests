@@ -65,6 +65,8 @@ void commandlist_append_streamer_marker(
     zet_metric_streamer_handle_t metricStreamerHandle, uint32_t streamerMarker);
 size_t metric_streamer_read_data_size(
     zet_metric_streamer_handle_t metricStreamerHandle);
+size_t metric_streamer_read_data_size(
+    zet_metric_streamer_handle_t metricStreamerHandle, uint32_t);
 void metric_streamer_read_data(
     zet_metric_streamer_handle_t metricStreamerHandle,
     std::vector<uint8_t> *metricData);

@@ -254,7 +254,7 @@ INSTANTIATE_TEST_CASE_P(
 class zetMetricStreamerTest : public ::testing::TestWithParam<
                                   std::tuple<ze_device_handle_t, std::string>> {
 protected:
-  uint32_t notifyEveryNReports = 30000;
+  uint32_t notifyEveryNReports = 3000;
   uint32_t samplingPeriod = 1000000;
   ze_event_handle_t eventHandle;
   lzt::zeEventPool eventPool;
@@ -300,7 +300,23 @@ TEST_P(
   lzt::close_command_list(commandList);
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
   lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
+  ze_result_t eventResult;
+  eventResult = zeEventQueryStatus(eventHandle);
+
+  if (ZE_RESULT_SUCCESS == eventResult) {
+    size_t oneReportSize, allReportsSize, numReports;
+    oneReportSize =
+        lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
+    allReportsSize =
+        lzt::metric_streamer_read_data_size(metricStreamerHandle, UINT32_MAX);
+    LOG_INFO << "Event triggered. Single report size: " << oneReportSize
+             << ". All reports size:" << allReportsSize;
+
+    EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
+
+  } else if (ZE_RESULT_ERROR_NOT_AVAILABLE != eventResult) {
+    FAIL() << "zeEventQueryStatus() FAILED";
+  }
 
   std::vector<uint8_t> rawData;
   lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);

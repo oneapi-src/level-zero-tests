@@ -280,6 +280,16 @@ size_t metric_streamer_read_data_size(
                                       &metricSize, nullptr));
   return metricSize;
 }
+
+size_t metric_streamer_read_data_size(
+    zet_metric_streamer_handle_t metricStreamerHandle, uint32_t reports) {
+  size_t metricSize = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricStreamerReadData(metricStreamerHandle, reports,
+                                      &metricSize, nullptr));
+  return metricSize;
+}
+
 void metric_streamer_read_data(
     zet_metric_streamer_handle_t metricStreamerHandle,
     std::vector<uint8_t> *metricData) {
