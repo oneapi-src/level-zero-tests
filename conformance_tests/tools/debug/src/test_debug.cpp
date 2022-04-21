@@ -1431,6 +1431,9 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     }
 
     lzt::debug_resume(debug_session, device_threads);
+    debug_helper.wait();
+    ASSERT_EQ(debug_helper.exit_code(), 0);
+    lzt::debug_detach(debug_session);
   }
 }
 
