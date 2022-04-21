@@ -34,9 +34,9 @@ TEST_F(
   ze_device_handle_t device = nullptr;
 
   ze_command_queue_handle_t command_queue = nullptr;
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-            uint64_t(zeCommandQueueCreate(lzt::get_default_context(), device,
-                                          &descriptor, &command_queue)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
+            zeCommandQueueCreate(lzt::get_default_context(), device,
+                                 &descriptor, &command_queue));
 }
 
 TEST_F(
@@ -46,9 +46,9 @@ TEST_F(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_command_queue_handle_t command_queue = nullptr;
 
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
-            uint64_t(zeCommandQueueCreate(lzt::get_default_context(), device,
-                                          nullptr, &command_queue)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+            zeCommandQueueCreate(lzt::get_default_context(), device, nullptr,
+                                 &command_queue));
 }
 
 TEST_F(
@@ -64,9 +64,9 @@ TEST_F(
   descriptor.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
-            uint64_t(zeCommandQueueCreate(lzt::get_default_context(), device,
-                                          &descriptor, nullptr)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+            zeCommandQueueCreate(lzt::get_default_context(), device,
+                                 &descriptor, nullptr));
 }
 
 class CommandQueueDestroyNegativeTests : public ::testing::Test {};
@@ -74,8 +74,8 @@ class CommandQueueDestroyNegativeTests : public ::testing::Test {};
 TEST_F(
     CommandQueueDestroyNegativeTests,
     GivenValidDeviceAndNonNullCommandQueueWhenDestroyingCommandQueueThenSuccessIsReturned) {
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-            uint64_t(zeCommandQueueDestroy(nullptr)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
+            zeCommandQueueDestroy(nullptr));
 }
 
 class CommandQueueExecuteCommandListNegativeTests : public ::testing::Test {};
@@ -88,9 +88,9 @@ TEST_F(
 
   command_list = lzt::create_command_list();
 
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-            uint64_t(zeCommandQueueExecuteCommandLists(
-                nullptr, 1, &command_list, nullptr)));
+  EXPECT_EQ(
+      ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
+      zeCommandQueueExecuteCommandLists(nullptr, 1, &command_list, nullptr));
   lzt::destroy_command_list(command_list);
 }
 
@@ -100,9 +100,9 @@ TEST_F(
   ze_command_queue_handle_t command_queue = nullptr;
   command_queue = lzt::create_command_queue();
 
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
-            uint64_t(zeCommandQueueExecuteCommandLists(command_queue, 1,
-                                                       nullptr, nullptr)));
+  EXPECT_EQ(
+      ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+      zeCommandQueueExecuteCommandLists(command_queue, 1, nullptr, nullptr));
   lzt::destroy_command_queue(command_queue);
 }
 
@@ -115,9 +115,9 @@ TEST_F(
   command_queue = lzt::create_command_queue();
   command_list = lzt::create_command_list();
 
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_SIZE),
-            uint64_t(zeCommandQueueExecuteCommandLists(
-                command_queue, 0, &command_list, nullptr)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_SIZE,
+            zeCommandQueueExecuteCommandLists(command_queue, 0, &command_list,
+                                              nullptr));
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
 }
@@ -139,9 +139,9 @@ TEST_F(
   // Now use the same signalled fence above for below other commandlist
   // execution
   command_list2 = lzt::create_command_list();
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT),
-            uint64_t(zeCommandQueueExecuteCommandLists(
-                command_queue, 0, &command_list2, hFence)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT,
+            zeCommandQueueExecuteCommandLists(command_queue, 0, &command_list2,
+                                              hFence));
   lzt::destroy_command_list(command_list1);
   lzt::destroy_command_list(command_list2);
   lzt::destroy_command_queue(command_queue);
@@ -158,8 +158,8 @@ TEST_F(
 
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
 
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-            uint64_t(zeCommandQueueSynchronize(nullptr, UINT64_MAX)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
+            zeCommandQueueSynchronize(nullptr, UINT64_MAX));
 
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);

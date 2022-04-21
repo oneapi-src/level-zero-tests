@@ -22,8 +22,8 @@ TEST(
     DeviceGetNegativeTests,
     GivenInvalidDriverHandleWhileCallingzeDeviceGetThenInvalidHandleIsReturned) {
   uint32_t pCount = 0;
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_HANDLE),
-            uint64_t(zeDeviceGet(nullptr, &pCount, nullptr)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
+            zeDeviceGet(nullptr, &pCount, nullptr));
 }
 
 TEST(
@@ -31,8 +31,8 @@ TEST(
     GivenInvalidOutputCountPointerWhileCallingzeDeviceGetThenInvalidNullPointerIsReturned) {
   auto drivers = lzt::get_all_driver_handles();
   for (auto driver : drivers) {
-    EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
-              uint64_t(zeDeviceGet(driver, nullptr, nullptr)));
+    EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+              zeDeviceGet(driver, nullptr, nullptr));
   }
 }
 } // namespace

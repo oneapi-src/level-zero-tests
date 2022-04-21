@@ -19,23 +19,20 @@ namespace lzt = level_zero_tests;
 namespace {
 TEST(InitNegativeTests,
      GivenInvalidFlagValueWhileCallingzeInitThenInvalidEnumerationIsReturned) {
-  EXPECT_EQ(
-      uint64_t(ZE_RESULT_ERROR_INVALID_ENUMERATION),
-      uint64_t(zeInit(static_cast<ze_init_flag_t>(ZE_RESULT_ERROR_UNKNOWN))));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ENUMERATION,
+            zeInit(static_cast<ze_init_flag_t>(ZE_RESULT_ERROR_UNKNOWN)));
 }
 TEST(DriverGetNegativeTests,
      GivenzeDriverGetIsCalledBeforezeInitThenUninitialiZedIsReturned) {
   uint32_t pCount = 0;
-  uint64_t errorExpected = uint64_t(ZE_RESULT_ERROR_UNINITIALIZED);
-  uint64_t errorRecieved = uint64_t(zeDriverGet(&pCount, nullptr));
-  EXPECT_EQ(errorExpected, errorRecieved);
+  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zeDriverGet(&pCount, nullptr));
 }
 
 TEST(
     DriverGetNegativeTests,
     GivenInvalidCountPointerUsedWhileCallingzeDriverGetThenInvalidNullPointerIsReturned) {
   lzt::ze_init();
-  EXPECT_EQ(uint64_t(ZE_RESULT_ERROR_INVALID_NULL_POINTER),
-            uint64_t(zeDriverGet(nullptr, nullptr)));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+            zeDriverGet(nullptr, nullptr));
 }
 } // namespace
