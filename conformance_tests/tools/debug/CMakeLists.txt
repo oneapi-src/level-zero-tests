@@ -12,6 +12,7 @@ add_lzt_test(
   SOURCES
     src/test_debug.cpp
     src/main.cpp
+    src/test_debug_utils.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
