@@ -27,8 +27,6 @@ namespace fs = boost::filesystem;
 namespace bp = boost::process;
 namespace bi = boost::interprocess;
 
-namespace {
-
 TEST(
     zetDeviceGetDebugPropertiesTest,
     GivenValidDeviceWhenGettingDebugPropertiesThenPropertiesReturnedSuccessfully) {
@@ -1094,9 +1092,6 @@ class zetDebugMemAccessTest : public zetDebugAttachDetachTest {
 protected:
   void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
   void TearDown() override { zetDebugAttachDetachTest::TearDown(); }
-  void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
-                             const ze_device_thread_t &thread,
-                             zet_debug_event_t &module_event);
   void run_module_isa_elf_test(std::vector<ze_device_handle_t> &devices,
                                bool use_sub_devices);
   void
@@ -1104,13 +1099,14 @@ protected:
                                     bool use_sub_devices);
 
   zet_debug_session_handle_t debug_session;
-  static constexpr uint8_t bufferSize = 16;
 };
 
-void zetDebugMemAccessTest::readWriteModuleMemory(
-    const zet_debug_session_handle_t &debug_session,
-    const ze_device_thread_t &thread, zet_debug_event_t &module_event) {
+void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
+                           const ze_device_thread_t &thread,
+                           zet_debug_event_t &module_event, bool access_elf) {
 
+  static constexpr uint8_t bufferSize = 16;
+  bool read_success = false;
   zet_debug_memory_space_desc_t desc;
   desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
   uint8_t buffer[bufferSize];
@@ -1120,15 +1116,23 @@ void zetDebugMemAccessTest::readWriteModuleMemory(
   desc.address = module_event.info.module.load;
   lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
   for (int i = 0; i < bufferSize; i++) {
-    EXPECT_NE(static_cast<char>(0xaa), buffer[i]);
+    if (buffer[i] != 0xaa) {
+      read_success = true;
+    }
   }
+  EXPECT_TRUE(read_success);
+  read_success = false;
   memset(buffer, 0xaa, bufferSize);
 
   desc.address += 0xF; // add intentional missalignment
   lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
   for (int i = 0; i < bufferSize; i++) {
-    EXPECT_NE(static_cast<char>(0xaa), buffer[i]);
+    if (buffer[i] != 0xaa) {
+      read_success = true;
+    }
   }
+  EXPECT_TRUE(read_success);
+  read_success = false;
 
   uint8_t bufferCopy[bufferSize];
   memcpy(bufferCopy, buffer, bufferSize);
@@ -1142,20 +1146,43 @@ void zetDebugMemAccessTest::readWriteModuleMemory(
       memcmp(bufferCopy, buffer, bufferSize)); // memcmp retruns 0 on equal
 
   // Access ELF
-  if (module_event.info.module.moduleBegin) {
-    desc.address = module_event.info.module.moduleBegin;
-    lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
-    for (int i = 0; i < bufferSize; i++) {
-      EXPECT_NE(static_cast<char>(0xaa), buffer[i]);
-    }
-    memset(buffer, 0xaa, bufferSize);
 
-    desc.address += 0xF; // add intentional missalignment
-    lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
-    for (int i = 0; i < bufferSize; i++) {
-      EXPECT_NE(static_cast<char>(0xaa), buffer[i]);
+  if (access_elf) {
+    int offset = 0xF;
+    size_t elf_size = module_event.info.module.moduleEnd -
+                      module_event.info.module.moduleBegin;
+    uint8_t *elf_buffer = new uint8_t[elf_size];
+    memset(elf_buffer, 0xaa, elf_size);
+
+    desc.address = module_event.info.module.moduleBegin;
+    LOG_DEBUG << "[Debugger] Reading ELF of size " << elf_size;
+    lzt::debug_read_memory(debug_session, thread, desc, elf_size, elf_buffer);
+
+    EXPECT_EQ(elf_buffer[1], 'E');
+    EXPECT_EQ(elf_buffer[2], 'L');
+    EXPECT_EQ(elf_buffer[3], 'F');
+
+    for (int i = 0; i < elf_size; i++) {
+      if (elf_buffer[i] != 0xaa) {
+        read_success = true;
+      }
     }
-    // NO writing allowed to ELF
+    EXPECT_TRUE(read_success);
+    read_success = false;
+
+    memset(elf_buffer, 0xaa, elf_size);
+    desc.address += offset; // add intentional missalignment
+    lzt::debug_read_memory(debug_session, thread, desc, elf_size - offset,
+                           elf_buffer);
+    for (int i = 0; i < elf_size; i++) {
+      if (elf_buffer[i] != 0xaa) {
+        read_success = true;
+      }
+    }
+    EXPECT_TRUE(read_success);
+    read_success = false;
+
+    delete[] elf_buffer;
   }
 }
 
@@ -1179,7 +1206,7 @@ void zetDebugMemAccessTest::run_module_isa_elf_test(
     thread.subslice = UINT32_MAX;
     thread.eu = UINT32_MAX;
     thread.thread = UINT32_MAX;
-    readWriteModuleMemory(debug_session, thread, module_event);
+    readWriteModuleMemory(debug_session, thread, module_event, false);
 
     lzt::debug_detach(debug_session);
     debug_helper.terminate();
@@ -1253,7 +1280,8 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
         print_thread("[Debugger] Reading and writing from Stopped thread ",
                      stopped_thread);
 
-        readWriteModuleMemory(debug_session, stopped_thread, module_event);
+        readWriteModuleMemory(debug_session, stopped_thread, module_event,
+                              false);
 
         lzt::debug_read_memory(debug_session, stopped_thread, desc, sizeToRead,
                                buffer);
@@ -1609,5 +1637,3 @@ TEST_F(
   auto devices = lzt::get_all_sub_devices();
   run_alternate_stop_resume_test(devices, true);
 }
-
-} // namespace

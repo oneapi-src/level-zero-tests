@@ -42,6 +42,15 @@ typedef enum { SINGLE_THREAD, GROUP_OF_THREADS, ALL_THREADS } num_threads_t;
     }                                                                          \
   } while (0)
 
+void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
+                                 ze_device_handle_t device,
+                                 zet_debug_session_handle_t &debug_session,
+                                 zet_debug_event_t &module_event);
+
+void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
+                           const ze_device_thread_t &thread,
+                           zet_debug_event_t &module_event, bool access_elf);
+
 class zetDebugBaseSetup : public ::testing::Test {
 protected:
   void SetUp() override { synchro = new process_synchro(true, true); }
