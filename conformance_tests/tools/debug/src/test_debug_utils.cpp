@@ -31,44 +31,51 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
   bool read_success = false;
   zet_debug_memory_space_desc_t desc;
   desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
-  uint8_t buffer[bufferSize];
-  memset(buffer, 0xaa, bufferSize);
+  uint8_t buffer1[bufferSize];
+  uint8_t buffer2[bufferSize];
+  uint8_t origBuffer[bufferSize];
+  memset(buffer1, 0xaa, bufferSize);
+  memset(buffer2, 0xaa, bufferSize);
 
   // Access ISA
   desc.address = module_event.info.module.load;
-  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
+  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer1);
   for (int i = 0; i < bufferSize; i++) {
-    if (buffer[i] != 0xaa) {
+    if (buffer1[i] != 0xaa) {
       read_success = true;
     }
   }
   EXPECT_TRUE(read_success);
   read_success = false;
-  memset(buffer, 0xaa, bufferSize);
 
   desc.address += 0xF; // add intentional missalignment
-  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
+  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer2);
   for (int i = 0; i < bufferSize; i++) {
-    if (buffer[i] != 0xaa) {
+    if (buffer2[i] != 0xaa) {
       read_success = true;
     }
   }
   EXPECT_TRUE(read_success);
   read_success = false;
 
-  uint8_t bufferCopy[bufferSize];
-  memcpy(bufferCopy, buffer, bufferSize);
+  EXPECT_FALSE(memcmp(buffer1 + 0xF, buffer2,
+                      bufferSize - 0xF)); // memcmp returns 0 if equal
 
-  lzt::debug_write_memory(debug_session, thread, desc, bufferSize, buffer);
+  memcpy(origBuffer, buffer2, bufferSize);
 
-  // Confirm reading again returns the original content
-  memset(buffer, 0xaa, bufferSize);
-  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer);
-  EXPECT_FALSE(
-      memcmp(bufferCopy, buffer, bufferSize)); // memcmp retruns 0 on equal
+  *(reinterpret_cast<uint64_t *>(buffer2)) = 0xDEADBEEFDEADBEEF;
+
+  lzt::debug_write_memory(debug_session, thread, desc, bufferSize, buffer2);
+  memset(buffer2, 0xaa, bufferSize);
+  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, buffer2);
+  if (*(reinterpret_cast<uint64_t *>(buffer2)) != 0xDEADBEEFDEADBEEF) {
+    FAIL() << "[Debugger] Writing memory failed";
+  }
+
+  // Restore content
+  lzt::debug_write_memory(debug_session, thread, desc, bufferSize, origBuffer);
 
   // Access ELF
-
   if (access_elf) {
     int offset = 0xF;
     size_t elf_size = module_event.info.module.moduleEnd -
