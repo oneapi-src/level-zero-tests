@@ -405,21 +405,22 @@ TEST_P(zeP2PMemAccessTestsAtomicAccess,
 
   run_test(1, false, ATOMIC);
 
-  int *dev0_int = (static_cast<int *>(dev_access_[0].device_mem_validation));
+  int *dev0_int = (static_cast<int *>(host_mem_validation));
   LOG_INFO << "OUTPUT = " << dev0_int[0];
   EXPECT_EQ(dev_access_[0].init_val + dev_access_[0].group_count_x *
                                           dev_access_[0].group_size_x *
                                           dev_access_[0].kernel_add_val,
             dev0_int[0]);
-  dev_access_.clear();
+  lzt::free_memory(host_mem_validation);
   lzt::free_memory(dev_access_[0].device_mem_validation);
+  dev_access_.clear();
 }
 
 INSTANTIATE_TEST_CASE_P(TestP2PAtomicAccess, zeP2PMemAccessTestsAtomicAccess,
                         testing::Combine(testing::Values("atomic_access"),
                                          testing::Values(ZE_MEMORY_TYPE_DEVICE,
                                                          ZE_MEMORY_TYPE_SHARED),
-                                         testing::Range(2, 2)));
+                                         testing::Range(2, 3)));
 
 class zeP2PMemAccessTestsConcurrentAccess : public zeP2PMemAccessTests {};
 
