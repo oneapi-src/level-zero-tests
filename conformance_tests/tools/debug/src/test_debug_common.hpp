@@ -120,7 +120,7 @@ public:
     LOG_INFO << "[Application] Waiting for debugger to attach";
     bi::scoped_lock<bi::named_mutex> lock(*mutex);
     condition->wait(lock, [&] { return *debugger_signal; });
-    LOG_INFO << "[Application] Debugged process proceeding";
+    LOG_INFO << "[Application] process proceeding";
   }
 
   // To be used by application only:

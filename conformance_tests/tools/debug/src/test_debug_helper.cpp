@@ -95,7 +95,6 @@ void attach_after_module_created_test(ze_context_handle_t context,
                                       ze_device_handle_t device,
                                       process_synchro &synchro,
                                       debug_options &options) {
-  LOG_INFO << "[Application] Attach After Module Created Test";
 
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -104,9 +103,12 @@ void attach_after_module_created_test(ze_context_handle_t context,
   std::string module_name = (options.use_custom_module == true)
                                 ? options.module_name_in
                                 : "debug_add.spv";
+
+  LOG_INFO << "[Application] Creating module";
   auto module = lzt::create_module(context, device, module_name,
                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
 
+  LOG_INFO << "[Application] Creating kernel";
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto size = 8192;

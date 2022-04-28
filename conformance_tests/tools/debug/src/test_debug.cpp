@@ -901,27 +901,25 @@ void zetDebugEventReadTest::run_attach_after_module_created_test(
 
     synchro->notify_attach();
 
-    auto event_found = false;
-    while (true) {
-      zet_debug_event_t debug_event;
-      ze_result_t result = lzt::debug_read_event(debugSession, debug_event,
-                                                 eventsTimeoutMS, false);
-      if (ZE_RESULT_SUCCESS != result) {
-        break;
-      }
-
+    bool event_found = false;
+    uint8_t attempts = 0;
+    zet_debug_event_t debug_event = {};
+    do {
+      lzt::debug_read_event(debugSession, debug_event, eventsTimeoutMS / 10,
+                            true);
+      LOG_INFO << "[Debugger] received event: "
+               << lzt::debuggerEventTypeString[debug_event.type];
       if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
         event_found = true;
-      }
-
-      if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
-        lzt::debug_ack_event(debugSession, &debug_event);
+        break;
       }
 
       if (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) {
         break;
       }
-    }
+
+      attempts++;
+    } while (attempts < 5);
 
     ASSERT_TRUE(event_found);
     lzt::debug_detach(debugSession);
