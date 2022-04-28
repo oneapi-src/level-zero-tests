@@ -124,8 +124,7 @@ void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
   debug_config.pid = pid;
   debug_session = lzt::debug_attach(device, debug_config);
   if (!debug_session) {
-    LOG_ERROR << "[Debugger] Failed to attach to start a debug session";
-    return;
+    FAIL() << "[Debugger] Failed to attach to start a debug session";
   }
 
   synchro->notify_attach();
@@ -148,7 +147,7 @@ void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
              << lzt::debuggerEventTypeString[debug_event.type];
 
     if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
-      LOG_INFO << "[Debugger] ZET_DEBUG_EVENT_TYPE_MODULE_LOAD."
+      LOG_INFO << "[Debugger]"
                << " ISA load address: " << std::hex
                << debug_event.info.module.load << " ELF begin: " << std::hex
                << debug_event.info.module.moduleBegin
@@ -162,8 +161,11 @@ void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
     checkpoint = std::chrono::system_clock::now();
     std::chrono::duration<double> secondsLooping = checkpoint - start;
     if (secondsLooping.count() > eventsTimeoutS) {
-      LOG_ERROR << "[Debugger] Timed out waiting for module event";
-      break;
+      FAIL() << "[Debugger] Timed out waiting for module load event";
     }
+  }
+
+  if (!module_loaded) {
+    FAIL() << "[Debugger] Did not receive module load event";
   }
 }

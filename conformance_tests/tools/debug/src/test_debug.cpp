@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2022 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -63,26 +63,26 @@ void zetDebugAttachDetachTest::run_test(
     if (!is_debug_supported(device))
       continue;
 
-    auto debug_helper = launch_process(BASIC, device, use_sub_devices);
+    debugHelper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debug_helper.id();
+    debug_config.pid = debugHelper.id();
 
     if (!reattach) {
-      auto debug_session = lzt::debug_attach(device, debug_config);
-      if (!debug_session) {
+      debugSession = lzt::debug_attach(device, debug_config);
+      if (!debugSession) {
         FAIL() << "[Debugger] Failed to attach to start a debug session";
       }
       synchro->notify_attach();
       LOG_INFO << "[Debugger] Detaching";
-      lzt::debug_detach(debug_session);
-      debug_helper.wait(); // we don't care about the child processes exit code
-                           // at the moment
+      lzt::debug_detach(debugSession);
+      debugHelper.wait(); // we don't care about the child processes exit code
+                          // at the moment
     } else {
       int loop = 1;
       for (loop = 1; loop < 11; loop++) {
         LOG_INFO << "[Debugger] Attaching. Loop " << loop;
-        auto debug_session = lzt::debug_attach(device, debug_config);
-        if (!debug_session) {
+        auto debugSession = lzt::debug_attach(device, debug_config);
+        if (!debugSession) {
           FAIL()
               << "[Debugger] Failed to attach to start a debug session. Loop "
               << loop;
@@ -90,14 +90,14 @@ void zetDebugAttachDetachTest::run_test(
         // delay last detach to happen after application finishes
         if (loop < 10) {
           LOG_INFO << "[Debugger] Detaching. Loop " << loop;
-          lzt::debug_detach(debug_session);
+          lzt::debug_detach(debugSession);
         } else {
           synchro->notify_attach();
-          debug_helper
+          debugHelper
               .terminate(); // we don't care about the child processes exit code
           LOG_INFO << "[Debugger] LAST Detach after aplication finished. Loop "
                    << loop;
-          lzt::debug_detach(debug_session);
+          lzt::debug_detach(debugSession);
         }
       }
     }
@@ -158,12 +158,12 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
 
     if (!is_debug_supported(device))
       continue;
-    auto debug_helper = launch_process(test_type, device, use_sub_devices);
+    debugHelper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debug_helper.id();
-    auto debug_session = lzt::debug_attach(device, debug_config);
-    if (!debug_session) {
+    debug_config.pid = debugHelper.id();
+    debugSession = lzt::debug_attach(device, debug_config);
+    if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
@@ -181,7 +181,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
 
     zet_debug_event_t debug_event;
     do {
-      ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
+      ze_result_t result = lzt::debug_read_event(debugSession, debug_event,
                                                  eventsTimeoutMS, false);
       if (ZE_RESULT_SUCCESS != result) {
         break;
@@ -198,7 +198,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
         moduleLoadCount++;
         EXPECT_TRUE(debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK);
         if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
-          lzt::debug_ack_event(debug_session, &debug_event);
+          lzt::debug_ack_event(debugSession, &debug_event);
         }
       } else if (ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD == debug_event.type) {
         EXPECT_GT(eventNum, 1);
@@ -222,8 +222,8 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
     EXPECT_TRUE(gotProcEntry);
     EXPECT_TRUE(gotProcExit);
 
-    lzt::debug_detach(debug_session);
-    debug_helper.wait();
+    lzt::debug_detach(debugSession);
+    debugHelper.wait();
   }
 }
 
@@ -356,6 +356,7 @@ bool find_stopped_threads(const zet_debug_session_handle_t &debug_session,
   } while (attempts < 5);
 
   if (threads.size() > 0) {
+    LOG_INFO << "Number of stopped threads: " << threads.size();
     return true;
   } else {
     return false;
@@ -769,12 +770,12 @@ void zetDebugEventReadTest::run_advanced_test(
   for (auto &device : devices) {
     if (!is_debug_supported(device))
       continue;
-    auto debug_helper = launch_process(test_type, device, use_sub_devices);
+    debugHelper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debug_helper.id();
-    auto debug_session = lzt::debug_attach(device, debug_config);
-    if (!debug_session) {
+    debug_config.pid = debugHelper.id();
+    debugSession = lzt::debug_attach(device, debug_config);
+    if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
@@ -792,7 +793,7 @@ void zetDebugEventReadTest::run_advanced_test(
     uint32_t thread_unavailable_event_count = 0;
     while (true) {
       zet_debug_event_t debug_event;
-      ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
+      ze_result_t result = lzt::debug_read_event(debugSession, debug_event,
                                                  eventsTimeoutMS / 10, true);
       if (ZE_RESULT_SUCCESS != result) {
         if (ZE_RESULT_NOT_READY == result) {
@@ -813,21 +814,20 @@ void zetDebugEventReadTest::run_advanced_test(
         if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
           LOG_DEBUG << "[Debugger] Acking event: "
                     << lzt::debuggerEventTypeString[debug_event.type];
-          lzt::debug_ack_event(debug_session, &debug_event);
+          lzt::debug_ack_event(debugSession, &debug_event);
         }
       }
 
       switch (test_type) {
       case LONG_RUNNING_KERNEL_INTERRUPTED: {
         if (::testing::Test::HasFailure()) {
-          debug_helper.terminate();
-          lzt::debug_detach(debug_session);
+          lzt::debug_detach(debugSession);
           FAIL() << "[Debugger] Failed to receive either stop or unavailable "
                     "result after "
                     "interrupting threads";
         } else {
           auto result =
-              interrupt_test(debug_session, debug_event, threads, debug_helper,
+              interrupt_test(debugSession, debug_event, threads, debugHelper,
                              timeout, timeout_count, device);
           if (result) {
             end_test = true;
@@ -843,7 +843,7 @@ void zetDebugEventReadTest::run_advanced_test(
         device_thread.subslice = 0;
         device_thread.eu = 0;
         device_thread.thread = 0;
-        lzt::debug_interrupt(debug_session, device_thread);
+        lzt::debug_interrupt(debugSession, device_thread);
         switch (debug_event.type) {
         case ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE:
           thread_unavailable_event_count++;
@@ -869,10 +869,9 @@ void zetDebugEventReadTest::run_advanced_test(
 
     // cleanup
     LOG_INFO << "[Debugger] terminating application to finish";
-    debug_helper.terminate();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    debugHelper.terminate();
     LOG_INFO << "[Debugger] detaching";
-    lzt::debug_detach(debug_session);
+    lzt::debug_detach(debugSession);
     if (test_type == THREAD_UNAVAILABLE) {
       ASSERT_EQ(thread_unavailable_event_count, 1)
           << "Number of ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE events is not "
@@ -888,15 +887,15 @@ void zetDebugEventReadTest::run_attach_after_module_created_test(
     if (!is_debug_supported(device))
       continue;
 
-    auto debug_helper =
+    debugHelper =
         launch_process(ATTACH_AFTER_MODULE_CREATED, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debug_helper.id();
+    debug_config.pid = debugHelper.id();
 
     synchro->wait_for_application();
 
-    auto debug_session = lzt::debug_attach(device, debug_config);
-    if (!debug_session) {
+    debugSession = lzt::debug_attach(device, debug_config);
+    if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
@@ -905,7 +904,7 @@ void zetDebugEventReadTest::run_attach_after_module_created_test(
     auto event_found = false;
     while (true) {
       zet_debug_event_t debug_event;
-      ze_result_t result = lzt::debug_read_event(debug_session, debug_event,
+      ze_result_t result = lzt::debug_read_event(debugSession, debug_event,
                                                  eventsTimeoutMS, false);
       if (ZE_RESULT_SUCCESS != result) {
         break;
@@ -916,17 +915,17 @@ void zetDebugEventReadTest::run_attach_after_module_created_test(
       }
 
       if (debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
-        lzt::debug_ack_event(debug_session, &debug_event);
+        lzt::debug_ack_event(debugSession, &debug_event);
       }
 
       if (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) {
         break;
       }
     }
-    lzt::debug_detach(debug_session);
-    debug_helper.wait();
 
     ASSERT_TRUE(event_found);
+    lzt::debug_detach(debugSession);
+    debugHelper.wait();
   }
 }
 
@@ -1044,8 +1043,6 @@ protected:
   void
   run_module_read_write_buffer_test(std::vector<ze_device_handle_t> &devices,
                                     bool use_sub_devices);
-
-  zet_debug_session_handle_t debug_session;
 };
 
 void zetDebugMemAccessTest::run_module_isa_elf_test(
@@ -1055,12 +1052,10 @@ void zetDebugMemAccessTest::run_module_isa_elf_test(
     if (!is_debug_supported(device))
       continue;
 
-    auto debug_helper = launch_process(BASIC, device, use_sub_devices);
+    debugHelper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_event_t module_event;
-    attach_and_get_module_event(debug_helper.id(), synchro, device,
-                                debug_session, module_event);
-    CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
-                     debug_helper);
+    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
+                                module_event);
 
     // ALL threads
     ze_device_thread_t thread;
@@ -1068,10 +1063,10 @@ void zetDebugMemAccessTest::run_module_isa_elf_test(
     thread.subslice = UINT32_MAX;
     thread.eu = UINT32_MAX;
     thread.thread = UINT32_MAX;
-    readWriteModuleMemory(debug_session, thread, module_event, false);
+    readWriteModuleMemory(debugSession, thread, module_event, false);
 
-    lzt::debug_detach(debug_session);
-    debug_helper.terminate();
+    lzt::debug_detach(debugSession);
+    debugHelper.terminate();
   }
 }
 
@@ -1094,26 +1089,22 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
     if (!is_debug_supported(device))
       continue;
 
-    auto debug_helper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
-                                       use_sub_devices);
+    debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
+                                 use_sub_devices);
     zet_debug_event_t module_event;
-    attach_and_get_module_event(debug_helper.id(), synchro, device,
-                                debug_session, module_event);
-    CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
-                     debug_helper);
+    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
+                                module_event);
 
     if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
       LOG_DEBUG << "[Debugger] Acking event: "
                 << lzt::debuggerEventTypeString[module_event.type];
-      lzt::debug_ack_event(debug_session, &module_event);
+      lzt::debug_ack_event(debugSession, &module_event);
     }
 
     uint64_t gpu_buffer_va = 0;
     synchro->wait_for_application();
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
-      debug_helper.terminate();
-      lzt::debug_detach(debug_session);
     }
     LOG_INFO << "[Debugger] Accessing application GPU buffer VA: " << std::hex
              << gpu_buffer_va;
@@ -1126,9 +1117,9 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
 
     std::this_thread::sleep_for(std::chrono::seconds(5));
     LOG_INFO << "[Debugger] Interrupting all threads";
-    lzt::debug_interrupt(debug_session, thread);
+    lzt::debug_interrupt(debugSession, thread);
     std::vector<ze_device_thread_t> stopped_threads;
-    if (find_stopped_threads(debug_session, device, stopped_threads)) {
+    if (find_stopped_threads(debugSession, device, stopped_threads)) {
 
       zet_debug_memory_space_desc_t desc;
       desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
@@ -1142,10 +1133,10 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
         print_thread("[Debugger] Reading and writing from Stopped thread ",
                      stopped_thread);
 
-        readWriteModuleMemory(debug_session, stopped_thread, module_event,
+        readWriteModuleMemory(debugSession, stopped_thread, module_event,
                               false);
 
-        lzt::debug_read_memory(debug_session, stopped_thread, desc, sizeToRead,
+        lzt::debug_read_memory(debugSession, stopped_thread, desc, sizeToRead,
                                buffer);
 
         // Skip the first byte since the first thread read will
@@ -1158,20 +1149,19 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
 
         // set buffer[0] to 0 to break the loop. See debug_loop.cl
         buffer[0] = 0;
-        lzt::debug_write_memory(debug_session, thread, desc, sizeToRead,
-                                buffer);
+        lzt::debug_write_memory(debugSession, thread, desc, sizeToRead, buffer);
       }
 
       LOG_INFO << "[Debugger] resuming interrupted threads";
-      lzt::debug_resume(debug_session, thread);
+      lzt::debug_resume(debugSession, thread);
       delete[] buffer;
     } else {
       FAIL() << "[Debugger] Could not find a stopped thread";
     }
 
-    debug_helper.wait();
-    ASSERT_EQ(debug_helper.exit_code(), 0);
-    lzt::debug_detach(debug_session);
+    debugHelper.wait();
+    lzt::debug_detach(debugSession);
+    ASSERT_EQ(debugHelper.exit_code(), 0);
   }
 }
 
@@ -1230,20 +1220,31 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
 
     if (!is_debug_supported(device))
       continue;
-    auto debug_helper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
-                                       use_sub_devices);
+    debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
+                                 use_sub_devices);
 
     zet_debug_event_t module_event;
-    attach_and_get_module_event(debug_helper.id(), synchro, device,
-                                debug_session, module_event);
-    CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
-                     debug_helper);
+    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
+                                module_event);
 
     if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
       LOG_DEBUG << "[Debugger] Acking event: "
                 << lzt::debuggerEventTypeString[module_event.type];
-      lzt::debug_ack_event(debug_session, &module_event);
+      lzt::debug_ack_event(debugSession, &module_event);
     }
+
+    uint64_t gpu_buffer_va = 0;
+    synchro->wait_for_application();
+    if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
+      FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
+    }
+    zet_debug_memory_space_desc_t desc;
+    desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+    int sizeToRead = 512;
+    uint8_t *kernel_buffer = new uint8_t[sizeToRead];
+    // set buffer[0] to 0 to break the loop. See debug_loop.cl
+    kernel_buffer[0] = 0;
+    desc.address = gpu_buffer_va;
 
     LOG_INFO << "[Debugger] Stopping all device threads";
     ze_device_thread_t device_threads = {};
@@ -1253,16 +1254,18 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     device_threads.thread = UINT32_MAX;
 
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    lzt::debug_interrupt(debug_session, device_threads);
+    lzt::debug_interrupt(debugSession, device_threads);
 
     std::vector<ze_device_thread_t> stopped_threads;
-    if (!find_stopped_threads(debug_session, device, stopped_threads)) {
+    if (!find_stopped_threads(debugSession, device, stopped_threads)) {
       FAIL() << "Failed to stop device thread";
     }
-    LOG_INFO << "[Debugger] Stopped device thread";
 
     auto register_set_properties = lzt::get_register_set_properties(device);
+    LOG_INFO << "[Debugger] Reading/Writing registers on interrupted threads";
     for (auto &stopped_thread : stopped_threads) {
+      int regSetNumber = 1;
+
       for (auto &register_set : register_set_properties) {
         auto buffer_size = register_set.byteSize * register_set.count;
         void *buffer = lzt::allocate_host_memory(register_set.byteSize *
@@ -1270,60 +1273,76 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
         void *buffer_copy = lzt::allocate_host_memory(register_set.byteSize *
                                                       register_set.count);
 
+        uint32_t regSetType = register_set.type;
         std::memset(buffer, 0xaa, buffer_size);
 
-        auto can_verify_write = false;
+        // Will NOT test write-only registers since cannot restore oringal
+        // content
         if (register_set.generalFlags & ZET_DEBUG_REGSET_FLAG_READABLE) {
-          LOG_INFO << "[Debugger] Register set is readable";
-          can_verify_write = true;
+          LOG_DEBUG << "[Debugger] Register set " << regSetNumber << " type "
+                    << regSetType << " is readable";
+
           // read all registers in this register set
-          lzt::debug_read_registers(debug_session, stopped_thread,
+          lzt::debug_read_registers(debugSession, stopped_thread,
                                     register_set.type, 0, register_set.count,
-                                    register_set.byteSize, buffer);
+                                    buffer);
 
           // save the contents for write test
           std::memcpy(buffer_copy, buffer, buffer_size);
-        } else {
-          LOG_INFO << "[Debugger] Register set not readable";
-        }
 
-        if (register_set.generalFlags & ZET_DEBUG_REGSET_FLAG_WRITEABLE) {
-          LOG_INFO << "[Debugger] Register set is writeable";
-          std::memset(buffer, 0xaa, buffer_size);
+          if (register_set.generalFlags & ZET_DEBUG_REGSET_FLAG_WRITEABLE) {
+            LOG_DEBUG << "[Debugger] Register set " << regSetNumber << " type "
+                      << regSetType << " is writeable";
+            std::memset(buffer, 0xaa, buffer_size);
 
-          lzt::debug_write_registers(debug_session, stopped_thread,
-                                     register_set.type, 0, register_set.count,
-                                     buffer);
+            lzt::debug_write_registers(debugSession, stopped_thread,
+                                       register_set.type, 0, register_set.count,
+                                       buffer);
 
-          if (can_verify_write) {
-            LOG_INFO << "[Debugger] Validating register written successfully";
-            lzt::debug_read_registers(debug_session, stopped_thread,
+            lzt::debug_read_registers(debugSession, stopped_thread,
                                       register_set.type, 0, register_set.count,
-                                      register_set.byteSize, buffer);
+                                      buffer);
 
             for (int i = 0; i < buffer_size; i++) {
-              ASSERT_EQ(static_cast<char>(0xaa),
-                        static_cast<char *>(buffer)[i]);
+              if (static_cast<char>(0xaa) != static_cast<char *>(buffer)[i]) {
+                FAIL() << "[Debugger] register set " << regSetNumber
+                       << " FAILED write test. Expected "
+                       << static_cast<char>(0xaa) << " , found "
+                       << static_cast<char *>(buffer)[i];
+              }
             }
 
+            LOG_INFO << "[Debugger] Validating register set " << regSetNumber
+                     << " type " << regSetType << " written successfully";
+
             // write back the original contents
-            lzt::debug_write_registers(debug_session, stopped_thread,
+            lzt::debug_write_registers(debugSession, stopped_thread,
                                        register_set.type, 0, register_set.count,
                                        buffer_copy);
+          } else {
+            LOG_INFO << "[Debugger] Register set " << regSetNumber << " type "
+                     << regSetType << " is NOT writeable";
           }
         } else {
-          LOG_INFO << "[Debugger] Register set not writeable";
+          LOG_INFO << "[Debugger] Register set " << regSetNumber << " type "
+                   << regSetType << " si NOT readable";
         }
 
         lzt::free_memory(buffer);
         lzt::free_memory(buffer_copy);
+        regSetNumber++;
       }
     }
 
-    lzt::debug_resume(debug_session, device_threads);
-    debug_helper.wait();
-    ASSERT_EQ(debug_helper.exit_code(), 0);
-    lzt::debug_detach(debug_session);
+    lzt::debug_write_memory(debugSession, device_threads, desc, 1,
+                            kernel_buffer);
+    delete[] kernel_buffer;
+
+    LOG_INFO << "[Debugger] resuming interrupted threads";
+    lzt::debug_resume(debugSession, device_threads);
+    debugHelper.wait();
+    lzt::debug_detach(debugSession);
+    ASSERT_EQ(debugHelper.exit_code(), 0);
   }
 }
 
@@ -1348,8 +1367,6 @@ protected:
   void TearDown() override { zetDebugBaseSetup::TearDown(); }
   void run_alternate_stop_resume_test(std::vector<ze_device_handle_t> &devices,
                                       bool use_sub_devices);
-
-  zet_debug_session_handle_t debug_session;
 };
 
 void zetDebugThreadControlTest::run_alternate_stop_resume_test(
@@ -1359,27 +1376,23 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
       continue;
     }
 
-    auto debug_helper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
-                                       use_sub_devices);
+    debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
+                                 use_sub_devices);
 
     zet_debug_event_t module_event;
-    attach_and_get_module_event(debug_helper.id(), synchro, device,
-                                debug_session, module_event);
-    CLEAN_AND_ASSERT(module_event.info.module.load, debug_session,
-                     debug_helper);
+    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
+                                module_event);
 
     if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
       LOG_DEBUG << "[Debugger] Acking event: "
                 << lzt::debuggerEventTypeString[module_event.type];
-      lzt::debug_ack_event(debug_session, &module_event);
+      lzt::debug_ack_event(debugSession, &module_event);
     }
 
     uint64_t gpu_buffer_va = 0;
     synchro->wait_for_application();
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
-      debug_helper.terminate();
-      lzt::debug_detach(debug_session);
     }
 
     // stop all threads
@@ -1391,9 +1404,9 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
 
     LOG_INFO << "[Debugger] Interrupting all threads";
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    lzt::debug_interrupt(debug_session, thread);
+    lzt::debug_interrupt(debugSession, thread);
     std::vector<ze_device_thread_t> stopped_threads;
-    if (find_stopped_threads(debug_session, device, stopped_threads)) {
+    if (find_stopped_threads(debugSession, device, stopped_threads)) {
       zet_debug_memory_space_desc_t desc;
       desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
       const int bufferSize = 1;
@@ -1409,7 +1422,7 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
         i++;
         if (i % 2) {
           print_thread("[Debugger] Resuming thread ", stopped_thread);
-          lzt::debug_resume(debug_session, stopped_thread);
+          lzt::debug_resume(debugSession, stopped_thread);
         }
       }
 
@@ -1418,32 +1431,32 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
         i++;
         if (i % 2) {
           print_thread("[Debugger] Interrupting thread ", stopped_thread);
-          lzt::debug_interrupt(debug_session, stopped_thread);
+          lzt::debug_interrupt(debugSession, stopped_thread);
         }
       }
 
       // wait a bit
       std::this_thread::sleep_for(std::chrono::seconds(2));
-      EXPECT_EQ(debug_helper.running(), true);
+      EXPECT_EQ(debugHelper.running(), true);
 
       i = 0;
       for (auto &stopped_thread : stopped_threads) {
         i++;
         if (!(i % 2)) {
           print_thread("[Debugger] Resuming thread ", stopped_thread);
-          lzt::debug_resume(debug_session, stopped_thread);
+          lzt::debug_resume(debugSession, stopped_thread);
         }
       }
 
       std::this_thread::sleep_for(std::chrono::seconds(2));
-      EXPECT_EQ(debug_helper.running(), true);
+      EXPECT_EQ(debugHelper.running(), true);
 
       i = 0;
       for (auto &stopped_thread : stopped_threads) {
         i++;
         if (i % 2) {
           print_thread("[Debugger] Resuming thread ", stopped_thread);
-          lzt::debug_resume(debug_session, stopped_thread);
+          lzt::debug_resume(debugSession, stopped_thread);
         }
       }
 
@@ -1452,12 +1465,12 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
         i++;
         if (!(i % 2)) {
           print_thread("[Debugger] Interrupting thread ", stopped_thread);
-          lzt::debug_interrupt(debug_session, stopped_thread);
+          lzt::debug_interrupt(debugSession, stopped_thread);
         }
       }
 
       std::this_thread::sleep_for(std::chrono::seconds(2));
-      EXPECT_EQ(debug_helper.running(), true);
+      EXPECT_EQ(debugHelper.running(), true);
 
       i = 0;
       for (auto &stopped_thread : stopped_threads) {
@@ -1465,9 +1478,9 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
         if (!(i % 2)) {
           print_thread("[Debugger] Writing memory and resuming thread ",
                        stopped_thread);
-          lzt::debug_write_memory(debug_session, stopped_thread, desc,
+          lzt::debug_write_memory(debugSession, stopped_thread, desc,
                                   bufferSize, buffer);
-          lzt::debug_resume(debug_session, stopped_thread);
+          lzt::debug_resume(debugSession, stopped_thread);
         }
       }
 
@@ -1477,9 +1490,9 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     }
 
     // verify helper completes
-    debug_helper.wait();
-    ASSERT_EQ(debug_helper.exit_code(), 0);
-    lzt::debug_detach(debug_session);
+    debugHelper.wait();
+    lzt::debug_detach(debugSession);
+    ASSERT_EQ(debugHelper.exit_code(), 0);
   }
 }
 

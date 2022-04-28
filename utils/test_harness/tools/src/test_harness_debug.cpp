@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2022 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -40,6 +40,8 @@ zet_device_debug_properties_t get_debug_properties(ze_device_handle_t device) {
   return properties;
 }
 
+std::unordered_map<zet_debug_session_handle_t, bool> sessionsAttachStatus;
+
 zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,
                                         const zet_debug_config_t &debug_config,
                                         uint32_t timeout) {
@@ -71,12 +73,21 @@ zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,
                 .count() < timeout));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+  if (ZE_RESULT_SUCCESS == result) {
+    sessionsAttachStatus[debug_session] = true;
+  }
 
   return debug_session;
 }
 
 void debug_detach(const zet_debug_session_handle_t &debug_session) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugDetach(debug_session));
+
+  ze_result_t result = zetDebugDetach(debug_session);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+
+  if (ZE_RESULT_SUCCESS == result) {
+    sessionsAttachStatus[debug_session] = false;
+  }
 }
 
 zet_debug_event_t
@@ -164,15 +175,17 @@ get_register_set_properties(const ze_device_handle_t &device) {
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugGetRegisterSetProperties(
                                    device, &count, properties.data()));
+  LOG_DEBUG << "[Debugger] Found " << count << " regsets";
   EXPECT_EQ(device, device_initial);
+  EXPECT_NE(properties.data(), nullptr);
+
   return properties;
 }
 
 void debug_read_registers(const zet_debug_session_handle_t &debug_session,
                           const ze_device_thread_t &device_thread,
                           const uint32_t type, const uint32_t start,
-                          const uint32_t count, const uint32_t byte_size,
-                          void *buffer) {
+                          const uint32_t count, void *buffer) {
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetDebugReadRegisters(debug_session, device_thread, type, start,

@@ -173,6 +173,9 @@ public:
     mutex->lock();
     gpu_address = *gpu_buffer_address;
     mutex->unlock();
+    LOG_DEBUG << "[Debugger] Received Application buffer address: " << std::hex
+              << gpu_address;
+
     return true;
   }
 

@@ -423,11 +423,6 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
             << *(static_cast<unsigned long *>(loop_counter_s)) << " out of "
             << loop_max;
 
-  if (::testing::Test::HasFailure()) {
-    FAIL() << "[Application] Sanity check did not pass";
-    exit(1);
-  }
-
   // cleanup
   lzt::free_memory(context, dest_buffer_s);
   lzt::free_memory(context, dest_buffer_d);
@@ -439,6 +434,11 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   lzt::destroy_module(module);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
+
+  if (::testing::Test::HasFailure()) {
+    LOG_FATAL << "[Application] Sanity check did not pass";
+    exit(1);
+  }
 }
 
 // ***************************************************************************************

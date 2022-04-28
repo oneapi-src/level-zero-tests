@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2022 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -21,6 +21,8 @@ extern std::map<zet_debug_event_type_t, std::string> debuggerEventTypeString;
 
 zet_device_debug_properties_t get_debug_properties(ze_device_handle_t device);
 
+extern std::unordered_map<zet_debug_session_handle_t, bool>
+    sessionsAttachStatus;
 zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,
                                         const zet_debug_config_t &debug_config,
                                         uint32_t timeout = 30);
@@ -61,8 +63,7 @@ void debug_clean_assert_true(bool condition,
 void debug_read_registers(const zet_debug_session_handle_t &debug_session,
                           const ze_device_thread_t &device_thread,
                           const uint32_t type, const uint32_t start,
-                          const uint32_t count, const uint32_t byte_size,
-                          void *buffer);
+                          const uint32_t count, void *buffer);
 void debug_write_registers(const zet_debug_session_handle_t &debug_session,
                            const ze_device_thread_t &device_thread,
                            const uint32_t type, const uint32_t start,

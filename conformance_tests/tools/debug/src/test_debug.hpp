@@ -55,7 +55,20 @@ class zetDebugBaseSetup : public ::testing::Test {
 protected:
   void SetUp() override { synchro = new process_synchro(true, true); }
 
-  void TearDown() override { delete synchro; }
+  void TearDown() override {
+    if (::testing::Test::HasFailure()) {
+      LOG_WARNING << "[Debugger] Teardown with failure cleaning ";
+      debugHelper.terminate();
+      if ((lzt::sessionsAttachStatus.find(debugSession) !=
+           lzt::sessionsAttachStatus.end()) &&
+          (lzt::sessionsAttachStatus[debugSession])) {
+        // Ingore detach result
+        zetDebugDetach(debugSession);
+      }
+    }
+
+    delete synchro;
+  }
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
@@ -102,6 +115,9 @@ public:
       return false;
     }
   }
+
+  bp::child debugHelper;
+  zet_debug_session_handle_t debugSession;
 };
 
 #endif // TEST_DEBUG_HPP
