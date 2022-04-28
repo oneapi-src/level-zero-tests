@@ -1,2 +1,4 @@
-# Copyright (C) 2020 Intel Corporation
+# Copyright (C) 2022 Intel Corporation
 # SPDX-License-Identifier: MIT
+
+add_subdirectory(debug_errors)
