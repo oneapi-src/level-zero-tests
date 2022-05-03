@@ -189,6 +189,13 @@ get_memory_access_properties(ze_device_handle_t device) {
   return properties;
 }
 
+bool is_concurrent_memory_access_supported(ze_device_handle_t device) {
+
+  auto device_mem_access_props = lzt::get_memory_access_properties(device);
+  return ((device_mem_access_props.sharedSingleDeviceAllocCapabilities &
+           ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT) != 0);
+}
+
 uint32_t get_command_queue_group_properties_count(ze_device_handle_t device) {
   uint32_t count = 0;
 

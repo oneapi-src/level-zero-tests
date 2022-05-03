@@ -60,6 +60,7 @@ ze_device_external_memory_properties_t
 get_external_memory_properties(ze_device_handle_t device);
 ze_device_memory_access_properties_t
 get_memory_access_properties(ze_device_handle_t device);
+bool is_concurrent_memory_access_supported(ze_device_handle_t device);
 std::vector<ze_device_cache_properties_t>
 get_cache_properties(ze_device_handle_t device);
 ze_device_image_properties_t get_image_properties(ze_device_handle_t device);

@@ -141,6 +141,14 @@ TEST_F(
 TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopiesWithDependenciesWhenExecutingCommandListThenCommandsCompletesSuccessfully) {
+
+  if (!lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
+                   "device, skipping test";
+    return;
+  }
+
   auto src_buffer = lzt::allocate_shared_memory(size);
   auto temp_buffer = lzt::allocate_shared_memory(size);
   auto dst_buffer = lzt::allocate_shared_memory(size);
@@ -186,10 +194,8 @@ TEST_F(
 
   // Check for concurrent access which is required for this functionality to
   // work
-  auto device_mem_access_props = lzt::get_memory_access_properties(
-      lzt::get_default_device(lzt::get_default_driver()));
-  if ((device_mem_access_props.sharedSingleDeviceAllocCapabilities &
-       ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT) == 0) {
+  if (!lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
     LOG_WARNING << "Concurrent access for shared allocations unsupported by "
                    "device, skipping test";
     return;
@@ -229,6 +235,14 @@ TEST_F(
 TEST_F(
     zeCommandListEventTests,
     GivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListThenCommandCompletesSuccessfully) {
+
+  if (!lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
+                   "device, skipping test";
+    return;
+  }
+
   auto ref_buffer = lzt::allocate_shared_memory(size);
   auto dst_buffer = lzt::allocate_shared_memory(size);
   memset(ref_buffer, 0x1, size);
@@ -271,6 +285,13 @@ TEST_F(
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
+  if (!lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
+                   "device, skipping test";
+    return;
+  }
+
   auto ref_buffer = lzt::allocate_shared_memory(size);
   auto dst_buffer = lzt::allocate_shared_memory(size);
   memset(ref_buffer, 0x1, size);
@@ -309,6 +330,14 @@ TEST_F(
   uint32_t width = 16;
   uint32_t height = 16;
   size = height * width;
+
+  if (!lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
+                   "device, skipping test";
+    return;
+  }
+
   auto src_buffer = lzt::allocate_shared_memory(size);
   auto temp_buffer = lzt::allocate_shared_memory(size);
   auto dst_buffer = lzt::allocate_shared_memory(size);
@@ -354,6 +383,13 @@ TEST_F(
     GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
+
+  if (!lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
+                   "device, skipping test";
+    return;
+  }
 
   uint32_t width = 16;
   uint32_t height = 16;
