@@ -31,16 +31,14 @@ const uint16_t timeoutThreshold = 4;
 
 namespace lzt = level_zero_tests;
 
-typedef enum { SINGLE_THREAD, GROUP_OF_THREADS, ALL_THREADS } num_threads_t;
+typedef enum {
+  SINGLE_THREAD,
+  SINGLE_EU_THREADS,
+  GROUP_OF_THREADS,
+  ALL_THREADS
+} num_threads_t;
 
-#define CLEAN_AND_ASSERT(condition, debug_session, helper)                     \
-  do {                                                                         \
-    if (!condition) {                                                          \
-      lzt::debug_detach(debug_session);                                        \
-      helper.terminate();                                                      \
-      ASSERT_TRUE(false);                                                      \
-    }                                                                          \
-  } while (0)
+typedef enum { DEBUG, INFO, WARNING } log_level_t;
 
 void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
                                  ze_device_handle_t device,

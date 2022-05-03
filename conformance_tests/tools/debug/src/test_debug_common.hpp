@@ -18,7 +18,6 @@
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
-#include "test_debug_common.hpp"
 
 namespace lzt = level_zero_tests;
 namespace fs = boost::filesystem;

@@ -8,9 +8,6 @@
 #include <chrono>
 #include <thread>
 
-#include "utils/utils.hpp"
-#include "test_harness/test_harness.hpp"
-#include "logging/logging.hpp"
 #include "test_debug.hpp"
 #include "test_debug_helper.hpp"
 
@@ -373,9 +370,6 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   LOG_DEBUG << "[Application] Allocated destination device memory at: "
             << std::hex << dest_buffer_d;
 
-  synchro.update_gpu_buffer_address(reinterpret_cast<uint64_t>(src_buffer_d));
-  synchro.notify_debugger();
-
   std::memset(dest_buffer_s, 1, size);
   std::memset(src_buffer_s, 0, size);
   std::memset(loop_counter_s, 0, sizeof(loop_counter_s));
@@ -410,6 +404,10 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   lzt::close_command_list(command_list);
 
   LOG_DEBUG << "[Application] launching execution long_kernel";
+
+  synchro.update_gpu_buffer_address(reinterpret_cast<uint64_t>(src_buffer_d));
+  synchro.notify_debugger();
+
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
   lzt::synchronize(command_queue, UINT64_MAX);
 

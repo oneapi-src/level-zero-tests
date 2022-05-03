@@ -291,6 +291,61 @@ bool read_register(const zet_debug_session_handle_t &debug_session,
   return false;
 }
 
+void print_thread(const char *entry_message,
+                  const ze_device_thread_t &device_thread,
+                  log_level_t logLevel) {
+  std::stringstream message;
+  message << entry_message << "SLICE:" << device_thread.slice
+          << " SUBSLICE: " << device_thread.subslice
+          << " EU: " << device_thread.eu << " THREAD: " << device_thread.thread;
+
+  if (logLevel == WARNING) {
+    LOG_WARNING << message.str();
+  } else if (logLevel == INFO) {
+    LOG_INFO << message.str();
+  } else if (logLevel == DEBUG) {
+    LOG_DEBUG << message.str();
+  }
+}
+
+bool unique_thread(const ze_device_thread_t &device_thread) {
+  print_thread("[Debugger] is thread unique: ", device_thread, DEBUG);
+  return (device_thread.slice != UINT32_MAX &&
+          device_thread.subslice != UINT32_MAX &&
+          device_thread.eu != UINT32_MAX && device_thread.thread != UINT32_MAX);
+}
+
+bool areThreadsEqual(const ze_device_thread_t &thread1,
+                     const ze_device_thread_t &thread2) {
+  return (thread1.slice == thread2.slice &&
+          thread1.subslice == thread2.subslice && thread1.eu == thread2.eu &&
+          thread1.thread == thread2.thread);
+}
+
+struct smaller_thread_functor {
+
+  inline bool operator()(ze_device_thread_t thread1,
+                         ze_device_thread_t thread2) const {
+    if (thread1.slice < thread2.slice) {
+      return true;
+    } else if ((thread1.slice == thread2.slice) &&
+               (thread1.subslice < thread2.subslice)) {
+      return true;
+    } else if ((thread1.slice == thread2.slice) &&
+               (thread1.subslice == thread2.subslice) &&
+               (thread1.eu < thread2.eu)) {
+      return true;
+    } else if ((thread1.slice == thread2.slice) &&
+               (thread1.subslice == thread2.subslice) &&
+               (thread1.eu == thread2.eu) &&
+               (thread1.thread < thread2.thread)) {
+      return true;
+    }
+
+    return false;
+  }
+};
+
 // return a list of stopped threads
 std::vector<ze_device_thread_t>
 get_stopped_threads(const zet_debug_session_handle_t &debug_session,
@@ -321,53 +376,77 @@ get_stopped_threads(const zet_debug_session_handle_t &debug_session,
       }
     }
   }
+  LOG_INFO << "[Debugger] Number of stopped threads: " << threads.size();
 
   return threads;
 }
 
-void print_thread(const char *entry_message,
-                  const ze_device_thread_t &device_thread) {
-  LOG_DEBUG << entry_message << "SLICE:" << device_thread.slice
-            << " SUBSLICE: " << device_thread.subslice
-            << " EU: " << device_thread.eu
-            << " THREAD: " << device_thread.thread;
+std::vector<ze_device_thread_t>
+get_threads_in_eu(uint32_t eu, std::vector<ze_device_thread_t> threads) {
+  std::vector<ze_device_thread_t> threadsInEu;
+  for (auto &thread : threads) {
+    if (thread.eu == eu) {
+      threadsInEu.push_back(thread);
+    }
+  }
+  return threadsInEu;
+}
+
+std::vector<ze_device_thread_t>
+get_threads_in_subSlice(uint32_t subSlice,
+                        std::vector<ze_device_thread_t> threads) {
+  std::vector<ze_device_thread_t> threadsInSubSlice;
+  for (auto &thread : threads) {
+    if (thread.subslice == subSlice) {
+      threadsInSubSlice.push_back(thread);
+    }
+  }
+  return threadsInSubSlice;
+}
+
+std::vector<ze_device_thread_t>
+get_threads_in_slice(uint32_t slice, std::vector<ze_device_thread_t> threads) {
+  std::vector<ze_device_thread_t> threadsInSlice;
+  for (auto &thread : threads) {
+    if (thread.slice == slice) {
+      threadsInSlice.push_back(thread);
+    }
+  }
+  return threadsInSlice;
 }
 
 // wait for stopped thread event and retunrn stopped threads
-bool find_stopped_threads(const zet_debug_session_handle_t &debug_session,
+bool find_stopped_threads(const zet_debug_session_handle_t &debugSession,
                           const ze_device_handle_t &device,
-                          std::vector<ze_device_thread_t> &threads) {
+                          ze_device_thread_t thread, bool checkEvent,
+                          std::vector<ze_device_thread_t> &stoppedThreads) {
   uint8_t attempts = 0;
-  zet_debug_event_t debug_event = {};
-  threads.clear();
+  zet_debug_event_t debugEvent = {};
+  stoppedThreads.clear();
   do {
-    lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS / 10,
-                          true);
+    lzt::debug_read_event(debugSession, debugEvent, eventsTimeoutMS / 10, true);
     LOG_INFO << "[Debugger] received event: "
-             << lzt::debuggerEventTypeString[debug_event.type];
+             << lzt::debuggerEventTypeString[debugEvent.type];
 
-    if (debug_event.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
+    if (debugEvent.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
       print_thread("[Debugger] Stopped thread event for ",
-                   debug_event.info.thread.thread);
-      threads = get_stopped_threads(debug_session, device);
+                   debugEvent.info.thread.thread, DEBUG);
+
+      if (checkEvent) {
+        EXPECT_TRUE(areThreadsEqual(thread, debugEvent.info.thread.thread));
+      }
+
+      stoppedThreads = get_stopped_threads(debugSession, device);
       break;
     }
     attempts++;
   } while (attempts < 5);
 
-  if (threads.size() > 0) {
-    LOG_INFO << "Number of stopped threads: " << threads.size();
+  if (stoppedThreads.size() > 0) {
     return true;
   } else {
     return false;
   }
-}
-
-bool unique_thread(const ze_device_thread_t &device_thread) {
-  print_thread("[Debugger] is thread unique: ", device_thread);
-  return (device_thread.slice != UINT32_MAX &&
-          device_thread.subslice != UINT32_MAX &&
-          device_thread.eu != UINT32_MAX && device_thread.thread != UINT32_MAX);
 }
 
 int interrupt_test(zet_debug_session_handle_t &debug_session,
@@ -411,7 +490,7 @@ int interrupt_test(zet_debug_session_handle_t &debug_session,
       case SINGLE_THREAD: {
         // resume thread from list of stopped threads
         print_thread("[Debugger] Updating and resuming thread ",
-                     stopped_threads_initial[0]);
+                     stopped_threads_initial[0], DEBUG);
         saved_thread = stopped_threads_initial[0];
         lzt::debug_resume(debug_session, stopped_threads_initial[0]);
 
@@ -807,7 +886,7 @@ void zetDebugEventReadTest::run_advanced_test(
 
         if (debug_event.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
           print_thread("[Debugger] Stopped thread event for ",
-                       debug_event.info.thread.thread);
+                       debug_event.info.thread.thread, DEBUG);
         }
         events.push_back(debug_event.type);
 
@@ -1104,8 +1183,6 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
     }
-    LOG_INFO << "[Debugger] Accessing application GPU buffer VA: " << std::hex
-             << gpu_buffer_va;
 
     ze_device_thread_t thread;
     thread.slice = UINT32_MAX;
@@ -1113,49 +1190,51 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
     thread.eu = UINT32_MAX;
     thread.thread = UINT32_MAX;
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
     LOG_INFO << "[Debugger] Interrupting all threads";
+    // give time to app to launch the kernel
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
     lzt::debug_interrupt(debugSession, thread);
     std::vector<ze_device_thread_t> stopped_threads;
-    if (find_stopped_threads(debugSession, device, stopped_threads)) {
+    if (!find_stopped_threads(debugSession, device, thread, true,
+                              stopped_threads)) {
+      FAIL() << "[Debugger] Did not find stopped threads";
+    }
 
-      zet_debug_memory_space_desc_t desc;
-      desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
-      int sizeToRead = 512;
-      uint8_t *buffer = new uint8_t[sizeToRead];
+    zet_debug_memory_space_desc_t memorySpaceDesc;
+    memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+    int sizeToRead = 512;
+    uint8_t *buffer = new uint8_t[sizeToRead];
 
-      desc.address = gpu_buffer_va;
+    memorySpaceDesc.address = gpu_buffer_va;
 
-      LOG_INFO << "[Debugger] Reading/Writing on interrupted threads";
-      for (auto &stopped_thread : stopped_threads) {
-        print_thread("[Debugger] Reading and writing from Stopped thread ",
-                     stopped_thread);
+    LOG_INFO << "[Debugger] Reading/Writing on interrupted threads";
+    for (auto &stopped_thread : stopped_threads) {
+      print_thread("[Debugger] Reading and writing from Stopped thread ",
+                   stopped_thread, DEBUG);
 
-        readWriteModuleMemory(debugSession, stopped_thread, module_event,
-                              false);
+      readWriteModuleMemory(debugSession, stopped_thread, module_event, false);
 
-        lzt::debug_read_memory(debugSession, stopped_thread, desc, sizeToRead,
-                               buffer);
+      lzt::debug_read_memory(debugSession, stopped_thread, memorySpaceDesc,
+                             sizeToRead, buffer);
 
-        // Skip the first byte since the first thread read will
-        // see it 1 and others will see 0 after setting buffer[0]=0 below
-        int i = 1;
-        for (i = 1; i < sizeToRead; i++) {
-          // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
-          EXPECT_EQ(buffer[i], (i + 1 & 0xFF));
-        }
-
-        // set buffer[0] to 0 to break the loop. See debug_loop.cl
-        buffer[0] = 0;
-        lzt::debug_write_memory(debugSession, thread, desc, sizeToRead, buffer);
+      // Skip the first byte since the first thread read will
+      // see it 1 and others will see 0 after setting buffer[0]=0 below
+      int i = 1;
+      for (i = 1; i < sizeToRead; i++) {
+        // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
+        EXPECT_EQ(buffer[i], (i + 1 & 0xFF));
       }
 
-      LOG_INFO << "[Debugger] resuming interrupted threads";
-      lzt::debug_resume(debugSession, thread);
-      delete[] buffer;
-    } else {
-      FAIL() << "[Debugger] Could not find a stopped thread";
+      // set buffer[0] to 0 to break the loop. See debug_loop.cl
+      buffer[0] = 0;
+      lzt::debug_write_memory(debugSession, thread, memorySpaceDesc, sizeToRead,
+                              buffer);
     }
+
+    LOG_INFO << "[Debugger] resuming interrupted threads";
+    lzt::debug_resume(debugSession, thread);
+    delete[] buffer;
 
     debugHelper.wait();
     lzt::debug_detach(debugSession);
@@ -1236,27 +1315,30 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
     }
-    zet_debug_memory_space_desc_t desc;
-    desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+    zet_debug_memory_space_desc_t memorySpaceDesc;
+    memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
     int sizeToRead = 512;
     uint8_t *kernel_buffer = new uint8_t[sizeToRead];
     // set buffer[0] to 0 to break the loop. See debug_loop.cl
     kernel_buffer[0] = 0;
-    desc.address = gpu_buffer_va;
+    memorySpaceDesc.address = gpu_buffer_va;
 
-    LOG_INFO << "[Debugger] Stopping all device threads";
     ze_device_thread_t device_threads = {};
     device_threads.slice = UINT32_MAX;
     device_threads.subslice = UINT32_MAX;
     device_threads.eu = UINT32_MAX;
     device_threads.thread = UINT32_MAX;
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    LOG_INFO << "[Debugger] Stopping all device threads";
+    // give time to app to launch the kernel
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
     lzt::debug_interrupt(debugSession, device_threads);
 
     std::vector<ze_device_thread_t> stopped_threads;
-    if (!find_stopped_threads(debugSession, device, stopped_threads)) {
-      FAIL() << "Failed to stop device thread";
+    if (!find_stopped_threads(debugSession, device, device_threads, true,
+                              stopped_threads)) {
+      FAIL() << "[Debugger] Did not find stopped threads";
     }
 
     auto register_set_properties = lzt::get_register_set_properties(device);
@@ -1332,7 +1414,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
       }
     }
 
-    lzt::debug_write_memory(debugSession, device_threads, desc, 1,
+    lzt::debug_write_memory(debugSession, device_threads, memorySpaceDesc, 1,
                             kernel_buffer);
     delete[] kernel_buffer;
 
@@ -1363,9 +1445,79 @@ class zetDebugThreadControlTest : public zetDebugBaseSetup {
 protected:
   void SetUp() override { zetDebugBaseSetup::SetUp(); }
   void TearDown() override { zetDebugBaseSetup::TearDown(); }
+  void SetUpThreadControl(ze_device_handle_t &device, bool use_sub_devices);
   void run_alternate_stop_resume_test(std::vector<ze_device_handle_t> &devices,
                                       bool use_sub_devices);
+  void run_interrupt_resume_test(std::vector<ze_device_handle_t> &devices,
+                                 bool use_sub_devices);
+
+  zet_debug_memory_space_desc_t memorySpaceDesc;
+  std::vector<ze_device_thread_t> stopped_threads;
+
+  // Order matters, ALL should go last
+  typedef enum {
+    SINGLE_THREAD,
+    THREADS_IN_EU,
+    THREADS_IN_SUBSLICE,
+    THREADS_IN_SLICE,
+    ALL_THREADS
+  } threads_test_type_t;
+
+  std::map<threads_test_type_t, std::string> numThreadsToString = {
+      {SINGLE_THREAD, "SINGLE_THREAD"},
+      {THREADS_IN_EU, "THREADS_IN_EU"},
+      {THREADS_IN_SUBSLICE, "THREADS_IN_SUBSLICE"},
+      {THREADS_IN_SLICE, "THREADS_IN_SLICE"},
+      {ALL_THREADS, "ALL_THREADS"}};
 };
+
+void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
+                                                   bool use_sub_devices) {
+
+  LOG_INFO << "[Debugger] Setting up for thread control tests ";
+  debugHelper =
+      launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device, use_sub_devices);
+
+  zet_debug_event_t module_event;
+  attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
+                              module_event);
+
+  ASSERT_TRUE(module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK);
+  LOG_DEBUG << "[Debugger] Acking event: "
+            << lzt::debuggerEventTypeString[module_event.type];
+  lzt::debug_ack_event(debugSession, &module_event);
+
+  uint64_t gpu_buffer_va = 0;
+  synchro->wait_for_application();
+  if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
+    FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
+  }
+
+  memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+  memorySpaceDesc.address = gpu_buffer_va;
+
+  // stop all threads
+  ze_device_thread_t thread;
+  thread.slice = UINT32_MAX;
+  thread.subslice = UINT32_MAX;
+  thread.eu = UINT32_MAX;
+  thread.thread = UINT32_MAX;
+
+  LOG_INFO << "[Debugger] Interrupting all threads";
+  // give time to app to launch the kernel
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  lzt::debug_interrupt(debugSession, thread);
+  stopped_threads = {};
+  if (!find_stopped_threads(debugSession, device, thread, true,
+                            stopped_threads)) {
+    FAIL() << "[Debugger] Did not find stopped threads";
+  }
+
+  // sort to avoid ordering differences
+  std::sort(stopped_threads.begin(), stopped_threads.end(),
+            smaller_thread_functor());
+}
 
 void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
@@ -1374,117 +1526,230 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
       continue;
     }
 
-    debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
-                                 use_sub_devices);
+    SetUpThreadControl(device, use_sub_devices);
 
-    zet_debug_event_t module_event;
-    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
-                                module_event);
+    // iterate over threads and resume
+    LOG_INFO << "[Debugger] Alternating resuming threads";
+    int i = 0;
+    for (auto &stopped_thread : stopped_threads) {
 
-    if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
-      LOG_DEBUG << "[Debugger] Acking event: "
-                << lzt::debuggerEventTypeString[module_event.type];
-      lzt::debug_ack_event(debugSession, &module_event);
+      i++;
+      if (i % 2) {
+        print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
+        lzt::debug_resume(debugSession, stopped_thread);
+      }
     }
 
-    uint64_t gpu_buffer_va = 0;
-    synchro->wait_for_application();
-    if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
-      FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
+    i = 0;
+    for (auto &stopped_thread : stopped_threads) {
+      i++;
+      if (i % 2) {
+        print_thread("[Debugger] Interrupting thread ", stopped_thread, INFO);
+        lzt::debug_interrupt(debugSession, stopped_thread);
+      }
     }
 
-    // stop all threads
+    // wait a bit
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    EXPECT_EQ(debugHelper.running(), true);
+
+    i = 0;
+    for (auto &stopped_thread : stopped_threads) {
+      i++;
+      if (!(i % 2)) {
+        print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
+        lzt::debug_resume(debugSession, stopped_thread);
+      }
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    EXPECT_EQ(debugHelper.running(), true);
+
+    i = 0;
+    for (auto &stopped_thread : stopped_threads) {
+      i++;
+      if (i % 2) {
+        print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
+        lzt::debug_resume(debugSession, stopped_thread);
+      }
+    }
+
+    i = 0;
+    for (auto &stopped_thread : stopped_threads) {
+      i++;
+      if (!(i % 2)) {
+        print_thread("[Debugger] Interrupting thread ", stopped_thread, INFO);
+        lzt::debug_interrupt(debugSession, stopped_thread);
+      }
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    EXPECT_EQ(debugHelper.running(), true);
+
+    const int bufferSize = 1;
+    uint8_t *buffer = new uint8_t[bufferSize];
+    memset(buffer, 0, bufferSize);
+
+    i = 0;
+    for (auto &stopped_thread : stopped_threads) {
+      i++;
+      if (!(i % 2)) {
+        print_thread("[Debugger] Writing memory and resuming thread ",
+                     stopped_thread, INFO);
+        lzt::debug_write_memory(debugSession, stopped_thread, memorySpaceDesc,
+                                bufferSize, buffer);
+        lzt::debug_resume(debugSession, stopped_thread);
+      }
+    }
+
+    delete[] buffer;
+    // verify helper completes
+    debugHelper.wait();
+    lzt::debug_detach(debugSession);
+    ASSERT_EQ(debugHelper.exit_code(), 0);
+  }
+}
+
+void zetDebugThreadControlTest::run_interrupt_resume_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+
+  for (auto &device : devices) {
+    if (!is_debug_supported(device)) {
+      continue;
+    }
+
+    std::vector<ze_device_thread_t> newly_stopped_threads;
+    std::vector<ze_device_thread_t> hierarchyThreads;
     ze_device_thread_t thread;
+    bool breakKernelLoop = false;
+
+    SetUpThreadControl(device, use_sub_devices);
+
+    // Resume all threads
     thread.slice = UINT32_MAX;
     thread.subslice = UINT32_MAX;
     thread.eu = UINT32_MAX;
     thread.thread = UINT32_MAX;
 
-    LOG_INFO << "[Debugger] Interrupting all threads";
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    lzt::debug_interrupt(debugSession, thread);
-    std::vector<ze_device_thread_t> stopped_threads;
-    if (find_stopped_threads(debugSession, device, stopped_threads)) {
-      zet_debug_memory_space_desc_t desc;
-      desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
-      const int bufferSize = 1;
-      uint8_t *buffer = new uint8_t[bufferSize];
-      memset(buffer, 0, bufferSize);
+    LOG_DEBUG << "[Debugger] Resumming ALL threads";
+    lzt::debug_resume(debugSession, thread);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
-      desc.address = gpu_buffer_va;
+    newly_stopped_threads.clear();
+    newly_stopped_threads = get_stopped_threads(debugSession, device);
+    // All threads should be running
+    EXPECT_EQ(newly_stopped_threads.size(), 0);
 
-      // iterate over threads and resume
-      LOG_INFO << "[Debugger] Alternating resuming threads";
-      int i = 0;
-      for (auto &stopped_thread : stopped_threads) {
-        i++;
-        if (i % 2) {
-          print_thread("[Debugger] Resuming thread ", stopped_thread);
-          lzt::debug_resume(debugSession, stopped_thread);
-        }
+    for (auto testType : numThreadsToString) {
+      LOG_INFO
+          << "[Debugger] ---- Testing interrupting and resuming threads on "
+          << numThreadsToString[testType.first] << " ---- ";
+
+      switch (testType.first) {
+      case SINGLE_THREAD:
+
+        thread = stopped_threads[0];
+        print_thread("[Debugger] Interrupting thread: ", thread, INFO);
+
+        break;
+      case THREADS_IN_EU:
+
+        thread.slice = UINT32_MAX;
+        thread.subslice = UINT32_MAX;
+        thread.eu = stopped_threads[0].eu;
+        thread.thread = UINT32_MAX;
+        print_thread("[Debugger] Interrupting EU threads: ", thread, INFO);
+        hierarchyThreads =
+            get_threads_in_eu(stopped_threads[0].eu, stopped_threads);
+
+        break;
+      case THREADS_IN_SUBSLICE:
+
+        thread.slice = UINT32_MAX;
+        thread.subslice = stopped_threads[0].subslice;
+        thread.eu = UINT32_MAX;
+        thread.thread = UINT32_MAX;
+        print_thread("[Debugger] Interrupting Subslice threads: ", thread,
+                     INFO);
+        hierarchyThreads = get_threads_in_subSlice(stopped_threads[0].subslice,
+                                                   stopped_threads);
+
+        break;
+      case THREADS_IN_SLICE:
+
+        thread.slice = stopped_threads[0].slice;
+        thread.subslice = UINT32_MAX;
+        thread.eu = UINT32_MAX;
+        thread.thread = UINT32_MAX;
+        print_thread("[Debugger] Interrupting Slice threads: ", thread, INFO);
+        hierarchyThreads =
+            get_threads_in_slice(stopped_threads[0].slice, stopped_threads);
+
+        break;
+      case ALL_THREADS:
+
+        thread.slice = UINT32_MAX;
+        thread.subslice = UINT32_MAX;
+        thread.eu = UINT32_MAX;
+        thread.thread = UINT32_MAX;
+        print_thread("[Debugger] Interrupting All threads: ", thread, INFO);
+
+        break;
+      default:
+        FAIL() << "[Debugger] Invalid thread control test";
+        break;
       }
 
-      i = 0;
-      for (auto &stopped_thread : stopped_threads) {
-        i++;
-        if (i % 2) {
-          print_thread("[Debugger] Interrupting thread ", stopped_thread);
-          lzt::debug_interrupt(debugSession, stopped_thread);
-        }
-      }
-
-      // wait a bit
+      lzt::debug_interrupt(debugSession, thread);
       std::this_thread::sleep_for(std::chrono::seconds(2));
-      EXPECT_EQ(debugHelper.running(), true);
-
-      i = 0;
-      for (auto &stopped_thread : stopped_threads) {
-        i++;
-        if (!(i % 2)) {
-          print_thread("[Debugger] Resuming thread ", stopped_thread);
-          lzt::debug_resume(debugSession, stopped_thread);
-        }
+      if (!find_stopped_threads(debugSession, device, thread, true,
+                                newly_stopped_threads)) {
+        FAIL() << "[Debugger] Did not find stopped threads";
       }
 
+      // sort to avoid ordering differences
+      std::sort(newly_stopped_threads.begin(), newly_stopped_threads.end(),
+                smaller_thread_functor());
+
+      switch (testType.first) {
+      case SINGLE_THREAD:
+        EXPECT_EQ(newly_stopped_threads.size(), 1);
+        EXPECT_TRUE(areThreadsEqual(thread, newly_stopped_threads[0]));
+        break;
+      case THREADS_IN_EU:
+      case THREADS_IN_SUBSLICE:
+      case THREADS_IN_SLICE:
+        std::sort(hierarchyThreads.begin(), hierarchyThreads.end(),
+                  smaller_thread_functor());
+        EXPECT_EQ(newly_stopped_threads.size(), hierarchyThreads.size());
+        EXPECT_TRUE(newly_stopped_threads == hierarchyThreads);
+        break;
+      case ALL_THREADS:
+        EXPECT_EQ(newly_stopped_threads.size(), stopped_threads.size());
+        EXPECT_TRUE(newly_stopped_threads == stopped_threads);
+        breakKernelLoop = true;
+        break;
+      default:
+        break;
+      }
+
+      if (breakKernelLoop) {
+        LOG_DEBUG << "[Debugger] Writting to GPU buffer to break kernel loop ";
+        const int bufferSize = 1;
+        uint8_t *buffer = new uint8_t[bufferSize];
+        memset(buffer, 0, bufferSize);
+        lzt::debug_write_memory(debugSession, thread, memorySpaceDesc, 1,
+                                buffer);
+        delete[] buffer;
+      }
+
+      print_thread("[Debugger] Resuming thread: ", thread, INFO);
+      lzt::debug_resume(debugSession, thread);
       std::this_thread::sleep_for(std::chrono::seconds(2));
-      EXPECT_EQ(debugHelper.running(), true);
-
-      i = 0;
-      for (auto &stopped_thread : stopped_threads) {
-        i++;
-        if (i % 2) {
-          print_thread("[Debugger] Resuming thread ", stopped_thread);
-          lzt::debug_resume(debugSession, stopped_thread);
-        }
-      }
-
-      i = 0;
-      for (auto &stopped_thread : stopped_threads) {
-        i++;
-        if (!(i % 2)) {
-          print_thread("[Debugger] Interrupting thread ", stopped_thread);
-          lzt::debug_interrupt(debugSession, stopped_thread);
-        }
-      }
-
-      std::this_thread::sleep_for(std::chrono::seconds(2));
-      EXPECT_EQ(debugHelper.running(), true);
-
-      i = 0;
-      for (auto &stopped_thread : stopped_threads) {
-        i++;
-        if (!(i % 2)) {
-          print_thread("[Debugger] Writing memory and resuming thread ",
-                       stopped_thread);
-          lzt::debug_write_memory(debugSession, stopped_thread, desc,
-                                  bufferSize, buffer);
-          lzt::debug_resume(debugSession, stopped_thread);
-        }
-      }
-
-      delete[] buffer;
-    } else {
-      FAIL() << "[Debugger] Could not find a stopped thread";
+      newly_stopped_threads.clear();
+      newly_stopped_threads = get_stopped_threads(debugSession, device);
+      // All threads should be running or terminated
+      EXPECT_EQ(newly_stopped_threads.size(), 0);
     }
 
     // verify helper completes
@@ -1509,4 +1774,13 @@ TEST_F(
 
   auto devices = lzt::get_all_sub_devices();
   run_alternate_stop_resume_test(devices, true);
+}
+
+TEST_F(
+    zetDebugThreadControlTest,
+    GivengInterruptingAndResumingThreadWhenDebuggingThenKernelCompletesSuccessfully) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  run_interrupt_resume_test(devices, false);
 }
