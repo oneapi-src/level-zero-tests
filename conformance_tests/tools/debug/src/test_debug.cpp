@@ -315,11 +315,24 @@ bool unique_thread(const ze_device_thread_t &device_thread) {
           device_thread.eu != UINT32_MAX && device_thread.thread != UINT32_MAX);
 }
 
-bool areThreadsEqual(const ze_device_thread_t &thread1,
-                     const ze_device_thread_t &thread2) {
+bool are_threads_equal(const ze_device_thread_t &thread1,
+                       const ze_device_thread_t &thread2) {
   return (thread1.slice == thread2.slice &&
           thread1.subslice == thread2.subslice && thread1.eu == thread2.eu &&
           thread1.thread == thread2.thread);
+}
+
+bool is_thread_in_vector(const ze_device_thread_t &thread,
+                         const std::vector<ze_device_thread_t> &threads) {
+  bool flag = false;
+  for (auto threadIterator : threads) {
+    if (are_threads_equal(thread, threadIterator)) {
+      flag = true;
+      break;
+    }
+  }
+
+  return flag;
 }
 
 struct smaller_thread_functor {
@@ -433,7 +446,7 @@ bool find_stopped_threads(const zet_debug_session_handle_t &debugSession,
                    debugEvent.info.thread.thread, DEBUG);
 
       if (checkEvent) {
-        EXPECT_TRUE(areThreadsEqual(thread, debugEvent.info.thread.thread));
+        EXPECT_TRUE(are_threads_equal(thread, debugEvent.info.thread.thread));
       }
 
       stoppedThreads = get_stopped_threads(debugSession, device);
@@ -447,6 +460,58 @@ bool find_stopped_threads(const zet_debug_session_handle_t &debugSession,
   } else {
     return false;
   }
+}
+
+bool find_multi_event_stopped_threads(
+    const zet_debug_session_handle_t &debugSession,
+    const ze_device_handle_t &device,
+    std::vector<ze_device_thread_t> &threadsToCheck, bool checkEvent,
+    std::vector<ze_device_thread_t> &stoppedThreadsFound) {
+
+  uint8_t attempts = 0;
+  uint16_t numEventsReceived = 0;
+  uint16_t numEventsExpected = threadsToCheck.size();
+
+  zet_debug_event_t debugEvent = {};
+  stoppedThreadsFound.clear();
+  bool foundAll = true;
+
+  LOG_DEBUG << "[Debugger] Expecting " << threadsToCheck.size() << " events.";
+  for (auto threadToCheck : threadsToCheck) {
+    do {
+      lzt::debug_read_event(debugSession, debugEvent, eventsTimeoutMS / 10,
+                            true);
+      LOG_INFO << "[Debugger] received event: "
+               << lzt::debuggerEventTypeString[debugEvent.type];
+
+      if (debugEvent.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
+        print_thread("[Debugger] Stopped thread event for ",
+                     debugEvent.info.thread.thread, DEBUG);
+
+        if (checkEvent) {
+          EXPECT_TRUE(is_thread_in_vector(debugEvent.info.thread.thread,
+                                          threadsToCheck));
+        }
+        numEventsReceived++;
+        break;
+      }
+      attempts++;
+    } while (attempts < 5);
+  }
+
+  EXPECT_EQ(numEventsReceived, numEventsExpected);
+
+  stoppedThreadsFound = get_stopped_threads(debugSession, device);
+
+  for (auto threadToCheck : threadsToCheck) {
+    if (!is_thread_in_vector(threadToCheck, stoppedThreadsFound)) {
+      foundAll = false;
+      EXPECT_TRUE(0);
+      break;
+    }
+  }
+
+  return foundAll;
 }
 
 int interrupt_test(zet_debug_session_handle_t &debug_session,
@@ -1526,83 +1591,200 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
       continue;
     }
 
+    std::vector<ze_device_thread_t> stoppedThreadsCheck;
+    std::vector<ze_device_thread_t> threadsToCheck;
+
     SetUpThreadControl(device, use_sub_devices);
 
     // iterate over threads and resume
-    LOG_INFO << "[Debugger] Alternating resuming threads";
-    int i = 0;
+    LOG_INFO << "[Debugger] ######### Ressuming Odd threads ##########";
+    int i = 1;
     for (auto &stopped_thread : stopped_threads) {
 
-      i++;
       if (i % 2) {
         print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
         lzt::debug_resume(debugSession, stopped_thread);
       }
-    }
-
-    i = 0;
-    for (auto &stopped_thread : stopped_threads) {
       i++;
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    LOG_INFO
+        << "[Debugger] ######### Interrupting Odd AND resumming Even threads "
+           "##########";
+    i = 1;
+    for (auto &stopped_thread : stopped_threads) {
       if (i % 2) {
         print_thread("[Debugger] Interrupting thread ", stopped_thread, INFO);
         lzt::debug_interrupt(debugSession, stopped_thread);
+
+        // Confirm the thread was effectively stopped
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        if (!find_stopped_threads(debugSession, device, stopped_thread, true,
+                                  stoppedThreadsCheck)) {
+          FAIL() << "[Debugger] Did not find stopped threads";
+        }
+        if (!is_thread_in_vector(stopped_thread, stoppedThreadsCheck)) {
+          FAIL() << "[Debugger] Did not interrupt requested thread";
+        }
       }
-    }
 
-    // wait a bit
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    EXPECT_EQ(debugHelper.running(), true);
-
-    i = 0;
-    for (auto &stopped_thread : stopped_threads) {
-      i++;
       if (!(i % 2)) {
         print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
         lzt::debug_resume(debugSession, stopped_thread);
       }
-    }
-
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    EXPECT_EQ(debugHelper.running(), true);
-
-    i = 0;
-    for (auto &stopped_thread : stopped_threads) {
       i++;
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    LOG_INFO
+        << "[Debugger] ######### Interrupting Even threads AND resumming Odd "
+           "threads ##########";
+    i = 1;
+    for (auto &stopped_thread : stopped_threads) {
+      if (!(i % 2)) {
+        print_thread("[Debugger] Interrupting thread ", stopped_thread, INFO);
+        lzt::debug_interrupt(debugSession, stopped_thread);
+
+        // Confirm the thread was effectively stopped
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        if (!find_stopped_threads(debugSession, device, stopped_thread, true,
+                                  stoppedThreadsCheck)) {
+          FAIL() << "[Debugger] Did not find stopped threads";
+        }
+
+        if (!is_thread_in_vector(stopped_thread, stoppedThreadsCheck)) {
+          FAIL() << "[Debugger] Did not interrupt requested thread";
+        }
+      }
       if (i % 2) {
         print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
         lzt::debug_resume(debugSession, stopped_thread);
       }
-    }
-
-    i = 0;
-    for (auto &stopped_thread : stopped_threads) {
       i++;
-      if (!(i % 2)) {
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    LOG_INFO << "[Debugger] ######### Interrupting Odd threads ##########";
+    threadsToCheck.clear();
+    i = 1;
+    for (auto &stopped_thread : stopped_threads) {
+
+      if (i % 2) {
         print_thread("[Debugger] Interrupting thread ", stopped_thread, INFO);
         lzt::debug_interrupt(debugSession, stopped_thread);
+        threadsToCheck.push_back(stopped_thread);
       }
+      i++;
+    }
+
+    // check for odd threads events and threads stopped all together
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    if (!find_multi_event_stopped_threads(debugSession, device, threadsToCheck,
+                                          true, stoppedThreadsCheck)) {
+      FAIL() << "[Debugger] Did not interrupt Odd threads";
+    }
+
+    LOG_INFO
+        << "[Debugger] ######### Checking ALL threads are stopped ##########";
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    stoppedThreadsCheck = get_stopped_threads(debugSession, device);
+    EXPECT_EQ(stoppedThreadsCheck.size(), stopped_threads.size());
+
+    EXPECT_EQ(debugHelper.running(), true);
+
+    LOG_INFO << "[Debugger] ######### Resuming Even threads ######";
+    i = 1;
+    for (auto &stopped_thread : stopped_threads) {
+      if (!(i % 2)) {
+        print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
+        lzt::debug_resume(debugSession, stopped_thread);
+      }
+      i++;
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(2));
     EXPECT_EQ(debugHelper.running(), true);
 
+    LOG_INFO << "[Debugger] ######### Ressuming Odd threads ##########";
+    i = 1;
+    for (auto &stopped_thread : stopped_threads) {
+      if (i % 2) {
+        print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
+        lzt::debug_resume(debugSession, stopped_thread);
+      }
+      i++;
+    }
+
+    LOG_INFO << "[Debugger] ######### Checking ALL threads are running ######";
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    stoppedThreadsCheck.clear();
+    stoppedThreadsCheck = get_stopped_threads(debugSession, device);
+    EXPECT_EQ(stoppedThreadsCheck.size(), 0);
+
+    LOG_INFO << "[Debugger] ######### Interrupting Even threads ##########";
+    threadsToCheck.clear();
+    i = 1;
+    for (auto &stopped_thread : stopped_threads) {
+      if (!(i % 2)) {
+        print_thread("[Debugger] Interrupting thread ", stopped_thread, INFO);
+        lzt::debug_interrupt(debugSession, stopped_thread);
+        threadsToCheck.push_back(stopped_thread);
+      }
+      i++;
+    }
+
+    // check for Even threads events and threads stopped all together
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    if (!find_multi_event_stopped_threads(debugSession, device, threadsToCheck,
+                                          true, stoppedThreadsCheck)) {
+      FAIL() << "[Debugger] Did not interrupt Even threads";
+    }
+
+    LOG_INFO << "[Debugger] ######### Resuming Even threads ##########";
+    i = 1;
+    for (auto &stopped_thread : stopped_threads) {
+      if (!(i % 2)) {
+        print_thread("[Debugger] Resuming thread ", stopped_thread, INFO);
+        lzt::debug_resume(debugSession, stopped_thread);
+      }
+      i++;
+    }
+
+    LOG_INFO
+        << "[Debugger] ######### Checking ALL threads are running ##########";
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    stoppedThreadsCheck.clear();
+    stoppedThreadsCheck = get_stopped_threads(debugSession, device);
+    EXPECT_EQ(stoppedThreadsCheck.size(), 0);
+
+    EXPECT_EQ(debugHelper.running(), true);
+
+    // stop all threads
+    ze_device_thread_t thread;
+    thread.slice = UINT32_MAX;
+    thread.subslice = UINT32_MAX;
+    thread.eu = UINT32_MAX;
+    thread.thread = UINT32_MAX;
+
+    LOG_INFO << "[Debugger] ######### Interrupting all threads ##########";
+    lzt::debug_interrupt(debugSession, thread);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    // All threads should be stopped
+    stoppedThreadsCheck = get_stopped_threads(debugSession, device);
+    EXPECT_EQ(stoppedThreadsCheck.size(), stopped_threads.size());
+
+    LOG_DEBUG << "[Debugger] Writting to GPU buffer to break kernel loop ";
     const int bufferSize = 1;
     uint8_t *buffer = new uint8_t[bufferSize];
-    memset(buffer, 0, bufferSize);
-
-    i = 0;
-    for (auto &stopped_thread : stopped_threads) {
-      i++;
-      if (!(i % 2)) {
-        print_thread("[Debugger] Writing memory and resuming thread ",
-                     stopped_thread, INFO);
-        lzt::debug_write_memory(debugSession, stopped_thread, memorySpaceDesc,
-                                bufferSize, buffer);
-        lzt::debug_resume(debugSession, stopped_thread);
-      }
-    }
+    buffer[0] = 0;
+    lzt::debug_write_memory(debugSession, thread, memorySpaceDesc, 1, buffer);
+    LOG_INFO << "[Debugger] ######### Resuming all threads  ######### ";
+    lzt::debug_resume(debugSession, thread);
+    // Do not check for running threads because some will terminate the loop
 
     delete[] buffer;
+
     // verify helper completes
     debugHelper.wait();
     lzt::debug_detach(debugSession);
@@ -1714,7 +1896,7 @@ void zetDebugThreadControlTest::run_interrupt_resume_test(
       switch (testType.first) {
       case SINGLE_THREAD:
         EXPECT_EQ(newly_stopped_threads.size(), 1);
-        EXPECT_TRUE(areThreadsEqual(thread, newly_stopped_threads[0]));
+        EXPECT_TRUE(are_threads_equal(thread, newly_stopped_threads[0]));
         break;
       case THREADS_IN_EU:
       case THREADS_IN_SUBSLICE:
@@ -1783,4 +1965,12 @@ TEST_F(
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
   run_interrupt_resume_test(devices, false);
+}
+
+TEST_F(
+    zetDebugThreadControlTest,
+    GivengInterruptingAndResumingThreadWhenDebuggingOnSubDevicesThenKernelCompletesSuccessfully) {
+
+  auto devices = lzt::get_all_sub_devices();
+  run_interrupt_resume_test(devices, true);
 }
