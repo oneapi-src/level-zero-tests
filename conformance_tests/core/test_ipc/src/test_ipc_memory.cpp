@@ -8,6 +8,7 @@
 #ifdef __linux__
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #include "gmock/gmock.h"
@@ -22,7 +23,32 @@
 namespace {
 #ifdef __linux__
 
-void run_child(int size, ze_ipc_memory_flags_t flags) {
+class IpcMemoryAccessTest : public ::testing::Test {
+protected:
+  pid_t pid;
+  bool is_parent;
+  bool child_exited = false;
+
+  void run_child(int size, ze_ipc_memory_flags_t flags);
+  void run_parent(int size);
+
+  void SetUp() override {
+    pid = fork();
+    if (pid < 0) {
+      throw std::runtime_error("Failed to fork child process");
+    }
+    is_parent = pid > 0;
+  }
+
+  void TearDown() override {
+    if (is_parent && !child_exited) {
+      kill(pid, SIGTERM);
+      wait(nullptr);
+    }
+  }
+};
+
+void IpcMemoryAccessTest::run_child(int size, ze_ipc_memory_flags_t flags) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -68,7 +94,7 @@ void run_child(int size, ze_ipc_memory_flags_t flags) {
   }
 }
 
-void run_parent(int size) {
+void IpcMemoryAccessTest::run_parent(int size) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -81,7 +107,7 @@ void run_parent(int size) {
   auto device = lzt::zeDevice::get_instance()->get_device();
   auto cl = lzt::create_command_list();
   auto cq = lzt::create_command_queue();
-  ze_ipc_mem_handle_t ipc_handle;
+  ze_ipc_mem_handle_t ipc_handle = {};
 
   void *buffer = lzt::allocate_host_memory(size);
   memset(buffer, 0, size);
@@ -93,6 +119,9 @@ void run_parent(int size) {
   lzt::synchronize(cq, UINT64_MAX);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
+  ze_ipc_mem_handle_t ipc_handle_zero = {};
+  ASSERT_NE(0, memcmp((void *)&ipc_handle, (void *)&ipc_handle_zero,
+                      sizeof(ipc_handle)));
   lzt::send_ipc_handle(ipc_handle);
 
   // free device memory once receiver is done
@@ -103,6 +132,7 @@ void run_parent(int size) {
               << "\n";
   }
 
+  child_exited = true;
   if (WIFEXITED(child_status)) {
     if (WEXITSTATUS(child_status)) {
       FAIL() << "Receiver process failed memory verification\n";
@@ -116,28 +146,22 @@ void run_parent(int size) {
   lzt::destroy_context(context);
 }
 
-TEST(
+TEST_F(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   const auto size = 4096;
-  pid_t pid = fork();
-  if (pid < 0) {
-    throw std::runtime_error("Failed to fork child process");
-  } else if (pid > 0) {
+  if (is_parent) {
     run_parent(size);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
   }
 }
 
-TEST(
+TEST_F(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   const auto size = 4096;
-  pid_t pid = fork();
-  if (pid < 0) {
-    throw std::runtime_error("Failed to fork child process");
-  } else if (pid > 0) {
+  if (is_parent) {
     run_parent(size);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
