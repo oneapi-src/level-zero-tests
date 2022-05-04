@@ -11,6 +11,8 @@
 #include "utils/utils.hpp"
 
 int main(int argc, char **argv) {
+  static char sys_env[] = "ZET_ENABLE_PROGRAM_DEBUGGING=1";
+  putenv(sys_env);
   static char val_env[] = "ZE_ENABLE_VALIDATION_LAYER=1";
   putenv(val_env);
   static char neg_env[] = "ZE_ENABLE_PARAMETER_VALIDATION=1";
