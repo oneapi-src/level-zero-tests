@@ -40,6 +40,11 @@ typedef enum {
 
 typedef enum { DEBUG, INFO, WARNING } log_level_t;
 
+bool check_event(zet_debug_session_handle_t &debug_session,
+                 zet_debug_event_type_t eventType);
+bool check_events(zet_debug_session_handle_t &debug_session,
+                  std::vector<zet_debug_event_type_t> eventTypes);
+
 void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
                                  ze_device_handle_t device,
                                  zet_debug_session_handle_t &debug_session,

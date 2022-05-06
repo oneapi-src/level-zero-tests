@@ -114,6 +114,38 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
   }
 }
 
+bool check_event(zet_debug_session_handle_t &debug_session,
+                 zet_debug_event_type_t eventType) {
+
+  bool found = false;
+  zet_debug_event_t debugEvent;
+
+  lzt::debug_read_event(debug_session, debugEvent, eventsTimeoutMS, false);
+
+  if (debugEvent.type == eventType) {
+    LOG_INFO << "[Debugger] expected event received: "
+             << lzt::debuggerEventTypeString[debugEvent.type];
+    found = true;
+  } else {
+    LOG_WARNING << "[Debugger] UNEXPECTED event received: "
+                << lzt::debuggerEventTypeString[debugEvent.type];
+  }
+
+  return found;
+}
+
+bool check_events(zet_debug_session_handle_t &debug_session,
+                  std::vector<zet_debug_event_type_t> eventTypes) {
+
+  for (auto eventType : eventTypes) {
+    if (!check_event(debug_session, eventType)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
                                  ze_device_handle_t device,
                                  zet_debug_session_handle_t &debug_session,
