@@ -142,6 +142,10 @@ void attach_after_module_created_test(ze_context_handle_t context,
   lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
   lzt::close_command_list(command_list);
 
+  // Notify:
+  //  After the module and command queue are created: send
+  //  ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD
+  //  Before destroying the module or the comand queue
   synchro.notify_debugger();
   synchro.wait_for_attach();
 
@@ -165,6 +169,88 @@ void attach_after_module_created_test(ze_context_handle_t context,
   lzt::destroy_module(module);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
+}
+
+// debugger waits and attaches after module created and destroyed
+void attach_after_module_destroyed_test(ze_context_handle_t context,
+                                        ze_device_handle_t device,
+                                        process_synchro &synchro,
+                                        debug_options &options) {
+
+  auto command_queue = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  auto command_list = lzt::create_command_list(context, device, 0, 0);
+  std::string module_name = (options.use_custom_module == true)
+                                ? options.module_name_in
+                                : "debug_add.spv";
+  auto module = lzt::create_module(context, device, module_name,
+                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
+
+  auto kernel = lzt::create_function(module, "debug_add_constant_2");
+
+  auto size = 8192;
+  auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
+  auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
+
+  std::memset(buffer_a, 0, size);
+  for (size_t i = 0; i < size; i++) {
+    static_cast<uint8_t *>(buffer_a)[i] = (i & 0xFF);
+  }
+
+  const int addval = 3;
+  lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
+  lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
+
+  uint32_t group_size_x = 1;
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
+                          group_size_z);
+  lzt::set_group_size(kernel, group_size_x, 1, 1);
+  ze_group_count_t group_count = {};
+  group_count.groupCountX = size / group_size_x;
+  group_count.groupCountY = 1;
+  group_count.groupCountZ = 1;
+
+  lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
+  lzt::append_barrier(command_list);
+  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+                              nullptr);
+  lzt::append_barrier(command_list);
+  lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
+  lzt::close_command_list(command_list);
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+
+  lzt::synchronize(command_queue, UINT64_MAX);
+
+  // cleanup
+  LOG_INFO << "[Application] Freeing resources";
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
+
+  // Notify:
+  //  After the module is created and destroyed
+  //  Before destroying the comand queue : send
+  //  ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT)
+  synchro.notify_debugger();
+  synchro.wait_for_attach();
+
+  // validation
+  for (size_t i = 0; i < size; i++) {
+    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
+              static_cast<uint8_t>((i & 0xFF) + addval));
+
+    if (::testing::Test::HasFailure()) {
+      exit(1);
+    }
+  }
+
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
+
+  lzt::free_memory(context, buffer_a);
+  lzt::free_memory(context, buffer_b);
 }
 
 // debuggee process creates multiple modules
@@ -249,84 +335,6 @@ void multiple_modules_created_test(ze_context_handle_t context,
   lzt::destroy_module(module2);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
-}
-
-// debugger waits and attaches after module created and destroyed
-void attach_after_module_destroyed_test(ze_context_handle_t context,
-                                        ze_device_handle_t device,
-                                        process_synchro &synchro,
-                                        debug_options &options) {
-
-  auto command_queue = lzt::create_command_queue(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = (options.use_custom_module == true)
-                                ? options.module_name_in
-                                : "debug_add.spv";
-  auto module = lzt::create_module(context, device, module_name,
-                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
-
-  auto kernel = lzt::create_function(module, "debug_add_constant_2");
-
-  auto size = 8192;
-  auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
-  auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
-
-  std::memset(buffer_a, 0, size);
-  for (size_t i = 0; i < size; i++) {
-    static_cast<uint8_t *>(buffer_a)[i] = (i & 0xFF);
-  }
-
-  const int addval = 3;
-  lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
-  lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
-
-  uint32_t group_size_x = 1;
-  uint32_t group_size_y = 1;
-  uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
-                          group_size_z);
-  lzt::set_group_size(kernel, group_size_x, 1, 1);
-  ze_group_count_t group_count = {};
-  group_count.groupCountX = size / group_size_x;
-  group_count.groupCountY = 1;
-  group_count.groupCountZ = 1;
-
-  lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
-  lzt::append_barrier(command_list);
-  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
-                              nullptr);
-  lzt::append_barrier(command_list);
-  lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-
-  lzt::synchronize(command_queue, UINT64_MAX);
-
-  // validation
-  for (size_t i = 0; i < size; i++) {
-    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              static_cast<uint8_t>((i & 0xFF) + addval));
-
-    if (::testing::Test::HasFailure()) {
-      exit(1);
-    }
-  }
-
-  // cleanup
-  lzt::free_memory(context, buffer_a);
-  lzt::free_memory(context, buffer_b);
-  lzt::destroy_function(kernel);
-  lzt::destroy_module(module);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
-
-  LOG_INFO << "[Application] All resouces freed";
-  synchro.wait_for_attach();
-
-  // Allow debugger to attach
-  std::this_thread::sleep_for(std::chrono::seconds(10));
 }
 
 void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
@@ -442,14 +450,6 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 }
 
 // ***************************************************************************************
-void thread_unavailable_test(process_synchro &synchro) {
-
-  synchro.wait_for_attach();
-
-  // do nothing
-  std::this_thread::sleep_for(std::chrono::seconds(30));
-}
-
 int main(int argc, char **argv) {
 
   debug_options options;
@@ -512,12 +512,6 @@ int main(int argc, char **argv) {
       break;
     case LONG_RUNNING_KERNEL_INTERRUPTED:
       run_long_kernel(context, device, synchro, options);
-      break;
-    case KERNEL_RESUME:
-      run_long_kernel(context, device, synchro, options);
-      break;
-    case THREAD_UNAVAILABLE:
-      thread_unavailable_test(synchro);
       break;
     default:
 #ifdef EXTENDED_TESTS

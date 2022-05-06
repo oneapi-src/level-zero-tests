@@ -27,16 +27,8 @@ namespace bi = boost::interprocess;
 
 const uint16_t eventsTimeoutMS = 30000;
 const uint16_t eventsTimeoutS = 30;
-const uint16_t timeoutThreshold = 4;
 
 namespace lzt = level_zero_tests;
-
-typedef enum {
-  SINGLE_THREAD,
-  SINGLE_EU_THREADS,
-  GROUP_OF_THREADS,
-  ALL_THREADS
-} num_threads_t;
 
 typedef enum { DEBUG, INFO, WARNING } log_level_t;
 
