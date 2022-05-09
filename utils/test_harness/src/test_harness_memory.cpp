@@ -137,7 +137,7 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
 
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
 
-  return allocate_shared_memory(size, alignment, 0, 0, device);
+  return allocate_shared_memory(size, alignment, dev_flags, host_flags, device);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
@@ -146,7 +146,8 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
                              ze_device_handle_t device) {
 
   auto context = lzt::get_default_context();
-  return allocate_shared_memory(size, alignment, 0, 0, device, context);
+  return allocate_shared_memory(size, alignment, dev_flags, host_flags, device,
+                                context);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
