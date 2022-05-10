@@ -97,6 +97,11 @@
 * --import_test_plan IMPORT_TEST_PLAN
    * Import a Test Plan generated previously thru this tool as `<name>.csv`
 
+## oneAPI Level Zero Compliancy Testing
+ * Verifying the Core Compliancy of an L0 Driver can be confirmed by executing the following:
+   * `python3 scripts/run_test_report.py --run_test_sections="core"`
+   * This result determines the health of the L0 Driver for Core Functionality and is the standard for compliancy of a given L0 Driver.
+   * A result less than 100% means the L0 Driver is not fully Compliant with the L0 Specification for Core Features.
 ## Execution
  * **Required: Ensure the oneAPI Level Zero Loader Library & your desired oneAPI Level Zero Driver are in your library path before execution.**
  * `python3 scripts/run_test_report.py <options>`
