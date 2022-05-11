@@ -21,7 +21,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-constexpr uint32_t thread_iters = 2000;
+constexpr uint32_t thread_iters = 200;
 constexpr size_t num_threads = 16;
 constexpr size_t size = 4096;
 constexpr size_t num_events = 2;

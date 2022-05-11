@@ -17,7 +17,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-const int thread_iters = 1000;
+const int thread_iters = 200;
 const size_t num_threads = 16;
 
 void driver_thread_test() {
