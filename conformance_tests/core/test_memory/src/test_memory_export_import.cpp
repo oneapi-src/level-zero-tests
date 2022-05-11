@@ -147,7 +147,12 @@ TEST(
 
   if (mapped_memory == MAP_FAILED) {
     perror("Error:");
-    FAIL() << "Error mmap-ing exported file descriptor";
+    if (errno == ENODEV) {
+      FAIL() << "Filesystem does not support memory mapping: "
+                "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE";
+    } else {
+      FAIL() << "Error mmap-ing exported file descriptor";
+    }
   }
 
   for (size_t i = 0; i < size; i++) {
