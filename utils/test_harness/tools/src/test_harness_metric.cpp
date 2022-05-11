@@ -328,102 +328,91 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                                                eventHandle, 0, nullptr));
 }
 
-void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
-                      const size_t rawDataSize, const uint8_t *rawData) {
-  uint32_t count = 0;
-  std::vector<zet_typed_value_t> results;
-  std::vector<zet_metric_handle_t> metrics;
-  zet_metric_group_properties_t properties;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupCalculateMetricValues(
-                matchedGroupHandle,
-                ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES, rawDataSize,
-                rawData, &count, nullptr));
-  EXPECT_GT(count, 0);
-  results.resize(count);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupCalculateMetricValues(
-                matchedGroupHandle,
-                ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES, rawDataSize,
-                rawData, &count, results.data()));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupGetProperties(matchedGroupHandle, &properties));
-  metrics.resize(properties.metricCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(matchedGroupHandle, &properties.metricCount,
-                         metrics.data()));
-  for (uint32_t i = 0; i < count; i++) {
-    switch (results[i].type) {
-    case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
-      EXPECT_GE(results[i].value.b8, std::numeric_limits<unsigned char>::min());
-      EXPECT_LE(results[i].value.b8, std::numeric_limits<unsigned char>::max());
-      break;
-    case zet_value_type_t::ZET_VALUE_TYPE_FLOAT32:
-      EXPECT_GE(results[i].value.fp32, std::numeric_limits<float>::lowest());
-      EXPECT_LE(results[i].value.fp32, std::numeric_limits<float>::max());
-      break;
-    case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
-      EXPECT_GE(results[i].value.fp64, std::numeric_limits<double>::lowest());
-      EXPECT_LE(results[i].value.fp64, std::numeric_limits<double>::max());
-      break;
-    case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
-      EXPECT_GE(results[i].value.ui32, 0);
-      EXPECT_LE(results[i].value.ui32, std::numeric_limits<uint32_t>::max());
-      break;
-    case zet_value_type_t::ZET_VALUE_TYPE_UINT64:
-      EXPECT_GE(results[i].value.ui64, 0);
-      EXPECT_LE(results[i].value.ui64, std::numeric_limits<uint64_t>::max());
-      break;
-    default:
-      ADD_FAILURE() << "Unexpected value type returned for metric query";
-    }
-  }
-  for (uint32_t i = 0; i < count; i++) {
-    zet_metric_properties_t metricProperties = {};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGetProperties(metrics[i % properties.metricCount],
-                                     &metricProperties));
-
-    if (metricProperties.metricType ==
-        zet_metric_type_t::ZET_METRIC_TYPE_DURATION) {
-      switch (results[i].type) {
-      case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
-        if (results[i].value.b8 > 0) {
-          i = count;
-          continue;
-        }
-        break;
-      case zet_value_type_t::ZET_VALUE_TYPE_FLOAT32:
-        if (results[i].value.fp32 > 0) {
-          i = count;
-          continue;
-        }
-        break;
-      case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
-        if (results[i].value.fp64 > 0) {
-          i = count;
-          continue;
-        }
-        break;
-      case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
-        if (results[i].value.ui32 > 0) {
-          i = count;
-          continue;
-        }
-        break;
-      case zet_value_type_t::ZET_VALUE_TYPE_UINT64:
-        if (results[i].value.ui64 > 0) {
-          i = count;
-          continue;
-        }
-        break;
-      default:
-        ADD_FAILURE() << "Unexpected value type returned for metric query";
-      }
-    }
-    if (i == count - 1) {
-      ADD_FAILURE() << "All duration metrics are zero";
-    }
+void verify_typed_metric_value(zet_typed_value_t result,
+                               zet_value_type_t metricValueType) {
+  EXPECT_EQ(metricValueType, result.type);
+  switch (result.type) {
+  case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
+    EXPECT_GE(result.value.b8, std::numeric_limits<unsigned char>::min());
+    EXPECT_LE(result.value.b8, std::numeric_limits<unsigned char>::max());
+    break;
+  case zet_value_type_t::ZET_VALUE_TYPE_FLOAT32:
+    EXPECT_GE(result.value.fp32, std::numeric_limits<float>::lowest());
+    EXPECT_LE(result.value.fp32, std::numeric_limits<float>::max());
+    break;
+  case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
+    EXPECT_GE(result.value.fp64, std::numeric_limits<double>::lowest());
+    EXPECT_LE(result.value.fp64, std::numeric_limits<double>::max());
+    break;
+  case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
+    EXPECT_GE(result.value.ui32, 0);
+    EXPECT_LE(result.value.ui32, std::numeric_limits<uint32_t>::max());
+    break;
+  case zet_value_type_t::ZET_VALUE_TYPE_UINT64:
+    EXPECT_GE(result.value.ui64, 0);
+    EXPECT_LE(result.value.ui64, std::numeric_limits<uint64_t>::max());
+    break;
+  default:
+    ADD_FAILURE() << "Unexpected value type returned for metric query";
   }
 }
+
+void validate_metrics(zet_metric_group_handle_t hMetricGroup,
+                      const size_t rawDataSize, const uint8_t *rawData) {
+
+  // Get set count and total metric value count
+  uint32_t setCount = 0;
+  uint32_t totalMetricValueCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupCalculateMultipleMetricValuesExp(
+                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+                rawDataSize, rawData, &setCount, &totalMetricValueCount,
+                nullptr, nullptr));
+
+  // Get metric counts and metric values
+  std::vector<uint32_t> metricValueSets(setCount);
+  std::vector<zet_typed_value_t> totalMetricValues(totalMetricValueCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupCalculateMultipleMetricValuesExp(
+                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+                rawDataSize, rawData, &setCount, &totalMetricValueCount,
+                metricValueSets.data(), totalMetricValues.data()));
+  EXPECT_GT(totalMetricValueCount, 0);
+
+  // Setup
+  uint32_t metricCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(hMetricGroup, &metricCount, nullptr));
+  EXPECT_GT(metricCount, 0);
+
+  std::vector<zet_metric_handle_t> phMetrics(metricCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
+
+  LOG_INFO << "totalMetricValueCount " << totalMetricValueCount << " setCount "
+           << setCount << " metricCount " << metricCount;
+  // This loop over metric data is new for this extension
+  uint32_t startIndex = 0;
+  for (uint32_t dataIndex = 0; dataIndex < setCount; dataIndex++) {
+
+    const uint32_t metricCountForDataIndex = metricValueSets[dataIndex];
+    const uint32_t reportCount = metricCountForDataIndex / metricCount;
+
+    for (uint32_t report = 0; report < reportCount; report++) {
+      for (uint32_t metric = 0; metric < metricCount; metric++) {
+        zet_metric_properties_t properties;
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zetMetricGetProperties(phMetrics[metric], &properties));
+        const size_t metricIndex = report * metricCount + metric;
+        zet_typed_value_t typed_value =
+            totalMetricValues[startIndex + metricIndex];
+        verify_typed_metric_value(typed_value, properties.resultType);
+      }
+    }
+
+    startIndex += metricCountForDataIndex;
+  }
+  assert(startIndex == totalMetricValueCount);
+}
+
 } // namespace level_zero_tests
