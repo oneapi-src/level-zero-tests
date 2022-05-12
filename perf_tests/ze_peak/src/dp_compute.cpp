@@ -16,6 +16,16 @@ void ZePeak::ze_peak_dp_compute(L0Context &context) {
   struct ZeWorkGroups workgroup_info;
   double input_value = 1.3f;
 
+  ze_device_module_properties_t module_properties{};
+  module_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES;
+  result = zeDeviceGetModuleProperties(context.device, &module_properties);
+  if (!(module_properties.flags & ZE_DEVICE_MODULE_FLAG_FP64)) {
+    std::cout << "dp_compute test skipping for missing support: "
+              << "Device Module Properties not reporting "
+                 "ZE_DEVICE_MODULE_FLAG_FP64\n";
+    return;
+  }
+
   std::vector<uint8_t> binary_file =
       context.load_binary_file("ze_dp_compute.spv");
 
