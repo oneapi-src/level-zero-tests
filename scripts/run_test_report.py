@@ -105,7 +105,7 @@ def add_to_test_list(test_name: str,
             checks_passed = True
 
     if checks_passed == True:
-        test_plan_generated.append((test_name, test_filter, binary_and_path, test_feature_tag, test_section, test_feature))
+        test_plan_generated.append((test_name, test_filter, os.path.basename(binary_and_path), test_feature_tag, test_section, test_feature))
 
 def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
     results = []
@@ -121,7 +121,8 @@ def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
         stderr_log = "_stderr.log"
         fout = open(stdout_log, 'a+')
         ferr = open(stderr_log, 'a+')
-        test_run = subprocess.Popen([test_plan[i][2], test_plan[i][1]], stdout=fout, stderr=ferr, start_new_session=True, cwd=binary_cwd)
+        binary_prefix_path = os.path.join(binary_cwd, '')
+        test_run = subprocess.Popen([binary_prefix_path + test_plan[i][2], test_plan[i][1]], stdout=fout, stderr=ferr, start_new_session=True, cwd=binary_cwd)
         try:
             failed = 0
             unsupported = 0
@@ -373,6 +374,7 @@ if __name__ == '__main__':
 
     print("Level Zero Test Report Generator\n")
 
+    binary_cwd = args.binary_dir
     if import_test_plan:
         print("Importing Test plan: " + import_test_plan)
         test_plan_generated = read_test_plan(plan_name = import_test_plan)
@@ -388,7 +390,6 @@ if __name__ == '__main__':
             print(" Excluding Regex:" + exclude_regex, end = '')
         print("\n")
 
-        binary_cwd = args.binary_dir
         generate_test_cases_from_binaries(
         binary_dir = args.binary_dir,
         requested_sections = run_test_sections,
