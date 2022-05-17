@@ -21,6 +21,7 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
            process_synchro &synchro, debug_options &options) {
 
   synchro.wait_for_attach();
+  LOG_DEBUG << "[Application] Child Proceeding";
 
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -455,7 +456,7 @@ int main(int argc, char **argv) {
   debug_options options;
   options.parse_options(argc, argv);
 
-  process_synchro synchro(options.enable_synchro, false);
+  process_synchro synchro(options.enable_synchro, false, options.index_in);
 
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {

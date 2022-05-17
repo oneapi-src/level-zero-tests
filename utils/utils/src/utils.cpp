@@ -230,6 +230,44 @@ std::vector<ze_device_handle_t> get_all_sub_devices() {
   return all_sub_devices;
 }
 
+ze_device_handle_t find_device(ze_driver_handle_t &driver,
+                               const char *device_id, bool sub_device) {
+  ze_device_handle_t device = nullptr;
+
+  for (auto &root_device : lzt::get_devices(driver)) {
+    if (sub_device) {
+      LOG_INFO << "[Application] Searching subdevices";
+
+      for (auto &sub_device : lzt::get_ze_sub_devices(root_device)) {
+        auto device_properties = lzt::get_device_properties(sub_device);
+        if (strncmp(device_id, lzt::to_string(device_properties.uuid).c_str(),
+                    ZE_MAX_DEVICE_NAME)) {
+          continue;
+        } else {
+          device = sub_device;
+          LOG_INFO << "Found the subdevice";
+          break;
+        }
+      }
+      if (device) {
+        break;
+      }
+    } else {
+      LOG_INFO << "[Application] Searching root device";
+
+      auto device_properties = lzt::get_device_properties(root_device);
+      if (strncmp(device_id, lzt::to_string(device_properties.uuid).c_str(),
+                  ZE_MAX_DEVICE_NAME)) {
+        continue;
+      }
+      device = root_device;
+      LOG_INFO << "Found the device";
+      break;
+    }
+  }
+  return device;
+}
+
 std::string to_string(const ze_api_version_t version) {
   std::stringstream ss;
   ss << ZE_MAJOR_VERSION(version) << "." << ZE_MINOR_VERSION(version);

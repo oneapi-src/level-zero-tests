@@ -19,6 +19,8 @@ namespace level_zero_tests {
 
 ze_context_handle_t get_default_context();
 ze_device_handle_t get_default_device(ze_driver_handle_t driver);
+ze_device_handle_t find_device(ze_driver_handle_t &driver,
+                               const char *device_id, bool sub_device);
 ze_driver_handle_t get_default_driver();
 ze_context_handle_t create_context();
 ze_context_handle_t create_context(ze_driver_handle_t driver);

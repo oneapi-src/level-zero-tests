@@ -33,3 +33,15 @@ add_lzt_test_executable(
     level_zero_tests::utils
     ${debug_libraries}
 )
+
+add_lzt_test_executable(
+  NAME child_debugger
+  GROUP "/conformance_tests/tools/debug"
+  PREFIX "debug"  # install to prefix so it's not confused for a test
+  SOURCES
+    src/child_debugger.cpp
+  LINK_LIBRARIES
+    level_zero_tests::logging
+    level_zero_tests::utils
+    ${debug_libraries}
+)

@@ -53,6 +53,8 @@ class zetDebugAttachDetachTest : public zetDebugBaseSetup {
 protected:
   void run_test(std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
                 bool reattach);
+  void run_multidevice_test(std::vector<ze_device_handle_t> &devices,
+                            bool use_sub_devices);
 };
 
 void zetDebugAttachDetachTest::run_test(
@@ -134,6 +136,124 @@ TEST_F(
     GivenSubDevicePreviousDebugSessionDetachedWhenAttachingThenReAttachIsSuccessful) {
   auto all_sub_devices = lzt::get_all_sub_devices();
   run_test(all_sub_devices, true, true);
+}
+
+bp::child launch_child_debugger_process(std::string device_id,
+                                        bool use_sub_devices, uint32_t index) {
+
+  fs::path debugger_path(fs::current_path() / "debug");
+  std::vector<fs::path> paths;
+  paths.push_back(debugger_path);
+  fs::path helper = bp::search_path("child_debugger", paths);
+
+  bp::child debugger(helper, "--device_id=" + device_id,
+                     (use_sub_devices ? "--use_sub_devices" : ""),
+                     "--index=" + std::to_string(index));
+
+  return debugger;
+}
+
+void zetDebugAttachDetachTest::run_multidevice_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+
+  auto device0 = devices[0];
+  auto device1 = devices[1];
+  auto device_properties = lzt::get_device_properties(device0);
+  LOG_DEBUG << "[Debugger] Launching application on " << device_properties.uuid
+            << " " << device_properties.name;
+  debugHelper = launch_process(BASIC, devices[0], use_sub_devices);
+  zet_debug_config_t debug_config = {};
+  debug_config.pid = debugHelper.id();
+  LOG_DEBUG << "[Debugger] Launched application with PID:  " << debugHelper.id()
+            << " using " << device_properties.uuid << " "
+            << device_properties.name;
+
+  debugSession = lzt::debug_attach(device0, debug_config);
+  if (!debugSession) {
+    FAIL() << "[Debugger] Failed to attach to start a debug session";
+  }
+
+  LOG_DEBUG << "[Debugger] Notifying applications of attach";
+  synchro->notify_attach();
+
+  // create new process
+  auto device_properties_1 = lzt::get_device_properties(device1);
+  LOG_DEBUG << "[Debugger] Launching new debugger on "
+            << device_properties_1.uuid << " " << device_properties_1.name;
+  auto debugger = launch_child_debugger_process(
+      lzt::to_string(device_properties_1.uuid), use_sub_devices, 1);
+
+  LOG_DEBUG << "[Debugger] Launched new debugger with PID:  " << debugger.id()
+            << " using " << device_properties_1.uuid << " "
+            << device_properties_1.name;
+
+  debugHelper.wait();
+  LOG_INFO << "[Debugger] Main debugger detaching";
+  lzt::debug_detach(debugSession);
+
+  LOG_INFO << "[Debugger] Waiting for child debugger to exit";
+  debugger.wait();
+  LOG_INFO << "[Debugger] Child debugger exited, finishing test";
+
+  ASSERT_EQ(debugHelper.exit_code(), 0);
+  ASSERT_EQ(debugger.exit_code(), 0);
+}
+
+TEST_F(
+    zetDebugAttachDetachTest,
+    GivenApplicationsExecutingOnDifferentSubdevicesWhenAttachingThenDifferentDebuggersCanAttachAndDetachSuccessfully) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  bool test_run = false;
+  for (auto &device : devices) {
+    auto device_properties = lzt::get_device_properties(device);
+    auto sub_devices = lzt::get_ze_sub_devices(device);
+    auto initial_count = sub_devices.size();
+    std::remove_if(sub_devices.begin(), sub_devices.end(),
+                   [](ze_device_handle_t &device) {
+                     return (!is_debug_supported(device));
+                   });
+    auto final_count = sub_devices.size();
+    if (final_count < 2) {
+      LOG_WARNING << "Skipping device with < 2  "
+                  << ((final_count < initial_count) ? "debug capable " : "")
+                  << "subdevices: " << device_properties.uuid << " "
+                  << device_properties.name;
+      continue;
+    } else {
+      test_run = true;
+      run_multidevice_test(sub_devices, true);
+    }
+  }
+
+  if (!test_run) {
+    LOG_WARNING << "No device with multiple supported subdevices available, "
+                   "test not run";
+  }
+}
+
+TEST_F(
+    zetDebugAttachDetachTest,
+    GivenApplicationsExecutingOnDifferentDevicesInMultiDeviceSystemWhenAttachingThenDifferentDebuggersCanAttachAndDetachSuccessfully) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  LOG_ERROR << "NUMBER OF DEVICES: " << devices.size();
+
+  auto initial_count = devices.size();
+  std::remove_if(
+      devices.begin(), devices.end(),
+      [](ze_device_handle_t &device) { return (!is_debug_supported(device)); });
+  auto final_count = devices.size();
+
+  if (final_count < 2) {
+    LOG_WARNING << "Not enough "
+                << ((final_count < initial_count) ? "debug capable" : "")
+                << "devices to run multi-device test for driver";
+  } else {
+    run_multidevice_test(devices, false);
+  }
 }
 
 class zetDebugEventReadTest : public zetDebugAttachDetachTest {

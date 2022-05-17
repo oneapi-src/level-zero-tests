@@ -48,15 +48,19 @@ typedef struct {
 
 class process_synchro {
 public:
-  process_synchro(bool enable, bool create) {
+  process_synchro(bool enable, bool create, int index = 0) {
     enabled = enable;
     if (!enable)
       return;
-    if (create) {
 
-      bi::shared_memory_object::remove("debug_bool");
+    auto debug_bool_name = "debug_bool" + std::to_string(index);
+    auto debug_mutex_name = "debugger_mutex" + std::to_string(index);
+    auto debug_bool_set_name = "debug_bool_set" + std::to_string(index);
+
+    if (create) {
+      bi::shared_memory_object::remove(debug_bool_name.c_str());
       bi::shared_memory_object shm = bi::shared_memory_object(
-          bi::create_only, "debug_bool", bi::read_write);
+          bi::create_only, debug_bool_name.c_str(), bi::read_write);
 
       shm.truncate(sizeof(debug_signals_t));
       region = new bi::mapped_region(shm, bi::read_write);
@@ -75,21 +79,23 @@ public:
       *debugee_signal = false;
       *gpu_buffer_address = 0;
 
-      bi::named_mutex::remove("debugger_mutex");
-      mutex = new bi::named_mutex(bi::create_only, "debugger_mutex");
+      bi::named_mutex::remove(debug_mutex_name.c_str());
+      mutex = new bi::named_mutex(bi::create_only, debug_mutex_name.c_str());
       LOG_DEBUG << "[Debugger] Created debugger mutex";
 
-      bi::named_condition::remove("debug_bool_set");
-      condition = new bi::named_condition(bi::create_only, "debug_bool_set");
+      bi::named_condition::remove(debug_bool_set_name.c_str());
+      condition =
+          new bi::named_condition(bi::create_only, debug_bool_set_name.c_str());
       LOG_DEBUG << "[Debugger] Created debug bool set";
 
     } else {
-      bi::shared_memory_object shm =
-          bi::shared_memory_object(bi::open_only, "debug_bool", bi::read_write);
+      bi::shared_memory_object shm = bi::shared_memory_object(
+          bi::open_only, debug_bool_name.c_str(), bi::read_write);
       region = new bi::mapped_region(shm, bi::read_write);
 
-      mutex = new bi::named_mutex(bi::open_only, "debugger_mutex");
-      condition = new bi::named_condition(bi::open_only, "debug_bool_set");
+      mutex = new bi::named_mutex(bi::open_only, debug_mutex_name.c_str());
+      condition =
+          new bi::named_condition(bi::open_only, debug_bool_set_name.c_str());
 
       debugger_signal = &(static_cast<debug_signals_t *>(region->get_address())
                               ->debugger_signal);

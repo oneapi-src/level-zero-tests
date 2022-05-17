@@ -46,7 +46,47 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
                            const ze_device_thread_t &thread,
                            zet_debug_event_t &module_event, bool access_elf);
 
-class zetDebugBaseSetup : public ::testing::Test {
+class ProcessLauncher {
+public:
+  bp::child launch_process(debug_test_type_t test_type,
+                           ze_device_handle_t device, bool use_sub_devices,
+                           std::string module_name, uint64_t index) {
+    auto device_properties = lzt::get_device_properties(device);
+    std::string device_id = lzt::to_string(device_properties.uuid);
+    fs::path helper_path(fs::current_path() / "debug");
+    std::vector<fs::path> paths;
+    paths.push_back(helper_path);
+    fs::path helper = bp::search_path(bin_name, paths);
+    bp::opstream child_input;
+    std::string module_name_option = "";
+    if (!module_name.empty())
+      module_name_option = "--module=" + module_name;
+
+    bp::child debug_helper(helper, "--test_type=" + std::to_string(test_type),
+                           "--device_id=" + device_id, module_name_option,
+                           (use_sub_devices ? "--use_sub_devices" : ""),
+                           "--index=" + std::to_string(index),
+                           bp::std_in < child_input);
+
+    return debug_helper;
+  }
+
+  bp::child launch_process(debug_test_type_t test_type,
+                           ze_device_handle_t device, bool use_sub_devices,
+                           std::string module_name) {
+    return launch_process(test_type, device, use_sub_devices, module_name, 0);
+  }
+
+  bp::child launch_process(debug_test_type_t test_type,
+                           ze_device_handle_t device, bool use_sub_devices) {
+    return launch_process(test_type, device, use_sub_devices, "", 0);
+  }
+
+protected:
+  std::string bin_name = "test_debug_helper";
+};
+
+class zetDebugBaseSetup : public ProcessLauncher, public ::testing::Test {
 protected:
   void SetUp() override { synchro = new process_synchro(true, true); }
 
@@ -65,34 +105,6 @@ protected:
     delete synchro;
   }
 
-  bp::child launch_process(debug_test_type_t test_type,
-                           ze_device_handle_t device, bool use_sub_devices,
-                           std::string module_name) {
-    auto device_properties = lzt::get_device_properties(device);
-    std::string device_id = lzt::to_string(device_properties.uuid);
-    fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path(bin_name, paths);
-    bp::opstream child_input;
-    std::string module_name_option = "";
-    if (!module_name.empty())
-      module_name_option = "--module=" + module_name;
-
-    bp::child debug_helper(helper, "--test_type=" + std::to_string(test_type),
-                           "--device_id=" + device_id, module_name_option,
-                           (use_sub_devices ? "--use_sub_devices=1" : ""),
-                           bp::std_in < child_input);
-
-    return debug_helper;
-  }
-
-  bp::child launch_process(debug_test_type_t test_type,
-                           ze_device_handle_t device, bool use_sub_devices) {
-    return launch_process(test_type, device, use_sub_devices, "");
-  }
-
-  std::string bin_name = "test_debug_helper";
   process_synchro *synchro;
 
 public:

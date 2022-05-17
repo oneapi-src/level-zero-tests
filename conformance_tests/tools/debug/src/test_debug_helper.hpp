@@ -43,6 +43,9 @@ public:
         "no_ipc",
         "Disable process controls so tests can be run without parent process");
     options(use_sub_devices_string, "run the test on subdevices if available");
+    auto index_string = "index";
+    options(index_string, po::value<uint64_t>(&index_in),
+            "Index of this debuggee");
 
     std::vector<std::string> parser(argv + 1, argv + argc);
     po::parsed_options parsed_options = po::command_line_parser(parser)
@@ -72,6 +75,11 @@ public:
       LOG_INFO << "[Application] Disabling IPC controls";
       enable_synchro = false;
     }
+
+    if (variables_map.count(index_string)) {
+      index_in = variables_map[index_string].as<uint64_t>();
+      LOG_INFO << "[Application] Setting index: " << index_in;
+    }
   }
 
   bool use_sub_devices = false;
@@ -81,6 +89,7 @@ public:
   bool use_custom_module = false;
   debug_test_type_t test_selected = BASIC;
   bool enable_synchro = true;
+  uint64_t index_in = 0;
 };
 
 #ifdef EXTENDED_TESTS
