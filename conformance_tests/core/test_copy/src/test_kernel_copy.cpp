@@ -289,8 +289,6 @@ protected:
           return lzt::allocate_shared_memory(size, device);
         } else { // shared cross
           auto cross_device = devices[driver_index][cross_device_index];
-          // mem_access_properties =
-          // memory_access_properties[driver_index][cross_device_index];
           auto memory_access_cap =
               mem_access_properties.sharedCrossDeviceAllocCapabilities;
           if ((memory_access_cap & ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
@@ -427,14 +425,12 @@ protected:
 
     // Set up input/output data as containers of memory buffers, host ptr
     copy_data *input_data, *output_data;
-    input_data = static_cast<copy_data *>(malloc(size * sizeof(copy_data)));
-    output_data = static_cast<copy_data *>(malloc(size * sizeof(copy_data)));
+    input_data = new copy_data[size];
+    output_data = new copy_data[size];
 
     for (int i = 0; i < size; i++) {
-      input_data[i].data =
-          static_cast<uint32_t *>(malloc(size * sizeof(uint32_t)));
-      output_data[i].data =
-          static_cast<uint32_t *>(malloc(size * sizeof(uint32_t)));
+      input_data[i].data = new uint32_t[size];
+      output_data[i].data = new uint32_t[size];
       memset(output_data[i].data, 0, size * sizeof(uint32_t));
       lzt::write_data_pattern(input_data[i].data, size * sizeof(uint32_t), 1);
     }
@@ -456,8 +452,7 @@ protected:
     // handling pointers in src_data[i].data
     if (src_ptr_mem_type == ZE_MEMORY_TYPE_DEVICE) {
       // generate copy_data array in host and copy the array to device
-      src_data_host_ptr =
-          static_cast<copy_data *>(malloc(size * sizeof(copy_data)));
+      src_data_host_ptr = new copy_data[size];
       for (int i = 0; i < size; i++) {
         src_data_host_ptr[i].data = src_data_ptr_array[i];
       }
@@ -472,8 +467,7 @@ protected:
     // handling pointers in dst_data[i].data
     if (dst_ptr_mem_type == ZE_MEMORY_TYPE_DEVICE) {
       // generate copy_data array in host and copy the array to device
-      dst_data_host_ptr =
-          static_cast<copy_data *>(malloc(size * sizeof(copy_data)));
+      dst_data_host_ptr = new copy_data[size];
       for (int i = 0; i < size; i++) {
         dst_data_host_ptr[i].data = dst_data_ptr_array[i];
       }
@@ -554,17 +548,17 @@ protected:
 
     // cleanup
     for (int i = 0; i < size; i++) {
-      free(input_data[i].data);
-      free(output_data[i].data);
+      delete[] input_data[i].data;
+      delete[] output_data[i].data;
       free_memory(src_data_ptr_array[i], src_mem_type, src_shr_type);
       free_memory(dst_data_ptr_array[i], dst_mem_type, dst_shr_type);
     }
-    free(input_data);
-    free(output_data);
+    delete[] input_data;
+    delete[] output_data;
     if (src_data_host_ptr)
-      free(src_data_host_ptr);
+      delete[] src_data_host_ptr;
     if (dst_data_host_ptr)
-      free(dst_data_host_ptr);
+      delete[] dst_data_host_ptr;
     free_memory(src_data, src_ptr_mem_type, src_ptr_shr_type);
     free_memory(dst_data, dst_ptr_mem_type, dst_ptr_shr_type);
     lzt::destroy_function(kernel);
