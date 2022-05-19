@@ -566,17 +566,28 @@ TEST_F(
 
 class zeHostSystemMemoryDeviceTests : public ::testing::Test {
 protected:
-  zeHostSystemMemoryDeviceTests() { memory_ = new uint8_t[size_]; }
+  zeHostSystemMemoryDeviceTests() {
+    auto mem_access_props = lzt::get_memory_access_properties(
+        lzt::get_default_device(lzt::get_default_driver()));
+    systemMemSupported = mem_access_props.sharedSystemAllocCapabilities &
+                         ZE_MEMORY_ACCESS_CAP_FLAG_RW;
+    memory_ = new uint8_t[size_];
+  }
   ~zeHostSystemMemoryDeviceTests() { delete[] memory_; }
   const size_t size_ = 4 * 1024;
   uint8_t *memory_ = nullptr;
   lzt::zeCommandList cmdlist_;
   lzt::zeCommandQueue cmdqueue_;
+  bool systemMemSupported;
 };
 
 TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenAccessingMemoryOnDeviceThenCorrectDataIsRead) {
+  if (!systemMemSupported) {
+    FAIL() << "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE - Device does not support "
+              "system memory";
+  }
   lzt::write_data_pattern(memory_, size_, 1);
   std::string module_name = "unified_mem_test.spv";
   ze_module_handle_t module = lzt::create_module(
@@ -602,6 +613,10 @@ TEST_F(
 TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenCopyingMemoryOnDeviceThenMemoryCopiedCorrectly) {
+  if (!systemMemSupported) {
+    FAIL() << "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE - Device does not support "
+              "system memory";
+  }
   lzt::write_data_pattern(memory_, size_, 1);
   uint8_t *other_system_memory = new uint8_t[size_];
 
@@ -618,6 +633,10 @@ TEST_F(
 
 TEST_F(zeHostSystemMemoryDeviceTests,
        GivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly) {
+  if (!systemMemSupported) {
+    FAIL() << "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE - Device does not support "
+              "system memory";
+  }
 
   const uint8_t value = 0x55;
   lzt::write_data_pattern(memory_, size_, 1);
