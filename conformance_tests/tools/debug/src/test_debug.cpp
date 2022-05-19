@@ -55,6 +55,8 @@ protected:
                 bool reattach);
   void run_multidevice_test(std::vector<ze_device_handle_t> &devices,
                             bool use_sub_devices);
+  void run_attach_detach_to_multiple_applications_on_different_devs_test(
+      std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
 };
 
 void zetDebugAttachDetachTest::run_test(
@@ -239,7 +241,6 @@ TEST_F(
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
-  LOG_ERROR << "NUMBER OF DEVICES: " << devices.size();
 
   auto initial_count = devices.size();
   std::remove_if(
@@ -253,6 +254,114 @@ TEST_F(
                 << "devices to run multi-device test for driver";
   } else {
     run_multidevice_test(devices, false);
+  }
+}
+
+void zetDebugAttachDetachTest::
+    run_attach_detach_to_multiple_applications_on_different_devs_test(
+        std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+
+  auto device0 = devices[0];
+  auto device1 = devices[1];
+  LOG_DEBUG << "[Debugger] Test attaching/detaching to 2 applications";
+
+  auto device_properties_0 = lzt::get_device_properties(device0);
+  auto device_properties_1 = lzt::get_device_properties(device1);
+
+  LOG_DEBUG << "[Debugger] Launching application 1 on "
+            << device_properties_0.uuid << " " << device_properties_0.name;
+  auto debug_helper_0 = launch_process(BASIC, device0, use_sub_devices);
+  LOG_DEBUG << "[Debugger] Launching application 2 on "
+            << device_properties_1.uuid << " " << device_properties_1.name;
+  auto debug_helper_1 = launch_process(BASIC, device1, use_sub_devices);
+
+  zet_debug_config_t debug_config_0 = {};
+  debug_config_0.pid = debug_helper_0.id();
+
+  zet_debug_config_t debug_config_1 = {};
+  debug_config_1.pid = debug_helper_1.id();
+
+  LOG_DEBUG << "[Debugger] Attaching to application 1 at pid="
+            << debug_config_0.pid;
+  auto debug_session_0 = lzt::debug_attach(device0, debug_config_0);
+
+  LOG_DEBUG << "[Debugger] Attaching to application 2 at pid="
+            << debug_config_1.pid;
+  auto debug_session_1 = lzt::debug_attach(device1, debug_config_1);
+
+  if (!debug_session_0 || !debug_session_1) {
+    debug_helper_0.terminate();
+    debug_helper_1.terminate();
+    FAIL() << "[Debugger] Failed to attach to 1 or both applications start a "
+              "debug session";
+  }
+  synchro->notify_attach(); // both applications will see debugger signal
+
+  LOG_DEBUG << "[Debugger] Waiting for application process entry debug events";
+  zet_debug_event_t event;
+  lzt::debug_read_event(debug_session_0, event, eventsTimeoutMS, false);
+  ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
+  lzt::debug_read_event(debug_session_1, event, eventsTimeoutMS, false);
+  ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
+
+  LOG_DEBUG << "[Debugger] Waiting for application module load debug events";
+  for (int i = 0; i < 5;
+       i++) { // BASIC test loads debug_add which has 5 kernels
+    lzt::debug_read_event(debug_session_0, event, eventsTimeoutMS, false);
+    ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD);
+    lzt::debug_ack_event(debug_session_0, &event);
+    lzt::debug_read_event(debug_session_1, event, eventsTimeoutMS, false);
+    ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD);
+    lzt::debug_ack_event(debug_session_1, &event);
+  }
+
+  LOG_DEBUG << "[Debugger] Waiting for application module unload debug events";
+  for (int i = 0; i < 5; i++) {
+    lzt::debug_read_event(debug_session_0, event, eventsTimeoutMS, false);
+    ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD);
+    lzt::debug_read_event(debug_session_1, event, eventsTimeoutMS, false);
+    ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD);
+  }
+
+  LOG_DEBUG << "[Debugger] Waiting for application process exit debug events";
+  lzt::debug_read_event(debug_session_0, event, eventsTimeoutMS, false);
+  ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT);
+  lzt::debug_read_event(debug_session_1, event, eventsTimeoutMS, false);
+  ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT);
+
+  LOG_DEBUG << "[Debugger] Waiting for application 1 to finish";
+  debug_helper_0.wait();
+  LOG_DEBUG << "[Debugger] Waiting for application 2 to finish";
+  debug_helper_1.wait();
+
+  LOG_INFO << "[Debugger] Detaching from application 1";
+  lzt::debug_detach(debug_session_0);
+  LOG_INFO << "[Debugger] Detaching from application 2";
+  lzt::debug_detach(debug_session_1);
+
+  ASSERT_EQ(debug_helper_0.exit_code(), 0);
+  ASSERT_EQ(debug_helper_1.exit_code(), 0);
+}
+
+TEST_F(
+    zetDebugAttachDetachTest,
+    GivenDeviceSupportsDebugAttachWhenAttachingToMultipleApplicationsThenAttachAndDetachIsSuccessful) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  auto initial_count = devices.size();
+  std::remove_if(
+      devices.begin(), devices.end(),
+      [](ze_device_handle_t &device) { return (!is_debug_supported(device)); });
+  auto final_count = devices.size();
+
+  if (final_count < 2) {
+    LOG_WARNING << "Not enough "
+                << ((final_count < initial_count) ? "debug capable" : "")
+                << "devices to run multi-device test for driver";
+  } else {
+    run_attach_detach_to_multiple_applications_on_different_devs_test(devices,
+                                                                      false);
   }
 }
 

@@ -470,7 +470,7 @@ int main(int argc, char **argv) {
   ze_device_handle_t device = nullptr;
   for (auto &root_device : lzt::get_devices(driver)) {
     if (options.use_sub_devices) {
-      LOG_INFO << "[Application] Using subdevices";
+      LOG_INFO << "[Application] Comparing subdevices";
 
       for (auto &sub_device : lzt::get_ze_sub_devices(root_device)) {
         auto device_properties = lzt::get_device_properties(sub_device);
@@ -486,7 +486,7 @@ int main(int argc, char **argv) {
       if (!device)
         continue;
     } else {
-      LOG_INFO << "[Application] Using root device";
+      LOG_INFO << "[Application] Comparing root device";
 
       auto device_properties = lzt::get_device_properties(root_device);
 
