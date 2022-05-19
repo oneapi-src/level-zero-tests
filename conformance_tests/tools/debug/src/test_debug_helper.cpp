@@ -368,7 +368,8 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   auto src_buffer_s =
       lzt::allocate_shared_memory(size, size, 0, 0, device, context);
 
-  unsigned long loop_max = 100000000;
+  unsigned long loop_max = 1000000000;
+
   auto loop_counter_d = lzt::allocate_device_memory(
       sizeof(unsigned long), sizeof(unsigned long), 0, 0, device, context);
   auto loop_counter_s = lzt::allocate_shared_memory(
