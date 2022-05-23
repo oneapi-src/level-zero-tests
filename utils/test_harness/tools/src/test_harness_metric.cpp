@@ -65,17 +65,16 @@ get_metric_test_device_list(uint32_t testSubDeviceCount) {
   return testDevices;
 }
 
-bool check_metric_type_ip_exp(
-    ze_device_handle_t device, std::string groupName,
-    zet_metric_group_sampling_type_flags_t samplingType,
-    bool includeExpFeature) {
-  zet_metric_group_handle_t groupHandle;
-  groupHandle = lzt::find_metric_group(device, groupName, samplingType);
+bool check_metric_type_ip_exp(zet_metric_group_handle_t metricGroupHandle,
+                              bool includeExpFeature) {
+
   std::vector<zet_metric_handle_t> metricHandles =
-      get_metric_handles(groupHandle);
+      get_metric_handles(metricGroupHandle);
+
   for (auto metric : metricHandles) {
     zet_metric_properties_t MetricProp = {};
     MetricProp.stype = ZET_STRUCTURE_TYPE_METRIC_PROPERTIES;
+    MetricProp.pNext = nullptr;
     EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGetProperties(metric, &MetricProp));
 
     if (MetricProp.metricType == ZET_METRIC_TYPE_IP_EXP && !includeExpFeature) {
@@ -83,6 +82,55 @@ bool check_metric_type_ip_exp(
     }
   }
   return false;
+}
+
+bool check_metric_type_ip_exp(
+    ze_device_handle_t device, std::string groupName,
+    zet_metric_group_sampling_type_flags_t samplingType,
+    bool includeExpFeature) {
+
+  zet_metric_group_handle_t groupHandle;
+  groupHandle = lzt::find_metric_group(device, groupName, samplingType);
+  return check_metric_type_ip_exp(groupHandle, includeExpFeature);
+}
+
+std::vector<metricGroupInfo_t>
+get_metric_group_info(ze_device_handle_t device,
+                      zet_metric_group_sampling_type_flags_t metricSamplingType,
+                      bool includeExpFeature) {
+
+  ze_result_t result = zeInit(0);
+  if (result) {
+    throw std::runtime_error("zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+
+  std::vector<zet_metric_group_handle_t> metricGroupHandles =
+      get_metric_group_handles(device);
+
+  std::vector<metricGroupInfo_t> matchedGroupsInfo;
+
+  for (auto metricGroupHandle : metricGroupHandles) {
+    zet_metric_group_properties_t metricGroupProp = {};
+    metricGroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    metricGroupProp.pNext = nullptr;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricGroupGetProperties(metricGroupHandle, &metricGroupProp));
+    // samplingType is a bit mask.
+    if (!(metricGroupProp.samplingType & metricSamplingType)) {
+      continue;
+    }
+
+    if (check_metric_type_ip_exp(metricGroupHandle, includeExpFeature)) {
+      LOG_WARNING
+          << "Test includes ZET_METRIC_TYPE_IP_EXP Metric Type - Skipped...";
+      continue;
+    }
+
+    matchedGroupsInfo.emplace_back(metricGroupHandle, metricGroupProp.name);
+  }
+
+  return matchedGroupsInfo;
 }
 
 std::vector<std::string>
