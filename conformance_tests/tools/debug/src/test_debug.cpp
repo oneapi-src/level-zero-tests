@@ -1245,7 +1245,6 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
         lzt::debug_interrupt(debugSession, stopped_thread);
 
         // Confirm the thread was effectively stopped
-        std::this_thread::sleep_for(std::chrono::seconds(2));
         if (!find_stopped_threads(debugSession, device, stopped_thread, true,
                                   stoppedThreadsCheck)) {
           FAIL() << "[Debugger] Did not find stopped threads";
@@ -1273,7 +1272,6 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
         lzt::debug_interrupt(debugSession, stopped_thread);
 
         // Confirm the thread was effectively stopped
-        std::this_thread::sleep_for(std::chrono::seconds(2));
         if (!find_stopped_threads(debugSession, device, stopped_thread, true,
                                   stoppedThreadsCheck)) {
           FAIL() << "[Debugger] Did not find stopped threads";
@@ -1305,7 +1303,6 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     }
 
     // check for odd threads events and threads stopped all together
-    std::this_thread::sleep_for(std::chrono::seconds(2));
     if (!find_multi_event_stopped_threads(debugSession, device, threadsToCheck,
                                           true, stoppedThreadsCheck)) {
       FAIL() << "[Debugger] Did not interrupt Odd threads";
@@ -1313,7 +1310,6 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
 
     LOG_INFO
         << "[Debugger] ######### Checking ALL threads are stopped ##########";
-    std::this_thread::sleep_for(std::chrono::seconds(2));
     stoppedThreadsCheck = get_stopped_threads(debugSession, device);
     EXPECT_EQ(stoppedThreadsCheck.size(), stopped_threads.size());
 
@@ -1361,7 +1357,6 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     }
 
     // check for Even threads events and threads stopped all together
-    std::this_thread::sleep_for(std::chrono::seconds(2));
     if (!find_multi_event_stopped_threads(debugSession, device, threadsToCheck,
                                           true, stoppedThreadsCheck)) {
       FAIL() << "[Debugger] Did not interrupt Even threads";
@@ -1395,9 +1390,11 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
 
     LOG_INFO << "[Debugger] ######### Interrupting all threads ##########";
     lzt::debug_interrupt(debugSession, thread);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    if (!find_stopped_threads(debugSession, device, thread, true,
+                              stoppedThreadsCheck)) {
+      FAIL() << "[Debugger] Did not find stopped threads";
+    }
     // All threads should be stopped
-    stoppedThreadsCheck = get_stopped_threads(debugSession, device);
     EXPECT_EQ(stoppedThreadsCheck.size(), stopped_threads.size());
 
     LOG_DEBUG << "[Debugger] Writting to GPU buffer to break kernel loop ";
@@ -1509,7 +1506,6 @@ void zetDebugThreadControlTest::run_interrupt_resume_test(
       }
 
       lzt::debug_interrupt(debugSession, thread);
-      std::this_thread::sleep_for(std::chrono::seconds(2));
       if (!find_stopped_threads(debugSession, device, thread, true,
                                 newly_stopped_threads)) {
         FAIL() << "[Debugger] Did not find stopped threads";
@@ -1640,7 +1636,12 @@ void zetDebugThreadControlTest::run_unavailable_thread_test(
 
     LOG_INFO << "[Debugger] Interrupting all threads ";
     lzt::debug_interrupt(debugSession, thread);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    newly_stopped_threads.clear();
+    if (!find_stopped_threads(debugSession, device, thread, true,
+                              newly_stopped_threads)) {
+      FAIL() << "[Debugger] Did not find stopped threads";
+    }
+    EXPECT_EQ(newly_stopped_threads.size(), stopped_threads.size());
 
     LOG_DEBUG << "[Debugger] Writting to GPU buffer to break kernel loop ";
     const int bufferSize = 1;
@@ -1664,8 +1665,7 @@ void zetDebugThreadControlTest::run_unavailable_thread_test(
     lzt::debug_interrupt(debugSession, threadToStop);
 
     std::vector<zet_debug_event_type_t> expectedEvents = {
-        ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED, ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD,
-        ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT,
+        ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT,
         ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE};
 
     if (!check_events(debugSession, expectedEvents)) {
