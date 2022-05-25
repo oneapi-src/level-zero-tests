@@ -1585,7 +1585,7 @@ void zetDebugThreadControlTest::run_unavailable_thread_test(
              << " EU per SS:" << deviceProperties.numEUsPerSubslice
              << " Threads per EU:" << deviceProperties.numThreadsPerEU;
 
-    // Start with the highest
+    // Find a thread that is not running. Start with the highest
     threadToStop.slice = deviceProperties.numSlices - 1;
     threadToStop.subslice = deviceProperties.numSubslicesPerSlice - 1;
     threadToStop.eu = deviceProperties.numEUsPerSubslice - 1;
@@ -1611,6 +1611,13 @@ void zetDebugThreadControlTest::run_unavailable_thread_test(
       }
     }
 
+    // Interrupt already stopped thread
+    print_thread(
+        "[Debugger] Attempting to interrupt thread (already stopped): ",
+        stopped_threads[0], INFO);
+    EXPECT_EQ(ZE_RESULT_ERROR_NOT_AVAILABLE,
+              zetDebugInterrupt(debugSession, stopped_threads[0]));
+
     // Resume all threads
     thread.slice = UINT32_MAX;
     thread.subslice = UINT32_MAX;
@@ -1627,8 +1634,8 @@ void zetDebugThreadControlTest::run_unavailable_thread_test(
     EXPECT_EQ(newly_stopped_threads.size(), 0);
 
     if (foundThread) {
-      print_thread("[Debugger] Attempting to interrupt thread: ", threadToStop,
-                   INFO);
+      print_thread("[Debugger] Attempting to interrupt thread (not running): ",
+                   threadToStop, INFO);
       lzt::debug_interrupt(debugSession, threadToStop);
 
       if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE)) {
