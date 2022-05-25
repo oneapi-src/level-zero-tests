@@ -36,6 +36,16 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto size = 8192;
+  ze_kernel_properties_t kernel_properties = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetProperties(kernel, &kernel_properties));
+  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+
+  LOG_INFO << "[Application] Problem size: " << size
+           << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
+           << ". GPU thread count: ceil (P size/maxSubGroupSize) = "
+           << threadCount;
+
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
 
@@ -110,6 +120,15 @@ void attach_after_module_created_test(ze_context_handle_t context,
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto size = 8192;
+  ze_kernel_properties_t kernel_properties = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetProperties(kernel, &kernel_properties));
+  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+
+  LOG_INFO << "[Application] Problem size: " << size
+           << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
+           << ". GPU thread count: ceil (P size/maxSubGroupSize) = "
+           << threadCount;
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
 
@@ -191,6 +210,15 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto size = 8192;
+  ze_kernel_properties_t kernel_properties = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetProperties(kernel, &kernel_properties));
+  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+
+  LOG_INFO << "[Application] Problem size: " << size
+           << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
+           << ". GPU thread count: ceil (P size/maxSubGroupSize) = "
+           << threadCount;
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
 
@@ -285,6 +313,15 @@ void multiple_modules_created_test(ze_context_handle_t context,
                               nullptr);
 
   auto size = 8192;
+  ze_kernel_properties_t kernel_properties = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetProperties(kernel, &kernel_properties));
+  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+
+  LOG_INFO << "[Application] Problem size: " << size
+           << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
+           << ". GPU thread count: ceil (P size/maxSubGroupSize) = "
+           << threadCount;
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
 
@@ -358,6 +395,15 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   auto kernel = lzt::create_function(module, kernel_name);
 
   auto size = 512;
+  ze_kernel_properties_t kernel_properties = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetProperties(kernel, &kernel_properties));
+  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+
+  LOG_INFO << "[Application] Problem size: " << size
+           << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
+           << ". GPU thread count: ceil (P size/maxSubGroupSize) = "
+           << threadCount;
 
   auto dest_buffer_d =
       lzt::allocate_device_memory(size, size, 0, 0, device, context);
