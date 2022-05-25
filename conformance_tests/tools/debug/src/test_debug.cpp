@@ -212,10 +212,10 @@ TEST_F(
     auto device_properties = lzt::get_device_properties(device);
     auto sub_devices = lzt::get_ze_sub_devices(device);
     auto initial_count = sub_devices.size();
-    std::remove_if(sub_devices.begin(), sub_devices.end(),
-                   [](ze_device_handle_t &device) {
-                     return (!is_debug_supported(device));
-                   });
+    sub_devices.erase(std::remove_if(sub_devices.begin(), sub_devices.end(),
+                                     [](ze_device_handle_t &device) {
+                                       return (!is_debug_supported(device));
+                                     }));
     auto final_count = sub_devices.size();
     if (final_count < 2) {
       LOG_WARNING << "Skipping device with < 2  "
@@ -243,14 +243,15 @@ TEST_F(
   auto devices = lzt::get_devices(driver);
 
   auto initial_count = devices.size();
-  std::remove_if(
-      devices.begin(), devices.end(),
-      [](ze_device_handle_t &device) { return (!is_debug_supported(device)); });
+  devices.erase(std::remove_if(devices.begin(), devices.end(),
+                               [](ze_device_handle_t &device) {
+                                 return (!is_debug_supported(device));
+                               }));
   auto final_count = devices.size();
 
   if (final_count < 2) {
     LOG_WARNING << "Not enough "
-                << ((final_count < initial_count) ? "debug capable" : "")
+                << ((final_count < initial_count) ? "debug capable " : "")
                 << "devices to run multi-device test for driver";
   } else {
     run_multidevice_test(devices, false);
@@ -350,14 +351,15 @@ TEST_F(
   auto devices = lzt::get_devices(driver);
 
   auto initial_count = devices.size();
-  std::remove_if(
-      devices.begin(), devices.end(),
-      [](ze_device_handle_t &device) { return (!is_debug_supported(device)); });
+  devices.erase(std::remove_if(devices.begin(), devices.end(),
+                               [](ze_device_handle_t &device) {
+                                 return (!is_debug_supported(device));
+                               }));
   auto final_count = devices.size();
 
   if (final_count < 2) {
     LOG_WARNING << "Not enough "
-                << ((final_count < initial_count) ? "debug capable" : "")
+                << ((final_count < initial_count) ? "debug capable " : "")
                 << "devices to run multi-device test for driver";
   } else {
     run_attach_detach_to_multiple_applications_on_different_devs_test(devices,
