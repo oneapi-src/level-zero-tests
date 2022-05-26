@@ -215,7 +215,8 @@ TEST_F(
     sub_devices.erase(std::remove_if(sub_devices.begin(), sub_devices.end(),
                                      [](ze_device_handle_t &device) {
                                        return (!is_debug_supported(device));
-                                     }));
+                                     }),
+                      sub_devices.end());
     auto final_count = sub_devices.size();
     if (final_count < 2) {
       LOG_WARNING << "Skipping device with < 2  "
@@ -246,7 +247,8 @@ TEST_F(
   devices.erase(std::remove_if(devices.begin(), devices.end(),
                                [](ze_device_handle_t &device) {
                                  return (!is_debug_supported(device));
-                               }));
+                               }),
+                devices.end());
   auto final_count = devices.size();
 
   if (final_count < 2) {
@@ -354,7 +356,8 @@ TEST_F(
   devices.erase(std::remove_if(devices.begin(), devices.end(),
                                [](ze_device_handle_t &device) {
                                  return (!is_debug_supported(device));
-                               }));
+                               }),
+                devices.end());
   auto final_count = devices.size();
 
   if (final_count < 2) {

@@ -639,11 +639,14 @@ static void
 test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
 
   devices.erase(std::remove_if(
-      devices.begin(), devices.end(), [](ze_device_handle_t device) {
-        auto device_props = lzt::get_memory_access_properties(device);
-        return !(device_props.sharedCrossDeviceAllocCapabilities &
-                 ZE_MEMORY_ACCESS_CAP_FLAG_RW);
-      }));
+                    devices.begin(), devices.end(),
+                    [](ze_device_handle_t device) {
+                      auto device_props =
+                          lzt::get_memory_access_properties(device);
+                      return !(device_props.sharedCrossDeviceAllocCapabilities &
+                               ZE_MEMORY_ACCESS_CAP_FLAG_RW);
+                    }),
+                devices.end());
 
   if (devices.size() < 2) {
     LOG_WARNING << "Less than two devices, skipping test";
