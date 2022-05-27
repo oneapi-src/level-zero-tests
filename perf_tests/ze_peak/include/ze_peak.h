@@ -37,6 +37,7 @@ enum class TimingMeasurement {
   BANDWIDTH = 0,
   BANDWIDTH_EVENT_TIMING,
   KERNEL_LAUNCH_LATENCY,
+  IMMEDIATE_KERNEL_LAUNCH_LATENCY,
   KERNEL_COMPLETE_RUNTIME
 };
 
@@ -46,6 +47,8 @@ struct L0Context {
   ze_command_queue_handle_t copy_command_queue = nullptr;
   ze_command_list_handle_t command_list = nullptr;
   std::vector<ze_command_list_handle_t> cmd_list;
+  ze_command_list_handle_t immediate_command_list = nullptr;
+  std::vector<ze_command_list_handle_t> immediate_cmd_list;
   ze_command_list_handle_t copy_command_list = nullptr;
   ze_module_handle_t module = nullptr;
   std::vector<ze_module_handle_t> subdevice_module;

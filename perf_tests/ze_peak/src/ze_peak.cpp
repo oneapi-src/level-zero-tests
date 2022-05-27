@@ -336,6 +336,14 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
                                    std::to_string(result));
         }
 
+        result = zeCommandListCreateImmediate(context, device,
+                                              &command_queue_description,
+                                              &immediate_cmd_list[i]);
+        if (result) {
+          throw std::runtime_error("zeCommandListCreateImmediate failed: " +
+                                   std::to_string(result));
+        }
+
         result = zeCommandQueueCreate(
             context, device, &command_queue_description, &cmd_queue[i]);
         if (result) {
@@ -376,6 +384,15 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
       }
       if (verbose)
         std::cout << "compute command_list created\n";
+
+      result = zeCommandListCreateImmediate(
+          context, device, &command_queue_description, &immediate_command_list);
+      if (result) {
+        throw std::runtime_error("zeCommandListCreateImmediate failed: " +
+                                 std::to_string(result));
+      }
+      if (verbose)
+        std::cout << "compute immediate_command_list created\n";
 
       result = zeCommandQueueCreate(context, device, &command_queue_description,
                                     &command_queue);
@@ -492,8 +509,20 @@ void L0Context::clean_xe() {
                                  std::to_string(result));
       }
     }
+    for (auto list : immediate_cmd_list) {
+      result = zeCommandListDestroy(list);
+      if (result) {
+        throw std::runtime_error("zeCommandListDestroy failed: " +
+                                 std::to_string(result));
+      }
+    }
   } else {
     result = zeCommandListDestroy(command_list);
+    if (result) {
+      throw std::runtime_error("zeCommandListDestroy failed: " +
+                               std::to_string(result));
+    }
+    result = zeCommandListDestroy(immediate_command_list);
     if (result) {
       throw std::runtime_error("zeCommandListDestroy failed: " +
                                std::to_string(result));
@@ -1032,11 +1061,25 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     ze_event_pool_handle_t kernel_launch_event_pool;
 
     single_event_pool_create(context, &kernel_launch_event_pool,
-                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                 ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
     if (verbose)
       std::cout << "Event Pool Created\n";
 
-    single_event_create(kernel_launch_event_pool, &kernel_launch_event);
+    ze_event_desc_t event_desc = {};
+    event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+
+    event_desc.index = 0;
+    event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    event_desc.wait = 0;
+
+    event_desc.pNext = nullptr;
+    result = zeEventCreate(kernel_launch_event_pool, &event_desc,
+                           &kernel_launch_event);
+    if (result) {
+      throw std::runtime_error("zeEventCreate failed: " +
+                               std::to_string(result));
+    }
     if (verbose)
       std::cout << "Event Created\n";
 
@@ -1045,32 +1088,10 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
         std::cout << "current_sub_device_id value is ::"
                   << current_sub_device_id << std::endl;
       }
-      result = zeCommandListAppendSignalEvent(
-          context.cmd_list[current_sub_device_id], kernel_launch_event);
-      if (result) {
-        throw std::runtime_error("zeCommandListAppendSignalEvent failed: " +
-                                 std::to_string(result));
-      }
-    } else {
-      result = zeCommandListAppendSignalEvent(context.command_list,
-                                              kernel_launch_event);
-      if (result) {
-        throw std::runtime_error("zeCommandListAppendSignalEvent failed: " +
-                                 std::to_string(result));
-      }
-    }
-
-    if (verbose)
-      std::cout << "Kernel Launch Event signal appended to command list\n";
-
-    if (context.sub_device_count) {
-      if (verbose) {
-        std::cout << "current_sub_device_id value is ::"
-                  << current_sub_device_id << std::endl;
-      }
       result = zeCommandListAppendLaunchKernel(
           context.cmd_list[current_sub_device_id], function,
-          &workgroup_info.thread_group_dimensions, nullptr, 0, nullptr);
+          &workgroup_info.thread_group_dimensions, kernel_launch_event, 0,
+          nullptr);
       if (result) {
         throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
                                  std::to_string(result));
@@ -1078,7 +1099,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     } else {
       result = zeCommandListAppendLaunchKernel(
           context.command_list, function,
-          &workgroup_info.thread_group_dimensions, nullptr, 0, nullptr);
+          &workgroup_info.thread_group_dimensions, kernel_launch_event, 0,
+          nullptr);
       if (result) {
         throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
                                  std::to_string(result));
@@ -1105,14 +1127,62 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     if (verbose)
       std::cout << "Command list closed\n";
 
+    ze_device_properties_t device_properties{};
+    result = zeDeviceGetProperties(context.device, &device_properties);
+    if (result) {
+      throw std::runtime_error("zeDeviceGetProperties failed: " +
+                               std::to_string(result));
+    }
+
+    uint64_t timer_resolution_ns = device_properties.timerResolution;
+    uint32_t device_timestamp_bits = device_properties.timestampValidBits;
+    uint32_t kernel_timestamp_bits = device_properties.kernelTimestampValidBits;
+    uint32_t timestamp_bits =
+        std::min(device_timestamp_bits, kernel_timestamp_bits);
+
     for (uint32_t i = 0; i < warmup_iterations; i++) {
-      run_command_queue(context);
-      synchronize_command_queue(context);
+      uint64_t host_timestamp = 0;
+      uint64_t device_timestamp = 0;
+      result = zeDeviceGetGlobalTimestamps(context.device, &host_timestamp,
+                                           &device_timestamp);
+      if (result) {
+        throw std::runtime_error("zeDeviceGetGlobalTimestamps failed: " +
+                                 std::to_string(result));
+      }
+
+      if (context.sub_device_count) {
+        result = zeCommandQueueExecuteCommandLists(
+            context.cmd_queue[current_sub_device_id], 1,
+            &context.cmd_list[current_sub_device_id], nullptr);
+        if (result) {
+          throw std::runtime_error(
+              "zeCommandQueueExecuteCommandLists failed: " +
+              std::to_string(result));
+        }
+      } else {
+        result = zeCommandQueueExecuteCommandLists(
+            context.command_queue, 1, &context.command_list, nullptr);
+        if (result) {
+          throw std::runtime_error(
+              "zeCommandQueueExecuteCommandLists failed: " +
+              std::to_string(result));
+        }
+      }
+
       result = zeEventHostSynchronize(kernel_launch_event, UINT64_MAX);
       if (result) {
         throw std::runtime_error("zeEventHostSynchronize failed: " +
                                  std::to_string(result));
       }
+
+      ze_kernel_timestamp_result_t kernel_timestamp;
+      result =
+          zeEventQueryKernelTimestamp(kernel_launch_event, &kernel_timestamp);
+      if (result) {
+        throw std::runtime_error("zeEventQueryKernelTimestamp failed: " +
+                                 std::to_string(result));
+      }
+
       result = zeEventHostReset(kernel_launch_event);
       if (result) {
         throw std::runtime_error("zeEventHostReset failed: " +
@@ -1123,8 +1193,16 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     }
 
     for (uint32_t i = 0; i < iters; i++) {
+      uint64_t host_timestamp = 0;
+      uint64_t device_timestamp = 0;
+      result = zeDeviceGetGlobalTimestamps(context.device, &host_timestamp,
+                                           &device_timestamp);
+      if (result) {
+        throw std::runtime_error("zeDeviceGetGlobalTimestamps failed: " +
+                                 std::to_string(result));
+      }
+
       if (context.sub_device_count) {
-        timer.start();
         result = zeCommandQueueExecuteCommandLists(
             context.cmd_queue[current_sub_device_id], 1,
             &context.cmd_list[current_sub_device_id], nullptr);
@@ -1133,15 +1211,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
               "zeCommandQueueExecuteCommandLists failed: " +
               std::to_string(result));
         }
-
-        result = zeEventHostSynchronize(kernel_launch_event, UINT64_MAX);
-        if (result) {
-          throw std::runtime_error("zeEventHostSynchronize failed: " +
-                                   std::to_string(result));
-        }
-        timed += timer.stopAndTime();
       } else {
-        timer.start();
         result = zeCommandQueueExecuteCommandLists(
             context.command_queue, 1, &context.command_list, nullptr);
         if (result) {
@@ -1149,14 +1219,201 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
               "zeCommandQueueExecuteCommandLists failed: " +
               std::to_string(result));
         }
+      }
 
-        result = zeEventHostSynchronize(kernel_launch_event, UINT64_MAX);
+      result = zeEventHostSynchronize(kernel_launch_event, UINT64_MAX);
+      if (result) {
+        throw std::runtime_error("zeEventHostSynchronize failed: " +
+                                 std::to_string(result));
+      }
+
+      ze_kernel_timestamp_result_t kernel_timestamp;
+      result =
+          zeEventQueryKernelTimestamp(kernel_launch_event, &kernel_timestamp);
+      if (result) {
+        throw std::runtime_error("zeEventQueryKernelTimestamp failed: " +
+                                 std::to_string(result));
+      }
+
+      uint64_t timestamp_mask = (1ull << timestamp_bits) - 1;
+      uint64_t masked_device_time = device_timestamp & timestamp_mask;
+      uint64_t masked_kernel_time =
+          kernel_timestamp.global.kernelStart & timestamp_mask;
+
+      timed += (masked_kernel_time - masked_device_time) * timer_resolution_ns /
+               1e3; // returned in microseconds
+
+      result = zeEventHostReset(kernel_launch_event);
+      if (result) {
+        throw std::runtime_error("zeEventHostReset failed: " +
+                                 std::to_string(result));
+      }
+      if (verbose)
+        std::cout << "Event Reset\n";
+    }
+    if (context.sub_device_count) {
+      if (context.sub_device_count == current_sub_device_id + 1) {
+        current_sub_device_id = 0;
+        while (current_sub_device_id < context.sub_device_count) {
+          synchronize_command_queue(context);
+          current_sub_device_id++;
+        }
+      }
+    } else {
+      synchronize_command_queue(context);
+    }
+
+    if (verbose)
+      std::cout << "Command queue synchronized\n";
+
+    zeEventDestroy(kernel_launch_event);
+    zeEventPoolDestroy(kernel_launch_event_pool);
+
+  } else if (type == TimingMeasurement::IMMEDIATE_KERNEL_LAUNCH_LATENCY) {
+    ze_event_handle_t kernel_launch_event;
+    ze_event_pool_handle_t kernel_launch_event_pool;
+
+    single_event_pool_create(context, &kernel_launch_event_pool,
+                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+    if (verbose)
+      std::cout << "Event Pool Created\n";
+
+    ze_event_desc_t event_desc = {};
+    event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+
+    event_desc.index = 0;
+    event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    event_desc.wait = 0;
+
+    event_desc.pNext = nullptr;
+    result = zeEventCreate(kernel_launch_event_pool, &event_desc,
+                           &kernel_launch_event);
+    if (result) {
+      throw std::runtime_error("zeEventCreate failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "Event Created\n";
+
+    ze_device_properties_t device_properties{};
+    result = zeDeviceGetProperties(context.device, &device_properties);
+    if (result) {
+      throw std::runtime_error("zeDeviceGetProperties failed: " +
+                               std::to_string(result));
+    }
+
+    uint64_t timer_resolution_ns = device_properties.timerResolution;
+    uint32_t device_timestamp_bits = device_properties.timestampValidBits;
+    uint32_t kernel_timestamp_bits = device_properties.kernelTimestampValidBits;
+    uint32_t timestamp_bits =
+        std::min(device_timestamp_bits, kernel_timestamp_bits);
+
+    for (uint32_t i = 0; i < warmup_iterations; i++) {
+      uint64_t host_timestamp = 0;
+      uint64_t device_timestamp = 0;
+      result = zeDeviceGetGlobalTimestamps(context.device, &host_timestamp,
+                                           &device_timestamp);
+      if (result) {
+        throw std::runtime_error("zeDeviceGetGlobalTimestamps failed: " +
+                                 std::to_string(result));
+      }
+
+      if (context.sub_device_count) {
+        if (verbose) {
+          std::cout << "current_sub_device_id value is ::"
+                    << current_sub_device_id << std::endl;
+        }
+        result = zeCommandListAppendLaunchKernel(
+            context.immediate_cmd_list[current_sub_device_id], function,
+            &workgroup_info.thread_group_dimensions, kernel_launch_event, 0,
+            nullptr);
         if (result) {
-          throw std::runtime_error("zeEventHostSynchronize failed: " +
+          throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
                                    std::to_string(result));
         }
-        timed += timer.stopAndTime();
+      } else {
+        result = zeCommandListAppendLaunchKernel(
+            context.immediate_command_list, function,
+            &workgroup_info.thread_group_dimensions, kernel_launch_event, 0,
+            nullptr);
+        if (result) {
+          throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
+                                   std::to_string(result));
+        }
       }
+
+      result = zeEventHostSynchronize(kernel_launch_event, UINT64_MAX);
+      if (result) {
+        throw std::runtime_error("zeEventHostSynchronize failed: " +
+                                 std::to_string(result));
+      }
+
+      ze_kernel_timestamp_result_t kernel_timestamp;
+      result =
+          zeEventQueryKernelTimestamp(kernel_launch_event, &kernel_timestamp);
+      if (result) {
+        throw std::runtime_error("zeEventQueryKernelTimestamp failed: " +
+                                 std::to_string(result));
+      }
+
+      result = zeEventHostReset(kernel_launch_event);
+      if (result) {
+        throw std::runtime_error("zeEventHostReset failed: " +
+                                 std::to_string(result));
+      }
+    }
+
+    for (uint32_t i = 0; i < iters; i++) {
+      uint64_t host_timestamp = 0;
+      uint64_t device_timestamp = 0;
+      result = zeDeviceGetGlobalTimestamps(context.device, &host_timestamp,
+                                           &device_timestamp);
+      if (result) {
+        throw std::runtime_error("zeDeviceGetGlobalTimestamps failed: " +
+                                 std::to_string(result));
+      }
+
+      if (context.sub_device_count) {
+        result = zeCommandListAppendLaunchKernel(
+            context.immediate_cmd_list[current_sub_device_id], function,
+            &workgroup_info.thread_group_dimensions, kernel_launch_event, 0,
+            nullptr);
+        if (result) {
+          throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
+                                   std::to_string(result));
+        }
+      } else {
+        result = zeCommandListAppendLaunchKernel(
+            context.immediate_command_list, function,
+            &workgroup_info.thread_group_dimensions, kernel_launch_event, 0,
+            nullptr);
+        if (result) {
+          throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
+                                   std::to_string(result));
+        }
+      }
+
+      result = zeEventHostSynchronize(kernel_launch_event, UINT64_MAX);
+      if (result) {
+        throw std::runtime_error("zeEventHostSynchronize failed: " +
+                                 std::to_string(result));
+      }
+
+      ze_kernel_timestamp_result_t kernel_timestamp;
+      result =
+          zeEventQueryKernelTimestamp(kernel_launch_event, &kernel_timestamp);
+      if (result) {
+        throw std::runtime_error("zeEventQueryKernelTimestamp failed: " +
+                                 std::to_string(result));
+      }
+
+      uint64_t timestamp_mask = (1ull << timestamp_bits) - 1;
+      uint64_t masked_device_time = device_timestamp & timestamp_mask;
+      uint64_t masked_kernel_time =
+          kernel_timestamp.global.kernelStart & timestamp_mask;
+
+      timed += (masked_kernel_time - masked_device_time) * timer_resolution_ns /
+               1e3; // returned in microseconds
 
       result = zeEventHostReset(kernel_launch_event);
       if (result) {
