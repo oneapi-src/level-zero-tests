@@ -35,6 +35,7 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
+  //  auto size = 1024;
   auto size = 8192;
   ze_kernel_properties_t kernel_properties = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -45,6 +46,9 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
            << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
            << ". GPU thread count: ceil (P size/maxSubGroupSize) = "
            << threadCount;
+
+  synchro.update_gpu_thread_count(threadCount);
+  synchro.notify_debugger();
 
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);

@@ -200,3 +200,20 @@ void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
     FAIL() << "[Debugger] Did not receive module load event";
   }
 }
+
+void print_thread(const char *entry_message,
+                  const ze_device_thread_t &device_thread,
+                  log_level_t logLevel) {
+  std::stringstream message;
+  message << entry_message << "SLICE:" << device_thread.slice
+          << " SUBSLICE: " << device_thread.subslice
+          << " EU: " << device_thread.eu << " THREAD: " << device_thread.thread;
+
+  if (logLevel == WARNING) {
+    LOG_WARNING << message.str();
+  } else if (logLevel == INFO) {
+    LOG_INFO << message.str();
+  } else if (logLevel == DEBUG) {
+    LOG_DEBUG << message.str();
+  }
+}

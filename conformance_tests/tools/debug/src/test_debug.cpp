@@ -659,23 +659,6 @@ bool read_register(const zet_debug_session_handle_t &debug_session,
   return false;
 }
 
-void print_thread(const char *entry_message,
-                  const ze_device_thread_t &device_thread,
-                  log_level_t logLevel) {
-  std::stringstream message;
-  message << entry_message << "SLICE:" << device_thread.slice
-          << " SUBSLICE: " << device_thread.subslice
-          << " EU: " << device_thread.eu << " THREAD: " << device_thread.thread;
-
-  if (logLevel == WARNING) {
-    LOG_WARNING << message.str();
-  } else if (logLevel == INFO) {
-    LOG_INFO << message.str();
-  } else if (logLevel == DEBUG) {
-    LOG_DEBUG << message.str();
-  }
-}
-
 bool unique_thread(const ze_device_thread_t &device_thread) {
   print_thread("[Debugger] is thread unique: ", device_thread, DEBUG);
   return (device_thread.slice != UINT32_MAX &&

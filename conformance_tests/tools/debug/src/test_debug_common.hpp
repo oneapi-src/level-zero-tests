@@ -45,6 +45,7 @@ typedef struct {
   bool debugger_signal;
   bool debugee_signal;
   uint64_t gpu_buffer_address;
+  uint32_t gpu_thread_count;
 } debug_signals_t;
 
 class process_synchro {
@@ -75,10 +76,13 @@ public:
       gpu_buffer_address =
           &(static_cast<debug_signals_t *>(region->get_address())
                 ->gpu_buffer_address);
+      gpu_thread_count = &(static_cast<debug_signals_t *>(region->get_address())
+                               ->gpu_thread_count);
 
       *debugger_signal = false;
       *debugee_signal = false;
       *gpu_buffer_address = 0;
+      *gpu_thread_count = 0;
 
       bi::named_mutex::remove(debug_mutex_name.c_str());
       mutex = new bi::named_mutex(bi::create_only, debug_mutex_name.c_str());
@@ -105,6 +109,8 @@ public:
       gpu_buffer_address =
           &(static_cast<debug_signals_t *>(region->get_address())
                 ->gpu_buffer_address);
+      gpu_thread_count = &(static_cast<debug_signals_t *>(region->get_address())
+                               ->gpu_thread_count);
     }
   }
 
@@ -148,6 +154,17 @@ public:
     mutex->unlock();
   }
 
+  // To be used by application only:
+  void update_gpu_thread_count(const uint32_t &gpu_threads) {
+    if (!enabled)
+      return;
+    LOG_DEBUG << "[Application] Sharing number gpu thread to run: "
+              << gpu_threads;
+    mutex->lock();
+    *gpu_thread_count = gpu_threads;
+    mutex->unlock();
+  }
+
   // To be used by Debugger only:
   void notify_attach() {
     if (!enabled)
@@ -176,8 +193,20 @@ public:
     mutex->lock();
     gpu_address = *gpu_buffer_address;
     mutex->unlock();
-    LOG_DEBUG << "[Debugger] Received Application buffer address: " << std::hex
-              << gpu_address;
+    LOG_INFO << "[Debugger] Received Application buffer address: " << std::hex
+             << gpu_address;
+
+    return true;
+  }
+
+  // To be used by Debugger only:
+  bool get_app_gpu_thread_count(uint32_t &gpu_threads) {
+    if ((!enabled) || (*gpu_thread_count == 0))
+      return false;
+    mutex->lock();
+    gpu_threads = *gpu_thread_count;
+    mutex->unlock();
+    LOG_INFO << "[Debugger] Received number gpu thread to run: " << gpu_threads;
 
     return true;
   }
@@ -189,6 +218,7 @@ private:
   bool *debugger_signal;
   bool *debugee_signal;
   uint64_t *gpu_buffer_address;
+  uint32_t *gpu_thread_count;
   bool enabled;
 };
 

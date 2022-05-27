@@ -46,6 +46,9 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
                            const ze_device_thread_t &thread,
                            zet_debug_event_t &module_event, bool access_elf);
 
+void print_thread(const char *entry_message,
+                  const ze_device_thread_t &device_thread,
+                  log_level_t logLevel);
 class ProcessLauncher {
 public:
   bp::child launch_process(debug_test_type_t test_type,
