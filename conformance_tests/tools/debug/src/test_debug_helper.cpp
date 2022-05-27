@@ -497,6 +497,22 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   }
 }
 
+void run_multiple_threads(ze_context_handle_t context,
+                          ze_device_handle_t device, process_synchro &synchro,
+                          debug_options &options) {
+  constexpr auto num_threads = 2;
+  std::vector<std::unique_ptr<std::thread>> threads;
+
+  for (int i = 0; i < num_threads; i++) {
+    threads.push_back(std::unique_ptr<std::thread>(new std::thread(
+        basic, context, device, std::ref(synchro), std::ref(options))));
+  }
+
+  for (int i = 0; i < num_threads; i++) {
+    threads[i]->join();
+  }
+}
+
 // ***************************************************************************************
 int main(int argc, char **argv) {
 
@@ -560,6 +576,9 @@ int main(int argc, char **argv) {
       break;
     case LONG_RUNNING_KERNEL_INTERRUPTED:
       run_long_kernel(context, device, synchro, options);
+      break;
+    case MULTIPLE_THREADS:
+      run_multiple_threads(context, device, synchro, options);
       break;
     default:
 #ifdef EXTENDED_TESTS
