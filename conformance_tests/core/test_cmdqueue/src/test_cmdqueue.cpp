@@ -579,8 +579,7 @@ TEST(
   lzt::destroy_event(event_sync);
 }
 
-class CommandQueueCopyOnlyTest : public ::testing::Test,
-                                 public ::testing::WithParamInterface<bool> {
+class CommandQueueCopyOnlyTest : public ::testing::Test {
 protected:
   CommandQueueCopyOnlyTest() {
     device = lzt::get_default_device(lzt::get_default_driver());
@@ -631,7 +630,11 @@ public:
   }
 };
 
-TEST_P(CommandQueueCopyOnlyTest,
+class CommandQueueCopyOnlyTestQueueMode
+    : public CommandQueueCopyOnlyTest,
+      public ::testing::WithParamInterface<bool> {};
+
+TEST_P(CommandQueueCopyOnlyTestQueueMode,
        GivenCopyOnlyCommandQueueWhenCopyingMemoryThenResultIsCorrect) {
 
   ze_command_list_handle_t cmdlist;
@@ -660,7 +663,7 @@ TEST_P(CommandQueueCopyOnlyTest,
   lzt::destroy_command_queue(cmdqueue);
 }
 
-TEST_P(CommandQueueCopyOnlyTest,
+TEST_P(CommandQueueCopyOnlyTestQueueMode,
        GivenCopyOnlyCommandQueueWhenCopyingImageThenResultIsCorrect) {
 
   ze_command_list_handle_t cmdlist;
@@ -714,8 +717,93 @@ TEST_P(CommandQueueCopyOnlyTest,
   lzt::destroy_ze_image(ze_img_dest);
 }
 
-INSTANTIATE_TEST_CASE_P(TestCopyOnlyQueueSyncAndAsync, CommandQueueCopyOnlyTest,
+INSTANTIATE_TEST_CASE_P(TestCopyOnlyQueueSyncAndAsync,
+                        CommandQueueCopyOnlyTestQueueMode,
                         testing::Values(true, false));
+
+class CommandQueueCopyOnlyTestForGlobalTimeStamp
+    : public CommandQueueCopyOnlyTest,
+      public ::testing::WithParamInterface<std::string> {};
+
+TEST_P(
+    CommandQueueCopyOnlyTestForGlobalTimeStamp,
+    GivenCopyOnlyCommandQueueWhenGlobalTimeStampIsRequestedThenResultIsValid) {
+
+  ze_command_list_handle_t cmdlist;
+  ze_command_queue_handle_t cmdqueue;
+  if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue, true) == false) {
+    LOG_WARNING << "No Copy-Only command queue group found, can't run test";
+    SUCCEED();
+    return;
+  }
+
+  // Prepare for global time stamp
+  const size_t ts_size = 8;
+  void *ts_start = nullptr;
+  void *ts_end = nullptr;
+  if (GetParam() == "DeviceMemory") {
+    ts_start = lzt::allocate_device_memory(ts_size, 8);
+    ts_end = lzt::allocate_device_memory(ts_size, 8);
+  } else if (GetParam() == "HostMemory") {
+    ts_start = lzt::allocate_host_memory(ts_size, 8);
+    ts_end = lzt::allocate_host_memory(ts_size, 8);
+  } else {
+    FAIL() << "Unsupported Input \"" << GetParam() << "\" for the Test";
+    return;
+  }
+
+  auto ts_readback_start = lzt::allocate_shared_memory(ts_size, 8);
+  auto ts_readback_end = lzt::allocate_shared_memory(ts_size, 8);
+
+  // Prepare for copy operation
+  const size_t copy_size = 8192;
+  auto copy_source = lzt::allocate_host_memory(copy_size, 1, context);
+  auto copy_dest = lzt::allocate_host_memory(copy_size, 1, context);
+  memset(copy_source, 1, copy_size);
+
+  // Initial clear
+  const uint8_t clear_value = 0;
+  lzt::append_memory_set(cmdlist, ts_start, &clear_value, ts_size);
+  lzt::append_memory_set(cmdlist, ts_end, &clear_value, ts_size);
+  lzt::append_barrier(cmdlist);
+
+  // Get timestamp
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendWriteGlobalTimestamp(
+                                   cmdlist, static_cast<uint64_t *>(ts_start),
+                                   nullptr, 0, nullptr));
+  lzt::append_memory_copy(cmdlist, copy_dest, copy_source, copy_size);
+  lzt::append_barrier(cmdlist);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendWriteGlobalTimestamp(
+                cmdlist, static_cast<uint64_t *>(ts_end), nullptr, 0, nullptr));
+  // Readback
+  lzt::append_memory_copy(cmdlist, ts_readback_start, ts_start, ts_size);
+  lzt::append_memory_copy(cmdlist, ts_readback_end, ts_end, ts_size);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+
+  auto ts_readback_start_alias = static_cast<uint64_t *>(ts_readback_start);
+  auto ts_readback_end_alias = static_cast<uint64_t *>(ts_readback_end);
+
+  LOG_DEBUG << "Global Time Stamp: start[" << *ts_readback_start_alias
+            << "] end[" << *ts_readback_end_alias << "] diff["
+            << (*ts_readback_end_alias - *ts_readback_start_alias) << "]\n";
+
+  EXPECT_NE(*ts_readback_start_alias, 0);
+  EXPECT_NE(*ts_readback_end_alias, *ts_readback_start_alias);
+
+  lzt::free_memory(copy_source);
+  lzt::free_memory(copy_dest);
+  lzt::free_memory(ts_start);
+  lzt::free_memory(ts_end);
+  lzt::free_memory(ts_readback_start);
+  lzt::free_memory(ts_readback_end);
+}
+
+INSTANTIATE_TEST_CASE_P(TestCopyOnlyQueueGlobalTimeStampDeviceAndHostMemory,
+                        CommandQueueCopyOnlyTestForGlobalTimeStamp,
+                        testing::Values("HostMemory", "DeviceMemory"));
 
 TEST(ConcurrentCommandQueueExecutionTests,
      GivenMultipleCommandQueuesWhenExecutedOnSameDeviceResultsAreCorrect) {
