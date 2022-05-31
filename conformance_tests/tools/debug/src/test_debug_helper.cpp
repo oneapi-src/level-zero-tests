@@ -35,7 +35,6 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
-  //  auto size = 1024;
   auto size = 8192;
   ze_kernel_properties_t kernel_properties = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS,

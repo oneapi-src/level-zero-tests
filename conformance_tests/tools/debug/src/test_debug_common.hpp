@@ -147,8 +147,8 @@ public:
   void update_gpu_buffer_address(const uint64_t &gpu_address) {
     if (!enabled)
       return;
-    LOG_DEBUG << "[Application] Updating gpu buffer address:" << std::hex
-              << gpu_address;
+    LOG_INFO << "[Application] Updating gpu buffer address:" << std::hex
+             << gpu_address;
     mutex->lock();
     *gpu_buffer_address = gpu_address;
     mutex->unlock();
@@ -158,8 +158,8 @@ public:
   void update_gpu_thread_count(const uint32_t &gpu_threads) {
     if (!enabled)
       return;
-    LOG_DEBUG << "[Application] Sharing number gpu thread to run: "
-              << gpu_threads;
+    LOG_INFO << "[Application] Sharing number gpu thread to run: "
+             << gpu_threads;
     mutex->lock();
     *gpu_thread_count = gpu_threads;
     mutex->unlock();
