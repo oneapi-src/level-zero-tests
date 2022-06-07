@@ -14,9 +14,6 @@
 
 #include <boost/program_options.hpp>
 
-#include "utils/utils.hpp"
-#include "test_harness/test_harness.hpp"
-#include "logging/logging.hpp"
 #include "test_debug_common.hpp"
 
 namespace po = boost::program_options;

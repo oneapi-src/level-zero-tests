@@ -6,11 +6,6 @@
  *
  */
 
-#include <boost/filesystem.hpp>
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-#include <boost/interprocess/sync/named_condition.hpp>
-
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"

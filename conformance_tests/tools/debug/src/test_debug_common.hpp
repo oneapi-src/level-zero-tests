@@ -9,10 +9,14 @@
 #ifndef TEST_DEBUG_COMMON_HPP
 #define TEST_DEBUG_COMMON_HPP
 
+#ifdef _WIN32
+#define BOOST_INTERPROCESS_SHARED_DIR_FUNC
+#endif
 #include <boost/filesystem.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
+
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"
@@ -28,6 +32,12 @@ constexpr auto device_id_string = "device_id";
 constexpr auto use_sub_devices_string = "use_sub_devices";
 constexpr auto module_string = "module";
 constexpr auto test_type_string = "test_type";
+#ifdef _WIN32
+static void
+boost::interprocess::ipcdetail::get_shared_dir(std::string &shared_dir) {
+  shared_dir = ".";
+}
+#endif
 
 typedef enum {
   BASIC,

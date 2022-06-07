@@ -9,15 +9,6 @@
 #ifndef TEST_DEBUG_HPP
 #define TEST_DEBUG_HPP
 
-#include <boost/filesystem.hpp>
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-#include <boost/interprocess/sync/named_condition.hpp>
-#include "gtest/gtest.h"
-
-#include "logging/logging.hpp"
-#include "utils/utils.hpp"
-#include "test_harness/test_harness.hpp"
 #include "test_debug_common.hpp"
 
 namespace lzt = level_zero_tests;
