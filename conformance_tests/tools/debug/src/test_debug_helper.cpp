@@ -86,9 +86,9 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   for (size_t i = 0; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
               static_cast<uint8_t>((i & 0xFF) + addval));
-
     if (::testing::Test::HasFailure()) {
-      exit(1);
+      LOG_ERROR << "[Application] Sanity check did not pass";
+      break;
     }
   }
 
@@ -99,6 +99,10 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   lzt::destroy_module(module);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  }
 }
 
 // Debugger attaches after module created
@@ -179,9 +183,9 @@ void attach_after_module_created_test(ze_context_handle_t context,
   for (size_t i = 0; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
               static_cast<uint8_t>((i & 0xFF) + addval));
-
     if (::testing::Test::HasFailure()) {
-      exit(1);
+      LOG_ERROR << "[Application] Sanity check did not pass";
+      break;
     }
   }
 
@@ -192,6 +196,10 @@ void attach_after_module_created_test(ze_context_handle_t context,
   lzt::destroy_module(module);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  }
 }
 
 // debugger waits and attaches after module created and destroyed
@@ -274,7 +282,8 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
               static_cast<uint8_t>((i & 0xFF) + addval));
 
     if (::testing::Test::HasFailure()) {
-      exit(1);
+      LOG_ERROR << "[Application] Sanity check did not pass";
+      break;
     }
   }
 
@@ -283,6 +292,10 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
 
   lzt::free_memory(context, buffer_a);
   lzt::free_memory(context, buffer_b);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  }
 }
 
 // debuggee process creates multiple modules
@@ -363,7 +376,8 @@ void multiple_modules_created_test(ze_context_handle_t context,
               static_cast<uint8_t>((i & 0xFF) + addval));
 
     if (::testing::Test::HasFailure()) {
-      exit(1);
+      LOG_ERROR << "[Application] Sanity check did not pass";
+      break;
     }
   }
 
@@ -376,6 +390,9 @@ void multiple_modules_created_test(ze_context_handle_t context,
   lzt::destroy_module(module2);
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  }
 }
 
 void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
@@ -475,6 +492,10 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   for (size_t i = 1; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(dest_buffer_s)[i],
               static_cast<uint8_t *>(src_buffer_s)[i]);
+    if (::testing::Test::HasFailure()) {
+      LOG_ERROR << "[Application] Sanity check did not pass";
+      break;
+    }
   }
 
   EXPECT_LT(*(static_cast<unsigned long *>(loop_counter_s)), loop_max);
@@ -495,7 +516,6 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   lzt::destroy_command_queue(command_queue);
 
   if (::testing::Test::HasFailure()) {
-    LOG_FATAL << "[Application] Sanity check did not pass";
     exit(1);
   }
 }
