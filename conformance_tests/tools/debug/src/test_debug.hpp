@@ -51,16 +51,14 @@ public:
     std::vector<fs::path> paths;
     paths.push_back(helper_path);
     fs::path helper = bp::search_path(bin_name, paths);
-    bp::opstream child_input;
-    std::string module_name_option = "";
+    std::string module_name_option = " ";
     if (!module_name.empty())
       module_name_option = "--module=" + module_name;
 
     bp::child debug_helper(helper, "--test_type=" + std::to_string(test_type),
                            "--device_id=" + device_id, module_name_option,
-                           (use_sub_devices ? "--use_sub_devices" : ""),
-                           "--index=" + std::to_string(index),
-                           bp::std_in < child_input);
+                           (use_sub_devices ? "--use_sub_devices" : " "),
+                           "--index=" + std::to_string(index));
 
     return debug_helper;
   }
