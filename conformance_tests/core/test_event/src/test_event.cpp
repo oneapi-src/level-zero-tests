@@ -368,8 +368,11 @@ TEST_F(zeEventSignalingTests,
   size_t loop_data_size = 300; // do not make this N*256
   ASSERT_TRUE(loop_data_size % 256);
   size_t copy_size = num_loop * loop_data_size;
-  void *src_buff = lzt::allocate_host_memory(copy_size);
-  void *dst_buff = lzt::allocate_shared_memory(copy_size);
+  void *src_buff = lzt::allocate_host_memory(copy_size, 1, context);
+  ze_device_mem_alloc_flags_t dev_flags{};
+  ze_host_mem_alloc_flags_t host_flags{};
+  void *dst_buff = lzt::allocate_shared_memory(copy_size, 1, dev_flags,
+                                               host_flags, device, context);
   uint8_t *src_char = static_cast<uint8_t *>(src_buff);
   uint8_t *dst_char = static_cast<uint8_t *>(dst_buff);
   ep.create_events(device_event, num_event, ZE_EVENT_SCOPE_FLAG_HOST, 0);
