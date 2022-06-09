@@ -29,4 +29,6 @@ add_lzt_test(
     update_variable_with_spec_constant
     import_kernel
     export_kernel
+    module_fptr_call
+    module_fptr_call_kernels
 )

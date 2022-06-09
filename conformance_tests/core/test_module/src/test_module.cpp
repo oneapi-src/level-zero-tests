@@ -272,6 +272,152 @@ TEST_F(
 
 TEST_F(
     zeModuleCreateTests,
+    GivenModuleWithFunctionWhenRetrievingFunctionPointerThenCallToKernelWithFunctionPointerSucceeds) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  void *values = lzt::allocate_shared_memory(sizeof(int));
+  std::vector<lzt::FunctionArg> args;
+  ze_module_handle_t module = lzt::create_module(
+      lzt::get_default_context(), device, "module_fptr_call.spv",
+      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+
+  const std::string function_pointer_name = "add_int";
+  const std::string function_name = "module_call_fptr";
+  void *function_pointer;
+
+  function_pointer = nullptr;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetFunctionPointer(module, function_pointer_name.c_str(),
+                                       &function_pointer));
+  EXPECT_NE(nullptr, function_pointer);
+  ze_kernel_handle_t function = lzt::create_function(module, function_name);
+  ze_command_list_handle_t cmdlist = lzt::create_command_list(device);
+  ze_command_queue_handle_t cmdq = lzt::create_command_queue(device);
+  uint32_t group_size_x = 1;
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSuggestGroupSize(function, 1, 1, 1, &group_size_x,
+                                     &group_size_y, &group_size_z));
+
+  EXPECT_EQ(
+      ZE_RESULT_SUCCESS,
+      zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
+
+  uint64_t function_pointer_value = (uint64_t)function_pointer;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSetArgumentValue(function, 0, sizeof(uint64_t),
+                                     &function_pointer_value));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSetArgumentValue(function, 1, sizeof(values), &values));
+
+  ze_group_count_t thread_group_dimensions;
+  thread_group_dimensions.groupCountX = 1;
+  thread_group_dimensions.groupCountY = 1;
+  thread_group_dimensions.groupCountZ = 1;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
+                                   cmdlist, function, &thread_group_dimensions,
+                                   nullptr, 0, nullptr));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendBarrier(cmdlist, nullptr, 0, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmdlist));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandQueueExecuteCommandLists(cmdq, 1, &cmdlist, nullptr));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmdq, UINT64_MAX));
+
+  lzt::destroy_function(function);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(cmdq));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cmdlist));
+  int result = *(int *)values;
+  // val = 1;
+  // function_pointer add_int will add 1
+  // int add_int(int a) {
+  //   return a + 1;
+  // }
+  EXPECT_EQ(result, 2);
+
+  lzt::destroy_module(module);
+  lzt::free_memory(values);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleWithFunctionWhenRetrievingFunctionPointerThenKernelCallToKernelWithFunctionPointerSucceeds) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  void *values = lzt::allocate_shared_memory(sizeof(int));
+  std::vector<lzt::FunctionArg> args;
+  ze_module_handle_t module = lzt::create_module(
+      lzt::get_default_context(), device, "module_fptr_call_kernels.spv",
+      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+
+  const std::string function_pointer_name = "add_int";
+  const std::string function_name = "module_call_fptr";
+  void *function_pointer;
+
+  function_pointer = nullptr;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetFunctionPointer(module, function_pointer_name.c_str(),
+                                       &function_pointer));
+  EXPECT_NE(nullptr, function_pointer);
+  ze_kernel_handle_t function = lzt::create_function(module, function_name);
+  ze_command_list_handle_t cmdlist = lzt::create_command_list(device);
+  ze_command_queue_handle_t cmdq = lzt::create_command_queue(device);
+  uint32_t group_size_x = 1;
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSuggestGroupSize(function, 1, 1, 1, &group_size_x,
+                                     &group_size_y, &group_size_z));
+
+  EXPECT_EQ(
+      ZE_RESULT_SUCCESS,
+      zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
+
+  uint64_t function_pointer_value = (uint64_t)function_pointer;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSetArgumentValue(function, 0, sizeof(uint64_t),
+                                     &function_pointer_value));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSetArgumentValue(function, 1, sizeof(values), &values));
+
+  ze_group_count_t thread_group_dimensions;
+  thread_group_dimensions.groupCountX = 1;
+  thread_group_dimensions.groupCountY = 1;
+  thread_group_dimensions.groupCountZ = 1;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
+                                   cmdlist, function, &thread_group_dimensions,
+                                   nullptr, 0, nullptr));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendBarrier(cmdlist, nullptr, 0, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmdlist));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandQueueExecuteCommandLists(cmdq, 1, &cmdlist, nullptr));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmdq, UINT64_MAX));
+
+  lzt::destroy_function(function);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(cmdq));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cmdlist));
+  int result = *(int *)values;
+  // val = 1;
+  // kernel_function_pointer add_int will add 2
+  // __kernel void add_int(__global int *a) {
+  //   *a += 2;
+  // }
+  EXPECT_EQ(result, 3);
+
+  lzt::destroy_module(module);
+  lzt::free_memory(values);
+}
+
+TEST_F(
+    zeModuleCreateTests,
     GivenValidDeviceAndBinaryFileWhenCreatingModuleThenReturnSuccessfulAndDestroyModule) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr, "-ze-opt-level=0",
