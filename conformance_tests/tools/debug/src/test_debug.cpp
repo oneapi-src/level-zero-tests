@@ -374,6 +374,9 @@ protected:
   void
   run_multithreaded_application_test(std::vector<zet_device_handle_t> &devices,
                                      bool use_sub_devices);
+
+  void run_read_events_in_separate_thread_test(
+      std::vector<zet_device_handle_t> &devices, bool use_sub_devices);
 };
 
 void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
@@ -552,6 +555,80 @@ TEST_F(
                                                  ATTACH_AFTER_MODULE_DESTROYED);
 }
 
+void verify_single_thread(const zet_debug_session_handle_t &debug_session) {
+
+  zet_debug_event_t debug_event;
+  LOG_DEBUG << "[Debugger] Waiting for application process entry debug event "
+               "due to second thread starting";
+  lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
+  ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
+
+  LOG_INFO << "[Debugger] Waiting for application module load debug events";
+  for (int i = 0; i < 5; i++) {
+    lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
+    ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD);
+    lzt::debug_ack_event(debug_session, &debug_event);
+  }
+  LOG_INFO << "[Debugger] Waiting for application module load debug events";
+  for (int i = 0; i < 5; i++) {
+    lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
+    ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD);
+  }
+  LOG_INFO << "[Debugger] Waiting for application process exit debug event";
+  lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
+  ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT);
+}
+
+void read_and_verify_events(const zet_debug_session_handle_t &debug_session,
+                            uint32_t num_threads) {
+
+  zet_debug_event_t debug_event;
+  lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
+  LOG_INFO << "[Debugger] received event: "
+           << lzt::debuggerEventTypeString[debug_event.type];
+  ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
+
+  auto num_threads_to_verify = num_threads;
+  auto broken = false;
+  for (int i = 0; i < 10 * num_threads;
+       i++) { // BASIC test loads debug_add which has 5 kernels
+    // module load and unload events can be interleaved if threads run
+    // concurrently if threads run sequentially we will expect a process exit
+    // event in this loop
+    lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
+    LOG_INFO << "[Debugger] received event: "
+             << lzt::debuggerEventTypeString[debug_event.type];
+    ASSERT_TRUE((ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) ||
+                (ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD == debug_event.type) ||
+                (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type));
+    if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
+      lzt::debug_ack_event(debug_session, &debug_event);
+    }
+
+    if (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) {
+      // This means the first thread exited before the second started
+      // we should break this loop
+      num_threads_to_verify--;
+      if (num_threads_to_verify == 1) {
+        broken = true;
+        break;
+      }
+    }
+  }
+
+  if (broken) {
+    // we should expect a process entry/load/unload/exit sequence
+    verify_single_thread(debug_session);
+  } else {
+    // we should expect a process exit event
+    LOG_INFO << "[Debugger] Waiting for application process exit debug event";
+    lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
+    LOG_INFO << "[Debugger] received event: "
+             << lzt::debuggerEventTypeString[debug_event.type];
+    ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT);
+  }
+}
+
 void zetDebugEventReadTest::run_multithreaded_application_test(
     std::vector<zet_device_handle_t> &devices, bool use_sub_devices) {
 
@@ -570,48 +647,14 @@ void zetDebugEventReadTest::run_multithreaded_application_test(
 
     synchro->notify_attach();
 
-    LOG_DEBUG
-        << "[Debugger] Waiting for application process entry debug events";
-    zet_debug_event_t debug_event;
-    auto result = lzt::debug_read_event(debugSession, debug_event,
-                                        eventsTimeoutMS, false);
-    LOG_INFO << "[Debugger] received event: "
-             << lzt::debuggerEventTypeString[debug_event.type];
-    ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
-    int process_entry_count = 1;
-    int module_load_count = 0;
-    int module_unload_count = 0;
-    int process_exit_count = 0;
+    read_and_verify_events(debugSession, 2);
 
-    while (result == ZE_RESULT_SUCCESS) {
-      result = lzt::debug_read_event(debugSession, debug_event, eventsTimeoutMS,
-                                     true);
-      LOG_INFO << "[Debugger] received event: "
-               << lzt::debuggerEventTypeString[debug_event.type];
-      if (ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY == debug_event.type) {
-        process_entry_count++;
-      } else if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
-        module_load_count++;
-        EXPECT_TRUE(debug_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK);
-        lzt::debug_ack_event(debugSession, &debug_event);
-      } else if (ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD == debug_event.type) {
-        module_unload_count++;
-      } else if (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) {
-        process_exit_count++;
-      }
-    }
-
-    LOG_DEBUG << "[Debugger] Waiting for application to finish";
+    LOG_INFO << "[Debugger] Waiting for application to finish";
     debugHelper.wait();
 
-    LOG_DEBUG << "[Debugger] Detaching from application";
+    LOG_INFO << "[Debugger] Detaching from application";
     lzt::debug_detach(debugSession);
     ASSERT_EQ(debugHelper.exit_code(), 0);
-
-    LOG_DEBUG << "[Debugger] Verifying expected events received";
-    EXPECT_EQ(process_entry_count, process_exit_count);
-    EXPECT_EQ(module_load_count, 10); // 5 events from debug_add for each thread
-    EXPECT_EQ(module_unload_count, 10);
   }
 }
 
@@ -623,6 +666,46 @@ TEST_F(
   auto devices = lzt::get_devices(driver);
 
   run_multithreaded_application_test(devices, false);
+}
+
+void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
+    std::vector<zet_device_handle_t> &devices, bool use_sub_devices) {
+
+  for (auto &device : devices) {
+    if (!is_debug_supported(device))
+      continue;
+
+    debugHelper = launch_process(BASIC, device, use_sub_devices);
+
+    zet_debug_config_t debug_config = {};
+    debug_config.pid = debugHelper.id();
+    debugSession = lzt::debug_attach(device, debug_config);
+    if (!debugSession) {
+      FAIL() << "[Debugger] Failed to attach to start a debug session";
+    }
+
+    std::thread event_read_thread(read_and_verify_events, debugSession, 1);
+    synchro->notify_attach();
+
+    event_read_thread.join();
+
+    LOG_INFO << "[Debugger] Waiting for application to finish";
+    debugHelper.wait();
+
+    LOG_INFO << "[Debugger] Detaching from application";
+    lzt::debug_detach(debugSession);
+
+    ASSERT_EQ(debugHelper.exit_code(), 0);
+  }
+}
+
+TEST_F(
+    zetDebugEventReadTest,
+    GivenDebuggerReadsEventsInDifferentThreadWhenRunningApplicationThenCorrectEventsReadAndAcknowledgementsSucceed) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  run_read_events_in_separate_thread_test(devices, false);
 }
 
 bool read_register(const zet_debug_session_handle_t &debug_session,
