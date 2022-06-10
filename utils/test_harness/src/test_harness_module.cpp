@@ -243,8 +243,10 @@ void create_and_execute_function(ze_device_handle_t device,
                                  std::string func_name, int group_size,
                                  void *arg) {
   std::vector<FunctionArg> args;
-  FunctionArg func_arg{sizeof(arg), &arg};
-  args.push_back(func_arg);
+  if (arg != nullptr) {
+    FunctionArg func_arg{sizeof(arg), &arg};
+    args.push_back(func_arg);
+  }
   create_and_execute_function(device, module, func_name, group_size, args);
 }
 
