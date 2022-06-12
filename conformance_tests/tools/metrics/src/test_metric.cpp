@@ -423,8 +423,8 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_ERROR_NOT_AVAILABLE != eventResult) {
-        FAIL() << "zeEventQueryStatus() FAILED";
+      } else if (ZE_RESULT_NOT_READY != eventResult) {
+        FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
       std::vector<uint8_t> rawData;
@@ -507,8 +507,8 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_ERROR_NOT_AVAILABLE != eventResult) {
-        FAIL() << "zeEventQueryStatus() FAILED";
+      } else if (ZE_RESULT_NOT_READY != eventResult) {
+        FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
       std::vector<uint8_t> rawData;
@@ -604,8 +604,8 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_ERROR_NOT_AVAILABLE != eventResult) {
-        FAIL() << "zeEventQueryStatus() FAILED";
+      } else if (ZE_RESULT_NOT_READY != eventResult) {
+        FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
       std::vector<uint8_t> rawData;
@@ -697,8 +697,8 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_ERROR_NOT_AVAILABLE != eventResult) {
-        FAIL() << "zeEventQueryStatus() FAILED";
+      } else if (ZE_RESULT_NOT_READY != eventResult) {
+        FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
       std::vector<uint8_t> rawData;
