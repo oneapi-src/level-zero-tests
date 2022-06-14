@@ -68,12 +68,7 @@ int ZePeer::recvmsg_fd(int socket) {
 void ZePeer::set_up_ipc(int number_buffer_elements, uint32_t device_id,
                         size_t &buffer_size,
                         ze_command_queue_handle_t &command_queue,
-                        ze_command_list_handle_t &command_list, bool validate) {
-
-  if (validate) {
-    warm_up_iterations = 0;
-    number_iterations = 1;
-  }
+                        ze_command_list_handle_t &command_list) {
 
   size_t element_size = sizeof(char);
   buffer_size = element_size * number_buffer_elements;
@@ -88,23 +83,23 @@ void ZePeer::set_up_ipc(int number_buffer_elements, uint32_t device_id,
       reinterpret_cast<void **>(&ze_host_validate_buffer);
   benchmark->memoryAllocHost(buffer_size, host_validate_buffer);
 
-  command_list = ze_peer_devices[device_id].command_lists[0];
-  command_queue = ze_peer_devices[device_id].command_queues[0];
+  command_list = ze_peer_devices[device_id].engines[0].second;
+  command_queue = ze_peer_devices[device_id].engines[0].first;
 }
 
-void ZePeer::bandwidth_latency_ipc(bool bidirectional, peer_test_t test_type,
+void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
                                    peer_transfer_t transfer_type,
                                    bool is_server, int commSocket,
                                    int number_buffer_elements,
                                    uint32_t local_device_id,
-                                   uint32_t remote_device_id, bool validate) {
+                                   uint32_t remote_device_id) {
 
   size_t buffer_size = 0;
   ze_command_queue_handle_t command_queue = {};
   ze_command_list_handle_t command_list = {};
 
   set_up_ipc(number_buffer_elements, local_device_id, buffer_size,
-             command_queue, command_list, validate);
+             command_queue, command_list);
 
   if (is_server == false) {
     if (transfer_type == PEER_READ) {
@@ -151,7 +146,7 @@ void ZePeer::bandwidth_latency_ipc(bool bidirectional, peer_test_t test_type,
                    ze_buffers[local_device_id], ze_buffers[remote_device_id],
                    buffer_size);
 
-      if (validate) {
+      if (validate_results) {
         validate_buffer(command_list, command_queue, ze_host_validate_buffer,
                         ze_buffers[local_device_id], ze_host_buffer,
                         buffer_size);
@@ -172,7 +167,7 @@ void ZePeer::bandwidth_latency_ipc(bool bidirectional, peer_test_t test_type,
       std::terminate();
     }
     if (transfer_type == PEER_WRITE) {
-      if (validate) {
+      if (validate_results) {
         validate_buffer(command_list, command_queue, ze_host_validate_buffer,
                         ze_buffers[local_device_id], ze_host_buffer,
                         buffer_size);
