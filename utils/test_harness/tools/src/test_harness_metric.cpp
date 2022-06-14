@@ -346,8 +346,8 @@ void metric_streamer_read_data(
   EXPECT_GT(metricSize, 0);
   metricData->resize(metricSize);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerReadData(metricStreamerHandle, 0, &metricSize,
-                                      metricData->data()));
+            zetMetricStreamerReadData(metricStreamerHandle, UINT32_MAX,
+                                      &metricSize, metricData->data()));
 }
 
 void activate_metric_groups(ze_device_handle_t device, uint32_t count,
