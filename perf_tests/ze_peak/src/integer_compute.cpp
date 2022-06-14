@@ -266,7 +266,7 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
   timed = 0;
   ///////////////////////////////////////////////////////////////////////////
   // Vector width 8
-  std::cout << "double8 : ";
+  std::cout << "int8 : ";
   if (context.sub_device_count) {
     uint32_t i = 0;
     for (auto device : context.sub_devices) {
@@ -286,7 +286,7 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
   timed = 0;
   ///////////////////////////////////////////////////////////////////////////
   // Vector width 16
-  std::cout << "double16 : ";
+  std::cout << "int16 : ";
   if (context.sub_device_count) {
     uint32_t i = 0;
     for (auto device : context.sub_devices) {
