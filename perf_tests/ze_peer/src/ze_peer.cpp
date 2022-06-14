@@ -7,6 +7,8 @@
  */
 #include "ze_peer.h"
 
+const std::string version = "1.0";
+
 bool run_using_all_compute_engines = false;
 bool run_using_all_copy_engines = false;
 bool run_continuously = false;
@@ -186,6 +188,9 @@ int main(int argc, char **argv) {
   for (int i = 1; i < argc; i++) {
     if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
       std::cout << usage_str;
+      exit(0);
+    } else if (strcmp(argv[i], "--version") == 0) {
+      std::cout << "ze_peer v" << version.c_str() << "\n";
       exit(0);
     } else if ((strcmp(argv[i], "-q") == 0)) {
       ZePeer peer(command_queue_group_ordinal, command_queue_index, 0, 1, false,

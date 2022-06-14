@@ -89,6 +89,7 @@ static const char *usage_str =
     "the queue"
     "\n      src                     use queue in source"
     "\n      dst                     use queue in source"
+    "\n  --version                   display version"
     "\n  -h, --help                  display help message"
     "\n";
 
