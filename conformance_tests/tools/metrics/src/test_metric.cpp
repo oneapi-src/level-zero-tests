@@ -555,7 +555,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false);
 
     for (auto groupInfo : metricGroupInfo) {
 
@@ -648,7 +648,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false);
 
     for (auto groupInfo : metricGroupInfo) {
 
