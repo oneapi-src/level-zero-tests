@@ -69,8 +69,8 @@ void zetDebugAttachDetachTest::run_test(
       synchro->notify_attach();
       LOG_INFO << "[Debugger] Detaching";
       lzt::debug_detach(debugSession);
-      debugHelper.wait(); // we don't care about the child processes exit code
-                          // at the moment
+      debugHelper.wait();
+      EXPECT_EQ(debugHelper.exit_code(), 0);
     } else {
       int loop = 1;
       for (loop = 1; loop < 11; loop++) {
@@ -1087,7 +1087,7 @@ TEST_F(
 void run_register_set_properties_test(std::vector<ze_device_handle_t> devices) {
   for (auto &device : devices) {
     auto properties = lzt::get_register_set_properties(device);
-
+    EXPECT_FALSE(properties.empty());
     zet_debug_regset_properties_t empty_properties = {};
     for (auto &property : properties) {
       EXPECT_NE(memcmp(&property, &empty_properties,
