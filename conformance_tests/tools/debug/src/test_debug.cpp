@@ -1359,6 +1359,9 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     std::vector<ze_device_thread_t> threadsToCheck;
 
     SetUpThreadControl(device, use_sub_devices);
+    if (::testing::Test::HasFailure()) {
+      FAIL() << "[Debugger] Failed to setup Thread Control tests";
+    }
 
     // iterate over threads and resume
     LOG_INFO << "[Debugger] ######### Ressuming Odd threads ##########";
@@ -1567,6 +1570,9 @@ void zetDebugThreadControlTest::run_interrupt_resume_test(
     bool breakKernelLoop = false;
 
     SetUpThreadControl(device, use_sub_devices);
+    if (::testing::Test::HasFailure()) {
+      FAIL() << "[Debugger] Failed to setup Thread Control tests";
+    }
 
     // Resume all threads
     thread.slice = UINT32_MAX;
@@ -1713,6 +1719,9 @@ void zetDebugThreadControlTest::run_unavailable_thread_test(
     bool foundThread;
 
     SetUpThreadControl(device, use_sub_devices);
+    if (::testing::Test::HasFailure()) {
+      FAIL() << "[Debugger] Failed to setup Thread Control tests";
+    }
 
     ze_device_properties_t deviceProperties =
         lzt::get_device_properties(device);
