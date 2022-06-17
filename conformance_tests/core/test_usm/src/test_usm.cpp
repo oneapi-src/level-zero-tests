@@ -648,6 +648,13 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
                     }),
                 devices.end());
 
+  for (int i = 0; i < devices.size(); i++) {
+    if (!lzt::can_access_peer(devices[0], devices[i])) {
+      LOG_WARNING << "P2P Access not supported between devices, skipping test";
+      return;
+    }
+  }
+
   if (devices.size() < 2) {
     LOG_WARNING << "Less than two devices, skipping test";
     return;
@@ -670,8 +677,8 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
     lzt::destroy_command_list(command_list);
     lzt::destroy_command_queue(command_queue);
 
-    for (int i = 0; i < memory_size; i++) {
-      ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern);
+    for (int j = 0; j < memory_size; j++) {
+      ASSERT_EQ(static_cast<uint8_t *>(memory)[j], pattern);
     }
     pattern++;
   }
