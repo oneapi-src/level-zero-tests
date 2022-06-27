@@ -565,17 +565,21 @@ void loop_create_destroy_multiple_cq(ze_context_handle_t context,
         cmdQueues.push_back(cmdqueue);
         LOG_DEBUG << "[Application] Created CQ with ordinal: " << ordinal
                   << " CQs: " << index;
+
+        synchro.notify_debugger();
+        synchro.wait_for_debugger_signal();
+        synchro.clear_debugger_signal();
       }
     }
-
-    synchro.notify_debugger();
-    synchro.wait_for_debugger_signal();
-    synchro.clear_debugger_signal();
 
     // cleanup
     for (auto cmdqueue : cmdQueues) {
       LOG_DEBUG << "[Application] Destroying CQ ";
       lzt::destroy_command_queue(cmdqueue);
+
+      synchro.notify_debugger();
+      synchro.wait_for_debugger_signal();
+      synchro.clear_debugger_signal();
     }
     cmdQueues.clear();
   }

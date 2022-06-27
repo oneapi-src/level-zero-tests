@@ -137,7 +137,7 @@ public:
   void notify_application() {
     if (!enabled)
       return;
-    LOG_INFO << "[Debugger] Notifying application after attaching";
+    LOG_INFO << "[Debugger] Notifying application signal";
     mutex->lock();
     *debugger_signal = true;
     mutex->unlock();
@@ -148,16 +148,16 @@ public:
   void wait_for_debugger_signal() {
     if (!enabled)
       return;
-    LOG_INFO << "[Application] Waiting for debugger to attach";
+    LOG_INFO << "[Application] Waiting for debugger to notify";
     bi::scoped_lock<bi::named_mutex> lock(*mutex);
     condition->wait(lock, [&] { return *debugger_signal; });
-    LOG_INFO << "[Application] process proceeding";
+    LOG_INFO << "[Application] Received debugger notification proceeding";
   }
 
   void clear_debugger_signal() {
     if (!enabled)
       return;
-    LOG_INFO << "[] Clearing Debugger signal";
+    LOG_INFO << "[] Clearing debugger signal";
     mutex->lock();
     *debugger_signal = false;
     mutex->unlock();
@@ -168,7 +168,7 @@ public:
   void notify_debugger() {
     if (!enabled)
       return;
-    LOG_INFO << "[Application] Notifying Debugger";
+    LOG_INFO << "[Application] Notifying debugger signal";
     mutex->lock();
     *debugee_signal = true;
     mutex->unlock();
@@ -179,10 +179,10 @@ public:
   void wait_for_application_signal() {
     if (!enabled)
       return;
-    LOG_INFO << "[Debugger] Waiting for Application to notify";
+    LOG_INFO << "[Debugger] Waiting for application to notify";
     bi::scoped_lock<bi::named_mutex> lock(*mutex);
     condition->wait(lock, [&] { return *debugee_signal; });
-    LOG_INFO << "[Debugger] Received Application notification proceeding";
+    LOG_INFO << "[Debugger] Received application notification proceeding";
   }
 
   void clear_application_signal() {

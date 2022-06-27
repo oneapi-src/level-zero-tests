@@ -499,6 +499,10 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
 
     if (!is_debug_supported(device))
       continue;
+
+    std::map<int, int> ordinalCQs;
+    int totalNumCQs = get_numCQs_per_ordinal(device, ordinalCQs);
+
     debugHelper = launch_process(MULTIPLE_CQ, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
@@ -515,33 +519,56 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
     for (int i = 0; i < 3; i++) {
       LOG_DEBUG << "[Debugger]--- Loop " << i << " ---";
 
-      // Expect timeout with no event since no CQ is created
+      // Expect timeout with no event since no CQ is created.
+      // No event expected after attaching
       result = lzt::debug_read_event(debugSession, debug_event, 2, true);
       EXPECT_EQ(result, ZE_RESULT_NOT_READY);
 
-      synchro->notify_application();
-      synchro->wait_for_application_signal();
-      synchro->clear_application_signal();
+      // check CQs creation
+      for (int queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
 
-      // Only one process entry event should be received independendly of number
-      // of CQs created
-      if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY)) {
-        FAIL()
-            << "[Debugger] Did not recieve ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY";
+        // let the app create a CQ
+        synchro->notify_application();
+        synchro->wait_for_application_signal();
+        synchro->clear_application_signal();
+
+        // only the first queue creation should send the event
+        if (queueNum == 1) {
+          if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY)) {
+            FAIL() << "[Debugger] Did not recieve "
+                      "ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY";
+          }
+        } else {
+          result = lzt::debug_read_event(debugSession, debug_event, 2, true);
+          EXPECT_EQ(result, ZE_RESULT_NOT_READY);
+        }
       }
 
-      result = lzt::debug_read_event(debugSession, debug_event, 2, true);
-      EXPECT_EQ(result, ZE_RESULT_NOT_READY);
-
+      // let the app to continue after creating the last CQ.
       synchro->notify_application();
 
-      // Only one process exit event should be received independendly of number
-      // of CQs destroyed
-      if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT)) {
-        FAIL()
-            << "[Debugger] Did not recieve ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT";
+      // check CQs destruction
+      for (int queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
+
+        synchro->wait_for_application_signal();
+        synchro->clear_application_signal();
+
+        // only the last CQ destruciton should send the event
+        if (queueNum == totalNumCQs) {
+          if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT)) {
+            FAIL() << "[Debugger] Did not recieve "
+                      "ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT";
+          }
+        } else {
+          result = lzt::debug_read_event(debugSession, debug_event, 2, true);
+          EXPECT_EQ(result, ZE_RESULT_NOT_READY);
+        }
+
+        // let the app destroy another CQ
+        synchro->notify_application();
       }
-    }
+
+    } // loops
 
     debugHelper.wait();
     lzt::debug_detach(debugSession);

@@ -213,13 +213,14 @@ void print_thread(const char *entry_message,
   }
 }
 
-void get_numCQs_per_ordinal(ze_device_handle_t &device,
-                            std::map<int, int> &ordinalCQs) {
+int get_numCQs_per_ordinal(ze_device_handle_t &device,
+                           std::map<int, int> &ordinalCQs) {
 
+  int totalNumCQs = 0;
   uint32_t numQueueGroups =
       lzt::get_command_queue_group_properties_count(device);
 
-  ASSERT_GE(numQueueGroups, 0);
+  EXPECT_GE(numQueueGroups, 0);
 
   std::vector<ze_command_queue_group_properties_t> queueProperties(
       numQueueGroups);
@@ -229,6 +230,9 @@ void get_numCQs_per_ordinal(ze_device_handle_t &device,
     ordinalCQs[i] = queueProperties[i].numQueues;
 
     LOG_DEBUG << "ordinal: " << i << " CQs: " << queueProperties[i].numQueues;
-    ASSERT_GE(queueProperties[i].numQueues, 0);
+    EXPECT_GE(queueProperties[i].numQueues, 0);
+    totalNumCQs += queueProperties[i].numQueues;
   }
+
+  return totalNumCQs;
 }
