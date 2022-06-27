@@ -40,6 +40,9 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
 void print_thread(const char *entry_message,
                   const ze_device_thread_t &device_thread,
                   log_level_t logLevel);
+
+void get_numCQs_per_ordinal(ze_device_handle_t &device,
+                            std::map<int, int> &ordinalCQs);
 class ProcessLauncher {
 public:
   bp::child launch_process(debug_test_type_t test_type,

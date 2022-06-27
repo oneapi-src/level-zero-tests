@@ -66,7 +66,7 @@ void zetDebugAttachDetachTest::run_test(
       if (!debugSession) {
         FAIL() << "[Debugger] Failed to attach to start a debug session";
       }
-      synchro->notify_attach();
+      synchro->notify_application();
       LOG_INFO << "[Debugger] Detaching";
       lzt::debug_detach(debugSession);
       debugHelper.wait();
@@ -86,7 +86,7 @@ void zetDebugAttachDetachTest::run_test(
           LOG_INFO << "[Debugger] Detaching. Loop " << loop;
           lzt::debug_detach(debugSession);
         } else {
-          synchro->notify_attach();
+          synchro->notify_application();
           debugHelper
               .terminate(); // we don't care about the child processes exit code
           LOG_INFO << "[Debugger] LAST Detach after aplication finished. Loop "
@@ -166,7 +166,7 @@ void zetDebugAttachDetachTest::run_multidevice_test(
   }
 
   LOG_DEBUG << "[Debugger] Notifying applications of attach";
-  synchro->notify_attach();
+  synchro->notify_application();
 
   // create new process
   auto device_properties_1 = lzt::get_device_properties(device1);
@@ -288,7 +288,7 @@ void zetDebugAttachDetachTest::
     FAIL() << "[Debugger] Failed to attach to 1 or both applications start a "
               "debug session";
   }
-  synchro->notify_attach(); // both applications will see debugger signal
+  synchro->notify_application(); // both applications will see debugger signal
 
   LOG_DEBUG << "[Debugger] Waiting for application process entry debug events";
   zet_debug_event_t event;
@@ -377,6 +377,9 @@ protected:
 
   void run_read_events_in_separate_thread_test(
       std::vector<zet_device_handle_t> &devices, bool use_sub_devices);
+
+  void run_proc_entry_exit_test(std::vector<zet_device_handle_t> &devices,
+                                bool use_sub_devices);
 };
 
 void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
@@ -395,7 +398,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    synchro->notify_attach();
+    synchro->notify_application();
     LOG_INFO << "[Debugger] Listening for events";
 
     uint16_t eventNum = 0;
@@ -457,14 +460,14 @@ void zetDebugEventReadTest::run_attach_after_module_created_destroyed_test(
     zet_debug_config_t debug_config = {};
     debug_config.pid = debugHelper.id();
 
-    synchro->wait_for_application();
+    synchro->wait_for_application_signal();
 
     debugSession = lzt::debug_attach(device, debug_config);
     if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    synchro->notify_attach();
+    synchro->notify_application();
 
     std::vector<zet_debug_event_type_t> expectedEvents = {};
     if (test_type == ATTACH_AFTER_MODULE_CREATED) {
@@ -485,6 +488,63 @@ void zetDebugEventReadTest::run_attach_after_module_created_destroyed_test(
 
     lzt::debug_detach(debugSession);
     debugHelper.wait();
+    ASSERT_EQ(debugHelper.exit_code(), 0);
+  }
+}
+
+void zetDebugEventReadTest::run_proc_entry_exit_test(
+    std::vector<zet_device_handle_t> &devices, bool use_sub_devices) {
+
+  for (auto &device : devices) {
+
+    if (!is_debug_supported(device))
+      continue;
+    debugHelper = launch_process(MULTIPLE_CQ, device, use_sub_devices);
+
+    zet_debug_config_t debug_config = {};
+    debug_config.pid = debugHelper.id();
+    debugSession = lzt::debug_attach(device, debug_config);
+    if (!debugSession) {
+      FAIL() << "[Debugger] Failed to attach to start a debug session";
+    }
+
+    LOG_INFO << "[Debugger] Listening for events";
+
+    zet_debug_event_t debug_event;
+    ze_result_t result;
+    for (int i = 0; i < 3; i++) {
+      LOG_DEBUG << "[Debugger]--- Loop " << i << " ---";
+
+      // Expect timeout with no event since no CQ is created
+      result = lzt::debug_read_event(debugSession, debug_event, 2, true);
+      EXPECT_EQ(result, ZE_RESULT_NOT_READY);
+
+      synchro->notify_application();
+      synchro->wait_for_application_signal();
+      synchro->clear_application_signal();
+
+      // Only one process entry event should be received independendly of number
+      // of CQs created
+      if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY)) {
+        FAIL()
+            << "[Debugger] Did not recieve ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY";
+      }
+
+      result = lzt::debug_read_event(debugSession, debug_event, 2, true);
+      EXPECT_EQ(result, ZE_RESULT_NOT_READY);
+
+      synchro->notify_application();
+
+      // Only one process exit event should be received independendly of number
+      // of CQs destroyed
+      if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT)) {
+        FAIL()
+            << "[Debugger] Did not recieve ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT";
+      }
+    }
+
+    debugHelper.wait();
+    lzt::debug_detach(debugSession);
     ASSERT_EQ(debugHelper.exit_code(), 0);
   }
 }
@@ -553,6 +613,14 @@ TEST_F(
   auto all_sub_devices = lzt::get_all_sub_devices();
   run_attach_after_module_created_destroyed_test(all_sub_devices, true,
                                                  ATTACH_AFTER_MODULE_DESTROYED);
+}
+
+TEST_F(zetDebugEventReadTest,
+       GivenDebuggerAttachedProcessEntryAndExitAreSentForCQs) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  run_proc_entry_exit_test(devices, false);
 }
 
 void verify_single_thread(const zet_debug_session_handle_t &debug_session) {
@@ -645,7 +713,7 @@ void zetDebugEventReadTest::run_multithreaded_application_test(
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    synchro->notify_attach();
+    synchro->notify_application();
 
     read_and_verify_events(debugSession, 2);
 
@@ -685,7 +753,7 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
     }
 
     std::thread event_read_thread(read_and_verify_events, debugSession, 1);
-    synchro->notify_attach();
+    synchro->notify_application();
 
     event_read_thread.join();
 
@@ -1006,7 +1074,7 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
     }
 
     uint64_t gpu_buffer_va = 0;
-    synchro->wait_for_application();
+    synchro->wait_for_application_signal();
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
     }
@@ -1138,7 +1206,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     }
 
     uint64_t gpu_buffer_va = 0;
-    synchro->wait_for_application();
+    synchro->wait_for_application_signal();
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
     }
@@ -1317,7 +1385,7 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
   lzt::debug_ack_event(debugSession, &module_event);
 
   uint64_t gpu_buffer_va = 0;
-  synchro->wait_for_application();
+  synchro->wait_for_application_signal();
   if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
     FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
   }

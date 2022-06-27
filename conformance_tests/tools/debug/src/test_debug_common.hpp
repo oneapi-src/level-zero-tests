@@ -47,6 +47,7 @@ typedef enum {
   LONG_RUNNING_KERNEL_INTERRUPTED,
   PAGE_FAULT,
   MULTIPLE_THREADS,
+  MULTIPLE_CQ,
   MAX_DEBUG_TEST_TYPE_VALUE = 0xff, // Values greater than 0xFF are reserved
   DEBUG_TEST_TYPE_FORCE_UINT32 = 0x7fffffff
 } debug_test_type_t;
@@ -132,14 +133,35 @@ public:
     delete region;
   }
 
+  // To be used by Debugger only:
+  void notify_application() {
+    if (!enabled)
+      return;
+    LOG_INFO << "[Debugger] Notifying application after attaching";
+    mutex->lock();
+    *debugger_signal = true;
+    mutex->unlock();
+    condition->notify_all();
+  }
+
   // To be used by application only:
-  void wait_for_attach() {
+  void wait_for_debugger_signal() {
     if (!enabled)
       return;
     LOG_INFO << "[Application] Waiting for debugger to attach";
     bi::scoped_lock<bi::named_mutex> lock(*mutex);
     condition->wait(lock, [&] { return *debugger_signal; });
     LOG_INFO << "[Application] process proceeding";
+  }
+
+  void clear_debugger_signal() {
+    if (!enabled)
+      return;
+    LOG_INFO << "[] Clearing Debugger signal";
+    mutex->lock();
+    *debugger_signal = false;
+    mutex->unlock();
+    condition->notify_all();
   }
 
   // To be used by application only:
@@ -149,6 +171,26 @@ public:
     LOG_INFO << "[Application] Notifying Debugger";
     mutex->lock();
     *debugee_signal = true;
+    mutex->unlock();
+    condition->notify_all();
+  }
+
+  // To be used by Debugger only:
+  void wait_for_application_signal() {
+    if (!enabled)
+      return;
+    LOG_INFO << "[Debugger] Waiting for Application to notify";
+    bi::scoped_lock<bi::named_mutex> lock(*mutex);
+    condition->wait(lock, [&] { return *debugee_signal; });
+    LOG_INFO << "[Debugger] Received Application notification proceeding";
+  }
+
+  void clear_application_signal() {
+    if (!enabled)
+      return;
+    LOG_INFO << "[] Clearing application signal";
+    mutex->lock();
+    *debugee_signal = false;
     mutex->unlock();
     condition->notify_all();
   }
@@ -173,27 +215,6 @@ public:
     mutex->lock();
     *gpu_thread_count = gpu_threads;
     mutex->unlock();
-  }
-
-  // To be used by Debugger only:
-  void notify_attach() {
-    if (!enabled)
-      return;
-    LOG_INFO << "[Debugger] Notifying application after attaching";
-    mutex->lock();
-    *debugger_signal = true;
-    mutex->unlock();
-    condition->notify_all();
-  }
-
-  // To be used by Debugger only:
-  void wait_for_application() {
-    if (!enabled)
-      return;
-    LOG_INFO << "[Debugger] Waiting for Application to notify";
-    bi::scoped_lock<bi::named_mutex> lock(*mutex);
-    condition->wait(lock, [&] { return *debugee_signal; });
-    LOG_INFO << "[Debugger] Received Application notification proceeding";
   }
 
   // To be used by Debugger only:

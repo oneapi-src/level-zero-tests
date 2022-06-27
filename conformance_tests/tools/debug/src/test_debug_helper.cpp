@@ -7,6 +7,7 @@
  */
 #include <chrono>
 #include <thread>
+#include <map>
 
 #include "test_debug.hpp"
 #include "test_debug_helper.hpp"
@@ -20,7 +21,7 @@ namespace lzt = level_zero_tests;
 void basic(ze_context_handle_t context, ze_device_handle_t device,
            process_synchro &synchro, debug_options &options) {
 
-  synchro.wait_for_attach();
+  synchro.wait_for_debugger_signal();
   LOG_DEBUG << "[Application] Child Proceeding";
 
   auto command_queue = lzt::create_command_queue(
@@ -174,7 +175,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
   //  ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD
   //  Before destroying the module or the comand queue
   synchro.notify_debugger();
-  synchro.wait_for_attach();
+  synchro.wait_for_debugger_signal();
 
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
   lzt::synchronize(command_queue, UINT64_MAX);
@@ -274,7 +275,7 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
   //  Before destroying the comand queue : send
   //  ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT)
   synchro.notify_debugger();
-  synchro.wait_for_attach();
+  synchro.wait_for_debugger_signal();
 
   // validation
   for (size_t i = 0; i < size; i++) {
@@ -304,7 +305,7 @@ void multiple_modules_created_test(ze_context_handle_t context,
                                    process_synchro &synchro,
                                    debug_options &options) {
 
-  synchro.wait_for_attach();
+  synchro.wait_for_debugger_signal();
 
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
@@ -407,7 +408,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   std::string kernel_name = (options.use_custom_module == true)
                                 ? options.kernel_name_in
                                 : "long_kernel";
-  synchro.wait_for_attach();
+  synchro.wait_for_debugger_signal();
   auto module =
       lzt::create_module(device, module_name, ZE_MODULE_FORMAT_IL_SPIRV,
                          "-g" /* include debug symbols*/, nullptr);
@@ -536,6 +537,54 @@ void run_multiple_threads(ze_context_handle_t context,
   }
 }
 
+void loop_create_destroy_multiple_cq(ze_context_handle_t context,
+                                     ze_device_handle_t device,
+                                     process_synchro &synchro,
+                                     debug_options &options) {
+
+  std::map<int, int> ordinalCQs;
+  get_numCQs_per_ordinal(device, ordinalCQs);
+
+  for (int i = 0; i < 3; i++) {
+    std::vector<ze_command_queue_handle_t> cmdQueues;
+    LOG_DEBUG << "[Application]--- Loop " << i << " ---";
+    synchro.wait_for_debugger_signal();
+    synchro.clear_debugger_signal();
+
+    LOG_DEBUG << "[Application] Child Proceeding";
+
+    for (std::map<int, int>::iterator ordinalCQ = ordinalCQs.begin();
+         ordinalCQ != ordinalCQs.end(); ordinalCQ++) {
+      int ordinal = ordinalCQ->first;
+      int numQueues = ordinalCQ->second;
+
+      for (int index = 0; index < numQueues; index++) {
+        ze_command_queue_handle_t cmdqueue = lzt::create_command_queue(
+            context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+            ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal, index);
+        cmdQueues.push_back(cmdqueue);
+        LOG_DEBUG << "[Application] Created CQ with ordinal: " << ordinal
+                  << " CQs: " << index;
+      }
+    }
+
+    synchro.notify_debugger();
+    synchro.wait_for_debugger_signal();
+    synchro.clear_debugger_signal();
+
+    // cleanup
+    for (auto cmdqueue : cmdQueues) {
+      LOG_DEBUG << "[Application] Destroying CQ ";
+      lzt::destroy_command_queue(cmdqueue);
+    }
+    cmdQueues.clear();
+  }
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  }
+}
+
 // ***************************************************************************************
 int main(int argc, char **argv) {
 
@@ -602,6 +651,9 @@ int main(int argc, char **argv) {
       break;
     case MULTIPLE_THREADS:
       run_multiple_threads(context, device, synchro, options);
+      break;
+    case MULTIPLE_CQ:
+      loop_create_destroy_multiple_cq(context, device, synchro, options);
       break;
     default:
 #ifdef EXTENDED_TESTS

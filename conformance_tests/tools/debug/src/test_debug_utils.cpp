@@ -153,7 +153,7 @@ void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
     FAIL() << "[Debugger] Failed to attach to start a debug session";
   }
 
-  synchro->notify_attach();
+  synchro->notify_application();
 
   bool module_loaded = false;
   std::chrono::time_point<std::chrono::system_clock> start, checkpoint;
@@ -210,5 +210,25 @@ void print_thread(const char *entry_message,
     LOG_INFO << message.str();
   } else if (logLevel == DEBUG) {
     LOG_DEBUG << message.str();
+  }
+}
+
+void get_numCQs_per_ordinal(ze_device_handle_t &device,
+                            std::map<int, int> &ordinalCQs) {
+
+  uint32_t numQueueGroups =
+      lzt::get_command_queue_group_properties_count(device);
+
+  ASSERT_GE(numQueueGroups, 0);
+
+  std::vector<ze_command_queue_group_properties_t> queueProperties(
+      numQueueGroups);
+  queueProperties = lzt::get_command_queue_group_properties(device);
+
+  for (int i = 0; i < numQueueGroups; i++) {
+    ordinalCQs[i] = queueProperties[i].numQueues;
+
+    LOG_DEBUG << "ordinal: " << i << " CQs: " << queueProperties[i].numQueues;
+    ASSERT_GE(queueProperties[i].numQueues, 0);
   }
 }

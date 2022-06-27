@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
   LOG_DEBUG << "[Child Debugger] Notifying child application";
-  synchro.notify_attach();
+  synchro.notify_application();
 
   LOG_DEBUG << "[Child Debugger] Waiting for application to exit";
   debug_helper.wait();

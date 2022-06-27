@@ -28,6 +28,7 @@ add_lzt_test_executable(
   PREFIX "debug"  # install to prefix so it's not confused for a test
   SOURCES
     src/test_debug_helper.cpp
+    src/test_debug_utils.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils

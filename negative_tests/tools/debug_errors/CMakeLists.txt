@@ -28,6 +28,7 @@ add_lzt_test_executable(
     ../../../conformance_tests/tools/debug/src
   SOURCES
     ../../../conformance_tests/tools/debug/src/test_debug_helper.cpp
+    ../../../conformance_tests/tools/debug/src/test_debug_utils.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
