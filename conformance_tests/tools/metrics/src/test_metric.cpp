@@ -207,11 +207,11 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     for (auto groupInfo : metricGroupInfo) {
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
-
       zet_metric_query_pool_handle_t metricQueryPoolHandle =
           lzt::create_metric_query_pool_for_device(
               device, 1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE,
@@ -287,6 +287,7 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     for (auto groupInfo : metricGroupInfo) {
 
@@ -382,11 +383,11 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     for (auto groupInfo : metricGroupInfo) {
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
-
       lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
 
       ze_event_handle_t eventHandle;
@@ -418,8 +419,8 @@ TEST_F(
             lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
         allReportsSize = lzt::metric_streamer_read_data_size(
             metricStreamerHandle, UINT32_MAX);
-        LOG_INFO << "Event triggered. Single report size: " << oneReportSize
-                 << ". All reports size:" << allReportsSize;
+        LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
+                  << ". All reports size:" << allReportsSize;
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
@@ -466,6 +467,7 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     for (auto groupInfo : metricGroupInfo) {
 
@@ -502,8 +504,8 @@ TEST_F(
             lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
         allReportsSize = lzt::metric_streamer_read_data_size(
             metricStreamerHandle, UINT32_MAX);
-        LOG_INFO << "Event triggered. Single report size: " << oneReportSize
-                 << ". All reports size:" << allReportsSize;
+        LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
+                  << ". All reports size:" << allReportsSize;
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
@@ -556,6 +558,7 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false);
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     for (auto groupInfo : metricGroupInfo) {
 
@@ -599,8 +602,8 @@ TEST_F(
             lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
         allReportsSize = lzt::metric_streamer_read_data_size(
             metricStreamerHandle, UINT32_MAX);
-        LOG_INFO << "Event triggered. Single report size: " << oneReportSize
-                 << ". All reports size:" << allReportsSize;
+        LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
+                  << ". All reports size:" << allReportsSize;
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
@@ -649,6 +652,7 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false);
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     for (auto groupInfo : metricGroupInfo) {
 
@@ -692,8 +696,8 @@ TEST_F(
             lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
         allReportsSize = lzt::metric_streamer_read_data_size(
             metricStreamerHandle, UINT32_MAX);
-        LOG_INFO << "Event triggered. Single report size: " << oneReportSize
-                 << ". All reports size:" << allReportsSize;
+        LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
+                  << ". All reports size:" << allReportsSize;
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 

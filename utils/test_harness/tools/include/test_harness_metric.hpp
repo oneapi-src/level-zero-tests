@@ -19,9 +19,12 @@ namespace level_zero_tests {
 typedef struct metricGroupInfo {
   zet_metric_group_handle_t metricGroupHandle;
   std::string metricGroupName;
+  uint32_t domain = 0;
 
-  metricGroupInfo(zet_metric_group_handle_t handle, std::string name)
-      : metricGroupHandle(handle), metricGroupName(std::move(name)) {}
+  metricGroupInfo(zet_metric_group_handle_t handle, std::string name,
+                  uint32_t domain)
+      : metricGroupHandle(handle), metricGroupName(std::move(name)),
+        domain(domain) {}
 } metricGroupInfo_t;
 
 std::vector<metricGroupInfo_t>
@@ -95,6 +98,8 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                              ze_event_handle_t eventHandle);
 void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
                       const size_t rawDataSize, const uint8_t *rawData);
+std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
+    std::vector<metricGroupInfo_t> &metricGroupInfoList);
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */

@@ -11,6 +11,8 @@
 #include <level_zero/ze_api.h>
 #include "utils/utils.hpp"
 #include <cstring>
+#include <cstdlib>
+#include <map>
 
 namespace lzt = level_zero_tests;
 
@@ -94,6 +96,37 @@ bool check_metric_type_ip_exp(
   return check_metric_type_ip_exp(groupHandle, includeExpFeature);
 }
 
+std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
+    std::vector<metricGroupInfo_t> &metricGroupInfoList) {
+
+  std::map<uint32_t, std::vector<metricGroupInfo_t>> domainMetricGroupMap = {};
+  // Split the metric group info based on domains
+  for (auto const &metricGroupInfo : metricGroupInfoList) {
+    domainMetricGroupMap[metricGroupInfo.domain].push_back(metricGroupInfo);
+  }
+
+  std::vector<metricGroupInfo_t> optimizedList = {};
+  optimizedList.reserve(metricGroupInfoList.size());
+  // Consider 20% of the metric groups in each domain for test input
+  uint32_t percentOfMetricGroupForTest = 20;
+  const char *valueString = std::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
+  if (valueString != nullptr) {
+    uint32_t value = atoi(valueString);
+    percentOfMetricGroupForTest =
+        value != 0 ? value : percentOfMetricGroupForTest;
+    percentOfMetricGroupForTest = std::min(percentOfMetricGroupForTest, 100u);
+  }
+
+  for (auto const &mapEntry : domainMetricGroupMap) {
+    uint32_t newCount = static_cast<uint32_t>(std::max<double>(
+        mapEntry.second.size() * percentOfMetricGroupForTest * 0.01, 1.0));
+    std::copy(mapEntry.second.begin(), mapEntry.second.begin() + newCount,
+              std::back_inserter(optimizedList));
+  }
+
+  return optimizedList;
+}
+
 std::vector<metricGroupInfo_t>
 get_metric_group_info(ze_device_handle_t device,
                       zet_metric_group_sampling_type_flags_t metricSamplingType,
@@ -127,7 +160,8 @@ get_metric_group_info(ze_device_handle_t device,
       continue;
     }
 
-    matchedGroupsInfo.emplace_back(metricGroupHandle, metricGroupProp.name);
+    matchedGroupsInfo.emplace_back(metricGroupHandle, metricGroupProp.name,
+                                   metricGroupProp.domain);
   }
 
   return matchedGroupsInfo;
@@ -437,8 +471,8 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
 
-  LOG_INFO << "totalMetricValueCount " << totalMetricValueCount << " setCount "
-           << setCount << " metricCount " << metricCount;
+  LOG_DEBUG << "totalMetricValueCount " << totalMetricValueCount << " setCount "
+            << setCount << " metricCount " << metricCount;
   // This loop over metric data is new for this extension
   uint32_t startIndex = 0;
   for (uint32_t dataIndex = 0; dataIndex < setCount; dataIndex++) {
