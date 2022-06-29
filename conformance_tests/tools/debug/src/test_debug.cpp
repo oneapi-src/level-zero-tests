@@ -379,7 +379,8 @@ protected:
       std::vector<zet_device_handle_t> &devices, bool use_sub_devices);
 
   void run_proc_entry_exit_test(std::vector<zet_device_handle_t> &devices,
-                                bool use_sub_devices);
+                                bool use_sub_devices,
+                                debug_test_type_t test_type);
 };
 
 void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
@@ -493,7 +494,8 @@ void zetDebugEventReadTest::run_attach_after_module_created_destroyed_test(
 }
 
 void zetDebugEventReadTest::run_proc_entry_exit_test(
-    std::vector<zet_device_handle_t> &devices, bool use_sub_devices) {
+    std::vector<zet_device_handle_t> &devices, bool use_sub_devices,
+    debug_test_type_t test_type) {
 
   for (auto &device : devices) {
 
@@ -503,7 +505,7 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
     std::map<int, int> ordinalCQs;
     int totalNumCQs = get_numCQs_per_ordinal(device, ordinalCQs);
 
-    debugHelper = launch_process(MULTIPLE_CQ, device, use_sub_devices);
+    debugHelper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
     debug_config.pid = debugHelper.id();
@@ -553,7 +555,7 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
         synchro->wait_for_application_signal();
         synchro->clear_application_signal();
 
-        // only the last CQ destruciton should send the event
+        // only the last CQ destruction should send the event
         if (queueNum == totalNumCQs) {
           if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT)) {
             FAIL() << "[Debugger] Did not recieve "
@@ -644,10 +646,29 @@ TEST_F(
 
 TEST_F(zetDebugEventReadTest,
        GivenDebuggerAttachedProcessEntryAndExitAreSentForCQs) {
-
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
-  run_proc_entry_exit_test(devices, false);
+  run_proc_entry_exit_test(devices, false, MULTIPLE_CQ);
+}
+
+TEST_F(zetDebugEventReadTest,
+       GivenDebuggerAttachedtoSubDeviceProcessEntryAndExitAreSentForCQs) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_proc_entry_exit_test(all_sub_devices, true, MULTIPLE_CQ);
+}
+
+TEST_F(zetDebugEventReadTest,
+       GivenDebuggerAttachedProcessEntryAndExitAreSentForImmediateCMDLists) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  run_proc_entry_exit_test(devices, false, MULTIPLE_IMM_CL);
+}
+
+TEST_F(
+    zetDebugEventReadTest,
+    GivenDebuggerAttachedtoSubDeviceProcessEntryAndExitAreSentForImmediateCMDLists) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_proc_entry_exit_test(all_sub_devices, true, MULTIPLE_IMM_CL);
 }
 
 void verify_single_thread(const zet_debug_session_handle_t &debug_session) {

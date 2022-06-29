@@ -234,5 +234,7 @@ int get_numCQs_per_ordinal(ze_device_handle_t &device,
     totalNumCQs += queueProperties[i].numQueues;
   }
 
+  LOG_DEBUG << "Total num of CQs: " << totalNumCQs;
+
   return totalNumCQs;
 }

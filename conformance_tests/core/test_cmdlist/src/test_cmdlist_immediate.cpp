@@ -182,7 +182,7 @@ TEST_P(
   for (uint32_t i = 0; i < num_cmdq; i++) {
     mulcmdlist_immediate[i] = lzt::create_immediate_command_list(
         context_handle, device_handle, 0, mode,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
 
     buffer[i] = lzt::allocate_shared_memory(size);
     val[i] = static_cast<uint8_t>(i + 1);

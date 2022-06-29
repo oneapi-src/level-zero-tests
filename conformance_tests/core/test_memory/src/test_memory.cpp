@@ -217,7 +217,7 @@ TEST_P(
 
   auto cmdlist = lzt::create_immediate_command_list(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
   lzt::append_memory_fill(cmdlist, memory, &pattern2, 1, size, nullptr);
 
   for (size_t i = 0; i++; i < size) {

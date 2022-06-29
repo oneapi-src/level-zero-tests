@@ -537,17 +537,19 @@ void run_multiple_threads(ze_context_handle_t context,
   }
 }
 
-void loop_create_destroy_multiple_cq(ze_context_handle_t context,
-                                     ze_device_handle_t device,
-                                     process_synchro &synchro,
-                                     debug_options &options) {
+void loop_create_destroy_multiple_cq_immcl(ze_context_handle_t context,
+                                           ze_device_handle_t device,
+                                           process_synchro &synchro,
+                                           debug_options &options,
+                                           debug_test_type_t test_selected) {
 
   std::map<int, int> ordinalCQs;
-  get_numCQs_per_ordinal(device, ordinalCQs);
+  int totalNumCQs = get_numCQs_per_ordinal(device, ordinalCQs);
+  std::vector<ze_command_queue_handle_t> cmdQueues;
+  std::vector<ze_command_list_handle_t> cmdLists;
 
-  for (int i = 0; i < 3; i++) {
-    std::vector<ze_command_queue_handle_t> cmdQueues;
-    LOG_DEBUG << "[Application]--- Loop " << i << " ---";
+  for (int loop = 0; loop < 3; loop++) {
+    LOG_DEBUG << "[Application]--- Loop " << loop << " ---";
     synchro.wait_for_debugger_signal();
     synchro.clear_debugger_signal();
 
@@ -559,12 +561,26 @@ void loop_create_destroy_multiple_cq(ze_context_handle_t context,
       int numQueues = ordinalCQ->second;
 
       for (int index = 0; index < numQueues; index++) {
-        ze_command_queue_handle_t cmdqueue = lzt::create_command_queue(
-            context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-            ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal, index);
-        cmdQueues.push_back(cmdqueue);
-        LOG_DEBUG << "[Application] Created CQ with ordinal: " << ordinal
-                  << " CQs: " << index;
+        if (test_selected == MULTIPLE_CQ) {
+          ze_command_queue_handle_t cmdqueue = lzt::create_command_queue(
+              context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
+              ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+              ordinal, index);
+          cmdQueues.push_back(cmdqueue);
+        } else {
+          ze_command_list_handle_t immCommandList =
+              lzt::create_immediate_command_list(
+                  context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
+                  ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                  ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal, index);
+
+          cmdLists.push_back(immCommandList);
+        }
+
+        LOG_DEBUG << "[Application] Created "
+                  << (test_selected == MULTIPLE_CQ ? " CQ "
+                                                   : " immediate CMD List ")
+                  << "with ordinal: " << ordinal << " and index: " << index;
 
         synchro.notify_debugger();
         synchro.wait_for_debugger_signal();
@@ -573,15 +589,30 @@ void loop_create_destroy_multiple_cq(ze_context_handle_t context,
     }
 
     // cleanup
-    for (auto cmdqueue : cmdQueues) {
-      LOG_DEBUG << "[Application] Destroying CQ ";
-      lzt::destroy_command_queue(cmdqueue);
+    int counter = 1;
+    if (test_selected == MULTIPLE_CQ) {
+      for (auto cmdqueue : cmdQueues) {
+        LOG_DEBUG << "[Application] Destroying CQ: " << counter;
+        lzt::destroy_command_queue(cmdqueue);
 
-      synchro.notify_debugger();
-      synchro.wait_for_debugger_signal();
-      synchro.clear_debugger_signal();
+        synchro.notify_debugger();
+        synchro.wait_for_debugger_signal();
+        synchro.clear_debugger_signal();
+        counter++;
+      }
+      cmdQueues.clear();
+    } else {
+      for (auto cmdList : cmdLists) {
+        LOG_DEBUG << "[Application] Destroying Immedate CMD List: " << counter;
+        lzt::destroy_command_list(cmdList);
+
+        synchro.notify_debugger();
+        synchro.wait_for_debugger_signal();
+        synchro.clear_debugger_signal();
+        counter++;
+      }
+      cmdLists.clear();
     }
-    cmdQueues.clear();
   }
 
   if (::testing::Test::HasFailure()) {
@@ -657,7 +688,12 @@ int main(int argc, char **argv) {
       run_multiple_threads(context, device, synchro, options);
       break;
     case MULTIPLE_CQ:
-      loop_create_destroy_multiple_cq(context, device, synchro, options);
+      loop_create_destroy_multiple_cq_immcl(context, device, synchro, options,
+                                            MULTIPLE_CQ);
+      break;
+    case MULTIPLE_IMM_CL:
+      loop_create_destroy_multiple_cq_immcl(context, device, synchro, options,
+                                            MULTIPLE_IMM_CL);
       break;
     default:
 #ifdef EXTENDED_TESTS
