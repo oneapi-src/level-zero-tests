@@ -22,7 +22,7 @@ namespace {
 ze_kernel_handle_t load_gpu(ze_device_handle_t device, ze_group_count_t *tg,
                             void **a_buffer, void **b_buffer, void **c_buffer) {
   int m, k, n;
-  m = k = n = 4096;
+  m = k = n = 1024;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
