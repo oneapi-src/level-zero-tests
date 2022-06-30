@@ -30,4 +30,5 @@
 #include "test_harness_sysman_overclocking.hpp"
 #include "test_harness_sysman_scheduler.hpp"
 #include "test_harness_sysman_performance.hpp"
+#include "test_harness_sysman_ecc.hpp"
 #endif
