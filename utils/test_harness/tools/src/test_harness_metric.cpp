@@ -99,13 +99,13 @@ bool check_metric_type_ip_exp(
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList) {
 
-  std::map<uint32_t, std::vector<metricGroupInfo_t>> domainMetricGroupMap = {};
+  std::map<uint32_t, std::vector<metricGroupInfo_t>> domainMetricGroupMap;
   // Split the metric group info based on domains
   for (auto const &metricGroupInfo : metricGroupInfoList) {
     domainMetricGroupMap[metricGroupInfo.domain].push_back(metricGroupInfo);
   }
 
-  std::vector<metricGroupInfo_t> optimizedList = {};
+  std::vector<metricGroupInfo_t> optimizedList;
   optimizedList.reserve(metricGroupInfoList.size());
   // Consider 20% of the metric groups in each domain for test input
   uint32_t percentOfMetricGroupForTest = 20;
