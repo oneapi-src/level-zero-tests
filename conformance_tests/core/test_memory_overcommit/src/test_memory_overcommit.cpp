@@ -274,6 +274,7 @@ protected:
       driver_info[i].device_memory_properties =
           new ze_device_memory_properties_t[device_memory_properties_count];
       for (uint32_t j = 0; j < device_memory_properties_count; j++) {
+        driver_info[i].device_memory_properties[j].pNext = nullptr;
         driver_info[i].device_memory_properties[j].stype =
             ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
 

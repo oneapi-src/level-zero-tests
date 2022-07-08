@@ -152,6 +152,7 @@ get_memory_properties(ze_device_handle_t device, uint32_t count) {
   std::vector<ze_device_memory_properties_t> properties(count);
   memset(properties.data(), 0, sizeof(ze_device_memory_properties_t) * count);
   for (auto &prop : properties) {
+    prop.pNext = nullptr;
     prop.stype = ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
   }
 

@@ -89,6 +89,7 @@ protected:
       instance.group_size_x = std::min(
           static_cast<uint32_t>(128), dev_compute_properties.maxTotalGroupSize);
       instance.group_count_x = 1;
+      instance.dev_mem_properties.pNext = nullptr;
       instance.dev_mem_properties.stype =
           ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
       uint32_t num_mem_properties = 1;
