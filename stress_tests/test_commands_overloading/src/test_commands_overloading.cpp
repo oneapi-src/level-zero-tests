@@ -23,7 +23,7 @@ namespace {
 class zeDriverSpreadKernelsStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<
-          float, float, uint32_t, enum memory_test_type, bool, bool, bool>> {
+          float, float, uint32_t, ze_memory_type_t, bool, bool, bool>> {
 protected:
   void dispatch_kernels(const ze_device_handle_t device,
                         const std::vector<ze_module_handle_t> &module,
@@ -203,8 +203,9 @@ TEST_P(
   std::vector<ze_device_memory_properties_t> device_memory_properties =
       lzt::get_memory_properties(device);
 
+  const uint32_t used_vectors_in_test = 3;
   const uint32_t multiplier = test_arguments.base_arguments.multiplier;
-  const uint64_t number_of_all_allocations = 2 * multiplier;
+  uint64_t number_of_all_allocations = used_vectors_in_test * multiplier;
   float total_memory_size_limit =
       test_arguments.base_arguments.total_memory_size_limit;
   float one_allocation_size_limit =
@@ -212,11 +213,12 @@ TEST_P(
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
   bool relax_memory_capability;
+
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,
       test_total_memory_size, test_single_allocation_memory_size,
-      number_of_all_allocations, total_memory_size_limit,
-      one_allocation_size_limit, relax_memory_capability);
+      number_of_all_allocations, test_arguments.base_arguments,
+      relax_memory_capability);
 
   uint64_t tmp_count = test_single_allocation_memory_size / sizeof(uint32_t);
   uint64_t test_single_allocation_count =
@@ -334,7 +336,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent),
                        ::testing::ValuesIn(dispatches),
-                       testing::Values(MTT_DEVICE),
+                       testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::ValuesIn(use_separate_command_lists),
                        ::testing::ValuesIn(use_separate_command_queues),
                        ::testing::ValuesIn(use_separate_modules)),
@@ -344,7 +346,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(five_percent),
                        ::testing::ValuesIn(dispatches),
-                       testing::Values(MTT_DEVICE),
+                       testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::ValuesIn(use_separate_command_lists),
                        ::testing::ValuesIn(use_separate_command_queues),
                        ::testing::ValuesIn(use_separate_modules)),

@@ -14,20 +14,11 @@
 
 #include <vector>
 
-void adjust_max_memory_allocation(
-    const ze_driver_handle_t &driver,
-    const ze_device_properties_t &device_properties,
-    const std::vector<ze_device_memory_properties_t> &device_memory_properties,
-    uint64_t &total_memory_size, uint64_t &one_allocation_size,
-    const uint64_t number_of_all_alloc, const float total_memory_limit,
-    const float one_allocation_size_limit, bool &relax_memory_capability);
-
-enum memory_test_type { MTT_SHARED, MTT_HOST, MTT_DEVICE };
-std::string print_allocation_type(memory_test_type);
+std::string print_allocation_type(ze_memory_type_t);
 
 template <typename T>
 T *allocate_memory(const ze_context_handle_t &context,
-                   const ze_device_handle_t &device, memory_test_type mem_type,
+                   const ze_device_handle_t &device, ze_memory_type_t mem_type,
                    size_t allocation_size, bool relax_memory_capability) {
   void *pNext = nullptr;
   T *new_allocation = nullptr;
@@ -39,14 +30,14 @@ T *allocate_memory(const ze_context_handle_t &context,
         ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE;
     pNext = &relaxed_allocation_limits_desc;
   }
-  if (mem_type == MTT_DEVICE) {
+  if (mem_type == ZE_MEMORY_TYPE_DEVICE) {
     new_allocation = (T *)lzt::allocate_device_memory(
         allocation_size, 0, 0, pNext, 0, device, context);
-  } else if (mem_type == MTT_HOST) {
+  } else if (mem_type == ZE_MEMORY_TYPE_HOST) {
     new_allocation =
         (T *)lzt::allocate_host_memory(allocation_size, 0, 0, pNext, context);
 
-  } else if (mem_type == MTT_SHARED) {
+  } else if (mem_type == ZE_MEMORY_TYPE_SHARED) {
     new_allocation = (T *)lzt::allocate_shared_memory(
         allocation_size, 0, 0, pNext, 0, nullptr, device, context);
   }
@@ -57,7 +48,7 @@ typedef struct TestArguments {
   float total_memory_size_limit;
   float one_allocation_size_limit;
   uint64_t multiplier;
-  memory_test_type memory_type;
+  ze_memory_type_t memory_type;
 
   void print_test_arguments(const ze_device_properties_t &device_properties) {
     LOG_INFO << "TESTED device: " << device_properties.name;
@@ -72,6 +63,16 @@ typedef struct TestArguments {
   };
 } TestArguments_t;
 
+void adjust_max_memory_allocation(
+    const ze_driver_handle_t &driver,
+    const ze_device_properties_t &device_properties,
+    const std::vector<ze_device_memory_properties_t> &device_memory_properties,
+    uint64_t &total_allocation_size, uint64_t &one_allocation_size,
+    uint64_t &number_of_all_alloc, const TestArguments_t test_arguments,
+    bool &relax_memory_capability);
+
+void get_mem_page_size(const ze_driver_handle_t &driver,
+                       ze_memory_type_t mem_type, size_t &page_size);
 extern float one_percent;
 extern float five_percent;
 extern float ten_percent;

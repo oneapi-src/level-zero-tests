@@ -24,7 +24,7 @@ namespace {
 class zeDriverMemoryAllocationStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<float, float, uint32_t, enum memory_test_type>> {
+          std::tuple<float, float, uint32_t, ze_memory_type_t>> {
 protected:
   typedef struct KernelFunctions {
     ze_kernel_desc_t test_function_description;
@@ -90,7 +90,6 @@ protected:
       test_functions.push_back(kernel_handle);
     }
 
-
     ze_command_queue_handle_t command_queue = lzt::create_command_queue(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
@@ -136,8 +135,10 @@ TEST_P(
   std::vector<ze_device_memory_properties_t> device_memory_properties =
       lzt::get_memory_properties(device);
 
+  const uint32_t used_vectors_in_test = 3;
   uint32_t number_of_dispatches = test_arguments.multiplier;
-  uint64_t number_of_all_allocations = 3 * number_of_dispatches;
+  uint64_t number_of_all_allocations =
+      used_vectors_in_test * number_of_dispatches;
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
   bool relax_memory_capability;
@@ -145,30 +146,44 @@ TEST_P(
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,
       test_total_memory_size, test_single_allocation_memory_size,
-      number_of_all_allocations, test_arguments.total_memory_size_limit,
-      test_arguments.one_allocation_size_limit, relax_memory_capability);
+      number_of_all_allocations, test_arguments, relax_memory_capability);
 
-  if (test_single_allocation_memory_size > (16ull * 1024ull * 1024ull * 1024ull)) {
-      LOG_WARNING << "Single size allocation " << test_single_allocation_memory_size
-          << " exceeds 16GB, adjusting it to 16GB";
-      test_single_allocation_memory_size = (16ull * 1024ull * 1024ull * 1024ull);
+  if (number_of_all_allocations !=
+      used_vectors_in_test * number_of_dispatches) {
+
+    LOG_INFO << "Need to limit dispatches from : " << number_of_dispatches
+             << " to: " << number_of_all_allocations / used_vectors_in_test;
+    number_of_dispatches =
+        number_of_all_allocations /
+        used_vectors_in_test; // bacause number_of_all_allocations can change;
   }
-  if(test_single_allocation_memory_size < kernel_copy_unit_size) {
-      LOG_WARNING << "Single size allocation " << test_single_allocation_memory_size
-          << "is smaller than the copy unit size "<< kernel_copy_unit_size
-          << ", skipping the test.";
-      return;
+  if (test_single_allocation_memory_size >
+      (16ull * 1024ull * 1024ull * 1024ull)) {
+    LOG_WARNING << "Single size allocation "
+                << test_single_allocation_memory_size
+                << " exceeds 16GB, adjusting it to 16GB";
+    test_single_allocation_memory_size = (16ull * 1024ull * 1024ull * 1024ull);
+  }
+  if (test_single_allocation_memory_size < kernel_copy_unit_size) {
+    LOG_WARNING << "Single size allocation "
+                << test_single_allocation_memory_size
+                << "is smaller than the copy unit size "
+                << kernel_copy_unit_size << ", skipping the test.";
+    return;
   }
 
-  uint64_t tmp_count = test_single_allocation_memory_size / kernel_copy_unit_size;
+  uint64_t tmp_count =
+      test_single_allocation_memory_size / kernel_copy_unit_size;
   uint64_t test_single_allocation_count =
       tmp_count - tmp_count % workgroup_size_x_;
-  test_single_allocation_memory_size = test_single_allocation_count * kernel_copy_unit_size;
+  test_single_allocation_memory_size =
+      test_single_allocation_count * kernel_copy_unit_size;
   LOG_INFO << "Test one allocation data count: "
            << test_single_allocation_count;
   LOG_INFO << "Test number of allocations: " << number_of_all_allocations;
   LOG_INFO << "Test kernel dispatches count: " << number_of_dispatches;
-  LOG_INFO << "Adjusted Allocation size: " << test_single_allocation_memory_size;
+  LOG_INFO << "Adjusted Allocation size: "
+           << test_single_allocation_memory_size;
 
   std::vector<kernel_copy_unit_t *> input_allocations;
   std::vector<kernel_copy_unit_t *> output_allocations;
@@ -184,21 +199,24 @@ TEST_P(
     kernel_copy_unit_t *output_allocation = allocate_memory<kernel_copy_unit_t>(
         context, device, test_arguments.memory_type,
         test_single_allocation_memory_size, relax_memory_capability);
-    if(input_allocation == nullptr || output_allocation == nullptr) {
-        LOG_WARNING << "Cannot allocate "<< ((input_allocation ==nullptr)? "input":"output")
-            << " memory for dispatch id " << dispatch_id << ", terminating";
-        for(auto each_allocation : input_allocations) {
-            lzt::free_memory(context, each_allocation);
-        }
-        for(auto each_allocation : output_allocations) {
-            lzt::free_memory(context, each_allocation);
-        }
-        return;
+    if (input_allocation == nullptr || output_allocation == nullptr) {
+      LOG_WARNING << "Cannot allocate "
+                  << ((input_allocation == nullptr) ? "input" : "output")
+                  << " memory for dispatch id " << dispatch_id
+                  << ", terminating";
+      for (auto each_allocation : input_allocations) {
+        lzt::free_memory(context, each_allocation);
+      }
+      for (auto each_allocation : output_allocations) {
+        lzt::free_memory(context, each_allocation);
+      }
+      return;
     }
     input_allocations.push_back(input_allocation);
     output_allocations.push_back(output_allocation);
 
-    std::vector<uint8_t> data_out(test_single_allocation_count * kernel_copy_unit_size, init_value_1_);
+    std::vector<uint8_t> data_out(
+        test_single_allocation_count * kernel_copy_unit_size, init_value_1_);
     data_out_vector.push_back(data_out);
 
     std::string kernel_name;
@@ -212,7 +230,8 @@ TEST_P(
   LOG_INFO << "call create module";
   ze_module_handle_t module_handle = lzt::create_module(
       context, device, "test_multiple_memory_allocations.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required", nullptr);
+      ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required",
+      nullptr);
 
   LOG_INFO << "call dispatch_kernels";
   dispatch_kernels(device, module_handle, input_allocations, output_allocations,
@@ -235,13 +254,13 @@ TEST_P(
   LOG_INFO << "call verification output";
   bool memory_test_failure = false;
   for (size_t v = 0; v < data_out_vector.size(); v++) {
-        auto each_data_out = data_out_vector[v];
-    for (uint64_t i = 0; i < test_single_allocation_count * kernel_copy_unit_size; i++) {
+    auto each_data_out = data_out_vector[v];
+    for (uint64_t i = 0;
+         i < test_single_allocation_count * kernel_copy_unit_size; i++) {
       if (init_value_2_ != each_data_out[i]) {
-        LOG_INFO << "dispatch "<< v
-                 <<", index of difference " << i << " found = 0x"
-                 << std::bitset<8>(each_data_out[i]) << " expected = 0x"
-                 << std::bitset<8>(init_value_2_);
+        LOG_INFO << "dispatch " << v << ", index of difference " << i
+                 << " found = 0x" << std::bitset<8>(each_data_out[i])
+                 << " expected = 0x" << std::bitset<8>(init_value_2_);
         memory_test_failure = true;
         break;
       }
@@ -261,7 +280,6 @@ struct CombinationsTestNameSuffix {
   }
 };
 
-//std::vector<uint32_t> multiple_dispatches = {1, 10, 1000, 5000, 10000, 20000};
 std::vector<uint32_t> multiple_dispatches = {1, 10, 1000, 5000, 10000};
 
 INSTANTIATE_TEST_CASE_P(
@@ -269,7 +287,9 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent),
                        ::testing::ValuesIn(multiple_dispatches),
-                       ::testing::Values(MTT_HOST, MTT_SHARED, MTT_DEVICE)),
+                       ::testing::Values(ZE_MEMORY_TYPE_HOST,
+                                         ZE_MEMORY_TYPE_SHARED,
+                                         ZE_MEMORY_TYPE_DEVICE)),
     CombinationsTestNameSuffix());
 
 INSTANTIATE_TEST_CASE_P(
@@ -277,7 +297,9 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(ten_percent),
                        ::testing::ValuesIn(multiple_dispatches),
-                       ::testing::Values(MTT_HOST, MTT_SHARED, MTT_DEVICE)),
+                       ::testing::Values(ZE_MEMORY_TYPE_HOST,
+                                         ZE_MEMORY_TYPE_SHARED,
+                                         ZE_MEMORY_TYPE_DEVICE)),
     CombinationsTestNameSuffix());
 
 } // namespace

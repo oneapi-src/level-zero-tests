@@ -24,7 +24,7 @@ namespace {
 class zeDriverMultiplyEventsStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<float, float, uint64_t, enum memory_test_type>> {
+          std::tuple<float, float, uint64_t, ze_memory_type_t>> {
 protected:
   ze_kernel_handle_t create_kernel(ze_module_handle_t module,
                                    const std::string &kernel_name,
@@ -75,17 +75,27 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
   std::vector<ze_device_memory_properties_t> device_memory_properties =
       lzt::get_memory_properties(device);
 
-  const uint64_t number_of_all_allocations = 2 * test_arguments.multiplier;
+  const uint32_t used_vectors_in_test = 2;
+  uint64_t number_of_all_allocations =
+      used_vectors_in_test * test_arguments.multiplier;
 
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
   bool relax_memory_capability;
+
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,
       test_total_memory_size, test_single_allocation_memory_size,
-      number_of_all_allocations, test_arguments.total_memory_size_limit,
-      test_arguments.one_allocation_size_limit, relax_memory_capability);
+      number_of_all_allocations, test_arguments, relax_memory_capability);
 
+  if (number_of_all_allocations !=
+      used_vectors_in_test * test_arguments.multiplier) {
+
+    LOG_INFO << "Need to limit dispatches from : " << test_arguments.multiplier
+             << " to: " << number_of_all_allocations / used_vectors_in_test;
+    test_arguments.multiplier =
+        number_of_all_allocations / used_vectors_in_test;
+  }
   uint64_t tmp_count = test_single_allocation_memory_size / sizeof(uint32_t);
   uint64_t test_single_allocation_count =
       tmp_count - tmp_count % workgroup_size_x_;
@@ -269,7 +279,7 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
   std::vector<ze_device_memory_properties_t> device_memory_properties =
       lzt::get_memory_properties(device);
 
-  const uint64_t number_of_all_allocations = 4;
+  uint64_t number_of_all_allocations = 4;
 
   uint64_t test_single_allocation_memory_size =
       test_arguments.multiplier * sizeof(uint32_t);
@@ -278,11 +288,12 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
                                     test_single_allocation_memory_size *
                                     test_arguments.total_memory_size_limit;
   bool relax_memory_capability;
+
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,
       test_total_memory_size, test_single_allocation_memory_size,
-      number_of_all_allocations, test_arguments.total_memory_size_limit,
-      test_arguments.one_allocation_size_limit, relax_memory_capability);
+      number_of_all_allocations, test_arguments, relax_memory_capability);
+
   uint64_t test_single_allocation_count =
       test_single_allocation_memory_size / sizeof(uint32_t);
 
@@ -428,19 +439,19 @@ std::vector<uint64_t> multiple_events = {
     1,    32,   64,    128,    256,     512,     1024,
     5000, 9000, 10000, 100000, 1000000, 2000000, 10000000};
 
-INSTANTIATE_TEST_CASE_P(TestEventsMatrixMinMemory,
-                        zeDriverMultiplyEventsStressTest,
-                        ::testing::Combine(::testing::Values(hundred_percent),
-                                           ::testing::Values(one_percent),
-                                           testing::ValuesIn(multiple_events),
-                                           testing::Values(MTT_DEVICE)),
-                        CombinationsTestNameSuffix());
-INSTANTIATE_TEST_CASE_P(TestEventsMatrixMaxMemory,
-                        zeDriverMultiplyEventsStressTest,
-                        ::testing::Combine(::testing::Values(hundred_percent),
-                                           ::testing::Values(hundred_percent),
-                                           testing::ValuesIn(multiple_events),
-                                           testing::Values(MTT_DEVICE)),
-                        CombinationsTestNameSuffix());
+INSTANTIATE_TEST_CASE_P(
+    TestEventsMatrixMinMemory, zeDriverMultiplyEventsStressTest,
+    ::testing::Combine(::testing::Values(hundred_percent),
+                       ::testing::Values(one_percent),
+                       testing::ValuesIn(multiple_events),
+                       testing::Values(ZE_MEMORY_TYPE_DEVICE)),
+    CombinationsTestNameSuffix());
+INSTANTIATE_TEST_CASE_P(
+    TestEventsMatrixMaxMemory, zeDriverMultiplyEventsStressTest,
+    ::testing::Combine(::testing::Values(hundred_percent),
+                       ::testing::Values(hundred_percent),
+                       testing::ValuesIn(multiple_events),
+                       testing::Values(ZE_MEMORY_TYPE_DEVICE)),
+    CombinationsTestNameSuffix());
 
 } // namespace

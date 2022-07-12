@@ -23,7 +23,7 @@ namespace {
 class zeDriverMultiplyObjectsStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<float, float, uint32_t, enum memory_test_type, uint64_t,
+          std::tuple<float, float, uint32_t, ze_memory_type_t, uint64_t,
                      uint64_t, uint64_t, uint64_t>> {
 protected:
   ze_kernel_handle_t create_kernel(ze_module_handle_t module,
@@ -114,7 +114,9 @@ TEST_P(zeDriverMultiplyObjectsStressTest,
                                   test_arguments.multiply_modules *
                                   test_arguments.multiply_command_lists *
                                   test_arguments.multiply_command_queues;
-  const uint64_t number_of_all_allocations = 2 * requested_dispatches;
+  const uint32_t used_vectors_in_test = 3;
+  uint64_t number_of_all_allocations =
+      used_vectors_in_test * requested_dispatches;
 
   float total_memory_size_limit =
       test_arguments.base_arguments.total_memory_size_limit;
@@ -128,8 +130,41 @@ TEST_P(zeDriverMultiplyObjectsStressTest,
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,
       test_total_memory_size, test_single_allocation_memory_size,
-      number_of_all_allocations, total_memory_size_limit,
-      one_allocation_size_limit, relax_memory_capability);
+      number_of_all_allocations, test_arguments.base_arguments,
+      relax_memory_capability);
+
+  if (number_of_all_allocations !=
+      used_vectors_in_test * requested_dispatches) {
+
+    LOG_INFO << "Need to limit dispatches from : " << requested_dispatches
+             << " to: " << number_of_all_allocations / used_vectors_in_test;
+
+    requested_dispatches = number_of_all_allocations / used_vectors_in_test;
+    while (requested_dispatches < test_arguments.multiply_kernels *
+                                      test_arguments.multiply_modules *
+                                      test_arguments.multiply_command_lists *
+                                      test_arguments.multiply_command_queues) {
+      if (test_arguments.multiply_kernels == 1 &&
+          test_arguments.multiply_modules == 1 &&
+          test_arguments.multiply_command_lists == 1 &&
+          test_arguments.multiply_command_queues == 1)
+        break;
+
+      if (test_arguments.multiply_kernels > 1)
+        --test_arguments.multiply_kernels;
+      else if (test_arguments.multiply_modules > 1)
+        --test_arguments.multiply_modules;
+      else if (test_arguments.multiply_command_lists > 1)
+        --test_arguments.multiply_command_lists;
+      else if (test_arguments.multiply_command_queues > 1)
+        --test_arguments.multiply_command_queues;
+    }
+
+    requested_dispatches = test_arguments.multiply_kernels *
+                           test_arguments.multiply_modules *
+                           test_arguments.multiply_command_lists *
+                           test_arguments.multiply_command_queues;
+  }
 
   uint32_t tmp_count = test_single_allocation_memory_size / sizeof(uint32_t);
   uint32_t test_single_allocation_count =
@@ -276,7 +311,7 @@ INSTANTIATE_TEST_CASE_P(
     zeDriverMultiplyObjectsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(one_percent), ::testing::Values(1),
-                       testing::Values(MTT_DEVICE),
+                       testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::ValuesIn(multiple_kernels),
                        ::testing::ValuesIn(multiple_modules),
                        ::testing::ValuesIn(multiple_command_lists),
@@ -287,7 +322,7 @@ INSTANTIATE_TEST_CASE_P(
     zeDriverMultiplyObjectsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent), ::testing::Values(1),
-                       testing::Values(MTT_DEVICE),
+                       testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::ValuesIn(multiple_kernels),
                        ::testing::ValuesIn(multiple_modules),
                        ::testing::ValuesIn(multiple_command_lists),
