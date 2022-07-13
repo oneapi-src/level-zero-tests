@@ -56,6 +56,9 @@ std::vector<ze_device_memory_properties_t>
 get_memory_properties(ze_device_handle_t device);
 std::vector<ze_device_memory_properties_t>
 get_memory_properties(ze_device_handle_t device, uint32_t count);
+std::vector<ze_device_memory_properties_t> get_memory_properties_ext(
+    ze_device_handle_t device, uint32_t count,
+    std::vector<ze_device_memory_ext_properties_t> &extProperties);
 ze_device_external_memory_properties_t
 get_external_memory_properties(ze_device_handle_t device);
 ze_device_memory_access_properties_t

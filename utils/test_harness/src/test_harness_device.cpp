@@ -163,6 +163,24 @@ get_memory_properties(ze_device_handle_t device, uint32_t count) {
   return properties;
 }
 
+std::vector<ze_device_memory_properties_t> get_memory_properties_ext(
+    ze_device_handle_t device, uint32_t count,
+    std::vector<ze_device_memory_ext_properties_t> &extProperties) {
+  std::vector<ze_device_memory_properties_t> properties(count);
+  memset(properties.data(), 0, sizeof(ze_device_memory_properties_t) * count);
+  for (int i = 0; i < count; i++) {
+    properties[i].stype = ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
+    extProperties[i].stype = ZE_STRUCTURE_TYPE_DEVICE_MEMORY_EXT_PROPERTIES;
+    properties[i].pNext = &extProperties[i];
+  }
+
+  auto device_initial = device;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetMemoryProperties(device, &count, properties.data()));
+  EXPECT_EQ(device, device_initial);
+  return properties;
+}
+
 ze_device_external_memory_properties_t
 get_external_memory_properties(ze_device_handle_t device) {
   ze_device_external_memory_properties_t properties;
