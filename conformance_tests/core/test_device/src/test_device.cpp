@@ -358,7 +358,7 @@ TEST_F(DevicePropertiesTest,
         iterSkuHandles->deviceHandlesForSku.front();
     ze_device_properties_t firstDeviceProperties =
         lzt::get_device_properties(firstDeviceHandle);
-    EXPECT_FALSE(firstDeviceProperties.flags |
+    EXPECT_FALSE(firstDeviceProperties.flags &
                  ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE);
 
     bool first_iteration = true;
@@ -378,13 +378,13 @@ TEST_F(DevicePropertiesTest,
         EXPECT_FALSE(areDeviceUuidsEqual(firstDeviceProperties.uuid,
                                          iterDeviceProperties.uuid));
       }
-      EXPECT_FALSE(iterDeviceProperties.flags |
+      EXPECT_FALSE(iterDeviceProperties.flags &
                    ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE);
       EXPECT_EQ(firstDeviceProperties.coreClockRate,
                 iterDeviceProperties.coreClockRate);
       EXPECT_EQ(
-          firstDeviceProperties.flags | ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING,
-          iterDeviceProperties.flags | ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING);
+          firstDeviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING,
+          iterDeviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING);
 
       EXPECT_EQ(firstDeviceProperties.numThreadsPerEU,
                 iterDeviceProperties.numThreadsPerEU);
