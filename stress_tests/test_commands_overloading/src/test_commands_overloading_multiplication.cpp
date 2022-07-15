@@ -125,7 +125,7 @@ TEST_P(zeDriverMultiplyObjectsStressTest,
 
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
-  bool relax_memory_capability;
+  bool relax_memory_capability = false;
 
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,

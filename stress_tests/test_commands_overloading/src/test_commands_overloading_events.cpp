@@ -81,7 +81,7 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
 
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
-  bool relax_memory_capability;
+  bool relax_memory_capability = false;
 
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,
@@ -287,7 +287,7 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
   uint64_t test_total_memory_size = number_of_all_allocations *
                                     test_single_allocation_memory_size *
                                     test_arguments.total_memory_size_limit;
-  bool relax_memory_capability;
+  bool relax_memory_capability = false;
 
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,

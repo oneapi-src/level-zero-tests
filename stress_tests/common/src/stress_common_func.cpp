@@ -63,6 +63,7 @@ void adjust_max_memory_allocation(
     } else {
       LOG_INFO << "Relax memory capability enabled. Higher memory allocation "
                   "allowed. ";
+      relax_memory_capability = true;
     }
   }
 

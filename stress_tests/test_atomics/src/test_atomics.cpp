@@ -70,7 +70,7 @@ TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
       test_arguments.base_arguments.one_allocation_size_limit;
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
-  bool relax_memory_capability;
+  bool relax_memory_capability = false;
   adjust_max_memory_allocation(
       driver, device_properties, device_memory_properties,
       test_total_memory_size, test_single_allocation_memory_size,
