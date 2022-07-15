@@ -44,7 +44,8 @@ static void run_child_process(std::string driver_id, std::string affinity_mask,
   std::getline(child_output, result_string);
 
   LOG_INFO << "[Affinity Mask: " << affinity_mask << "]";
-  LOG_INFO << "Result from Child: " << result_string;
+  LOG_INFO << "Result from Child (RETURN CODE : NUMBER of DEVICES) : "
+           << result_string;
 
   auto result_code =
       std::stoul(result_string.substr(0, result_string.find(":")));
@@ -59,26 +60,118 @@ static void run_child_process(std::string driver_id, std::string affinity_mask,
   }
 }
 
+void print_devices(ze_device_handle_t device, int level) {
+  if (lzt::get_ze_sub_device_count(device)) {
+    for (auto &subdevice : lzt::get_ze_sub_devices(device)) {
+      print_devices(subdevice, level + 1);
+    }
+    std::cout << " Parent Device - lvl: " << level << "\n";
+  } else {
+    std::cout << level << "\n";
+  }
+}
+
+uint16_t get_device_count(ze_device_handle_t device) {
+  if (lzt::get_ze_sub_device_count(device)) {
+    int sum = 1; // 1 for this device
+    for (auto &subdevice : lzt::get_ze_sub_devices(device)) {
+      sum += get_device_count(subdevice);
+    }
+    return sum;
+  } else {
+    return 1;
+  }
+}
+
+uint16_t get_leaf_device_count(ze_device_handle_t device) {
+  if (lzt::get_ze_sub_device_count(device)) {
+    int sum = 0;
+    for (auto &subdevice : lzt::get_ze_sub_devices(device)) {
+      sum += get_leaf_device_count(subdevice);
+    }
+    return sum;
+  } else {
+    return 1;
+  }
+}
+
+std::string get_affinity_mask_string(ze_device_handle_t device,
+                                     uint32_t &input_mask,
+                                     uint16_t parent_index, uint16_t my_index,
+                                     uint16_t &devices_present) {
+
+  std::stringstream output_mask;
+  auto device_count = get_device_count(device);
+  if (device_count == 1) {
+    if (input_mask & 0x01) { // device present in input_mask
+      // tell my parent that I am present
+      devices_present++;
+      // add this device to output mask
+      output_mask << my_index;
+    }
+    input_mask >>= 1;
+  } else { // device has subdevices
+    std::stringstream temp_output_mask;
+    auto sub_device_index = 0;
+    devices_present = 0;
+    auto subdevices = lzt::get_ze_sub_devices(device);
+    for (auto &sub_device : subdevices) {
+      auto result = get_affinity_mask_string(sub_device, input_mask, my_index,
+                                             sub_device_index, devices_present);
+      if (!result.empty()) {
+        temp_output_mask << result + ",";
+      }
+      sub_device_index++;
+    }
+    devices_present += 1;
+
+    // we have determined wether our descendant devices are present
+    // if all our descendants are present, then just ouput our device index
+    // **if only some of our devices are present, then concatenate those
+    // strings**
+    // if none of our descendants are present, then do nothing
+    if (devices_present == device_count) {
+      output_mask << my_index;
+    } else if (devices_present == 1) {
+    } else {
+
+      auto temp_string = temp_output_mask.str();
+      if (temp_string.size() > 1) {
+        temp_string.erase(temp_string.end() - 1);
+      }
+      auto prefix = std::to_string(my_index) + ".";
+      if (!temp_string.empty()) {
+        temp_string.insert(0, prefix);
+      }
+      auto pos = temp_string.find(",");
+      while (pos != std::string::npos) {
+        temp_string.insert(pos + 1, prefix);
+        pos = temp_string.find(",", pos + 1);
+      }
+
+      output_mask << temp_string;
+    }
+  }
+  return output_mask.str();
+}
+
 TEST(
     TestAffinity,
     GivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
 
-  std::string affinity_mask = "";
-
   for (auto driver : lzt::get_all_driver_handles()) {
     auto devices = lzt::get_devices(driver);
-    uint32_t num_total_devices = 0;
+    uint32_t num_leaf_devices = 0;
     if (devices.empty()) {
       continue;
     }
     for (auto device : devices) {
-      auto num_sub_devices = lzt::get_sub_device_count(device);
-      num_total_devices += num_sub_devices ? num_sub_devices : 1;
+      num_leaf_devices += get_leaf_device_count(device);
     }
 
     // in each mask, either a device is present or it is not,
     // so for N devices there are 2^N possible masks
-    auto num_masks = 1 << num_total_devices;
+    auto num_masks = 1 << num_leaf_devices;
     for (uint32_t mask = 0; mask < num_masks; mask++) {
       uint32_t num_devices_mask = 0;
       auto temp = mask;
@@ -88,67 +181,43 @@ TEST(
       }
       // an unset mask means all devices should be returned
       if (num_devices_mask == 0) {
-        num_devices_mask = num_total_devices;
+        num_devices_mask = num_leaf_devices;
       }
 
       // build this affinity mask string
-      std::stringstream os;
       auto temp_mask = mask;
+      std::string affinity_mask_string;
+      uint16_t parent_index = 0;
       for (int root_device = 0; root_device < devices.size(); root_device++) {
-        uint32_t num_sub_devices_in_mask = 0;
-        std::vector<int> sub_devices;
-        auto num_sub_devices = lzt::get_sub_device_count(devices[root_device]);
+        uint16_t device_present = 0;
 
-        for (int i = 0; i < num_sub_devices; i++) {
-          if (temp_mask & 0x01) { // include this subdevice?
-            num_sub_devices_in_mask++;
-            // save this subdevice
-            sub_devices.push_back(i);
+        auto temp_string =
+            get_affinity_mask_string(devices[root_device], temp_mask,
+                                     parent_index, root_device, device_present);
+        if (!temp_string.empty()) {
+          if (!affinity_mask_string.empty()) {
+            affinity_mask_string += ",";
           }
-          temp_mask >>= 1;
+          affinity_mask_string += temp_string;
         }
-
-        if (num_sub_devices == 0) {
-          if (os.rdbuf()->in_avail()) {
-            os << ",";
-          }
-          os << ((temp_mask & 0x1) ? std::to_string(root_device) : "");
-          temp_mask >>= 1;
-        } else if (!num_sub_devices_in_mask) { // no subdevices specified, don't
-                                               // include this device
-          os << "";
-        } else if (num_sub_devices_in_mask ==
-                   num_sub_devices) { // all subdevices specified
-          if (os.rdbuf()->in_avail()) {
-            os << ",";
-          }
-          os << root_device;
-        } else { // specific devices should be listed
-          if (os.rdbuf()->in_avail()) {
-            os << ",";
-          }
-          for (int j = 0; j < sub_devices.size() - 1; j++) {
-            os << root_device << "." << sub_devices[j];
-            os << ",";
-          }
-          os << root_device << "." << sub_devices[sub_devices.size() - 1];
-        }
+        parent_index++;
       }
-      affinity_mask = os.str();
 
       // launch child process with constructed mask
       auto driver_properties = lzt::get_driver_properties(driver);
       // most significant 32-bits of UUID are timestamp, which can change, so
       // zero-out least significant 32-bits are driver version
       memset(&driver_properties.uuid.id[4], 0, 4);
-      run_child_process(lzt::to_string(driver_properties.uuid), affinity_mask,
-                        num_devices_mask);
+
+      run_child_process(lzt::to_string(driver_properties.uuid),
+                        affinity_mask_string, num_devices_mask);
     }
   }
 }
 
-TEST(TestAffinity,
-     GivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturned) {
+TEST(
+    TestAffinity,
+    GivenSpecificAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturned) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
@@ -157,10 +226,9 @@ TEST(TestAffinity,
     return;
   }
 
-  uint32_t num_total_devices = 0;
+  uint32_t num_leaf_devices = 0;
   for (int i = 0; i < devices.size(); i++) {
-    auto num_sub_devices = lzt::get_sub_device_count(devices[i]);
-    num_total_devices += num_sub_devices ? num_sub_devices : 1;
+    num_leaf_devices += get_leaf_device_count(devices[i]);
   }
 
   auto mask1 = "";
@@ -171,14 +239,14 @@ TEST(TestAffinity,
   auto driver_properties = lzt::get_driver_properties(driver);
   memset(&driver_properties.uuid.id[4], 0, 4);
   run_child_process(lzt::to_string(driver_properties.uuid), mask1,
-                    num_total_devices);
+                    num_leaf_devices);
   run_child_process(lzt::to_string(driver_properties.uuid), mask2,
-                    lzt::get_ze_sub_device_count(devices[0]));
+                    get_leaf_device_count(devices[0]));
   run_child_process(lzt::to_string(driver_properties.uuid), mask3,
-                    lzt::get_ze_sub_device_count(devices[1]));
+                    get_leaf_device_count(devices[1]));
   run_child_process(lzt::to_string(driver_properties.uuid), mask4,
-                    lzt::get_ze_sub_device_count(devices[0]) +
-                        lzt::get_ze_sub_device_count(devices[1]));
+                    get_leaf_device_count(devices[0]) +
+                        get_leaf_device_count(devices[1]));
 }
 
 TEST(
@@ -192,6 +260,7 @@ TEST(
     return;
   }
 
+  auto subdevices = lzt::get_ze_sub_devices(devices[0]);
   auto mask1 = "0";
   auto mask2 = "0.0";
   auto mask3 = "0.1";
@@ -200,10 +269,17 @@ TEST(
   auto driver_properties = lzt::get_driver_properties(driver);
   memset(&driver_properties.uuid.id[4], 0, 4);
   run_child_process(lzt::to_string(driver_properties.uuid), mask1,
-                    lzt::get_ze_sub_device_count(devices[0]));
-  run_child_process(lzt::to_string(driver_properties.uuid), mask2, 1);
-  run_child_process(lzt::to_string(driver_properties.uuid), mask3, 1);
-  run_child_process(lzt::to_string(driver_properties.uuid), mask4, 2);
+                    get_leaf_device_count(devices[0]));
+
+  run_child_process(lzt::to_string(driver_properties.uuid), mask2,
+                    get_leaf_device_count(subdevices[0]));
+  run_child_process(lzt::to_string(driver_properties.uuid), mask3,
+                    get_leaf_device_count(subdevices[1]));
+  run_child_process(lzt::to_string(driver_properties.uuid), mask4,
+                    get_leaf_device_count(subdevices[0]) +
+                        get_leaf_device_count(subdevices[1]));
+
+  //
 }
 
 } // namespace
