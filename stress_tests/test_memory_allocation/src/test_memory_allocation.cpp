@@ -157,13 +157,7 @@ TEST_P(
         number_of_all_allocations /
         used_vectors_in_test; // bacause number_of_all_allocations can change;
   }
-  if (test_single_allocation_memory_size >
-      (16ull * 1024ull * 1024ull * 1024ull)) {
-    LOG_WARNING << "Single size allocation "
-                << test_single_allocation_memory_size
-                << " exceeds 16GB, adjusting it to 16GB";
-    test_single_allocation_memory_size = (16ull * 1024ull * 1024ull * 1024ull);
-  }
+
   if (test_single_allocation_memory_size < kernel_copy_unit_size) {
     LOG_WARNING << "Single size allocation "
                 << test_single_allocation_memory_size

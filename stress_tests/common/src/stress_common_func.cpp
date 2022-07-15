@@ -85,6 +85,14 @@ void adjust_max_memory_allocation(
     }
   }
 
+  if (one_allocation_size > (16ull * 1024ull * 1024ull * 1024ull)) {
+    LOG_WARNING << "Single size allocation " << one_allocation_size
+                << " exceeds 16GB, adjusting it to 16GB";
+    one_allocation_size = (16ull * 1024ull * 1024ull * 1024ull);
+    total_allocation_size = number_of_all_alloc * one_allocation_size *
+                            test_arguments.total_memory_size_limit;
+  }
+
   LOG_INFO << "Test total memory size submitted: "
            << (float)total_allocation_size / (1024 * 1024) << "MB";
   LOG_INFO << "Test single allocation memory size submitted: "
