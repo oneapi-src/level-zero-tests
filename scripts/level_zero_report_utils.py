@@ -7,7 +7,17 @@ import re
 def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str,):
         test_feature_tag = ""
         if test_section == "Core":
-            if test_feature == "Allocation Residency" or \
+            if (test_name.find("MemAdvise")!= -1) or \
+                    (test_name.find("MultiDevice")!= -1) or \
+                    (test_name.find("MemoryPrefetch")!= -1) or \
+                    (test_name.find("MemAdvice")!= -1) or \
+                    (test_name.find("MultipleRootDevices") != -1) or \
+                    (test_name.find("MultipleSubDevices") != -1) or \
+                    test_feature == "Peer-To-Peer" or \
+                    test_feature == "Sub-Devices" or \
+                    (test_feature == "Unified Shared Memory" and (test_name.find("SystemMemory") == -1)):
+                test_feature_tag = "discrete"
+            elif test_feature == "Allocation Residency" or \
                     (test_feature == "Barriers" and test_name.find("MemoryRange")!= -1) or \
                     (test_feature == "Barriers" and test_name.find("System")!= -1) or \
                     (test_feature == "Command Lists" and test_name.find("Immediate")!= -1) or \
@@ -34,6 +44,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_name.find("KernelCopyTests") != -1) or \
                     (test_name.find("Thread") != -1) or \
                     (test_name.find("Affinity") != -1) or \
+                    (test_name.find("Luid") != -1) or \
                     (re.search('concurrent', test_name, re.IGNORECASE)) or \
                     (re.search('context', test_name, re.IGNORECASE)) or \
                     (re.search('KernelOffset', test_name, re.IGNORECASE)) or \
@@ -56,18 +67,22 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_IpcMemoryAccessTest_GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeModuleProgramTests_GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeModuleCreateTests_GivenValidDeviceAndBinaryFileWhenCreatingStatelessKernelModuleThenReturnSuccessfulAndDestroyModule', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeModuleCreateTests_GivenModuleCompiledWithOptimizationsWhenExecutingThenResultIsCorrect', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeKernelScheduleHintsTests_GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeKernelCreateTests_GivenValidFunctionWhenGettingPreferredGroupSizePropertiesThenReturn', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeIpcMemHandleCloseTests_GivenValidPointerToDeviceMemoryAllocationBiasCachedWhenClosingIpcHandleThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDriverMemFreeTests_GivenValidSharedMemAllocationWhenFreeingSharedMemoryThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDriverMemFreeTests_GivenValidHostMemAllocationWhenFreeingHostMemoryThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDriverAllocSharedMemTestVarySizeAndAlignment_zeDriverAllocSharedMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingDeviceMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDriverAllocHostMemTestVarySizeAndAlignment_zeDriverAllocHostMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingHostMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDriverAllocDeviceMemTestVarySizeAndAlignment_zeDriverAllocDeviceMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingDeviceMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_IpcMemoryAccessTest_GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDeviceGetMemoryPropertiesTests_GivenValidDeviceWhenRetrievingMemoryPropertiesThenValidExtPropertiesAreReturned', test_name, re.IGNORECASE)) or \
                     (test_name.find("Cooperative")!= -1):
                 test_feature_tag = "advanced"
-            elif (test_name.find("MemAdvise")!= -1) or \
-                    (test_name.find("MultiDevice")!= -1) or \
-                    (test_name.find("MemoryPrefetch")!= -1) or \
-                    (test_name.find("MemAdvice")!= -1) or \
-                    (test_name.find("MultipleRootDevices") != -1) or \
-                    (test_name.find("MultipleSubDevices") != -1) or \
-                    test_feature == "Peer-To-Peer" or \
-                    test_feature == "Sub-Devices" or \
-                    (test_feature == "Unified Shared Memory" and (test_name.find("SystemMemory") == -1)):
-                test_feature_tag = "discrete"
             else:
                 test_feature_tag = "basic"
         elif test_section == "Tool":
@@ -130,6 +145,8 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "Metrics"
     elif (re.search('debug', test_binary, re.IGNORECASE)):
         test_feature = "Program Debug"
+    elif test_binary == "test_sysman_ecc":
+        test_feature = "SysMan ECC"
     if test_feature == "None":
         print("ERROR: test case " + test_name + " has no assigned feature\n")
     return test_feature
