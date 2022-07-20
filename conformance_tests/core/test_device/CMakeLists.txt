@@ -7,6 +7,7 @@ add_lzt_test(
   SOURCES
     src/test_device.cpp
     src/test_affinity.cpp
+    src/test_luid.cpp
     src/test_memory_properties_ext.cpp
     src/main.cpp
   LINK_LIBRARIES
