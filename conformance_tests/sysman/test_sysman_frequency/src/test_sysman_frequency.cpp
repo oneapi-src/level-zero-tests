@@ -491,4 +491,123 @@ TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
   }
 }
 
+// Function(thread 1) to run frequency checks while GPU workload is running
+void checkFreqInLoop(zes_freq_handle_t pfreq_handle) {
+  // Loop counter
+  int counter = 100;
+
+  // Get current min/max frequency setting
+  zes_freq_range_t limits = {};
+  limits = lzt::get_freq_range(pfreq_handle);
+
+  // Monitor actual frequency in loop[fixed loop count]
+  do {
+    counter--;
+    zes_freq_state_t state = lzt::get_freq_state(pfreq_handle);
+    lzt::validate_freq_state(pfreq_handle, state);
+    if (state.actual > 0) {
+      EXPECT_LE(state.actual, limits.max);
+      EXPECT_GE(state.actual, limits.min);
+    } else {
+      LOG_INFO << "Actual frequency is unknown";
+    }
+    // Sleep for some fixed duration before next check
+    std::this_thread::sleep_for(
+        std::chrono::microseconds(1000 * IDLE_WAIT_TIMESTEP_MSEC));
+  } while (counter > 0);
+}
+
+// Function(thread 2) to run workload on GPU
+void loadForGpuMaxFreqTest() {
+  int m, k, n;
+  m = k = n = 10000;
+  std::vector<float> a(m * k, 1);
+  std::vector<float> b(k * n, 1);
+  std::vector<float> c(m * n, 0);
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
+  void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
+  void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
+  ze_module_handle_t module =
+      lzt::create_module(device, "sysman_matrix_multiplication.spv",
+                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_kernel_handle_t function =
+      lzt::create_function(module, "sysman_matrix_multiplication");
+  lzt::set_group_size(function, 16, 16, 1);
+  lzt::set_argument_value(function, 0, sizeof(a_buffer), &a_buffer);
+  lzt::set_argument_value(function, 1, sizeof(b_buffer), &b_buffer);
+  lzt::set_argument_value(function, 2, sizeof(m), &m);
+  lzt::set_argument_value(function, 3, sizeof(k), &k);
+  lzt::set_argument_value(function, 4, sizeof(n), &n);
+  lzt::set_argument_value(function, 5, sizeof(c_buffer), &c_buffer);
+  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
+  std::memcpy(a_buffer, a.data(), a.size() * sizeof(float));
+  std::memcpy(b_buffer, b.data(), b.size() * sizeof(float));
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  const int group_count_x = m / 16;
+  const int group_count_y = n / 16;
+  ze_group_count_t tg;
+  tg.groupCountX = group_count_x;
+  tg.groupCountY = group_count_y;
+  tg.groupCountZ = 1;
+  zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
+  lzt::synchronize(cmd_q, UINT64_MAX);
+  std::memcpy(c.data(), c_buffer, c.size() * sizeof(float));
+  lzt::destroy_command_queue(cmd_q);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_function(function);
+  lzt::free_memory(a_buffer);
+  lzt::free_memory(b_buffer);
+  lzt::free_memory(c_buffer);
+  lzt::destroy_module(module);
+}
+
+TEST_F(
+    FrequencyModuleTest,
+    GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectActualFrequencyStaysInRangeDuringGpuLoad) {
+  for (auto device : devices) {
+    uint32_t p_count = 0;
+    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+    if (p_count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
+
+      // Fetch frequency properties
+      zes_freq_properties_t properties = {};
+      properties = lzt::get_freq_properties(pfreq_handle);
+
+      if (properties.canControl) {
+        // Set values for min and max frequencies
+        zes_freq_range_t limits = {};
+        limits.min = properties.min + (properties.max - properties.min) / 4;
+        limits.max = properties.min + (properties.max - properties.min) / 2;
+
+        lzt::set_freq_range(pfreq_handle, limits);
+        lzt::idle_check(pfreq_handle);
+
+        // Thread to start workload on GPU
+        std::thread first(loadForGpuMaxFreqTest);
+        // Thread to monitor actual frequency
+        std::thread second(checkFreqInLoop, pfreq_handle);
+
+        // wait for threads to finish
+        first.join();
+        second.join();
+      } else {
+        // User cannot control min,max frequency settings
+        LOG_WARNING
+            << "User cannot control min/max frequency setting, skipping test";
+      }
+    }
+  }
+}
+
 } // namespace
