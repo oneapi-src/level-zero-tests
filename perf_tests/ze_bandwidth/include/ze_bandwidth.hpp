@@ -17,6 +17,7 @@ public:
   int parse_arguments(int argc, char **argv);
   void test_host2device(void);
   void test_device2host(void);
+  void test_bidir(void);
   void ze_bandwidth_query_engines();
 
   std::vector<size_t> transfer_size;
@@ -26,18 +27,26 @@ public:
   bool run_host2dev = true;
   bool run_dev2host = true;
   uint32_t number_iterations = 500;
+  uint32_t warmup_iterations = 10;
   bool query_engines = false;
   bool enable_fixed_ordinal_index = false;
   uint32_t command_queue_group_ordinal = 0;
   uint32_t command_queue_index = 0;
+  bool run_bidirectional = false;
   bool csv_output = false;
+  ze_event_pool_handle_t event_pool = {};
+  ze_event_handle_t event = {};
 
 private:
   void transfer_size_test(size_t size, void *destination_buffer,
                           void *source_buffer, long double &total_time_nsec);
   void transfer_size_test_verify(size_t size, long double &host2dev_time_nsec,
                                  long double &dev2host_time_nsec);
-  long double measure_transfer(uint32_t num_transfer);
+  void transfer_bidir_size_test(size_t size, void *destination_buffer,
+                                void *source_buffer, void *destination_buffer1,
+                                void *source_buffer1,
+                                long double &total_time_nsec);
+  long double measure_transfer();
   void measure_transfer_verify(size_t buffer_size, uint32_t num_transfer,
                                long double &host2dev_time_nsec,
                                long double &dev2host_time_nsec);
@@ -47,17 +56,23 @@ private:
   void print_results_device2host(size_t buffer_size,
                                  long double total_bandwidth,
                                  long double total_latency);
+  void print_results_bidir(size_t buffer_size, long double total_bandwidth,
+                           long double total_latency);
   void calculate_metrics(long double total_time_nsec, /* Units in nanoseconds */
                          long double total_data_transfer, /* Units in bytes */
                          long double &total_bandwidth,
                          long double &total_latency);
   ZeApp *benchmark;
   ze_command_queue_handle_t command_queue;
+  ze_command_queue_handle_t command_queue1;
   ze_command_list_handle_t command_list;
+  ze_command_list_handle_t command_list1;
   ze_command_list_handle_t command_list_verify;
   std::vector<ze_command_queue_group_properties_t> queueProperties;
 
   void *device_buffer;
+  void *device_buffer1;
   void *host_buffer;
+  void *host_buffer1;
   void *host_buffer_verify;
 };

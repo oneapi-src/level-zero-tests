@@ -31,17 +31,23 @@ To use command line option features:
  OPTIONS:
   -t, string               selectively run a particular test:
       h2d or H2D                       run only Host-to-Device tests
-      d2h or D2H                       run only Device-to-Host tests 
+      d2h or D2H                       run only Device-to-Host tests
                             [default:  both]
-  -v                       enable verificaton
+  -v                       enable verification
                             [default:  disabled]
   -i                       set number of iterations per transfer
                             [default:  500]
-  -s                       select only one transfer size (bytes) 
+  -w                       set number of warmup iterations
+                            [default:  10]
+  -s                       select only one transfer size (bytes)
   -sb                      select beginning transfer size (bytes)
                             [default:  1]
   -se                      select ending transfer size (bytes)
                             [default: 2^30]
+  -q                       query for number of engines available
+  -g, group                select engine group (default: 0)
+  -n, number               select engine index (default: 0)
+  --csv                    output in csv format (default: disabled)
   -h, --help               display help message
 
 For example to run a single Host->Device test for transfer_size = 300 bytes, 100 iterations, verification enabled:

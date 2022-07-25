@@ -16,10 +16,12 @@ static const char *usage_str =
     "\n      h2d or H2D                       run only Host-to-Device tests"
     "\n      d2h or D2H                       run only Device-to-Host tests "
     "\n                            [default:  both]"
-    "\n  -v                       enable verificaton"
+    "\n  -v                       enable verification"
     "\n                            [default:  disabled]"
     "\n  -i                       set number of iterations per transfer"
     "\n                            [default:  500]"
+    "\n  -w                       set number of warmup iterations"
+    "\n                            [default:  10]"
     "\n  -s                       select only one transfer size (bytes) "
     "\n  -sb                      select beginning transfer size (bytes)"
     "\n                            [default:  1]"
@@ -59,6 +61,11 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
     } else if (strcmp(argv[i], "-i") == 0) {
       if ((i + 1) < argc) {
         number_iterations = sanitize_ulong(argv[i + 1]);
+        i++;
+      }
+    } else if (strcmp(argv[i], "-w") == 0) {
+      if ((i + 1) < argc) {
+        warmup_iterations = sanitize_ulong(argv[i + 1]);
         i++;
       }
     } else if (strcmp(argv[i], "-s") == 0) {

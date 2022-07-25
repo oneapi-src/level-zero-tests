@@ -27,6 +27,11 @@ ZeBandwidth::~ZeBandwidth() {
     benchmark->commandListDestroy(command_list_verify);
     benchmark->commandListDestroy(command_list);
     benchmark->commandQueueDestroy(command_queue);
+    benchmark->commandListDestroy(command_list1);
+    benchmark->commandQueueDestroy(command_queue1);
+
+    SUCCESS_OR_TERMINATE(zeEventDestroy(event));
+    SUCCESS_OR_TERMINATE(zeEventPoolDestroy(event_pool));
   }
 
   benchmark->singleDeviceCleanup();
@@ -75,6 +80,20 @@ void ZeBandwidth::print_results_device2host(size_t buffer_size,
   }
 }
 
+void ZeBandwidth::print_results_bidir(size_t buffer_size,
+                                      long double total_bandwidth,
+                                      long double total_latency) {
+  if (csv_output) {
+    std::cout << buffer_size << "," << std::setprecision(6) << total_bandwidth
+              << "," << std::setprecision(2) << total_latency << std::endl;
+  } else {
+    std::cout << "Device<->Host[" << std::fixed << std::setw(10) << buffer_size
+              << "]:  BW = " << std::setw(9) << std::setprecision(6)
+              << total_bandwidth << " GBPS  Latency = " << std::setw(9)
+              << std::setprecision(2) << total_latency << " usec" << std::endl;
+  }
+}
+
 void ZeBandwidth::measure_transfer_verify(size_t buffer_size,
                                           uint32_t num_transfer,
                                           long double &host2dev_time_nsec,
@@ -113,15 +132,57 @@ void ZeBandwidth::measure_transfer_verify(size_t buffer_size,
   }
 }
 
-long double ZeBandwidth::measure_transfer(uint32_t num_transfer) {
+long double ZeBandwidth::measure_transfer() {
   Timer<std::chrono::nanoseconds::period> timer;
 
-  timer.start();
-  for (uint32_t i = 0; i < num_transfer; i++) {
-    benchmark->commandQueueExecuteCommandList(command_queue, 1, &command_list);
-    benchmark->commandQueueSynchronize(command_queue);
+  if (run_bidirectional) {
+    // warm-up
+    for (uint32_t i = 0; i < warmup_iterations; i++) {
+      benchmark->commandQueueExecuteCommandList(command_queue, 1,
+                                                &command_list);
+      benchmark->commandQueueExecuteCommandList(command_queue1, 1,
+                                                &command_list1);
+
+      SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
+
+      benchmark->commandQueueSynchronize(command_queue);
+      benchmark->commandQueueSynchronize(command_queue1);
+
+      SUCCESS_OR_TERMINATE(zeEventHostReset(event));
+    }
+
+    timer.start();
+    for (uint32_t i = 0; i < number_iterations; i++) {
+      benchmark->commandQueueExecuteCommandList(command_queue, 1,
+                                                &command_list);
+      benchmark->commandQueueExecuteCommandList(command_queue1, 1,
+                                                &command_list1);
+
+      SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
+
+      benchmark->commandQueueSynchronize(command_queue);
+      benchmark->commandQueueSynchronize(command_queue1);
+
+      SUCCESS_OR_TERMINATE(zeEventHostReset(event));
+      ;
+    }
+    timer.end();
+  } else {
+    // warm-up
+    for (uint32_t i = 0; i < warmup_iterations; i++) {
+      benchmark->commandQueueExecuteCommandList(command_queue, 1,
+                                                &command_list);
+      benchmark->commandQueueSynchronize(command_queue);
+    }
+
+    timer.start();
+    for (uint32_t i = 0; i < number_iterations; i++) {
+      benchmark->commandQueueExecuteCommandList(command_queue, 1,
+                                                &command_list);
+      benchmark->commandQueueSynchronize(command_queue);
+    }
+    timer.end();
   }
-  timer.end();
 
   return timer.period_minus_overhead();
 }
@@ -158,8 +219,34 @@ void ZeBandwidth::transfer_size_test(size_t size, void *destination_buffer,
   benchmark->commandListAppendMemoryCopy(command_list, destination_buffer,
                                          source_buffer, buffer_size);
   benchmark->commandListClose(command_list);
-  total_time_nsec = measure_transfer(number_iterations);
+  total_time_nsec = measure_transfer();
   benchmark->commandListReset(command_list);
+}
+
+void ZeBandwidth::transfer_bidir_size_test(size_t size,
+                                           void *destination_buffer,
+                                           void *source_buffer,
+                                           void *destination_buffer1,
+                                           void *source_buffer1,
+                                           long double &total_time_nsec) {
+  size_t element_size = sizeof(uint8_t);
+  size_t buffer_size = element_size * size;
+  long double total_time_s;
+  long double total_data_transfer;
+
+  SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
+      command_list, destination_buffer, source_buffer, buffer_size, nullptr, 1,
+      &event));
+  benchmark->commandListClose(command_list);
+
+  SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
+      command_list1, destination_buffer1, source_buffer1, buffer_size, nullptr,
+      1, &event));
+  benchmark->commandListClose(command_list1);
+
+  total_time_nsec = measure_transfer();
+  benchmark->commandListReset(command_list);
+  benchmark->commandListReset(command_list1);
 }
 
 void ZeBandwidth::test_host2device(void) {
@@ -274,6 +361,40 @@ void ZeBandwidth::test_device2host(void) {
   }
 }
 
+void ZeBandwidth::test_bidir(void) {
+  long double total_bandwidth;
+  long double total_latency;
+
+  std::cout << std::endl;
+  std::cout
+      << "BIDIRECTIONAL DEVICE-TO-HOST/HOST-TO-DEVICE BANDWIDTH AND LATENCY"
+      << std::endl;
+  if (csv_output) {
+    std::cout << "Transfer_size,Bandwidth_(GBPS),Latency_(usec)" << std::endl;
+  }
+  for (auto size : transfer_size) {
+    long double total_time_nsec;
+
+    benchmark->memoryAlloc(size, &device_buffer);
+    benchmark->memoryAllocHost(size, &host_buffer);
+    benchmark->memoryAlloc(size, &device_buffer1);
+    benchmark->memoryAllocHost(size, &host_buffer1);
+
+    transfer_bidir_size_test(size, host_buffer, device_buffer, device_buffer1,
+                             host_buffer1, total_time_nsec);
+
+    benchmark->memoryFree(device_buffer);
+    benchmark->memoryFree(host_buffer);
+    benchmark->memoryFree(device_buffer1);
+    benchmark->memoryFree(host_buffer1);
+
+    calculate_metrics(total_time_nsec,
+                      static_cast<long double>(2 * size * number_iterations),
+                      total_bandwidth, total_latency);
+    print_results_bidir(size, total_bandwidth, total_latency);
+  }
+}
+
 //---------------------------------------------------------------------
 // Utility function to query queue group properties
 //---------------------------------------------------------------------
@@ -306,58 +427,67 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
     }
   }
 
-  if (enable_fixed_ordinal_index) {
-    if (command_queue_group_ordinal >= numQueueGroups) {
-      std::cout << "Specified command queue group "
-                << command_queue_group_ordinal
-                << " is not valid, defaulting to first group" << std::endl;
-      benchmark->commandQueueCreate(0, &command_queue);
-      benchmark->commandListCreate(&command_list);
-      benchmark->commandListCreate(&command_list_verify);
-    } else if (queueProperties[command_queue_group_ordinal].flags &
-               ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
-      std::cout << "The ordinal provided matches COMPUTE engine, so "
-                   "fixed ordinal will be used\n";
-      if (command_queue_index >=
-          queueProperties[command_queue_group_ordinal].numQueues) {
-        command_queue_index = 0;
-      }
-      benchmark->commandQueueCreate(0, command_queue_group_ordinal,
-                                    command_queue_index, &command_queue);
-      benchmark->commandListCreate(0, command_queue_group_ordinal,
-                                   &command_list);
-      benchmark->commandListCreate(0, command_queue_group_ordinal,
-                                   &command_list_verify);
-
-    } else if ((queueProperties[command_queue_group_ordinal].flags &
-                ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
-               !(queueProperties[command_queue_group_ordinal].flags &
-                 ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
-      std::cout << "The ordinal provided matches COPY engine, so "
-                   "fixed ordinal will be used\n";
-      if (command_queue_index >=
-          queueProperties[command_queue_group_ordinal].numQueues) {
-        command_queue_index = 0;
-      }
-      benchmark->commandQueueCreate(0, command_queue_group_ordinal,
-                                    command_queue_index, &command_queue);
-      benchmark->commandListCreate(0, command_queue_group_ordinal,
-                                   &command_list);
-      benchmark->commandListCreate(0, command_queue_group_ordinal,
-                                   &command_list_verify);
-    } else {
-      std::cout << "The ordinal provided neither matches COMPUTE nor COPY "
-                   "engine, so disabling fixed dispatch\n";
-      benchmark->commandQueueCreate(0, &command_queue);
-      benchmark->commandListCreate(&command_list);
-      benchmark->commandListCreate(&command_list_verify);
-    }
-    std::cout << std::endl;
-  } else {
-    benchmark->commandQueueCreate(0, &command_queue);
-    benchmark->commandListCreate(&command_list);
-    benchmark->commandListCreate(&command_list_verify);
+  if (command_queue_group_ordinal >= numQueueGroups) {
+    command_queue_group_ordinal = 0;
+    std::cout << "Specified command queue group " << command_queue_group_ordinal
+              << " is not valid, defaulting to first group" << std::endl;
   }
+
+  if (command_queue_index >=
+      queueProperties[command_queue_group_ordinal].numQueues) {
+    command_queue_index = 0;
+    std::cout << "Specified command queue index " << command_queue_group_ordinal
+              << " is not valid for group " << command_queue_group_ordinal
+              << ", defaulting to first index" << std::endl;
+  }
+
+  if (queueProperties[command_queue_group_ordinal].flags &
+      ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
+    if ((run_host2dev && run_dev2host) == false) {
+      std::cout << "Using compute engine " << command_queue_index << "\n";
+    } else {
+      std::cout << "Using compute engines " << command_queue_index << " and "
+                << ((command_queue_index + 1) %
+                    queueProperties[command_queue_group_ordinal].numQueues)
+                << "\n";
+    }
+  } else if ((queueProperties[command_queue_group_ordinal].flags &
+              ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
+             !(queueProperties[command_queue_group_ordinal].flags &
+               ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
+    if ((run_host2dev && run_dev2host) == false) {
+      std::cout << "Using copy engine " << command_queue_index << "\n";
+    } else {
+      std::cout << "Using copy engines " << command_queue_index << " and "
+                << ((command_queue_index + 1) %
+                    queueProperties[command_queue_group_ordinal].numQueues)
+                << "\n";
+    }
+  }
+
+  benchmark->commandQueueCreate(0, command_queue_group_ordinal,
+                                command_queue_index, &command_queue);
+  benchmark->commandListCreate(0, command_queue_group_ordinal, &command_list);
+
+  benchmark->commandQueueCreate(
+      0, command_queue_group_ordinal,
+      (command_queue_index + 1) %
+          queueProperties[command_queue_group_ordinal].numQueues,
+      &command_queue1);
+  benchmark->commandListCreate(0, command_queue_group_ordinal, &command_list1);
+
+  benchmark->commandListCreate(0, command_queue_group_ordinal,
+                               &command_list_verify);
+
+  ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC};
+  event_pool_desc.count = 1;
+  event_pool_desc.flags = {};
+  SUCCESS_OR_TERMINATE(zeEventPoolCreate(benchmark->context, &event_pool_desc,
+                                         0, nullptr, &event_pool));
+
+  ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+  SUCCESS_OR_TERMINATE(zeEventCreate(event_pool, &event_desc, &event));
 }
 
 int main(int argc, char **argv) {
@@ -387,6 +517,11 @@ int main(int argc, char **argv) {
 
     if (bw.run_dev2host) {
       bw.test_device2host();
+    }
+
+    if (bw.run_host2dev && bw.run_dev2host) {
+      bw.run_bidirectional = true;
+      bw.test_bidir();
     }
 
     std::cout << std::endl;
