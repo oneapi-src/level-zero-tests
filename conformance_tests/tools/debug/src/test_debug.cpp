@@ -671,7 +671,8 @@ TEST_F(
   run_proc_entry_exit_test(all_sub_devices, true, MULTIPLE_IMM_CL);
 }
 
-void verify_single_thread(const zet_debug_session_handle_t &debug_session) {
+void verify_single_application_host_thread(
+    const zet_debug_session_handle_t &debug_session) {
 
   zet_debug_event_t debug_event;
   LOG_DEBUG << "[Debugger] Waiting for application process entry debug event "
@@ -695,8 +696,8 @@ void verify_single_thread(const zet_debug_session_handle_t &debug_session) {
   ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT);
 }
 
-void read_and_verify_events(const zet_debug_session_handle_t &debug_session,
-                            uint32_t num_threads) {
+void read_and_verify_events_multithreaded_app(
+    const zet_debug_session_handle_t &debug_session) {
 
   zet_debug_event_t debug_event;
   lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
@@ -704,16 +705,16 @@ void read_and_verify_events(const zet_debug_session_handle_t &debug_session,
            << lzt::debuggerEventTypeString[debug_event.type];
   ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
 
-  auto num_threads_to_verify = num_threads;
+  auto num_application_host_threads_to_verify = 2;
   auto broken = false;
-  for (int i = 0; i < 10 * num_threads;
-       i++) { // BASIC test loads debug_add which has 5 kernels
+  for (int i = 0; i < 20; i++) {
     // module load and unload events can be interleaved if threads run
     // concurrently if threads run sequentially we will expect a process exit
     // event in this loop
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
     LOG_INFO << "[Debugger] received event: "
              << lzt::debuggerEventTypeString[debug_event.type];
+
     ASSERT_TRUE((ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) ||
                 (ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD == debug_event.type) ||
                 (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type));
@@ -724,8 +725,8 @@ void read_and_verify_events(const zet_debug_session_handle_t &debug_session,
     if (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) {
       // This means the first thread exited before the second started
       // we should break this loop
-      num_threads_to_verify--;
-      if (num_threads_to_verify == 1) {
+      num_application_host_threads_to_verify--;
+      if (num_application_host_threads_to_verify == 1) {
         broken = true;
         break;
       }
@@ -734,7 +735,7 @@ void read_and_verify_events(const zet_debug_session_handle_t &debug_session,
 
   if (broken) {
     // we should expect a process entry/load/unload/exit sequence
-    verify_single_thread(debug_session);
+    verify_single_application_host_thread(debug_session);
   } else {
     // we should expect a process exit event
     LOG_INFO << "[Debugger] Waiting for application process exit debug event";
@@ -763,7 +764,8 @@ void zetDebugEventReadTest::run_multithreaded_application_test(
 
     synchro->notify_application();
 
-    read_and_verify_events(debugSession, 2);
+    // BASIC test loads debug_add which has 5 kernels
+    read_and_verify_events_multithreaded_app(debugSession);
 
     LOG_INFO << "[Debugger] Waiting for application to finish";
     debugHelper.wait();
@@ -784,6 +786,49 @@ TEST_F(
   run_multithreaded_application_test(devices, false);
 }
 
+void read_and_verify_events_debugger_thread(
+    const zet_debug_session_handle_t &debug_session, uint64_t *gpu_buffer_va) {
+
+  LOG_INFO << "[Debugger] Event Read Thread starting...";
+  zet_debug_event_t debug_event;
+
+  std::vector<zet_debug_event_type_t> expectedEvents = {
+      ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD};
+
+  if (!check_events(debug_session, expectedEvents)) {
+    FAIL() << "[Debugger] Did not receive expected events";
+  }
+
+  lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
+  LOG_INFO << "[Debugger] received event: "
+           << lzt::debuggerEventTypeString[debug_event.type];
+  ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED);
+
+  // write to kernel buffer to signal to application to end
+  zet_debug_memory_space_desc_t memory_space_desc = {};
+
+  memory_space_desc.address = *gpu_buffer_va;
+  memory_space_desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+  memory_space_desc.stype = ZET_STRUCTURE_TYPE_DEBUG_MEMORY_SPACE_DESC;
+
+  uint8_t *buffer = new uint8_t[1];
+  buffer[0] = 0;
+  auto thread = debug_event.info.thread.thread;
+  LOG_INFO << "[Debugger] Writing to address: " << std::hex << *gpu_buffer_va;
+  lzt::debug_write_memory(debug_session, thread, memory_space_desc, 1, buffer);
+  delete[] buffer;
+  print_thread("Resuming device thread ", thread, DEBUG);
+  lzt::debug_resume(debug_session, thread);
+
+  LOG_INFO << "[Debugger] Waiting for module unload and process exit events";
+
+  expectedEvents = {ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD,
+                    ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT};
+  if (!check_events(debug_session, expectedEvents)) {
+    FAIL() << "[Debugger] Did not receive expected events";
+  }
+}
+
 void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
     std::vector<zet_device_handle_t> &devices, bool use_sub_devices) {
 
@@ -791,7 +836,8 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
     if (!is_debug_supported(device))
       continue;
 
-    debugHelper = launch_process(BASIC, device, use_sub_devices);
+    debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
+                                 use_sub_devices);
 
     zet_debug_config_t debug_config = {};
     debug_config.pid = debugHelper.id();
@@ -800,13 +846,32 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
 
-    std::thread event_read_thread(read_and_verify_events, debugSession, 1);
     synchro->notify_application();
 
-    event_read_thread.join();
+    uint64_t gpu_buffer_va = 0;
+    std::thread event_read_thread(read_and_verify_events_debugger_thread,
+                                  debugSession, &gpu_buffer_va);
+    synchro->wait_for_application_signal();
+    if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
+      FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
+    }
+
+    ze_device_thread_t device_thread;
+    device_thread.slice = UINT32_MAX;
+    device_thread.subslice = UINT32_MAX;
+    device_thread.eu = UINT32_MAX;
+    device_thread.thread = UINT32_MAX;
+
+    LOG_INFO << "[Debugger] Main thread sleeping to wait for device threads";
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    LOG_INFO << "[Debugger] Sending interrupt from main thread";
+    lzt::debug_interrupt(debugSession, device_thread);
 
     LOG_INFO << "[Debugger] Waiting for application to finish";
     debugHelper.wait();
+
+    event_read_thread.join();
 
     LOG_INFO << "[Debugger] Detaching from application";
     lzt::debug_detach(debugSession);
@@ -1395,6 +1460,8 @@ protected:
                                  bool use_sub_devices);
   void run_unavailable_thread_test(std::vector<ze_device_handle_t> &devices,
                                    bool use_sub_devices);
+  void run_interrupt_and_resume_device_threads_in_separate_host_threads_test(
+      std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
 
   zet_debug_memory_space_desc_t memorySpaceDesc;
   std::vector<ze_device_thread_t> stopped_threads;

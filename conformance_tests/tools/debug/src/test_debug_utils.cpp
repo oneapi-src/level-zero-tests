@@ -109,7 +109,7 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
   }
 }
 
-bool check_event(zet_debug_session_handle_t &debug_session,
+bool check_event(const zet_debug_session_handle_t &debug_session,
                  zet_debug_event_type_t eventType) {
 
   bool found = false;
@@ -126,10 +126,13 @@ bool check_event(zet_debug_session_handle_t &debug_session,
                 << lzt::debuggerEventTypeString[debugEvent.type];
   }
 
+  if (debugEvent.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
+    lzt::debug_ack_event(debug_session, &debugEvent);
+  }
   return found;
 }
 
-bool check_events(zet_debug_session_handle_t &debug_session,
+bool check_events(const zet_debug_session_handle_t &debug_session,
                   std::vector<zet_debug_event_type_t> eventTypes) {
 
   for (auto eventType : eventTypes) {
