@@ -1,5 +1,3 @@
-# How to Build module_fptr kernels:
-* clang -c -emit-llvm -target spir64 -o module_fptr_call.bc module_fptr_call.cl
-* llvm-spirv module_fptr_call.bc -o module_fptr_call.spv --spirv-ext=+SPV_INTEL_function_pointers
-* clang -c -emit-llvm -target spir64 -o module_fptr_call_kernels.bc module_fptr_call_kernels.cl
-* llvm-spirv module_fptr_call_kernels.bc -o module_fptr_call_kernels.spv --spirv-ext=+SPV_INTEL_function_pointers
+# How to Build CL Modules with Function Pointers:
+* clang -c -emit-llvm -target spir64 -o module_name.bc module_name.cl
+* llvm-spirv module_name.bc -o module_name.spv --spirv-ext=+SPV_INTEL_function_pointers
