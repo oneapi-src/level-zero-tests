@@ -85,7 +85,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                 test_feature_tag = "advanced"
             else:
                 test_feature_tag = "basic"
-        elif test_section == "Tool":
+        elif test_section == "Tools":
             test_feature_tag = "tools"
         elif test_section == "Negative":
             test_feature_tag = "negative"
@@ -160,7 +160,7 @@ def assign_test_feature(test_binary: str, test_name: str):
             or (re.search('debug', test_binary, re.IGNORECASE)) \
             or (test_binary == "test_metric"):
             test_feature = assign_tool_test_feature(test_binary, test_name)
-            test_section = "Tool"
+            test_section = "Tools"
             return test_feature, test_section
         if (re.search('stress', test_name, re.IGNORECASE)):
             test_section = "Stress"
