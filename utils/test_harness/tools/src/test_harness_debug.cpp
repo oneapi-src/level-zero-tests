@@ -6,8 +6,9 @@
  *
  */
 
-#include "test_harness/test_harness.hpp"
+#include <thread>
 
+#include "test_harness/test_harness.hpp"
 #include <level_zero/ze_api.h>
 #include "utils/utils.hpp"
 
