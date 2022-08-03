@@ -140,6 +140,10 @@ def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
                     failed = 1
                     break
 
+            if not unsupported:
+                if test_run.returncode:
+                    failed = 1
+
             if failed == 1:
                 result = (test_plan[i][0], test_plan[i][4], test_plan[i][3], 'FAILED')
                 results.append(result)
