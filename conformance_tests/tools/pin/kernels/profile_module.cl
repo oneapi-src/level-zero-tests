@@ -6,42 +6,36 @@
  *
  */
 
-double cnd(double d) {
-  const double A1 = 0.31938153;
-  const double A2 = -0.356563782;
-  const double A3 = 1.781477937;
-  const double A4 = -1.821255978;
-  const double A5 = 1.330274429;
-  const double RSQRT2PI = 0.39894228040143267793994605993438;
+float cnd(float d) {
+	const float       A1 = 0.31938153f;
+	const float       A2 = -0.356563782f;
+	const float       A3 = 1.781477937f;
+	const float       A4 = -1.821255978f;
+	const float       A5 = 1.330274429f;
+	const float RSQRT2PI = 0.39894228040143267793994605993438f;
 
-  double K = 1.0 / (1.0 + 0.2316419 * fabs(d));
+	float K = 1.0f / (1.0f + 0.2316419f * fabs(d));
 
-  double val = RSQRT2PI * exp(-0.5 * d * d) *
-               (K * (A1 + K * (A2 + K * (A3 + K * (A4 + K * A5)))));
+	float val = RSQRT2PI * exp(-0.5f * d * d) *
+		(K * (A1 + K * (A2 + K * (A3 + K * (A4 + K * A5)))));
 
-  if (d > 0.)
-    val = 1.0 - val;
+	if (d > 0.f)
+		val = 1.0f - val;
 
-  return val;
+	return val;
 }
 
-__kernel void blackscholes(const double riskfree, const double volatility,
-                           global const double *T, global const double *X,
-                           global const double *S, global double *Call,
-                           global double *Put) {
-  const double sqrt1_2 = 0.70710678118654752440084436210485;
-  const double c_half = 0.5;
+kernel void blackscholes(const float riskfree, const float volatility, global const float* T, global const float* X, global const float* S, global float* Call, global float* Put) {
+	const float c_half = 0.5f;
 
-  int id = get_global_id(0);
-  double sqrtT = sqrt(T[id]);
-  double d1 = (log(S[id] / X[id]) +
-               (riskfree + c_half * volatility * volatility) * T[id]) /
-              (volatility * sqrtT);
-  double d2 = d1 - volatility * sqrtT;
-  double CNDD1 = cnd(d1);
-  double CNDD2 = cnd(d2);
-  double expRT = exp(-riskfree * T[id]);
+	int id = get_global_id(0);
+	float sqrtT = sqrt(T[id]);
+	float d1 = (log(S[id] / X[id]) + (riskfree + c_half * volatility * volatility) * T[id]) / (volatility * sqrtT);
+	float d2 = d1 - volatility * sqrtT;
+	float CNDD1 = cnd(d1);
+	float CNDD2 = cnd(d2);
+	float expRT = exp(-riskfree * T[id]);
 
-  Call[id] = S[id] * CNDD1 - X[id] * expRT * CNDD2;
-  Put[id] = Call[id] + expRT - S[id];
+	Call[id] = S[id] * CNDD1 - X[id] * expRT * CNDD2;
+	Put[id] = Call[id] + expRT - S[id];
 }
