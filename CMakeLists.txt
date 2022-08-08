@@ -41,6 +41,8 @@ if(NOT TARGET GTest::GTest AND NOT TARGET GMock::GMock)
 endif()
 enable_testing()
 
+set(CMAKE_CXX_STANDARD 14)
+
 if(NOT BUILD_ZE_PERF_TESTS_ONLY)
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_MULTITHREADED ON)
