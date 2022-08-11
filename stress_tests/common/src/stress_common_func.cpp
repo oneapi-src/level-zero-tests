@@ -36,6 +36,8 @@ void adjust_max_memory_allocation(
            << (float)total_allocation_size / (1024 * 1024) << "MB";
   LOG_INFO << "Test single allocation memory size requested: "
            << (float)one_allocation_size / (1024 * 1024) << "MB";
+  LOG_INFO << "Max single allocation memory size: "
+           << (float)device_properties.maxMemAllocSize / (1024 * 1024) << "MB";
   uint64_t min_page_size = 4096;
   get_mem_page_size(driver, test_arguments.memory_type, min_page_size);
 
@@ -56,8 +58,7 @@ void adjust_max_memory_allocation(
             driver, "ZE_experimental_relaxed_allocation_limits")) {
       LOG_INFO << "Requested allocation size higher then max alloc size. Need "
                   "to limit... ";
-      one_allocation_size = test_arguments.one_allocation_size_limit *
-                            device_properties.maxMemAllocSize;
+      one_allocation_size = device_properties.maxMemAllocSize;
       total_allocation_size = number_of_all_alloc * one_allocation_size *
                               test_arguments.total_memory_size_limit;
     } else {

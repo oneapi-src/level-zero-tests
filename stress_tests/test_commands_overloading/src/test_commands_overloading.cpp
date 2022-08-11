@@ -258,7 +258,7 @@ TEST_P(
       LOG_DEBUG << "call create module";
       ze_module_handle_t module_handle =
           lzt::create_module(context, device, kernel_file_name,
-                             ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+                             ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required", nullptr);
       multiple_module_handle.push_back(module_handle);
     }
   }
@@ -266,7 +266,7 @@ TEST_P(
   LOG_INFO << "call create module";
   ze_module_handle_t module_handle =
       lzt::create_module(context, device, kernel_file_name,
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+                         ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required", nullptr);
 
   LOG_INFO << "call dispatch_kernels";
   dispatch_kernels(device, multiple_module_handle, output_allocations,
@@ -295,7 +295,7 @@ TEST_P(
   uint64_t dispatch_id = 0;
   uint64_t data_id = 0;
   for (auto each_data_out : data_for_all_dispatches) {
-    for (uint64_t i = 0; i < test_single_allocation_count; i++) {
+    for (uint64_t i = 0; i < each_data_out.size(); i++) {
       if (data_id + dispatch_id != each_data_out[i]) {
         LOG_ERROR << "Index of difference " << i
                   << " dispatch id = " << dispatch_id
