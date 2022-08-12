@@ -57,6 +57,7 @@ def zes_typed_structure(stype):
                  ZES_STRUCTURE_TYPE_ENGINE_PROPERTIES : zes_engine_properties_t,
                  ZES_STRUCTURE_TYPE_FABRIC_PORT_PROPERTIES : zes_fabric_port_properties_t,
                  ZES_STRUCTURE_TYPE_FAN_PROPERTIES : zes_fan_properties_t,
+                 ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES: zes_device_ecc_properties_t,
                  ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES : zes_firmware_properties_t,
                  ZES_STRUCTURE_TYPE_FREQ_PROPERTIES : zes_freq_properties_t,
                  ZES_STRUCTURE_TYPE_LED_PROPERTIES : zes_led_properties_t,

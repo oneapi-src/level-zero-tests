@@ -591,7 +591,7 @@ def main():
         args.show_power or args.show_freq or args.show_util or args.show_mem or args.show_pci or
         args.show_fabric_ports or args.show_standby or args.show_errors or args.show_diag or
         args.show_fans or args.show_firmware or args.show_oc or args.show_leds or args.show_perf or
-        args.show_psu):
+        args.show_psu or args.show_ecc):
 
         generatingDeviceReport = True
 
@@ -863,6 +863,7 @@ def main():
     for devID, devUUID, device in zip(deviceIDs, deviceUUIDs, devices):
         devNode = Node(devicesNode, "Device", None, ("Index", devID), ("UUID", output.uuid(devUUID)),
                        index=True)
+        
         if args.show_device:
             coreProps = ze_typed_structure(ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES)
             zeCall(zeDeviceGetProperties(device, coreProps))
@@ -1757,7 +1758,56 @@ def main():
                         telemetryClosures.append(utilTelemetry)
                         pollDelayRequired = True
 
+        isEnabled = ze_bool_ptr()
+        isConfigurable = ze_bool_ptr()
+
+        try:
+            zeCall(zesDeviceEccAvailable(device, isEnabled.cast()))
+            zeCall(zesDeviceEccConfigurable(device, isConfigurable.cast()))
+        except NotImplementedError:
+            pass
+        except ValueError:
+            logger.reportZeException()
+
+        if args.enable_ecc:
+            if isEnabled.value() and isConfigurable.value():
+                eccAttributes = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES)
+                zeCall(zesDeviceGetEccState(device, eccAttributes))
+
+                if eccAttributes.currentState == ZES_DEVICE_ECC_STATE_DISABLED:
+                    newState = zes_device_ecc_desc_t()
+                    newState.state = ZES_DEVICE_ECC_STATE_ENABLED
+                    pr("Enabling ecc.")
+                    zeCall(zesDeviceSetEccState(device, newState, eccAttributes))
+                else:
+                    pr("Ecc already enabled.")
+        
+        if args.disable_ecc:
+            if isEnabled.value() and isConfigurable.value():
+                eccAttributes = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES)
+                zeCall(zesDeviceGetEccState(device, eccAttributes))
+
+                if eccAttributes.currentState == ZES_DEVICE_ECC_STATE_ENABLED:
+                    newState = zes_device_ecc_desc_t()
+                    newState.state = ZES_DEVICE_ECC_STATE_DISABLED
+                    pr("Disabling ecc.")
+                    zeCall(zesDeviceSetEccState(device, newState, eccAttributes))
+                else:
+                    pr("Ecc already disabled.")
+
+        if args.show_ecc:
+            if isEnabled.value():
+                eccTop = Node(devNode, "EccProperties", None)
+                eccAttributes = zes_typed_structure(ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES)
+                zeCall(zesDeviceGetEccState(device, eccAttributes))
+                Node(eccTop, "currentState", eccTypeString(eccAttributes.currentState))
+                Node(eccTop, "pendingState", eccTypeString(eccAttributes.pendingState))
+                Node(eccTop, "pendingAction", eccActionString(eccAttributes.pendingAction))
+            else:
+                pr("Ecc not available.")
+       
         memCount = uint32_ptr()
+
         try:
             zeCall(zesDeviceEnumMemoryModules(device, memCount.cast(), None))
         except NotImplementedError:

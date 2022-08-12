@@ -270,6 +270,7 @@ void add_pci_bar_properties_1_2_array(zes_pci_bar_properties_t *baseArray, zes_p
 }
 %}
 
+%pointer_class(ze_bool_t, ze_bool_ptr)
 %pointer_class(int32_t, int32_ptr)
 %pointer_class(uint32_t, uint32_ptr)
 %pointer_class(uint64_t, uint64_ptr)

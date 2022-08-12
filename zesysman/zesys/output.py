@@ -117,6 +117,19 @@ def tempTypeString(tempType):
                   zes_wrap.ZES_TEMP_SENSORS_MEMORY_MIN : "Memory_Min" }
     return tempTypes.get(tempType, "Unknown")
 
+def eccTypeString(eccType):
+    eccTypes =  { zes_wrap.ZES_DEVICE_ECC_STATE_UNAVAILABLE : "None",
+                  zes_wrap.ZES_DEVICE_ECC_STATE_ENABLED : "Enabled",
+                  zes_wrap.ZES_DEVICE_ECC_STATE_DISABLED : "Disabled" }
+    return eccTypes.get(eccType, "Unknown")
+
+def eccActionString(eccAction):
+    eccActions =  { zes_wrap.ZES_DEVICE_ACTION_NONE : "None",
+                  zes_wrap.ZES_DEVICE_ACTION_WARM_CARD_RESET : "warmReset",
+                  zes_wrap.ZES_DEVICE_ACTION_COLD_CARD_RESET : "coldReset",
+                  zes_wrap.ZES_DEVICE_ACTION_COLD_SYSTEM_REBOOT : "coldReboot" }
+    return eccActions.get(eccAction, "Unknown")
+
 def freqTypeString(freqType):
     freqTypes = { zes_wrap.ZES_FREQ_DOMAIN_GPU : "GPU",
                   zes_wrap.ZES_FREQ_DOMAIN_MEMORY : "Memory" }

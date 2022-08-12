@@ -270,6 +270,7 @@ def parse():
     parser.add_argument("-e", "--show-errors", action='store_true', help="show errors")
     parser.add_argument("-a", "--show-all", action='store_true', help="show all sysman attributes")
     parser.add_argument("--show-device", action='store_true', help="show device attributes")
+    parser.add_argument("--show-ecc", action='store_true', help="show ecc attributes")
     parser.add_argument("--show-processes", action='store_true', help="show process usage")
     parser.add_argument("--show-scheduler", action='store_true', help="show scheduler mode")
     parser.add_argument("--show-diag", action='store_true', help="show diagnostic test suites")
@@ -307,6 +308,8 @@ def parse():
                         help="set sustained power limit")
     parser.add_argument("--enable-power", action='store_true', help="enable sustained power limit")
     parser.add_argument("--disable-power", action='store_true', help="disable sustained power limit")
+    parser.add_argument("--enable-ecc", action='store_true', help="enable ecc for device")
+    parser.add_argument("--disable-ecc", action='store_true', help="disable ecc for device")
     parser.add_argument("--set-burst-power", nargs='+', metavar=('POW',''),
                         help="set burst power limit")
     parser.add_argument("--enable-burst-power", action='store_true', help="enable burst power limit")
