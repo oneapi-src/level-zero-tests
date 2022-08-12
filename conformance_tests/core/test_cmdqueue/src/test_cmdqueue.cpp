@@ -288,10 +288,9 @@ INSTANTIATE_TEST_CASE_P(TestIncreasingNumberCommandListsWithCommandQueueFence,
 
 static void ExecuteCommandQueue(ze_command_queue_handle_t &cq,
                                 ze_command_list_handle_t &cl,
-                                volatile bool &exited) {
-  exited = false;
+                                std::promise<bool> &exited) {
   lzt::execute_command_lists(cq, 1, &cl, nullptr);
-  exited = true;
+  exited.set_value(true);
 }
 
 class zeCommandQueueSynchronousTests
@@ -306,28 +305,32 @@ TEST_P(
   ze_command_list_handle_t cl = lzt::create_command_list();
   lzt::zeEventPool ep;
   ze_event_handle_t hEvent;
+  ze_event_handle_t hSignalEvent;
+  std::promise<bool> exitPromise;
+  auto exitFuture = exitPromise.get_future();
 
   ep.create_event(hEvent, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(hSignalEvent, ZE_EVENT_SCOPE_FLAG_HOST, 0);
   // Verify Host Reads Event as unset
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hSignalEvent, 0));
 
+  lzt::append_signal_event(cl, hSignalEvent);
   lzt::append_wait_on_events(cl, 1, &hEvent);
   lzt::close_command_list(cl);
-  volatile bool exited = false;
+
   std::thread child_thread(&ExecuteCommandQueue, std::ref(cq), std::ref(cl),
-                           std::ref(exited));
+                           std::ref(exitPromise));
 
-  // sleep for 500 ms to give execution a chance to complete
-  std::chrono::milliseconds timespan(500);
-  std::this_thread::sleep_for(timespan);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventHostSynchronize(hSignalEvent, UINT64_MAX));
 
-  // We expect the child thread to exit if we are in async mode:
-  if (exited)
-    EXPECT_EQ(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, mode);
-  else
-    // We expect if we are in synchronous mode that the child thread will never
-    // exit:
-    EXPECT_EQ(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS, mode);
+  auto status = exitFuture.wait_for(std::chrono::milliseconds(500));
+  if (mode == ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS) {
+    EXPECT_EQ(status, std::future_status::ready);
+  } else {
+    EXPECT_EQ(status, std::future_status::timeout);
+  }
 
   // Note: if the command queue has a mode of: ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS
   // It won't ever finish unless we signal the event that is waiting on:
@@ -339,6 +342,7 @@ TEST_P(
   }
 
   ep.destroy_event(hEvent);
+  ep.destroy_event(hSignalEvent);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
 }
