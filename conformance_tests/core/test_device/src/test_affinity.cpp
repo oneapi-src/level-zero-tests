@@ -6,6 +6,10 @@
  *
  */
 
+#include <regex>
+#include <chrono>
+#include <future>
+
 #include <boost/process.hpp>
 #include <boost/filesystem.hpp>
 
@@ -24,6 +28,14 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+std::string get_result(bp::ipstream &stream) {
+
+  std::string result;
+  std::getline(stream, result);
+
+  return result;
+}
+
 static void run_child_process(std::string driver_id, std::string affinity_mask,
                               uint32_t num_devices_mask) {
   auto env = boost::this_process::environment();
@@ -39,11 +51,30 @@ static void run_child_process(std::string driver_id, std::string affinity_mask,
                                 bp::std_out > child_output);
   get_devices_process.wait();
 
+  LOG_INFO << "[Affinity Mask: " << affinity_mask << "]";
+
   int num_devices_child = -1;
   std::string result_string;
   std::getline(child_output, result_string);
 
-  LOG_INFO << "[Affinity Mask: " << affinity_mask << "]";
+  // ensure that the output matches the expected format:
+  while (!std::regex_match(result_string, std::regex("[0-1]:[0-9]+"))) {
+    LOG_INFO << result_string;
+    // spawn thread to read the next line if available
+    auto future =
+        std::async(std::launch::async, get_result, std::ref(child_output));
+
+    auto status = future.wait_until(std::chrono::system_clock::now() +
+                                    std::chrono::seconds(5));
+
+    if (status == std::future_status::ready) {
+      result_string = future.get();
+    } else {
+      ADD_FAILURE() << "Timedout waiting for expected result format";
+      return;
+    }
+  }
+
   LOG_INFO << "Result from Child (RETURN CODE : NUMBER of DEVICES) : "
            << result_string;
 
