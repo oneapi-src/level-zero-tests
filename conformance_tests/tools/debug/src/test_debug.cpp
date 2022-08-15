@@ -12,6 +12,7 @@ namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
+#include <mutex>
 #include <thread>
 
 namespace fs = boost::filesystem;
@@ -787,6 +788,9 @@ TEST_F(
   run_multithreaded_application_test(devices, false);
 }
 
+std::mutex module_load_mutex;
+std::condition_variable module_load_cv;
+bool module_loaded = false;
 void read_and_verify_events_debugger_thread(
     const zet_debug_session_handle_t &debug_session, uint64_t *gpu_buffer_va) {
 
@@ -798,6 +802,13 @@ void read_and_verify_events_debugger_thread(
 
   if (!check_events(debug_session, expectedEvents)) {
     FAIL() << "[Debugger] Did not receive expected events";
+  }
+
+  {
+    // we have received module load event and acknowledged it
+    std::lock_guard<std::mutex> lk(module_load_mutex);
+    module_loaded = true;
+    module_load_cv.notify_one();
   }
 
   lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
@@ -863,8 +874,12 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
     device_thread.eu = UINT32_MAX;
     device_thread.thread = UINT32_MAX;
 
+    LOG_INFO << "[Debugger] Main thread waiting for module load event";
+    std::unique_lock<std::mutex> lk(module_load_mutex);
+    module_load_cv.wait(lk, [] { return module_loaded; });
+    lk.unlock();
     LOG_INFO << "[Debugger] Main thread sleeping to wait for device threads";
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::seconds(6));
 
     LOG_INFO << "[Debugger] Sending interrupt from main thread";
     lzt::debug_interrupt(debugSession, device_thread);
