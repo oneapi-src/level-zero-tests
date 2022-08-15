@@ -32,9 +32,9 @@ ze_driver_properties_t get_driver_properties(ze_driver_handle_t driver) {
 uint32_t get_driver_version(ze_driver_handle_t driver) {
 
   uint32_t driverVersion = 0;
-  ze_driver_properties_t properties;
+  ze_driver_properties_t properties = {ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES,
+                                       nullptr};
 
-  properties.pNext = nullptr;
   auto driver_initial = driver;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetProperties(driver, &properties));
   EXPECT_EQ(driver, driver_initial);

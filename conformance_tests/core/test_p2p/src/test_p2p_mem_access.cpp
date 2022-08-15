@@ -67,7 +67,8 @@ protected:
     get_devices_ = devices.size();
     LOG_INFO << "Detected " << get_devices_ << " devices";
 
-    ze_device_compute_properties_t dev_compute_properties = {};
+    ze_device_compute_properties_t dev_compute_properties = {
+        ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES, nullptr};
 
     for (auto device : devices) {
       DevAccess instance = {};
@@ -339,8 +340,10 @@ protected:
     ze_command_queue_handle_t cmd_q;
     ze_module_handle_t module;
     ze_kernel_handle_t function;
-    ze_device_memory_properties_t dev_mem_properties;
-    ze_device_memory_access_properties_t dev_mem_access_properties;
+    ze_device_memory_properties_t dev_mem_properties = {
+        ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES, nullptr};
+    ze_device_memory_access_properties_t dev_mem_access_properties = {
+        ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES, nullptr};
   } DevAccess_t;
 
   std::vector<DevAccess> dev_access_;
@@ -359,7 +362,8 @@ TEST_P(zeP2PMemAccessTestsAtomicAccess,
   if (skip) {
     return;
   }
-  ze_device_p2p_properties_t dev_p2p_properties;
+  ze_device_p2p_properties_t dev_p2p_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES, nullptr};
 
   // Search for compatible access
   dev_access_.clear();
@@ -513,7 +517,8 @@ TEST_P(
   if (skip) {
     return;
   }
-  ze_device_p2p_properties_t dev_p2p_properties;
+  ze_device_p2p_properties_t dev_p2p_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES, nullptr};
 
   kernel_name_ = std::get<0>(GetParam());
   memory_type_ = std::get<1>(GetParam());

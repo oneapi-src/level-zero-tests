@@ -192,7 +192,8 @@ TEST_F(
 
   for (auto device : devices) {
 
-    ze_device_properties_t deviceProperties;
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
     LOG_INFO << "test device name " << deviceProperties.name << " uuid "
              << lzt::to_string(deviceProperties.uuid);
@@ -271,7 +272,8 @@ TEST_F(
 
   for (auto device : devices) {
 
-    ze_device_properties_t deviceProperties;
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
 
     LOG_INFO << "test device name " << deviceProperties.name << " uuid "
@@ -367,7 +369,8 @@ TEST_F(
 
   for (auto device : devices) {
 
-    ze_device_properties_t deviceProperties;
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
 
     LOG_INFO << "test device name " << deviceProperties.name << " uuid "
@@ -451,7 +454,8 @@ TEST_F(
 
   for (auto device : devices) {
 
-    ze_device_properties_t deviceProperties;
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
 
     LOG_INFO << "test device name " << deviceProperties.name << " uuid "
@@ -542,7 +546,8 @@ TEST_F(
 
   for (auto device : devices) {
 
-    ze_device_properties_t deviceProperties;
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
 
     LOG_INFO << "test device name " << deviceProperties.name << " uuid "
@@ -636,7 +641,8 @@ TEST_F(
 
   for (auto device : devices) {
 
-    ze_device_properties_t deviceProperties;
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
 
     LOG_INFO << "test device name " << deviceProperties.name << " uuid "

@@ -61,10 +61,9 @@ protected:
     callback_enter_invocations = 0;
     ready = false;
     signaling_thread = false;
-    zel_tracer_desc_t tracer_desc = {};
+    zel_tracer_desc_t tracer_desc = {ZEL_STRUCTURE_TYPE_TRACER_DESC, nullptr,
+                                     nullptr};
 
-    tracer_desc.pNext = nullptr;
-    tracer_desc.pUserData = nullptr;
     tracer = lzt::create_ltracer_handle(tracer_desc);
 
     prologues.Mem.pfnAllocDeviceCb = OnEnterMemAllocDevice;

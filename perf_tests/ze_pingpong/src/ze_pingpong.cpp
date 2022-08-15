@@ -15,8 +15,10 @@
 // On error, an exception will be thrown describing the failure.
 //---------------------------------------------------------------------
 void L0Context::init() {
-  ze_command_list_desc_t command_list_description{};
-  ze_command_queue_desc_t command_queue_description{};
+  ze_command_list_desc_t command_list_description{
+      ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, nullptr};
+  ze_command_queue_desc_t command_queue_description{
+      ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC, nullptr};
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   result = zeInit(0);
@@ -58,7 +60,6 @@ void L0Context::init() {
     throw std::runtime_error("zeDeviceGet failed: " + std::to_string(result));
   }
 
-  device_property.pNext = nullptr;
   result = zeDeviceGetProperties(device, &device_property);
   if (result) {
     throw std::runtime_error("zeDeviceGetProperties failed: " +

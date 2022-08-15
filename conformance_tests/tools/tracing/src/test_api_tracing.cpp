@@ -25,11 +25,8 @@ TEST(
     GivenValidDeviceAndTracerDescriptionWhenCreatingTracerThenTracerIsNotNull) {
   uint32_t user_data;
 
-  zet_tracer_exp_desc_t tracer_desc = {};
-
-  tracer_desc.pNext = nullptr;
-  tracer_desc.pUserData = &user_data;
-
+  zet_tracer_exp_desc_t tracer_desc = {ZET_STRUCTURE_TYPE_TRACER_EXP_DESC,
+                                       nullptr, &user_data};
   zet_tracer_exp_handle_t tracer_handle =
       lzt::create_tracer_handle(tracer_desc);
   EXPECT_NE(tracer_handle, nullptr);
@@ -50,6 +47,7 @@ TEST_P(TracingCreateMultipleTests,
 
   for (uint32_t i = 0; i < GetParam(); ++i) {
 
+    descs[i].stype = ZET_STRUCTURE_TYPE_TRACER_EXP_DESC;
     descs[i].pNext = nullptr;
     descs[i].pUserData = &user_data[i];
 
@@ -70,10 +68,8 @@ TEST(TracingDestroyTests,
      GivenSingleDisabledTracerWhenDestroyingTracerThenSuccessIsReturned) {
   uint32_t user_data;
 
-  zet_tracer_exp_desc_t tracer_desc = {};
-
-  tracer_desc.pNext = nullptr;
-  tracer_desc.pUserData = &user_data;
+  zet_tracer_exp_desc_t tracer_desc = {ZET_STRUCTURE_TYPE_TRACER_EXP_DESC,
+                                       nullptr, &user_data};
   zet_tracer_exp_handle_t tracer_handle =
       lzt::create_tracer_handle(tracer_desc);
 
@@ -103,9 +99,8 @@ protected:
     p2p_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
     p2p_properties.pNext = nullptr;
 
-    zet_tracer_exp_desc_t tracer_desc = {};
-
-    tracer_desc.pUserData = &user_data;
+    zet_tracer_exp_desc_t tracer_desc = {ZET_STRUCTURE_TYPE_TRACER_EXP_DESC,
+                                         nullptr, &user_data};
     tracer_handle = lzt::create_tracer_handle(tracer_desc);
   }
 
@@ -260,19 +255,27 @@ protected:
   ze_driver_handle_t driver;
 
   ze_device_handle_t device;
-  ze_device_properties_t properties = {};
-  ze_device_compute_properties_t compute_properties = {};
+  ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+                                       nullptr};
+  ze_device_compute_properties_t compute_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES, nullptr};
 
-  ze_device_memory_properties_t memory_properties = {};
+  ze_device_memory_properties_t memory_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES, nullptr};
 
-  ze_device_memory_access_properties_t memory_access_properties = {};
+  ze_device_memory_access_properties_t memory_access_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES, nullptr};
 
-  ze_device_cache_properties_t cache_properties = {};
-  ze_device_image_properties_t device_image_properties = {};
-  ze_device_p2p_properties_t p2p_properties = {};
+  ze_device_cache_properties_t cache_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES, nullptr};
+  ze_device_image_properties_t device_image_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
+  ze_device_p2p_properties_t p2p_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES, nullptr};
 
   ze_api_version_t api_version;
-  ze_driver_ipc_properties_t ipc_properties = {};
+  ze_driver_ipc_properties_t ipc_properties = {
+      ZE_STRUCTURE_TYPE_DRIVER_IPC_PROPERTIES, nullptr};
 
   ze_command_queue_desc_t command_queue_desc = {
       ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC, nullptr};
@@ -323,11 +326,13 @@ protected:
                                 0,
                                 0};
   ze_image_handle_t image = nullptr;
-  ze_image_properties_t image_properties;
+  ze_image_properties_t image_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
 
   void *device_memory, *host_memory, *shared_memory, *memory = nullptr;
 
-  ze_memory_allocation_properties_t mem_alloc_properties = {};
+  ze_memory_allocation_properties_t mem_alloc_properties = {
+      ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES, nullptr};
 
   std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file("module_add.spv");
@@ -351,7 +356,8 @@ protected:
   ze_sampler_handle_t sampler = nullptr;
 
   uint32_t num = 0, version;
-  ze_driver_properties_t driver_properties = {};
+  ze_driver_properties_t driver_properties = {
+      ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES, nullptr};
   ze_bool_t can_access;
 };
 
@@ -1810,8 +1816,8 @@ TEST_F(
 
   init_kernel();
 
-  ze_kernel_properties_t kernel_properties = {};
-  kernel_properties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
+  ze_kernel_properties_t kernel_properties = {
+      ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   ze_result_t initial_result =
       zeKernelGetProperties(kernel, &kernel_properties);
   ready_tracer(tracer_handle, prologues, epilogues);

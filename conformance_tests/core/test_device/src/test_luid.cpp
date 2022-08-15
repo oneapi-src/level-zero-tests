@@ -60,7 +60,8 @@ TEST(zeLuidTests, GivenValidDevicesWhenRetrievingLuidThenValidValuesReturned) {
   // devices
   std::vector<std::array<uint8_t, ZE_MAX_DEVICE_LUID_SIZE_EXT>> uniqueLuidList;
   for (auto device : devices) {
-    ze_device_properties_t properties = {};
+    ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+                                         nullptr};
     ze_device_luid_ext_properties_t extProperties = {};
     extProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_LUID_EXT_PROPERTIES;
 

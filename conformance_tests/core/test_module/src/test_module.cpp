@@ -531,7 +531,8 @@ protected:
               zeKernelSetGroupSize(function, group_size_x, group_size_y,
                                    group_size_z));
 
-    ze_kernel_properties_t kernel_properties = {};
+    ze_kernel_properties_t kernel_properties = {
+        ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeKernelGetProperties(function, &kernel_properties));
 
@@ -685,7 +686,8 @@ TEST_F(zeKernelCreateTests,
 TEST_F(zeKernelCreateTests,
        GivenValidFunctionWhenSettingGroupSizeThenReturnSuccessful) {
   ze_kernel_handle_t function;
-  ze_device_compute_properties_t dev_compute_properties;
+  ze_device_compute_properties_t dev_compute_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES, nullptr};
   uint32_t x;
   uint32_t y;
   uint32_t z;
@@ -728,7 +730,8 @@ TEST_F(zeKernelCreateTests,
 TEST_F(zeKernelCreateTests,
        GivenValidFunctionWhenSuggestingGroupSizeThenReturnSuccessful) {
   ze_kernel_handle_t function;
-  ze_device_compute_properties_t dev_compute_properties;
+  ze_device_compute_properties_t dev_compute_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES, nullptr};
   uint32_t group_size_x;
   uint32_t group_size_y;
   uint32_t group_size_z;

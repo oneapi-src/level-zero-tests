@@ -52,9 +52,8 @@ TEST_P(zeCommandQueueCreateTests,
   const ze_driver_handle_t driver = lzt::get_default_driver();
   const ze_context_handle_t context = lzt::get_default_context();
 
-  ze_device_properties_t properties = {};
-  properties.pNext = nullptr;
-  properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+  ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+                                       nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
 
   auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
@@ -360,7 +359,8 @@ protected:
   void *device_buffer;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   uint8_t *char_input;
-  ze_device_properties_t properties = {};
+  ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+                                       nullptr};
 
   CommandQueueFlagTest() {
     host_buffer = lzt::allocate_shared_memory(buff_size_bytes);

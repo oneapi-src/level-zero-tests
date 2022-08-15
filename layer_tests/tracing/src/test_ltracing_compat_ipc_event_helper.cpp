@@ -37,9 +37,9 @@ int main(int argc, char **argv) {
 
   ze_context_handle_t context = lzt::get_default_context();
 
-  zel_tracer_desc_t tracer_desc = {};
   lzt::test_api_ltracing_user_data user_data = {};
-  tracer_desc.pUserData = &user_data;
+  zel_tracer_desc_t tracer_desc = {ZEL_STRUCTURE_TYPE_TRACER_DESC, nullptr,
+                                   &user_data};
   zel_tracer_handle_t tracer_handle = lzt::create_ltracer_handle(tracer_desc);
 
   if (test_type_string == "TEST_OPEN_IPC_EVENT") {

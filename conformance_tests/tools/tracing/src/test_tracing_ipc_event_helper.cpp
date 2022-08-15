@@ -37,9 +37,9 @@ int main(int argc, char **argv) {
 
   ze_context_handle_t context = lzt::get_default_context();
 
-  zet_tracer_exp_desc_t tracer_desc = {};
   lzt::test_api_tracing_user_data user_data = {};
-  tracer_desc.pUserData = &user_data;
+  zet_tracer_exp_desc_t tracer_desc = {ZET_STRUCTURE_TYPE_TRACER_EXP_DESC,
+                                       nullptr, &user_data};
   zet_tracer_exp_handle_t tracer_handle =
       lzt::create_tracer_handle(context, tracer_desc);
 

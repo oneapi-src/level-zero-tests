@@ -51,8 +51,10 @@ struct L0Context {
   uint32_t device_count = 0;
   const uint32_t default_device = 0;
   const uint32_t command_queue_id = 0;
-  ze_device_properties_t device_property = {};
-  ze_device_compute_properties_t device_compute_property = {};
+  ze_device_properties_t device_property = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+                                            nullptr};
+  ze_device_compute_properties_t device_compute_property = {
+      ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES, nullptr};
   void init();
   void destroy();
   void print_ze_device_properties(const ze_device_properties_t &props);

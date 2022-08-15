@@ -166,6 +166,9 @@ void L0Context::ze_peak_query_engines() {
   }
 
   queueProperties.resize(numQueueGroups);
+  for (auto it = queueProperties.begin(); it != queueProperties.end(); ++it) {
+    *it = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr};
+  }
   result = zeDeviceGetCommandQueueGroupProperties(device, &numQueueGroups,
                                                   queueProperties.data());
   if (result) {
@@ -199,8 +202,10 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
                         bool &enable_fixed_ordinal_index,
                         uint32_t command_queue_group_ordinal,
                         uint32_t command_queue_index) {
-  ze_command_list_desc_t command_list_description{};
-  ze_command_queue_desc_t command_queue_description{};
+  ze_command_list_desc_t command_list_description{
+      ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC, nullptr};
+  ze_command_queue_desc_t command_queue_description{
+      ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC, nullptr};
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   result = zeInit(0);
@@ -1127,7 +1132,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     if (verbose)
       std::cout << "Command list closed\n";
 
-    ze_device_properties_t device_properties{};
+    ze_device_properties_t device_properties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     result = zeDeviceGetProperties(context.device, &device_properties);
     if (result) {
       throw std::runtime_error("zeDeviceGetProperties failed: " +
@@ -1295,7 +1301,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     if (verbose)
       std::cout << "Event Created\n";
 
-    ze_device_properties_t device_properties{};
+    ze_device_properties_t device_properties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     result = zeDeviceGetProperties(context.device, &device_properties);
     if (result) {
       throw std::runtime_error("zeDeviceGetProperties failed: " +

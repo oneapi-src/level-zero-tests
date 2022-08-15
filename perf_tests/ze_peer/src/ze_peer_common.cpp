@@ -14,7 +14,8 @@ void ZePeer::query_engines() {
        device_index++) {
     auto device = benchmark->_devices[device_index];
 
-    ze_device_properties_t device_properties{};
+    ze_device_properties_t device_properties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     SUCCESS_OR_TERMINATE(zeDeviceGetProperties(device, &device_properties));
 
     uint32_t numQueueGroups = 0;
@@ -28,6 +29,9 @@ void ZePeer::query_engines() {
 
     std::vector<ze_command_queue_group_properties_t> queueProperties(
         numQueueGroups);
+    for (auto &prop : queueProperties) {
+      prop = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr};
+    }
     benchmark->deviceGetCommandQueueGroupProperties(
         device_index, &numQueueGroups, queueProperties.data());
 

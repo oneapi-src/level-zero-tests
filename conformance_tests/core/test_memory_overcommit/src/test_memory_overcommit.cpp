@@ -290,6 +290,10 @@ protected:
       driver_info[i].device_memory_access_properties =
           new ze_device_memory_access_properties_t[device_count];
       for (uint32_t j = 0; j < device_count; j++) {
+        driver_info[i].device_memory_access_properties[j].pNext = nullptr;
+        driver_info[i].device_memory_access_properties[j].stype =
+            ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES;
+
         EXPECT_EQ(ZE_RESULT_SUCCESS,
                   zeDeviceGetMemoryAccessProperties(
                       driver_info[i].device_handles[j],
