@@ -12,8 +12,10 @@ target_link_libraries(logging
     Boost::program_options
 )
 
-add_core_library_test(logging
-    SOURCE
-    "test/main.cpp"
-    "test/logging_unit_tests.cpp"
-)
+if (NOT BUILD_ZE_PERF_TESTS_ONLY)
+    add_core_library_test(logging
+        SOURCE
+        "test/main.cpp"
+        "test/logging_unit_tests.cpp"
+    )
+endif()

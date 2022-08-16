@@ -28,6 +28,6 @@ add_lzt_test(
     src/benchmark.cpp
   LINK_LIBRARIES
     ${OS_SPECIFIC_LIBS}
-    gmock
+    Boost::program_options
   KERNELS ze_nano_benchmarks
 )

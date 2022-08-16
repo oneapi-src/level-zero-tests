@@ -19,17 +19,22 @@ To run all tests, use the following command. Options for filtering tests are bel
 ```
 
 # Additional Options
-* To look up tests available:
+* To view tests available:
 ```
-      $ ./ze_nano --gtest_list_tests
-        xeKernelSetArgumentValue_Buffer
-        xeKernelSetArgumentValue_Immediate
-        xeKernelSetArgumentValue_Image
-        xeCommandListAppendLaunchKernel
-        xeCommandQueueExecuteCommandLists
+    $ ./ze_nano --h
+    Select tests to be run. If none specified, all test cases will be run.
+
+    Allowed options:
+    --help                                produce help message
+    --zeKernelSetArgumentValue_Buffer     enable this test case
+    --zeKernelSetArgumentValue_Immediate  enable this test case
+    --zeKernelSetArgumentValue_Image      enable this test case
+    --zeCommandListAppendLaunchKernel     enable this test case
+    --zeCommandQueueExecuteCommandLists   enable this test case
+    --zeDeviceGroupGetMemIpcHandle        enable this test case
 ```
 
-* To filter tests available:
+* To select tests available:
 ```
-      $ ./ze_nano --gtest_filter=*xeKernelSetArgumentValue*
+      $ ./ze_nano --zeKernelSetArgumentValue_Buffer --zeCommandQueueExecuteCommandLists
 ```

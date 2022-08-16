@@ -4,7 +4,7 @@
 set(ze_imagecopy_libraries
 Boost::program_options
 ${OS_SPECIFIC_LIBS}
-utils
+level_zero_tests::utils_string
 )
 
 

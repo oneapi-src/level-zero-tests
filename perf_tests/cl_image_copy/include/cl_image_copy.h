@@ -22,7 +22,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/optional.hpp>
-#include "utils/utils.hpp"
 
 namespace po = boost::program_options;
 namespace pt = boost::property_tree;

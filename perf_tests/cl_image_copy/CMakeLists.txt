@@ -13,5 +13,4 @@ add_lzt_test(
     OpenCL::OpenCL
     Boost::boost
     Boost::program_options
-    level_zero_tests::utils
 )

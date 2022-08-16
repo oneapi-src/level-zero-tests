@@ -12,6 +12,7 @@
 #include "common.hpp"
 #include <level_zero/ze_api.h>
 #include "ze_app.hpp"
+#include "utils/utils_string.hpp"
 
 #include <assert.h>
 #include <iomanip>
@@ -20,7 +21,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/optional.hpp>
-#include "utils/utils.hpp"
 
 namespace po = boost::program_options;
 namespace pt = boost::property_tree;
