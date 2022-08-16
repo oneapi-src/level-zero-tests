@@ -86,10 +86,11 @@ void adjust_max_memory_allocation(
     }
   }
 
-  if (one_allocation_size > (16ull * 1024ull * 1024ull * 1024ull)) {
+  uint64_t maxSingleSizeAllocation = (16ull * 1024ull * 1024ull * 1024ull) - 1;
+  if (one_allocation_size > maxSingleSizeAllocation) {
     LOG_WARNING << "Single size allocation " << one_allocation_size
                 << " exceeds 16GB, adjusting it to 16GB";
-    one_allocation_size = (16ull * 1024ull * 1024ull * 1024ull);
+    one_allocation_size = maxSingleSizeAllocation;
     total_allocation_size = number_of_all_alloc * one_allocation_size *
                             test_arguments.total_memory_size_limit;
   }
