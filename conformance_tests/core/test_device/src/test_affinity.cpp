@@ -7,6 +7,7 @@
  */
 
 #include <regex>
+#include <algorithm>
 #include <chrono>
 #include <future>
 
@@ -56,6 +57,11 @@ static void run_child_process(std::string driver_id, std::string affinity_mask,
   int num_devices_child = -1;
   std::string result_string;
   std::getline(child_output, result_string);
+  // trim trailing whitespace from result_string
+  result_string.erase(std::find_if(result_string.rbegin(), result_string.rend(),
+                                   [](int ch) { return !std::isspace(ch); })
+                          .base(),
+                      result_string.end());
 
   // ensure that the output matches the expected format:
   while (!std::regex_match(result_string, std::regex("[0-1]:[0-9]+"))) {
@@ -69,8 +75,17 @@ static void run_child_process(std::string driver_id, std::string affinity_mask,
 
     if (status == std::future_status::ready) {
       result_string = future.get();
+      result_string.erase(std::find_if(result_string.rbegin(),
+                                       result_string.rend(),
+                                       [](int ch) { return !std::isspace(ch); })
+                              .base(),
+                          result_string.end());
+      if (result_string.empty()) {
+        ADD_FAILURE() << "Error reading from child process";
+        return;
+      }
     } else {
-      ADD_FAILURE() << "Timedout waiting for expected result format";
+      ADD_FAILURE() << "Timed out waiting for expected result format";
       return;
     }
   }
