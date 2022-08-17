@@ -156,6 +156,8 @@ TEST_F(
   command_queue = lzt::create_command_queue();
   command_list = lzt::create_command_list();
 
+  lzt::close_command_list(command_list);
+
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
 
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
