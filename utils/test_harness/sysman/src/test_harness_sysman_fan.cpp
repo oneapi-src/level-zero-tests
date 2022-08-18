@@ -33,7 +33,8 @@ std::vector<zes_fan_handle_t> get_fan_handles(ze_device_handle_t device,
 }
 
 zes_fan_properties_t get_fan_properties(zes_fan_handle_t fan_handle) {
-  zes_fan_properties_t properties;
+  zes_fan_properties_t properties = {ZES_STRUCTURE_TYPE_FAN_PROPERTIES,
+                                     nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesFanGetProperties(fan_handle, &properties));
   return properties;
 }

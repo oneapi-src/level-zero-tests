@@ -29,14 +29,16 @@ ze_bool_t get_ecc_configurable(zes_device_handle_t device) {
 }
 
 zes_device_ecc_properties_t get_ecc_state(zes_device_handle_t device) {
-  zes_device_ecc_properties_t pState = {};
+  zes_device_ecc_properties_t pState = {
+      ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceGetEccState(device, &pState));
   return pState;
 }
 
 zes_device_ecc_properties_t set_ecc_state(zes_device_handle_t device,
                                           zes_device_ecc_desc_t &newState) {
-  zes_device_ecc_properties_t pState = {};
+  zes_device_ecc_properties_t pState = {
+      ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zesDeviceSetEccState(device, &newState, &pState));
   return pState;

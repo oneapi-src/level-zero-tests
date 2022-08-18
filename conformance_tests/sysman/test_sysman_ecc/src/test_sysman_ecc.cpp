@@ -75,7 +75,8 @@ TEST_F(
     auto configurable = lzt::get_ecc_configurable(device);
     if (configurable == static_cast<ze_bool_t>(true)) {
       auto stateInitial = lzt::get_ecc_state(device);
-      zes_device_ecc_desc_t newState = {};
+      zes_device_ecc_desc_t newState = {ZES_STRUCTURE_TYPE_DEVICE_ECC_DESC,
+                                        nullptr};
       newState.state = stateInitial.currentState;
       auto stateLater = lzt::set_ecc_state(device, newState);
       EXPECT_EQ(stateInitial.currentState, stateLater.currentState);
@@ -93,7 +94,8 @@ TEST_F(
     auto configurable = lzt::get_ecc_configurable(device);
     if (configurable == static_cast<ze_bool_t>(true)) {
       auto stateInitial = lzt::get_ecc_state(device);
-      zes_device_ecc_desc_t newState = {};
+      zes_device_ecc_desc_t newState = {ZES_STRUCTURE_TYPE_DEVICE_ECC_DESC,
+                                        nullptr};
       if (stateInitial.currentState == ZES_DEVICE_ECC_STATE_ENABLED) {
         newState.state = ZES_DEVICE_ECC_STATE_DISABLED;
       } else {
