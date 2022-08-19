@@ -1,7 +1,7 @@
 # Copyright (C) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: MIT
 
-if(BOOST_FOUND)
+if(Boost_FOUND)
   add_subdirectory(ze_nano)
   add_subdirectory(ze_image_copy)
 else()
@@ -17,7 +17,7 @@ else()
   message(WARNING "Skipping ze_peer: test only supported on Linux")
 endif()
 
-if(OPENCL_FOUND AND BOOST_FOUND)
+if(OpenCL_FOUND AND Boost_FOUND)
   add_subdirectory(cl_image_copy)
   add_subdirectory(ze_cabe)
 else()
