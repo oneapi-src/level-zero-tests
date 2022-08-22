@@ -37,6 +37,44 @@ zes_power_properties_t get_power_properties(zes_pwr_handle_t pPowerHandle) {
             zesPowerGetProperties(pPowerHandle, &pProperties));
   return pProperties;
 }
+uint32_t get_power_limit_count(zes_pwr_handle_t hPower) {
+  uint32_t pCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesPowerGetLimitsExt(hPower, &pCount, nullptr));
+  EXPECT_GE(pCount, 0);
+  return pCount;
+}
+std::vector<zes_power_limit_ext_desc_t>
+get_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount) {
+  if (*pCount == 0)
+    *pCount = get_power_limit_count(hPower);
+  std::vector<zes_power_limit_ext_desc_t> p_power_limits_descriptors(*pCount);
+  EXPECT_EQ(
+      ZE_RESULT_SUCCESS,
+      zesPowerGetLimitsExt(hPower, pCount, p_power_limits_descriptors.data()));
+  return p_power_limits_descriptors;
+}
+void set_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount,
+                          zes_power_limit_ext_desc_t *pSustained) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesPowerSetLimitsExt(hPower, pCount, pSustained));
+}
+void compare_power_descriptor_structures(
+    zes_power_limit_ext_desc_t firstDescriptor,
+    zes_power_limit_ext_desc_t secondDescriptor) {
+
+  EXPECT_EQ(firstDescriptor.level, secondDescriptor.level);
+  EXPECT_EQ(firstDescriptor.source, secondDescriptor.source);
+  EXPECT_EQ(firstDescriptor.limitUnit, secondDescriptor.limitUnit);
+  EXPECT_EQ(firstDescriptor.enabledStateLocked,
+            secondDescriptor.enabledStateLocked);
+  EXPECT_EQ(firstDescriptor.enabled, secondDescriptor.enabled);
+  EXPECT_EQ(firstDescriptor.intervalValueLocked,
+            secondDescriptor.intervalValueLocked);
+  EXPECT_EQ(firstDescriptor.interval, secondDescriptor.interval);
+  EXPECT_EQ(firstDescriptor.limitValueLocked,
+            secondDescriptor.limitValueLocked);
+  EXPECT_EQ(firstDescriptor.limit, secondDescriptor.limit);
+}
 void get_power_limits(zes_pwr_handle_t pPowerHandle,
                       zes_power_sustained_limit_t *pSustained,
                       zes_power_burst_limit_t *pBurst,

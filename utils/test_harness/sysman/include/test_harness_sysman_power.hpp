@@ -30,6 +30,14 @@ zes_energy_threshold_t
 get_power_energy_threshold(zes_pwr_handle_t pPowerHandle);
 void set_power_energy_threshold(zes_pwr_handle_t pPowerHandle,
                                 double threshold);
+std::vector<zes_power_limit_ext_desc_t>
+get_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount);
+void set_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount,
+                          zes_power_limit_ext_desc_t *pSustained);
+void compare_power_descriptor_structures(
+    zes_power_limit_ext_desc_t firstDescriptor,
+    zes_power_limit_ext_desc_t secondDescriptor);
+uint32_t get_power_limit_count(zes_pwr_handle_t hPower);
 } // namespace level_zero_tests
 
 #endif
