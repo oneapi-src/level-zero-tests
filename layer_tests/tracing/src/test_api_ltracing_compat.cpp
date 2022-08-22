@@ -1683,8 +1683,13 @@ TEST_F(
   zelTracerImageGetAllocPropertiesExtRegisterCallback(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
-  ze_image_allocation_ext_properties_t imageAllocProperties = {
-      ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES, nullptr};
+  init_image();
+
+  ze_image_allocation_ext_properties_t imageAllocProperties;
+  imageAllocProperties.stype =
+      ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES;
+  imageAllocProperties.pNext = nullptr;
+  imageAllocProperties.id = 0;
 
   lzt::enable_ltracer(tracer_handle);
 
