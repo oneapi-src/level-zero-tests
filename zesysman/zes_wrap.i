@@ -283,6 +283,7 @@ void add_pci_bar_properties_1_2_array(zes_pci_bar_properties_t *baseArray, zes_p
 %array_class(zes_freq_handle_t, zes_freq_handle_array);
 %array_class(zes_temp_handle_t, zes_temp_handle_array);
 %array_class(zes_pwr_handle_t, zes_pwr_handle_array);
+%array_class(zes_power_limit_ext_desc_t, zes_power_limit_ext_desc_array);
 %array_class(zes_engine_handle_t, zes_engine_handle_array);
 %array_class(zes_mem_handle_t, zes_mem_handle_array);
 %array_class(zes_fabric_port_handle_t, zes_fabric_port_handle_array);

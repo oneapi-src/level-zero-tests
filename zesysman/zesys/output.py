@@ -135,6 +135,18 @@ def freqTypeString(freqType):
                   zes_wrap.ZES_FREQ_DOMAIN_MEMORY : "Memory" }
     return freqTypes.get(freqType, "Unknown")
 
+def limitUnitTypeString(limitUnitType):
+    limitUnitTypes = { zes_wrap.ZES_LIMIT_UNIT_UNKNOWN : "Unknown",
+                zes_wrap.ZES_LIMIT_UNIT_CURRENT : "mA",
+                zes_wrap.ZES_LIMIT_UNIT_POWER : "mW" }
+    return limitUnitTypes.get(limitUnitType, "Unknown")
+
+def powerSourceTypeString(powerSourceType):
+    powerSourceTypes = { zes_wrap.ZES_POWER_SOURCE_ANY : "Any",
+                zes_wrap.ZES_POWER_SOURCE_MAINS : "Mains",
+                zes_wrap.ZES_POWER_SOURCE_BATTERY : "Battery" }
+    return powerSourceTypes.get(powerSourceType, "Unknown")
+
 def ocModeString(mode):
     ocModes = { zes_wrap.ZES_OC_MODE_OFF : "Off",
                 zes_wrap.ZES_OC_MODE_OVERRIDE : "Override",

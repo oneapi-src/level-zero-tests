@@ -1189,66 +1189,58 @@ def main():
             powers = zes_pwr_handle_array(pwrCount.value())
             zeCall(zesDeviceEnumPowerDomains(device, pwrCount.cast(), powers.cast()))
 
-        if (args.set_power or args.enable_power or args.disable_power or args.set_burst_power
-            or args.enable_burst_power or args.disable_burst_power or args.set_peak_power):
-            sustainedLimit = None
-            burstLimit = None
-            peakLimit = None
-            if args.set_power or args.enable_power or args.disable_power:
-                sustainedLimit = zes_power_sustained_limit_t()
-                if args.set_power:
-                    sustainedLimit.enabled = True
-                    sustainedLimit.power, remainder = arg.parseMilliwatts(args.set_power)
-                    sustainedLimit.interval, remainder = arg.parseMilliseconds(remainder)
-                    if remainder:
-                        pr.err("WARNING: Extra set-power arguments ignored")
-                    if args.enable_power:
-                        sustainedLimit.enabled = True
-                    if args.disable_power:
-                        sustainedLimit.enabled = False
-            if args.set_burst_power or args.enable_burst_power or args.disable_burst_power:
-                burstLimit = zes_power_burst_limit_t()
-                if args.set_burst_power:
-                    burstLimit.enabled = True
-                    burstLimit.power, remainder = arg.parseMilliwatts(args.set_burst_power)
-                    if remainder:
-                        pr.err("WARNING: Extra set-burst-power arguments ignored")
-                    if args.enable_burst_power:
-                        burstLimit.enabled = True
-                    if args.disable_burst_power:
-                        burstLimit.enabled = False
-            if args.set_peak_power:
-                peakLimit = zes_power_peak_limit_t()
-                peakLimit.powerAC, remainder = arg.parseMilliwatts(args.set_peak_power)
-                peakLimit.powerDC, remainder = arg.parseMilliwatts(remainder)
-                if remainder:
-                    pr.err("WARNING: Extra set-peak-power arguments ignored")
+        if (args.set_sustained_power or args.enable_sustained_power or args.disable_sustained_power or args.set_burst_power or args.enable_burst_power or args.disable_burst_power or args.set_peak_power or args.enable_peak_power or args.disable_peak_power or args.set_instantaneous_power or args.enable_instantaneous_power or args.disable_peak_power):            
             for i in range(pwrCount.value()):
                 pwr = powers[i]
-                if sustainedLimit and not args.set_power:
-                    zeCall(zesPowerGetLimits(pwr, sustainedLimit, None, None))
-                    if args.enable_power:
-                        sustainedLimit.enabled = True
-                    if args.disable_power:
-                        sustainedLimit.enabled = False
-                if burstLimit and not args.set_burst_power:
-                    zeCall(zesPowerGetLimits(pwr, None, burstLimit, None))
-                    if args.enable_burst_power:
-                        burstLimit.enabled = True
-                    if args.disable_burst_power:
-                        burstLimit.enabled = False
-                if sustainedLimit:
-                    pr("Setting sustained limit to", sustainedLimit.power, "mW,", sustainedLimit.interval,
-                       "ms, enabled =", bool(sustainedLimit.enabled))
-                if burstLimit:
-                    pr("Setting burst limit to", burstLimit.power, "mW, enabled = ", bool(burstLimit.enabled))
-                if peakLimit:
-                    pr("Setting peak AC, DC limits to", peakLimit.powerAC, "mW,", peakLimit.powerDC, "mW")
-                if args.dry_run:
-                    pr(dryRunMessage)
+                pwrCount = uint32_ptr()
+                try:
+                    zeCall(zesPowerGetLimitsExt(pwr, pwrCount.cast(), None))
+                except NotImplementedError:
+                    pass
+                except ValueError:
+                    logger.reportZeException()
                 else:
-                    zeCall(zesPowerSetLimits(pwr, sustainedLimit, burstLimit, peakLimit))
+                    powerDescriptors = zes_power_limit_ext_desc_array(pwrCount.value())
+                    zeCall(zesPowerGetLimitsExt(pwr, pwrCount.cast(), powerDescriptors.cast()))
+                
+                def setPowerLimits(set_level_power, enable_level_power, disable_level_power, level, levelName):
+                    if set_level_power or enable_level_power or disable_level_power:
+                        if set_level_power:
+                            level.limit, remainder = arg.parseMilliwatts(set_level_power)
+                            level.interval, remainder = arg.parseMilliseconds(remainder)
+                            if remainder:
+                                pr.err("WARNING: Extra set-power arguments ignored")
+                        if enable_level_power:
+                            if not level.enabledStateLocked:
+                                level.enabled = True
+                            else:
+                                pr("WARNING: Cannot enable " + levelName + " power since enabledStateLocked is set to True")
+                        if disable_level_power:
+                            if not level.enabledStateLocked:
+                                level.enabled = False
+                            else:
+                                pr("WARNING: Cannot disable " + levelName + " power since enabledStateLocked is set to True")
+                        pr("Setting " + levelName + " limit to", level.limit, limitUnitTypeString(level.limitUnit), level.interval,"ms, enabled =", bool(level.enabled))
+                        zeCall(zesPowerSetLimitsExt(pwr, pwrCount.cast(), level))
 
+                for i in range(pwrCount.value()):
+                    if powerDescriptors[i].level == ZES_POWER_LEVEL_SUSTAINED:
+                        sustained = zes_power_limit_ext_desc_t()
+                        sustained = powerDescriptors[i]
+                        setPowerLimits(args.set_sustained_power, args.enable_sustained_power, args.disable_sustained_power, sustained, 'sustained')
+                    elif powerDescriptors[i].level == ZES_POWER_LEVEL_PEAK:
+                        peak = zes_power_limit_ext_desc_t()
+                        peak = powerDescriptors[i]
+                        setPowerLimits(args.set_peak_power, args.enable_peak_power, args.disable_peak_power, peak, 'peak')
+                    elif powerDescriptors[i].level == ZES_POWER_LEVEL_BURST:
+                        burst = zes_power_limit_ext_desc_t()
+                        burst = powerDescriptors[i]
+                        setPowerLimits(args.set_burst_power, args.enable_burst_power, args.disable_burst_power, burst, 'burst')
+                    elif powerDescriptors[i].level == ZES_POWER_LEVEL_INSTANTANEOUS:
+                        instantaneous = zes_power_limit_ext_desc_t()
+                        instantaneous = powerDescriptors[i]
+                        setPowerLimits(args.set_instantaneous_power, args.enable_instantaneous_power, args.disable_instantaneous_power, instantaneous, 'instantaneous')
+                
         if args.set_energy_threshold:
             threshold, remainder = arg.parseJoules(args.set_energy_threshold)
             for i in range(pwrCount.value()):
@@ -1285,21 +1277,43 @@ def main():
                                  setFn=units_mW)
                         Node(limitNode, "Max", pwrProps.maxLimit, ("Units", "W"), join=".", setFn=units_mW)
 
-                    sustainedLimit = zes_power_sustained_limit_t()
-                    burstLimit = zes_power_burst_limit_t()
-                    peakLimit = zes_power_peak_limit_t()
-                    zeCall(zesPowerGetLimits(pwr, sustainedLimit, burstLimit, peakLimit))
-                    sustainedNode = Node(pwrNode, "SustainedLimit", None, heading="Sustained", join=".")
-                    Node(sustainedNode, "Enabled", bool(sustainedLimit.enabled), join=".")
-                    Node(sustainedNode, "Power", sustainedLimit.power, ("Units", "W"), join=".", setFn=units_mW)
-                    Node(sustainedNode, "Interval", sustainedLimit.interval, ("Units", "s"), join=".", setFn=units_ms)
-                    burstNode = Node(pwrNode, "BurstLimit", None, heading="Burst", join=".")
-                    Node(burstNode, "Enabled", bool(burstLimit.enabled), join=".")
-                    Node(burstNode, "Power", burstLimit.power, ("Units", "W"), join=".", setFn=units_mW)
-                    peakNode = Node(pwrNode, "PeakLimit", None, heading="Peak", join=".")
-                    Node(peakNode, "Power", peakLimit.powerAC, ("Units", "W"), join=".", setFn=units_mW)
-                    if peakLimit.powerDC > 0:
-                        Node(peakNode, "PowerOnDC", peakLimit.powerDC, ("Units", "W"), join=".", setFn=units_mW)
+                    pwrCount = uint32_ptr()
+                    try:
+                        zeCall(zesPowerGetLimitsExt(pwr, pwrCount.cast(), None))
+                    except NotImplementedError:
+                        pass
+                    except ValueError:
+                        logger.reportZeException()
+                    else:
+                        powerDescriptors = zes_power_limit_ext_desc_array(pwrCount.value())
+                        zeCall(zesPowerGetLimitsExt(pwr, pwrCount.cast(), powerDescriptors.cast()))
+                    
+                    def showLimitsData(node, powerDescriptors):
+                        Node(node, "Source", powerSourceTypeString(powerDescriptors.source), join=".")
+                        Node(node, "LimitUnit", limitUnitTypeString(powerDescriptors.limitUnit), join=".")
+                        Node(node, "EnabledStateLocked", bool(powerDescriptors.enabledStateLocked), join=".")
+                        Node(node, "Enabled", bool(powerDescriptors.enabled), join=".")
+                        Node(node, "IntervalValueLocked", bool(powerDescriptors.intervalValueLocked), join=".")
+                        Node(node, "Interval", powerDescriptors.interval, ("Units", "s"), join=".", setFn=units_ms)
+                        Node(node, "LimitValueLocked", bool(powerDescriptors.limitValueLocked), join=".")
+                        if powerDescriptors.limitUnit == 1:
+                            Node(node, "Limit", powerDescriptors.limit, ("Units", "A"), join=".", setFn=units_mA)
+                        elif powerDescriptors.limitUnit == 2:
+                            Node(node, "Limit", powerDescriptors.limit, ("Units", "W"), join=".", setFn=units_mW)
+                        
+                    for i in range(pwrCount.value()):
+                        if powerDescriptors[i].level == ZES_POWER_LEVEL_SUSTAINED:
+                            sustainedNode = Node(pwrNode, "SustainedLimit", None, heading="Sustained", join=".")
+                            showLimitsData(sustainedNode, powerDescriptors[i])
+                        elif powerDescriptors[i].level == ZES_POWER_LEVEL_PEAK:
+                            peakNode = Node(pwrNode, "PeakLimit", None, heading="Peak", join=".")
+                            showLimitsData(peakNode, powerDescriptors[i])
+                        elif powerDescriptors[i].level == ZES_POWER_LEVEL_BURST:
+                            burstNode = Node(pwrNode, "BurstLimit", None, heading="Burst", join=".")
+                            showLimitsData(burstNode, powerDescriptors[i])
+                        elif powerDescriptors[i].level == ZES_POWER_LEVEL_INSTANTANEOUS:
+                            instantaneousNode = Node(pwrNode, "InstantaneousLimit", None, heading="Instantaneous", join=".")
+                            showLimitsData(instantaneousNode, powerDescriptors[i])
 
                 if args.show_telemetry:
                     pwrCounter = zes_power_energy_counter_t()

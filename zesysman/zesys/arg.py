@@ -304,18 +304,24 @@ def parse():
                         help="disable high-to-low temperature threshold 2")
     parser.add_argument("--set-t2-threshold", nargs=2, metavar=('IDX','C'), type=int,
                         help="set temperature threshold 2")
-    parser.add_argument("--set-power", nargs='+', metavar=('POW','TAU'),
+    parser.add_argument("--set-sustained-power", nargs='+', metavar=('POW','TAU'),
                         help="set sustained power limit")
-    parser.add_argument("--enable-power", action='store_true', help="enable sustained power limit")
-    parser.add_argument("--disable-power", action='store_true', help="disable sustained power limit")
-    parser.add_argument("--enable-ecc", action='store_true', help="enable ecc for device")
-    parser.add_argument("--disable-ecc", action='store_true', help="disable ecc for device")
+    parser.add_argument("--enable-sustained-power", action='store_true', help="enable sustained power limit")
+    parser.add_argument("--disable-sustained-power", action='store_true', help="disable sustained power limit")
     parser.add_argument("--set-burst-power", nargs='+', metavar=('POW',''),
                         help="set burst power limit")
     parser.add_argument("--enable-burst-power", action='store_true', help="enable burst power limit")
     parser.add_argument("--disable-burst-power", action='store_true', help="disable burst power limit")
     parser.add_argument("--set-peak-power", nargs='+', metavar=('POW',''),
                         help="set peak power limit")
+    parser.add_argument("--enable-peak-power", action='store_true', help="enable peak power limit")
+    parser.add_argument("--disable-peak-power", action='store_true', help="disable peak power limit")
+    parser.add_argument("--set-instantaneous-power", nargs='+', metavar=('POW',''),
+                        help="set instantaneous power limit")
+    parser.add_argument("--enable-instantaneous-power", action='store_true', help="enable instantaneous power limit")
+    parser.add_argument("--disable-instantaneous-power", action='store_true', help="disable instantaneous power limit")
+    parser.add_argument("--enable-ecc", action='store_true', help="enable ecc for device")
+    parser.add_argument("--disable-ecc", action='store_true', help="disable ecc for device")
     parser.add_argument("--set-energy-threshold", nargs='+', metavar=('J',''),
                         help="set energy threshold")
     parser.add_argument("--set-freq", nargs='+', metavar=('MIN','MAX'), help="set frequency limits")
