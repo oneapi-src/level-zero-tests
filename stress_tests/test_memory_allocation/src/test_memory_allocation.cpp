@@ -26,11 +26,6 @@ class zeDriverMemoryAllocationStressTest
       public ::testing::WithParamInterface<
           std::tuple<float, float, uint32_t, ze_memory_type_t>> {
 protected:
-  typedef struct KernelFunctions {
-    ze_kernel_desc_t test_function_description;
-    ze_kernel_handle_t test_function;
-  } KernelFunctions_t;
-
   typedef uint32_t kernel_copy_unit_t;
   const size_t kernel_copy_unit_size = sizeof(kernel_copy_unit_t);
 

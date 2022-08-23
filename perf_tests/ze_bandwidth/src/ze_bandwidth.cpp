@@ -409,6 +409,9 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
   }
 
   queueProperties.resize(numQueueGroups);
+  for (auto queueProperty : queueProperties) {
+    queueProperty = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr};
+  }
   benchmark->deviceGetCommandQueueGroupProperties(0, &numQueueGroups,
                                                   queueProperties.data());
 

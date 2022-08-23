@@ -568,6 +568,10 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
 
     std::vector<ze_command_queue_group_properties_t> queueProperties(
         numQueueGroups);
+    for (auto queueProperty : queueProperties) {
+      queueProperty = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES,
+                       nullptr};
+    }
     benchmark->deviceGetCommandQueueGroupProperties(d, &numQueueGroups,
                                                     queueProperties.data());
 

@@ -41,7 +41,8 @@ void ZeSimpleAdd::build_program() {
 }
 
 void ZeSimpleAdd::create_buffers() {
-  ze_device_mem_alloc_desc_t device_desc = {};
+  ze_device_mem_alloc_desc_t device_desc = {
+      ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC, nullptr};
   device_desc.ordinal = 0;
   device_desc.flags = 0;
   ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc, sizeof(int) * num, 1,
