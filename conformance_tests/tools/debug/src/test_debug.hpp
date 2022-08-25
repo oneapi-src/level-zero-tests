@@ -48,8 +48,12 @@ public:
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
                            std::string module_name, uint64_t index) {
-    auto device_properties = lzt::get_device_properties(device);
-    std::string device_id = lzt::to_string(device_properties.uuid);
+
+    std::string device_id = " ";
+    if (device) {
+      auto device_properties = lzt::get_device_properties(device);
+      device_id = lzt::to_string(device_properties.uuid);
+    }
     fs::path helper_path(fs::current_path() / "debug");
     std::vector<fs::path> paths;
     paths.push_back(helper_path);
@@ -58,7 +62,8 @@ public:
     if (!module_name.empty())
       module_name_option = "--module=" + module_name;
     bp::child debug_helper(helper, "--test_type=" + std::to_string(test_type),
-                           "--device_id=" + device_id, module_name_option,
+                           device ? ("--device_id=" + device_id) : " ",
+                           module_name_option,
                            (use_sub_devices ? "--use_sub_devices" : " "),
                            "--index=" + std::to_string(index));
 

@@ -49,6 +49,7 @@ typedef enum {
   MULTIPLE_THREADS,
   MULTIPLE_CQ,
   MULTIPLE_IMM_CL,
+  USE_TWO_DEVICES,
   MAX_DEBUG_TEST_TYPE_VALUE = 0xff, // Values greater than 0xFF are reserved
   DEBUG_TEST_TYPE_FORCE_UINT32 = 0x7fffffff
 } debug_test_type_t;
@@ -158,7 +159,7 @@ public:
   void clear_debugger_signal() {
     if (!enabled)
       return;
-    LOG_INFO << "[] Clearing debugger signal";
+    LOG_INFO << "Clearing debugger signal";
     mutex->lock();
     *debugger_signal = false;
     mutex->unlock();
@@ -189,7 +190,7 @@ public:
   void clear_application_signal() {
     if (!enabled)
       return;
-    LOG_INFO << "[] Clearing application signal";
+    LOG_INFO << "Clearing application signal";
     mutex->lock();
     *debugee_signal = false;
     mutex->unlock();

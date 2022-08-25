@@ -30,10 +30,10 @@ public:
     options(test_type_string,
             po::value<uint32_t>((uint32_t *)&test_selected)->required(),
             "the test type to run");
-    options(device_id_string, po::value<std::string>(&device_id_in)->required(),
-            "Device ID of device to test");
 
     // Optional options:
+    options(device_id_string, po::value<std::string>(&device_id_in),
+            "Device ID of device to test");
     options(module_string, po::value<std::string>(&module_name_in),
             "spv file to use");
     options(
@@ -55,9 +55,12 @@ public:
     po::notify(variables_map);
 
     LOG_INFO << "[Application] TEST TYPE: " << test_selected;
-    LOG_INFO << "[Application] device ID: "
-             << variables_map[device_id_string].as<std::string>() << " "
-             << device_id_in;
+
+    if (variables_map.count(device_id_string)) {
+      LOG_INFO << "[Application] Device ID option: "
+               << variables_map[device_id_string].as<std::string>() << " "
+               << device_id_in;
+    }
 
     if (variables_map.count(use_sub_devices_string)) {
       LOG_INFO << "[Application] Using sub devices";

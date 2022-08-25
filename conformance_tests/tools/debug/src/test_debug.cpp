@@ -2081,3 +2081,169 @@ TEST_F(
   auto devices = lzt::get_all_sub_devices();
   run_unavailable_thread_test(devices, false);
 }
+
+auto address_valid = false;
+void wait_for_events_interrupt_and_resume(
+    const zet_debug_session_handle_t &debugSession, process_synchro *synchro,
+    uint64_t *gpu_buffer_va, ze_device_handle_t device) {
+
+  auto device_properties = lzt::get_device_properties(device);
+
+  zet_debug_event_t debug_event;
+  std::vector<zet_debug_event_type_t> expectedEvents = {
+      ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD};
+
+  if (!check_events(debugSession, expectedEvents)) {
+    FAIL() << "[Debugger] Did not receive expected events";
+  }
+
+  ze_device_thread_t device_thread;
+  device_thread.slice = UINT32_MAX;
+  device_thread.subslice = UINT32_MAX;
+  device_thread.eu = UINT32_MAX;
+  device_thread.thread = UINT32_MAX;
+
+  LOG_INFO << "[Debugger] Sleeping to wait for device threads";
+  std::this_thread::sleep_for(std::chrono::seconds(12));
+
+  LOG_INFO << "[Debugger] Sending interrupt";
+  lzt::debug_interrupt(debugSession, device_thread);
+
+  lzt::debug_read_event(debugSession, debug_event, eventsTimeoutMS, false);
+  LOG_INFO << "[Debugger] received event: "
+           << lzt::debuggerEventTypeString[debug_event.type];
+  ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED);
+
+  // write to kernel buffer to signal to application to end
+  zet_debug_memory_space_desc_t memory_space_desc = {};
+
+  // we need to wait until address is valid
+  while (!address_valid)
+    ;
+  memory_space_desc.address = *gpu_buffer_va;
+  memory_space_desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+  memory_space_desc.stype = ZET_STRUCTURE_TYPE_DEBUG_MEMORY_SPACE_DESC;
+
+  uint8_t *buffer = new uint8_t[1], *val_buffer = new uint8_t[1];
+  buffer[0] = 0;
+  val_buffer[0] = 1;
+  auto thread = debug_event.info.thread.thread;
+  LOG_INFO << "[Debugger] Writing to address: " << std::hex << *gpu_buffer_va;
+  LOG_INFO << "[Debugger] on device:" << device_properties.uuid;
+
+  lzt::debug_write_memory(debugSession, thread, memory_space_desc, 1, buffer);
+  // validate write succeeded
+  lzt::debug_read_memory(debugSession, thread, memory_space_desc, 1,
+                         val_buffer);
+  ASSERT_EQ(val_buffer[0], 0);
+
+  delete[] buffer;
+  delete[] val_buffer;
+  print_thread("Resuming device thread ", thread, DEBUG);
+  lzt::debug_resume(debugSession, thread);
+}
+
+// using MultiGpuDebugTest = Test<zetDebugAttachDetachTest>;
+class MultiDeviceDebugTest : public zetDebugAttachDetachTest {
+protected:
+  void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
+  void TearDown() override { zetDebugAttachDetachTest::TearDown(); }
+  void run_multidevice_single_application_test(
+      std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
+};
+
+void MultiDeviceDebugTest::run_multidevice_single_application_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+
+  lzt::sort_devices(devices);
+  auto device0 = devices[0];
+  auto device1 = devices[1];
+
+  auto device_properties = lzt::get_device_properties(device0);
+  auto device_properties_1 = lzt::get_device_properties(device1);
+
+  LOG_DEBUG << "[Debugger] Launching application using two devices:";
+  LOG_DEBUG << "[Debugger] Device 0: " << device_properties.name << " "
+            << device_properties.deviceId << " " << device_properties.uuid;
+  LOG_DEBUG << "[Debugger] Device 1: " << device_properties_1.name << " "
+            << device_properties_1.deviceId << " " << device_properties_1.uuid;
+
+  debugHelper = launch_process(USE_TWO_DEVICES, nullptr, use_sub_devices);
+  zet_debug_config_t debug_config = {};
+  debug_config.pid = debugHelper.id();
+  LOG_DEBUG << "[Debugger] Launched application with PID:  "
+            << debugHelper.id();
+
+  auto debug_session_0 = lzt::debug_attach(device0, debug_config);
+  if (!debug_session_0) {
+    FAIL() << "[Debugger] Failed to attach to start a debug session";
+  }
+
+  auto debug_session_1 = lzt::debug_attach(device1, debug_config);
+  if (!debug_session_1) {
+    lzt::debug_detach(debug_session_0);
+    FAIL() << "[Debugger] Failed to attach to start a debug session";
+  }
+
+  LOG_DEBUG << "[Debugger] Notifying applications of attach";
+  synchro->notify_application();
+
+  uint64_t gpu_buffer_va_0 = 0, gpu_buffer_va_1 = 0;
+  LOG_DEBUG << "[Debugger]  Spawning Threads";
+  std::thread first_thread(wait_for_events_interrupt_and_resume,
+                           debug_session_0, synchro, &gpu_buffer_va_0, device0);
+  std::thread second_thread(wait_for_events_interrupt_and_resume,
+                            debug_session_1, synchro, &gpu_buffer_va_1,
+                            device1);
+
+  synchro->wait_for_application_signal();
+  if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va_0)) {
+    FAIL()
+        << "[Debugger] Could not get a valid GPU buffer VA for first device ";
+  }
+
+  synchro->clear_application_signal();
+  synchro->notify_application();
+
+  // get second gpu address
+  synchro->wait_for_application_signal();
+  if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va_1)) {
+    FAIL()
+        << "[Debugger] Could not get a valid GPU buffer VA for second device ";
+  }
+  address_valid = true;
+
+  first_thread.join();
+  second_thread.join();
+
+  debugHelper.wait();
+  LOG_INFO << "[Debugger] Debugger detaching";
+  lzt::debug_detach(debug_session_0);
+  lzt::debug_detach(debug_session_1);
+
+  LOG_INFO << "[Debugger] Child debugger exited, finishing test";
+  ASSERT_EQ(debugHelper.exit_code(), 0);
+}
+
+TEST_F(
+    MultiDeviceDebugTest,
+    GivenApplicationUsingTwoDevicesWhenDebuggingThenDebuggerCanAttachAndOperateOnBoth) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  auto initial_count = devices.size();
+  devices.erase(std::remove_if(devices.begin(), devices.end(),
+                               [](ze_device_handle_t &device) {
+                                 return (!is_debug_supported(device));
+                               }),
+                devices.end());
+  auto final_count = devices.size();
+
+  if (final_count < 2) {
+    LOG_WARNING << "Not enough "
+                << ((final_count < initial_count) ? "debug capable " : "")
+                << "devices to run multi-device test for driver";
+  } else {
+    run_multidevice_single_application_test(devices, false);
+  }
+}

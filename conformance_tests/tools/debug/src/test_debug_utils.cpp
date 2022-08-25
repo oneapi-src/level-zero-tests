@@ -127,6 +127,7 @@ bool check_event(const zet_debug_session_handle_t &debug_session,
   }
 
   if (debugEvent.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
+    LOG_INFO << "[Debugger] Acking event";
     lzt::debug_ack_event(debug_session, &debugEvent);
   }
   return found;

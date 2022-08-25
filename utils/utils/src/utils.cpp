@@ -268,6 +268,25 @@ ze_device_handle_t find_device(ze_driver_handle_t &driver,
   return device;
 }
 
+void sort_devices(std::vector<ze_device_handle_t> &devices) {
+  std::sort(devices.begin(), devices.end(),
+            [](ze_device_handle_t &a, ze_device_handle_t &b) {
+              auto device_properties_a = lzt::get_device_properties(a);
+              auto device_properties_b = lzt::get_device_properties(b);
+
+              for (int i = ZE_MAX_DEVICE_UUID_SIZE; i >= 0; i--) {
+                if (device_properties_a.uuid.id[i] <
+                    device_properties_b.uuid.id[i]) {
+                  return true;
+                } else if (device_properties_a.uuid.id[i] >
+                           device_properties_b.uuid.id[i]) {
+                  return false;
+                }
+              }
+              return false;
+            });
+}
+
 void print_driver_version(ze_driver_handle_t driver) {
   ze_driver_properties_t properties = {};
 
