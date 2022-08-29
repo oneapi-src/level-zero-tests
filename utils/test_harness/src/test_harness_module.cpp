@@ -322,6 +322,13 @@ void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
   EXPECT_EQ(hKernel, kernel_initial);
 }
 
+void kernel_get_indirect_access(ze_kernel_handle_t hKernel,
+                                ze_kernel_indirect_access_flags_t *flags) {
+  auto kernel_initial = hKernel;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelGetIndirectAccess(hKernel, flags));
+  EXPECT_EQ(hKernel, kernel_initial);
+}
+
 #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
 void set_kernel_scheduling_hint(ze_kernel_handle_t kernel,
                                 ze_scheduling_hint_exp_flags_t hints) {

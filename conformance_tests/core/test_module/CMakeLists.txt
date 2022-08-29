@@ -7,6 +7,7 @@ add_lzt_test(
   SOURCES
     src/test_module.cpp
     src/test_kernel_args.cpp
+    src/test_kernel_indirect_access.cpp
     src/test_cooperative_kernel.cpp
     src/test_kernel_schedule_hints.cpp
     src/main.cpp

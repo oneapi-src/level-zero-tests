@@ -68,6 +68,8 @@ void create_and_execute_function(ze_device_handle_t device,
                                  void *arg);
 void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
                                 ze_kernel_indirect_access_flags_t flags);
+void kernel_get_indirect_access(ze_kernel_handle_t hKernel,
+                                ze_kernel_indirect_access_flags_t *flags);
 
 struct FunctionArg {
   size_t arg_size;
