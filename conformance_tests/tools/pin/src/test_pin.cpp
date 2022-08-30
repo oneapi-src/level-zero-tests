@@ -42,7 +42,8 @@ TEST(
 
     auto kernel = lzt::create_function(module, "blackscholes");
 
-    zet_profile_properties_t kernel_profile_properties = {};
+    zet_profile_properties_t kernel_profile_properties = {
+        ZET_STRUCTURE_TYPE_PROFILE_PROPERTIES, nullptr};
     ASSERT_EQ(ZE_RESULT_SUCCESS,
               zetKernelGetProfileInfo(kernel, &kernel_profile_properties));
 
@@ -71,7 +72,8 @@ TEST(
 
     auto kernel = lzt::create_function(module, "blackscholes");
 
-    zet_profile_properties_t kernel_profile_properties = {};
+    zet_profile_properties_t kernel_profile_properties = {
+        ZET_STRUCTURE_TYPE_PROFILE_PROPERTIES, nullptr};
     ASSERT_EQ(ZE_RESULT_SUCCESS,
               zetKernelGetProfileInfo(kernel, &kernel_profile_properties));
 

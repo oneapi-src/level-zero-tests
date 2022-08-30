@@ -48,6 +48,9 @@ get_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount) {
   if (*pCount == 0)
     *pCount = get_power_limit_count(hPower);
   std::vector<zes_power_limit_ext_desc_t> p_power_limits_descriptors(*pCount);
+  for (auto desc : p_power_limits_descriptors) {
+    desc = {ZES_STRUCTURE_TYPE_POWER_LIMIT_EXT_DESC, nullptr};
+  }
   EXPECT_EQ(
       ZE_RESULT_SUCCESS,
       zesPowerGetLimitsExt(hPower, pCount, p_power_limits_descriptors.data()));

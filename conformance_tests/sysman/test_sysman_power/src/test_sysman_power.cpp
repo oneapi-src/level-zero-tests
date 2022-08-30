@@ -469,6 +469,8 @@ TEST_F(
                                             // later
 
       for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        power_limits_descriptors[i] = {ZES_STRUCTURE_TYPE_POWER_LIMIT_EXT_DESC,
+                                       nullptr};
         power_limits_descriptors_initial.push_back(power_limits_descriptors[i]);
 
         if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_SUSTAINED) {

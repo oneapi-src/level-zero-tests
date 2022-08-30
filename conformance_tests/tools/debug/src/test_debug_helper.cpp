@@ -37,7 +37,8 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto size = 8192;
-  ze_kernel_properties_t kernel_properties = {};
+  ze_kernel_properties_t kernel_properties = {
+      ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
@@ -128,7 +129,8 @@ void attach_after_module_created_test(ze_context_handle_t context,
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto size = 8192;
-  ze_kernel_properties_t kernel_properties = {};
+  ze_kernel_properties_t kernel_properties = {
+      ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
@@ -222,7 +224,8 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto size = 8192;
-  ze_kernel_properties_t kernel_properties = {};
+  ze_kernel_properties_t kernel_properties = {
+      ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
@@ -330,7 +333,8 @@ void multiple_modules_created_test(ze_context_handle_t context,
                               nullptr);
 
   auto size = 8192;
-  ze_kernel_properties_t kernel_properties = {};
+  ze_kernel_properties_t kernel_properties = {
+      ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
@@ -416,7 +420,8 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   auto kernel = lzt::create_function(module, kernel_name);
 
   auto size = 512;
-  ze_kernel_properties_t kernel_properties = {};
+  ze_kernel_properties_t kernel_properties = {
+      ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);

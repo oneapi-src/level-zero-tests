@@ -227,7 +227,8 @@ protected:
       memory_access_properties.push_back(
           std::vector<ze_device_memory_access_properties_t>());
       for (int j = 0; j < devices[i].size(); j++) {
-        ze_device_memory_access_properties_t mem_access_properties{};
+        ze_device_memory_access_properties_t mem_access_properties{
+            ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES, nullptr};
         EXPECT_EQ(ZE_RESULT_SUCCESS,
                   zeDeviceGetMemoryAccessProperties(devices[i][j],
                                                     &mem_access_properties));
