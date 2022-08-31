@@ -470,6 +470,30 @@ TEST_F(zeModuleCreateTests,
   }
 }
 
+TEST_F(zeModuleCreateTests,
+       GivenModuleGetPropertiesReturnsValidNonZeroProperties) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::get_default_device(driver);
+
+  auto module = lzt::create_module(context, device, "module_add.spv",
+                                   ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
+
+  ze_module_properties_t moduleProperties;
+  moduleProperties.stype = ZE_STRUCTURE_TYPE_MODULE_PROPERTIES;
+  moduleProperties.pNext = nullptr;
+  moduleProperties.flags = ZE_MODULE_PROPERTY_FLAG_FORCE_UINT32;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleGetProperties(module, &moduleProperties));
+  EXPECT_EQ(ZE_STRUCTURE_TYPE_MODULE_PROPERTIES, moduleProperties.stype);
+  EXPECT_EQ(nullptr, moduleProperties.pNext);
+  EXPECT_EQ(0, moduleProperties.flags);
+
+  lzt::destroy_module(module);
+  lzt::destroy_context(context);
+}
+
 class zeKernelCreateTests : public lzt::zeEventPoolTests {
 protected:
   void SetUp() override {
