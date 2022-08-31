@@ -299,22 +299,6 @@ void create_and_execute_function(ze_device_handle_t device,
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cmdlist));
 }
 
-char *get_kernel_source_attribute(ze_kernel_handle_t hKernel) {
-
-  uint32_t size = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetSourceAttributes(hKernel, &size, nullptr));
-
-  char *source_string = static_cast<char *>(malloc(size));
-
-  auto kernel_initial = hKernel;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetSourceAttributes(hKernel, &size, &source_string));
-  EXPECT_EQ(hKernel, kernel_initial);
-
-  return source_string;
-}
-
 void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
                                 ze_kernel_indirect_access_flags_t flags) {
   auto kernel_initial = hKernel;
@@ -327,6 +311,38 @@ void kernel_get_indirect_access(ze_kernel_handle_t hKernel,
   auto kernel_initial = hKernel;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelGetIndirectAccess(hKernel, flags));
   EXPECT_EQ(hKernel, kernel_initial);
+}
+
+std::string kernel_get_name_string(ze_kernel_handle_t hKernel) {
+  size_t kernel_name_size = 0;
+  auto kernel_initial = hKernel;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetName(hKernel, &kernel_name_size, nullptr));
+
+  char *kernel_name = new char[kernel_name_size];
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetName(hKernel, &kernel_name_size, kernel_name));
+  EXPECT_EQ(hKernel, kernel_initial);
+
+  std::string kernel_name_str(kernel_name, kernel_name_size - 1);
+  delete[] kernel_name;
+  return kernel_name_str;
+}
+
+std::string kernel_get_source_attribute(ze_kernel_handle_t hKernel) {
+  uint32_t size = 0;
+  auto kernel_initial = hKernel;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetSourceAttributes(hKernel, &size, nullptr));
+
+  char *source_string = new char[size];
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelGetSourceAttributes(hKernel, &size, &source_string));
+  EXPECT_EQ(hKernel, kernel_initial);
+
+  std::string source_string_str(source_string, size - 1);
+  delete[] source_string;
+  return source_string_str;
 }
 
 #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME

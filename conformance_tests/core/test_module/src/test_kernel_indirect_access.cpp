@@ -36,7 +36,7 @@ TEST(zeKernelIndirectAccessTests,
 
     auto module = lzt::create_module(context, device, "module_add.spv",
                                      ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
-    auto kernel = lzt::create_function(module, "module_add_constant_2");
+    auto kernel = lzt::create_function(module, "module_add_constant");
 
     lzt::kernel_set_indirect_access(kernel, inputFlags);
 

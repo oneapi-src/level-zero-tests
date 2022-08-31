@@ -886,19 +886,14 @@ TEST_F(
   }
 }
 
-TEST_F(
-    zeKernelCreateTests,
-    DISABLED_GivenValidFunctionWhenGettingSourceAttributeThenReturnAttributeString) {
-  ze_kernel_handle_t function;
-  std::string kernel_source_attr = "work_group_size_hint(1,1,1)";
-  kernel_source_attr.push_back('\0');
+TEST_F(zeKernelCreateTests,
+       GivenValidFunctionWhenGettingSourceAttributeThenReturnAttributeString) {
+  const std::string kernel_source_attr = "work_group_size_hint(1,1,1)";
   for (auto mod : module_) {
-    function = lzt::create_function(mod, "module_add_attr");
-    char *get_source_attr_char = lzt::get_kernel_source_attribute(function);
-    auto get_source_attr = std::string(get_source_attr_char);
-    EXPECT_EQ(0, get_source_attr.compare(kernel_source_attr));
-    lzt::destroy_function(function);
-    free(get_source_attr_char);
+    ze_kernel_handle_t kernel = lzt::create_function(mod, "module_add_attr");
+    std::string get_source_attr = lzt::kernel_get_source_attribute(kernel);
+    EXPECT_EQ(kernel_source_attr, get_source_attr);
+    lzt::destroy_function(kernel);
   }
 }
 
