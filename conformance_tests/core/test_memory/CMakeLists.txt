@@ -15,6 +15,7 @@ add_lzt_test(
     src/test_memory.cpp
     src/test_param_tests.cpp
     src/test_memory_export_import.cpp
+    src/test_virtual_memory.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
@@ -31,6 +32,7 @@ add_lzt_test(
   SOURCES
     src/test_memory.cpp
     src/test_param_tests.cpp
+    src/test_virtual_memory.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging

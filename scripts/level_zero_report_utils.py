@@ -84,6 +84,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeKernelCreateTests_GivenValidFunctionWhenGettingSourceAttributeThenReturnAttributeString', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelGetNameTests_GivenKernelGetNameCorrectNameIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleGetPropertiesReturnsValidNonZeroProperties', test_name, re.IGNORECASE)) or \
+                    (test_name.find("zeVirtualMemoryTests")!= -1) or \
                     (test_name.find("Cooperative")!= -1):
                 test_feature_tag = "advanced"
             else:
@@ -191,6 +192,8 @@ def assign_test_feature(test_binary: str, test_name: str):
         if test_binary == "test_fence":
             test_feature = "Fences"
         if test_binary == "test_memory" and test_name.find("DeviceMem") != -1:
+            test_feature = "Device Memory"
+        if test_binary == "test_memory" and test_name.find("zeVirtualMemoryTests") != -1:
             test_feature = "Device Memory"
         if test_binary == "test_memory" and test_name.find("HostMem") != -1:
             test_feature = "Host Memory"

@@ -90,5 +90,28 @@ void get_mem_alloc_properties(
     ze_context_handle_t context, const void *memory,
     ze_memory_allocation_properties_t *memory_properties,
     ze_device_handle_t *device);
+void query_page_size(ze_context_handle_t context, ze_device_handle_t device,
+                     size_t alloc_size, size_t *page_size);
+void virtual_memory_reservation(ze_context_handle_t context, const void *pStart,
+                                size_t size, void **memory);
+void virtual_memory_free(ze_context_handle_t context, void *memory,
+                         size_t alloc_size);
+void physical_memory_allocation(ze_context_handle_t context,
+                                ze_device_handle_t device,
+                                ze_physical_mem_desc_t *desc,
+                                ze_physical_mem_handle_t *memory);
+void physical_memory_allocation(ze_context_handle_t context,
+                                ze_device_handle_t device,
+                                size_t allocation_size,
+                                ze_physical_mem_handle_t *memory);
+void physical_memory_destroy(ze_context_handle_t context,
+                             ze_physical_mem_handle_t memory);
+void virtual_memory_map(ze_context_handle_t context,
+                        const void *reservedVirtualMemory, size_t size,
+                        ze_physical_mem_handle_t physical_memory, size_t offset,
+                        ze_memory_access_attribute_t access);
+void virtual_memory_unmap(ze_context_handle_t hContext,
+                          const void *reservedVirtualMemory, size_t size);
+size_t create_page_aligned_size(size_t requested_size, size_t page_size);
 }; // namespace level_zero_tests
 #endif

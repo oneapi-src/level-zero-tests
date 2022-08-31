@@ -278,4 +278,66 @@ void get_mem_alloc_properties(
                                    context, memory, memory_properties, device));
   EXPECT_EQ(context, context_initial);
 }
+
+void query_page_size(ze_context_handle_t context, ze_device_handle_t device,
+                     size_t alloc_size, size_t *page_size) {
+  EXPECT_EQ(zeVirtualMemQueryPageSize(context, device, alloc_size, page_size),
+            ZE_RESULT_SUCCESS);
+  EXPECT_GT(*page_size, 0);
+}
+
+void virtual_memory_reservation(ze_context_handle_t context, const void *pStart,
+                                size_t size, void **memory) {
+  EXPECT_EQ(zeVirtualMemReserve(context, pStart, size, memory),
+            ZE_RESULT_SUCCESS);
+}
+
+void virtual_memory_free(ze_context_handle_t context, void *memory,
+                         size_t alloc_size) {
+  EXPECT_EQ(zeVirtualMemFree(context, memory, alloc_size), ZE_RESULT_SUCCESS);
+}
+
+void physical_memory_allocation(ze_context_handle_t context,
+                                ze_device_handle_t device,
+                                size_t allocation_size,
+                                ze_physical_mem_handle_t *memory) {
+  ze_physical_mem_desc_t physDesc = {ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC,
+                                     nullptr};
+  physDesc.size = allocation_size;
+  lzt::physical_memory_allocation(context, device, &physDesc, memory);
+}
+
+void physical_memory_allocation(ze_context_handle_t context,
+                                ze_device_handle_t device,
+                                ze_physical_mem_desc_t *desc,
+                                ze_physical_mem_handle_t *memory) {
+  EXPECT_EQ(zePhysicalMemCreate(context, device, desc, memory),
+            ZE_RESULT_SUCCESS);
+  EXPECT_NE(nullptr, memory);
+}
+
+void physical_memory_destroy(ze_context_handle_t context,
+                             ze_physical_mem_handle_t memory) {
+  EXPECT_EQ(zePhysicalMemDestroy(context, memory), ZE_RESULT_SUCCESS);
+}
+
+void virtual_memory_map(ze_context_handle_t context,
+                        const void *reservedVirtualMemory, size_t size,
+                        ze_physical_mem_handle_t physical_memory, size_t offset,
+                        ze_memory_access_attribute_t access) {
+  EXPECT_EQ(zeVirtualMemMap(context, reservedVirtualMemory, size,
+                            physical_memory, offset, access),
+            ZE_RESULT_SUCCESS);
+}
+
+void virtual_memory_unmap(ze_context_handle_t context,
+                          const void *reservedVirtualMemory, size_t size) {
+  EXPECT_EQ(zeVirtualMemUnmap(context, reservedVirtualMemory, size),
+            ZE_RESULT_SUCCESS);
+}
+
+size_t create_page_aligned_size(size_t requested_size, size_t page_size) {
+  return (requested_size / page_size) * page_size;
+}
+
 }; // namespace level_zero_tests
