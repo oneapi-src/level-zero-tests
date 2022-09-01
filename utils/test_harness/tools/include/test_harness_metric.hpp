@@ -39,6 +39,7 @@ std::vector<zet_metric_group_properties_t>
 get_metric_group_properties(std::vector<zet_metric_group_handle_t> metricGroup);
 std::vector<zet_metric_group_properties_t>
 get_metric_group_properties(ze_device_handle_t device);
+std::vector<ze_device_handle_t> get_metric_test_no_subdevices_list(void);
 std::vector<ze_device_handle_t>
 get_metric_test_device_list(uint32_t testSubDeviceCount = 1);
 std::vector<std::string>
@@ -98,8 +99,12 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                              ze_event_handle_t eventHandle);
 void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
                       const size_t rawDataSize, const uint8_t *rawData);
+void validate_metrics_std(zet_metric_group_handle_t matchedGroupHandle,
+                          const size_t rawDataSize, const uint8_t *rawData);
+// Consider 20% of the metric groups in each domain for test input as default
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
-    std::vector<metricGroupInfo_t> &metricGroupInfoList);
+    std::vector<metricGroupInfo_t> &metricGroupInfoList,
+    uint32_t percentOfMetricGroupForTest = 20);
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */

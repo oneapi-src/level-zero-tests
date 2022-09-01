@@ -50,6 +50,23 @@ get_metric_handles(zet_metric_group_handle_t metricGroup) {
   return phMetric;
 }
 
+std::vector<ze_device_handle_t> get_metric_test_no_subdevices_list(void) {
+  std::vector<ze_device_handle_t> testDevices;
+  ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  uint32_t subDeviceCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
+  if (subDeviceCount) {
+    testDevices.resize(subDeviceCount);
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetSubDevices(device, &subDeviceCount,
+                                                       testDevices.data()));
+  } else {
+    testDevices.resize(1);
+    testDevices[0] = device;
+  }
+  return testDevices;
+}
+
 std::vector<ze_device_handle_t>
 get_metric_test_device_list(uint32_t testSubDeviceCount) {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -97,7 +114,8 @@ bool check_metric_type_ip_exp(
 }
 
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
-    std::vector<metricGroupInfo_t> &metricGroupInfoList) {
+    std::vector<metricGroupInfo_t> &metricGroupInfoList,
+    uint32_t percentOfMetricGroupForTest) {
 
   std::map<uint32_t, std::vector<metricGroupInfo_t>> domainMetricGroupMap;
   // Split the metric group info based on domains
@@ -107,8 +125,6 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
 
   std::vector<metricGroupInfo_t> optimizedList;
   optimizedList.reserve(metricGroupInfoList.size());
-  // Consider 20% of the metric groups in each domain for test input
-  uint32_t percentOfMetricGroupForTest = 20;
   const char *valueString = std::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
   if (valueString != nullptr) {
     uint32_t value = atoi(valueString);
@@ -482,7 +498,8 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
 
     for (uint32_t report = 0; report < reportCount; report++) {
       for (uint32_t metric = 0; metric < metricCount; metric++) {
-        zet_metric_properties_t properties;
+        zet_metric_properties_t properties = {
+            ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
         EXPECT_EQ(ZE_RESULT_SUCCESS,
                   zetMetricGetProperties(phMetrics[metric], &properties));
         const size_t metricIndex = report * metricCount + metric;
@@ -495,6 +512,48 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
     startIndex += metricCountForDataIndex;
   }
   assert(startIndex == totalMetricValueCount);
+}
+
+void validate_metrics_std(zet_metric_group_handle_t hMetricGroup,
+                          const size_t rawDataSize, const uint8_t *rawData) {
+
+  uint32_t metricValueCount = 0;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupCalculateMetricValues(
+                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+                rawDataSize, rawData, &metricValueCount, nullptr));
+
+  // Get metric counts and metric values
+  std::vector<zet_typed_value_t> metricValues(metricValueCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupCalculateMetricValues(
+                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+                rawDataSize, rawData, &metricValueCount, metricValues.data()));
+  EXPECT_GT(metricValueCount, 0);
+
+  // Setup
+  uint32_t metricCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(hMetricGroup, &metricCount, nullptr));
+  EXPECT_GT(metricCount, 0);
+
+  std::vector<zet_metric_handle_t> phMetrics(metricCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
+
+  LOG_DEBUG << "metricValueCount " << metricValueCount << " metricCount "
+            << metricCount;
+
+  for (uint32_t count = 0; count < metricValueCount; count++) {
+    zet_metric_properties_t properties = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES,
+                                          nullptr};
+    EXPECT_EQ(
+        ZE_RESULT_SUCCESS,
+        zetMetricGetProperties(phMetrics[count % metricCount], &properties));
+    zet_typed_value_t typed_value = metricValues[count];
+    verify_typed_metric_value(typed_value, properties.resultType);
+  }
 }
 
 } // namespace level_zero_tests
