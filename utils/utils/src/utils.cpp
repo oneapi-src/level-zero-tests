@@ -274,7 +274,7 @@ void sort_devices(std::vector<ze_device_handle_t> &devices) {
               auto device_properties_a = lzt::get_device_properties(a);
               auto device_properties_b = lzt::get_device_properties(b);
 
-              for (int i = ZE_MAX_DEVICE_UUID_SIZE; i >= 0; i--) {
+              for (int i = (ZE_MAX_DEVICE_UUID_SIZE - 1); i >= 0; i--) {
                 if (device_properties_a.uuid.id[i] <
                     device_properties_b.uuid.id[i]) {
                   return true;
