@@ -18,6 +18,8 @@
 
 namespace lzt = level_zero_tests;
 
+static constexpr auto loop_counter_alloc_size = sizeof(unsigned long);
+
 void basic(ze_context_handle_t context, ze_device_handle_t device,
            process_synchro &synchro, debug_options &options) {
 
@@ -443,9 +445,9 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   unsigned long loop_max = 1000000000;
 
   auto loop_counter_d = lzt::allocate_device_memory(
-      sizeof(unsigned long), sizeof(unsigned long), 0, 0, device, context);
+      loop_counter_alloc_size, loop_counter_alloc_size, 0, 0, device, context);
   auto loop_counter_s = lzt::allocate_shared_memory(
-      sizeof(unsigned long), sizeof(unsigned long), 0, 0, device, context);
+      loop_counter_alloc_size, loop_counter_alloc_size, 0, 0, device, context);
 
   LOG_DEBUG << "[Application] Allocated source device memory at: " << std::hex
             << src_buffer_d;
@@ -454,7 +456,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 
   std::memset(dest_buffer_s, 1, size);
   std::memset(src_buffer_s, 0, size);
-  std::memset(loop_counter_s, 0, sizeof(loop_counter_s));
+  std::memset(loop_counter_s, 0, loop_counter_alloc_size);
   for (size_t i = 0; i < size; i++) {
     static_cast<uint8_t *>(src_buffer_s)[i] = (i + 1 & 0xFF);
   }
@@ -482,7 +484,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   lzt::append_barrier(command_list);
   lzt::append_memory_copy(command_list, dest_buffer_s, dest_buffer_d, size);
   lzt::append_memory_copy(command_list, loop_counter_s, loop_counter_d,
-                          sizeof(loop_counter_d));
+                          loop_counter_alloc_size);
   lzt::close_command_list(command_list);
 
   LOG_DEBUG << "[Application] launching execution long_kernel";
@@ -702,9 +704,9 @@ void Job::set_up_work(debug_options &options) {
   src_buffer_s = lzt::allocate_shared_memory(size, size, 0, 0, device, context);
 
   loop_counter_d = lzt::allocate_device_memory(
-      sizeof(unsigned long), sizeof(unsigned long), 0, 0, device, context);
+      loop_counter_alloc_size, loop_counter_alloc_size, 0, 0, device, context);
   loop_counter_s = lzt::allocate_shared_memory(
-      sizeof(unsigned long), sizeof(unsigned long), 0, 0, device, context);
+      loop_counter_alloc_size, loop_counter_alloc_size, 0, 0, device, context);
 
   LOG_DEBUG << "[Application] Allocated source device memory at: " << std::hex
             << src_buffer_d;
@@ -713,7 +715,7 @@ void Job::set_up_work(debug_options &options) {
 
   std::memset(dest_buffer_s, 1, size);
   std::memset(src_buffer_s, 0, size);
-  std::memset(loop_counter_s, 0, sizeof(loop_counter_s));
+  std::memset(loop_counter_s, 0, loop_counter_alloc_size);
   for (size_t i = 0; i < size; i++) {
     static_cast<uint8_t *>(src_buffer_s)[i] = (i + 1 & 0xFF);
   }
@@ -741,7 +743,7 @@ void Job::set_up_work(debug_options &options) {
   lzt::append_barrier(command_list);
   lzt::append_memory_copy(command_list, dest_buffer_s, dest_buffer_d, size);
   lzt::append_memory_copy(command_list, loop_counter_s, loop_counter_d,
-                          sizeof(loop_counter_d));
+                          loop_counter_alloc_size);
   lzt::close_command_list(command_list);
 }
 
