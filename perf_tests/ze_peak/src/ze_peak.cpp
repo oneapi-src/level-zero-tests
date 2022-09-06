@@ -331,6 +331,8 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
     if (sub_device_count) {
       cmd_list.resize(sub_device_count);
       cmd_queue.resize(sub_device_count);
+      immediate_cmd_list.resize(sub_device_count);
+
       uint32_t i = 0;
       for (auto device : sub_devices) {
 
