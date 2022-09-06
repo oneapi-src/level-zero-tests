@@ -49,6 +49,39 @@ TEST_F(zeVirtualMemoryTests,
 
 TEST_F(
     zeVirtualMemoryTests,
+    GivenVirtualMemoryReservationThenSettingTheMemoryAccessAttributeReturnsSuccess) {
+  ze_memory_access_attribute_t access;
+  ze_memory_access_attribute_t previousAccess;
+  size_t memorySize = 0;
+  lzt::query_page_size(context, device, allocationSize, &pageSize);
+  allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
+  lzt::virtual_memory_reservation(context, nullptr, allocationSize,
+                                  &reservedVirtualMemory);
+  EXPECT_NE(nullptr, reservedVirtualMemory);
+  lzt::virtual_memory_reservation_get_access(
+      context, reservedVirtualMemory, allocationSize, &access, &memorySize);
+  EXPECT_EQ(access, ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+  EXPECT_EQ(memorySize, allocationSize);
+
+  std::vector<ze_memory_access_attribute_t> memoryAccessFlags = {
+      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY,
+      ZE_MEMORY_ACCESS_ATTRIBUTE_NONE};
+
+  for (auto accessFlags : memoryAccessFlags) {
+    previousAccess = access;
+    lzt::virtual_memory_reservation_set_access(context, reservedVirtualMemory,
+                                               allocationSize, accessFlags);
+    lzt::virtual_memory_reservation_get_access(
+        context, reservedVirtualMemory, allocationSize, &access, &memorySize);
+    EXPECT_NE(previousAccess, access);
+    EXPECT_EQ(accessFlags, access);
+  }
+
+  lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
     GivenPageAlignedSizeThenVirtualAndPhysicalMemoryReservedAndMappedSuccessfully) {
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);

@@ -292,6 +292,21 @@ void virtual_memory_reservation(ze_context_handle_t context, const void *pStart,
             ZE_RESULT_SUCCESS);
 }
 
+void virtual_memory_reservation_set_access(
+    ze_context_handle_t context, const void *ptr, size_t size,
+    ze_memory_access_attribute_t access) {
+  EXPECT_EQ(zeVirtualMemSetAccessAttribute(context, ptr, size, access),
+            ZE_RESULT_SUCCESS);
+}
+
+void virtual_memory_reservation_get_access(ze_context_handle_t context,
+                                           const void *ptr, size_t size,
+                                           ze_memory_access_attribute_t *access,
+                                           size_t *outSize) {
+  EXPECT_EQ(zeVirtualMemGetAccessAttribute(context, ptr, size, access, outSize),
+            ZE_RESULT_SUCCESS);
+}
+
 void virtual_memory_free(ze_context_handle_t context, void *memory,
                          size_t alloc_size) {
   EXPECT_EQ(zeVirtualMemFree(context, memory, alloc_size), ZE_RESULT_SUCCESS);

@@ -113,5 +113,12 @@ void virtual_memory_map(ze_context_handle_t context,
 void virtual_memory_unmap(ze_context_handle_t hContext,
                           const void *reservedVirtualMemory, size_t size);
 size_t create_page_aligned_size(size_t requested_size, size_t page_size);
+void virtual_memory_reservation_get_access(ze_context_handle_t context,
+                                           const void *ptr, size_t size,
+                                           ze_memory_access_attribute_t *access,
+                                           size_t *outSize);
+void virtual_memory_reservation_set_access(ze_context_handle_t context,
+                                           const void *ptr, size_t size,
+                                           ze_memory_access_attribute_t access);
 }; // namespace level_zero_tests
 #endif
