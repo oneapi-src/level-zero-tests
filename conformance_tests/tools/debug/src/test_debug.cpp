@@ -10,6 +10,11 @@
 
 namespace lzt = level_zero_tests;
 
+#ifdef WIN32
+#include <windows.h>
+#include <tlhelp32.h>
+#endif
+
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 #include <mutex>
@@ -132,7 +137,8 @@ TEST_F(
   run_test(all_sub_devices, true, true);
 }
 
-bp::child launch_child_debugger_process(std::string device_id,
+bp::child launch_child_debugger_process(debug_test_type_t test_type,
+                                        std::string device_id,
                                         bool use_sub_devices, uint32_t index) {
 
   fs::path debugger_path(fs::current_path() / "debug");
@@ -140,7 +146,8 @@ bp::child launch_child_debugger_process(std::string device_id,
   paths.push_back(debugger_path);
   fs::path helper = bp::search_path("child_debugger", paths);
 
-  bp::child debugger(helper, "--device_id=" + device_id,
+  bp::child debugger(helper, "--test_type=" + std::to_string(test_type),
+                     "--device_id=" + device_id,
                      (use_sub_devices ? "--use_sub_devices" : ""),
                      "--index=" + std::to_string(index));
 
@@ -175,7 +182,7 @@ void zetDebugAttachDetachTest::run_multidevice_test(
   LOG_DEBUG << "[Debugger] Launching new debugger on "
             << device_properties_1.uuid << " " << device_properties_1.name;
   auto debugger = launch_child_debugger_process(
-      lzt::to_string(device_properties_1.uuid), use_sub_devices, 1);
+      BASIC, lzt::to_string(device_properties_1.uuid), use_sub_devices, 1);
 
   LOG_DEBUG << "[Debugger] Launched new debugger with PID:  " << debugger.id()
             << " using " << device_properties_1.uuid << " "
@@ -359,6 +366,135 @@ TEST_F(
   } else {
     run_attach_detach_to_multiple_applications_on_different_devs_test(devices,
                                                                       false);
+  }
+}
+
+TEST_F(
+    zetDebugAttachDetachTest,
+    GivenExistingDebuggerExitsWithoutDetachingWhenDebuggingApplicationThenNewDebuggerCanAttach) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  for (auto &device : devices) {
+    if (!is_debug_supported(device))
+      continue;
+
+    auto device_properties = lzt::get_device_properties(device);
+    auto debugger = launch_child_debugger_process(
+        LONG_RUNNING_KERNEL_INTERRUPTED, lzt::to_string(device_properties.uuid),
+        false, 1);
+    LOG_DEBUG << "[Debugger] Launched new debugger with PID:  " << debugger.id()
+              << " using " << device_properties.uuid << " "
+              << device_properties.name;
+
+    zet_debug_config_t debug_config = {};
+
+    std::this_thread::sleep_for(std::chrono::seconds(6));
+    process_synchro synchro2(true, false, 1);
+
+    synchro2.wait_for_debugger_signal(1);
+    uint32_t child_pid = 0;
+
+    synchro2.get_child_application_pid(child_pid);
+    LOG_INFO << "[Debugger] Received child pid: " << child_pid;
+    bp::pid_t pid = child_pid;
+    debug_config.pid = child_pid;
+
+    debugger.terminate();
+    LOG_INFO << "[Debugger] Terminated child debugger without detaching";
+    LOG_INFO << "[Debugger] New debugger attaching to application at pid="
+             << child_pid;
+    debugSession = lzt::debug_attach(device, debug_config);
+    if (!debugSession) {
+      FAIL() << "[Debugger] Failed to attach to application";
+    }
+
+    zet_debug_event_t debug_event;
+
+    std::vector<zet_debug_event_type_t> expectedEvents = {
+        ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD};
+
+    if (!check_events(debugSession, expectedEvents)) {
+      FAIL() << "[Debugger] Did not receive expected events";
+    }
+
+    ze_device_thread_t device_thread;
+    device_thread.slice = UINT32_MAX;
+    device_thread.subslice = UINT32_MAX;
+    device_thread.eu = UINT32_MAX;
+    device_thread.thread = UINT32_MAX;
+
+    LOG_INFO << "[Debugger] Sleeping to wait for device threads";
+    std::this_thread::sleep_for(std::chrono::seconds(6));
+
+    LOG_INFO << "[Debugger] Sending interrupt from main thread";
+    lzt::debug_interrupt(debugSession, device_thread);
+
+    lzt::debug_read_event(debugSession, debug_event, eventsTimeoutMS, false);
+    LOG_INFO << "[Debugger] received event: "
+             << lzt::debuggerEventTypeString[debug_event.type];
+    ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED);
+
+    // write to kernel buffer to signal to application to end
+    zet_debug_memory_space_desc_t memory_space_desc = {};
+    uint64_t gpu_buffer_va = 0;
+    synchro2.wait_for_application_signal();
+    if (!synchro2.get_app_gpu_buffer_address(gpu_buffer_va)) {
+      FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
+    }
+
+    memory_space_desc.address = gpu_buffer_va;
+    memory_space_desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+    memory_space_desc.stype = ZET_STRUCTURE_TYPE_DEBUG_MEMORY_SPACE_DESC;
+
+    uint8_t *buffer = new uint8_t[1];
+    buffer[0] = 0;
+    auto thread = debug_event.info.thread.thread;
+    LOG_INFO << "[Debugger] Writing to address: " << std::hex << gpu_buffer_va;
+    lzt::debug_write_memory(debugSession, thread, memory_space_desc, 1, buffer);
+    delete[] buffer;
+    print_thread("Resuming device thread ", thread, DEBUG);
+    lzt::debug_resume(debugSession, thread);
+
+    debugger.wait();
+    // see
+    // https://www.boost.org/doc/libs/1_64_0/doc/html/boost/process/child.html#idp24658944-bb:~:text=There%20is%20no%20guarantee%20that%20this%20will%20work.%20The%20process%20need%20the%20right%20access%20rights%2C%20which%20are%20very%20platform%20specific.
+    debugHelper = std::move(bp::child(pid));
+
+#ifdef __linux__
+    while (kill(pid, 0) != -1) {
+    }
+    if (errno == ESRCH) {
+      LOG_INFO << "[Debugger] Child process has exited";
+    } else {
+      FAIL() << "[Debugger] Child process has not exited";
+    }
+#endif
+
+#ifdef _WIN32
+    // wait for child to exit on windows
+    auto exists = true;
+    PROCESSENTRY32 entry;
+    entry.dwSize = sizeof(PROCESSENTRY32);
+    while (exists) {
+      exists = false;
+      HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+
+      if (Process32First(snapshot, &entry)) {
+        while (Process32Next(snapshot, &entry)) {
+          if (entry.th32ProcessID == pid) {
+            exists = true;
+            break;
+          }
+        }
+      }
+
+      CloseHandle(snapshot);
+    }
+#endif
+
+    EXPECT_EQ(debugHelper.running(), false);
+    EXPECT_EQ(debugHelper.exit_code(), 0);
   }
 }
 

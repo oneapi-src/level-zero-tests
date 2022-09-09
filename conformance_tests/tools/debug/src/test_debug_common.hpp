@@ -59,6 +59,7 @@ typedef struct {
   bool debugee_signal;
   uint64_t gpu_buffer_address;
   uint32_t gpu_thread_count;
+  uint32_t child_application_pid;
 } debug_signals_t;
 
 class process_synchro {
@@ -91,11 +92,15 @@ public:
                 ->gpu_buffer_address);
       gpu_thread_count = &(static_cast<debug_signals_t *>(region->get_address())
                                ->gpu_thread_count);
+      child_application_pid =
+          &(static_cast<debug_signals_t *>(region->get_address())
+                ->child_application_pid);
 
       *debugger_signal = false;
       *debugee_signal = false;
       *gpu_buffer_address = 0;
       *gpu_thread_count = 0;
+      *child_application_pid = 0;
 
       bi::named_mutex::remove(debug_mutex_name.c_str());
       mutex = new bi::named_mutex(bi::create_only, debug_mutex_name.c_str());
@@ -124,6 +129,9 @@ public:
                 ->gpu_buffer_address);
       gpu_thread_count = &(static_cast<debug_signals_t *>(region->get_address())
                                ->gpu_thread_count);
+      child_application_pid =
+          &(static_cast<debug_signals_t *>(region->get_address())
+                ->child_application_pid);
     }
   }
 
@@ -147,13 +155,17 @@ public:
   }
 
   // To be used by application only:
-  void wait_for_debugger_signal() {
+  void wait_for_debugger_signal(int parent = 0) {
+    auto prefix = "[Application]";
+    if (parent)
+      prefix = "[Parent Debugger]";
     if (!enabled)
       return;
-    LOG_INFO << "[Application] Waiting for debugger to notify";
+    LOG_INFO << prefix << " Waiting for debugger to notify";
     bi::scoped_lock<bi::named_mutex> lock(*mutex);
+
     condition->wait(lock, [&] { return *debugger_signal; });
-    LOG_INFO << "[Application] Received debugger notification proceeding";
+    LOG_INFO << prefix << " Received debugger notification proceeding";
   }
 
   void clear_debugger_signal() {
@@ -244,6 +256,25 @@ public:
     return true;
   }
 
+  void update_child_application_pid(uint32_t child_pid) {
+    if (!enabled)
+      return;
+    LOG_INFO << "[Child Debugger] Updating child application pid: "
+             << child_pid;
+    mutex->lock();
+    *child_application_pid = child_pid;
+    mutex->unlock();
+  }
+
+  void get_child_application_pid(uint32_t &child_pid) {
+    if (!enabled)
+      return;
+    mutex->lock();
+    child_pid = *child_application_pid;
+    mutex->unlock();
+    LOG_INFO << "[Debugger] Received child application pid: " << child_pid;
+  }
+
 private:
   bi::mapped_region *region;
   bi::named_mutex *mutex;
@@ -252,6 +283,7 @@ private:
   bool *debugee_signal;
   uint64_t *gpu_buffer_address;
   uint32_t *gpu_thread_count;
+  uint32_t *child_application_pid;
   bool enabled;
 };
 

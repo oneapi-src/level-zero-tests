@@ -27,6 +27,9 @@ public:
     options(index_string.c_str(), po::value<uint64_t>(&index_in)->required(),
             "Index of this debuggee");
     options(use_sub_devices_string, "Use subdevices");
+    options(test_type_string,
+            po::value<uint32_t>((uint32_t *)&test_selected)->required(),
+            "the test type to run");
 
     std::vector<std::string> parser(argv + 1, argv + argc);
     po::parsed_options parsed_options = po::command_line_parser(parser)
@@ -50,6 +53,7 @@ public:
   bool use_sub_devices = false;
   std::string sub_device_id_in;
   uint64_t index_in = 0;
+  debug_test_type_t test_selected = BASIC;
 };
 
 int main(int argc, char **argv) {
@@ -83,7 +87,9 @@ int main(int argc, char **argv) {
 
   ProcessLauncher launcher;
   auto debug_helper = launcher.launch_process(
-      BASIC, device, options.use_sub_devices, "", index);
+      options.test_selected, device, options.use_sub_devices, "", index);
+
+  // inform parent of my child's pid
 
   // we have the device, now create a debug session
   zet_debug_config_t debug_config = {};
@@ -97,9 +103,14 @@ int main(int argc, char **argv) {
     exit(1);
   }
   LOG_DEBUG << "[Child Debugger] Notifying child application";
+  synchro.update_child_application_pid(debug_helper.id());
+  if (options.test_selected != BASIC) {
+    debug_helper.detach();
+  }
   synchro.notify_application();
 
   LOG_DEBUG << "[Child Debugger] Waiting for application to exit";
+
   debug_helper.wait();
   LOG_DEBUG << "[Child Debugger] Detaching";
   lzt::debug_detach(debugSession);
