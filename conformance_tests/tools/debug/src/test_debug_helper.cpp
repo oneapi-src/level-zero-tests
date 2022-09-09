@@ -881,8 +881,11 @@ int main(int argc, char **argv) {
             break;
           }
         }
-        if (!device)
-          continue;
+        if (device) {
+          LOG_INFO << "Selected sub device: " << device
+                   << " of root device: " << root_device;
+          break;
+        }
       } else {
         LOG_INFO << "[Application] Comparing root device";
 
@@ -893,6 +896,7 @@ int main(int argc, char **argv) {
           continue;
         }
         device = root_device;
+        LOG_INFO << "Selected root device: " << device;
       }
     }
   } else {
@@ -901,9 +905,21 @@ int main(int argc, char **argv) {
     if (!options.use_sub_devices) {
       devices = lzt::get_devices(driver);
     } else {
-      // ToDo:: Add support for subdevices
+      // ToDo:: Consider subdevices on different devices
       devices = lzt::get_ze_sub_devices(lzt::get_devices(driver)[0]);
     }
+
+    devices.erase(
+        std::remove_if(devices.begin(), devices.end(),
+                       [](ze_device_handle_t &device) {
+                         auto device_properties =
+                             lzt::get_device_properties(device);
+                         auto properties = lzt::get_debug_properties(device);
+
+                         return !(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &
+                                  properties.flags);
+                       }),
+        devices.end());
 
     if (devices.size() < 2) {
       LOG_ERROR << "[Application] Not enough devices to compare";
