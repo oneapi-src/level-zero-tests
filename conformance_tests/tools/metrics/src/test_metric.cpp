@@ -1,10 +1,15 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2022 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
+
+#include <boost/filesystem.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+#include <boost/interprocess/sync/named_condition.hpp>
 
 #include "gtest/gtest.h"
 
@@ -13,6 +18,9 @@
 #include "test_harness/test_harness.hpp"
 
 namespace lzt = level_zero_tests;
+namespace fs = boost::filesystem;
+namespace bp = boost::process;
+namespace bi = boost::interprocess;
 
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
@@ -943,6 +951,94 @@ TEST_F(
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
   }
+}
+
+TEST(
+    zetMetricStreamProcessTest,
+    GivenWorkloadExecutingInSeparateProcessWhenStreamingSingleMetricsThenExpectValidMetrics) {
+
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+
+  // setup monitor
+  auto metricGroupInfo = lzt::get_metric_group_info(
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+  metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+
+  if (metricGroupInfo.empty()) {
+    LOG_INFO << "No metric groups found";
+    return;
+  }
+  // pick a metric group
+  auto groupInfo = metricGroupInfo[0];
+  for (auto &_groupInfo : metricGroupInfo) {
+    if (_groupInfo.metricGroupName == "ComputeBasic") {
+      groupInfo = _groupInfo;
+      break;
+    }
+  }
+  LOG_INFO << "Selected metric group: " << groupInfo.metricGroupName
+           << " domain: " << groupInfo.domain;
+
+  LOG_INFO << "Activating metric group: " << groupInfo.metricGroupName;
+  lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+
+  ze_event_handle_t eventHandle;
+  lzt::zeEventPool eventPool;
+  eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
+                         ZE_EVENT_SCOPE_FLAG_HOST);
+
+  uint32_t notifyEveryNReports = 3000;
+  uint32_t samplingPeriod = 1000000;
+  zet_metric_streamer_handle_t metricStreamerHandle =
+      lzt::metric_streamer_open_for_device(device, groupInfo.metricGroupHandle,
+                                           eventHandle, notifyEveryNReports,
+                                           samplingPeriod);
+
+  //================================================================================
+  LOG_INFO << "Starting workload in separate process";
+  fs::path helper_path(fs::current_path() / "metrics");
+  std::vector<fs::path> paths;
+  paths.push_back(helper_path);
+  fs::path helper = bp::search_path("test_metric_helper", paths);
+  bp::child metric_helper(helper);
+
+  // start monitor
+  do {
+    LOG_DEBUG << "Waiting for data (event synchronize)...";
+    lzt::event_host_synchronize(eventHandle,
+                                std::numeric_limits<uint64_t>::max());
+    lzt::event_host_reset(eventHandle);
+
+    // read data
+    size_t oneReportSize, allReportsSize, numReports;
+    oneReportSize =
+        lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
+    allReportsSize =
+        lzt::metric_streamer_read_data_size(metricStreamerHandle, UINT32_MAX);
+
+    LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
+              << ". All reports size:" << allReportsSize;
+
+    EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
+
+    std::vector<uint8_t> rawData;
+    lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
+    lzt::validate_metrics(
+        groupInfo.metricGroupHandle,
+        lzt::metric_streamer_read_data_size(metricStreamerHandle),
+        rawData.data());
+
+  } while (metric_helper.running());
+  LOG_INFO << "Waiting for process to finish...";
+  metric_helper.wait();
+
+  EXPECT_EQ(metric_helper.exit_code(), 0);
+
+  // cleanup
+  lzt::deactivate_metric_groups(device);
+  lzt::metric_streamer_close(metricStreamerHandle);
+  eventPool.destroy_event(eventHandle);
 }
 
 } // namespace

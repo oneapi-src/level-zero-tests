@@ -13,3 +13,14 @@ add_lzt_test(
   KERNELS
     ze_matrix_multiplication
 )
+
+add_lzt_test_executable(
+  NAME test_metric_helper
+  GROUP "/conformance_tests/tools/metrics"
+  PREFIX "metrics"
+  SOURCES
+  src/test_metric_helper.cpp
+  LINK_LIBRARIES
+  level_zero_tests::logging
+  level_zero_tests::utils
+)
