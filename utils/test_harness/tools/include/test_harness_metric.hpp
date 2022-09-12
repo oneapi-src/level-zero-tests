@@ -66,6 +66,7 @@ zet_metric_query_handle_t
 metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle);
 
 void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle);
+void reset_metric_query(zet_metric_query_handle_t &metricQueryHandle);
 
 size_t metric_query_get_data_size(zet_metric_query_handle_t metricQueryHandle);
 void metric_query_get_data(zet_metric_query_handle_t metricQueryHandle,

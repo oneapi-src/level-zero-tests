@@ -309,6 +309,10 @@ void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryDestroy(metricQueryHandle));
 }
 
+void reset_metric_query(zet_metric_query_handle_t &metricQueryHandle) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryReset(metricQueryHandle));
+}
+
 size_t metric_query_get_data_size(zet_metric_query_handle_t metricQueryHandle) {
   size_t metricSize = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
