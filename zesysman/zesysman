@@ -1207,7 +1207,8 @@ def main():
                     if set_level_power or enable_level_power or disable_level_power:
                         if set_level_power:
                             level.limit, remainder = arg.parseMilliwatts(set_level_power)
-                            level.interval, remainder = arg.parseMilliseconds(remainder)
+                            if remainder:
+                                level.interval, remainder = arg.parseMilliseconds(remainder)
                             if remainder:
                                 pr.err("WARNING: Extra set-power arguments ignored")
                         if enable_level_power:
@@ -1221,7 +1222,12 @@ def main():
                             else:
                                 pr("WARNING: Cannot disable " + levelName + " power since enabledStateLocked is set to True")
                         pr("Setting " + levelName + " limit to", level.limit, limitUnitTypeString(level.limitUnit), level.interval,"ms, enabled =", bool(level.enabled))
-                        zeCall(zesPowerSetLimitsExt(pwr, pwrCount.cast(), level))
+                        try:
+                            zeCall(zesPowerSetLimitsExt(pwr, pwrCount.cast(), level))
+                        except NotImplementedError:
+                            pass
+                        except ValueError:
+                            logger.reportZeException()
 
                 for i in range(pwrCount.value()):
                     if powerDescriptors[i].level == ZES_POWER_LEVEL_SUSTAINED:
