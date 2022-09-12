@@ -112,6 +112,50 @@ TEST_F(
   }
 }
 
+TEST_F(
+    zetMetricGroupTest,
+    GivenMetricGroupsInDifferentDomainWhenValidGroupIsActivatedThenExpectGroupActivationAndDeactivationToSucceed) {
+
+  bool test_executed = false;
+  std::vector<zet_metric_group_handle_t> groupHandleList;
+  groupHandleList = lzt::get_metric_group_handles(device);
+  EXPECT_NE(0, groupHandleList.size());
+  if (groupHandleList.size() < 2) {
+    LOG_INFO << "Not enough metric groups to test multiple groups activation";
+    return;
+  }
+  zet_metric_group_properties_t metric_group_properties = {};
+  metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+  metric_group_properties.pNext = nullptr;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupGetProperties(groupHandleList[0],
+                                        &metric_group_properties));
+  auto domain = metric_group_properties.domain;
+  auto domain_2 = 0;
+  std::vector<zet_metric_group_handle_t> test_handles{groupHandleList[0]};
+  for (zet_metric_group_handle_t groupHandle : groupHandleList) {
+    metric_group_properties = {};
+    metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    metric_group_properties.pNext = nullptr;
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
+                                     groupHandle, &metric_group_properties));
+    if (metric_group_properties.domain != domain) {
+      domain_2 = metric_group_properties.domain;
+      // lzt::get_metric_group_properties(groupHandle);
+      test_handles.push_back(groupHandle);
+      lzt::activate_metric_groups(device, 2, test_handles.data());
+      lzt::deactivate_metric_groups(device);
+      test_executed = true;
+      break;
+    }
+  }
+  if (!test_executed) {
+    GTEST_SKIP() << "Not enough metric groups in different domains";
+  } else {
+    LOG_INFO << "Domain 1: " << domain << " Domain 2: " << domain_2;
+  }
+}
+
 TEST_F(zetMetricGroupTest,
        GivenValidMetricGroupWhenStreamerIsOpenedThenExpectStreamerToSucceed) {
 
