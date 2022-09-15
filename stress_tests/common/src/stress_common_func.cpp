@@ -10,6 +10,37 @@
 
 namespace lzt = level_zero_tests;
 
+#if defined(unix) || defined(__unix__) || defined(__unix)
+
+#include <unistd.h>
+
+uint64_t total_available_host_memory() {
+  const long page_count = sysconf(_SC_AVPHYS_PAGES);
+  const long page_size = sysconf(_SC_PAGE_SIZE);
+  const uint64_t total_bytes = page_count * page_size;
+
+  return total_bytes;
+}
+
+#endif
+
+#if defined(_WIN64) || defined(_WIN64) || defined(_WIN32)
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+
+uint64_t total_available_host_memory() {
+  MEMORYSTATUSEX stat;
+  stat.dwLength = sizeof(stat);
+  GlobalMemoryStatusEx(&stat);
+
+  return stat.ullAvailVirtual;
+}
+
+#endif
+
 // limit total or one allocation size, do not change number of allocations
 void adjust_max_memory_allocation(
     const ze_driver_handle_t &driver,
@@ -21,16 +52,34 @@ void adjust_max_memory_allocation(
 
   // NEO return always one property that why index 0.
   uint64_t device_total_memory_size = device_memory_properties[0].totalSize;
-
-  // initial values base on test arguments
-  one_allocation_size = test_arguments.one_allocation_size_limit *
-                        device_total_memory_size / number_of_all_alloc;
-
-  total_allocation_size = number_of_all_alloc * one_allocation_size *
-                          test_arguments.total_memory_size_limit;
+  uint64_t host_available_memory_size = total_available_host_memory();
+  uint64_t total_available_memory = device_total_memory_size;
 
   LOG_INFO << "Device total memory size == "
            << (float)device_total_memory_size / (1024 * 1024) << " MB";
+
+  if (device_properties.flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED) {
+    LOG_INFO << "Device is Integrated, device will share memory with host. "
+                "Available host memory size will be set to half.";
+    host_available_memory_size = host_available_memory_size / 2;
+  }
+  LOG_INFO << "Host Available Memory == "
+           << (float)host_available_memory_size / (1024 * 1024) << " MB";
+
+  if (device_total_memory_size > host_available_memory_size) {
+    LOG_INFO << "Require equal amount of host memory for "
+                "verification, limiting to available host memory size.";
+    total_available_memory = host_available_memory_size;
+  }
+  LOG_INFO << "Total Available Memory == "
+           << (float)total_available_memory / (1024 * 1024) << " MB";
+
+  // initial values base on test arguments
+  one_allocation_size = test_arguments.one_allocation_size_limit *
+                        total_available_memory / number_of_all_alloc;
+
+  total_allocation_size = number_of_all_alloc * one_allocation_size *
+                          test_arguments.total_memory_size_limit;
 
   LOG_INFO << "Test total memory size requested: "
            << (float)total_allocation_size / (1024 * 1024) << "MB";
@@ -69,11 +118,11 @@ void adjust_max_memory_allocation(
   }
 
   // verify if total memory used by test is bigger that device memory
-  if (total_allocation_size > device_total_memory_size) {
+  if (total_allocation_size > total_available_memory) {
     LOG_INFO << "Requested  total memory size higher then device memory size. "
                 "Need to limit... ";
     total_allocation_size =
-        test_arguments.total_memory_size_limit * device_total_memory_size;
+        test_arguments.total_memory_size_limit * total_available_memory;
     one_allocation_size = test_arguments.one_allocation_size_limit *
                           total_allocation_size / number_of_all_alloc;
     if (one_allocation_size < min_page_size) {
@@ -86,7 +135,7 @@ void adjust_max_memory_allocation(
     }
   }
 
-  uint64_t maxSingleSizeAllocation = (16ull * 1024ull * 1024ull * 1024ull) - 1;
+  uint64_t maxSingleSizeAllocation = (16ull * 1024ull * 1024ull * 1024ull);
   if (one_allocation_size > maxSingleSizeAllocation) {
     LOG_WARNING << "Single size allocation " << one_allocation_size
                 << " exceeds 16GB, adjusting it to 16GB";
