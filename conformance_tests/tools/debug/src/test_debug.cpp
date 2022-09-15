@@ -41,7 +41,7 @@ TEST(
 
   for (auto &device : lzt::get_devices(driver)) {
     for (auto &sub_device : lzt::get_ze_sub_devices(device)) {
-      zetDebugBaseSetup::is_debug_supported(device);
+      zetDebugBaseSetup::is_debug_supported(sub_device);
     }
   }
 }
