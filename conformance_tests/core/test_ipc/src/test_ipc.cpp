@@ -35,6 +35,13 @@ protected:
 TEST_F(
     zeIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenGettingIpcMemHandleThenSuccessIsReturned) {
+  ze_result_t result = zeInit(0);
+  if (result) {
+    throw std::runtime_error("zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_TRACE << "Driver initialized";
+  level_zero_tests::print_platform_overview();
   memory_ = lzt::allocate_device_memory(1);
   context_ = lzt::create_context();
 
@@ -47,6 +54,13 @@ TEST_F(
 class zeIpcMemHandleCloseTests : public zeIpcMemHandleTests {
 protected:
   void SetUp() override {
+    ze_result_t result = zeInit(0);
+    if (result) {
+      throw std::runtime_error("zeInit failed: " +
+                               level_zero_tests::to_string(result));
+    }
+    LOG_TRACE << "Driver initialized";
+    level_zero_tests::print_platform_overview();
     context_ = lzt::create_context();
     lzt::allocate_mem_and_get_ipc_handle(context_, &ipc_mem_handle_, &memory_,
                                          ZE_MEMORY_TYPE_DEVICE);
@@ -58,7 +72,6 @@ protected:
 TEST_F(
     zeIpcMemHandleCloseTests,
     GivenValidPointerToDeviceMemoryAllocationWhenClosingIpcHandleThenSuccessIsReturned) {
-
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemOpenIpcHandle(context_,
                                lzt::zeDevice::get_instance()->get_device(),
@@ -70,7 +83,6 @@ TEST_F(
 TEST_F(
     zeIpcMemHandleCloseTests,
     GivenValidPointerToDeviceMemoryAllocationBiasCachedWhenClosingIpcHandleThenSuccessIsReturned) {
-
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemOpenIpcHandle(
                 context_, lzt::zeDevice::get_instance()->get_device(),

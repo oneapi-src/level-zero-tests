@@ -66,6 +66,18 @@ static void parent_device_signals(ze_event_handle_t hEvent) {
 static void run_ipc_event_test(parent_test_t parent_test,
                                child_test_t child_test, bool multi_device) {
 #ifdef __linux__
+  bipc::shared_memory_object::remove("ipc_event_test");
+  // launch child
+  boost::process::child c("./ipc/test_ipc_event_helper");
+
+  ze_result_t result = zeInit(0);
+  if (result) {
+    throw std::runtime_error("zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_INFO << "IPC Parent zeinit";
+  level_zero_tests::print_platform_overview();
+
   auto ep = get_event_pool(multi_device);
   ze_ipc_event_pool_handle_t hIpcEventPool;
   ep.get_ipc_handle(&hIpcEventPool);
@@ -75,15 +87,12 @@ static void run_ipc_event_test(parent_test_t parent_test,
   ze_event_handle_t hEvent;
   ep.create_event(hEvent, defaultEventDesc);
   shared_data_t test_data = {parent_test, child_test, multi_device};
-  bipc::shared_memory_object::remove("ipc_event_test");
   bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));
   bipc::mapped_region region(shm, bipc::read_write);
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
-  // launch child
-  boost::process::child c("./ipc/test_ipc_event_helper");
   lzt::send_ipc_handle(hIpcEventPool);
 
   switch (parent_test) {

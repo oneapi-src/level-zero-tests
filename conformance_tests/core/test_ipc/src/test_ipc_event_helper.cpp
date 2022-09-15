@@ -102,9 +102,21 @@ int main() {
     LOG_DEBUG << "Child exit due to zeInit failure";
     exit(1);
   }
+  LOG_INFO << "IPC Child zeinit";
   shared_data_t shared_data;
-  bipc::shared_memory_object shm(bipc::open_only, "ipc_event_test",
-                                 bipc::read_write);
+  int count = 0;
+  int retries = 1000;
+  bipc::shared_memory_object shm;
+  while (true) {
+    try {
+      shm = bipc::shared_memory_object(bipc::open_only, "ipc_event_test",
+                                       bipc::read_write);
+      break;
+    } catch (const bipc::interprocess_exception &ex) {
+      if (++count == retries)
+        throw ex;
+    }
+  }
   shm.truncate(sizeof(shared_data_t));
   bipc::mapped_region region(shm, bipc::read_only);
   std::memcpy(&shared_data, region.get_address(), sizeof(shared_data_t));
