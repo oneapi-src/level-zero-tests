@@ -631,7 +631,7 @@ class Job {
 public:
   Job(ze_context_handle_t &context, ze_device_handle_t &device);
   void set_up_work(debug_options &options);
-  void notify_debugger_address(process_synchro *synchro);
+  void notify_debugger_address_and_thread_count(process_synchro *synchro);
   void execute();
   void synchronize();
   void validate();
@@ -651,6 +651,7 @@ private:
   void *src_buffer_d;
   void *loop_counter_s;
   void *loop_counter_d;
+  uint32_t gpu_thread_count = 0;
   ze_context_handle_t context;
 };
 constexpr uint32_t Job::size;
@@ -695,6 +696,8 @@ void Job::set_up_work(debug_options &options) {
            << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
            << ". GPU thread count: ceil (P size/maxSubGroupSize) = "
            << threadCount;
+
+  gpu_thread_count = threadCount;
 
   dest_buffer_d =
       lzt::allocate_device_memory(size, size, 0, 0, device, context);
@@ -747,7 +750,8 @@ void Job::set_up_work(debug_options &options) {
   lzt::close_command_list(command_list);
 }
 
-void Job::notify_debugger_address(process_synchro *synchro) {
+void Job::notify_debugger_address_and_thread_count(process_synchro *synchro) {
+  synchro->update_gpu_thread_count(gpu_thread_count);
   synchro->update_gpu_buffer_address(reinterpret_cast<uint64_t>(src_buffer_d));
   synchro->notify_debugger();
 }
@@ -812,13 +816,13 @@ void use_two_devices(ze_context_handle_t context, ze_device_handle_t &device_0,
   job_1.set_up_work(options);
 
   LOG_INFO << "[Application] Setting buffer address 0 for debugger to read";
-  job_0.notify_debugger_address(&synchro);
+  job_0.notify_debugger_address_and_thread_count(&synchro);
   LOG_INFO
       << "[Application] Waiting for debugger to signal it read first address";
   synchro.clear_debugger_signal();
   synchro.wait_for_debugger_signal();
   LOG_INFO << "[Application] Setting buffer address 1 for debugger to read";
-  job_1.notify_debugger_address(&synchro);
+  job_1.notify_debugger_address_and_thread_count(&synchro);
 
   job_0.execute();
   job_1.execute();
