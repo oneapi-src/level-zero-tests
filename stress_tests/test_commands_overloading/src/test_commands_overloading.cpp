@@ -256,17 +256,17 @@ TEST_P(
     test_kernel_names.push_back(kernel_name);
     if (test_arguments.separate_modules || dispatch_id == 0) {
       LOG_DEBUG << "call create module";
-      ze_module_handle_t module_handle =
-          lzt::create_module(context, device, kernel_file_name,
-                             ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required", nullptr);
+      ze_module_handle_t module_handle = lzt::create_module(
+          context, device, kernel_file_name, ZE_MODULE_FORMAT_IL_SPIRV,
+          "-ze-opt-greater-than-4GB-buffer-required", nullptr);
       multiple_module_handle.push_back(module_handle);
     }
   }
 
   LOG_INFO << "call create module";
-  ze_module_handle_t module_handle =
-      lzt::create_module(context, device, kernel_file_name,
-                         ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required", nullptr);
+  ze_module_handle_t module_handle = lzt::create_module(
+      context, device, kernel_file_name, ZE_MODULE_FORMAT_IL_SPIRV,
+      "-ze-opt-greater-than-4GB-buffer-required", nullptr);
 
   LOG_INFO << "call dispatch_kernels";
   dispatch_kernels(device, multiple_module_handle, output_allocations,
@@ -325,8 +325,7 @@ struct CombinationsTestNameSuffix {
   }
 };
 
-std::vector<uint32_t> dispatches = {1,     4,     100,   1000,
-                                    10000, 40000, 80000, 100000};
+std::vector<uint32_t> dispatches = {1, 4, 100, 1000, 2000};
 std::vector<bool> use_separate_modules = {true, false};
 std::vector<bool> use_separate_command_lists = {true, false};
 std::vector<bool> use_separate_command_queues = {true, false};

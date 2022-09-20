@@ -222,9 +222,10 @@ TEST_P(zeDriverMultiplyObjectsStressTest,
       // for (auto next_module : multiple_module_handle) {
       for (uint64_t module_id = 0; module_id < test_arguments.multiply_modules;
            module_id++) {
-        ze_module_handle_t module_handle =
-            lzt::create_module(context, device, "test_commands_overloading.spv",
-                               ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required", nullptr);
+        ze_module_handle_t module_handle = lzt::create_module(
+            context, device, "test_commands_overloading.spv",
+            ZE_MODULE_FORMAT_IL_SPIRV,
+            "-ze-opt-greater-than-4GB-buffer-required", nullptr);
         multiple_module_handle.push_back(module_handle);
         for (uint64_t kernel_id = 0;
              kernel_id < test_arguments.multiply_kernels; kernel_id++) {
@@ -299,8 +300,7 @@ struct CombinationsTestNameSuffix {
   }
 };
 
-std::vector<uint64_t> input_values = {1,    2,     4,     10,    100,
-                                      1000, 10000, 40000, 80000, 1000000};
+std::vector<uint64_t> input_values = {1, 2, 4, 10, 100, 1000, 2000};
 std::vector<uint64_t> multiple_kernels = input_values;
 std::vector<uint64_t> multiple_command_lists = input_values;
 std::vector<uint64_t> multiple_command_queues = input_values;
