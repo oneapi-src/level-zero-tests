@@ -46,6 +46,13 @@ TEST(
   }
 }
 
+void print_device(const ze_device_handle_t &device) {
+  std::cout << "\n==========================================================="
+               "=====================\n\n";
+  auto properties = lzt::get_device_properties(device);
+  // print uuid
+  LOG_INFO << "Device : " << properties.uuid;
+}
 class zetDebugAttachDetachTest : public zetDebugBaseSetup {
 protected:
   void run_test(std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
@@ -61,9 +68,11 @@ void zetDebugAttachDetachTest::run_test(
     bool reattach) {
 
   for (auto &device : devices) {
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
     debug_config.pid = debugHelper.id();
@@ -94,8 +103,8 @@ void zetDebugAttachDetachTest::run_test(
           lzt::debug_detach(debugSession);
         } else {
           synchro->notify_application();
-          debugHelper
-              .terminate(); // we don't care about the child processes exit code
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+          debugHelper.terminate();
           LOG_INFO << "[Debugger] LAST Detach after aplication finished. Loop "
                    << loop;
           lzt::debug_detach(debugSession);
@@ -208,6 +217,8 @@ TEST_F(
 
   bool test_run = false;
   for (auto &device : devices) {
+    print_device(device);
+
     auto device_properties = lzt::get_device_properties(device);
     auto sub_devices = lzt::get_ze_sub_devices(device);
     auto initial_count = sub_devices.size();
@@ -341,6 +352,8 @@ void zetDebugAttachDetachTest::
   LOG_INFO << "[Debugger] Detaching from application 2";
   lzt::debug_detach(debug_session_1);
 
+  synchro->clear_application_signal();
+
   ASSERT_EQ(debug_helper_0.exit_code(), 0);
   ASSERT_EQ(debug_helper_1.exit_code(), 0);
 }
@@ -376,9 +389,11 @@ TEST_F(
   auto devices = lzt::get_devices(driver);
 
   for (auto &device : devices) {
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
+    synchro->clear_debugger_signal();
     auto device_properties = lzt::get_device_properties(device);
     auto debugger = launch_child_debugger_process(
         LONG_RUNNING_KERNEL_INTERRUPTED, lzt::to_string(device_properties.uuid),
@@ -442,7 +457,7 @@ TEST_F(
     if (!synchro2.get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
     }
-
+    synchro2.clear_application_signal();
     memory_space_desc.address = gpu_buffer_va;
     memory_space_desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
     memory_space_desc.stype = ZET_STRUCTURE_TYPE_DEBUG_MEMORY_SPACE_DESC;
@@ -525,9 +540,11 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
                                      bool use_sub_devices,
                                      debug_test_type_t test_type) {
   for (auto &device : devices) {
-
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
+
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
@@ -591,10 +608,11 @@ void zetDebugEventReadTest::run_attach_after_module_created_destroyed_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
     debug_test_type_t test_type) {
   for (auto &device : devices) {
-
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(test_type, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
     debug_config.pid = debugHelper.id();
@@ -605,7 +623,7 @@ void zetDebugEventReadTest::run_attach_after_module_created_destroyed_test(
     if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
     }
-
+    synchro->clear_application_signal();
     synchro->notify_application();
 
     std::vector<zet_debug_event_type_t> expectedEvents = {};
@@ -636,13 +654,13 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
     debug_test_type_t test_type) {
 
   for (auto &device : devices) {
-
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
     std::map<int, int> ordinalCQs;
     int totalNumCQs = get_numCQs_per_ordinal(device, ordinalCQs);
-
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
@@ -888,9 +906,11 @@ void zetDebugEventReadTest::run_multithreaded_application_test(
     std::vector<zet_device_handle_t> &devices, bool use_sub_devices) {
 
   for (auto &device : devices) {
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(MULTIPLE_THREADS, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
@@ -981,9 +1001,11 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
     std::vector<zet_device_handle_t> &devices, bool use_sub_devices) {
 
   for (auto &device : devices) {
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
                                  use_sub_devices);
 
@@ -1003,6 +1025,7 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
     }
+    synchro->clear_application_signal();
 
     ze_device_thread_t device_thread;
     device_thread.slice = UINT32_MAX;
@@ -1285,10 +1308,11 @@ protected:
 void zetDebugMemAccessTest::run_module_isa_elf_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
-
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_event_t module_event;
     attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
@@ -1323,9 +1347,11 @@ TEST_F(zetDebugMemAccessTest,
 void zetDebugMemAccessTest::run_module_read_write_buffer_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
                                  use_sub_devices);
     zet_debug_event_t module_event;
@@ -1343,6 +1369,7 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
     }
+    synchro->clear_application_signal();
 
     ze_device_thread_t thread;
     thread.slice = UINT32_MAX;
@@ -1419,6 +1446,8 @@ TEST_F(
 
 void run_register_set_properties_test(std::vector<ze_device_handle_t> devices) {
   for (auto &device : devices) {
+    print_device(device);
+
     auto properties = lzt::get_register_set_properties(device);
     EXPECT_FALSE(properties.empty());
     zet_debug_regset_properties_t empty_properties = {};
@@ -1454,9 +1483,11 @@ protected:
 void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
-
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
+
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
                                  use_sub_devices);
 
@@ -1475,6 +1506,8 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
     }
+    synchro->clear_application_signal();
+
     zet_debug_memory_space_desc_t memorySpaceDesc;
     memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
     int sizeToRead = 512;
@@ -1639,6 +1672,7 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
                                                    bool use_sub_devices) {
 
   LOG_INFO << "[Debugger] Setting up for thread control tests ";
+  synchro->clear_debugger_signal();
   debugHelper =
       launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device, use_sub_devices);
 
@@ -1656,7 +1690,7 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
   if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
     FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
   }
-
+  synchro->clear_application_signal();
   memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
   memorySpaceDesc.address = gpu_buffer_va;
 
@@ -1686,6 +1720,7 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
 void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
+    print_device(device);
     if (!is_debug_supported(device)) {
       continue;
     }
@@ -1895,6 +1930,7 @@ void zetDebugThreadControlTest::run_interrupt_resume_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
 
   for (auto &device : devices) {
+    print_device(device);
     if (!is_debug_supported(device)) {
       continue;
     }
@@ -2045,6 +2081,7 @@ void zetDebugThreadControlTest::run_interrupt_resume_test(
 void zetDebugThreadControlTest::run_unavailable_thread_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
+    print_device(device);
     if (!is_debug_supported(device)) {
       continue;
     }
@@ -2344,9 +2381,10 @@ void MultiDeviceDebugTest::run_multidevice_single_application_test(
   // get second gpu address
   synchro->wait_for_application_signal();
   if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va_1)) {
-    FAIL()
-        << "[Debugger] Could not get a valid GPU buffer VA for second device ";
+    FAIL() << "[Debugger] Could not get a valid GPU buffer VA for second "
+              "device ";
   }
+  synchro->clear_application_signal();
   address_valid = true;
 
   first_thread.join();
