@@ -88,7 +88,6 @@ create_module_vector(ze_device_handle_t device,
 }
 class zeModuleCreateTests : public ::testing::Test {};
 
-// TODO: Dynamically Link module for these tests to be valid
 TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerThenPointerPointsToValidGlobalVariable) {
@@ -103,13 +102,24 @@ TEST_F(
   int *typed_global_pointer;
 
   for (auto mod : module) {
+    auto cmd_list = lzt::create_command_list();
+    auto cmd_queue = lzt::create_command_queue();
     global_pointer = nullptr;
     ASSERT_EQ(ZE_RESULT_SUCCESS,
               zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
                                        &global_pointer));
     EXPECT_NE(nullptr, global_pointer);
-    typed_global_pointer = static_cast<int *>(global_pointer);
+    void *memory = lzt::allocate_shared_memory(sizeof(expected_value));
+    lzt::append_memory_copy(cmd_list, memory, global_pointer,
+                            sizeof(expected_value));
+    lzt::close_command_list(cmd_list);
+    lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
+    lzt::synchronize(cmd_queue, UINT64_MAX);
+    typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_value, *typed_global_pointer);
+    lzt::free_memory(memory);
+    lzt::destroy_command_list(cmd_list);
+    lzt::destroy_command_queue(cmd_queue);
     lzt::destroy_module(mod);
   }
 }
@@ -160,15 +170,24 @@ TEST_F(
 
   for (auto mod : module) {
     for (int i = 0; i < global_count; ++i) {
+      auto cmd_list = lzt::create_command_list();
+      auto cmd_queue = lzt::create_command_queue();
       std::string global_name = "global_" + std::to_string(i);
       global_pointer = nullptr;
       ASSERT_EQ(ZE_RESULT_SUCCESS,
                 zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
                                          &global_pointer));
       EXPECT_NE(nullptr, global_pointer);
-
-      typed_global_pointer = static_cast<int *>(global_pointer);
+      void *memory = lzt::allocate_shared_memory(sizeof(i));
+      lzt::append_memory_copy(cmd_list, memory, global_pointer, sizeof(i));
+      lzt::close_command_list(cmd_list);
+      lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
+      lzt::synchronize(cmd_queue, UINT64_MAX);
+      typed_global_pointer = static_cast<int *>(memory);
       EXPECT_EQ(i, *typed_global_pointer);
+      lzt::free_memory(memory);
+      lzt::destroy_command_list(cmd_list);
+      lzt::destroy_command_queue(cmd_queue);
     }
     lzt::destroy_module(mod);
   }
@@ -189,15 +208,33 @@ TEST_F(
   const int expected_updated_value = 2;
 
   for (auto mod : module) {
+    auto cmd_list = lzt::create_command_list();
+    auto cmd_queue = lzt::create_command_queue();
     global_pointer = nullptr;
     ASSERT_EQ(ZE_RESULT_SUCCESS,
               zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
                                        &global_pointer));
     EXPECT_NE(nullptr, global_pointer);
-    typed_global_pointer = static_cast<int *>(global_pointer);
+    void *memory = lzt::allocate_shared_memory(sizeof(expected_initial_value));
+    lzt::append_memory_copy(cmd_list, memory, global_pointer,
+                            sizeof(expected_initial_value));
+    lzt::close_command_list(cmd_list);
+    lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
+    lzt::synchronize(cmd_queue, UINT64_MAX);
+    typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_initial_value, *typed_global_pointer);
     lzt::create_and_execute_function(device, mod, "test", 1, nullptr);
+    lzt::reset_command_list(cmd_list);
+    lzt::append_memory_copy(cmd_list, memory, global_pointer,
+                            sizeof(expected_updated_value));
+    lzt::close_command_list(cmd_list);
+    lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
+    lzt::synchronize(cmd_queue, UINT64_MAX);
+    typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_updated_value, *typed_global_pointer);
+    lzt::free_memory(memory);
+    lzt::destroy_command_list(cmd_list);
+    lzt::destroy_command_queue(cmd_queue);
     lzt::destroy_module(mod);
   }
 }
