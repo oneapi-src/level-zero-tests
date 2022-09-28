@@ -113,6 +113,8 @@ int main() {
                                        bipc::read_write);
       break;
     } catch (const bipc::interprocess_exception &ex) {
+      sched_yield();
+      sleep(1);
       if (++count == retries)
         throw ex;
     }
