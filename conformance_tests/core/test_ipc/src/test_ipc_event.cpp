@@ -78,6 +78,12 @@ static void run_ipc_event_test(parent_test_t parent_test,
   LOG_INFO << "IPC Parent zeinit";
   level_zero_tests::print_platform_overview();
 
+  if (lzt::get_ze_device_count() < 2) {
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    GTEST_SKIP();
+    return;
+  }
+
   auto ep = get_event_pool(multi_device);
   ze_ipc_event_pool_handle_t hIpcEventPool;
   ep.get_ipc_handle(&hIpcEventPool);
@@ -143,11 +149,6 @@ TEST(
 TEST(
     zeIPCEventMultiDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromSecondDevicePerspective) {
-  if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
-    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
-  }
   run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS,
                      true);
 }
@@ -155,11 +156,6 @@ TEST(
 TEST(
     zeIPCEventMultiDeviceTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromMultipleDevicePerspective) {
-  if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
-    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
-  }
   run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
                      true);
 }
