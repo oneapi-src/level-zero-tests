@@ -534,6 +534,9 @@ protected:
   void run_proc_entry_exit_test(std::vector<zet_device_handle_t> &devices,
                                 bool use_sub_devices,
                                 debug_test_type_t test_type);
+  void
+  run_detach_no_ack_module_create_test(std::vector<ze_device_handle_t> &devices,
+                                       bool use_sub_devices);
 };
 
 void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
@@ -730,6 +733,24 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
 
     debugHelper.wait();
     lzt::debug_detach(debugSession);
+    ASSERT_EQ(debugHelper.exit_code(), 0);
+  }
+}
+
+void zetDebugEventReadTest::run_detach_no_ack_module_create_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+  for (auto &device : devices) {
+
+    if (!is_debug_supported(device))
+      continue;
+
+    debugHelper = launch_process(BASIC, device, use_sub_devices);
+    zet_debug_event_t module_event;
+    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
+                                module_event);
+
+    lzt::debug_detach(debugSession);
+    debugHelper.wait();
     ASSERT_EQ(debugHelper.exit_code(), 0);
   }
 }
@@ -1064,6 +1085,23 @@ TEST_F(
   run_read_events_in_separate_thread_test(devices, false);
 }
 
+TEST_F(
+    zetDebugEventReadTest,
+    GivenDebugDetachCalledWhenModuleCreateEventIsNotAckedThenKernelCompletesSuccessfully) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  run_detach_no_ack_module_create_test(devices, false);
+}
+
+TEST_F(
+    zetDebugEventReadTest,
+    GivenDebugDetachCalledOnSubDeviceWhenModuleCreateEventIsNotAckedThenKernelCompletesSuccessfully) {
+  auto all_sub_devices = lzt::get_all_sub_devices();
+
+  run_detach_no_ack_module_create_test(all_sub_devices, true);
+}
+
 bool read_register(const zet_debug_session_handle_t &debug_session,
                    const ze_device_thread_t &device_thread,
                    const zet_debug_regset_properties_t &regset, bool printerr) {
@@ -1325,7 +1363,7 @@ void zetDebugMemAccessTest::run_module_isa_elf_test(
     thread.eu = UINT32_MAX;
     thread.thread = UINT32_MAX;
     readWriteModuleMemory(debugSession, thread, module_event, false);
-
+    lzt::debug_ack_event(debugSession, &module_event);
     lzt::debug_detach(debugSession);
     debugHelper.terminate();
   }
