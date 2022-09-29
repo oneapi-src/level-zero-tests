@@ -85,7 +85,8 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeKernelGetNameTests_GivenKernelGetNameCorrectNameIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleGetPropertiesReturnsValidNonZeroProperties', test_name, re.IGNORECASE)) or \
                     (test_name.find("zeVirtualMemoryTests")!= -1) or \
-                    (test_name.find("Cooperative")!= -1):
+                    (test_name.find("Cooperative")!= -1) or \
+                    (test_name.find("zeMemFreeExtTests")!= -1):
                 test_feature_tag = "advanced"
             else:
                 test_feature_tag = "basic"

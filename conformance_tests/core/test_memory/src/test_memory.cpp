@@ -479,6 +479,158 @@ TEST_F(
   lzt::free_memory(memory);
 }
 
+#ifdef ZE_MEMORY_FREE_POLICIES_EXT_NAME
+
+bool check_ext_version() {
+  auto ext_props = lzt::get_extension_properties(lzt::get_default_driver());
+  uint32_t ext_version = 0;
+  for (auto prop : ext_props) {
+    if (strncmp(prop.name, ZE_MEMORY_FREE_POLICIES_EXT_NAME,
+                ZE_MAX_EXTENSION_NAME) == 0) {
+      ext_version = prop.version;
+      break;
+    }
+  }
+  if (ext_version == 0) {
+    printf("ZE_MEMORY_FREE_POLICIES_EXT_NAME not found, not running test\n");
+    return false;
+  } else {
+    printf("Extension version %d found\n", ext_version);
+    return true;
+  }
+}
+
+class zeMemFreeExtTests : public ::testing::Test {};
+
+TEST_F(zeMemFreeExtTests, GetMemoryFreePolicyFlagsAndVerifySet) {
+  if (!check_ext_version())
+    return;
+
+  auto drivers = lzt::get_all_driver_handles();
+  for (auto driver : drivers) {
+    ze_driver_properties_t properties = {};
+    ze_driver_memory_free_ext_properties_t ext_properties = {};
+    ext_properties.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
+    properties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
+    properties.pNext = &ext_properties;
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetProperties(driver, &properties));
+    EXPECT_EQ(ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE,
+              static_cast<uint32_t>(
+                  ext_properties.freePolicies &
+                  ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE));
+    EXPECT_EQ(ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE,
+              static_cast<uint32_t>(
+                  ext_properties.freePolicies &
+                  ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE));
+  }
+}
+
+TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithBlockingFreePolicy) {
+  if (!check_ext_version())
+    return;
+
+  const size_t size = 1;
+  const size_t alignment = 1;
+  void *base = nullptr;
+
+  void *memory = lzt::allocate_host_memory(size, alignment);
+
+  ze_memory_free_ext_desc_t memfreedesc = {};
+  memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
+  memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+}
+
+TEST_F(zeMemFreeExtTests,
+       AllocateSharedMemoryAndThenFreeWithBlockingFreePolicy) {
+  if (!check_ext_version())
+    return;
+
+  const size_t size = 1;
+  const size_t alignment = 1;
+  void *base = nullptr;
+
+  void *memory = lzt::allocate_shared_memory(size, alignment);
+
+  ze_memory_free_ext_desc_t memfreedesc = {};
+  memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
+  memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+}
+
+TEST_F(zeMemFreeExtTests,
+       AllocateDeviceMemoryAndThenFreeWithBlockingFreePolicy) {
+  if (!check_ext_version())
+    return;
+
+  const size_t size = 1;
+  const size_t alignment = 1;
+  void *base = nullptr;
+
+  void *memory = lzt::allocate_device_memory(size, alignment);
+
+  ze_memory_free_ext_desc_t memfreedesc = {};
+  memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
+  memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+}
+
+TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithDeferFreePolicy) {
+  if (!check_ext_version())
+    return;
+
+  const size_t size = 1;
+  const size_t alignment = 1;
+  void *base = nullptr;
+
+  void *memory = lzt::allocate_host_memory(size, alignment);
+
+  ze_memory_free_ext_desc_t memfreedesc = {};
+  memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
+  memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+}
+
+TEST_F(zeMemFreeExtTests, AllocateSharedMemoryAndThenFreeWithDeferFreePolicy) {
+  if (!check_ext_version())
+    return;
+
+  const size_t size = 1;
+  const size_t alignment = 1;
+  void *base = nullptr;
+
+  void *memory = lzt::allocate_shared_memory(size, alignment);
+
+  ze_memory_free_ext_desc_t memfreedesc = {};
+  memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
+  memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+}
+
+TEST_F(zeMemFreeExtTests, AllocateDeviceMemoryAndThenFreeWithDeferFreePolicy) {
+  if (!check_ext_version())
+    return;
+
+  const size_t size = 1;
+  const size_t alignment = 1;
+  void *base = nullptr;
+
+  void *memory = lzt::allocate_device_memory(size, alignment);
+
+  ze_memory_free_ext_desc_t memfreedesc = {};
+  memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
+  memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+}
+
+#endif
+
 class zeHostMemGetAddressRangeSizeTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<size_t, size_t>> {};
