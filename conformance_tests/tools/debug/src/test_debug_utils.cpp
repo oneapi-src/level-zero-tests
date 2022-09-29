@@ -133,6 +133,34 @@ bool check_event(const zet_debug_session_handle_t &debug_session,
   return found;
 }
 
+bool check_events_unordered(const zet_debug_session_handle_t &debug_session,
+                            std::vector<zet_debug_event_type_t> &eventTypes) {
+
+  zet_debug_event_t debugEvent;
+
+  for (int i = 0; i < eventTypes.size(); i++) {
+    lzt::debug_read_event(debug_session, debugEvent, eventsTimeoutMS, false);
+
+    // note: this should be modified if eventTypes contains duplicates
+    if (eventTypes.end() !=
+        std::find(eventTypes.begin(), eventTypes.end(), debugEvent.type)) {
+      LOG_INFO << "[Debugger] expected event received: "
+               << lzt::debuggerEventTypeString[debugEvent.type];
+    } else {
+      LOG_WARNING << "[Debugger] UNEXPECTED event received: "
+                  << lzt::debuggerEventTypeString[debugEvent.type];
+      return false;
+    }
+
+    if (debugEvent.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
+      LOG_INFO << "[Debugger] Acking event";
+      lzt::debug_ack_event(debug_session, &debugEvent);
+    }
+  }
+
+  return true;
+}
+
 bool check_events(const zet_debug_session_handle_t &debug_session,
                   std::vector<zet_debug_event_type_t> eventTypes) {
 

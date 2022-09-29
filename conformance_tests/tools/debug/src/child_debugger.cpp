@@ -41,11 +41,11 @@ public:
     po::store(parsed_options, variables_map);
     po::notify(variables_map);
 
-    LOG_INFO << "[Application] sub device ID: "
+    LOG_INFO << "[Child Debugger] sub device ID: "
              << variables_map[device_id_string].as<std::string>();
 
     if (variables_map.count(use_sub_devices_string)) {
-      LOG_INFO << "[Application] Using sub devices";
+      LOG_INFO << "[Child Debugger] Using sub devices";
       use_sub_devices = true;
     }
   }
@@ -61,13 +61,13 @@ int main(int argc, char **argv) {
   debugger_options options;
   options.parse_options(argc, argv);
 
-  LOG_DEBUG << "[Debugger] INDEX:  " << options.index_in;
+  LOG_DEBUG << "[Child Debugger] INDEX:  " << options.index_in;
   auto index = options.index_in;
   process_synchro synchro(true, true, index);
 
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
-    LOG_ERROR << "[Debugger] zeInit failed";
+    LOG_ERROR << "[Child Debugger] zeInit failed";
     exit(1);
   }
 
@@ -77,13 +77,13 @@ int main(int argc, char **argv) {
 
   if (device) {
     auto device_properties = lzt::get_device_properties(device);
-    LOG_DEBUG << "[Debugger] Found device: " << options.sub_device_id_in << "  "
-              << device_properties.name;
+    LOG_DEBUG << "[Child Debugger] Found device: " << options.sub_device_id_in
+              << "  " << device_properties.name;
   } else {
-    LOG_ERROR << "[Debugger] Could not find matching device";
+    LOG_ERROR << "[Child Debugger] Could not find matching device";
     exit(1);
   }
-  LOG_DEBUG << "[Debugger] Launching child application";
+  LOG_DEBUG << "[Child Debugger] Launching child application";
 
   ProcessLauncher launcher;
   auto debug_helper = launcher.launch_process(
@@ -108,11 +108,10 @@ int main(int argc, char **argv) {
     debug_helper.detach();
   }
   synchro.notify_application();
+  lzt::debug_detach(debugSession);
 
   LOG_DEBUG << "[Child Debugger] Waiting for application to exit";
-
   debug_helper.wait();
   LOG_DEBUG << "[Child Debugger] Detaching";
-  lzt::debug_detach(debugSession);
   exit(debug_helper.exit_code());
 }

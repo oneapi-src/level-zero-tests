@@ -166,6 +166,7 @@ bp::child launch_child_debugger_process(debug_test_type_t test_type,
 void zetDebugAttachDetachTest::run_multidevice_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
 
+  synchro->clear_debugger_signal();
   auto device0 = devices[0];
   auto device1 = devices[1];
   auto device_properties = lzt::get_device_properties(device0);
@@ -197,9 +198,9 @@ void zetDebugAttachDetachTest::run_multidevice_test(
             << " using " << device_properties_1.uuid << " "
             << device_properties_1.name;
 
+  lzt::debug_detach(debugSession);
   debugHelper.wait();
   LOG_INFO << "[Debugger] Main debugger detaching";
-  lzt::debug_detach(debugSession);
 
   LOG_INFO << "[Debugger] Waiting for child debugger to exit";
   debugger.wait();
@@ -635,15 +636,20 @@ void zetDebugEventReadTest::run_attach_after_module_created_destroyed_test(
           ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY,
           ZET_DEBUG_EVENT_TYPE_MODULE_LOAD,
       };
+
+      if (!check_events_unordered(debugSession, expectedEvents)) {
+        FAIL() << "[Debugger] Did not receive expected events";
+      }
+
     } else {
       expectedEvents = {
           ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY,
           ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT,
       };
-    }
 
-    if (!check_events(debugSession, expectedEvents)) {
-      FAIL() << "[Debugger] Did not receive expected events";
+      if (!check_events(debugSession, expectedEvents)) {
+        FAIL() << "[Debugger] Did not receive expected events";
+      }
     }
 
     lzt::debug_detach(debugSession);
@@ -785,8 +791,9 @@ TEST_F(zetDebugEventReadTest,
   run_test(all_sub_devices, true, MULTIPLE_MODULES_CREATED);
 }
 
-TEST_F(zetDebugEventReadTest,
-       GivenDeviceWhenThenAttachingAfterModuleCreatedThenEventReceived) {
+TEST_F(
+    zetDebugEventReadTest,
+    GivenDebugCapableDeviceWhenAttachingAfterModuleCreatedThenEventReceived) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
@@ -795,8 +802,9 @@ TEST_F(zetDebugEventReadTest,
                                                  ATTACH_AFTER_MODULE_CREATED);
 }
 
-TEST_F(zetDebugEventReadTest,
-       GivenSubDeviceWhenThenAttachingAfterModuleCreatedThenEventReceived) {
+TEST_F(
+    zetDebugEventReadTest,
+    GivenDebugCapableSubDeviceWhenAttachingAfterModuleCreatedThenEventReceived) {
   auto all_sub_devices = lzt::get_all_sub_devices();
   run_attach_after_module_created_destroyed_test(all_sub_devices, true,
                                                  ATTACH_AFTER_MODULE_CREATED);
@@ -1946,7 +1954,7 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     // All threads should be stopped
     EXPECT_EQ(stoppedThreadsCheck.size(), stopped_threads.size());
 
-    LOG_DEBUG << "[Debugger] Writting to GPU buffer to break kernel loop ";
+    LOG_DEBUG << "[Debugger] Writing to GPU buffer to break kernel loop ";
     const int bufferSize = 1;
     uint8_t *buffer = new uint8_t[bufferSize];
     buffer[0] = 0;
@@ -2287,10 +2295,10 @@ TEST_F(zetDebugThreadControlTest,
 
 TEST_F(
     zetDebugThreadControlTest,
-    GivengInterruptingThreadNotRunningOnSubDeviceThenUnavaiableEventIsReceived) {
+    GivengInterruptingThreadNotRunningOnSubDeviceThenUnavailableEventIsReceived) {
 
   auto devices = lzt::get_all_sub_devices();
-  run_unavailable_thread_test(devices, false);
+  run_unavailable_thread_test(devices, true);
 }
 
 auto address_valid = false;

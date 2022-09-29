@@ -27,6 +27,8 @@ bool check_event(const zet_debug_session_handle_t &debug_session,
                  zet_debug_event_type_t eventType);
 bool check_events(const zet_debug_session_handle_t &debug_session,
                   std::vector<zet_debug_event_type_t> eventTypes);
+bool check_events_unordered(const zet_debug_session_handle_t &debug_session,
+                            std::vector<zet_debug_event_type_t> &eventTypes);
 
 void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
                                  ze_device_handle_t device,
