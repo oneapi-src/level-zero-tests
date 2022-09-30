@@ -14,10 +14,20 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-class zeImageCreateTests : public ::testing::Test {};
+void check_image_properties(ze_image_properties_t imageprop) {
+
+  EXPECT_TRUE((static_cast<uint32_t>(imageprop.samplerFilterFlags) == 0) ||
+              ((static_cast<uint32_t>(imageprop.samplerFilterFlags) &
+                static_cast<uint32_t>(ZE_IMAGE_SAMPLER_FILTER_FLAG_POINT)) ==
+               static_cast<uint32_t>(ZE_IMAGE_SAMPLER_FILTER_FLAG_POINT)) ||
+              ((static_cast<uint32_t>(imageprop.samplerFilterFlags) &
+                static_cast<uint32_t>(ZE_IMAGE_SAMPLER_FILTER_FLAG_LINEAR)) ==
+               static_cast<uint32_t>(ZE_IMAGE_SAMPLER_FILTER_FLAG_LINEAR)));
+}
 
 void image_create_test_1d(ze_image_format_type_t format_type,
-                          ze_image_format_layout_t layout, bool useArrayImage) {
+                          ze_image_format_layout_t layout, bool useArrayImage,
+                          bool properties_only) {
 
   for (auto image_rw_flag : lzt::image_rw_flags) {
     for (auto image_cache_flag : lzt::image_cache_flags) {
@@ -56,10 +66,14 @@ void image_create_test_1d(ze_image_format_type_t format_type,
         image_descriptor.miplevels = 0;
 
         lzt::print_image_descriptor(image_descriptor);
-        image = lzt::create_ze_image(image_descriptor);
-        if (image) {
-          lzt::get_ze_image_properties(image_descriptor);
-          lzt::destroy_ze_image(image);
+        if (properties_only) {
+          check_image_properties(
+              lzt::get_ze_image_properties(image_descriptor));
+        } else {
+          image = lzt::create_ze_image(image_descriptor);
+          if (image) {
+            lzt::destroy_ze_image(image);
+          }
         }
       }
     }
@@ -67,7 +81,8 @@ void image_create_test_1d(ze_image_format_type_t format_type,
 }
 
 void image_create_test_2d(ze_image_format_type_t format_type,
-                          ze_image_format_layout_t layout, bool useArrayImage) {
+                          ze_image_format_layout_t layout, bool useArrayImage,
+                          bool properties_only) {
 
   for (auto image_rw_flag : lzt::image_rw_flags) {
     for (auto image_cache_flag : lzt::image_cache_flags) {
@@ -107,10 +122,14 @@ void image_create_test_2d(ze_image_format_type_t format_type,
           image_descriptor.miplevels = 0;
 
           lzt::print_image_descriptor(image_descriptor);
-          image = lzt::create_ze_image(image_descriptor);
-          if (image) {
-            lzt::get_ze_image_properties(image_descriptor);
-            lzt::destroy_ze_image(image);
+          if (properties_only) {
+            check_image_properties(
+                lzt::get_ze_image_properties(image_descriptor));
+          } else {
+            image = lzt::create_ze_image(image_descriptor);
+            if (image) {
+              lzt::destroy_ze_image(image);
+            }
           }
         }
       }
@@ -119,7 +138,8 @@ void image_create_test_2d(ze_image_format_type_t format_type,
 }
 
 void image_create_test_3d(ze_image_format_type_t format_type,
-                          ze_image_format_layout_t layout) {
+                          ze_image_format_layout_t layout,
+                          bool properties_only) {
 
   for (auto image_rw_flag : lzt::image_rw_flags) {
     for (auto image_cache_flag : lzt::image_cache_flags) {
@@ -151,10 +171,14 @@ void image_create_test_3d(ze_image_format_type_t format_type,
             image_descriptor.miplevels = 0;
 
             lzt::print_image_descriptor(image_descriptor);
-            image = lzt::create_ze_image(image_descriptor);
-            if (image) {
-              lzt::get_ze_image_properties(image_descriptor);
-              lzt::destroy_ze_image(image);
+            if (properties_only) {
+              check_image_properties(
+                  lzt::get_ze_image_properties(image_descriptor));
+            } else {
+              image = lzt::create_ze_image(image_descriptor);
+              if (image) {
+                lzt::destroy_ze_image(image);
+              }
             }
           }
         }
@@ -163,75 +187,211 @@ void image_create_test_3d(ze_image_format_type_t format_type,
   }
 }
 
+class zeImageCreateTests : public ::testing::Test {};
+
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
+  bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_uint) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UINT, layout);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, properties_only);
   }
 }
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
+  bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_sint) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SINT, layout);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, properties_only);
   }
 }
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
+  bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_unorm) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, properties_only);
   }
 }
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
+  bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_snorm) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, properties_only);
   }
 }
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
+  bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_float) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
   }
 }
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
+  bool properties_only = false;
 
   for (auto layout : lzt::image_format_media_layouts) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
+  }
+}
+
+class zeImageGetPropertiesTests : public ::testing::Test {};
+
+TEST(zeImageGetPropertiesTests,
+     GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
+  bool properties_only = true;
+
+  for (auto layout : lzt::image_format_layout_uint) {
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, properties_only);
+  }
+}
+
+TEST(zeImageGetPropertiesTests,
+     GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
+  bool properties_only = true;
+
+  for (auto layout : lzt::image_format_layout_sint) {
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, properties_only);
+  }
+}
+
+TEST(zeImageGetPropertiesTests,
+     GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
+  bool properties_only = true;
+
+  for (auto layout : lzt::image_format_layout_unorm) {
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, properties_only);
+  }
+}
+
+TEST(zeImageGetPropertiesTests,
+     GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
+  bool properties_only = true;
+
+  for (auto layout : lzt::image_format_layout_snorm) {
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, properties_only);
+  }
+}
+
+TEST(zeImageGetPropertiesTests,
+     GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
+  bool properties_only = true;
+
+  for (auto layout : lzt::image_format_layout_float) {
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
+  }
+}
+
+TEST(zeImageGetPropertiesTests,
+     GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
+  bool properties_only = true;
+
+  for (auto layout : lzt::image_format_media_layouts) {
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
+                         properties_only);
+    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
+                         properties_only);
+    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
+                         properties_only);
+    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
   }
 }
 
