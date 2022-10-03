@@ -197,4 +197,102 @@ TEST_F(MemoryModuleTest,
   }
 }
 
+uint64_t get_free_memory_state(ze_device_handle_t device) {
+  uint32_t count = 0;
+  uint64_t total_free_memory = 0;
+  uint64_t total_alloc = 0;
+
+  std::vector<zes_mem_handle_t> mem_handles =
+      lzt::get_mem_handles(device, count);
+  if (count == 0) {
+    std::cout << "No handles found: "
+              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+  }
+  for (zes_mem_handle_t mem_handle : mem_handles) {
+    auto state = lzt::get_mem_state(mem_handle);
+    total_free_memory += state.free;
+    total_alloc += state.size;
+  }
+
+  return total_free_memory;
+}
+
+TEST_F(
+    MemoryModuleTest,
+    GivenValidMemHandleWhenAllocatingMemoryUptoMaxCapacityThenOutOfDeviceMemoryErrorIsReturned) {
+
+  ze_command_list_handle_t command_list;
+  ze_command_queue_handle_t cq;
+
+  command_list = lzt::create_command_list();
+  cq = lzt::create_command_queue();
+
+  for (ze_device_handle_t device : devices) {
+    uint32_t count = 0;
+    uint64_t total_free = 0;
+    std::vector<void *> vec_ptr;
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(device, &deviceProperties);
+    std::cout << "test device name " << deviceProperties.name << " uuid "
+              << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      std::cout << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      std::cout << "test device is a root device" << std::endl;
+    }
+
+    uint64_t max_alloc_size = deviceProperties.maxMemAllocSize;
+    uint64_t alloc_size = ((uint64_t)4 * 1024 * 1024 * 1024);
+    if (max_alloc_size < alloc_size) {
+      alloc_size = max_alloc_size;
+    }
+    uint64_t free_memory = get_free_memory_state(device);
+    void *ze_buf = nullptr;
+    ze_result_t result = ZE_RESULT_SUCCESS;
+    uint8_t pattern = 0xAB;
+
+    auto local_mem = lzt::allocate_host_memory(alloc_size);
+    EXPECT_NE(nullptr, local_mem);
+    std::memset(local_mem, pattern, alloc_size);
+    uint64_t cur_mem_alloc_size = 0;
+    do {
+      ze_buf = nullptr;
+      if (alloc_size <= free_memory) {
+        cur_mem_alloc_size = alloc_size;
+      } else {
+        cur_mem_alloc_size = free_memory;
+      }
+      auto ze_buf = lzt::allocate_device_memory(cur_mem_alloc_size);
+      EXPECT_NE(nullptr, ze_buf);
+      if (ze_buf != nullptr) {
+        vec_ptr.push_back(ze_buf);
+      } else {
+        std::cout << "Memory Allocation Failed..." << std::endl;
+        break;
+      }
+      lzt::append_memory_copy(command_list, ze_buf, local_mem,
+                              cur_mem_alloc_size, nullptr);
+      lzt::append_barrier(command_list, nullptr, 0, nullptr);
+      lzt::close_command_list(command_list);
+      result = zeCommandQueueExecuteCommandLists(cq, 1, &command_list, nullptr);
+      lzt::synchronize(cq, UINT64_MAX);
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(command_list));
+      free_memory = get_free_memory_state(device);
+    } while ((result != ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY) &&
+             (free_memory > 0));
+
+    EXPECT_EQ(ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY, result);
+
+    // Free allocated device memory
+    for (int i = 0; i < vec_ptr.size(); i++) {
+      zeMemFree(lzt::get_default_context(), vec_ptr[i]);
+    }
+    vec_ptr.clear();
+    lzt::free_memory(local_mem);
+  }
+  lzt::destroy_command_queue(cq);
+  lzt::destroy_command_list(command_list);
+}
+
 } // namespace
