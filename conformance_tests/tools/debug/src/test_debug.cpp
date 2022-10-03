@@ -61,6 +61,7 @@ protected:
                             bool use_sub_devices);
   void run_attach_detach_to_multiple_applications_on_different_devs_test(
       std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
+  void run_use_same_device_test(const zet_device_handle_t &device);
 };
 
 void zetDebugAttachDetachTest::run_test(
@@ -131,7 +132,7 @@ TEST_F(
 }
 
 TEST_F(zetDebugAttachDetachTest,
-       GivenPreviousDebugSessionDetachedWenAttachingThenReAttachIsSuccessful) {
+       GivenPreviousDebugSessionDetachedWhenAttachingThenReAttachIsSuccessful) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
@@ -380,6 +381,56 @@ TEST_F(
   } else {
     run_attach_detach_to_multiple_applications_on_different_devs_test(devices,
                                                                       false);
+  }
+}
+
+void zetDebugAttachDetachTest::run_use_same_device_test(
+    const zet_device_handle_t &device) {
+
+  auto device_properties = lzt::get_device_properties(device);
+
+  LOG_DEBUG << "[Debugger] Launching application on " << device_properties.uuid
+            << " " << device_properties.name;
+
+  debugHelper = launch_process(BASIC, device, false);
+
+  auto debugger_1 = launch_child_debugger_process(
+      BASIC, lzt::to_string(device_properties.uuid), false, 1);
+
+  zet_debug_config_t debug_config = {};
+  debug_config.pid = debugHelper.id();
+
+  // Second debugger waits until first has run and exited
+  LOG_INFO << "[Debugger] Waiting for first debugger to finish";
+  debugger_1.wait();
+  EXPECT_EQ(debugger_1.exit_code(), 0);
+
+  LOG_INFO << "[Debugger] First debugger finished, second attaching";
+  debugSession = lzt::debug_attach(device, debug_config);
+  synchro->notify_application();
+
+  LOG_INFO << "[Debugger] Detaching";
+  lzt::debug_detach(debugSession);
+  LOG_INFO << "[Debugger] Waiting for application to finish";
+  debugHelper.wait();
+  EXPECT_EQ(debugHelper.exit_code(), 0);
+}
+
+TEST_F(
+    zetDebugAttachDetachTest,
+    GivenDifferentApplicationsUsingSameDeviceWhenBeingDebuggedThenAttachAndDetachIsSuccessful) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  for (auto &device : devices) {
+    print_device(device);
+    synchro->clear_debugger_signal();
+    if (!is_debug_supported(device)) {
+      LOG_WARNING << "Device does not support debug";
+      continue;
+    }
+
+    run_use_same_device_test(device);
   }
 }
 
