@@ -48,7 +48,8 @@ TEST(
 
 void print_device(const ze_device_handle_t &device) {
   std::cout << "\n==========================================================="
-               "=====================\n\n";
+               "=====================\n\n"
+            << std::endl;
   auto properties = lzt::get_device_properties(device);
   // print uuid
   LOG_INFO << "Device : " << properties.uuid;
@@ -797,10 +798,11 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
 void zetDebugEventReadTest::run_detach_no_ack_module_create_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
-
+    print_device(device);
     if (!is_debug_supported(device))
       continue;
 
+    synchro->clear_debugger_signal();
     debugHelper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_event_t module_event;
     attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
