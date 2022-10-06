@@ -135,7 +135,8 @@ void adjust_max_memory_allocation(
     }
   }
 
-  uint64_t maxSingleSizeAllocation = (16ull * 1024ull * 1024ull * 1024ull);
+  uint64_t maxSingleSizeAllocation =
+      (16ull * 1024ull * 1024ull * 1024ull) - min_page_size;
   if (one_allocation_size > maxSingleSizeAllocation) {
     LOG_WARNING << "Single size allocation " << one_allocation_size
                 << " exceeds 16GB, adjusting it to 16GB";
