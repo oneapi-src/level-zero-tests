@@ -253,7 +253,7 @@ zet_metric_group_handle_t find_metric_group(ze_device_handle_t device,
 zet_metric_query_pool_handle_t create_metric_query_pool_for_device(
     ze_device_handle_t device, zet_metric_query_pool_desc_t metricQueryPoolDesc,
     zet_metric_group_handle_t metricGroup) {
-  zet_metric_query_pool_handle_t metric_query_pool;
+  zet_metric_query_pool_handle_t metric_query_pool = nullptr;
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetMetricQueryPoolCreate(lzt::get_default_context(), device,
@@ -338,7 +338,7 @@ metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
                      ze_event_handle_t eventHandle,
                      uint32_t notifyEveryNReports, uint32_t samplingPeriod) {
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
-  zet_metric_streamer_handle_t metricStreamerHandle;
+  zet_metric_streamer_handle_t metricStreamerHandle = nullptr;
   zet_metric_streamer_desc_t metricStreamerDesc = {
       ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, notifyEveryNReports,
       samplingPeriod};
@@ -354,7 +354,7 @@ zet_metric_streamer_handle_t metric_streamer_open_for_device(
     ze_device_handle_t device, zet_metric_group_handle_t matchedGroupHandle,
     ze_event_handle_t eventHandle, uint32_t notifyEveryNReports,
     uint32_t samplingPeriod) {
-  zet_metric_streamer_handle_t metricStreamerHandle;
+  zet_metric_streamer_handle_t metricStreamerHandle = nullptr;
   zet_metric_streamer_desc_t metricStreamerDesc = {
       ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, notifyEveryNReports,
       samplingPeriod};
