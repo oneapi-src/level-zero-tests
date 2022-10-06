@@ -13,10 +13,14 @@ set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 include_directories(${LevelZero_INCLUDE_DIRS})
 include_directories(${Python3_INCLUDE_DIRS})
 
+if(MSVC)
+    link_directories(${Python3_LIBRARY}\\..\\)
+endif()
+    
 swig_add_library(zes_wrap
     TYPE SHARED
     LANGUAGE python
-    SOURCES 
+    SOURCES
         zes_wrap.i)
 
 swig_link_libraries(zes_wrap

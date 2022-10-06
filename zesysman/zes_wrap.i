@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2022 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  */
@@ -12,6 +12,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <level_zero/zes_api.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+    #define __attribute__(x)
+#endif
 
 #define _THROWS_ZET_ERROR __attribute__((noreturn))
 #define _CAN_THROW
@@ -39,8 +43,13 @@ void _initialize_zes_wrap()
     /*
      * Belts and suspenders: this should have been set by the Python wrapper
      */
-    if (setenv("ZES_ENABLE_SYSMAN", "1", 0) != 0)
-    {
+
+    char *sysman_enable_var_setting = getenv("ZES_ENABLE_SYSMAN");
+    if (!sysman_enable_var_setting) {
+        putenv("ZES_ENABLE_SYSMAN=1");
+    }
+    sysman_enable_var_setting = getenv("ZES_ENABLE_SYSMAN");
+    if (!sysman_enable_var_setting) {
         _zes_exception("Error setting ZES_ENABLE_SYSMAN environment variable");
     }
 
