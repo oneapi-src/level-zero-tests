@@ -323,7 +323,7 @@ TEST_F(
   }
 }
 
-void run_test(const ze_device_handle_t &device, bool reset) {
+void run_test(const ze_device_handle_t &device, bool reset, bool immediate) {
   ze_device_properties_t deviceProperties = {
       ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
   zeDeviceGetProperties(device, &deviceProperties);
@@ -336,9 +336,14 @@ void run_test(const ze_device_handle_t &device, bool reset) {
     LOG_INFO << "test device is a root device";
   }
 
-  ze_command_queue_handle_t commandQueue = lzt::create_command_queue(device);
-  zet_command_list_handle_t commandList = lzt::create_command_list(device);
-
+  ze_command_queue_handle_t commandQueue = nullptr;
+  ze_command_list_handle_t commandList = nullptr;
+  if (immediate) {
+    commandList = lzt::create_immediate_command_list(device);
+  } else {
+    commandQueue = lzt::create_command_queue(device);
+    commandList = lzt::create_command_list(device);
+  }
   auto metricGroupInfo = lzt::get_metric_group_info(
       device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
   metricGroupInfo =
@@ -373,18 +378,23 @@ void run_test(const ze_device_handle_t &device, bool reset) {
     lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
 
     lzt::close_command_list(commandList);
-    lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+    if (!immediate) {
+      lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+      lzt::synchronize(commandQueue, UINT64_MAX);
+    }
 
-    lzt::synchronize(commandQueue, UINT64_MAX);
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
+    if (!immediate) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
+    } else {
+      lzt::event_host_synchronize(eventHandle, UINT64_MAX);
+    }
 
     std::vector<uint8_t> rawData;
     lzt::metric_query_get_data(metricQueryHandle, &rawData);
     lzt::validate_metrics(groupInfo.metricGroupHandle,
                           lzt::metric_query_get_data_size(metricQueryHandle),
                           rawData.data());
-    if (reset) {
+    if (reset && !immediate) {
       lzt::reset_metric_query(metricQueryHandle);
 
       lzt::reset_command_list(commandList);
@@ -402,7 +412,6 @@ void run_test(const ze_device_handle_t &device, bool reset) {
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
       lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
-
       lzt::close_command_list(commandList);
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
 
@@ -428,7 +437,10 @@ void run_test(const ze_device_handle_t &device, bool reset) {
 
     lzt::reset_command_list(commandList);
   }
-  lzt::destroy_command_queue(commandQueue);
+
+  if (commandQueue) {
+    lzt::destroy_command_queue(commandQueue);
+  }
   lzt::destroy_command_list(commandList);
 }
 
@@ -437,7 +449,7 @@ TEST_F(
     GivenValidMetricGroupWhenEventBasedQueryIsCreatedThenExpectQueryToSucceed) {
 
   for (auto &device : devices) {
-    run_test(device, false);
+    run_test(device, false, false);
   }
 }
 
@@ -445,10 +457,18 @@ TEST_F(
     zetMetricQueryLoadTest,
     GivenWorkloadExecutedWithMetricQueryWhenResettingQueryHandleThenResetSucceedsAndCanReuseHandle) {
   for (auto &device : devices) {
-    run_test(device, true);
+    run_test(device, true, false);
   }
 }
 
+TEST_F(
+    zetMetricQueryLoadTest,
+    GivenWorkloadExecutedOnImmediateCommandListWhenQueryingThenQuerySucceeds) {
+
+  for (auto &device : devices) {
+    run_test(device, false, true);
+  }
+}
 class zetMetricQueryLoadStdTest : public ::testing::Test {
 protected:
   std::vector<ze_device_handle_t> devices;
