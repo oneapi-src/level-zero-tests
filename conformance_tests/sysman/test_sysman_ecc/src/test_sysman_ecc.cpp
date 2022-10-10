@@ -111,4 +111,72 @@ TEST_F(
   }
 }
 
+TEST_F(
+    EccModuleTest,
+    GivenValidDeviceHandleIfEccIsNotAvailableThenGetStateIsInvokedThenExpectEccIsNotAvailable) {
+  for (const auto &device : devices) {
+    auto available = lzt::get_ecc_available(device);
+    if (available == static_cast<ze_bool_t>(false)) {
+      zes_device_ecc_properties_t getState = {
+          ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
+      EXPECT_EQ(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE,
+                zesDeviceGetEccState(device, &getState));
+    }
+  }
+}
+
+TEST_F(
+    EccModuleTest,
+    GivenValidDeviceHandleIfEccIsAvailableButNotConfigurableThenGetStateIsInvokedThenExpectEccUnSupportedFeature) {
+  for (const auto &device : devices) {
+    auto available = lzt::get_ecc_available(device);
+    if (available == static_cast<ze_bool_t>(true)) {
+      auto configurable = lzt::get_ecc_configurable(device);
+      if (configurable == static_cast<ze_bool_t>(false)) {
+        zes_device_ecc_properties_t getState = {
+            ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
+        EXPECT_EQ(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE,
+                  zesDeviceGetEccState(device, &getState));
+      }
+    }
+  }
+}
+
+TEST_F(
+    EccModuleTest,
+    GivenValidDeviceHandleIfEccIsNotAvailableThenSetStateIsInvokedThenExpectEccIsNotAvailable) {
+  for (const auto &device : devices) {
+    auto available = lzt::get_ecc_available(device);
+    if (available == static_cast<ze_bool_t>(false)) {
+      zes_device_ecc_properties_t state = {
+          ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
+      zes_device_ecc_desc_t newState = {ZES_STRUCTURE_TYPE_DEVICE_ECC_DESC,
+                                        nullptr};
+      newState.state = ZES_DEVICE_ECC_STATE_ENABLED;
+      EXPECT_EQ(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE,
+                zesDeviceSetEccState(device, &newState, &state));
+    }
+  }
+}
+
+TEST_F(
+    EccModuleTest,
+    GivenValidDeviceHandleIfEccIsAvailableButNotConfigurableThenSetStateIsInvokedThenExpectEccUnSupportedFeature) {
+  for (const auto &device : devices) {
+    auto available = lzt::get_ecc_available(device);
+    if (available == static_cast<ze_bool_t>(false)) {
+      auto configurable = lzt::get_ecc_configurable(device);
+      if (configurable == static_cast<ze_bool_t>(false)) {
+        zes_device_ecc_properties_t state = {
+            ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
+        zes_device_ecc_desc_t newState = {ZES_STRUCTURE_TYPE_DEVICE_ECC_DESC,
+                                          nullptr};
+        newState.state = ZES_DEVICE_ECC_STATE_ENABLED;
+        EXPECT_EQ(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE,
+                  zesDeviceSetEccState(device, &newState, &state));
+      }
+    }
+  }
+}
+
 } // namespace
