@@ -47,6 +47,9 @@ set(SOURCE_FILES
     "${L0_SOURCE_FILES}"
 )
 
+add_definitions(-DCL_TARGET_OPENCL_VERSION=210)
+add_definitions(-DCL_USE_DEPRECATED_OPENCL_1_2_APIS)
+
 add_lzt_test(
   NAME ze_cabe
   GROUP "/perf_tests"
