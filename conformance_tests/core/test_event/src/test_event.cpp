@@ -64,7 +64,7 @@ INSTANTIATE_TEST_CASE_P(
 TEST_F(zeDeviceCreateEventPoolTests,
        GivenDefaultDeviceWhenGettingIpcEventHandleThenNotNullisReturned) {
   ze_ipc_event_pool_handle_t hIpc;
-  ep.InitEventPool();
+  ep.InitEventPool(32, ZE_EVENT_POOL_FLAG_IPC);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(ep.event_pool_, &hIpc));
 }
@@ -73,13 +73,13 @@ TEST_F(
     zeDeviceCreateEventPoolTests,
     GivenDefaultDeviceWhenGettingIpcEventHandleAndOpeningAndClosingThenSuccessIsReturned) {
   ze_ipc_event_pool_handle_t hIpc;
-  ze_context_handle_t context = lzt::create_context();
-  ep.InitEventPool(context, 32);
+  ep.InitEventPool(32,
+                   ZE_EVENT_POOL_FLAG_IPC | ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(ep.event_pool_, &hIpc));
 
   ze_event_pool_handle_t eventPool;
-  lzt::open_ipc_event_handle(context, hIpc, &eventPool);
+  lzt::open_ipc_event_handle(ep.context_, hIpc, &eventPool);
   EXPECT_NE(nullptr, eventPool);
   lzt::close_ipc_event_handle(eventPool);
 }
