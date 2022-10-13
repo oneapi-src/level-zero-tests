@@ -14,8 +14,17 @@ namespace lzt = level_zero_tests;
 
 ze_kernel_handle_t load_gpu(ze_device_handle_t device, ze_group_count_t *tg,
                             void **a_buffer, void **b_buffer, void **c_buffer) {
+
+  auto device_properties = lzt::get_device_properties(device);
+
+  auto max_threads =
+      device_properties.numSlices * device_properties.numSubslicesPerSlice *
+      device_properties.numEUsPerSubslice * device_properties.numThreadsPerEU;
+
+  LOG_INFO << "Available threads: " << max_threads;
+
   int m, k, n;
-  m = k = n = 8192;
+  m = k = n = (max_threads > 4096 ? 8192 : 256);
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
