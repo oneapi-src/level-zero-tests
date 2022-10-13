@@ -218,6 +218,7 @@ TEST_P(
 
       lzt::append_memory_fill(command_list, memory, &pattern, pattern_size,
                               size, nullptr);
+      lzt::append_barrier(command_list);
       lzt::append_memory_copy(command_list, host_memory, memory, size);
       lzt::close_command_list(command_list);
       lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
