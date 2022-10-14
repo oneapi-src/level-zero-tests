@@ -159,7 +159,7 @@ bp::child launch_child_debugger_process(debug_test_type_t test_type,
 
   bp::child debugger(helper, "--test_type=" + std::to_string(test_type),
                      "--device_id=" + device_id,
-                     (use_sub_devices ? "--use_sub_devices" : ""),
+                     (use_sub_devices ? "--use_sub_devices" : " "),
                      "--index=" + std::to_string(index));
 
   return debugger;
