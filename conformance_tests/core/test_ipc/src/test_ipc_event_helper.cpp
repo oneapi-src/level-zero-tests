@@ -64,6 +64,7 @@ static void child_device2_reads(ze_event_pool_handle_t hEventPool) {
   auto cmdlist = lzt::create_command_list(devices[1]);
   auto cmdqueue = lzt::create_command_queue(devices[1]);
   lzt::append_wait_on_events(cmdlist, 1, &hEvent);
+  lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
   lzt::synchronize(cmdqueue, UINT64_MAX);
 
@@ -79,12 +80,14 @@ static void child_multi_device_reads(ze_event_pool_handle_t hEventPool) {
   auto cmdlist1 = lzt::create_command_list(devices[0]);
   auto cmdqueue1 = lzt::create_command_queue(devices[0]);
   lzt::append_wait_on_events(cmdlist1, 1, &hEvent);
+  lzt::close_command_list(cmdlist1);
   lzt::execute_command_lists(cmdqueue1, 1, &cmdlist1, nullptr);
   lzt::synchronize(cmdqueue1, UINT64_MAX);
 
   auto cmdlist2 = lzt::create_command_list(devices[1]);
   auto cmdqueue2 = lzt::create_command_queue(devices[1]);
   lzt::append_wait_on_events(cmdlist2, 1, &hEvent);
+  lzt::close_command_list(cmdlist2);
   lzt::execute_command_lists(cmdqueue2, 1, &cmdlist2, nullptr);
   lzt::synchronize(cmdqueue2, UINT64_MAX);
   // cleanup
