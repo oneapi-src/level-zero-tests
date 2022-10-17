@@ -421,6 +421,97 @@ TEST_P(
   lzt::destroy_command_list(cmdlist_immediate_3);
 }
 
+TEST_P(
+    zeImmediateCommandListExecutionTests,
+    GivenImmediateCommandListAndRegularCommandListWithSameIndexWhenAppendingOperationsThenVerifyOperationsAreSuccessful) {
+  const size_t size = 16;
+  const int num_iteration = 3;
+  int addval = 10;
+
+  void *buffer = lzt::allocate_shared_memory(size * sizeof(int));
+  memset(buffer, 0x0, size * sizeof(int));
+
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event0));
+
+  ze_module_handle_t module = lzt::create_module(
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
+      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_kernel_handle_t kernel =
+      lzt::create_function(module, "cmdlist_add_constant");
+  lzt::set_group_size(kernel, 1, 1, 1);
+
+  int *p_dev = static_cast<int *>(buffer);
+  lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
+  lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
+  ze_group_count_t tg;
+  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountY = 1;
+  tg.groupCountZ = 1;
+
+  auto command_queue = lzt::create_command_queue();
+  auto command_list = lzt::create_command_list();
+  const size_t bufsize = 4096;
+  std::vector<uint8_t> host_memory1(bufsize), host_memory2(bufsize, 0);
+  void *device_memory =
+      lzt::allocate_device_memory(lzt::size_in_bytes(host_memory1));
+
+  lzt::write_data_pattern(host_memory1.data(), bufsize, 1);
+
+  ze_event_handle_t event1 = nullptr;
+  ze_event_handle_t event2 = nullptr;
+  ep.create_event(event1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  ep.create_event(event2, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+  lzt::append_memory_copy(command_list, device_memory, host_memory1.data(),
+                          lzt::size_in_bytes(host_memory1), event1);
+
+  lzt::append_memory_copy(command_list, host_memory2.data(), device_memory,
+                          lzt::size_in_bytes(host_memory2), event2, 1, &event1);
+
+  lzt::close_command_list(command_list);
+
+  int val_check = addval;
+  for (uint32_t iter = 0; iter < num_iteration; iter++) {
+    lzt::append_launch_function(cmdlist_immediate, kernel, &tg, event0, 0,
+                                nullptr);
+
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+
+    // Synchronize executions
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event0));
+    lzt::event_host_synchronize(event2, UINT64_MAX);
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event1));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event2));
+
+    // Validate kernel and copy execution
+    for (size_t i = 0; i < size; i++) {
+      EXPECT_EQ(static_cast<int *>(buffer)[i], val_check);
+    }
+
+    addval += 5;
+    val_check += addval;
+    lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
+    lzt::validate_data_pattern(host_memory2.data(), bufsize, 1);
+
+    // Reset buffers
+    memset(host_memory2.data(), 0x0, bufsize * sizeof(uint8_t));
+
+    uint8_t zero = 0;
+    lzt::append_memory_set(cmdlist_immediate, device_memory, &zero,
+                           bufsize * sizeof(uint8_t), event0);
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event0));
+  }
+
+  lzt::free_memory(device_memory);
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
+  lzt::free_memory(buffer);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
+}
+
 INSTANTIATE_TEST_CASE_P(TestCasesforCommandListImmediateCases,
                         zeImmediateCommandListExecutionTests,
                         testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
