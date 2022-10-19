@@ -293,6 +293,7 @@ TEST_F(
 
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
+      lzt::append_barrier(commandList, nullptr, 0, nullptr);
       lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
 
       lzt::close_command_list(commandList);
@@ -375,6 +376,7 @@ void run_test(const ze_device_handle_t &device, bool reset, bool immediate) {
 
     zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                     nullptr);
+    lzt::append_barrier(commandList);
     lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
 
     lzt::close_command_list(commandList);
@@ -411,6 +413,7 @@ void run_test(const ze_device_handle_t &device, bool reset, bool immediate) {
 
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
+      lzt::append_barrier(commandList, nullptr, 0, nullptr);
       lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
       lzt::close_command_list(commandList);
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
@@ -535,6 +538,7 @@ TEST_F(
 
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
+      lzt::append_barrier(commandList, nullptr, 0, nullptr);
       lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
 
       lzt::close_command_list(commandList);
@@ -1200,13 +1204,13 @@ TEST_F(
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
 
+      lzt::append_barrier(commandList);
       uint32_t streamerMarker = 0;
       lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
                                               ++streamerMarker);
       lzt::append_barrier(commandList);
       lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
                                               ++streamerMarker);
-
       ze_result_t eventResult;
       eventResult = zeEventQueryStatus(eventHandle);
 
