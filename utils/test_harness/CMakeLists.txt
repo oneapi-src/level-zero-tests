@@ -12,6 +12,7 @@ add_core_library(test_harness
     "src/test_harness_cmdlist.cpp"
     "src/test_harness_cmdqueue.cpp"
     "src/test_harness_event.cpp"
+    "src/test_harness_fabric.cpp"
     "src/test_harness_memory.cpp"
     "src/test_harness_image.cpp"
     "src/test_harness_fence.cpp"

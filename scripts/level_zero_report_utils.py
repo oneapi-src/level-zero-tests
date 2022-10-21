@@ -86,7 +86,8 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleGetPropertiesReturnsValidNonZeroProperties', test_name, re.IGNORECASE)) or \
                     (test_name.find("zeVirtualMemoryTests")!= -1) or \
                     (test_name.find("Cooperative")!= -1) or \
-                    (test_name.find("zeMemFreeExtTests")!= -1):
+                    (test_name.find("zeMemFreeExtTests")!= -1) or \
+                    re.search('fabric', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
             else:
                 test_feature_tag = "basic"
@@ -271,6 +272,8 @@ def assign_test_feature(test_binary: str, test_name: str):
             test_feature = "Device Handling"
         if test_name.find("L0_CTS_MultiProcessTests_GivenMultipleProcessesUsingMultipleDevicesKernelsExecuteCorrectly")!= -1:
             test_feature = "Kernels"
+        if test_binary == "test_fabric":
+            test_feature = "Fabric"
         if test_feature == "None":
             print("ERROR: test case " + test_name + " has no assigned feature\n")
             exit(-1)
