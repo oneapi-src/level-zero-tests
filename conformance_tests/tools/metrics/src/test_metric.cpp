@@ -69,6 +69,8 @@ protected:
 
   zetMetricGroupTest() {}
   ~zetMetricGroupTest() {}
+
+  void run_activate_deactivate_test(bool reactivate);
 };
 
 TEST_F(
@@ -107,15 +109,12 @@ TEST_F(
   groupHandleList = lzt::get_metric_group_handles(device);
   EXPECT_NE(0, groupHandleList.size());
   for (zet_metric_group_handle_t groupHandle : groupHandleList) {
-    lzt::activate_metric_groups(device, 1, groupHandle);
+    lzt::activate_metric_groups(device, 1, &groupHandle);
     lzt::deactivate_metric_groups(device);
   }
 }
 
-TEST_F(
-    zetMetricGroupTest,
-    GivenMetricGroupsInDifferentDomainWhenValidGroupIsActivatedThenExpectGroupActivationAndDeactivationToSucceed) {
-
+void zetMetricGroupTest::run_activate_deactivate_test(bool reactivate) {
   bool test_executed = false;
   std::vector<zet_metric_group_handle_t> groupHandleList;
   groupHandleList = lzt::get_metric_group_handles(device);
@@ -145,6 +144,12 @@ TEST_F(
       test_handles.push_back(groupHandle);
       lzt::activate_metric_groups(device, 2, test_handles.data());
       lzt::deactivate_metric_groups(device);
+
+      if (reactivate) {
+        LOG_INFO << "Deactivating then reactivating single metric group";
+        lzt::activate_metric_groups(device, 1, test_handles.data());
+        lzt::activate_metric_groups(device, 2, test_handles.data());
+      }
       test_executed = true;
       break;
     }
@@ -154,6 +159,20 @@ TEST_F(
   } else {
     LOG_INFO << "Domain 1: " << domain << " Domain 2: " << domain_2;
   }
+}
+
+TEST_F(
+    zetMetricGroupTest,
+    GivenMetricGroupsInDifferentDomainWhenValidGroupIsActivatedThenExpectGroupActivationAndDeactivationToSucceed) {
+
+  run_activate_deactivate_test(false);
+}
+
+TEST_F(
+    zetMetricGroupTest,
+    GivenMetricGroupsInDifferentDomainWhenValidGroupIsActivatedThenExpectGroupReActivationToSucceed) {
+
+  run_activate_deactivate_test(true);
 }
 
 TEST_F(zetMetricGroupTest,
@@ -168,7 +187,7 @@ TEST_F(zetMetricGroupTest,
     zet_metric_group_handle_t groupHandle = lzt::find_metric_group(
         device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
     EXPECT_NE(nullptr, groupHandle);
-    lzt::activate_metric_groups(device, 1, groupHandle);
+    lzt::activate_metric_groups(device, 1, &groupHandle);
     zet_metric_streamer_handle_t streamerHandle = lzt::metric_streamer_open(
         groupHandle, nullptr, notifyEveryNReports, samplingPeriod);
     EXPECT_NE(nullptr, streamerHandle);
@@ -222,7 +241,7 @@ TEST_F(
     GivenOnlyMetricQueryWhenCommandListIsCreatedThenExpectCommandListToExecuteSucessfully) {
 
   zet_command_list_handle_t commandList = lzt::create_command_list();
-  lzt::activate_metric_groups(device, 1, matchedGroupHandle);
+  lzt::activate_metric_groups(device, 1, &matchedGroupHandle);
   lzt::append_metric_query_begin(commandList, metricQueryHandle);
   lzt::append_metric_query_end(commandList, metricQueryHandle, nullptr);
   lzt::close_command_list(commandList);
@@ -278,7 +297,7 @@ TEST_F(
       zet_metric_query_handle_t metricQueryHandle =
           lzt::metric_query_create(metricQueryPoolHandle);
 
-      lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
       lzt::append_metric_query_begin(commandList, metricQueryHandle);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
       ze_event_handle_t eventHandle;
@@ -361,7 +380,7 @@ void run_test(const ze_device_handle_t &device, bool reset, bool immediate) {
     zet_metric_query_handle_t metricQueryHandle =
         lzt::metric_query_create(metricQueryPoolHandle);
 
-    lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+    lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
     lzt::append_metric_query_begin(commandList, metricQueryHandle);
     lzt::append_barrier(commandList, nullptr, 0, nullptr);
     ze_event_handle_t eventHandle;
@@ -523,7 +542,7 @@ TEST_F(
       zet_metric_query_handle_t metricQueryHandle =
           lzt::metric_query_create(metricQueryPoolHandle);
 
-      lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
       lzt::append_metric_query_begin(commandList, metricQueryHandle);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
       ze_event_handle_t eventHandle;
@@ -612,7 +631,7 @@ TEST_F(
     for (auto groupInfo : metricGroupInfo) {
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
-      lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
       ze_event_handle_t eventHandle;
       lzt::zeEventPool eventPool;
@@ -698,7 +717,7 @@ TEST_F(
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
-      lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
       ze_event_handle_t eventHandle;
       lzt::zeEventPool eventPool;
@@ -790,7 +809,7 @@ TEST_F(
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
-      lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
       ze_event_handle_t eventHandle;
       lzt::zeEventPool eventPool;
@@ -885,7 +904,7 @@ TEST_F(
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
-      lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
       ze_event_handle_t eventHandle;
       lzt::zeEventPool eventPool;
@@ -1000,7 +1019,7 @@ TEST_F(
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
-      lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
       ze_event_handle_t eventHandle;
       lzt::zeEventPool eventPool;
@@ -1096,7 +1115,7 @@ TEST(
            << " domain: " << groupInfo.domain;
 
   LOG_INFO << "Activating metric group: " << groupInfo.metricGroupName;
-  lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+  lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
   ze_event_handle_t eventHandle;
   lzt::zeEventPool eventPool;
@@ -1185,7 +1204,7 @@ TEST_F(
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
-      lzt::activate_metric_groups(device, 1, groupInfo.metricGroupHandle);
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
       ze_event_handle_t eventHandle;
       lzt::zeEventPool eventPool;

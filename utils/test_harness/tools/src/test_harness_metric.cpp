@@ -405,12 +405,6 @@ void metric_streamer_read_data(
 }
 
 void activate_metric_groups(ze_device_handle_t device, uint32_t count,
-                            zet_metric_group_handle_t matchedGroupHandle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetContextActivateMetricGroups(lzt::get_default_context(), device,
-                                           count, &matchedGroupHandle));
-}
-void activate_metric_groups(ze_device_handle_t device, uint32_t count,
                             zet_metric_group_handle_t *matchedGroupHandle) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetContextActivateMetricGroups(lzt::get_default_context(), device,
