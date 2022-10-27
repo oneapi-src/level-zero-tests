@@ -224,6 +224,7 @@ TEST_P(
     ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern2);
   }
 
+  lzt::destroy_command_list(cmdlist);
   lzt::free_memory(context, memory);
   lzt::destroy_context(context);
 }
