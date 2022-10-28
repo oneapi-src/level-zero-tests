@@ -236,7 +236,7 @@ ze_device_handle_t find_device(ze_driver_handle_t &driver,
 
   for (auto &root_device : lzt::get_devices(driver)) {
     if (sub_device) {
-      LOG_INFO << "[Application] Searching subdevices";
+      LOG_INFO << "[] Searching subdevices";
 
       for (auto &sub_device : lzt::get_ze_sub_devices(root_device)) {
         auto device_properties = lzt::get_device_properties(sub_device);
@@ -253,7 +253,7 @@ ze_device_handle_t find_device(ze_driver_handle_t &driver,
         break;
       }
     } else {
-      LOG_INFO << "[Application] Searching root device";
+      LOG_INFO << "[] Searching root device";
 
       auto device_properties = lzt::get_device_properties(root_device);
       if (strncmp(device_id, lzt::to_string(device_properties.uuid).c_str(),

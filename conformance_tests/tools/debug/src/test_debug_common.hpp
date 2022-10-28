@@ -143,11 +143,24 @@ public:
     delete region;
   }
 
+  void notify_child() { notify_application("[Parent] Notifying child"); }
+  void wait_for_parent_signal() {
+    wait_for_debugger_signal("[Child Debugger] Waiting for parent to notify");
+  }
+  void clear_parent_signal() { clear_debugger_signal(); }
+
+  void notify_parent() { notify_debugger("[Child Debugger] Notifying parent"); }
+  void wait_for_child_signal() {
+    wait_for_application_signal("[Parent] Waiting for child to notify");
+  }
+  void clear_child_signal() { clear_application_signal(); }
+
   // To be used by Debugger only:
-  void notify_application() {
+  void notify_application(const std::string &message = "") {
     if (!enabled)
       return;
-    LOG_INFO << "[Debugger] Notifying application signal";
+    LOG_INFO << (message != "" ? message
+                               : " [Debugger] Notifying application signal");
     mutex->lock();
     *debugger_signal = true;
     mutex->unlock();
@@ -155,17 +168,16 @@ public:
   }
 
   // To be used by application only:
-  void wait_for_debugger_signal(int parent = 0) {
-    auto prefix = "[Application]";
-    if (parent)
-      prefix = "[Parent Debugger]";
+  void wait_for_debugger_signal(const std::string &message = "") {
     if (!enabled)
       return;
-    LOG_INFO << prefix << " Waiting for debugger to notify";
+    LOG_INFO << (message != ""
+                     ? message
+                     : "[Application] Waiting for debugger to notify");
     bi::scoped_lock<bi::named_mutex> lock(*mutex);
 
     condition->wait(lock, [&] { return *debugger_signal; });
-    LOG_INFO << prefix << " Received debugger notification proceeding";
+    LOG_INFO << "Received notification proceeding";
   }
 
   void clear_debugger_signal() {
@@ -179,10 +191,11 @@ public:
   }
 
   // To be used by application only:
-  void notify_debugger() {
+  void notify_debugger(const std::string &message = "") {
     if (!enabled)
       return;
-    LOG_INFO << "[Application] Notifying debugger signal";
+    LOG_INFO << (message != "" ? message
+                               : "[Application] Notifying debugger signal");
     mutex->lock();
     *debugee_signal = true;
     mutex->unlock();
@@ -190,13 +203,15 @@ public:
   }
 
   // To be used by Debugger only:
-  void wait_for_application_signal() {
+  void wait_for_application_signal(const std::string &message = "") {
     if (!enabled)
       return;
-    LOG_INFO << "[Debugger] Waiting for application to notify";
+    LOG_INFO << (message != ""
+                     ? message
+                     : "[Debugger] Waiting for application to notify");
     bi::scoped_lock<bi::named_mutex> lock(*mutex);
     condition->wait(lock, [&] { return *debugee_signal; });
-    LOG_INFO << "[Debugger] Received application notification proceeding";
+    LOG_INFO << "Received notification proceeding";
   }
 
   void clear_application_signal() {
