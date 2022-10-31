@@ -186,4 +186,141 @@ TEST_F(
     }
   }
 }
+
+static std::vector<float>
+submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
+                        uint32_t dim, ze_device_handle_t targetDevice) {
+  int m, k, n;
+  m = k = n = dim;
+  std::vector<float> c(m * n, 0);
+  const ze_device_handle_t device = targetDevice;
+  void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
+  void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
+  void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
+  ze_module_handle_t module =
+      lzt::create_module(device, "sysman_matrix_multiplication.spv",
+                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_kernel_handle_t function =
+      lzt::create_function(module, "sysman_matrix_multiplication");
+  lzt::set_group_size(function, 16, 16, 1);
+  lzt::set_argument_value(function, 0, sizeof(a_buffer), &a_buffer);
+  lzt::set_argument_value(function, 1, sizeof(b_buffer), &b_buffer);
+  lzt::set_argument_value(function, 2, sizeof(m), &m);
+  lzt::set_argument_value(function, 3, sizeof(k), &k);
+  lzt::set_argument_value(function, 4, sizeof(n), &n);
+  lzt::set_argument_value(function, 5, sizeof(c_buffer), &c_buffer);
+  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
+  std::memcpy(a_buffer, a.data(), a.size() * sizeof(float));
+  std::memcpy(b_buffer, b.data(), b.size() * sizeof(float));
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  const int group_count_x = m / 16;
+  const int group_count_y = n / 16;
+  ze_group_count_t tg;
+  tg.groupCountX = group_count_x;
+  tg.groupCountY = group_count_y;
+  tg.groupCountZ = 1;
+  zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
+  lzt::synchronize(cmd_q, UINT64_MAX);
+  std::memcpy(c.data(), c_buffer, c.size() * sizeof(float));
+
+  lzt::destroy_command_queue(cmd_q);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_function(function);
+  lzt::free_memory(a_buffer);
+  lzt::free_memory(b_buffer);
+  lzt::free_memory(c_buffer);
+  lzt::destroy_module(module);
+
+  return c;
+}
+
+static std::vector<float>
+perform_matrix_multiplication_on_cpu(std::vector<float> a, std::vector<float> b,
+                                     uint32_t n) {
+  std::vector<float> c_cpu(n * n, 0);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      float sum = 0;
+      for (int kl = 0; kl < n; kl++) {
+        sum += a[i * n + kl] * b[kl * n + j];
+      }
+      c_cpu[i * n + j] = sum;
+    }
+  }
+  return c_cpu;
+}
+
+static void compare_results(std::vector<float> c, std::vector<float> c_cpu) {
+  for (int i = 0; i < c.size(); i++) {
+    if (c[i] != c_cpu[i]) {
+      EXPECT_EQ(c[i], c_cpu[i]);
+    }
+  }
+  return;
+}
+
+TEST_F(
+    SysmanDeviceTest,
+    GivenWorkingDeviceHandleWhenResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterReset) {
+  uint32_t n = 512;
+  std::vector<float> a(n * n, 1);
+  std::vector<float> b(n * n, 1);
+  std::vector<float> c;
+  std::vector<float> c_cpu;
+  c_cpu = perform_matrix_multiplication_on_cpu(a, b, n);
+
+  for (auto device : devices) {
+    // Perform workload execution before reset
+    c = submit_workload_for_gpu(a, b, n, device);
+    compare_results(c, c_cpu);
+    c.clear();
+    LOG_INFO << "Initiating device reset...\n";
+    // perform device reset
+    lzt::sysman_device_reset(device);
+    LOG_INFO << "End of device reset...\n";
+
+    // Perform workload execution after reset
+    c = submit_workload_for_gpu(a, b, n, device);
+    compare_results(c, c_cpu);
+    c.clear();
+  }
+}
+TEST_F(
+    SysmanDeviceTest,
+    GivenWorkingDeviceHandleWhenResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetInMultipleIterations) {
+  uint32_t n = 512;
+  std::vector<float> a(n * n, 1);
+  std::vector<float> b(n * n, 1);
+  std::vector<float> c;
+  std::vector<float> c_cpu;
+  c_cpu = perform_matrix_multiplication_on_cpu(a, b, n);
+  const char *valueString = std::getenv("LZT_SYSMAN_DEVICE_TEST_ITERATIONS");
+  uint32_t number_iterations = 2;
+  if (valueString != nullptr) {
+    number_iterations = atoi(valueString);
+  }
+
+  for (auto device : devices) {
+    for (int i = 0; i < number_iterations; i++) {
+      // Perform workload execution before reset
+      c = submit_workload_for_gpu(a, b, n, device);
+      compare_results(c, c_cpu);
+      c.clear();
+      LOG_INFO << "Initiating device reset...\n";
+      // perform device reset
+      lzt::sysman_device_reset(device);
+      LOG_INFO << "End of device reset...\n";
+
+      // Perform workload execution after reset
+      c = submit_workload_for_gpu(a, b, n, device);
+      compare_results(c, c_cpu);
+      c.clear();
+    }
+  }
+}
+
 } // namespace
