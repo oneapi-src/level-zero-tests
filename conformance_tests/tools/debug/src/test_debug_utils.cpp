@@ -16,6 +16,147 @@ namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
+void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
+                        const ze_device_thread_t &thread,
+                        uint64_t slmBaseAddress) {
+
+  static constexpr uint16_t bufferSize =
+      512; // Also defined in test_debug_helper.cpp for SLM buffer size
+
+  zet_debug_memory_space_desc_t desc;
+  desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
+
+  zet_debug_memory_space_desc_t verifyDesc;
+  verifyDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
+  verifyDesc.address = slmBaseAddress;
+
+  uint8_t buffer1[bufferSize];
+  uint8_t buffer2[bufferSize];
+  uint8_t original[bufferSize];
+
+  unsigned char slm_pattern[4] = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  memset(buffer1, 0xaa, bufferSize);
+  int i = 0;
+  for (i = 0; i < bufferSize; i++) {
+    buffer2[i] = slm_pattern[i & 0x3];
+  }
+
+  // Save original content to restore at the end
+  int accessSize;
+  int accessOffset;
+  desc.address = slmBaseAddress;
+  lzt::debug_read_memory(debug_session, thread, desc, bufferSize, original);
+  for (i = 0; i < bufferSize; i++) {
+    // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
+    EXPECT_EQ(original[i], (i + 1 & 0xFF));
+  }
+  // SIP access SLM in defined unit sizes at aligned addresses, so test multiple
+  // combinations
+  accessSize = 7;
+  accessOffset = 0;
+  desc.address = slmBaseAddress + accessOffset;
+  lzt::debug_write_memory(debug_session, thread, desc, accessSize, buffer2);
+  lzt::debug_read_memory(debug_session, thread, verifyDesc, bufferSize,
+                         buffer1);
+  // verify the content written
+  for (i = 0; i < accessSize; i++) {
+    EXPECT_EQ(buffer1[i], buffer2[i]);
+  }
+  // Veriy the rest of the buffer was not altered
+  for (i = accessSize; i < bufferSize; i++) {
+    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF) + accessOffset);
+  }
+  memset(buffer1, 0, bufferSize);
+
+  accessSize = 7;
+  accessOffset = 0x05;
+  desc.address = slmBaseAddress + accessOffset;
+  lzt::debug_write_memory(debug_session, thread, desc, accessSize, buffer2);
+  lzt::debug_read_memory(debug_session, thread, verifyDesc, bufferSize,
+                         buffer1);
+  // verify the content written
+  for (i = accessOffset; i < accessSize + accessOffset; i++) {
+    EXPECT_EQ(buffer1[i], buffer2[i - accessOffset]);
+  }
+  // Veriy the rest of the buffer was not altered
+  for (i = accessOffset + accessSize;
+       i < bufferSize - accessOffset - accessSize; i++) {
+    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+  }
+  memset(buffer1, 0, bufferSize);
+
+  // restore
+  lzt::debug_write_memory(debug_session, thread, verifyDesc, bufferSize,
+                          original);
+
+  accessSize = 7;
+  accessOffset = 0x0f;
+  desc.address = slmBaseAddress + accessOffset;
+  lzt::debug_write_memory(debug_session, thread, desc, accessSize, buffer2);
+  lzt::debug_read_memory(debug_session, thread, verifyDesc, bufferSize,
+                         buffer1);
+  // Veriy the rest of the buffer was not altered
+  for (i = 0; i < accessOffset; i++) {
+    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+  }
+  // verify the content written
+  for (i = accessOffset; i < accessSize + accessOffset; i++) {
+    EXPECT_EQ(buffer1[i], buffer2[i - accessOffset]);
+  }
+  // Veriy the rest of the buffer was not altered
+  for (i = accessOffset + accessSize;
+       i < bufferSize - accessOffset - accessSize; i++) {
+    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+  }
+  memset(buffer1, 0, bufferSize);
+
+  accessSize = 132;
+  accessOffset = 0x0f;
+  desc.address = slmBaseAddress + accessOffset;
+  lzt::debug_write_memory(debug_session, thread, desc, accessSize, buffer2);
+  lzt::debug_read_memory(debug_session, thread, verifyDesc, bufferSize,
+                         buffer1);
+  // Veriy the rest of the buffer was not altered
+  for (i = 0; i < accessOffset; i++) {
+    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+  }
+  // verify the content written
+  for (i = accessOffset; i < accessSize + accessOffset; i++) {
+    EXPECT_EQ(buffer1[i], buffer2[i - accessOffset]);
+  }
+  // Veriy the rest of the buffer was not altered
+  for (i = accessOffset + accessSize;
+       i < bufferSize - accessOffset - accessSize; i++) {
+    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+  }
+  memset(buffer1, 0, bufferSize);
+
+  accessSize = 230;
+  accessOffset = 0x0a;
+  desc.address = slmBaseAddress + accessOffset;
+  lzt::debug_write_memory(debug_session, thread, desc, accessSize, buffer2);
+  lzt::debug_read_memory(debug_session, thread, verifyDesc, bufferSize,
+                         buffer1);
+  // Veriy the rest of the buffer was not altered
+  for (i = 0; i < accessOffset; i++) {
+    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+  }
+  // verify the content written
+  for (i = accessOffset; i < accessSize + accessOffset; i++) {
+    EXPECT_EQ(buffer1[i], buffer2[i - accessOffset]);
+  }
+  // Veriy the rest of the buffer was not altered
+  for (i = accessOffset + accessSize;
+       i < bufferSize - accessOffset - accessSize; i++) {
+    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+  }
+  memset(buffer1, 0, bufferSize);
+
+  // restore
+  lzt::debug_write_memory(debug_session, thread, verifyDesc, bufferSize,
+                          original);
+}
 
 void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
                            const ze_device_thread_t &thread,

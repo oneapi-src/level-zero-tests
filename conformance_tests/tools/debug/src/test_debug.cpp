@@ -54,19 +54,6 @@ void print_device(const ze_device_handle_t &device) {
   // print uuid
   LOG_INFO << "Device : " << properties.uuid;
 }
-class zetDebugAttachDetachTest : public zetDebugBaseSetup {
-protected:
-  void run_test(std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
-                bool reattach);
-  void run_multidevice_test(std::vector<ze_device_handle_t> &devices,
-                            bool use_sub_devices);
-  void run_attach_detach_to_multiple_applications_on_different_devs_test(
-      std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
-  void run_use_same_device_test(const zet_device_handle_t &device);
-  void
-  run_new_debugger_attach_test(const std::vector<ze_device_handle_t> &devices,
-                               bool verify_events);
-};
 
 void zetDebugAttachDetachTest::run_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
@@ -533,32 +520,6 @@ TEST_F(
 
   run_new_debugger_attach_test(devices, true);
 }
-
-class zetDebugEventReadTest : public zetDebugAttachDetachTest {
-protected:
-  void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
-  void TearDown() override { zetDebugAttachDetachTest::TearDown(); }
-  void run_test(std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
-                debug_test_type_t test_type);
-
-  void run_attach_after_module_created_destroyed_test(
-      std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
-      debug_test_type_t test_type);
-
-  void
-  run_multithreaded_application_test(std::vector<zet_device_handle_t> &devices,
-                                     bool use_sub_devices);
-
-  void run_read_events_in_separate_thread_test(
-      std::vector<zet_device_handle_t> &devices, bool use_sub_devices);
-
-  void run_proc_entry_exit_test(std::vector<zet_device_handle_t> &devices,
-                                bool use_sub_devices,
-                                debug_test_type_t test_type);
-  void
-  run_detach_no_ack_module_create_test(std::vector<ze_device_handle_t> &devices,
-                                       bool use_sub_devices);
-};
 
 void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
                                      bool use_sub_devices,
@@ -1361,17 +1322,6 @@ bool find_multi_event_stopped_threads(
   return foundAll;
 }
 
-class zetDebugMemAccessTest : public zetDebugAttachDetachTest {
-protected:
-  void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
-  void TearDown() override { zetDebugAttachDetachTest::TearDown(); }
-  void run_module_isa_elf_test(std::vector<ze_device_handle_t> &devices,
-                               bool use_sub_devices);
-  void
-  run_module_read_write_buffer_test(std::vector<ze_device_handle_t> &devices,
-                                    bool use_sub_devices);
-};
-
 void zetDebugMemAccessTest::run_module_isa_elf_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
@@ -1411,16 +1361,23 @@ TEST_F(zetDebugMemAccessTest,
   run_module_isa_elf_test(all_sub_devices, true);
 }
 
-void zetDebugMemAccessTest::run_module_read_write_buffer_test(
-    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
+    std::vector<ze_device_handle_t> &devices, bool test_slm,
+    uint64_t slmBaseAddress, bool use_sub_devices) {
   for (auto &device : devices) {
     print_device(device);
-    if (!is_debug_supported(device))
+    if (!is_debug_supported(device)) {
       continue;
+    }
 
     synchro->clear_debugger_signal();
-    debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
-                                 use_sub_devices);
+
+    debug_test_type_t helper_test_type;
+    helper_test_type = test_slm ? LONG_RUNNING_KERNEL_INTERRUPTED_SLM
+                                : LONG_RUNNING_KERNEL_INTERRUPTED;
+
+    debugHelper = launch_process(helper_test_type, device, use_sub_devices);
+
     zet_debug_event_t module_event;
     attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
                                 module_event);
@@ -1464,20 +1421,50 @@ void zetDebugMemAccessTest::run_module_read_write_buffer_test(
 
     LOG_INFO << "[Debugger] Reading/Writing on interrupted threads";
     for (auto &stopped_thread : stopped_threads) {
-      print_thread("[Debugger] Reading and writing from Stopped thread ",
-                   stopped_thread, DEBUG);
-
-      readWriteModuleMemory(debugSession, stopped_thread, module_event, false);
 
       lzt::debug_read_memory(debugSession, stopped_thread, memorySpaceDesc,
                              sizeToRead, buffer);
 
-      // Skip the first byte since the first thread read will
-      // see it 1 and others will see 0 after setting buffer[0]=0 below
-      int i = 1;
-      for (i = 1; i < sizeToRead; i++) {
-        // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
-        EXPECT_EQ(buffer[i], (i + 1 & 0xFF));
+      if (test_slm) {
+        print_thread(
+            "[Debugger] Reading and writing SLM memory from Stopped thread",
+            stopped_thread, DEBUG);
+
+        readWriteSLMMemory(debugSession, stopped_thread, slmBaseAddress);
+
+        // Modify pattern only on the last thread since SLM area is shared by
+        // all threads
+        if (stopped_thread == stopped_threads.back()) {
+          // Write the custom pattern in the first bytes which
+          // test_debug_helper is expecting to find.
+          unsigned char slm_pattern[24] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD,
+                                           0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF,
+                                           0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD,
+                                           0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
+
+          zet_debug_memory_space_desc_t slmSpaceDesc;
+          slmSpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
+          slmSpaceDesc.address = slmBaseAddress;
+
+          lzt::debug_write_memory(debugSession, stopped_thread, slmSpaceDesc,
+                                  sizeof(slm_pattern), slm_pattern);
+        }
+
+      } else {
+        print_thread("[Debugger] Reading and writing DEFAULT memory from "
+                     "Stopped thread ",
+                     stopped_thread, DEBUG);
+
+        readWriteModuleMemory(debugSession, stopped_thread, module_event,
+                              false);
+
+        // Skip the first byte since the first thread read will
+        // see it 1 and others will see 0 after setting buffer[0]=0 below
+        int i = 1;
+        for (i = 1; i < sizeToRead; i++) {
+          // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
+          EXPECT_EQ(buffer[i], (i + 1 & 0xFF));
+        }
       }
 
       // set buffer[0] to 0 to break the loop. See debug_loop.cl
@@ -1501,14 +1488,14 @@ TEST_F(
     GivenDebuggerAttachedAndModuleLoadedWhenThreadStoppedThenDebuggerCanReadWriteToAllocatedBuffersInTheContextOfThread) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
-  run_module_read_write_buffer_test(devices, false);
+  run_read_write_module_and_memory_test(devices, false, 0, false);
 }
 
 TEST_F(
     zetDebugMemAccessTest,
     GivenDebuggerAttachedSubDeviceAndModuleLoadedWhenThreadStoppedThenDebuggerCanReadWriteToAllocatedBuffersInTheContextOfThread) {
   auto all_sub_devices = lzt::get_all_sub_devices();
-  run_module_read_write_buffer_test(all_sub_devices, true);
+  run_read_write_module_and_memory_test(all_sub_devices, false, 0, true);
 }
 
 void run_register_set_properties_test(std::vector<ze_device_handle_t> devices) {
@@ -1538,14 +1525,6 @@ TEST(
     GivenSubDeviceWhenGettingRegisterSetPropertiesThenValidPropertiesReturned) {
   run_register_set_properties_test(lzt::get_all_sub_devices());
 }
-
-class zetDebugReadWriteRegistersTest : public zetDebugMemAccessTest {
-protected:
-  void SetUp() override { zetDebugMemAccessTest::SetUp(); }
-  void TearDown() override { zetDebugMemAccessTest::TearDown(); }
-  void run_read_write_registers_test(std::vector<ze_device_handle_t> &devices,
-                                     bool use_sub_devices);
-};
 
 void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
@@ -1700,40 +1679,6 @@ TEST_F(
   auto all_sub_devices = lzt::get_all_sub_devices();
   run_read_write_registers_test(all_sub_devices, true);
 }
-
-class zetDebugThreadControlTest : public zetDebugBaseSetup {
-protected:
-  void SetUp() override { zetDebugBaseSetup::SetUp(); }
-  void TearDown() override { zetDebugBaseSetup::TearDown(); }
-  void SetUpThreadControl(ze_device_handle_t &device, bool use_sub_devices);
-  void run_alternate_stop_resume_test(std::vector<ze_device_handle_t> &devices,
-                                      bool use_sub_devices);
-  void run_interrupt_resume_test(std::vector<ze_device_handle_t> &devices,
-                                 bool use_sub_devices);
-  void run_unavailable_thread_test(std::vector<ze_device_handle_t> &devices,
-                                   bool use_sub_devices);
-  void run_interrupt_and_resume_device_threads_in_separate_host_threads_test(
-      std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
-
-  zet_debug_memory_space_desc_t memorySpaceDesc;
-  std::vector<ze_device_thread_t> stopped_threads;
-
-  // Order matters, ALL should go last
-  typedef enum {
-    SINGLE_THREAD,
-    THREADS_IN_EU,
-    THREADS_IN_SUBSLICE,
-    THREADS_IN_SLICE,
-    ALL_THREADS
-  } threads_test_type_t;
-
-  std::map<threads_test_type_t, std::string> numThreadsToString = {
-      {SINGLE_THREAD, "SINGLE_THREAD"},
-      {THREADS_IN_EU, "THREADS_IN_EU"},
-      {THREADS_IN_SUBSLICE, "THREADS_IN_SUBSLICE"},
-      {THREADS_IN_SLICE, "THREADS_IN_SLICE"},
-      {ALL_THREADS, "ALL_THREADS"}};
-};
 
 void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
                                                    bool use_sub_devices) {
@@ -2382,15 +2327,6 @@ void wait_for_events_interrupt_and_resume(
   print_thread("Resuming device thread ", thread, DEBUG);
   lzt::debug_resume(debugSession, thread);
 }
-
-// using MultiGpuDebugTest = Test<zetDebugAttachDetachTest>;
-class MultiDeviceDebugTest : public zetDebugAttachDetachTest {
-protected:
-  void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
-  void TearDown() override { zetDebugAttachDetachTest::TearDown(); }
-  void run_multidevice_single_application_test(
-      std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
-};
 
 void MultiDeviceDebugTest::run_multidevice_single_application_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {

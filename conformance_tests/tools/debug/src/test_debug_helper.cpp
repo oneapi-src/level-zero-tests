@@ -414,6 +414,14 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   std::string kernel_name = (options.use_custom_module == true)
                                 ? options.kernel_name_in
                                 : "long_kernel";
+  bool slm = false;
+  size_t slm_buffer_size =
+      512; // NOTE: Not all SKUs have same SLM so can go too big.
+  if (!module_name.compare("debug_loop_slm.spv")) {
+    LOG_INFO << "[Application] Testing SLM access ";
+    slm = true;
+  }
+
   synchro.wait_for_debugger_signal();
   auto module =
       lzt::create_module(device, module_name, ZE_MODULE_FORMAT_IL_SPIRV,
@@ -421,7 +429,8 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 
   auto kernel = lzt::create_function(module, kernel_name);
 
-  auto size = 512;
+  auto size = slm_buffer_size;
+
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -441,6 +450,12 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
       lzt::allocate_device_memory(size, size, 0, 0, device, context);
   auto src_buffer_s =
       lzt::allocate_shared_memory(size, size, 0, 0, device, context);
+
+  void *slm_output_s = nullptr;
+  if (slm) {
+    slm_output_s = lzt::allocate_shared_memory(slm_buffer_size, slm_buffer_size,
+                                               0, 0, device, context);
+  }
 
   unsigned long loop_max = 1000000000;
 
@@ -465,6 +480,9 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   lzt::set_argument_value(kernel, 1, sizeof(src_buffer_d), &src_buffer_d);
   lzt::set_argument_value(kernel, 2, sizeof(loop_counter_d), &loop_counter_d);
   lzt::set_argument_value(kernel, 3, sizeof(loop_max), &loop_max);
+  if (slm) {
+    lzt::set_argument_value(kernel, 4, sizeof(slm_output_s), &slm_output_s);
+  }
 
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
@@ -500,9 +518,38 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   for (size_t i = 1; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(dest_buffer_s)[i],
               static_cast<uint8_t *>(src_buffer_s)[i]);
-    if (::testing::Test::HasFailure()) {
-      LOG_ERROR << "[Application] Sanity check did not pass";
+    if (static_cast<uint8_t *>(dest_buffer_s)[i] !=
+        static_cast<uint8_t *>(src_buffer_s)[i]) {
+      LOG_ERROR << "[Application] Buffer Sanity check did not pass";
       break;
+    }
+  }
+
+  if (slm) {
+    unsigned char slm_pattern[24] = {
+        0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF,
+        0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
+
+    // debugger will modify the first bytes
+    for (size_t i = 0; i < sizeof(slm_pattern); i++) {
+      EXPECT_EQ(static_cast<uint8_t *>(slm_output_s)[i],
+                static_cast<uint8_t *>(slm_pattern)[i]);
+      if (static_cast<uint8_t *>(slm_output_s)[i] !=
+          static_cast<uint8_t *>(slm_pattern)[i]) {
+        LOG_ERROR << "[Application] SLM Buffer Sanity check did not pass";
+        break;
+      }
+    }
+
+    // remaining is expecte to same as the source buffer
+    for (size_t i = sizeof(slm_pattern); i < slm_buffer_size; i++) {
+      EXPECT_EQ(static_cast<uint8_t *>(slm_output_s)[i],
+                static_cast<uint8_t *>(src_buffer_s)[i]);
+      if (static_cast<uint8_t *>(slm_output_s)[i] !=
+          static_cast<uint8_t *>(src_buffer_s)[i]) {
+        LOG_ERROR << "[Application] SLM Buffer Sanity check did not pass";
+        break;
+      }
     }
   }
 
@@ -518,6 +565,11 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   lzt::free_memory(context, src_buffer_d);
   lzt::free_memory(context, loop_counter_s);
   lzt::free_memory(context, loop_counter_d);
+
+  if (slm) {
+    lzt::free_memory(context, slm_output_s);
+  }
+
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
   lzt::destroy_command_list(command_list);
@@ -948,6 +1000,12 @@ int main(int argc, char **argv) {
     attach_after_module_destroyed_test(context, device, synchro, options);
     break;
   case LONG_RUNNING_KERNEL_INTERRUPTED:
+    run_long_kernel(context, device, synchro, options);
+    break;
+  case LONG_RUNNING_KERNEL_INTERRUPTED_SLM:
+    options.use_custom_module = true;
+    options.module_name_in = "debug_loop_slm.spv";
+    options.kernel_name_in = "long_kernel_slm";
     run_long_kernel(context, device, synchro, options);
     break;
   case MULTIPLE_THREADS:
