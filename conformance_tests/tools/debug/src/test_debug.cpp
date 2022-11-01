@@ -1420,6 +1420,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
     memorySpaceDesc.address = gpu_buffer_va;
 
     LOG_INFO << "[Debugger] Reading/Writing on interrupted threads";
+    ze_result_t status;
     for (auto &stopped_thread : stopped_threads) {
 
       lzt::debug_read_memory(debugSession, stopped_thread, memorySpaceDesc,
@@ -1430,7 +1431,11 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
             "[Debugger] Reading and writing SLM memory from Stopped thread",
             stopped_thread, DEBUG);
 
-        readWriteSLMMemory(debugSession, stopped_thread, slmBaseAddress);
+        status =
+            readWriteSLMMemory(debugSession, stopped_thread, slmBaseAddress);
+        if (status != ZE_RESULT_SUCCESS) {
+          FAIL() << "[Debugger] Failed accessing SLM memory";
+        }
 
         // Modify pattern only on the last thread since SLM area is shared by
         // all threads

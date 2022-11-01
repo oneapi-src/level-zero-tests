@@ -505,7 +505,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
                           loop_counter_alloc_size);
   lzt::close_command_list(command_list);
 
-  LOG_DEBUG << "[Application] launching execution long_kernel";
+  LOG_DEBUG << "[Application] launching execution of " << kernel_name;
 
   synchro.update_gpu_buffer_address(reinterpret_cast<uint64_t>(src_buffer_d));
   synchro.notify_debugger();

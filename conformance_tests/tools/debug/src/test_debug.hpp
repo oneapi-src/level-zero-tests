@@ -35,9 +35,9 @@ void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
                                  zet_debug_session_handle_t &debug_session,
                                  zet_debug_event_t &module_event);
 
-void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
-                        const ze_device_thread_t &thread,
-                        uint64_t slmBaseAddress);
+ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
+                               const ze_device_thread_t &thread,
+                               uint64_t slmBaseAddress);
 
 void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
                            const ze_device_thread_t &thread,

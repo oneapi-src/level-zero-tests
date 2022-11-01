@@ -16,9 +16,9 @@ namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
-void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
-                        const ze_device_thread_t &thread,
-                        uint64_t slmBaseAddress) {
+ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
+                               const ze_device_thread_t &thread,
+                               uint64_t slmBaseAddress) {
 
   static constexpr uint16_t bufferSize =
       512; // Also defined in test_debug_helper.cpp for SLM buffer size
@@ -46,11 +46,16 @@ void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   int accessSize;
   int accessOffset;
   desc.address = slmBaseAddress;
+
   lzt::debug_read_memory(debug_session, thread, desc, bufferSize, original);
   for (i = 0; i < bufferSize; i++) {
     // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
     EXPECT_EQ(original[i], (i + 1 & 0xFF));
   }
+  if (::testing::Test::HasFailure()) {
+    return ZE_RESULT_ERROR_UNKNOWN;
+  }
+
   // SIP access SLM in defined unit sizes at aligned addresses, so test multiple
   // combinations
   accessSize = 7;
@@ -68,6 +73,9 @@ void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
     EXPECT_EQ(buffer1[i], (i + 1 & 0xFF) + accessOffset);
   }
   memset(buffer1, 0, bufferSize);
+  if (::testing::Test::HasFailure()) {
+    return ZE_RESULT_ERROR_UNKNOWN;
+  }
 
   accessSize = 7;
   accessOffset = 0x05;
@@ -85,6 +93,9 @@ void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
     EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
   }
   memset(buffer1, 0, bufferSize);
+  if (::testing::Test::HasFailure()) {
+    return ZE_RESULT_ERROR_UNKNOWN;
+  }
 
   // restore
   lzt::debug_write_memory(debug_session, thread, verifyDesc, bufferSize,
@@ -110,6 +121,9 @@ void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
     EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
   }
   memset(buffer1, 0, bufferSize);
+  if (::testing::Test::HasFailure()) {
+    return ZE_RESULT_ERROR_UNKNOWN;
+  }
 
   accessSize = 132;
   accessOffset = 0x0f;
@@ -131,6 +145,9 @@ void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
     EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
   }
   memset(buffer1, 0, bufferSize);
+  if (::testing::Test::HasFailure()) {
+    return ZE_RESULT_ERROR_UNKNOWN;
+  }
 
   accessSize = 230;
   accessOffset = 0x0a;
@@ -152,10 +169,15 @@ void readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
     EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
   }
   memset(buffer1, 0, bufferSize);
+  if (::testing::Test::HasFailure()) {
+    return ZE_RESULT_ERROR_UNKNOWN;
+  }
 
   // restore
   lzt::debug_write_memory(debug_session, thread, verifyDesc, bufferSize,
                           original);
+
+  return ZE_RESULT_SUCCESS;
 }
 
 void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
