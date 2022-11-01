@@ -132,6 +132,7 @@ int main() {
          sizeof(ipc_descriptor));
 
   ze_event_pool_handle_t hEventPool = 0;
+  LOG_INFO << "IPC Child open event handle";
   lzt::open_ipc_event_handle(lzt::get_default_context(), hIpcEventPool,
                              &hEventPool);
 
@@ -139,6 +140,7 @@ int main() {
     LOG_DEBUG << "Child exit due to null event pool";
     exit(1);
   }
+  LOG_INFO << "IPC Child open event handle success";
   switch (shared_data.child_type) {
 
   case CHILD_TEST_HOST_READS:

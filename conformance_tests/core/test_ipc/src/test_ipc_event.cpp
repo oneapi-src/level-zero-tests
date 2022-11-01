@@ -28,21 +28,32 @@ static const ze_event_desc_t defaultEventDesc = {
     ZE_EVENT_SCOPE_FLAG_HOST // ensure memory coherency across device
                              // and Host after event signalled
 };
+static const ze_event_desc_t defaultDeviceEventDesc = {
+    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
+    ZE_EVENT_SCOPE_FLAG_DEVICE // ensure memory coherency across device
+                               // after event signalled
+};
 
 ze_event_pool_desc_t defaultEventPoolDesc = {
     ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
     (ZE_EVENT_POOL_FLAG_HOST_VISIBLE | ZE_EVENT_POOL_FLAG_IPC), 10};
 
-static lzt::zeEventPool get_event_pool(bool multi_device) {
+static lzt::zeEventPool get_event_pool(bool multi_device, bool device_events) {
+  if (device_events) {
+    defaultEventPoolDesc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
+                            ZE_EVENT_POOL_FLAG_IPC, 10};
+    LOG_INFO << "Testing device only events";
+  }
   lzt::zeEventPool ep;
+  std::vector<ze_device_handle_t> devices;
   if (multi_device) {
-    auto devices = lzt::get_devices(lzt::get_default_driver());
-    ep.InitEventPool(defaultEventPoolDesc, devices);
+    devices = lzt::get_devices(lzt::get_default_driver());
   } else {
     ze_device_handle_t device =
         lzt::get_default_device(lzt::get_default_driver());
-    ep.InitEventPool(defaultEventPoolDesc);
+    devices.push_back(device);
   }
+  ep.InitEventPool(defaultEventPoolDesc, devices);
   return ep;
 }
 
@@ -78,20 +89,29 @@ static void run_ipc_event_test(parent_test_t parent_test,
   LOG_INFO << "IPC Parent zeinit";
   level_zero_tests::print_platform_overview();
 
-  if (lzt::get_ze_device_count() < 2) {
+  if (multi_device && lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
     return;
   }
+  bool device_events = false;
+  if (parent_test == PARENT_TEST_DEVICE_SIGNALS &&
+      child_test == CHILD_TEST_DEVICE_READS) {
+    device_events = true;
+  }
 
-  auto ep = get_event_pool(multi_device);
+  auto ep = get_event_pool(multi_device, device_events);
   ze_ipc_event_pool_handle_t hIpcEventPool;
   ep.get_ipc_handle(&hIpcEventPool);
   if (testing::Test::HasFatalFailure())
     return; // Abort test if IPC Event handle failed
 
   ze_event_handle_t hEvent;
-  ep.create_event(hEvent, defaultEventDesc);
+  if (device_events) {
+    ep.create_event(hEvent, defaultDeviceEventDesc);
+  } else {
+    ep.create_event(hEvent, defaultEventDesc);
+  }
   shared_data_t test_data = {parent_test, child_test, multi_device};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
                                  bipc::read_write);
