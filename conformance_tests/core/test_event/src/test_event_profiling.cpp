@@ -238,7 +238,7 @@ INSTANTIATE_TEST_CASE_P(CacheCoherencyTimeStampEventVsRegularEvent,
 class KernelEventProfilingCacheCoherencyTests : public ::testing::Test {};
 
 TEST_F(KernelEventProfilingCacheCoherencyTests,
-       GivenEventWhenUsingEventToSyncThenCacheIsCoherent) {
+       GivenKernelEventWhenUsingEventToSyncThenCacheIsCoherent) {
 
   ze_context_handle_t context = lzt::create_context();
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();

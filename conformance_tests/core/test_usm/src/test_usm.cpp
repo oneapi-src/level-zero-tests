@@ -21,7 +21,7 @@ class zeDriverMemoryMigrationPageFaultTestsMultiDevice
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<uint32_t, uint32_t, bool>> {
-protected:
+public:
   void run_functions(const ze_device_handle_t device, ze_module_handle_t module,
                      void *pattern_memory, size_t pattern_memory_count,
                      uint16_t sub_pattern,
@@ -149,14 +149,417 @@ protected:
     bool p2p_access_enabled;
   } MemoryTestArguments_t;
 
+  void memoryMigrationPageFaultTests(MemoryTestArguments_t test_arguments) {
+
+    uint32_t driver_index = test_arguments.driver_index;
+    uint32_t memory_size_factor = test_arguments.memory_size_factor;
+    bool p2p_access_enabled = test_arguments.p2p_access_enabled;
+
+    LOG_DEBUG << "TEST ARGUMENTS "
+              << "driver_index " << driver_index << " memory_size_factor "
+              << memory_size_factor << " p2p_access_enabled "
+              << p2p_access_enabled;
+
+    uint32_t driver_count = 0;
+
+    level_zero_tests::driverInfo_t *driver_info =
+        level_zero_tests::collect_driver_info(driver_count);
+
+    ze_driver_handle_t driver_handle = driver_info->driver_handle;
+    ze_context_handle_t context = lzt::create_context(driver_handle);
+
+    if (p2p_access_enabled && (driver_info->number_device_handles < 2)) {
+      LOG_DEBUG
+          << "Only one device is active, so just return without performing "
+             "peer2peer access";
+      return;
+    }
+    // For each combination of memory, iterate through all the valid devices
+
+    for (int i = 0; i < driver_info->number_device_handles; i++) {
+      device_in_driver_index = i;
+
+      ze_device_handle_t device_handle =
+          driver_info->device_handles[device_in_driver_index];
+
+      size_t totalSize =
+          driver_info->device_memory_properties[device_in_driver_index]
+              .totalSize;
+
+      LOG_DEBUG << " Total size on device " << i << " is ::" << totalSize;
+
+      size_t pattern_memory_size = totalSize / memory_size_factor;
+      size_t pattern_memory_count =
+          pattern_memory_size >> 3; // array of uint64_t
+
+      // create pattern buffer on which device  will perform writes using the
+      // compute kernel, create found and expected/gold buffers which are used
+      // to validate the data written by device
+
+      uint64_t *gpu_pattern_buffer;
+      gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
+          pattern_memory_size, 8, 0, 0, device_handle, context);
+
+      uint64_t *gpu_expected_output_buffer;
+      gpu_expected_output_buffer =
+          (uint64_t *)level_zero_tests::allocate_device_memory(
+              output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+              context);
+
+      uint64_t *gpu_found_output_buffer;
+      gpu_found_output_buffer =
+          (uint64_t *)level_zero_tests::allocate_device_memory(
+              output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+              context);
+
+      uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
+      std::fill(host_expected_output_buffer,
+                host_expected_output_buffer + output_count_, 0);
+
+      uint64_t *host_found_output_buffer = new uint64_t[output_size_];
+      std::fill(host_found_output_buffer,
+                host_found_output_buffer + output_count_, 0);
+
+      uint16_t pattern_base = std::rand() % 0xFFFF;
+      uint16_t pattern_base_1 = std::rand() % 0xFFFF;
+
+      LOG_DEBUG << "PREPARE TO RUN START for device " << i;
+      LOG_DEBUG << "totalSize " << totalSize;
+      LOG_DEBUG << "gpu_pattern_buffer " << gpu_pattern_buffer;
+      LOG_DEBUG << "pattern_memory_count " << pattern_memory_count;
+      LOG_DEBUG << "pattern_memory_size " << pattern_memory_size;
+      LOG_DEBUG << "pattern_base " << pattern_base;
+      LOG_DEBUG << "gpu_expected_output_buffer " << gpu_expected_output_buffer;
+      LOG_DEBUG << "host_expected_output_buffer "
+                << host_expected_output_buffer;
+      LOG_DEBUG << "gpu_found_output_buffer " << gpu_found_output_buffer;
+      LOG_DEBUG << "host_found_output_buffer " << host_found_output_buffer;
+      LOG_DEBUG << "output count " << output_count_;
+      LOG_DEBUG << "output size " << output_size_;
+      LOG_DEBUG << "PREPARE TO RUN END for device";
+
+      LOG_DEBUG << "call create module for device " << i;
+      ze_module_handle_t module_handle = lzt::create_module(
+          context, device_handle, "test_fill_device_memory.spv",
+          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+
+      LOG_DEBUG << "host access pattern buffer created on device " << i;
+      // Access to pattern buffer from host.
+      std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count,
+                0x0);
+
+      LOG_DEBUG << "call run_functions for device " << i;
+      run_functions(device_handle, module_handle, gpu_pattern_buffer,
+                    pattern_memory_count, pattern_base,
+                    host_expected_output_buffer, gpu_expected_output_buffer,
+                    host_found_output_buffer, gpu_found_output_buffer,
+                    output_count_, context);
+
+      LOG_DEBUG << "check output buffer copied from device";
+      bool memory_test_failure = false;
+      for (uint32_t i = 0; i < output_count_; i++) {
+        if (host_expected_output_buffer[i] || host_found_output_buffer[i]) {
+          LOG_DEBUG << "Index of difference " << i << " found "
+                    << host_found_output_buffer[i] << " expected "
+                    << host_expected_output_buffer[i];
+          memory_test_failure = true;
+          break;
+        }
+      }
+
+      EXPECT_EQ(false, memory_test_failure);
+
+      // Logic to assign the peer which will access the shared memory
+      int index =
+          (device_in_driver_index + 1) % driver_info->number_device_handles;
+      ze_device_handle_t device_handle_1 = driver_info->device_handles[index];
+
+      // check if peer can access the shared memory
+
+      ze_bool_t can_access = false;
+      EXPECT_EQ(
+          ZE_RESULT_SUCCESS,
+          zeDeviceCanAccessPeer(device_handle, device_handle_1, &can_access));
+
+      // Before accessing make sure the peer's device size
+      // can fit in shared memory buffer
+      size_t totalSize_1 =
+          driver_info->device_memory_properties[index].totalSize;
+
+      can_access &= (totalSize_1 >= pattern_memory_size);
+
+      if (p2p_access_enabled && can_access) {
+
+        LOG_DEBUG << "Accessing shared memory on device :" << i
+                  << " from peer :" << index;
+
+        LOG_DEBUG << "call create module for device :" << index;
+        ze_module_handle_t module_handle_1 = lzt::create_module(
+            context, device_handle_1, "test_fill_device_memory.spv",
+            ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+
+        uint64_t *gpu_expected_output_buffer_1;
+        gpu_expected_output_buffer_1 =
+            (uint64_t *)level_zero_tests::allocate_device_memory(
+                output_size_, 8, 0, use_this_ordinal_on_device_,
+                device_handle_1, context);
+
+        uint64_t *gpu_found_output_buffer_1;
+        gpu_found_output_buffer_1 =
+            (uint64_t *)level_zero_tests::allocate_device_memory(
+                output_size_, 8, 0, use_this_ordinal_on_device_,
+                device_handle_1, context);
+
+        uint64_t *host_expected_output_buffer_1 = new uint64_t[output_count_];
+        std::fill(host_expected_output_buffer_1,
+                  host_expected_output_buffer_1 + output_count_, 0);
+
+        uint64_t *host_found_output_buffer_1 = new uint64_t[output_size_];
+        std::fill(host_found_output_buffer_1,
+                  host_found_output_buffer_1 + output_count_, 0);
+
+        LOG_DEBUG << "call run_functions for device :" << index;
+        run_functions(device_handle_1, module_handle_1, gpu_pattern_buffer,
+                      pattern_memory_count, pattern_base_1,
+                      host_expected_output_buffer_1,
+                      gpu_expected_output_buffer_1, host_found_output_buffer_1,
+                      gpu_found_output_buffer_1, output_count_, context);
+
+        LOG_DEBUG << "End of p2p access by device :" << index;
+
+        LOG_DEBUG << "check output buffer copied from device :" << index;
+        bool memory_test_failure = false;
+        for (uint32_t i = 0; i < output_count_; i++) {
+          if (host_expected_output_buffer_1[i] ||
+              host_found_output_buffer_1[i]) {
+            LOG_DEBUG << "Index of difference " << i << " found "
+                      << host_found_output_buffer_1[i] << " expected "
+                      << host_expected_output_buffer_1[i];
+            memory_test_failure = true;
+            break;
+          }
+        }
+
+        EXPECT_EQ(false, memory_test_failure);
+
+        LOG_DEBUG << "host access pattern_buffer touched by device :" << index;
+        // Access to pattern buffer from host
+        bool host_test_failure = false;
+        for (uint32_t i = 0; i < pattern_memory_count; i++) {
+          if (gpu_pattern_buffer[i] !=
+              ((i << (sizeof(uint16_t) * 8)) + pattern_base_1)) {
+            LOG_DEBUG << "Index of difference " << i << " found "
+                      << gpu_pattern_buffer[i] << " expected "
+                      << ((i << (sizeof(uint16_t) * 8)) + pattern_base_1);
+            host_test_failure = true;
+            break;
+          }
+        }
+
+        EXPECT_EQ(false, host_test_failure);
+
+        LOG_DEBUG << "call free memory for device :" << index;
+        level_zero_tests::free_memory(context, gpu_expected_output_buffer_1);
+        level_zero_tests::free_memory(context, gpu_found_output_buffer_1);
+
+        LOG_DEBUG << "call destroy module for device :" << index;
+        EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle_1));
+
+        delete host_expected_output_buffer_1;
+        delete host_found_output_buffer_1;
+      } else {
+        LOG_DEBUG
+            << "Skipping P2P flow, cannot access shared memory on device :" << i
+            << " from peer :" << index;
+      }
+
+      LOG_DEBUG << "host touches pattern_buffer with new pattern";
+      // host will touch the pattern buffer,
+      uint16_t pattern_base_2 = std::rand() % 0xFFFF;
+      LOG_DEBUG << "pattern_base " << pattern_base_1;
+      for (uint32_t i = 0; i < pattern_memory_count; i++)
+        gpu_pattern_buffer[i] = (i << (sizeof(uint16_t) * 8)) + pattern_base_2;
+
+      bool host_test_failure = false;
+      for (uint32_t i = 0; i < pattern_memory_count; i++) {
+        if (gpu_pattern_buffer[i] !=
+            ((i << (sizeof(uint16_t) * 8)) + pattern_base_2)) {
+          LOG_DEBUG << "Index of difference " << i << " found "
+                    << gpu_pattern_buffer[i] << " expected "
+                    << ((i << (sizeof(uint16_t) * 8)) + pattern_base_2);
+          host_test_failure = true;
+          break;
+        }
+      }
+
+      EXPECT_EQ(false, host_test_failure);
+
+      LOG_DEBUG << "call free memory for device";
+      level_zero_tests::free_memory(context, gpu_pattern_buffer);
+      level_zero_tests::free_memory(context, gpu_expected_output_buffer);
+      level_zero_tests::free_memory(context, gpu_found_output_buffer);
+      LOG_DEBUG << "call destroy module for device";
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+      delete host_expected_output_buffer;
+      delete host_found_output_buffer;
+    }
+    level_zero_tests::free_driver_info(driver_info, driver_count);
+    level_zero_tests::destroy_context(context);
+  }
+
+  void memoryMigrationAccessTest(MemoryTestArguments_t test_arguments) {
+    uint32_t driver_index = test_arguments.driver_index;
+    uint32_t memory_size_factor = test_arguments.memory_size_factor;
+    bool p2p_access_enabled = test_arguments.p2p_access_enabled;
+
+    LOG_DEBUG << "TEST ARGUMENTS "
+              << "driver_index " << driver_index << " memory_size_factor "
+              << memory_size_factor << " p2p_access_enabled "
+              << p2p_access_enabled;
+
+    uint32_t driver_count = 0;
+
+    level_zero_tests::driverInfo_t *driver_info =
+        level_zero_tests::collect_driver_info(driver_count);
+
+    ze_driver_handle_t driver_handle = driver_info->driver_handle;
+    ze_context_handle_t context = lzt::create_context(driver_handle);
+
+    // For each combination of memory, iterate through all the valid devices
+
+    for (int i = 0; i < driver_info->number_device_handles; i++) {
+      device_in_driver_index = i;
+
+      ze_device_handle_t device_handle =
+          driver_info->device_handles[device_in_driver_index];
+
+      size_t totalSize =
+          driver_info->device_memory_properties[device_in_driver_index]
+              .totalSize;
+
+      LOG_DEBUG << " Total size on device " << i << " is ::" << totalSize;
+
+      size_t pattern_memory_size = totalSize / memory_size_factor;
+      size_t pattern_memory_count =
+          pattern_memory_size >> 3; // array of uint64_t
+
+      // create pattern buffer on which device  will perform writes using the
+      // compute kernel, create found and expected/gold buffers which are used
+      // to validate the data written by device
+
+      uint64_t *gpu_pattern_buffer;
+      gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
+          pattern_memory_size, 8, 0, 0, device_handle, context);
+
+      uint64_t *gpu_expected_output_buffer;
+      gpu_expected_output_buffer =
+          (uint64_t *)level_zero_tests::allocate_device_memory(
+              output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+              context);
+
+      uint64_t *gpu_found_output_buffer;
+      gpu_found_output_buffer =
+          (uint64_t *)level_zero_tests::allocate_device_memory(
+              output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
+              context);
+
+      uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
+      std::fill(host_expected_output_buffer,
+                host_expected_output_buffer + output_count_, 0);
+
+      uint64_t *host_found_output_buffer = new uint64_t[output_size_];
+      std::fill(host_found_output_buffer,
+                host_found_output_buffer + output_count_, 0);
+
+      uint16_t pattern_base = std::rand() % 0xFFFF;
+      uint16_t pattern_base_1 = std::rand() % 0xFFFF;
+
+      LOG_DEBUG << "PREPARE TO RUN START for device " << i;
+      LOG_DEBUG << "totalSize " << totalSize;
+      LOG_DEBUG << "gpu_pattern_buffer " << gpu_pattern_buffer;
+      LOG_DEBUG << "pattern_memory_count " << pattern_memory_count;
+      LOG_DEBUG << "pattern_memory_size " << pattern_memory_size;
+      LOG_DEBUG << "pattern_base " << pattern_base;
+      LOG_DEBUG << "gpu_expected_output_buffer " << gpu_expected_output_buffer;
+      LOG_DEBUG << "host_expected_output_buffer "
+                << host_expected_output_buffer;
+      LOG_DEBUG << "gpu_found_output_buffer " << gpu_found_output_buffer;
+      LOG_DEBUG << "host_found_output_buffer " << host_found_output_buffer;
+      LOG_DEBUG << "output count " << output_count_;
+      LOG_DEBUG << "output size " << output_size_;
+      LOG_DEBUG << "PREPARE TO RUN END for device";
+
+      LOG_DEBUG << "call create module for device " << i;
+      ze_module_handle_t module_handle = lzt::create_module(
+          context, device_handle, "test_fill_device_memory.spv",
+          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+
+      LOG_DEBUG << "host access pattern buffer created on device " << i;
+      // Access to pattern buffer from host.
+      std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count,
+                0x0);
+
+      LOG_DEBUG << "call run_functions for device " << i;
+      run_functions(device_handle, module_handle, gpu_pattern_buffer,
+                    pattern_memory_count, pattern_base,
+                    host_expected_output_buffer, gpu_expected_output_buffer,
+                    host_found_output_buffer, gpu_found_output_buffer,
+                    output_count_, context);
+
+      LOG_DEBUG << "check output buffer copied from device";
+      bool memory_test_failure = false;
+      for (uint32_t i = 0; i < output_count_; i++) {
+        if (host_expected_output_buffer[i] || host_found_output_buffer[i]) {
+          LOG_DEBUG << "Index of difference " << i << " found "
+                    << host_found_output_buffer[i] << " expected "
+                    << host_expected_output_buffer[i];
+          memory_test_failure = true;
+          break;
+        }
+      }
+
+      EXPECT_EQ(false, memory_test_failure);
+
+      LOG_DEBUG << "host access pattern_buffer touched by device " << i;
+      // Access to pattern buffer from host
+      bool host_test_failure = false;
+      for (uint32_t i = 0; i < pattern_memory_count; i++) {
+        if (gpu_pattern_buffer[i] !=
+            ((i << (sizeof(uint16_t) * 8)) + pattern_base)) {
+          LOG_DEBUG << "Index of difference " << i << " found "
+                    << gpu_pattern_buffer[i] << " expected "
+                    << ((i << (sizeof(uint16_t) * 8)) + pattern_base);
+          host_test_failure = true;
+          break;
+        }
+      }
+
+      EXPECT_EQ(false, host_test_failure);
+
+      LOG_DEBUG << "call free memory for device";
+      level_zero_tests::free_memory(context, gpu_pattern_buffer);
+      level_zero_tests::free_memory(context, gpu_expected_output_buffer);
+      level_zero_tests::free_memory(context, gpu_found_output_buffer);
+      LOG_DEBUG << "call destroy module for device";
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+      delete host_expected_output_buffer;
+      delete host_found_output_buffer;
+    }
+    level_zero_tests::free_driver_info(driver_info, driver_count);
+    level_zero_tests::destroy_context(context);
+  }
+
   uint32_t device_in_driver_index;
   uint32_t use_this_ordinal_on_device_ = 0;
   uint32_t output_count_ = 64;
   size_t output_size_ = output_count_ * sizeof(uint64_t);
 };
 
+class zeDriverMemoryMigrationPageFaultTestsSingleDevice
+    : public ::zeDriverMemoryMigrationPageFaultTestsMultiDevice {};
+
 TEST_P(
-    zeDriverMemoryMigrationPageFaultTestsMultiDevice,
+    zeDriverMemoryMigrationPageFaultTestsSingleDevice,
     GivenSingleDeviceWhenMemoryAccessedFromHostAndDeviceDataIsValidAndSuccessful) {
 
   MemoryTestArguments_t test_arguments = {
@@ -164,152 +567,8 @@ TEST_P(
       std::get<1>(GetParam()), // memory size factor, rounded up to uint16_t
       std::get<2>(GetParam())  // p2p access flag
   };
-
-  uint32_t driver_index = test_arguments.driver_index;
-  uint32_t memory_size_factor = test_arguments.memory_size_factor;
-  bool p2p_access_enabled = test_arguments.p2p_access_enabled;
-
-  LOG_DEBUG << "TEST ARGUMENTS "
-            << "driver_index " << driver_index << " memory_size_factor "
-            << memory_size_factor << " p2p_access_enabled "
-            << p2p_access_enabled;
-
-  uint32_t driver_count = 0;
-
-  level_zero_tests::driverInfo_t *driver_info =
-      level_zero_tests::collect_driver_info(driver_count);
-
-  ze_driver_handle_t driver_handle = driver_info->driver_handle;
-  ze_context_handle_t context = lzt::create_context(driver_handle);
-
-  // For each combination of memory, iterate through all the valid devices
-
-  for (int i = 0; i < driver_info->number_device_handles; i++) {
-    device_in_driver_index = i;
-
-    ze_device_handle_t device_handle =
-        driver_info->device_handles[device_in_driver_index];
-
-    size_t totalSize =
-        driver_info->device_memory_properties[device_in_driver_index].totalSize;
-
-    LOG_DEBUG << " Total size on device " << i << " is ::" << totalSize;
-
-    size_t pattern_memory_size = totalSize / memory_size_factor;
-    size_t pattern_memory_count = pattern_memory_size >> 3; // array of uint64_t
-
-    // create pattern buffer on which device  will perform writes using the
-    // compute kernel, create found and expected/gold buffers which are used to
-    // validate the data written by device
-
-    uint64_t *gpu_pattern_buffer;
-    gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
-        pattern_memory_size, 8, 0, 0, device_handle, context);
-
-    uint64_t *gpu_expected_output_buffer;
-    gpu_expected_output_buffer =
-        (uint64_t *)level_zero_tests::allocate_device_memory(
-            output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
-            context);
-
-    uint64_t *gpu_found_output_buffer;
-    gpu_found_output_buffer =
-        (uint64_t *)level_zero_tests::allocate_device_memory(
-            output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
-            context);
-
-    uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
-    std::fill(host_expected_output_buffer,
-              host_expected_output_buffer + output_count_, 0);
-
-    uint64_t *host_found_output_buffer = new uint64_t[output_size_];
-    std::fill(host_found_output_buffer,
-              host_found_output_buffer + output_count_, 0);
-
-    uint16_t pattern_base = std::rand() % 0xFFFF;
-    uint16_t pattern_base_1 = std::rand() % 0xFFFF;
-
-    LOG_DEBUG << "PREPARE TO RUN START for device " << i;
-    LOG_DEBUG << "totalSize " << totalSize;
-    LOG_DEBUG << "gpu_pattern_buffer " << gpu_pattern_buffer;
-    LOG_DEBUG << "pattern_memory_count " << pattern_memory_count;
-    LOG_DEBUG << "pattern_memory_size " << pattern_memory_size;
-    LOG_DEBUG << "pattern_base " << pattern_base;
-    LOG_DEBUG << "gpu_expected_output_buffer " << gpu_expected_output_buffer;
-    LOG_DEBUG << "host_expected_output_buffer " << host_expected_output_buffer;
-    LOG_DEBUG << "gpu_found_output_buffer " << gpu_found_output_buffer;
-    LOG_DEBUG << "host_found_output_buffer " << host_found_output_buffer;
-    LOG_DEBUG << "output count " << output_count_;
-    LOG_DEBUG << "output size " << output_size_;
-    LOG_DEBUG << "PREPARE TO RUN END for device";
-
-    LOG_DEBUG << "call create module for device " << i;
-    ze_module_handle_t module_handle = lzt::create_module(
-        context, device_handle, "test_fill_device_memory.spv",
-        ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
-
-    LOG_DEBUG << "host access pattern buffer created on device " << i;
-    // Access to pattern buffer from host.
-    std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count,
-              0x0);
-
-    LOG_DEBUG << "call run_functions for device " << i;
-    run_functions(device_handle, module_handle, gpu_pattern_buffer,
-                  pattern_memory_count, pattern_base,
-                  host_expected_output_buffer, gpu_expected_output_buffer,
-                  host_found_output_buffer, gpu_found_output_buffer,
-                  output_count_, context);
-
-    LOG_DEBUG << "check output buffer copied from device";
-    bool memory_test_failure = false;
-    for (uint32_t i = 0; i < output_count_; i++) {
-      if (host_expected_output_buffer[i] || host_found_output_buffer[i]) {
-        LOG_DEBUG << "Index of difference " << i << " found "
-                  << host_found_output_buffer[i] << " expected "
-                  << host_expected_output_buffer[i];
-        memory_test_failure = true;
-        break;
-      }
-    }
-
-    EXPECT_EQ(false, memory_test_failure);
-
-    LOG_DEBUG << "host access pattern_buffer touched by device " << i;
-    // Access to pattern buffer from host
-    bool host_test_failure = false;
-    for (uint32_t i = 0; i < pattern_memory_count; i++) {
-      if (gpu_pattern_buffer[i] !=
-          ((i << (sizeof(uint16_t) * 8)) + pattern_base)) {
-        LOG_DEBUG << "Index of difference " << i << " found "
-                  << gpu_pattern_buffer[i] << " expected "
-                  << ((i << (sizeof(uint16_t) * 8)) + pattern_base);
-        host_test_failure = true;
-        break;
-      }
-    }
-
-    EXPECT_EQ(false, host_test_failure);
-
-    LOG_DEBUG << "call free memory for device";
-    level_zero_tests::free_memory(context, gpu_pattern_buffer);
-    level_zero_tests::free_memory(context, gpu_expected_output_buffer);
-    level_zero_tests::free_memory(context, gpu_found_output_buffer);
-    LOG_DEBUG << "call destroy module for device";
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
-    delete host_expected_output_buffer;
-    delete host_found_output_buffer;
-  }
-  level_zero_tests::free_driver_info(driver_info, driver_count);
-  level_zero_tests::destroy_context(context);
+  memoryMigrationAccessTest(test_arguments);
 }
-
-INSTANTIATE_TEST_CASE_P(TestAllInputPermuntationsForSingleDevice,
-                        zeDriverMemoryMigrationPageFaultTestsMultiDevice,
-                        ::testing::Combine(::testing::Values(0),
-                                           ::testing::Values(1024 * 1024 * 64,
-                                                             1024 * 1024,
-                                                             1024 * 64),
-                                           ::testing::Values(0)));
 
 TEST_P(
     zeDriverMemoryMigrationPageFaultTestsMultiDevice,
@@ -320,255 +579,28 @@ TEST_P(
       std::get<1>(GetParam()), // memory size factor, rounded up to uint16_t
       std::get<2>(GetParam())  // p2p access flag
   };
-
-  uint32_t driver_index = test_arguments.driver_index;
-  uint32_t memory_size_factor = test_arguments.memory_size_factor;
-  bool p2p_access_enabled = test_arguments.p2p_access_enabled;
-
-  LOG_DEBUG << "TEST ARGUMENTS "
-            << "driver_index " << driver_index << " memory_size_factor "
-            << memory_size_factor << " p2p_access_enabled "
-            << p2p_access_enabled;
-
-  uint32_t driver_count = 0;
-
-  level_zero_tests::driverInfo_t *driver_info =
-      level_zero_tests::collect_driver_info(driver_count);
-
-  ze_driver_handle_t driver_handle = driver_info->driver_handle;
-  ze_context_handle_t context = lzt::create_context(driver_handle);
-
-  if (p2p_access_enabled && (driver_info->number_device_handles < 2)) {
-    LOG_DEBUG << "Only one device is active, so just return without performing "
-                 "peer2peer access";
-    return;
-  }
-  // For each combination of memory, iterate through all the valid devices
-
-  for (int i = 0; i < driver_info->number_device_handles; i++) {
-    device_in_driver_index = i;
-
-    ze_device_handle_t device_handle =
-        driver_info->device_handles[device_in_driver_index];
-
-    size_t totalSize =
-        driver_info->device_memory_properties[device_in_driver_index].totalSize;
-
-    LOG_DEBUG << " Total size on device " << i << " is ::" << totalSize;
-
-    size_t pattern_memory_size = totalSize / memory_size_factor;
-    size_t pattern_memory_count = pattern_memory_size >> 3; // array of uint64_t
-
-    // create pattern buffer on which device  will perform writes using the
-    // compute kernel, create found and expected/gold buffers which are used to
-    // validate the data written by device
-
-    uint64_t *gpu_pattern_buffer;
-    gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
-        pattern_memory_size, 8, 0, 0, device_handle, context);
-
-    uint64_t *gpu_expected_output_buffer;
-    gpu_expected_output_buffer =
-        (uint64_t *)level_zero_tests::allocate_device_memory(
-            output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
-            context);
-
-    uint64_t *gpu_found_output_buffer;
-    gpu_found_output_buffer =
-        (uint64_t *)level_zero_tests::allocate_device_memory(
-            output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
-            context);
-
-    uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
-    std::fill(host_expected_output_buffer,
-              host_expected_output_buffer + output_count_, 0);
-
-    uint64_t *host_found_output_buffer = new uint64_t[output_size_];
-    std::fill(host_found_output_buffer,
-              host_found_output_buffer + output_count_, 0);
-
-    uint16_t pattern_base = std::rand() % 0xFFFF;
-    uint16_t pattern_base_1 = std::rand() % 0xFFFF;
-
-    LOG_DEBUG << "PREPARE TO RUN START for device " << i;
-    LOG_DEBUG << "totalSize " << totalSize;
-    LOG_DEBUG << "gpu_pattern_buffer " << gpu_pattern_buffer;
-    LOG_DEBUG << "pattern_memory_count " << pattern_memory_count;
-    LOG_DEBUG << "pattern_memory_size " << pattern_memory_size;
-    LOG_DEBUG << "pattern_base " << pattern_base;
-    LOG_DEBUG << "gpu_expected_output_buffer " << gpu_expected_output_buffer;
-    LOG_DEBUG << "host_expected_output_buffer " << host_expected_output_buffer;
-    LOG_DEBUG << "gpu_found_output_buffer " << gpu_found_output_buffer;
-    LOG_DEBUG << "host_found_output_buffer " << host_found_output_buffer;
-    LOG_DEBUG << "output count " << output_count_;
-    LOG_DEBUG << "output size " << output_size_;
-    LOG_DEBUG << "PREPARE TO RUN END for device";
-
-    LOG_DEBUG << "call create module for device " << i;
-    ze_module_handle_t module_handle = lzt::create_module(
-        context, device_handle, "test_fill_device_memory.spv",
-        ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
-
-    LOG_DEBUG << "host access pattern buffer created on device " << i;
-    // Access to pattern buffer from host.
-    std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count,
-              0x0);
-
-    LOG_DEBUG << "call run_functions for device " << i;
-    run_functions(device_handle, module_handle, gpu_pattern_buffer,
-                  pattern_memory_count, pattern_base,
-                  host_expected_output_buffer, gpu_expected_output_buffer,
-                  host_found_output_buffer, gpu_found_output_buffer,
-                  output_count_, context);
-
-    LOG_DEBUG << "check output buffer copied from device";
-    bool memory_test_failure = false;
-    for (uint32_t i = 0; i < output_count_; i++) {
-      if (host_expected_output_buffer[i] || host_found_output_buffer[i]) {
-        LOG_DEBUG << "Index of difference " << i << " found "
-                  << host_found_output_buffer[i] << " expected "
-                  << host_expected_output_buffer[i];
-        memory_test_failure = true;
-        break;
-      }
-    }
-
-    EXPECT_EQ(false, memory_test_failure);
-
-    // Logic to assign the peer which will access the shared memory
-    int index =
-        (device_in_driver_index + 1) % driver_info->number_device_handles;
-    ze_device_handle_t device_handle_1 = driver_info->device_handles[index];
-
-    // check if peer can access the shared memory
-
-    ze_bool_t can_access = false;
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeDeviceCanAccessPeer(device_handle, device_handle_1, &can_access));
-
-    // Before accessing make sure the peer's device size
-    // can fit in shared memory buffer
-    size_t totalSize_1 = driver_info->device_memory_properties[index].totalSize;
-
-    can_access &= (totalSize_1 >= pattern_memory_size);
-
-    if (p2p_access_enabled && can_access) {
-
-      LOG_DEBUG << "Accessing shared memory on device :" << i
-                << " from peer :" << index;
-
-      LOG_DEBUG << "call create module for device :" << index;
-      ze_module_handle_t module_handle_1 = lzt::create_module(
-          context, device_handle_1, "test_fill_device_memory.spv",
-          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
-
-      uint64_t *gpu_expected_output_buffer_1;
-      gpu_expected_output_buffer_1 =
-          (uint64_t *)level_zero_tests::allocate_device_memory(
-              output_size_, 8, 0, use_this_ordinal_on_device_, device_handle_1,
-              context);
-
-      uint64_t *gpu_found_output_buffer_1;
-      gpu_found_output_buffer_1 =
-          (uint64_t *)level_zero_tests::allocate_device_memory(
-              output_size_, 8, 0, use_this_ordinal_on_device_, device_handle_1,
-              context);
-
-      uint64_t *host_expected_output_buffer_1 = new uint64_t[output_count_];
-      std::fill(host_expected_output_buffer_1,
-                host_expected_output_buffer_1 + output_count_, 0);
-
-      uint64_t *host_found_output_buffer_1 = new uint64_t[output_size_];
-      std::fill(host_found_output_buffer_1,
-                host_found_output_buffer_1 + output_count_, 0);
-
-      LOG_DEBUG << "call run_functions for device :" << index;
-      run_functions(device_handle_1, module_handle_1, gpu_pattern_buffer,
-                    pattern_memory_count, pattern_base_1,
-                    host_expected_output_buffer_1, gpu_expected_output_buffer_1,
-                    host_found_output_buffer_1, gpu_found_output_buffer_1,
-                    output_count_, context);
-
-      LOG_DEBUG << "End of p2p access by device :" << index;
-
-      LOG_DEBUG << "check output buffer copied from device :" << index;
-      bool memory_test_failure = false;
-      for (uint32_t i = 0; i < output_count_; i++) {
-        if (host_expected_output_buffer_1[i] || host_found_output_buffer_1[i]) {
-          LOG_DEBUG << "Index of difference " << i << " found "
-                    << host_found_output_buffer_1[i] << " expected "
-                    << host_expected_output_buffer_1[i];
-          memory_test_failure = true;
-          break;
-        }
-      }
-
-      EXPECT_EQ(false, memory_test_failure);
-
-      LOG_DEBUG << "host access pattern_buffer touched by device :" << index;
-      // Access to pattern buffer from host
-      bool host_test_failure = false;
-      for (uint32_t i = 0; i < pattern_memory_count; i++) {
-        if (gpu_pattern_buffer[i] !=
-            ((i << (sizeof(uint16_t) * 8)) + pattern_base_1)) {
-          LOG_DEBUG << "Index of difference " << i << " found "
-                    << gpu_pattern_buffer[i] << " expected "
-                    << ((i << (sizeof(uint16_t) * 8)) + pattern_base_1);
-          host_test_failure = true;
-          break;
-        }
-      }
-
-      EXPECT_EQ(false, host_test_failure);
-
-      LOG_DEBUG << "call free memory for device :" << index;
-      level_zero_tests::free_memory(context, gpu_expected_output_buffer_1);
-      level_zero_tests::free_memory(context, gpu_found_output_buffer_1);
-
-      LOG_DEBUG << "call destroy module for device :" << index;
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle_1));
-
-      delete host_expected_output_buffer_1;
-      delete host_found_output_buffer_1;
-    } else {
-      LOG_DEBUG << "Skipping P2P flow, cannot access shared memory on device :"
-                << i << " from peer :" << index;
-    }
-
-    LOG_DEBUG << "host touches pattern_buffer with new pattern";
-    // host will touch the pattern buffer,
-    uint16_t pattern_base_2 = std::rand() % 0xFFFF;
-    LOG_DEBUG << "pattern_base " << pattern_base_1;
-    for (uint32_t i = 0; i < pattern_memory_count; i++)
-      gpu_pattern_buffer[i] = (i << (sizeof(uint16_t) * 8)) + pattern_base_2;
-
-    bool host_test_failure = false;
-    for (uint32_t i = 0; i < pattern_memory_count; i++) {
-      if (gpu_pattern_buffer[i] !=
-          ((i << (sizeof(uint16_t) * 8)) + pattern_base_2)) {
-        LOG_DEBUG << "Index of difference " << i << " found "
-                  << gpu_pattern_buffer[i] << " expected "
-                  << ((i << (sizeof(uint16_t) * 8)) + pattern_base_2);
-        host_test_failure = true;
-        break;
-      }
-    }
-
-    EXPECT_EQ(false, host_test_failure);
-
-    LOG_DEBUG << "call free memory for device";
-    level_zero_tests::free_memory(context, gpu_pattern_buffer);
-    level_zero_tests::free_memory(context, gpu_expected_output_buffer);
-    level_zero_tests::free_memory(context, gpu_found_output_buffer);
-    LOG_DEBUG << "call destroy module for device";
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
-    delete host_expected_output_buffer;
-    delete host_found_output_buffer;
-  }
-  level_zero_tests::free_driver_info(driver_info, driver_count);
-  level_zero_tests::destroy_context(context);
+  memoryMigrationPageFaultTests(test_arguments);
 }
+
+TEST_P(
+    zeDriverMemoryMigrationPageFaultTestsSingleDevice,
+    GivenSingleDeviceWhenMemoryAccessedFromHostAndDeviceAndPeerToPeerDataIsValidAndSuccessful) {
+
+  MemoryTestArguments_t test_arguments = {
+      std::get<0>(GetParam()), // driver index
+      std::get<1>(GetParam()), // memory size factor, rounded up to uint16_t
+      std::get<2>(GetParam())  // p2p access flag
+  };
+  memoryMigrationPageFaultTests(test_arguments);
+}
+
+INSTANTIATE_TEST_CASE_P(TestAllInputPermuntationsForSingleDevice,
+                        zeDriverMemoryMigrationPageFaultTestsSingleDevice,
+                        ::testing::Combine(::testing::Values(0),
+                                           ::testing::Values(1024 * 1024 * 64,
+                                                             1024 * 1024,
+                                                             1024 * 64),
+                                           ::testing::Values(0)));
 
 INSTANTIATE_TEST_CASE_P(TestAllInputPermuntationsForMultiDevice,
                         zeDriverMemoryMigrationPageFaultTestsMultiDevice,
