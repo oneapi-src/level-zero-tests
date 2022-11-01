@@ -245,7 +245,7 @@ class zeDriverAllocSharedMemAlignmentTests
     : public zeDriverAllocSharedMemTests {};
 
 TEST_P(zeDriverAllocSharedMemAlignmentTests,
-       GivenSizeAndAlignmentWhenAllocatingDeviceMemoryThenPointerIsAligned) {
+       GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned) {
 
   const ze_device_mem_alloc_flag_t dev_flags = std::get<0>(GetParam());
   const ze_host_mem_alloc_flag_t host_flags = std::get<1>(GetParam());
