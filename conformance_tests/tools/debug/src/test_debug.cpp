@@ -167,8 +167,8 @@ bp::child launch_child_debugger_process(debug_test_type_t test_type,
                      "--device_id=" + device_id,
                      (use_sub_devices ? "--use_sub_devices" : " "),
                      "--index=" + std::to_string(index),
-                     app_pid ? "--app_pid=" + std::to_string(app_pid) : "",
-                     verify_events ? "--verify_events" : "");
+                     app_pid ? "--app_pid=" + std::to_string(app_pid) : " ",
+                     verify_events ? "--verify_events" : " ");
 
   return debugger;
 }
