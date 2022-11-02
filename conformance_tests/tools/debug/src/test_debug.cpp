@@ -58,6 +58,7 @@ void print_device(const ze_device_handle_t &device) {
 void zetDebugAttachDetachTest::run_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
     bool reattach) {
+  const uint64_t timeoutMs = 100;
 
   for (auto &device : devices) {
     print_device(device);
@@ -89,11 +90,24 @@ void zetDebugAttachDetachTest::run_test(
               << "[Debugger] Failed to attach to start a debug session. Loop "
               << loop;
         }
+
         // delay last detach to happen after application finishes
         if (loop < 10) {
           LOG_INFO << "[Debugger] Detaching. Loop " << loop;
           lzt::debug_detach(debugSession);
         } else {
+          zet_debug_event_t event = {};
+          auto readEventResult =
+              lzt::debug_read_event(debugSession, event, timeoutMs, true);
+          if (readEventResult == ZE_RESULT_SUCCESS &&
+              (event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK)) {
+            LOG_INFO << "[Debugger] Event with NEED_ACK flag";
+            lzt::debug_ack_event(debugSession, &event);
+            LOG_INFO << "[Debugger] Event acknowledged";
+          } else {
+            LOG_INFO << "[Debugger] No event to read";
+          }
+
           synchro->notify_application();
           std::this_thread::sleep_for(std::chrono::seconds(1));
           debugHelper.terminate();
