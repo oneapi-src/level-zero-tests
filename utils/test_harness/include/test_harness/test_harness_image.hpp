@@ -81,6 +81,7 @@ const std::vector<ze_image_format_swizzle_t> image_format_swizzles_all = {
     ZE_IMAGE_FORMAT_SWIZZLE_0, ZE_IMAGE_FORMAT_SWIZZLE_1,
     ZE_IMAGE_FORMAT_SWIZZLE_X};
 
+bool image_support();
 void print_image_format_descriptor(const ze_image_format_t descriptor);
 void print_image_descriptor(const ze_image_desc_t descriptor);
 void print_image_descriptor_unsupported(const ze_image_desc_t descriptor);

@@ -110,6 +110,10 @@ zeCommandListAppendImageCopyWithSwizzleTests::create_image_desc_format(
 TEST_F(
     zeCommandListAppendImageCopyWithSwizzleTests,
     GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   ze_image_desc_t image_descriptor_source = {};
   image_descriptor_source.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   image_descriptor_source.type = ZE_IMAGE_TYPE_2D;

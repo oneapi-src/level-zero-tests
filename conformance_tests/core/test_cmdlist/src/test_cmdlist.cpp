@@ -133,16 +133,23 @@ protected:
                             pattern_size, size, nullptr);
     lzt::append_barrier(command_list);
 
-    lzt::zeImageCreateCommon img;
-    lzt::ImagePNG32Bit dest_host_image(img.dflt_host_image_.width(),
-                                       img.dflt_host_image_.height());
-    lzt::write_image_data_pattern(dest_host_image, -1);
-    lzt::append_image_copy_from_mem(command_list, img.dflt_device_image_,
-                                    img.dflt_host_image_.raw_data(), nullptr);
-    lzt::append_barrier(command_list);
-    lzt::append_image_copy_to_mem(command_list, dest_host_image.raw_data(),
-                                  img.dflt_device_image_, nullptr);
+    lzt::zeImageCreateCommon *img_ptr = nullptr;
+    lzt::ImagePNG32Bit *dest_host_image_ptr = nullptr;
 
+    if (lzt::image_support()) {
+      img_ptr = new lzt::zeImageCreateCommon;
+      dest_host_image_ptr =
+          new lzt::ImagePNG32Bit(img_ptr->dflt_host_image_.width(),
+                                 img_ptr->dflt_host_image_.height());
+      lzt::write_image_data_pattern(*dest_host_image_ptr, -1);
+      lzt::append_image_copy_from_mem(command_list, img_ptr->dflt_device_image_,
+                                      img_ptr->dflt_host_image_.raw_data(),
+                                      nullptr);
+      lzt::append_barrier(command_list);
+      lzt::append_image_copy_to_mem(command_list,
+                                    dest_host_image_ptr->raw_data(),
+                                    img_ptr->dflt_device_image_, nullptr);
+    }
     ze_module_handle_t module = lzt::create_module(device, "cmdlist_add.spv");
     ze_kernel_handle_t kernel =
         lzt::create_function(module, "cmdlist_add_constant");
@@ -190,13 +197,16 @@ protected:
 
     if (execute_all_commands) {
       lzt::validate_data_pattern(host_mem, size, 1);
-
-      EXPECT_EQ(0, compare_data_pattern(dest_host_image, img.dflt_host_image_,
-                                        0, 0, img.dflt_host_image_.width(),
-                                        img.dflt_host_image_.height(), 0, 0,
-                                        img.dflt_host_image_.width(),
-                                        img.dflt_host_image_.height()));
-
+      if (lzt::image_support()) {
+        EXPECT_EQ(0, compare_data_pattern(*dest_host_image_ptr,
+                                          img_ptr->dflt_host_image_, 0, 0,
+                                          img_ptr->dflt_host_image_.width(),
+                                          img_ptr->dflt_host_image_.height(), 0,
+                                          0, img_ptr->dflt_host_image_.width(),
+                                          img_ptr->dflt_host_image_.height()));
+        delete img_ptr;
+        delete dest_host_image_ptr;
+      }
       for (size_t i = 0; i < size; i++) {
         EXPECT_EQ(static_cast<int *>(kernel_buffer)[i], addval);
         EXPECT_EQ(static_cast<uint8_t *>(memory_fill_mem)[i], pattern);
@@ -208,13 +218,16 @@ protected:
         EXPECT_EQ(static_cast<int *>(kernel_buffer)[i], 0);
         EXPECT_EQ(static_cast<uint8_t *>(memory_fill_mem)[i], 0);
       }
-
-      EXPECT_NE(0, compare_data_pattern(dest_host_image, img.dflt_host_image_,
-                                        0, 0, img.dflt_host_image_.width(),
-                                        img.dflt_host_image_.height(), 0, 0,
-                                        img.dflt_host_image_.width(),
-                                        img.dflt_host_image_.height()));
-
+      if (lzt::image_support()) {
+        EXPECT_NE(0, compare_data_pattern(*dest_host_image_ptr,
+                                          img_ptr->dflt_host_image_, 0, 0,
+                                          img_ptr->dflt_host_image_.width(),
+                                          img_ptr->dflt_host_image_.height(), 0,
+                                          0, img_ptr->dflt_host_image_.width(),
+                                          img_ptr->dflt_host_image_.height()));
+        delete img_ptr;
+        delete dest_host_image_ptr;
+      }
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
     }
 

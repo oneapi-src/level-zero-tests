@@ -127,6 +127,10 @@ TEST_F(KernelArgumentTests,
 
 TEST_F(KernelArgumentTests,
        GivenSeveral2DImagesWhenPassingToKernelThenCorrectResultIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   std::string kernel_name = "many_2d_images";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -155,8 +159,25 @@ TEST_F(KernelArgumentTests,
   }
 }
 
+bool sampler_support() {
+  ze_sampler_desc_t descriptor = {};
+  descriptor.stype = ZE_STRUCTURE_TYPE_SAMPLER_DESC;
+  ze_sampler_handle_t sampler = nullptr;
+  if (zeSamplerCreate(lzt::get_default_context(),
+                      lzt::zeDevice::get_instance()->get_device(), &descriptor,
+                      &sampler) == ZE_RESULT_ERROR_UNINITIALIZED) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
 TEST_F(KernelArgumentTests,
        GivenSeveralSamplersWhenPassingToKernelThenSuccessIsReturned) {
+  if (!(sampler_support())) {
+    LOG_INFO << "device does not support sampler, cannot run test";
+    return;
+  }
   std::string kernel_name = "many_samplers";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -187,6 +208,14 @@ TEST_F(KernelArgumentTests,
   global int *buf4, image2d_t image1, image2d_t image2, image2d_t image3,
   image2d_t image4, image2d_t image5, sampler_t samp1, sampler_t samp2
   */
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
+  if (!(sampler_support())) {
+    LOG_INFO << "device does not support sampler, cannot run test";
+    return;
+  }
   std::string kernel_name = "many_args_all_types";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;

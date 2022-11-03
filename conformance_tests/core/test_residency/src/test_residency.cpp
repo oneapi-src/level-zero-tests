@@ -405,6 +405,10 @@ class zeDeviceMakeImageResidentTests : public testing::Test,
 
 TEST_F(zeDeviceMakeImageResidentTests,
        GivenDeviceImageWhenMakingImageResidentThenSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextMakeImageResident(
                                    lzt::get_default_context(),
                                    lzt::zeDevice::get_instance()->get_device(),
@@ -415,6 +419,10 @@ class zeContextEvictImageTests : public zeDeviceMakeImageResidentTests {};
 
 TEST_F(zeContextEvictImageTests,
        GivenResidentDeviceImageWhenEvictingResidentImageThenSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextMakeImageResident(
                                    lzt::get_default_context(),
                                    lzt::zeDevice::get_instance()->get_device(),

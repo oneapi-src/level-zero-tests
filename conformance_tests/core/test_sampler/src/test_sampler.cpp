@@ -19,6 +19,19 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+bool sampler_support() {
+  ze_device_image_properties_t properties{};
+  properties.stype = ZE_STRUCTURE_TYPE_IMAGE_PROPERTIES;
+  properties.pNext = nullptr;
+  ze_result_t result = zeDeviceGetImageProperties(
+      lzt::zeDevice::get_instance()->get_device(), &properties);
+  if ((result != ZE_RESULT_SUCCESS) || (properties.maxSamplers == 0)) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
 const auto sampler_address_modes = ::testing::Values(
     ZE_SAMPLER_ADDRESS_MODE_NONE, ZE_SAMPLER_ADDRESS_MODE_REPEAT,
     ZE_SAMPLER_ADDRESS_MODE_CLAMP, ZE_SAMPLER_ADDRESS_MODE_MIRROR,
@@ -31,8 +44,13 @@ class zeDeviceCreateSamplerTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<
           ze_sampler_address_mode_t, ze_sampler_filter_mode_t, ze_bool_t>> {};
+
 TEST_P(zeDeviceCreateSamplerTests,
        GivenSamplerDescriptorWhenCreatingSamplerThenNotNullSamplerIsReturned) {
+  if (!(sampler_support())) {
+    LOG_INFO << "device does not support sampler, cannot run test";
+    return;
+  }
   ze_sampler_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_SAMPLER_DESC;
 
@@ -46,6 +64,7 @@ TEST_P(zeDeviceCreateSamplerTests,
             zeSamplerCreate(lzt::get_default_context(),
                             lzt::zeDevice::get_instance()->get_device(),
                             &descriptor, &sampler));
+
   EXPECT_NE(nullptr, sampler);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
@@ -58,7 +77,10 @@ INSTANTIATE_TEST_CASE_P(SamplerCreationCombinations, zeDeviceCreateSamplerTests,
 
 TEST(zeSamplerTests,
      GivenSamplerWhenPassingAsFunctionArgumentThenSuccessIsReturned) {
-
+  if (!(sampler_support())) {
+    LOG_INFO << "device does not support sampler, cannot run test";
+    return;
+  }
   ze_sampler_handle_t sampler = lzt::create_sampler();
 
   std::string module_name = "sampler.spv";
@@ -109,7 +131,10 @@ class zeDeviceExecuteSamplerTests : public zeDeviceCreateSamplerTests {};
 TEST_P(
     zeDeviceExecuteSamplerTests,
     GivenSamplerWhenPassingAsFunctionArgumentThenOutputMatchesInKernelSampler) {
-
+  if (!(sampler_support())) {
+    LOG_INFO << "device does not support sampler, cannot run test";
+    return;
+  }
   lzt::ImagePNG32Bit input("test_input.png");
   int output_width = input.width() / 2;
   int output_height = input.height() / 2;

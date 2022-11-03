@@ -110,6 +110,11 @@ ImageFormatTests::create_image_desc_format(ze_image_format_type_t format_type,
 
 TEST_F(ImageFormatTests,
        GivenImageFormatUINTWhenCopyingImageThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UINT, true);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UINT, true);
   uint32_t *inbuff =
@@ -133,6 +138,11 @@ TEST_F(ImageFormatTests,
 
 TEST_F(ImageFormatTests,
        GivenImageFormatINTWhenCopyingImageThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SINT, true);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SINT, true);
   int32_t *inbuff =
@@ -156,6 +166,11 @@ TEST_F(ImageFormatTests,
 
 TEST_F(ImageFormatTests,
        GivenImageFormatFloatWhenCopyingImageThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_FLOAT, true);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_FLOAT, true);
   float *inbuff =
@@ -180,6 +195,11 @@ TEST_F(ImageFormatTests,
 
 TEST_F(ImageFormatTests,
        GivenImageFormatUNORMWhenCopyingImageThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UNORM, false);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UNORM, false);
   uint16_t *inbuff =
@@ -203,6 +223,11 @@ TEST_F(ImageFormatTests,
 
 TEST_F(ImageFormatTests,
        GivenImageFormatSNORMWhenCopyingImageThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SNORM, false);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SNORM, false);
   int16_t *inbuff =
@@ -281,7 +306,11 @@ void ImageFormatLayoutTests::verify_buffer_float(T *&buff, bool saturates) {
 
 TEST_P(ImageFormatLayoutTests,
        GivenImageFormatLayoutWhenCopyingImageThenFormatIsCorrect) {
-
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   auto driver = lzt::get_default_driver();
   for (auto device : lzt::get_devices(driver)) {
 

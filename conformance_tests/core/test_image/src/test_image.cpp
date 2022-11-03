@@ -191,6 +191,11 @@ class zeImageCreateTests : public ::testing::Test {};
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_uint) {
@@ -208,6 +213,11 @@ TEST(zeImageCreateTests,
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_sint) {
@@ -225,6 +235,11 @@ TEST(zeImageCreateTests,
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_unorm) {
@@ -242,6 +257,11 @@ TEST(zeImageCreateTests,
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_snorm) {
@@ -259,6 +279,11 @@ TEST(zeImageCreateTests,
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = false;
 
   for (auto layout : lzt::image_format_layout_float) {
@@ -276,6 +301,11 @@ TEST(zeImageCreateTests,
 
 TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = false;
 
   for (auto layout : lzt::image_format_media_layouts) {
@@ -295,6 +325,11 @@ class zeImageGetPropertiesTests : public ::testing::Test {};
 
 TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = true;
 
   for (auto layout : lzt::image_format_layout_uint) {
@@ -312,6 +347,11 @@ TEST(zeImageGetPropertiesTests,
 
 TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = true;
 
   for (auto layout : lzt::image_format_layout_sint) {
@@ -329,6 +369,11 @@ TEST(zeImageGetPropertiesTests,
 
 TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = true;
 
   for (auto layout : lzt::image_format_layout_unorm) {
@@ -346,6 +391,11 @@ TEST(zeImageGetPropertiesTests,
 
 TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = true;
 
   for (auto layout : lzt::image_format_layout_snorm) {
@@ -363,6 +413,11 @@ TEST(zeImageGetPropertiesTests,
 
 TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = true;
 
   for (auto layout : lzt::image_format_layout_float) {
@@ -380,6 +435,11 @@ TEST(zeImageGetPropertiesTests,
 
 TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   bool properties_only = true;
 
   for (auto layout : lzt::image_format_media_layouts) {

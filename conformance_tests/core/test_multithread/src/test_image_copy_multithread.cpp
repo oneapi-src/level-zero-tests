@@ -113,6 +113,12 @@ class zeImageCreateDestroyThreadTest : public ::testing::Test {};
 TEST(
     zeImageCreateDestroyThreadTests,
     GivenMultipleThreadsWhenCreatingImagesThenImagesCreatedAndDestroyedSuccessfully) {
+
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 
   std::vector<std::unique_ptr<std::thread>> threads;
@@ -132,6 +138,11 @@ class zeImageCopyThreadTest : public ::testing::Test {};
 TEST(
     zeImageCopyThreadTests,
     GivenMultipleThreadsUsingSingleCommandQueueWhenCopyingImagesThenCopiedImagesAreCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 
   auto command_queue = lzt::create_command_queue();

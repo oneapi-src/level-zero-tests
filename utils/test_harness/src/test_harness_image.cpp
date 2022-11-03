@@ -16,6 +16,25 @@ namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
+bool image_support() {
+  ze_device_image_properties_t properties{};
+  properties.stype = ZE_STRUCTURE_TYPE_IMAGE_PROPERTIES;
+  properties.pNext = nullptr;
+  ze_result_t result = zeDeviceGetImageProperties(
+      lzt::zeDevice::get_instance()->get_device(), &properties);
+  if ((result != ZE_RESULT_SUCCESS) ||
+      ((properties.maxImageDims1D == 0) && (properties.maxImageDims2D == 0) &&
+       (properties.maxImageDims3D == 0) &&
+       (properties.maxImageBufferSize == 0) &&
+       (properties.maxImageArraySlices == 0) && (properties.maxSamplers == 0) &&
+       (properties.maxReadImageArgs == 0) &&
+       (properties.maxWriteImageArgs == 0))) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
 void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output) {
 
   auto command_list = lzt::create_command_list();

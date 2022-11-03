@@ -214,7 +214,10 @@ TEST_P(
 
 TEST_P(zeImmediateCommandListExecutionTests,
        GivenImmediateCommandListWhenAppendImageCopyThenVerifyCopyIsCorrect) {
-
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   lzt::zeImageCreateCommon img;
   // dest_host_image_upper is used to validate that the above image copy
   // operation(s) were correct:
@@ -351,7 +354,10 @@ static ze_image_handle_t create_test_image(int height, int width) {
 TEST_P(
     zeImmediateCommandListExecutionTests,
     GivenMultipleImmediateCommandListsThatHaveDependenciesThenAllTheCommandListsExecuteSuccessfully) {
-
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
   int width = input.width();

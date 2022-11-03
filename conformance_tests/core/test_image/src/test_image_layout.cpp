@@ -342,6 +342,10 @@ ze_image_handle_t ImageLayoutTests::create_image_desc_layout(
 
 TEST_F(ImageLayoutTests,
        GivenImageLayoutWhenConvertingImageToMemoryThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT,
                       ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
@@ -386,6 +390,10 @@ TEST_F(ImageLayoutTests,
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT};
   auto layout_type = {ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_8_8,
@@ -409,6 +417,10 @@ TEST_F(
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
   auto layout_type = {ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_8_8,
@@ -440,6 +452,10 @@ TEST_F(
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto layout_type = {
       ZE_IMAGE_FORMAT_LAYOUT_16,          ZE_IMAGE_FORMAT_LAYOUT_16_16,
@@ -458,6 +474,10 @@ TEST_F(
 TEST_F(
     ImageLayoutTests,
     GivenIntImageLayoutWhenKernelConvertingImageThenReverseKernelConvertedResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT};
   LOG_DEBUG << "TWO_KERNEL_CONVERT TESTS: UINT AND SINT";
@@ -504,6 +524,10 @@ TEST_F(
 TEST_F(
     ImageLayoutTests,
     GivenNormImageLayoutWhenKernelConvertingImageThenReverseKernelConvertedResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    return;
+  }
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
   LOG_DEBUG << "TWO_KERNEL_CONVERT TESTS: UNORM AND SNORM";

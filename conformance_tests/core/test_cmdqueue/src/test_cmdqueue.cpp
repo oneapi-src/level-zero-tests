@@ -678,6 +678,11 @@ TEST_P(CommandQueueCopyOnlyTestQueueMode,
     SUCCEED();
     return;
   }
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   ze_image_handle_t ze_img_src, ze_img_dest;
   lzt::ImagePNG32Bit png_img_src, png_img_dest;
 

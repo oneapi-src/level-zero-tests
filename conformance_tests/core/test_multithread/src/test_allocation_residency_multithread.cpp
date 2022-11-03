@@ -323,7 +323,11 @@ TEST_F(
     zeDeviceMakeImageResidentTests,
     GivenMultipleThreadsWhenMakingImageResidentFollowedByEvictThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
-
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    SUCCEED();
+    return;
+  }
   std::vector<std::unique_ptr<std::thread>> threads;
 
   for (int i = 0; i < num_threads; i++) {
