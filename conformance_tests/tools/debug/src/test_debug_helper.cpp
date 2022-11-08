@@ -898,10 +898,6 @@ int main(int argc, char **argv) {
 
   static char enable_debug[] = "ZET_ENABLE_PROGRAM_DEBUGGING=1";
   putenv(enable_debug);
-  static char disableSba[] =
-      "DebuggerDisableSingleAddressSbaTracking=1"; // WA for windows intel gpu
-                                                   // issue
-  putenv(disableSba);
 
   debug_options options;
   options.parse_options(argc, argv);
