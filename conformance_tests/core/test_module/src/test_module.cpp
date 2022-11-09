@@ -599,6 +599,11 @@ protected:
 
     EXPECT_EQ(kernel_properties.numKernelArgs, 2);
 
+    ze_kernel_indirect_access_flags_t indirect_flags = 0;
+    indirect_flags |= ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
+
+    lzt::kernel_set_indirect_access(function, indirect_flags);
+
     ze_event_handle_t signal_event = nullptr;
     uint32_t num_wait = 0;
     ze_event_handle_t *p_wait_events = nullptr;
