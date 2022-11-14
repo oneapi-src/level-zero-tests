@@ -27,6 +27,7 @@ class zeP2PTests : public ::testing::Test,
 protected:
   void SetUp() override {
     ze_memory_type_t memory_type = std::get<0>(GetParam());
+    memory_type_ = memory_type;
     offset_ = std::get<1>(GetParam());
     ze_bool_t can_access;
     auto driver = lzt::get_default_driver();
@@ -117,6 +118,7 @@ protected:
   size_t mem_size_ = columns * rows * slices;
   size_t offset_;
   std::vector<DevInstance> dev_instance_;
+  ze_memory_type_t memory_type_;
 };
 
 TEST_P(
@@ -132,12 +134,19 @@ TEST_P(
     src[i] = i & 0xff;
   }
 
+  if (dev_instance_.size() < 2) {
+    LOG_INFO << "Test cannot be run with less than 2 Devices";
+    return;
+  }
+
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
-      continue;
+      LOG_INFO << "FAILURE:  Device-to-Device access disabled";
+      FAIL();
     }
     if (!lzt::can_access_peer(dev_instance_[i].dev, dev_instance_[i - 1].dev)) {
-      continue;
+      LOG_INFO << "FAILURE:  Device-to-Device access disabled";
+      FAIL();
     }
 
     for (uint32_t d = 0; d < 2; d++) {
@@ -232,14 +241,23 @@ TEST_P(
   }
 
   for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+    if (dev_instance_[i].sub_devices.size() < 2) {
+      LOG_INFO << "Test cannot be run with less than 2 SubDevices";
+      return;
+    }
+
     for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                 dev_instance_[i].sub_devices[j].dev)) {
-        continue;
+        LOG_INFO
+            << "FAILURE:  IntraDevice SubDevice-to-SubDevice access disabled";
+        FAIL();
       }
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j].dev,
                                 dev_instance_[i].sub_devices[j - 1].dev)) {
-        continue;
+        LOG_INFO
+            << "FAILURE:  IntraDevice SubDevice-to-SubDevice access disabled";
+        FAIL();
       }
 
       for (uint32_t d = 0; d < 2; d++) {
@@ -343,9 +361,15 @@ TEST_P(
     zeP2PTests,
     GivenP2PDevicesWhenSettingAndCopyingMemoryToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
 
+  if (dev_instance_.size() < 2) {
+    LOG_INFO << "Test cannot be run with less than 2 devices";
+    return;
+  }
+
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
-      continue;
+      LOG_INFO << "FAILURE:  Device-to-Device access disabled";
+      FAIL();
     }
     uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
         mem_size_ + offset_, 1, 0, 0, dev_instance_[i].dev));
@@ -398,10 +422,16 @@ TEST_P(
     GivenP2PSubDevicesWhenSettingAndCopyingMemoryToRemoteSubDeviceThenRemoteSubDeviceGetsCorrectMemory) {
 
   for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+    if (dev_instance_[i].sub_devices.size() < 2) {
+      LOG_INFO << "Test cannot be run with less than 2 SubDevices";
+      return;
+    }
     for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                 dev_instance_[i].sub_devices[j].dev)) {
-        continue;
+        LOG_INFO
+            << "FAILURE:  IntraDevice SubDevice-to-SubDevice access disabled";
+        FAIL();
       }
       uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
           mem_size_ + offset_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
@@ -475,6 +505,11 @@ TEST_P(
   std::array<size_t, num_regions> heights = {1, rows / 2, rows};
   std::array<size_t, num_regions> depths = {1, slices / 2, slices};
 
+  if (dev_instance_.size() < 2) {
+    LOG_INFO << "Test cannot be run with less than 2 devices";
+    return;
+  }
+
   for (int region = 0; region < num_regions; region++) {
     // Define region to be copied from/to
     auto width = widths[region];
@@ -499,6 +534,7 @@ TEST_P(
 
     DevInstance *ptr_dev_src;
     DevInstance *ptr_dev_dst;
+
     for (int i = 1; i < dev_instance_.size(); i++) {
 
       for (uint32_t d = 0; d < 2; d++) {
@@ -577,7 +613,8 @@ TEST_P(
   }
 
   if (!test_count) {
-    LOG_INFO << " No memory region copy device<-->device tests executed";
+    LOG_INFO << "FAILURE:  Device-to-Device access disabled";
+    FAIL();
   }
   lzt::free_memory(verification_memory);
   lzt::free_memory(initial_pattern_memory);
@@ -634,6 +671,11 @@ TEST_P(
         } else {
           src_offset = 0;
           dst_offset = offset_;
+        }
+
+        if (dev_instance_[i].sub_devices.size() < 2) {
+          LOG_INFO << "Test cannot be run with less than 2 SubDevices";
+          return;
         }
 
         for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
@@ -707,8 +749,7 @@ TEST_P(
   }
 
   if (!test_count) {
-    LOG_INFO << "No memory copy region subdevice<-->subdevice tests executed "
-                "on same device";
+    LOG_INFO << "FAILURE:  IntraDevice SubDevice-to-SubDevice access disabled";
   }
 
   lzt::free_memory(verification_memory);
@@ -730,6 +771,11 @@ TEST_P(
   std::array<size_t, num_regions> widths = {1, columns / 2, columns};
   std::array<size_t, num_regions> heights = {1, rows / 2, rows};
   std::array<size_t, num_regions> depths = {1, slices / 2, slices};
+
+  if (dev_instance_.size() < 2) {
+    LOG_INFO << "Test cannot be run with less than 2 Devices";
+    return;
+  }
 
   for (int region = 0; region < num_regions; region++) {
     // Define region to be copied from/to
@@ -841,9 +887,9 @@ TEST_P(
   }
 
   if (!test_count) {
-    LOG_INFO << "No memory copy region subdevice<-->subdevice tests executed "
-                "on different device";
+    LOG_INFO << "FAILURE:  InterDevice SubDevice-to-SubDevice access disabled";
   }
+
   lzt::free_memory(verification_memory);
   lzt::free_memory(initial_pattern_memory);
 }
@@ -857,9 +903,15 @@ TEST_P(
 
   uint32_t dev_instance_size = dev_instance_.size();
 
+  if (dev_instance_.size() < 2) {
+    LOG_INFO << "Test cannot be run with less than 2 Devices";
+    return;
+  }
+
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
-      continue;
+      LOG_INFO << "FAILURE:  Device-to-Device access disabled";
+      FAIL();
     }
     ze_module_handle_t module =
         lzt::create_module(dev_instance_[i - 1].dev, module_name);
@@ -921,10 +973,18 @@ TEST_P(
   uint32_t dev_instance_size = dev_instance_.size();
 
   for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+
+    if (dev_instance_[i].sub_devices.size() < 2) {
+      LOG_INFO << "Test cannot be run with less than 2 SubDevices";
+      return;
+    }
+
     for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                 dev_instance_[i].sub_devices[j].dev)) {
-        continue;
+        LOG_INFO
+            << "FAILURE:  IntraDevice SubDevice-to-SubDevice access disabled";
+        FAIL();
       }
 
       ze_module_handle_t module = lzt::create_module(
@@ -993,9 +1053,15 @@ TEST_P(zeP2PTests,
 
   uint32_t dev_instance_size = dev_instance_.size();
 
+  if (dev_instance_.size() < 2) {
+    LOG_INFO << "Test cannot be run with less than 2 Devices";
+    return;
+  }
+
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
-      continue;
+      LOG_INFO << "FAILURE:  Device-to-Device access disabled";
+      FAIL();
     }
     ze_module_handle_t module =
         lzt::create_module(dev_instance_[i - 1].dev, module_name);
@@ -1066,10 +1132,18 @@ TEST_P(
   uint32_t dev_instance_size = dev_instance_.size();
 
   for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+
+    if (dev_instance_[i].sub_devices.size() < 2) {
+      LOG_INFO << "Test cannot be run with less than 2 SubDevices";
+      return;
+    }
+
     for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                 dev_instance_[i].sub_devices[j].dev)) {
-        continue;
+        LOG_INFO
+            << "FAILURE:  IntraDevice SubDevice-to-SubDevice access disabled";
+        FAIL();
       }
 
       ze_module_handle_t module = lzt::create_module(

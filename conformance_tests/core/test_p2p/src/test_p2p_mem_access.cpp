@@ -261,21 +261,18 @@ protected:
         ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
         0);
     for (uint32_t i = 1; i < num; i++) {
-      if (type == CONCURRENT_ATOMIC) {
-        dev_access_[i].init_val = dev_access_[0].init_val;
-        dev_access_[i].kernel_add_val = dev_access_[0].kernel_add_val;
-      } else {
-        dev_access_[i].init_val = (1 + i) * dev_access_[0].init_val;
-        dev_access_[i].kernel_add_val = (1 + i) * dev_access_[0].kernel_add_val;
-      }
+      dev_access_[i].init_val = (1 + i) * dev_access_[0].init_val;
+      dev_access_[i].kernel_add_val = (1 + i) * dev_access_[0].kernel_add_val;
       dev_access_[i].module =
           lzt::create_module(dev_access_[i].dev, module_path);
       uint8_t *char_src =
           static_cast<uint8_t *>(dev_access_[0].device_mem_remote);
-      if (type == CONCURRENT) {
+      if ((type == CONCURRENT) || (type == CONCURRENT_ATOMIC)) {
         char_src += (i * sizeof(int));
-        dev_access_[i].group_size_x = 1;
-        dev_access_[i].group_count_x = dev_access_[0].group_count_x;
+        if (type == CONCURRENT) {
+          dev_access_[i].group_size_x = 1;
+          dev_access_[i].group_count_x = dev_access_[0].group_count_x;
+        }
       }
       if (i < num - 1) {
         dev_access_[i].device_mem_remote =
@@ -397,7 +394,7 @@ TEST_P(zeP2PMemAccessTestsAtomicAccess,
   }
 
   if (dev_access_.size() < 2) {
-    LOG_INFO << "WARNING:  Exiting as device memory atomic access not enabled";
+    LOG_INFO << "WARNING:  Exiting as no peer-to-peer atomic access capability";
     dev_access_.clear();
     SUCCEED();
     return;
@@ -462,7 +459,7 @@ TEST_P(zeP2PMemAccessTestsConcurrentAccess,
   }
   if (dev_access_.size() < 2) {
     LOG_INFO
-        << "WARNING:  Exiting as device memory concurrent access not enabled";
+        << "WARNING:  Exiting as no peer-to-peer concurrent access capability";
     SUCCEED();
     return;
   }
@@ -480,7 +477,7 @@ TEST_P(zeP2PMemAccessTestsConcurrentAccess,
 
   if (dev_access_.size() < num_concurrent_devices) {
     LOG_INFO << "WARNING:  Exiting as requested " << num_concurrent_devices
-             << "number of concurrent devices not available";
+             << "number of concurrent devices/subdevices not available";
     SUCCEED();
     return;
   }
@@ -549,8 +546,8 @@ TEST_P(
     }
   }
   if (dev_access_.size() < 2) {
-    LOG_INFO << "WARNING:  Exiting as device memory concurrent atomic access "
-                "not enabled";
+    LOG_INFO << "WARNING:  Exiting as no peer-to-peer concurrent-atomic access "
+                "capability";
     SUCCEED();
     return;
   }
@@ -570,7 +567,7 @@ TEST_P(
 
   if (dev_access_.size() < num_concurrent_devices) {
     LOG_INFO << "WARNING:  Exiting as requested " << num_concurrent_devices
-             << "number of concurrent devices not available";
+             << "number of concurrent-atomic devices/subdevices not available";
     SUCCEED();
     return;
   }
@@ -580,12 +577,13 @@ TEST_P(
 
   run_test(num_concurrent_devices, true, CONCURRENT_ATOMIC);
   int *dev0_int = (static_cast<int *>(host_mem_validation));
-  // Concurrent Atomic test has all devices writing to same dev mem integer
-
-  LOG_INFO << "OUTPUT[0] = " << dev0_int[0];
-  EXPECT_EQ(num_concurrent_devices * dev_access_[0].group_count_x *
-                dev_access_[0].group_size_x * dev_access_[0].kernel_add_val,
-            dev0_int[0]);
+  for (uint32_t i = 0; i < num_concurrent_devices; i++) {
+    LOG_INFO << "OUTPUT[" << i << "] = " << dev0_int[i];
+    EXPECT_EQ(dev_access_[i].init_val + dev_access_[i].group_count_x *
+                                            dev_access_[i].group_size_x *
+                                            dev_access_[i].kernel_add_val,
+              dev0_int[i]);
+  }
 
   lzt::free_memory(host_mem_validation);
   lzt::free_memory(dev_access_[0].device_mem_validation);
