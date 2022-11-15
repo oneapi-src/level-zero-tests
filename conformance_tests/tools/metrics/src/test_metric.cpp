@@ -1220,16 +1220,23 @@ TEST_F(
       ze_group_count_t tg;
       ze_kernel_handle_t function =
           load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
-      zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
-                                      nullptr);
 
-      lzt::append_barrier(commandList);
-      uint32_t streamerMarker = 0;
-      lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
-                                              ++streamerMarker);
-      lzt::append_barrier(commandList);
-      lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
-                                              ++streamerMarker);
+      // Since immediate command list is used, using repeated command list
+      // updates to capture metric data
+      const uint32_t max_repeat_count = 200;
+      for (uint32_t repeat_count = 0; repeat_count < max_repeat_count;
+           repeat_count++) {
+        zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
+                                        nullptr);
+
+        lzt::append_barrier(commandList);
+        uint32_t streamerMarker = 0;
+        lzt::commandlist_append_streamer_marker(
+            commandList, metricStreamerHandle, ++streamerMarker);
+        lzt::append_barrier(commandList);
+        lzt::commandlist_append_streamer_marker(
+            commandList, metricStreamerHandle, ++streamerMarker);
+      }
       ze_result_t eventResult;
       eventResult = zeEventQueryStatus(eventHandle);
 
