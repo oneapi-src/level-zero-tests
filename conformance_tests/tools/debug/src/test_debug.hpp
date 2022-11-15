@@ -23,32 +23,6 @@ namespace lzt = level_zero_tests;
 
 typedef enum { DEBUG, INFO, WARNING } log_level_t;
 
-bool check_event(const zet_debug_session_handle_t &debug_session,
-                 zet_debug_event_type_t eventType);
-bool check_events(const zet_debug_session_handle_t &debug_session,
-                  std::vector<zet_debug_event_type_t> eventTypes);
-bool check_events_unordered(const zet_debug_session_handle_t &debug_session,
-                            std::vector<zet_debug_event_type_t> &eventTypes);
-
-void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
-                                 ze_device_handle_t device,
-                                 zet_debug_session_handle_t &debug_session,
-                                 zet_debug_event_t &module_event);
-
-ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
-                               const ze_device_thread_t &thread,
-                               uint64_t slmBaseAddress);
-
-void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
-                           const ze_device_thread_t &thread,
-                           zet_debug_event_t &module_event, bool access_elf);
-
-void print_thread(const char *entry_message,
-                  const ze_device_thread_t &device_thread,
-                  log_level_t logLevel);
-
-int get_numCQs_per_ordinal(ze_device_handle_t &device,
-                           std::map<int, int> &ordinalCQs);
 class ProcessLauncher {
 public:
   bp::child launch_process(debug_test_type_t test_type,

@@ -10,6 +10,7 @@
 #include <map>
 
 #include "test_debug.hpp"
+#include "test_debug_utils.hpp"
 #include "test_debug_helper.hpp"
 
 #ifdef EXTENDED_TESTS

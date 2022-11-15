@@ -8,6 +8,7 @@
 #include <boost/program_options.hpp>
 
 #include "test_debug.hpp"
+#include "test_debug_utils.hpp"
 
 namespace po = boost::program_options;
 
