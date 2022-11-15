@@ -83,11 +83,10 @@ protected:
   uint32_t image_size;
   ze_image_handle_t ze_img_src, ze_img_dest;
   lzt::ImagePNG32Bit png_img_src, png_img_dest;
-
-  zeImageCreateCommon img;
+  lzt::zeImageCreateCommon *img_ptr = nullptr;
 
   void test_image_copy() {
-
+    img_ptr = new zeImageCreateCommon;
     lzt::append_image_copy_from_mem(cl, ze_img_src, png_img_src.raw_data(),
                                     nullptr);
     lzt::append_barrier(cl, nullptr, 0, nullptr);
@@ -101,9 +100,11 @@ protected:
     synchronize(cq, UINT64_MAX);
 
     EXPECT_EQ(png_img_src, png_img_dest);
+    delete img_ptr;
   }
 
   void test_image_copy_region(const ze_image_region_t *region) {
+    img_ptr = new zeImageCreateCommon;
     ze_image_handle_t h_dest_image = nullptr;
     ze_image_desc_t image_desc = zeImageCreateCommon::dflt_ze_image_desc;
     h_dest_image = lzt::create_ze_image(image_desc);
@@ -114,19 +115,19 @@ protected:
     const int8_t foreground_dp = 2;
     const int8_t scribble_dp = 3;
     // The background image:
-    lzt::ImagePNG32Bit background_image(img.dflt_host_image_.width(),
-                                        img.dflt_host_image_.height());
+    lzt::ImagePNG32Bit background_image(img_ptr->dflt_host_image_.width(),
+                                        img_ptr->dflt_host_image_.height());
     // Initialize background image with background data pattern:
     lzt::write_image_data_pattern(background_image, background_dp);
     // The foreground image:
-    lzt::ImagePNG32Bit foreground_image(img.dflt_host_image_.width(),
-                                        img.dflt_host_image_.height());
+    lzt::ImagePNG32Bit foreground_image(img_ptr->dflt_host_image_.width(),
+                                        img_ptr->dflt_host_image_.height());
     // Initialize foreground image with foreground data pattern:
     lzt::write_image_data_pattern(foreground_image, foreground_dp);
     // new_host_image is used to validate that the image copy region
     // operation(s) were correct:
-    lzt::ImagePNG32Bit new_host_image(img.dflt_host_image_.width(),
-                                      img.dflt_host_image_.height());
+    lzt::ImagePNG32Bit new_host_image(img_ptr->dflt_host_image_.width(),
+                                      img_ptr->dflt_host_image_.height());
     // Scribble a known incorrect data pattern to new_host_image to ensure we
     // are validating actual data from the L0 functionality:
     lzt::write_image_data_pattern(new_host_image, scribble_dp);
@@ -160,6 +161,7 @@ protected:
     destroy_ze_image(h_dest_image);
     destroy_ze_image(h_source_image);
     reset_command_list(cl);
+    delete img_ptr;
   }
 
   void test_image_mem_copy_no_regions(void *source_buff, void *dest_buff) {
@@ -251,14 +253,15 @@ protected:
         out_image.set_pixel(x, y, 0xffffffff);
 
     // Copy from host image to to device image region
-    lzt::append_image_copy_from_mem(cl, img.dflt_device_image_,
+    lzt::append_image_copy_from_mem(cl, img_ptr->dflt_device_image_,
                                     in_image.raw_data(), in_region, nullptr);
 
     append_barrier(cl, nullptr, 0, nullptr);
 
     // Copy from image region to output host image
     lzt::append_image_copy_to_mem(cl, out_image.raw_data(),
-                                  img.dflt_device_image_, out_region, nullptr);
+                                  img_ptr->dflt_device_image_, out_region,
+                                  nullptr);
 
     // Execute
     close_command_list(cl);
@@ -308,8 +311,8 @@ TEST_F(
   test_image_copy_region(nullptr);
   LOG_DEBUG << "Completed test of nullptr region" << std::endl;
   // Aliases to reduce widths of the following region initializers
-  const uint32_t width = img.dflt_host_image_.width();
-  const uint32_t height = img.dflt_host_image_.height();
+  const uint32_t width = img_ptr->dflt_host_image_.width();
+  const uint32_t height = img_ptr->dflt_host_image_.height();
   ze_image_region_t regions[] = {
       // Region correspond to the entire image (C 2) (0)
       init_region(0, 0, 0, width, height, 1),
@@ -493,8 +496,10 @@ TEST_F(zeCommandListAppendImageCopyTests,
   if (!(lzt::image_support())) {
     return;
   }
-  lzt::append_image_copy(cl, img.dflt_device_image_, img.dflt_device_image_2_,
-                         nullptr);
+  img_ptr = new zeImageCreateCommon;
+  lzt::append_image_copy(cl, img_ptr->dflt_device_image_,
+                         img_ptr->dflt_device_image_2_, nullptr);
+  delete img_ptr;
 }
 
 TEST_F(zeCommandListAppendImageCopyTests,
@@ -502,6 +507,8 @@ TEST_F(zeCommandListAppendImageCopyTests,
   if (!(lzt::image_support())) {
     return;
   }
+
+  img_ptr = new zeImageCreateCommon;
   ze_event_handle_t hEvent = nullptr;
 
   ze_event_desc_t desc = {};
@@ -510,9 +517,10 @@ TEST_F(zeCommandListAppendImageCopyTests,
   desc.signal = 0;
   desc.wait = 0;
   auto event = lzt::create_event(ep, desc);
-  lzt::append_image_copy(cl, img.dflt_device_image_, img.dflt_device_image_2_,
-                         event);
+  lzt::append_image_copy(cl, img_ptr->dflt_device_image_,
+                         img_ptr->dflt_device_image_2_, event);
   destroy_event(event);
+  delete img_ptr;
 }
 
 TEST_F(
@@ -521,6 +529,8 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
+
+  img_ptr = new zeImageCreateCommon;
   ze_event_handle_t hEvent = nullptr;
 
   ze_event_desc_t desc = {};
@@ -530,10 +540,11 @@ TEST_F(
   desc.wait = 0;
   auto event = lzt::create_event(ep, desc);
   auto event_before = event;
-  lzt::append_image_copy(cl, img.dflt_device_image_, img.dflt_device_image_2_,
-                         nullptr, 1, &event);
+  lzt::append_image_copy(cl, img_ptr->dflt_device_image_,
+                         img_ptr->dflt_device_image_2_, nullptr, 1, &event);
   ASSERT_EQ(event, event_before);
   destroy_event(event);
+  delete img_ptr;
 }
 
 TEST_F(
@@ -543,8 +554,9 @@ TEST_F(
     return;
   }
 
-  int full_width = img.dflt_host_image_.width();
-  int full_height = img.dflt_host_image_.height();
+  img_ptr = new zeImageCreateCommon;
+  int full_width = img_ptr->dflt_host_image_.width();
+  int full_height = img_ptr->dflt_host_image_.height();
 
   EXPECT_GE(full_width, 10);
   EXPECT_GE(full_height, 10);
@@ -557,13 +569,14 @@ TEST_F(
   auto out_region = init_region(3, 1, 0, full_width - 6, full_height - 2, 1);
 
   image_region_copy(in_region, out_region);
+  delete img_ptr;
 }
 
 class zeCommandListAppendImageCopyFromMemoryTests : public ::testing::Test {
 protected:
   zeEventPool ep;
   zeCommandList cl;
-  zeImageCreateCommon img;
+  lzt::zeImageCreateCommon *img_ptr = nullptr;
 };
 
 TEST_F(
@@ -572,8 +585,12 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
-  lzt::append_image_copy_from_mem(cl.command_list_, img.dflt_device_image_,
-                                  img.dflt_host_image_.raw_data(), nullptr);
+
+  img_ptr = new zeImageCreateCommon;
+  lzt::append_image_copy_from_mem(cl.command_list_, img_ptr->dflt_device_image_,
+                                  img_ptr->dflt_host_image_.raw_data(),
+                                  nullptr);
+  delete img_ptr;
 }
 
 TEST_F(
@@ -582,12 +599,15 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
+
+  img_ptr = new zeImageCreateCommon;
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
-  lzt::append_image_copy_from_mem(cl.command_list_, img.dflt_device_image_,
-                                  img.dflt_host_image_.raw_data(), hEvent);
+  lzt::append_image_copy_from_mem(cl.command_list_, img_ptr->dflt_device_image_,
+                                  img_ptr->dflt_host_image_.raw_data(), hEvent);
   ep.destroy_event(hEvent);
+  delete img_ptr;
 }
 
 TEST_F(
@@ -596,15 +616,18 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
+
+  img_ptr = new zeImageCreateCommon;
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
   auto hEvent_initial = hEvent;
-  lzt::append_image_copy_from_mem(cl.command_list_, img.dflt_device_image_,
-                                  img.dflt_host_image_.raw_data(), nullptr, 1,
-                                  &hEvent);
+  lzt::append_image_copy_from_mem(cl.command_list_, img_ptr->dflt_device_image_,
+                                  img_ptr->dflt_host_image_.raw_data(), nullptr,
+                                  1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_initial);
   ep.destroy_event(hEvent);
+  delete img_ptr;
 }
 
 class zeCommandListAppendImageCopyRegionTests
@@ -616,25 +639,28 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
+
+  img_ptr = new zeImageCreateCommon;
   ze_image_region_t source_region = {};
   ze_image_region_t dest_region = {};
 
   dest_region.originX = 0;
   dest_region.originY = 0;
   dest_region.originZ = 0;
-  dest_region.width = img.dflt_host_image_.width() / 2;
-  dest_region.height = img.dflt_host_image_.height() / 2;
+  dest_region.width = img_ptr->dflt_host_image_.width() / 2;
+  dest_region.height = img_ptr->dflt_host_image_.height() / 2;
   dest_region.depth = 1;
 
-  source_region.originX = img.dflt_host_image_.width() / 2;
-  source_region.originY = img.dflt_host_image_.height() / 2;
+  source_region.originX = img_ptr->dflt_host_image_.width() / 2;
+  source_region.originY = img_ptr->dflt_host_image_.height() / 2;
   source_region.originZ = 0;
-  source_region.width = img.dflt_host_image_.width() / 2;
-  source_region.height = img.dflt_host_image_.height() / 2;
+  source_region.width = img_ptr->dflt_host_image_.width() / 2;
+  source_region.height = img_ptr->dflt_host_image_.height() / 2;
   source_region.depth = 1;
-  lzt::append_image_copy_region(cl.command_list_, img.dflt_device_image_,
-                                img.dflt_device_image_2_, &dest_region,
+  lzt::append_image_copy_region(cl.command_list_, img_ptr->dflt_device_image_,
+                                img_ptr->dflt_device_image_2_, &dest_region,
                                 &source_region, nullptr);
+  delete img_ptr;
 }
 
 TEST_F(
@@ -643,29 +669,32 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
+
+  img_ptr = new zeImageCreateCommon;
   ze_image_region_t source_region = {};
   ze_image_region_t dest_region = {};
 
   dest_region.originX = 0;
   dest_region.originY = 0;
   dest_region.originZ = 0;
-  dest_region.width = img.dflt_host_image_.width() / 2;
-  dest_region.height = img.dflt_host_image_.height() / 2;
+  dest_region.width = img_ptr->dflt_host_image_.width() / 2;
+  dest_region.height = img_ptr->dflt_host_image_.height() / 2;
   dest_region.depth = 1;
 
-  source_region.originX = img.dflt_host_image_.width() / 2;
-  source_region.originY = img.dflt_host_image_.height() / 2;
+  source_region.originX = img_ptr->dflt_host_image_.width() / 2;
+  source_region.originY = img_ptr->dflt_host_image_.height() / 2;
   source_region.originZ = 0;
-  source_region.width = img.dflt_host_image_.width() / 2;
-  source_region.height = img.dflt_host_image_.height() / 2;
+  source_region.width = img_ptr->dflt_host_image_.width() / 2;
+  source_region.height = img_ptr->dflt_host_image_.height() / 2;
   source_region.depth = 1;
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
-  lzt::append_image_copy_region(cl.command_list_, img.dflt_device_image_,
-                                img.dflt_device_image_2_, &dest_region,
+  lzt::append_image_copy_region(cl.command_list_, img_ptr->dflt_device_image_,
+                                img_ptr->dflt_device_image_2_, &dest_region,
                                 &source_region, hEvent);
   ep.destroy_event(hEvent);
+  delete img_ptr;
 }
 
 TEST_F(
@@ -674,31 +703,33 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
+  img_ptr = new zeImageCreateCommon;
   ze_image_region_t source_region = {};
   ze_image_region_t dest_region = {};
 
   dest_region.originX = 0;
   dest_region.originY = 0;
   dest_region.originZ = 0;
-  dest_region.width = img.dflt_host_image_.width() / 2;
-  dest_region.height = img.dflt_host_image_.height() / 2;
+  dest_region.width = img_ptr->dflt_host_image_.width() / 2;
+  dest_region.height = img_ptr->dflt_host_image_.height() / 2;
   dest_region.depth = 1;
 
-  source_region.originX = img.dflt_host_image_.width() / 2;
-  source_region.originY = img.dflt_host_image_.height() / 2;
+  source_region.originX = img_ptr->dflt_host_image_.width() / 2;
+  source_region.originY = img_ptr->dflt_host_image_.height() / 2;
   source_region.originZ = 0;
-  source_region.width = img.dflt_host_image_.width() / 2;
-  source_region.height = img.dflt_host_image_.height() / 2;
+  source_region.width = img_ptr->dflt_host_image_.width() / 2;
+  source_region.height = img_ptr->dflt_host_image_.height() / 2;
   source_region.depth = 1;
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
   auto hEvent_initial = hEvent;
-  lzt::append_image_copy_region(cl.command_list_, img.dflt_device_image_,
-                                img.dflt_device_image_2_, &dest_region,
+  lzt::append_image_copy_region(cl.command_list_, img_ptr->dflt_device_image_,
+                                img_ptr->dflt_device_image_2_, &dest_region,
                                 &source_region, nullptr, 1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_initial);
   ep.destroy_event(hEvent);
+  delete img_ptr;
 }
 
 class zeCommandListAppendImageCopyToMemoryTests
@@ -709,12 +740,14 @@ TEST_F(zeCommandListAppendImageCopyToMemoryTests,
   if (!(lzt::image_support())) {
     return;
   }
+  img_ptr = new zeImageCreateCommon;
   void *device_memory =
-      allocate_device_memory(size_in_bytes(img.dflt_host_image_));
+      allocate_device_memory(size_in_bytes(img_ptr->dflt_host_image_));
 
   lzt::append_image_copy_to_mem(cl.command_list_, device_memory,
-                                img.dflt_device_image_, nullptr);
+                                img_ptr->dflt_device_image_, nullptr);
   free_memory(device_memory);
+  delete img_ptr;
 }
 
 TEST_F(
@@ -723,15 +756,17 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
+  img_ptr = new zeImageCreateCommon;
   void *device_memory =
-      allocate_device_memory(size_in_bytes(img.dflt_host_image_));
+      allocate_device_memory(size_in_bytes(img_ptr->dflt_host_image_));
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
   lzt::append_image_copy_to_mem(cl.command_list_, device_memory,
-                                img.dflt_device_image_, hEvent);
+                                img_ptr->dflt_device_image_, hEvent);
   ep.destroy_event(hEvent);
   free_memory(device_memory);
+  delete img_ptr;
 }
 
 TEST_F(
@@ -740,16 +775,19 @@ TEST_F(
   if (!(lzt::image_support())) {
     return;
   }
+  img_ptr = new zeImageCreateCommon;
   void *device_memory =
-      allocate_device_memory(size_in_bytes(img.dflt_host_image_));
+      allocate_device_memory(size_in_bytes(img_ptr->dflt_host_image_));
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
   auto hEvent_initial = hEvent;
   lzt::append_image_copy_to_mem(cl.command_list_, device_memory,
-                                img.dflt_device_image_, nullptr, 1, &hEvent);
+                                img_ptr->dflt_device_image_, nullptr, 1,
+                                &hEvent);
   ASSERT_EQ(hEvent, hEvent_initial);
   ep.destroy_event(hEvent);
   free_memory(device_memory);
+  delete img_ptr;
 }
 } // namespace

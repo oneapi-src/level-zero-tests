@@ -400,8 +400,7 @@ TEST_F(
                                  memory_, size_));
 }
 
-class zeDeviceMakeImageResidentTests : public testing::Test,
-                                       public lzt::zeImageCreateCommon {};
+class zeDeviceMakeImageResidentTests : public testing::Test {};
 
 TEST_F(zeDeviceMakeImageResidentTests,
        GivenDeviceImageWhenMakingImageResidentThenSuccessIsReturned) {
@@ -409,10 +408,11 @@ TEST_F(zeDeviceMakeImageResidentTests,
     LOG_INFO << "device does not support images, cannot run test";
     return;
   }
+  lzt::zeImageCreateCommon img;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextMakeImageResident(
                                    lzt::get_default_context(),
                                    lzt::zeDevice::get_instance()->get_device(),
-                                   dflt_device_image_));
+                                   img.dflt_device_image_));
 }
 
 class zeContextEvictImageTests : public zeDeviceMakeImageResidentTests {};
@@ -423,14 +423,15 @@ TEST_F(zeContextEvictImageTests,
     LOG_INFO << "device does not support images, cannot run test";
     return;
   }
+  lzt::zeImageCreateCommon img;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextMakeImageResident(
                                    lzt::get_default_context(),
                                    lzt::zeDevice::get_instance()->get_device(),
-                                   dflt_device_image_));
+                                   img.dflt_device_image_));
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeContextEvictImage(lzt::get_default_context(),
                                 lzt::zeDevice::get_instance()->get_device(),
-                                dflt_device_image_));
+                                img.dflt_device_image_));
 }
 
 } // namespace

@@ -316,8 +316,7 @@ void image_make_resident_evict(ze_image_handle_t dflt_device_image_) {
   }
 }
 
-class zeDeviceMakeImageResidentTests : public testing::Test,
-                                       public lzt::zeImageCreateCommon {};
+class zeDeviceMakeImageResidentTests : public testing::Test {};
 
 TEST_F(
     zeDeviceMakeImageResidentTests,
@@ -328,11 +327,12 @@ TEST_F(
     SUCCEED();
     return;
   }
+  lzt::zeImageCreateCommon img;
   std::vector<std::unique_ptr<std::thread>> threads;
 
   for (int i = 0; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
-        new std::thread(image_make_resident_evict, dflt_device_image_)));
+        new std::thread(image_make_resident_evict, img.dflt_device_image_)));
   }
 
   for (int i = 0; i < num_threads; i++) {
