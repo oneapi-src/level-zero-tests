@@ -211,10 +211,10 @@ int main(int argc, char **argv) {
     LOG_DEBUG << "[Child Debugger] Notifying child application";
     synchro.notify_application();
 
-    LOG_DEBUG << "[Child Debugger] Waiting for application to exit";
-    dh_p->wait();
     LOG_DEBUG << "[Child Debugger] Detaching";
     lzt::debug_detach(debugSession);
+    LOG_DEBUG << "[Child Debugger] Waiting for application to exit";
+    dh_p->wait();
     exit(dh_p->exit_code());
   }
 }

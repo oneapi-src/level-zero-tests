@@ -244,8 +244,8 @@ TEST_F(
   }
 
   if (!test_run) {
-    LOG_WARNING << "No device with multiple supported subdevices available, "
-                   "test not run";
+    GTEST_SKIP() << "No device with multiple supported subdevices available, "
+                    "test not run";
   }
 }
 
