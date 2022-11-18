@@ -98,8 +98,7 @@ TEST(
 
   auto vertices = lzt::get_ze_fabric_vertices();
   for (const auto &vertex : vertices) {
-    std::vector<ze_fabric_vertex_handle_t> sub_vertices{};
-    sub_vertices = lzt::get_ze_fabric_sub_vertices(vertex);
+    auto sub_vertices = lzt::get_ze_fabric_sub_vertices(vertex);
     for (const auto &sub_vertex : sub_vertices) {
       ze_fabric_vertex_exp_properties_t properties =
           lzt::get_ze_fabric_vertex_properties(sub_vertex);
@@ -165,13 +164,12 @@ TEST(zeDeviceGetFabricVertex,
 
 static std::vector<ze_fabric_vertex_handle_t> fabric_get_all_vertices() {
 
-  std::vector<ze_fabric_vertex_handle_t> all_vertices{};
+  std::vector<ze_fabric_vertex_handle_t> all_vertices;
   auto vertices = lzt::get_ze_fabric_vertices();
   for (const auto &vertex : vertices) {
     all_vertices.push_back(vertex);
 
-    std::vector<ze_fabric_vertex_handle_t> sub_vertices{};
-    sub_vertices = lzt::get_ze_fabric_sub_vertices(vertex);
+    auto sub_vertices = lzt::get_ze_fabric_sub_vertices(vertex);
     for (const auto &sub_vertex : sub_vertices) {
       all_vertices.push_back(sub_vertex);
     }
@@ -182,7 +180,7 @@ static std::vector<ze_fabric_vertex_handle_t> fabric_get_all_vertices() {
 
 static std::vector<ze_fabric_edge_handle_t> fabric_get_all_edges() {
 
-  std::vector<ze_fabric_edge_handle_t> all_edges{};
+  std::vector<ze_fabric_edge_handle_t> all_edges;
   std::vector<ze_fabric_vertex_handle_t> vertices = fabric_get_all_vertices();
   auto vertex_count = vertices.size();
   if (vertex_count >= 2) {
@@ -285,7 +283,7 @@ TEST(zeFabricEdgeGetTests, GivenValidFabricEdgesThenEdgePropertyUuidIsUnique) {
     return;
   }
 
-  std::vector<ze_uuid_t> uuids{};
+  std::vector<ze_uuid_t> uuids;
 
   auto is_uuid_unique = [uuids](ze_uuid_t &uuid) {
     for (auto &prev_uuid : uuids) {
