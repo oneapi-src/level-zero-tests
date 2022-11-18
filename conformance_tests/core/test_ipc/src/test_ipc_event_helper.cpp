@@ -160,6 +160,10 @@ int main() {
     exit(1);
   }
   lzt::close_ipc_event_handle(hEventPool);
+  if (testing::Test::HasFailure()) {
+    LOG_DEBUG << "IPC Child Failed GTEST Check";
+    exit(1);
+  }
   exit(0);
 }
 #else // windows
