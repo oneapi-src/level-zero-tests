@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
   zet_debug_config_t debug_config = {};
 
   ProcessLauncher launcher;
-  bp::child *dh_p = nullptr;
+  bp::child debug_helper;
 
   if (options.app_pid_in) {
     // attach to pid from options
@@ -114,11 +114,9 @@ int main(int argc, char **argv) {
     debug_config.pid = options.app_pid_in;
   } else {
     LOG_DEBUG << "[Child Debugger] Launching child application";
-    auto debug_helper = launcher.launch_process(
-        options.test_selected, device, options.use_sub_devices, "", index);
+    debug_helper = launcher.launch_process(options.test_selected, device,
+                                           options.use_sub_devices, "", index);
     debug_config.pid = debug_helper.id();
-    dh_p = &debug_helper;
-    dh_p->detach();
   }
 
   // we have the device, now create a debug session
@@ -129,10 +127,6 @@ int main(int argc, char **argv) {
   if (!debugSession) {
     LOG_ERROR << "[Child Debugger] Failed to attach to start a debug session";
     exit(1);
-  }
-
-  if (options.test_selected != BASIC && dh_p) {
-    dh_p->detach();
   }
 
   if (options.app_pid_in) {
@@ -207,14 +201,14 @@ int main(int argc, char **argv) {
 
     exit(0);
 
-  } else if (dh_p) {
+  } else {
     LOG_DEBUG << "[Child Debugger] Notifying child application";
     synchro.notify_application();
 
     LOG_DEBUG << "[Child Debugger] Detaching";
     lzt::debug_detach(debugSession);
     LOG_DEBUG << "[Child Debugger] Waiting for application to exit";
-    dh_p->wait();
-    exit(dh_p->exit_code());
+    debug_helper.wait();
+    exit(debug_helper.exit_code());
   }
 }
