@@ -11,6 +11,7 @@
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "math.h"
 
 namespace lzt = level_zero_tests;
 
@@ -589,6 +590,13 @@ TEST_F(
         zes_freq_range_t limits = {};
         limits.min = properties.min + (properties.max - properties.min) / 4;
         limits.max = properties.min + (properties.max - properties.min) / 2;
+
+        if ((fmod(limits.min, 50))) {
+          limits.min = limits.min - fmod(limits.min, 50);
+        }
+        if (fmod(limits.max, 50)) {
+          limits.max = limits.max - fmod(limits.max, 50);
+        }
 
         lzt::set_freq_range(pfreq_handle, limits);
         lzt::idle_check(pfreq_handle);
