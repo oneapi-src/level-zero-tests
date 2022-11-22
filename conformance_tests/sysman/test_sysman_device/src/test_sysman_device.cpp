@@ -145,6 +145,26 @@ TEST_F(
 
 TEST_F(
     SysmanDeviceTest,
+    GivenValidDeviceHandleWhenRetrievingProcessesStateThenProcessIdOfCallingProcessIsPresent) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    int pid = getpid();
+    int pid_found = 0;
+    auto processes = lzt::get_processes_state(device, count);
+    if (processes.size() > 0) {
+      for (auto process : processes) {
+        EXPECT_GT(process.processId, 0u);
+        if (process.processId == pid) {
+          pid_found = 1;
+        }
+      }
+      EXPECT_EQ(pid_found, 1u);
+    }
+  }
+}
+
+TEST_F(
+    SysmanDeviceTest,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
