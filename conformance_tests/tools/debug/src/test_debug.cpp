@@ -520,7 +520,7 @@ TEST_F(
 
 TEST_F(
     zetDebugAttachDetachTest,
-    GivenExistingDebuggerExitsWithoutDetachingWhenDebuggingApplicationThenNewDebuggerCanAttachAndVerifyEvents) {
+    GivenExistingDebuggerExitsWithoutDetachingWhenDebuggingApplicationThenNewDebuggerCanVerifyEvents) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
