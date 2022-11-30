@@ -27,6 +27,10 @@ typedef struct metricGroupInfo {
         domain(domain) {}
 } metricGroupInfo_t;
 
+std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
+    ze_device_handle_t device,
+    zet_metric_group_sampling_type_flags_t metricSamplingType);
+
 std::vector<metricGroupInfo_t>
 get_metric_group_info(ze_device_handle_t device,
                       zet_metric_group_sampling_type_flags_t samplingType,
@@ -99,7 +103,8 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                              zet_metric_query_handle_t metricQueryHandle,
                              ze_event_handle_t eventHandle);
 void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
-                      const size_t rawDataSize, const uint8_t *rawData);
+                      const size_t rawDataSize, const uint8_t *rawData,
+                      bool requireOverflow = false);
 void validate_metrics_std(zet_metric_group_handle_t matchedGroupHandle,
                           const size_t rawDataSize, const uint8_t *rawData);
 // Consider 20% of the metric groups in each domain for test input as default

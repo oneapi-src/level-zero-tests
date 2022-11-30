@@ -45,6 +45,8 @@ std::string to_string(const ze_result_t result) {
     return "ZE_RESULT_ERROR_NOT_AVAILABLE";
   } else if (result == ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE) {
     return "ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE";
+  } else if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+    return "ZE_RESULT_WARNING_DROPPED_DATA";
   } else if (result == ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {
     return "ZE_RESULT_ERROR_UNSUPPORTED_VERSION";
   } else if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {

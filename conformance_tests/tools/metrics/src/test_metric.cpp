@@ -6,6 +6,9 @@
  *
  */
 
+#include <chrono>
+#include <ctime>
+
 #include <boost/filesystem.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -28,9 +31,10 @@ namespace bi = boost::interprocess;
 namespace {
 
 ze_kernel_handle_t load_gpu(ze_device_handle_t device, ze_group_count_t *tg,
-                            void **a_buffer, void **b_buffer, void **c_buffer) {
+                            void **a_buffer, void **b_buffer, void **c_buffer,
+                            int dimensions = 1024) {
   int m, k, n;
-  m = k = n = 1024;
+  m = k = n = dimensions;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
@@ -596,6 +600,7 @@ protected:
 
   uint32_t notifyEveryNReports = 3000;
   uint32_t samplingPeriod = 1000000;
+  uint64_t TimeForNReportsComplete = notifyEveryNReports * samplingPeriod;
   ze_device_handle_t device;
 
   void SetUp() { devices = lzt::get_metric_test_device_list(); }
@@ -667,7 +672,9 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_NOT_READY != eventResult) {
+      } else if (ZE_RESULT_NOT_READY == eventResult) {
+        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
+      } else {
         FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
@@ -753,7 +760,9 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_NOT_READY != eventResult) {
+      } else if (ZE_RESULT_NOT_READY == eventResult) {
+        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
+      } else {
         FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
@@ -770,6 +779,132 @@ TEST_F(
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
       lzt::free_memory(c_buffer);
+      eventPool.destroy_event(eventHandle);
+      lzt::reset_command_list(commandList);
+    }
+    lzt::destroy_command_queue(commandQueue);
+    lzt::destroy_command_list(commandList);
+  }
+}
+
+TEST_F(
+    zetMetricStreamerTest,
+    GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndOverflowTriggeredThenExpectStreamerValidateError) {
+
+  const uint32_t numberOfFunctionCalls = 8;
+
+  struct {
+    ze_kernel_handle_t function;
+    ze_group_count_t tg;
+    void *a_buffer, *b_buffer, *c_buffer;
+  } functionDataBuf[numberOfFunctionCalls];
+
+  for (auto device : devices) {
+
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(device, &deviceProperties);
+
+    LOG_INFO << "test device name " << deviceProperties.name << " uuid "
+             << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    ze_command_queue_handle_t commandQueue = lzt::create_command_queue(device);
+    zet_command_list_handle_t commandList = lzt::create_command_list(device);
+
+    auto metricGroupInfo = lzt::get_metric_type_ip_group_info(
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+
+    if (metricGroupInfo.size() == 0) {
+      LOG_INFO << "no IP metric groups are available to test on this platform";
+    }
+
+    for (auto groupInfo : metricGroupInfo) {
+
+      LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
+
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
+
+      ze_event_handle_t eventHandle;
+      lzt::zeEventPool eventPool;
+      eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
+                             ZE_EVENT_SCOPE_FLAG_HOST);
+
+      zet_metric_streamer_handle_t metricStreamerHandle =
+          lzt::metric_streamer_open_for_device(
+              device, groupInfo.metricGroupHandle, eventHandle,
+              notifyEveryNReports, samplingPeriod);
+
+      for (auto &fData : functionDataBuf) {
+        fData.function = load_gpu(device, &fData.tg, &fData.a_buffer,
+                                  &fData.b_buffer, &fData.c_buffer, 8192);
+        zeCommandListAppendLaunchKernel(commandList, fData.function, &fData.tg,
+                                        nullptr, 0, nullptr);
+      }
+
+      lzt::close_command_list(commandList);
+
+      std::chrono::steady_clock::time_point startTime =
+          std::chrono::steady_clock::now();
+
+      lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+      lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
+      ze_result_t eventResult;
+      eventResult = zeEventQueryStatus(eventHandle);
+
+      if (ZE_RESULT_SUCCESS == eventResult) {
+        size_t oneReportSize, allReportsSize, numReports;
+        oneReportSize =
+            lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
+        allReportsSize = lzt::metric_streamer_read_data_size(
+            metricStreamerHandle, UINT32_MAX);
+        LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
+                  << ". All reports size:" << allReportsSize;
+
+        EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
+
+      } else if (ZE_RESULT_NOT_READY == eventResult) {
+        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
+      } else {
+        FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
+      }
+
+      std::chrono::steady_clock::time_point endTime =
+          std::chrono::steady_clock::now();
+
+      uint64_t elapsedTime =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(endTime -
+                                                               startTime)
+              .count();
+
+      LOG_INFO << "elapsed time for workload completion " << elapsedTime
+               << " time for NReports to complete " << TimeForNReportsComplete;
+      if (elapsedTime < TimeForNReportsComplete) {
+        LOG_WARNING << "elapsed time for workload completion is too short";
+      }
+
+      std::vector<uint8_t> rawData;
+      lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
+      lzt::validate_metrics(
+          groupInfo.metricGroupHandle,
+          lzt::metric_streamer_read_data_size(metricStreamerHandle),
+          rawData.data(), true);
+
+      lzt::deactivate_metric_groups(device);
+      lzt::metric_streamer_close(metricStreamerHandle);
+
+      for (auto &fData : functionDataBuf) {
+        lzt::destroy_function(fData.function);
+        lzt::free_memory(fData.a_buffer);
+        lzt::free_memory(fData.b_buffer);
+        lzt::free_memory(fData.c_buffer);
+      }
+
       eventPool.destroy_event(eventHandle);
       lzt::reset_command_list(commandList);
     }
@@ -852,7 +987,9 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_NOT_READY != eventResult) {
+      } else if (ZE_RESULT_NOT_READY == eventResult) {
+        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
+      } else {
         FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
@@ -947,7 +1084,9 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_NOT_READY != eventResult) {
+      } else if (ZE_RESULT_NOT_READY == eventResult) {
+        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
+      } else {
         FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
@@ -1062,7 +1201,9 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_NOT_READY != eventResult) {
+      } else if (ZE_RESULT_NOT_READY == eventResult) {
+        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
+      } else {
         FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 
@@ -1251,7 +1392,9 @@ TEST_F(
 
         EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-      } else if (ZE_RESULT_NOT_READY != eventResult) {
+      } else if (ZE_RESULT_NOT_READY == eventResult) {
+        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
+      } else {
         FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
       }
 

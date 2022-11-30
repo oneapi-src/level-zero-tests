@@ -84,8 +84,8 @@ get_metric_test_device_list(uint32_t testSubDeviceCount) {
   return testDevices;
 }
 
-bool check_metric_type_ip_exp(zet_metric_group_handle_t metricGroupHandle,
-                              bool includeExpFeature) {
+bool check_metric_type_ip(zet_metric_group_handle_t metricGroupHandle,
+                          bool includeExpFeature) {
 
   std::vector<zet_metric_handle_t> metricHandles =
       get_metric_handles(metricGroupHandle);
@@ -103,14 +103,13 @@ bool check_metric_type_ip_exp(zet_metric_group_handle_t metricGroupHandle,
   return false;
 }
 
-bool check_metric_type_ip_exp(
-    ze_device_handle_t device, std::string groupName,
-    zet_metric_group_sampling_type_flags_t samplingType,
-    bool includeExpFeature) {
+bool check_metric_type_ip(ze_device_handle_t device, std::string groupName,
+                          zet_metric_group_sampling_type_flags_t samplingType,
+                          bool includeExpFeature) {
 
   zet_metric_group_handle_t groupHandle;
   groupHandle = lzt::find_metric_group(device, groupName, samplingType);
-  return check_metric_type_ip_exp(groupHandle, includeExpFeature);
+  return check_metric_type_ip(groupHandle, includeExpFeature);
 }
 
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
@@ -170,7 +169,7 @@ get_metric_group_info(ze_device_handle_t device,
       continue;
     }
 
-    if (check_metric_type_ip_exp(metricGroupHandle, includeExpFeature)) {
+    if (check_metric_type_ip(metricGroupHandle, includeExpFeature)) {
       LOG_WARNING
           << "Test includes ZET_METRIC_TYPE_IP_EXP Metric Type - Skipped...";
       continue;
@@ -178,6 +177,45 @@ get_metric_group_info(ze_device_handle_t device,
 
     matchedGroupsInfo.emplace_back(metricGroupHandle, metricGroupProp.name,
                                    metricGroupProp.domain);
+  }
+
+  return matchedGroupsInfo;
+}
+
+std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
+    ze_device_handle_t device,
+    zet_metric_group_sampling_type_flags_t metricSamplingType) {
+
+  ze_result_t result = zeInit(0);
+  if (result) {
+    throw std::runtime_error("zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+
+  std::vector<zet_metric_group_handle_t> metricGroupHandles =
+      get_metric_group_handles(device);
+
+  std::vector<metricGroupInfo_t> matchedGroupsInfo;
+
+  for (auto metricGroupHandle : metricGroupHandles) {
+    zet_metric_group_properties_t metricGroupProp = {};
+    metricGroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    metricGroupProp.pNext = nullptr;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricGroupGetProperties(metricGroupHandle, &metricGroupProp));
+    // samplingType is a bit mask.
+    if (!(metricGroupProp.samplingType & metricSamplingType)) {
+      continue;
+    }
+
+    if (!check_metric_type_ip(metricGroupHandle, false)) {
+      continue;
+    }
+
+    LOG_DEBUG << "Test INCLUDES Metric name ... " << metricGroupProp.name;
+    matchedGroupsInfo.emplace_back(metricGroupHandle, metricGroupProp.name,
+                                   metricGroupProp.domain);
+    continue;
   }
 
   return matchedGroupsInfo;
@@ -199,8 +237,8 @@ get_metric_group_name_list(ze_device_handle_t device,
     std::string strItem(propItem.name);
     if (propItem.samplingType != samplingType)
       continue;
-    if (check_metric_type_ip_exp(device, strItem, samplingType,
-                                 includeExpFeature)) {
+    if (check_metric_type_ip(device, strItem, samplingType,
+                             includeExpFeature)) {
       LOG_WARNING
           << "Test includes ZET_METRIC_TYPE_IP_EXP Metric Type - Skipped...";
       continue;
@@ -437,22 +475,27 @@ void verify_typed_metric_value(zet_typed_value_t result,
   case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
     EXPECT_GE(result.value.b8, std::numeric_limits<unsigned char>::min());
     EXPECT_LE(result.value.b8, std::numeric_limits<unsigned char>::max());
+    LOG_DEBUG << "BOOL " << result.value.b8;
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_FLOAT32:
     EXPECT_GE(result.value.fp32, std::numeric_limits<float>::lowest());
     EXPECT_LE(result.value.fp32, std::numeric_limits<float>::max());
+    LOG_DEBUG << "fp32 " << result.value.fp32;
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
     EXPECT_GE(result.value.fp64, std::numeric_limits<double>::lowest());
     EXPECT_LE(result.value.fp64, std::numeric_limits<double>::max());
+    LOG_DEBUG << "fp64 " << result.value.fp64;
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
     EXPECT_GE(result.value.ui32, 0);
     EXPECT_LE(result.value.ui32, std::numeric_limits<uint32_t>::max());
+    LOG_DEBUG << "uint32_t " << result.value.ui32;
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_UINT64:
     EXPECT_GE(result.value.ui64, 0);
     EXPECT_LE(result.value.ui64, std::numeric_limits<uint64_t>::max());
+    LOG_DEBUG << "uint64_t " << result.value.ui64;
     break;
   default:
     ADD_FAILURE() << "Unexpected value type returned for metric query";
@@ -460,7 +503,8 @@ void verify_typed_metric_value(zet_typed_value_t result,
 }
 
 void validate_metrics(zet_metric_group_handle_t hMetricGroup,
-                      const size_t rawDataSize, const uint8_t *rawData) {
+                      const size_t rawDataSize, const uint8_t *rawData,
+                      bool requireOverflow) {
 
   // Get set count and total metric value count
   uint32_t setCount = 0;
@@ -471,15 +515,31 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
                 rawDataSize, rawData, &setCount, &totalMetricValueCount,
                 nullptr, nullptr));
 
+  LOG_DEBUG << "validate_metrics first calculate rawDataSize " << rawDataSize
+            << " setCount " << setCount << " totalMetricValueCount "
+            << totalMetricValueCount;
+
   // Get metric counts and metric values
   std::vector<uint32_t> metricValueSets(setCount);
   std::vector<zet_typed_value_t> totalMetricValues(totalMetricValueCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupCalculateMultipleMetricValuesExp(
-                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
-                rawDataSize, rawData, &setCount, &totalMetricValueCount,
-                metricValueSets.data(), totalMetricValues.data()));
+  ze_result_t result = zetMetricGroupCalculateMultipleMetricValuesExp(
+      hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+      rawDataSize, rawData, &setCount, &totalMetricValueCount,
+      metricValueSets.data(), totalMetricValues.data());
+
+  LOG_DEBUG << "validate_metrics SECOND calculate rawDataSize " << rawDataSize
+            << " setCount " << setCount << " totalMetricValueCount "
+            << totalMetricValueCount << " result " << result;
+
+  if (requireOverflow) {
+    EXPECT_EQ(result, ZE_RESULT_WARNING_DROPPED_DATA);
+  } else {
+    EXPECT_EQ(result, ZE_RESULT_SUCCESS);
+  }
   EXPECT_GT(totalMetricValueCount, 0);
+
+  LOG_DEBUG << " rawDataSize " << rawDataSize << " setCount " << setCount
+            << " totalMetricValueCount " << totalMetricValueCount;
 
   // Setup
   uint32_t metricCount = 0;
@@ -491,8 +551,8 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
 
-  LOG_DEBUG << "totalMetricValueCount " << totalMetricValueCount << " setCount "
-            << setCount << " metricCount " << metricCount;
+  LOG_INFO << "totalMetricValueCount " << totalMetricValueCount << " setCount "
+           << setCount << " metricCount " << metricCount;
   // This loop over metric data is new for this extension
   uint32_t startIndex = 0;
   for (uint32_t dataIndex = 0; dataIndex < setCount; dataIndex++) {
@@ -500,7 +560,11 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
     const uint32_t metricCountForDataIndex = metricValueSets[dataIndex];
     const uint32_t reportCount = metricCountForDataIndex / metricCount;
 
+    LOG_DEBUG << "metricCountForDataIndex " << metricCountForDataIndex;
+    LOG_DEBUG << "reportCount " << reportCount;
+
     for (uint32_t report = 0; report < reportCount; report++) {
+      LOG_DEBUG << "BEGIN METRIC INSTANCE";
       for (uint32_t metric = 0; metric < metricCount; metric++) {
         zet_metric_properties_t properties = {
             ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
@@ -511,6 +575,7 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
             totalMetricValues[startIndex + metricIndex];
         verify_typed_metric_value(typed_value, properties.resultType);
       }
+      LOG_DEBUG << "END METRIC INSTANCE";
     }
 
     startIndex += metricCountForDataIndex;
