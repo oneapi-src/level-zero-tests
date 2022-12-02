@@ -24,12 +24,12 @@ namespace bipc = boost::interprocess;
 namespace {
 
 static const ze_event_desc_t defaultEventDesc = {
-    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
+    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, ZE_EVENT_SCOPE_FLAG_HOST,
     ZE_EVENT_SCOPE_FLAG_HOST // ensure memory coherency across device
                              // and Host after event signalled
 };
 static const ze_event_desc_t defaultDeviceEventDesc = {
-    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
+    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, ZE_EVENT_SCOPE_FLAG_DEVICE,
     ZE_EVENT_SCOPE_FLAG_DEVICE // ensure memory coherency across device
                                // after event signalled
 };
