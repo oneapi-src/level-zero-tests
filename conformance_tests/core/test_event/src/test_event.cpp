@@ -61,8 +61,50 @@ INSTANTIATE_TEST_CASE_P(
                                          ZE_EVENT_SCOPE_FLAG_DEVICE,
                                          ZE_EVENT_SCOPE_FLAG_HOST)));
 
+class zeEventSignalScopeTests
+    : public lzt::zeEventPoolTests,
+      public ::testing::WithParamInterface<ze_event_scope_flag_t> {};
+TEST_P(zeEventSignalScopeTests,
+       GivenDifferentEventSignalScopeFlagsThenAppendSignalEventIsSuccessful) {
+
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  size_t num_event = 3;
+  ze_context_handle_t context = lzt::create_context();
+  ep.InitEventPool(context, 10, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+  std::vector<ze_event_handle_t> events(num_event, nullptr);
+  ze_command_list_handle_t cmd_list =
+      lzt::create_command_list(context, device, 0);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  ze_event_scope_flag_t signalScope = GetParam();
+  ep.create_events(events, num_event, signalScope, 0);
+
+  for (uint32_t i = 0; i < num_event; i++) {
+    lzt::append_signal_event(cmd_list, events[i]);
+  }
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
+  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
+  lzt::synchronize(cmd_q, UINT64_MAX);
+
+  for (uint32_t i = 0; i < num_event; i++) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[i]));
+  }
+  lzt::destroy_command_queue(cmd_q);
+  lzt::destroy_command_list(cmd_list);
+  ep.destroy_events(events);
+  lzt::destroy_context(context);
+}
+
+INSTANTIATE_TEST_CASE_P(zeEventSignalScopeParameterizedTest,
+                        zeEventSignalScopeTests,
+                        ::testing::Values(0, ZE_EVENT_SCOPE_FLAG_SUBDEVICE,
+                                          ZE_EVENT_SCOPE_FLAG_DEVICE,
+                                          ZE_EVENT_SCOPE_FLAG_HOST));
+
 TEST_F(zeDeviceCreateEventPoolTests,
-       GivenDefaultDeviceWhenGettingIpcEventHandleThenNotNullisReturned) {
+       GivenDefaultDeviceWhenGettingIpcEventHandleThenNotNullIsReturned) {
   ze_ipc_event_pool_handle_t hIpc;
   ep.InitEventPool(32, ZE_EVENT_POOL_FLAG_IPC);
 

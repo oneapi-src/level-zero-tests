@@ -194,6 +194,18 @@ void zeEventPool::InitEventPool(uint32_t count, ze_event_pool_flags_t flags) {
   }
 }
 
+void zeEventPool::InitEventPool(ze_context_handle_t context, uint32_t count,
+                                ze_event_pool_flags_t flags) {
+  context_ = context;
+  if (event_pool_ == nullptr) {
+    if (context_ == nullptr) {
+      context_ = lzt::get_default_context();
+    }
+    event_pool_ = create_event_pool(context_, count, flags);
+    pool_indexes_available_.resize(count, true);
+  }
+}
+
 void zeEventPool::InitEventPool(ze_context_handle_t context, uint32_t count) {
   context_ = context;
   if (event_pool_ == nullptr) {

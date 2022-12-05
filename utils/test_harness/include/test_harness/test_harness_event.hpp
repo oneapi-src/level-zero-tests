@@ -29,6 +29,8 @@ public:
   void InitEventPool(uint32_t count);
   void InitEventPool(ze_context_handle_t context, uint32_t count);
   void InitEventPool(uint32_t count, ze_event_pool_flags_t flags);
+  void InitEventPool(ze_context_handle_t context, uint32_t count,
+                     ze_event_pool_flags_t flags);
   void InitEventPool(ze_event_pool_desc_t desc);
   void InitEventPool(ze_event_pool_desc_t desc,
                      std::vector<ze_device_handle_t> devices);
