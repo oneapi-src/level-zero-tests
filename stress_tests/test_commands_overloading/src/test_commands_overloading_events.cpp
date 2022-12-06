@@ -142,13 +142,13 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
       module_handle, kernel_name, output_allocations, dispatch_id);
 
   uint32_t final_events_count = 3 * test_arguments.multiplier;
+  LOG_INFO << "Test events count: " << final_events_count;
   ze_event_pool_desc_t event_pool_desc = {
       ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
       ZE_EVENT_POOL_FLAG_HOST_VISIBLE, final_events_count};
   std::vector<ze_event_handle_t> set_memory_events(test_arguments.multiplier);
   std::vector<ze_event_handle_t> exec_memory_events(test_arguments.multiplier);
   std::vector<ze_event_handle_t> read_memory_events(test_arguments.multiplier);
-  std::vector<ze_event_desc_t> event_descriptions;
 
   ze_event_pool_handle_t memory_pool =
       lzt::create_event_pool(context, event_pool_desc);
@@ -157,25 +157,22 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
   for (uint32_t data_idx = 0; data_idx < test_arguments.multiplier;
        data_idx++) {
     ze_event_desc_t event_desc_set = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
-                                      2 * data_idx, 0,
-                                      ZE_EVENT_SCOPE_FLAG_HOST};
-    event_descriptions.push_back(event_desc_set);
+                                      3 * data_idx, 0,
+                                      0};
 
     ze_event_desc_t event_desc_exec = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
-                                       2 * data_idx + 1, 0,
-                                       ZE_EVENT_SCOPE_FLAG_HOST};
-    event_descriptions.push_back(event_desc_exec);
+                                       3 * data_idx + 1, 0,
+                                       0};
 
     ze_event_desc_t event_desc_read = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
-                                       2 * data_idx + 2, 0,
-                                       ZE_EVENT_SCOPE_FLAG_HOST};
-    event_descriptions.push_back(event_desc_read);
+                                       3 * data_idx + 2, 0,
+                                       0};
     set_memory_events[data_idx] =
-        lzt::create_event(memory_pool, event_descriptions[2 * data_idx]);
+        lzt::create_event(memory_pool, event_desc_set);
     exec_memory_events[data_idx] =
-        lzt::create_event(memory_pool, event_descriptions[2 * data_idx + 1]);
+        lzt::create_event(memory_pool, event_desc_exec);
     read_memory_events[data_idx] =
-        lzt::create_event(memory_pool, event_descriptions[2 * data_idx + 2]);
+        lzt::create_event(memory_pool, event_desc_read);
   }
 
   LOG_INFO << "call commands to copy memory in number == "
@@ -199,29 +196,17 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
         output_allocations[dispatch_id],
         data_for_all_dispatches[data_idx].size() * sizeof(uint32_t),
         read_memory_events[data_idx], 1, &exec_memory_events[data_idx]);
-  }
 
-  lzt::append_wait_on_events(command_list, read_memory_events.size(),
-                             read_memory_events.data());
-
-  for (auto each_event : read_memory_events) {
-    lzt::query_event(each_event, ZE_RESULT_NOT_READY);
+    lzt::append_wait_on_events(command_list, 1, &read_memory_events[data_idx]);
   }
 
   LOG_INFO << "call send command queue to execution.";
   send_command_to_execution(command_list, command_queue);
 
-  LOG_INFO << "call query event to verify if read memory events status "
-              "is completed ";
-  for (auto each_event : read_memory_events) {
-    lzt::query_event(each_event);
-  }
-
   LOG_INFO << "call free test memory objects";
   for (auto next_allocation : output_allocations) {
     lzt::free_memory(context, next_allocation);
   }
-  lzt::destroy_event_pool(memory_pool);
   for (auto each_event : read_memory_events) {
     lzt::destroy_event(each_event);
   }
@@ -232,6 +217,7 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
     lzt::destroy_event(each_event);
   }
 
+  lzt::destroy_event_pool(memory_pool);
   lzt::destroy_function(kernel_handle);
   lzt::destroy_module(module_handle);
   lzt::destroy_command_list(command_list);
@@ -279,14 +265,12 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
   std::vector<ze_device_memory_properties_t> device_memory_properties =
       lzt::get_memory_properties(device);
 
-  uint64_t number_of_all_allocations = 4;
+  uint64_t used_vectors_in_test = 4;
+  uint64_t number_of_all_allocations =
+      used_vectors_in_test * test_arguments.multiplier;
 
-  uint64_t test_single_allocation_memory_size =
-      test_arguments.multiplier * sizeof(uint32_t);
-
-  uint64_t test_total_memory_size = number_of_all_allocations *
-                                    test_single_allocation_memory_size *
-                                    test_arguments.total_memory_size_limit;
+  uint64_t test_single_allocation_memory_size = 0;
+  uint64_t test_total_memory_size = 0;
   bool relax_memory_capability = false;
 
   adjust_max_memory_allocation(
@@ -313,17 +297,26 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
 
   LOG_INFO << "Test one allocation data count: "
            << test_single_allocation_count;
+  LOG_INFO << "test_single_allocation_memory_size: "
+           << test_single_allocation_memory_size;
   LOG_INFO << "Test number of allocations: " << number_of_all_allocations;
   LOG_INFO << "Test events count: " << final_events_count;
   bool memory_test_failure = false;
 
+  std::vector<uint32_t *> output_allocations;
+  std::vector<std::vector<uint32_t>> data_for_all_dispatches;
   LOG_INFO << "call allocation memory... ";
-  uint32_t *output_allocation;
-  output_allocation = allocate_memory<uint32_t>(
-      context, device, test_arguments.memory_type,
-      test_single_allocation_memory_size, relax_memory_capability);
+  for (uint32_t data_idx = 0; data_idx < test_single_allocation_count;
+       data_idx++) {
+    uint32_t *output_allocation;
+    output_allocation = allocate_memory<uint32_t>(
+        context, device, test_arguments.memory_type,
+        test_single_allocation_memory_size, relax_memory_capability);
+    output_allocations.push_back(output_allocation);
 
-  std::vector<uint32_t> data_out(test_single_allocation_count, 0);
+    std::vector<uint32_t> data_out(test_single_allocation_count, 0);
+    data_for_all_dispatches.push_back(data_out);
+  }
 
   LOG_INFO << "call create command queues... ";
   ze_command_queue_handle_t command_queue = lzt::create_command_queue(
@@ -341,7 +334,6 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
       test_single_allocation_count);
   std::vector<ze_event_handle_t> read_memory_events(
       test_single_allocation_count);
-  std::vector<ze_event_desc_t> event_descriptions;
 
   ze_event_pool_handle_t memory_pool =
       lzt::create_event_pool(context, event_pool_desc);
@@ -353,51 +345,40 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
     ze_event_desc_t event_desc_set = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
                                       2 * data_idx, 0,
                                       ZE_EVENT_SCOPE_FLAG_HOST};
-    event_descriptions.push_back(event_desc_set);
 
     ze_event_desc_t event_desc_read = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
                                        2 * data_idx + 1, 0,
                                        ZE_EVENT_SCOPE_FLAG_HOST};
-    event_descriptions.push_back(event_desc_read);
 
     set_memory_events[data_idx] =
-        lzt::create_event(memory_pool, event_descriptions[2 * data_idx]);
+        lzt::create_event(memory_pool, event_desc_set);
     read_memory_events[data_idx] =
-        lzt::create_event(memory_pool, event_descriptions[2 * data_idx + 1]);
+        lzt::create_event(memory_pool, event_desc_read);
   }
 
   LOG_INFO << "call commands to copy memory in number == "
            << test_single_allocation_count << " of steps";
   for (uint32_t data_idx = 0; data_idx < test_single_allocation_count;
        data_idx++) {
-    lzt::append_memory_fill(command_list, &output_allocation[data_idx],
-                            &set_value_, sizeof(uint32_t), sizeof(uint32_t),
+    lzt::append_memory_fill(command_list, &output_allocations[data_idx][0],
+                            &data_idx, sizeof(uint32_t), sizeof(uint32_t),
                             set_memory_events[data_idx]);
 
     lzt::append_memory_copy(
-        command_list, &data_out[data_idx], &output_allocation[data_idx],
+        command_list, &data_for_all_dispatches[data_idx][0], &output_allocations[data_idx][0],
         (size_t)sizeof(uint32_t), read_memory_events[data_idx], 1,
         &set_memory_events[data_idx]);
-  }
 
-  lzt::append_wait_on_events(command_list, read_memory_events.size(),
-                             read_memory_events.data());
-
-  for (auto each_event : read_memory_events) {
-    lzt::query_event(each_event, ZE_RESULT_NOT_READY);
+    lzt::append_wait_on_events(command_list, 1, &read_memory_events[data_idx]);
   }
 
   LOG_INFO << "call send commands for execution ";
   send_command_to_execution(command_list, command_queue);
 
-  LOG_INFO << "call query event to verify if read memory events status "
-              "is completed ";
-  for (auto each_event : read_memory_events) {
-    lzt::query_event(each_event);
-  }
-
   LOG_INFO << "call free test memory objects";
-  lzt::free_memory(context, output_allocation);
+  for (auto next_allocation : output_allocations) {
+    lzt::free_memory(context, next_allocation);
+  }
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
 
@@ -414,10 +395,10 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
   LOG_INFO << "call verification output";
   for (uint64_t byte_idx = 0; byte_idx < test_single_allocation_count;
        byte_idx++) {
-    if (data_out[byte_idx] != set_value_) {
+    if (data_for_all_dispatches[byte_idx][0] != byte_idx) {
       LOG_ERROR << "Results for byte offset ==  " << byte_idx << " failed. "
-                << "Found = 0x" << std::bitset<32>(data_out[byte_idx])
-                << " expected = 0x" << std::bitset<32>(set_value_);
+                << "Found = 0x" << std::bitset<32>(data_for_all_dispatches[byte_idx][0])
+                << " expected = 0x" << std::bitset<32>(byte_idx);
       memory_test_failure = true;
       break;
     }
@@ -437,7 +418,7 @@ struct CombinationsTestNameSuffix {
 
 std::vector<uint64_t> multiple_events = {
     1,    32,   64,    128,    256,     512,     1024,
-    5000, 9000, 10000, 100000, 1000000, 2000000, 10000000};
+    5000, 9000, 10000, 50000};
 
 INSTANTIATE_TEST_CASE_P(
     TestEventsMatrixMinMemory, zeDriverMultiplyEventsStressTest,
