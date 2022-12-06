@@ -132,7 +132,7 @@ endfunction()
 function(add_lzt_test_executable)
     set(options "")
     set(oneValueArgs NAME PREFIX GROUP EXTENDED)
-    set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS MEDIA)
+    set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS KERNELSCUSTOM MEDIA)
     cmake_parse_arguments(ADD_LZT_TEST_EXECUTABLE
       "${options}" "${oneValueArgs}" "${multiValueArgs}"
       ${ARGN}
@@ -220,6 +220,13 @@ function(add_lzt_test_executable)
         )
     endforeach()
 
+    foreach(kernel ${ADD_LZT_TEST_EXECUTABLE_KERNELSCUSTOM})
+        install(
+          FILES "${kernel}"
+          DESTINATION ${destination}
+        )
+    endforeach()
+
     foreach(media ${ADD_LZT_TEST_EXECUTABLE_MEDIA})
         install(
           FILES "${MEDIA_DIRECTORY}/${media}"
@@ -282,6 +289,7 @@ function(add_lzt_test)
       INCLUDE_DIRECTORIES ${ADD_LZT_TEST_INCLUDE_DIRECTORIES}
       LINK_LIBRARIES ${ADD_LZT_TEST_LINK_LIBRARIES}
       KERNELS ${ADD_LZT_TEST_KERNELS}
+      KERNELSCUSTOM ${ADD_LZT_TEST_KERNELSCUSTOM}
       MEDIA ${ADD_LZT_TEST_MEDIA}
       EXTENDED  ${ADD_LZT_TEST_EXTENDED}
     )
