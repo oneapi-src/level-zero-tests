@@ -20,6 +20,7 @@ add_lzt_test(
   KERNELS
     debug_add
     debug_loop
+    debug_loop_slm
 )
 
 add_lzt_test_executable(
