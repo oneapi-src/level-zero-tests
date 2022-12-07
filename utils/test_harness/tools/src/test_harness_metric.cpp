@@ -625,4 +625,64 @@ void validate_metrics_std(zet_metric_group_handle_t hMetricGroup,
   }
 }
 
+bool verify_value_type(zet_value_type_t value_type) {
+  bool value_type_is_valid = true;
+  switch (value_type) {
+  case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
+  case zet_value_type_t::ZET_VALUE_TYPE_UINT64:
+  case zet_value_type_t::ZET_VALUE_TYPE_FLOAT32:
+  case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
+  case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
+    break;
+  default:
+    value_type_is_valid = false;
+    LOG_WARNING << "invalid zet_value_type_t encountered " << value_type;
+    break;
+  }
+  return value_type_is_valid;
+}
+
+bool verify_metric_type(zet_metric_type_t metric_type) {
+  bool metric_type_is_valid = true;
+  switch (metric_type) {
+  case zet_metric_type_t::ZET_METRIC_TYPE_DURATION:
+  case zet_metric_type_t::ZET_METRIC_TYPE_EVENT:
+  case zet_metric_type_t::ZET_METRIC_TYPE_EVENT_WITH_RANGE:
+  case zet_metric_type_t::ZET_METRIC_TYPE_THROUGHPUT:
+  case zet_metric_type_t::ZET_METRIC_TYPE_TIMESTAMP:
+  case zet_metric_type_t::ZET_METRIC_TYPE_FLAG:
+  case zet_metric_type_t::ZET_METRIC_TYPE_RATIO:
+  case zet_metric_type_t::ZET_METRIC_TYPE_RAW:
+    break;
+  default:
+    metric_type_is_valid = false;
+    LOG_WARNING << "inalid zet_metric_type_t encountered " << metric_type;
+    break;
+  }
+  return metric_type_is_valid;
+}
+
+bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup) {
+  bool invalid_type_encountered = false;
+  uint32_t metricCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(hMetricGroup, &metricCount, nullptr));
+  EXPECT_GT(metricCount, 0);
+
+  std::vector<zet_metric_handle_t> phMetrics(metricCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
+
+  for (uint32_t metric = 0; metric < metricCount; metric++) {
+    zet_metric_properties_t properties = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES,
+                                          nullptr};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricGetProperties(phMetrics[metric], &properties));
+    invalid_type_encountered |= !verify_value_type(properties.resultType);
+    invalid_type_encountered |= !verify_metric_type(properties.metricType);
+  }
+
+  return !invalid_type_encountered;
+}
+
 } // namespace level_zero_tests

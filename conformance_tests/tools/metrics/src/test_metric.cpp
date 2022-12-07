@@ -93,6 +93,21 @@ TEST_F(
 
 TEST_F(
     zetMetricGroupTest,
+    GivenValidEventBasedMetricGroupWhenvalidGroupNameIsrequestedThenExpectMetricsValidationsToSucceed) {
+
+  std::vector<std::string> groupNameList;
+  groupNameList = lzt::get_metric_group_name_list(
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+  for (auto groupName : groupNameList) {
+    zet_metric_group_handle_t testMatchedGroupHandle = lzt::find_metric_group(
+        device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED);
+    EXPECT_NE(nullptr, testMatchedGroupHandle);
+    EXPECT_TRUE(lzt::validateMetricsStructures(testMatchedGroupHandle));
+  }
+}
+
+TEST_F(
+    zetMetricGroupTest,
     GivenValidTimeBasedMetricGroupWhenvalidGroupNameIsrequestedThenExpectMatchingMetricHandle) {
 
   std::vector<std::string> groupNameList;
@@ -102,6 +117,21 @@ TEST_F(
     zet_metric_group_handle_t testMatchedGroupHandle = lzt::find_metric_group(
         device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
     EXPECT_NE(nullptr, testMatchedGroupHandle);
+  }
+}
+
+TEST_F(
+    zetMetricGroupTest,
+    GivenValidTimeBasedMetricGroupWhenvalidGroupNameIsrequestedThenExpectMatchingMetricsValidationsToSucceed) {
+
+  std::vector<std::string> groupNameList;
+  groupNameList = lzt::get_metric_group_name_list(
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+  for (auto groupName : groupNameList) {
+    zet_metric_group_handle_t testMatchedGroupHandle = lzt::find_metric_group(
+        device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
+    EXPECT_NE(nullptr, testMatchedGroupHandle);
+    EXPECT_TRUE(lzt::validateMetricsStructures(testMatchedGroupHandle));
   }
 }
 

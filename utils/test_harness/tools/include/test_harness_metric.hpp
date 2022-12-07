@@ -111,6 +111,9 @@ void validate_metrics_std(zet_metric_group_handle_t matchedGroupHandle,
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
     uint32_t percentOfMetricGroupForTest = 20);
+
+bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup);
+
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */
