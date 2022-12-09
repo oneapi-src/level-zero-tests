@@ -23,9 +23,14 @@ namespace bipc = boost::interprocess;
 
 #ifdef __linux__
 static const ze_event_desc_t defaultEventDesc = {
-    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, 0,
+    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, ZE_EVENT_SCOPE_FLAG_HOST,
     ZE_EVENT_SCOPE_FLAG_HOST // ensure memory coherency across device
                              // and Host after event signalled
+};
+static const ze_event_desc_t defaultDeviceEventDesc = {
+    ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 5, ZE_EVENT_SCOPE_FLAG_DEVICE,
+    ZE_EVENT_SCOPE_FLAG_DEVICE // ensure memory coherency across device
+                               // after event signalled
 };
 
 ze_event_pool_desc_t defaultEventPoolDesc = {
@@ -40,9 +45,14 @@ static void child_host_reads(ze_event_pool_handle_t hEventPool) {
   zeEventDestroy(hEvent);
 }
 
-static void child_device_reads(ze_event_pool_handle_t hEventPool) {
+static void child_device_reads(ze_event_pool_handle_t hEventPool,
+                               bool device_events) {
   ze_event_handle_t hEvent;
-  zeEventCreate(hEventPool, &defaultEventDesc, &hEvent);
+  if (device_events) {
+    zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent);
+  } else {
+    zeEventCreate(hEventPool, &defaultEventDesc, &hEvent);
+  }
 
   auto cmdlist = lzt::create_command_list();
   auto cmdqueue = lzt::create_command_queue();
@@ -140,6 +150,11 @@ int main() {
     LOG_DEBUG << "Child exit due to null event pool";
     exit(1);
   }
+  bool device_events = false;
+  if (shared_data.parent_type == PARENT_TEST_DEVICE_SIGNALS &&
+      shared_data.child_type == CHILD_TEST_DEVICE_READS) {
+    device_events = true;
+  }
   LOG_INFO << "IPC Child open event handle success";
   switch (shared_data.child_type) {
 
@@ -147,7 +162,7 @@ int main() {
     child_host_reads(hEventPool);
     break;
   case CHILD_TEST_DEVICE_READS:
-    child_device_reads(hEventPool);
+    child_device_reads(hEventPool, device_events);
     break;
   case CHILD_TEST_DEVICE2_READS:
     child_device2_reads(hEventPool);
