@@ -96,6 +96,18 @@ ze_module_handle_t create_module(ze_context_handle_t context,
                                  const ze_module_format_t format,
                                  const char *build_flags,
                                  ze_module_build_log_handle_t *p_build_log) {
+  ze_result_t build_result = ZE_RESULT_SUCCESS;
+  return create_module(lzt::get_default_context(), device, filename, format,
+                       build_flags, p_build_log, &build_result);
+}
+
+ze_module_handle_t create_module(ze_context_handle_t context,
+                                 ze_device_handle_t device,
+                                 const std::string filename,
+                                 const ze_module_format_t format,
+                                 const char *build_flags,
+                                 ze_module_build_log_handle_t *p_build_log,
+                                 ze_result_t *build_result) {
 
   ze_module_desc_t module_description = {};
   module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
@@ -116,9 +128,9 @@ ze_module_handle_t create_module(ze_context_handle_t context,
 
   auto context_initial = context;
   auto device_initial = device;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleCreate(context, device, &module_description, &module,
-                           p_build_log));
+  *build_result = zeModuleCreate(context, device, &module_description, &module,
+                                 p_build_log);
+  EXPECT_EQ(*build_result, ZE_RESULT_SUCCESS);
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
 

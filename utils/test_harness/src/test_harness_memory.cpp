@@ -288,7 +288,7 @@ void query_page_size(ze_context_handle_t context, ze_device_handle_t device,
 
 void virtual_memory_reservation(ze_context_handle_t context, const void *pStart,
                                 size_t size, void **memory) {
-  EXPECT_EQ(zeVirtualMemReserve(context, pStart, size, memory),
+  ASSERT_EQ(zeVirtualMemReserve(context, pStart, size, memory),
             ZE_RESULT_SUCCESS);
 }
 

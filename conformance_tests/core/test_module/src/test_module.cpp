@@ -243,8 +243,12 @@ TEST_F(
     GivenValidSpecConstantsWhenCreatingModuleThenExpectSpecConstantInKernelGetsUpdates) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
+  ze_result_t build_result = ZE_RESULT_ERROR_UNKNOWN;
   ze_module_handle_t module =
-      lzt::create_module(device, "update_variable_with_spec_constant.spv");
+      lzt::create_module(lzt::get_default_context(), device,
+                         "update_variable_with_spec_constant.spv",
+                         ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr, &build_result);
+  ASSERT_EQ(build_result, ZE_RESULT_SUCCESS);
   std::string kernel_name = "test";
   void *buff = lzt::allocate_host_memory(sizeof(uint64_t));
   lzt::create_and_execute_function(device, module, kernel_name, 1, buff);
@@ -273,7 +277,7 @@ TEST_F(
   module_description.pBuildFlags = nullptr;
   module_description.pConstants = &specConstants;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeModuleCreate(lzt::get_default_context(), device,
                            &module_description, &module_spec, nullptr));
   kernel_name = "test";
@@ -302,10 +306,10 @@ TEST_F(
   void *function_pointer;
 
   function_pointer = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeModuleGetFunctionPointer(module, function_pointer_name.c_str(),
                                        &function_pointer));
-  EXPECT_NE(nullptr, function_pointer);
+  ASSERT_NE(nullptr, function_pointer);
   ze_kernel_handle_t function = lzt::create_function(module, function_name);
   ze_command_list_handle_t cmdlist = lzt::create_command_list(device);
   ze_command_queue_handle_t cmdq = lzt::create_command_queue(device);

@@ -129,9 +129,10 @@ TEST_F(
                                   &reservedVirtualMemory);
   EXPECT_NE(nullptr, reservedVirtualMemory);
 
-  lzt::virtual_memory_map(context, reservedVirtualMemory, allocationSize,
-                          reservedPhysicalMemory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+  ASSERT_EQ(zeVirtualMemMap(context, reservedVirtualMemory, allocationSize,
+                            reservedPhysicalMemory, 0,
+                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+            ZE_RESULT_SUCCESS);
   int8_t pattern = 9;
   void *memory = lzt::allocate_shared_memory(allocationSize, pageSize);
   lzt::append_memory_fill(cmdlist, reservedVirtualMemory, &pattern,
