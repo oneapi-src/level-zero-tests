@@ -97,6 +97,11 @@ void adjust_max_memory_allocation(
     LOG_INFO << "One allocation size too low. Change from "
              << one_allocation_size << " to " << min_page_size;
     one_allocation_size = min_page_size; // increased
+    while (number_of_all_alloc * one_allocation_size *
+            test_arguments.total_memory_size_limit >
+            total_allocation_size) {
+      number_of_all_alloc--;
+    }
     total_allocation_size = number_of_all_alloc * one_allocation_size *
                             test_arguments.total_memory_size_limit;
   }

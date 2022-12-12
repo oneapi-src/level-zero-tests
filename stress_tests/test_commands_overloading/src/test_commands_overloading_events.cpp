@@ -281,6 +281,15 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
   uint64_t test_single_allocation_count =
       test_single_allocation_memory_size / sizeof(uint32_t);
 
+  if (number_of_all_allocations !=
+      used_vectors_in_test * test_arguments.multiplier) {
+
+    LOG_INFO << "Need to limit dispatches from : " << test_arguments.multiplier
+             << " to: " << number_of_all_allocations / used_vectors_in_test;
+    test_arguments.multiplier =
+        number_of_all_allocations / used_vectors_in_test;
+  }
+
   // We have relation between single allocation size and events/multiplier
   // Need to override single allocation size/count to multiplier value
   // if these calculated values are bigger than requested
