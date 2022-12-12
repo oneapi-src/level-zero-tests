@@ -715,4 +715,109 @@ TEST_F(
     }
   }
 }
+TEST_F(
+    PowerModuleTest,
+    GivenValidCardPowerHandleWhenRequestingPowerPropertiesThenExpectOnSubDeviceToReturnFalse) {
+  for (auto device : devices) {
+    auto p_power_handle = lzt::get_card_power_handle(device);
+    if (p_power_handle == nullptr) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    auto p_properties = lzt::get_power_properties(p_power_handle);
+    EXPECT_EQ(false, p_properties.onSubdevice);
+  }
+}
+TEST_F(
+    PowerModuleTest,
+    GivenValidCardPowerHandleWhenRequestingPowerLimitsThenExpectzesPowerGetLimitsExtToReturnSameValuesTwice) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto p_power_handle = lzt::get_card_power_handle(device);
+    if (p_power_handle == nullptr) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    uint32_t count_power = 0;
+    zes_power_limit_ext_desc_t power_peak_descriptor_initial = {};
+    zes_power_limit_ext_desc_t power_burst_descriptor_initial = {};
+    zes_power_limit_ext_desc_t power_sustained_descriptor_initial = {};
+    zes_power_limit_ext_desc_t power_instantaneous_descriptor_initial = {};
+    zes_power_limit_ext_desc_t power_peak_descriptor_later = {};
+    zes_power_limit_ext_desc_t power_burst_descriptor_later = {};
+    zes_power_limit_ext_desc_t power_sustained_descriptor_later = {};
+    zes_power_limit_ext_desc_t power_instantaneous_descriptor_later = {};
+    auto power_limits_descriptors_initial =
+        lzt::get_power_limits_ext(p_power_handle, &count_power);
+    for (auto power_limits_descriptor_initial :
+         power_limits_descriptors_initial) {
+      if (power_limits_descriptor_initial.level == ZES_POWER_LEVEL_SUSTAINED) {
+        power_sustained_descriptor_initial = power_limits_descriptor_initial;
+      } else if (power_limits_descriptor_initial.level ==
+                 ZES_POWER_LEVEL_PEAK) {
+        power_peak_descriptor_initial = power_limits_descriptor_initial;
+      } else if (power_limits_descriptor_initial.level ==
+                 ZES_POWER_LEVEL_BURST) {
+        power_burst_descriptor_initial = power_limits_descriptor_initial;
+      } else if (power_limits_descriptor_initial.level ==
+                 ZES_POWER_LEVEL_INSTANTANEOUS) {
+        power_instantaneous_descriptor_initial =
+            power_limits_descriptor_initial;
+      }
+    }
+    auto power_limits_descriptors_later =
+        lzt::get_power_limits_ext(p_power_handle, &count_power);
+    for (auto power_limits_descriptor_later : power_limits_descriptors_later) {
+      if (power_limits_descriptor_later.level == ZES_POWER_LEVEL_SUSTAINED) {
+        power_sustained_descriptor_later = power_limits_descriptor_later;
+      } else if (power_limits_descriptor_later.level == ZES_POWER_LEVEL_PEAK) {
+        power_peak_descriptor_later = power_limits_descriptor_later;
+      } else if (power_limits_descriptor_later.level == ZES_POWER_LEVEL_BURST) {
+        power_burst_descriptor_later = power_limits_descriptor_later;
+      } else if (power_limits_descriptor_later.level ==
+                 ZES_POWER_LEVEL_INSTANTANEOUS) {
+        power_instantaneous_descriptor_later = power_limits_descriptor_later;
+      }
+    }
+    lzt::compare_power_descriptor_structures(power_sustained_descriptor_initial,
+                                             power_sustained_descriptor_later);
+    lzt::compare_power_descriptor_structures(power_peak_descriptor_initial,
+                                             power_peak_descriptor_later);
+    lzt::compare_power_descriptor_structures(power_burst_descriptor_initial,
+                                             power_burst_descriptor_later);
+    lzt::compare_power_descriptor_structures(
+        power_instantaneous_descriptor_initial,
+        power_instantaneous_descriptor_later);
+  }
+}
+TEST_F(
+    PowerModuleTest,
+    GivenValidPowerHandleWhenRequestingEnergyCounterThenExpectEnergyConsumedByCardToBeGreaterThanOrEqualsToEnergyConsumedBySubdevices) {
+  for (auto device : devices) {
+    auto p_power_handle = lzt::get_card_power_handle(device);
+    if (p_power_handle == nullptr) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    uint32_t count = 0;
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    zes_power_energy_counter_t p_energy = {};
+    lzt::get_power_energy_counter(p_power_handle, &p_energy);
+    uint32_t total_subdevice_energy = 0;
+    for (auto p_power_handle : p_power_handles) {
+      auto pProperties = lzt::get_power_properties(p_power_handle);
+      zes_power_energy_counter_t p_energy_subdevice = {};
+      lzt::get_power_energy_counter(p_power_handle, &p_energy_subdevice);
+      if (pProperties.onSubdevice == true) {
+        total_subdevice_energy =
+            total_subdevice_energy + p_energy_subdevice.energy;
+      }
+    }
+    EXPECT_GE(p_energy.energy, total_subdevice_energy);
+  }
+}
 } // namespace

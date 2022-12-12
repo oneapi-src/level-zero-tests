@@ -30,6 +30,13 @@ std::vector<zes_pwr_handle_t> get_power_handles(zes_device_handle_t device,
                                    device, &p_count, p_power_handles.data()));
   return p_power_handles;
 }
+zes_pwr_handle_t get_card_power_handle(zes_device_handle_t device) {
+  zes_pwr_handle_t p_powerdomain_handle = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceGetCardPowerDomain(device, &p_powerdomain_handle));
+  EXPECT_NE(nullptr, p_powerdomain_handle);
+  return p_powerdomain_handle;
+}
 zes_power_properties_t get_power_properties(zes_pwr_handle_t pPowerHandle) {
   zes_power_properties_t pProperties = {ZES_STRUCTURE_TYPE_POWER_PROPERTIES,
                                         nullptr};

@@ -15,6 +15,7 @@ namespace level_zero_tests {
 uint32_t get_power_handle_count(zes_device_handle_t device);
 std::vector<zes_pwr_handle_t> get_power_handles(zes_device_handle_t device,
                                                 uint32_t &count);
+zes_pwr_handle_t get_card_power_handle(zes_device_handle_t device);
 zes_power_properties_t get_power_properties(zes_pwr_handle_t pPowerhandle);
 void get_power_limits(zes_pwr_handle_t pPowerHandle,
                       zes_power_sustained_limit_t *pSustained,
