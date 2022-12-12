@@ -171,6 +171,58 @@ TEST_F(
   }
 }
 
+static double set_performance_factor(zes_perf_handle_t pHandle,
+                                     double pFactor) {
+  lzt::set_performance_config(pHandle, pFactor);
+  double getFactor = lzt::get_performance_config(pHandle);
+  return getFactor;
+}
+
+TEST_F(
+    PerformanceModuleTest,
+    GivenValidPerformanceHandleWhenSettingMultiplePerformanceConfigurationsForMediaThenValidPerformanceFactorIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto performance_handles = lzt::get_performance_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto performance_handle : performance_handles) {
+      ASSERT_NE(nullptr, performance_handle);
+      zes_perf_properties_t perfProperties = {};
+      perfProperties = lzt::get_performance_properties(performance_handle);
+      if (perfProperties.engines & ZES_ENGINE_TYPE_FLAG_MEDIA) {
+        auto initialFactor = lzt::get_performance_config(performance_handle);
+        // Verify that performance factor is equal to 50 if value set is 1-50
+        // and equal to 100 if value set is 51-100
+        // value 25
+        double pFactor = set_performance_factor(performance_handle, 25);
+        EXPECT_EQ(pFactor, 50);
+        // value 49
+        pFactor = set_performance_factor(performance_handle, 49);
+        EXPECT_EQ(pFactor, 50);
+        // value 50
+        pFactor = set_performance_factor(performance_handle, 50);
+        EXPECT_EQ(pFactor, 50);
+        // value 51
+        pFactor = set_performance_factor(performance_handle, 51);
+        EXPECT_EQ(pFactor, 100);
+        // value 75
+        pFactor = set_performance_factor(performance_handle, 75);
+        EXPECT_EQ(pFactor, 100);
+        // value 99
+        pFactor = set_performance_factor(performance_handle, 99);
+        EXPECT_EQ(pFactor, 100);
+        // value 100
+        pFactor = set_performance_factor(performance_handle, 100);
+        EXPECT_EQ(pFactor, 100);
+        lzt::set_performance_config(performance_handle, initialFactor);
+      }
+    }
+  }
+}
+
 TEST_F(
     PerformanceModuleTest,
     GivenValidPerformanceHandleWhenGettingPerformanceConfigurationThenValidPerformanceFactorIsReturned) {
