@@ -535,8 +535,8 @@ TEST_P(
       if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
           (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS) &&
           ((dev_access_scan_[i]
-               .dev_mem_access_properties.sharedCrossDeviceAllocCapabilities &
-           ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC) ||
+                .dev_mem_access_properties.sharedCrossDeviceAllocCapabilities &
+            ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC) ||
            memory_type_ == ZE_MEMORY_TYPE_DEVICE)) {
         dev_access_.push_back(dev_access_scan_[j]);
         dev_access_.push_back(dev_access_scan_[i]);
