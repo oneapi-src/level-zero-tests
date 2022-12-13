@@ -143,7 +143,10 @@ TEST_F(
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
   lzt::synchronize(cmdqueue, UINT64_MAX);
-  lzt::validate_data_pattern(memory, allocationSize, pattern);
+  uint8_t *data = reinterpret_cast<uint8_t *>(memory);
+  for (int i = 0; i < allocationSize; i++) {
+    ASSERT_EQ(data[i], pattern);
+  }
 
   lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
   lzt::physical_memory_destroy(context, reservedPhysicalMemory);
