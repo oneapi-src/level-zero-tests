@@ -104,7 +104,7 @@ INSTANTIATE_TEST_CASE_P(zeEventSignalScopeParameterizedTest,
                                           ZE_EVENT_SCOPE_FLAG_HOST));
 
 TEST_F(zeDeviceCreateEventPoolTests,
-       GivenDefaultDeviceWhenGettingIpcEventHandleThenNotNullIsReturned) {
+       GivenDefaultDeviceWhenGettingIpcEventHandleThenNotNullisReturned) {
   ze_ipc_event_pool_handle_t hIpc;
   ep.InitEventPool(32, ZE_EVENT_POOL_FLAG_IPC);
 
@@ -115,8 +115,7 @@ TEST_F(
     zeDeviceCreateEventPoolTests,
     GivenDefaultDeviceWhenGettingIpcEventHandleAndOpeningAndClosingThenSuccessIsReturned) {
   ze_ipc_event_pool_handle_t hIpc;
-  ep.InitEventPool(32,
-                   ZE_EVENT_POOL_FLAG_IPC | ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+  ep.InitEventPool(32, ZE_EVENT_POOL_FLAG_IPC);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(ep.event_pool_, &hIpc));
 
