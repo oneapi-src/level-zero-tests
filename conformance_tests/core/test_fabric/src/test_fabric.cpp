@@ -13,6 +13,11 @@
 #include "logging/logging.hpp"
 #include <unordered_map>
 
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
+namespace bp = boost::process;
+
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
@@ -38,7 +43,51 @@ TEST(
 }
 
 TEST(
-    zeFabricVertexGetProperties,
+    zeFabricVertexGetTests,
+    GivenValidCountWhenRetrievingFabricVerticesThenVerifyMultipleCallsReturnSameVertexHandles) {
+
+  auto vertices_first = lzt::get_ze_fabric_vertices();
+  auto vertices_second = lzt::get_ze_fabric_vertices();
+  EXPECT_TRUE(vertices_first == vertices_second);
+
+  for (auto &vertex : vertices_first) {
+    auto subVertices_first = lzt::get_ze_fabric_sub_vertices(vertex);
+    auto subVertices_second = lzt::get_ze_fabric_sub_vertices(vertex);
+    EXPECT_TRUE(subVertices_first == subVertices_second);
+  }
+}
+
+TEST(
+    zeFabricVertexGetTests,
+    GivenAffinityMaskIsSetWhenCallingFabricVertexGetThenVerifyOnlyExpectedVerticesAndSubVerticesAreReturned) {
+
+  auto devices = lzt::get_ze_devices();
+  if (devices.size() < 1) {
+    LOG_WARNING << "Test not executed due to not enough devices";
+    return;
+  }
+
+  auto sub_devices = lzt::get_ze_sub_devices(devices[0]);
+  if (sub_devices.size() < 2) {
+    LOG_WARNING << "Test not executed due to not enough sub-devices";
+    return;
+  }
+
+  bp::environment child_env = boost::this_process::environment();
+  child_env["ZE_AFFINITY_MASK"] = "0.1";
+  fs::path helper_path(fs::current_path() / "fabric");
+  std::vector<fs::path> paths;
+  paths.push_back(helper_path);
+  fs::path helper = bp::search_path("test_fabric_helper", paths);
+  bp::child fabric_helper(helper, child_env);
+
+  fabric_helper.wait();
+  const auto is_affinity_set_correctly = (fabric_helper.exit_code() == 0);
+  EXPECT_TRUE(is_affinity_set_correctly);
+}
+
+TEST(
+    zeFabricVertexGetPropertiesTests,
     GivenValidFabricVertexWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
 
   auto vertices = lzt::get_ze_fabric_vertices();
@@ -63,6 +112,39 @@ TEST(
       }
     } else {
       EXPECT_TRUE(properties.remote);
+    }
+  }
+}
+
+TEST(
+    zeFabricVertexGetTests,
+    GivenValidVerticesAndSubverticesThenVerifyVerticesAreDevicesAndSubverticesAreSubDevices) {
+
+  auto vertices = lzt::get_ze_fabric_vertices();
+
+  for (auto &vertex : vertices) {
+    ze_device_handle_t device = {};
+    ze_device_properties_t device_properties = {};
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeFabricVertexGetDeviceExp(vertex, &device));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetProperties(device, &device_properties));
+    EXPECT_EQ(device_properties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE, 0u);
+
+    auto count = lzt::get_ze_fabric_sub_vertices_count(vertex);
+    if (count > 0) {
+      std::vector<ze_fabric_vertex_handle_t> sub_vertices(count);
+      sub_vertices = lzt::get_ze_fabric_sub_vertices(vertex);
+      for (const auto &sub_vertex : sub_vertices) {
+        ze_device_handle_t sub_device = {};
+        ze_device_properties_t sub_device_properties = {};
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeFabricVertexGetDeviceExp(sub_vertex, &sub_device));
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeDeviceGetProperties(sub_device, &sub_device_properties));
+        EXPECT_EQ(sub_device_properties.flags &
+                      ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE,
+                  ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE);
+      }
     }
   }
 }
@@ -93,7 +175,7 @@ TEST(
 }
 
 TEST(
-    zeFabricVertexGetProperties,
+    zeFabricVertexGetPropertiesTests,
     GivenValidFabricSubVertexWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
 
   auto vertices = lzt::get_ze_fabric_vertices();
@@ -128,7 +210,7 @@ TEST(
   }
 }
 
-TEST(zeDeviceGetFabricVertex,
+TEST(zeDeviceGetFabricVertexTests,
      GivenValidDeviceAndSubDeviceWhenGettingVertexThenValidVertexIsReturned) {
 
   auto devices = lzt::get_ze_devices();
@@ -222,6 +304,83 @@ TEST(zeFabricEdgeGetTests,
   }
 }
 
+TEST(
+    zeFabricEdgeGetTests,
+    GivenValidEdgesWhenRetrievingFabricEdgesThenVerifyMultipleCallsReturnsSameEdges) {
+
+  std::vector<ze_fabric_vertex_handle_t> vertices = fabric_get_all_vertices();
+  auto vertex_count = vertices.size();
+  if (vertex_count < 2) {
+    LOG_WARNING << "Test not executed due to not enough vertices";
+    return;
+  }
+
+  for (auto &vertex_a : vertices) {
+    for (auto &vertex_b : vertices) {
+      auto edge_count = lzt::get_ze_fabric_edge_count(vertex_a, vertex_b);
+      auto edges_first =
+          lzt::get_ze_fabric_edges(vertex_a, vertex_b, edge_count);
+      auto edges_second =
+          lzt::get_ze_fabric_edges(vertex_a, vertex_b, edge_count);
+      EXPECT_TRUE(edges_first == edges_second);
+    }
+  }
+}
+
+TEST(
+    zeFabricEdgeGetTests,
+    GivenFabricEdgeExistsBetweenSubVerticesOfDifferentVerticesThenVerifyEdgeExistsBetweenVertices) {
+
+  if (lzt::get_ze_device_count() < 2) {
+    LOG_WARNING << "Test not executed due to not enough devices";
+    return;
+  }
+
+  auto devices = lzt::get_ze_devices();
+  if (lzt::get_ze_sub_device_count(devices[0]) == 0) {
+    LOG_WARNING << "Test not executed due to not enough sub devices";
+    return;
+  }
+
+  if (lzt::get_ze_sub_device_count(devices[1]) == 0) {
+    LOG_WARNING << "Test not executed due to not enough sub devices";
+    return;
+  }
+
+  bool is_sub_device_connected = false;
+  // Check connectivity between the subdevices of the devices
+  for (auto sub_device_root0 : lzt::get_ze_sub_devices(devices[0])) {
+
+    ze_fabric_vertex_handle_t vertex_a{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetFabricVertexExp(sub_device_root0, &vertex_a));
+
+    for (auto sub_device_root1 : lzt::get_ze_sub_devices(devices[1])) {
+      ze_fabric_vertex_handle_t vertex_b{};
+
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeDeviceGetFabricVertexExp(sub_device_root1, &vertex_b));
+      if (lzt::get_ze_fabric_edge_count(vertex_a, vertex_b) > 0) {
+        is_sub_device_connected = true;
+        break;
+      }
+    }
+  }
+
+  if (is_sub_device_connected == true) {
+    ze_fabric_vertex_handle_t vertex_a{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetFabricVertexExp(devices[0], &vertex_a));
+    ze_fabric_vertex_handle_t vertex_b{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetFabricVertexExp(devices[1], &vertex_b));
+    EXPECT_GT(lzt::get_ze_fabric_edge_count(vertex_a, vertex_b), 0);
+  } else {
+    LOG_WARNING << "Test not executed since fabric edges do not exist between "
+                   "sub devices";
+  }
+}
+
 TEST(zeFabricEdgeGetTests,
      GivenValidCountWhenRetrievingFabricEdgesThenValidFabricEdgesAreReturned) {
 
@@ -305,6 +464,117 @@ TEST(zeFabricEdgeGetTests, GivenValidFabricEdgesThenEdgePropertyUuidIsUnique) {
     } else {
       break;
     }
+  }
+}
+
+TEST(zeFabricEdgeGetTests,
+     GivenValidFabricEdgesThenVerifyDevicesCanAccessPeer) {
+  std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
+  if (edges.size() == 0) {
+    LOG_WARNING << "Test not executed due to not enough edges";
+    return;
+  }
+
+  for (auto &edge : edges) {
+    ze_fabric_vertex_handle_t vertex_a = nullptr, vertex_b = nullptr;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeFabricEdgeGetVerticesExp(edge, &vertex_a, &vertex_b));
+    ze_device_handle_t device_a{}, device_b{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeFabricVertexGetDeviceExp(vertex_a, &device_a));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeFabricVertexGetDeviceExp(vertex_b, &device_b));
+    EXPECT_TRUE(lzt::can_access_peer(device_a, device_b));
+  }
+}
+
+static void
+fabric_edge_get_minimum_bandwidth(std::vector<ze_fabric_edge_handle_t> &edges,
+                                  ze_bandwidth_unit_t &bandwidth_unit,
+                                  uint32_t &bandwidth) {
+
+  for (auto &edge : edges) {
+    auto edge_property = lzt::get_ze_fabric_edge_properties(edges[0]);
+    if (edge_property.bandwidth == 0) {
+      continue;
+    }
+
+    // Ignore different bandwidth units
+    if ((bandwidth_unit != ZE_BANDWIDTH_UNIT_UNKNOWN) &&
+        (bandwidth_unit != edge_property.bandwidthUnit)) {
+      continue;
+    }
+
+    bandwidth = std::min(bandwidth, edge_property.bandwidth);
+    bandwidth_unit = edge_property.bandwidthUnit;
+  }
+}
+
+TEST(
+    zeFabricEdgeGetTests,
+    GivenValidFabricEdgesThenVerifyThatRootVerticesEdgeBandwidthIsAtleastTheLowestBandwidthOfTheSubVerticesBandwidth) {
+
+  if (lzt::get_ze_device_count() < 2) {
+    LOG_WARNING << "Test not executed due to not enough devices";
+    return;
+  }
+
+  auto devices = lzt::get_ze_devices();
+  if (lzt::get_ze_sub_device_count(devices[0]) == 0) {
+    LOG_WARNING << "Test not executed due to not enough sub devices";
+    return;
+  }
+
+  if (lzt::get_ze_sub_device_count(devices[1]) == 0) {
+    LOG_WARNING << "Test not executed due to not enough sub devices";
+    return;
+  }
+
+  // Identify Edges between subdevices and find the least bandwidth
+  uint32_t sub_device_bandwidth = std::numeric_limits<uint32_t>::max();
+  auto sub_device_bandwidth_unit = ZE_BANDWIDTH_UNIT_UNKNOWN;
+  auto sub_devices_root0 = lzt::get_ze_sub_devices(devices[0]);
+  for (auto sub_device_root0 : sub_devices_root0) {
+    ze_fabric_vertex_handle_t vertex_a{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetFabricVertexExp(sub_device_root0, &vertex_a));
+    auto sub_devices_root1 = lzt::get_ze_sub_devices(devices[1]);
+
+    for (auto sub_device_root1 : sub_devices_root1) {
+      ze_fabric_vertex_handle_t vertex_b{};
+
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeDeviceGetFabricVertexExp(sub_device_root1, &vertex_b));
+      auto edge_count = lzt::get_ze_fabric_edge_count(vertex_a, vertex_b);
+      if (edge_count > 0) {
+
+        auto edges = lzt::get_ze_fabric_edges(vertex_a, vertex_b, edge_count);
+        fabric_edge_get_minimum_bandwidth(edges, sub_device_bandwidth_unit,
+                                          sub_device_bandwidth);
+      }
+    }
+  }
+
+  EXPECT_NE(sub_device_bandwidth_unit, ZE_BANDWIDTH_UNIT_UNKNOWN);
+
+  if (sub_device_bandwidth_unit != ZE_BANDWIDTH_UNIT_UNKNOWN) {
+
+    uint32_t device_bandwidth = std::numeric_limits<uint32_t>::max();
+    auto device_bandwidth_unit = ZE_BANDWIDTH_UNIT_UNKNOWN;
+    ze_fabric_vertex_handle_t vertex_a{}, vertex_b{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetFabricVertexExp(devices[0], &vertex_a));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetFabricVertexExp(devices[1], &vertex_b));
+
+    auto edge_count = lzt::get_ze_fabric_edge_count(vertex_a, vertex_b);
+    EXPECT_GT(edge_count, 0u);
+    auto edges = lzt::get_ze_fabric_edges(vertex_a, vertex_b, edge_count);
+    fabric_edge_get_minimum_bandwidth(edges, device_bandwidth_unit,
+                                      device_bandwidth);
+    EXPECT_NE(device_bandwidth_unit, ZE_BANDWIDTH_UNIT_UNKNOWN);
+
+    EXPECT_GE(device_bandwidth, sub_device_bandwidth);
   }
 }
 

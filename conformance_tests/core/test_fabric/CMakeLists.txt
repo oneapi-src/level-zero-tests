@@ -30,3 +30,14 @@ add_lzt_test(
     level_zero_tests::logging    
     level_zero_tests::utils  
 )
+
+add_lzt_test_executable(
+  NAME test_fabric_helper
+  GROUP "/conformance_tests/core"
+  PREFIX "fabric"
+  SOURCES
+  src/test_fabric_helper.cpp
+  LINK_LIBRARIES
+  level_zero_tests::logging
+  level_zero_tests::utils
+)
