@@ -515,14 +515,19 @@ TEST_F(zeMemFreeExtTests, GetMemoryFreePolicyFlagsAndVerifySet) {
     properties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
     properties.pNext = &ext_properties;
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetProperties(driver, &properties));
-    EXPECT_EQ(ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE,
-              static_cast<uint32_t>(
-                  ext_properties.freePolicies &
-                  ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE));
-    EXPECT_EQ(ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE,
-              static_cast<uint32_t>(
-                  ext_properties.freePolicies &
-                  ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE));
+    EXPECT_GE(ext_properties.freePolicies, 0u);
+    if (ext_properties.freePolicies > 0) {
+      uint32_t valid_policy_flags_found = 0;
+      if (ext_properties.freePolicies &
+          ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE) {
+        valid_policy_flags_found += 1;
+      }
+      if (ext_properties.freePolicies &
+          ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE) {
+        valid_policy_flags_found += 1;
+      }
+      EXPECT_NE(valid_policy_flags_found, 0u);
+    }
   }
 }
 
