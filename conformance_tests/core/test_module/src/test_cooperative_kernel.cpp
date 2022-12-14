@@ -65,7 +65,7 @@ TEST_P(
 
   module = lzt::create_module(context, device, "cooperative_kernel.spv",
                               ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
-  kernel = lzt::create_function(module, "module_cooperative_pascal");
+  kernel = lzt::create_function(module, "cooperative_kernel");
 
   // Use a small group size in order to use more groups
   // in order to stress cooperation
@@ -94,13 +94,10 @@ TEST_P(
   lzt::synchronize(command_queue, UINT64_MAX);
 
   // Validate the kernel completed successfully and correctly
-  uint64_t prev_val = 1;
-  uint64_t val = 1;
-  for (int i = 0; i <= row_num / 2; i++) {
-    val = i ? (prev_val * (row_num + 1 - i)) / i : 1;
+  uint64_t val = 0;
+  for (int i = 0; i <= row_num; i++) {
+    val = i + row_num;
     ASSERT_EQ(static_cast<uint64_t *>(input_data)[i], val);
-    ASSERT_EQ(static_cast<uint64_t *>(input_data)[row_num - i], val);
-    prev_val = val;
   }
 
   lzt::free_memory(context, input_data);

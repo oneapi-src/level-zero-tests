@@ -1,13 +1,12 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2022 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
 
-// compute the n'th row of Pascal's triangle and store in buffer
-kernel void module_cooperative_pascal(global ulong *buffer, const int n) {
+kernel void cooperative_kernel(global ulong *buffer, const int n) {
 
   const int work_group_id = get_group_id(0);
   const int xid = get_global_id(0);
@@ -21,19 +20,11 @@ kernel void module_cooperative_pascal(global ulong *buffer, const int n) {
     printf("Number of items in work-group: %d\n", xgsize);
   }
 
-  ulong val;
+  ulong val = 0;
+  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
   for (int i = 0; i <= n; i++) {
-    if (xid == 0 || xid == i) {
-      val = 1;
-    } else if (xid < i) {
-      val = buffer[xid - 1] + buffer[xid];
-    }
-    // Adding the global barriers should guarantee not to deadlock
-    // because the cooperative kernel API will suggest a group count
-    // such that all groups are active
-    global_barrier();
+    val = xid + n;
     buffer[xid] = val;
-    global_barrier(); // ensure that all threads have finished
-    // updating previous row before continuing
   }
+  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 }
