@@ -29,15 +29,27 @@ protected:
   typedef uint32_t kernel_copy_unit_t;
   const size_t kernel_copy_unit_size = sizeof(kernel_copy_unit_t);
 
-  void dispatch_kernels(const ze_device_handle_t device,
-                        ze_module_handle_t module_handle,
-                        std::vector<kernel_copy_unit_t *> src_allocations,
-                        std::vector<kernel_copy_unit_t *> dst_allocations,
-                        std::vector<std::vector<uint8_t>> &data_out,
-                        const std::vector<std::string> &test_kernel_names,
-                        uint32_t number_of_dispatch,
-                        uint64_t one_case_allocation_count,
-                        ze_context_handle_t context) {
+  bool verify_results(kernel_copy_unit_t *allocation,
+                      uint64_t test_single_allocation_count) {
+    for (uint64_t i = 0; i < test_single_allocation_count; i++) {
+      if (init_value_2_ != allocation[i]) {
+        LOG_INFO << "Mismatch detected "
+                 << " found = 0x" << std::bitset<32>(allocation[i])
+                 << " expected = 0x" << std::bitset<32>(init_value_2_);
+        return true;
+      }
+    }
+    return false;
+  }
+  void dispatch_kernels(
+      const ze_device_handle_t device, ze_memory_type_t memory_type,
+      ze_module_handle_t module_handle,
+      const std::vector<kernel_copy_unit_t *> &src_allocations,
+      std::vector<kernel_copy_unit_t *> &dst_allocations,
+      std::vector<std::vector<kernel_copy_unit_t>> &data_out,
+      const std::vector<std::string> &test_kernel_names,
+      uint32_t number_of_dispatch, uint64_t one_case_allocation_count,
+      ze_context_handle_t context) {
 
     std::vector<ze_kernel_handle_t> test_functions;
     ze_command_list_handle_t command_list =
@@ -76,10 +88,11 @@ protected:
 
       lzt::append_barrier(command_list, nullptr);
 
-      lzt::append_memory_copy(
-          command_list, data_out[dispatch_id].data(), dst_allocation,
-          data_out[dispatch_id].size() * sizeof(uint8_t), nullptr);
-
+      if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
+        lzt::append_memory_copy(
+            command_list, data_out[dispatch_id].data(), dst_allocation,
+            one_case_allocation_count * kernel_copy_unit_size, nullptr);
+      }
       lzt::append_barrier(command_list, nullptr);
 
       test_functions.push_back(kernel_handle);
@@ -104,9 +117,9 @@ protected:
 
   uint32_t workgroup_size_x_ = 8;
   uint32_t number_of_kernels_in_module_ = 10;
-  uint8_t init_value_1_ = 0;
-  uint8_t init_value_2_ = 0xAA; // 1010 1010
-  uint8_t init_value_3_ = 0x55; // 0101 0101
+  kernel_copy_unit_t init_value_1_ = 0;
+  kernel_copy_unit_t init_value_2_ = 0xAAAAAAAA; // 1010 1010
+  kernel_copy_unit_t init_value_3_ = 0x55555555; // 0101 0101
 };
 
 TEST_P(
@@ -176,7 +189,7 @@ TEST_P(
 
   std::vector<kernel_copy_unit_t *> input_allocations;
   std::vector<kernel_copy_unit_t *> output_allocations;
-  std::vector<std::vector<uint8_t>> data_out_vector;
+  std::vector<std::vector<kernel_copy_unit_t>> data_out_vector;
   std::vector<std::string> test_kernel_names;
 
   LOG_INFO << "call allocation memory... ";
@@ -203,10 +216,11 @@ TEST_P(
     }
     input_allocations.push_back(input_allocation);
     output_allocations.push_back(output_allocation);
-
-    std::vector<uint8_t> data_out(
-        test_single_allocation_count * kernel_copy_unit_size, init_value_1_);
-    data_out_vector.push_back(data_out);
+    if (test_arguments.memory_type == ZE_MEMORY_TYPE_DEVICE) {
+      std::vector<kernel_copy_unit_t> data_out(
+          test_single_allocation_count * kernel_copy_unit_size, init_value_1_);
+      data_out_vector.push_back(data_out);
+    }
 
     std::string kernel_name;
     kernel_name =
@@ -223,10 +237,36 @@ TEST_P(
       nullptr);
 
   LOG_INFO << "call dispatch_kernels";
-  dispatch_kernels(device, module_handle, input_allocations, output_allocations,
-                   data_out_vector, test_kernel_names, number_of_dispatches,
+  dispatch_kernels(device, test_arguments.memory_type, module_handle,
+                   input_allocations, output_allocations, data_out_vector,
+                   test_kernel_names, number_of_dispatches,
                    test_single_allocation_count, context);
 
+  LOG_INFO << "call verification output";
+  bool memory_test_failure = false;
+
+  uint32_t counter = 0;
+  if (test_arguments.memory_type == ZE_MEMORY_TYPE_DEVICE) {
+    for (auto output : data_out_vector) {
+      counter++;
+      memory_test_failure |=
+          verify_results(output.data(), test_single_allocation_count);
+      if (memory_test_failure) {
+        LOG_INFO << "Disptach nr " << counter << " error detected";
+        break;
+      }
+    }
+  } else {
+    for (auto output : output_allocations) {
+      counter++;
+      memory_test_failure |=
+          verify_results(output, test_single_allocation_count);
+      if (memory_test_failure) {
+        LOG_INFO << "Disptach nr " << counter << "error detected";
+        break;
+      }
+    }
+  }
   LOG_INFO << "call free input allocation memory";
   for (auto each_allocation : input_allocations) {
     lzt::free_memory(context, each_allocation);
@@ -239,22 +279,6 @@ TEST_P(
 
   LOG_INFO << "call destroy module";
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
-
-  LOG_INFO << "call verification output";
-  bool memory_test_failure = false;
-  for (size_t v = 0; v < data_out_vector.size(); v++) {
-    auto each_data_out = data_out_vector[v];
-    for (uint64_t i = 0;
-         i < test_single_allocation_count * kernel_copy_unit_size; i++) {
-      if (init_value_2_ != each_data_out[i]) {
-        LOG_INFO << "dispatch " << v << ", index of difference " << i
-                 << " found = 0x" << std::bitset<8>(each_data_out[i])
-                 << " expected = 0x" << std::bitset<8>(init_value_2_);
-        memory_test_failure = true;
-        break;
-      }
-    }
-  }
 
   EXPECT_EQ(false, memory_test_failure);
 }
