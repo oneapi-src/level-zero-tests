@@ -69,7 +69,20 @@ protected:
 
 class zetDebugBaseSetup : public ProcessLauncher, public ::testing::Test {
 protected:
-  void SetUp() override { synchro = new process_synchro(true, true); }
+  void SetUp() override {
+    synchro = new process_synchro(true, true);
+
+    auto one_module_event_per_kernel_string =
+        getenv("LZT_DEBUG_ONE_MODULE_EVENT_PER_KERNEL");
+    if (one_module_event_per_kernel_string) {
+      auto temp = std::stoi(one_module_event_per_kernel_string);
+      if (temp == 1) {
+        one_event_per_kernel = true;
+      } else if (temp == 0) {
+        one_event_per_kernel = false;
+      }
+    }
+  }
 
   void TearDown() override {
     if (::testing::Test::HasFailure()) {
@@ -106,6 +119,7 @@ public:
 
   bp::child debugHelper;
   zet_debug_session_handle_t debugSession;
+  bool one_event_per_kernel = true;
 };
 
 class zetDebugAttachDetachTest : public zetDebugBaseSetup {

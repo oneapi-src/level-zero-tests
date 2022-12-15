@@ -321,8 +321,9 @@ void zetDebugAttachDetachTest::
   ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
 
   LOG_DEBUG << "[Debugger] Waiting for application module load debug events";
-  for (int i = 0; i < 5;
-       i++) { // BASIC test loads debug_add which has 5 kernels
+  auto num_expected_module_events =
+      one_event_per_kernel ? 5 /* debug_add has 5 kernels*/ : 1;
+  for (int i = 0; i < num_expected_module_events; i++) {
     lzt::debug_read_event(debug_session_0, event, eventsTimeoutMS, false);
     ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD);
     lzt::debug_ack_event(debug_session_0, &event);
@@ -332,7 +333,7 @@ void zetDebugAttachDetachTest::
   }
 
   LOG_DEBUG << "[Debugger] Waiting for application module unload debug events";
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < num_expected_module_events; i++) {
     lzt::debug_read_event(debug_session_0, event, eventsTimeoutMS, false);
     ASSERT_EQ(event.type, ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD);
     lzt::debug_read_event(debug_session_1, event, eventsTimeoutMS, false);
@@ -845,7 +846,8 @@ TEST_F(
 }
 
 void verify_single_application_host_thread(
-    const zet_debug_session_handle_t &debug_session) {
+    const zet_debug_session_handle_t &debug_session,
+    const uint32_t &num_expected_module_events) {
 
   zet_debug_event_t debug_event;
   LOG_DEBUG << "[Debugger] Waiting for application process entry debug event "
@@ -854,13 +856,13 @@ void verify_single_application_host_thread(
   ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
 
   LOG_INFO << "[Debugger] Waiting for application module load debug events";
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < num_expected_module_events; i++) {
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
     ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD);
     lzt::debug_ack_event(debug_session, &debug_event);
   }
   LOG_INFO << "[Debugger] Waiting for application module load debug events";
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < num_expected_module_events; i++) {
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
     ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD);
   }
@@ -870,7 +872,8 @@ void verify_single_application_host_thread(
 }
 
 void read_and_verify_events_multithreaded_app(
-    const zet_debug_session_handle_t &debug_session) {
+    const zet_debug_session_handle_t &debug_session,
+    const uint32_t &num_expected_module_events) {
 
   zet_debug_event_t debug_event;
   lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
@@ -880,7 +883,7 @@ void read_and_verify_events_multithreaded_app(
 
   auto num_application_host_threads_to_verify = 2;
   auto broken = false;
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < (num_expected_module_events * 2 * 2); i++) {
     // module load and unload events can be interleaved if threads run
     // concurrently if threads run sequentially we will expect a process exit
     // event in this loop
@@ -908,7 +911,8 @@ void read_and_verify_events_multithreaded_app(
 
   if (broken) {
     // we should expect a process entry/load/unload/exit sequence
-    verify_single_application_host_thread(debug_session);
+    verify_single_application_host_thread(debug_session,
+                                          num_expected_module_events);
   } else {
     // we should expect a process exit event
     LOG_INFO << "[Debugger] Waiting for application process exit debug event";
@@ -939,8 +943,11 @@ void zetDebugEventReadTest::run_multithreaded_application_test(
 
     synchro->notify_application();
 
-    // BASIC test loads debug_add which has 5 kernels
-    read_and_verify_events_multithreaded_app(debugSession);
+    auto num_expected_module_events =
+        one_event_per_kernel ? 5 /*debug_add module has 5 kernels*/ : 1;
+
+    read_and_verify_events_multithreaded_app(debugSession,
+                                             num_expected_module_events);
 
     LOG_INFO << "[Debugger] Waiting for application to finish";
     debugHelper.wait();
