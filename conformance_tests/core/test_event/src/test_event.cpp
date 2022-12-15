@@ -111,20 +111,6 @@ TEST_F(zeDeviceCreateEventPoolTests,
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(ep.event_pool_, &hIpc));
 }
 
-TEST_F(
-    zeDeviceCreateEventPoolTests,
-    GivenDefaultDeviceWhenGettingIpcEventHandleAndOpeningAndClosingThenSuccessIsReturned) {
-  ze_ipc_event_pool_handle_t hIpc;
-  ep.InitEventPool(32, ZE_EVENT_POOL_FLAG_IPC);
-
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(ep.event_pool_, &hIpc));
-
-  ze_event_pool_handle_t eventPool;
-  lzt::open_ipc_event_handle(ep.context_, hIpc, &eventPool);
-  EXPECT_NE(nullptr, eventPool);
-  lzt::close_ipc_event_handle(eventPool);
-}
-
 class zeDeviceCreateEventAndCommandListTests : public ::testing::Test {};
 
 TEST_F(
