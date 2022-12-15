@@ -25,6 +25,7 @@ typedef struct {
   parent_test_t parent_type;
   child_test_t child_type;
   bool multi_device;
+  ze_ipc_event_pool_handle_t handle;
 } shared_data_t;
 
 #endif

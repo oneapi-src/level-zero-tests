@@ -112,7 +112,8 @@ static void run_ipc_event_test(parent_test_t parent_test,
   } else {
     ep.create_event(hEvent, defaultEventDesc);
   }
-  shared_data_t test_data = {parent_test, child_test, multi_device};
+  shared_data_t test_data = {parent_test, child_test, multi_device,
+                             hIpcEventPool};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));

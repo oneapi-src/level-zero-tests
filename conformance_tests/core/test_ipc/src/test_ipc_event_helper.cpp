@@ -137,7 +137,7 @@ int main() {
   std::memcpy(&shared_data, region.get_address(), sizeof(shared_data_t));
 
   int ipc_descriptor = lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>();
-  ze_ipc_event_pool_handle_t hIpcEventPool = {};
+  ze_ipc_event_pool_handle_t hIpcEventPool = shared_data.handle;
   memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));
 
