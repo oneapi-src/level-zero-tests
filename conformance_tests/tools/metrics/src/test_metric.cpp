@@ -677,6 +677,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, eventHandle,
               notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
@@ -765,6 +766,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, eventHandle,
               notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
@@ -869,6 +871,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, eventHandle,
               notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
 
       for (auto &fData : functionDataBuf) {
         fData.function = load_gpu(device, &fData.tg, &fData.a_buffer,
@@ -985,6 +988,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, eventHandle,
               notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
@@ -1082,6 +1086,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, eventHandle,
               notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
@@ -1199,6 +1204,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, eventHandle,
               notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
@@ -1299,6 +1305,7 @@ TEST(
       lzt::metric_streamer_open_for_device(device, groupInfo.metricGroupHandle,
                                            eventHandle, notifyEveryNReports,
                                            samplingPeriod);
+  ASSERT_NE(nullptr, metricStreamerHandle);
 
   //================================================================================
   LOG_INFO << "Starting workload in separate process";
@@ -1386,6 +1393,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, eventHandle,
               notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
