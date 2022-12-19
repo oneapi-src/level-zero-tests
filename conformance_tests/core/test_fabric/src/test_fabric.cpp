@@ -422,12 +422,16 @@ TEST(zeFabricEdgeGetTests,
   for (auto &edge : edges) {
     ze_fabric_edge_exp_properties_t property =
         lzt::get_ze_fabric_edge_properties(edge);
-    EXPECT_NE(property.bandwidth, 0);
-    EXPECT_TRUE(property.bandwidthUnit == ZE_BANDWIDTH_UNIT_BYTES_PER_NANOSEC ||
-                property.bandwidthUnit == ZE_BANDWIDTH_UNIT_BYTES_PER_CLOCK);
+    if (property.bandwidth != 0) {
+      EXPECT_TRUE(property.bandwidthUnit ==
+                      ZE_BANDWIDTH_UNIT_BYTES_PER_NANOSEC ||
+                  property.bandwidthUnit == ZE_BANDWIDTH_UNIT_BYTES_PER_CLOCK);
+    }
+
     EXPECT_TRUE(property.latency == ZE_LATENCY_UNIT_NANOSEC ||
                 property.latency == ZE_LATENCY_UNIT_CLOCK ||
-                property.latency == ZE_LATENCY_UNIT_HOP);
+                property.latency == ZE_LATENCY_UNIT_HOP ||
+                property.latency == ZE_LATENCY_UNIT_UNKNOWN);
     EXPECT_TRUE(property.duplexity ==
                     ZE_FABRIC_EDGE_EXP_DUPLEXITY_HALF_DUPLEX ||
                 property.duplexity == ZE_FABRIC_EDGE_EXP_DUPLEXITY_FULL_DUPLEX);
