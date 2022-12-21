@@ -119,7 +119,7 @@ public:
 
   bp::child debugHelper;
   zet_debug_session_handle_t debugSession;
-  bool one_event_per_kernel = true;
+  bool one_event_per_kernel = false;
 };
 
 class zetDebugAttachDetachTest : public zetDebugBaseSetup {
