@@ -209,6 +209,87 @@ TEST_F(
   run_activate_deactivate_test(true);
 }
 
+TEST_F(
+    zetMetricGroupTest,
+    GivenActiveMetricGroupsWhenActivatingSingleMetricGroupThenPreviouslyActiveGroupsAreDeactivated) {
+
+  std::vector<zet_metric_group_handle_t> groupHandleList;
+  groupHandleList = lzt::get_metric_group_handles(device);
+  EXPECT_NE(0, groupHandleList.size());
+
+  if (groupHandleList.size() < 2) {
+    GTEST_SKIP() << "Skipping test due to not enough metric groups";
+  }
+
+  zet_metric_group_properties_t metric_group_properties = {};
+  metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+  metric_group_properties.pNext = nullptr;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupGetProperties(groupHandleList[0],
+                                        &metric_group_properties));
+
+  std::set<uint32_t> domains;
+  domains.insert(metric_group_properties.domain);
+  std::vector<zet_metric_group_handle_t> test_handles{groupHandleList[0]};
+
+  for (zet_metric_group_handle_t groupHandle : groupHandleList) {
+    metric_group_properties = {};
+    metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    metric_group_properties.pNext = nullptr;
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
+                                     groupHandle, &metric_group_properties));
+    if (domains.find(metric_group_properties.domain) == domains.end()) {
+      domains.insert(metric_group_properties.domain);
+      test_handles.push_back(groupHandle);
+    }
+  }
+
+  if (domains.size() < 2) {
+    GTEST_SKIP() << "Skipping test due to not enough domains";
+  }
+
+  LOG_DEBUG << "Activating all metrics groups selected for test";
+  lzt::activate_metric_groups(device, test_handles.size(), test_handles.data());
+
+  std::vector<zet_metric_group_handle_t> activeGroupHandleList;
+  zet_metric_streamer_handle_t streamer;
+  zet_metric_streamer_desc_t streamer_desc = {
+      ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, 1000, 40000};
+
+  LOG_DEBUG << "Verifying groups are active by attempting to open streamer";
+  for (auto test_handle : test_handles) {
+    ASSERT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricStreamerOpen(lzt::get_default_context(), device,
+                                    test_handle, &streamer_desc, nullptr,
+                                    &streamer));
+
+    ASSERT_EQ(ZE_RESULT_SUCCESS, zetMetricStreamerClose(streamer));
+  }
+
+  LOG_DEBUG << "Activating only first group";
+  lzt::activate_metric_groups(device, 1, &test_handles[0]);
+
+  LOG_DEBUG << "Verify only first group is active";
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricStreamerOpen(lzt::get_default_context(), device,
+                                  test_handles[0], &streamer_desc, nullptr,
+                                  &streamer));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zetMetricStreamerClose(streamer));
+
+  for (auto test_handle : test_handles) {
+    if (test_handle == test_handles[0]) {
+      continue;
+    }
+    ASSERT_NE(ZE_RESULT_SUCCESS,
+              zetMetricStreamerOpen(lzt::get_default_context(), device,
+                                    test_handle, &streamer_desc, nullptr,
+                                    &streamer));
+  }
+
+  // deactivate all groups
+  lzt::deactivate_metric_groups(device);
+}
+
 TEST_F(zetMetricGroupTest,
        GivenValidMetricGroupWhenStreamerIsOpenedThenExpectStreamerToSucceed) {
 
