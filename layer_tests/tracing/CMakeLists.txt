@@ -1,6 +1,16 @@
 # Copyright (C) 2020-2021 Intel Corporation
 # SPDX-License-Identifier: MIT
 
+set(ipc_libraries
+  level_zero_tests::logging
+  level_zero_tests::utils
+  Boost::system
+)
+
+if(UNIX)
+    list(APPEND ipc_event_libraries rt)
+endif()
+
 add_lzt_test(
   NAME test_api_ltracing
   GROUP "/layer_tests/ltracing"
@@ -10,8 +20,8 @@ add_lzt_test(
     src/test_api_ltracing_threading.cpp
     src/main.cpp
   LINK_LIBRARIES
-    level_zero_tests::logging
-    level_zero_tests::utils
+    ${ipc_libraries}
+    ${ipc_event_libraries}
     level_zero_tests::net
 )
 
@@ -22,6 +32,8 @@ add_lzt_test_executable(
   SOURCES
     src/test_ltracing_ipc_event_helper.cpp
   LINK_LIBRARIES
+    ${ipc_libraries}
+    ${ipc_event_libraries}
     level_zero_tests::net
 )
 
@@ -32,5 +44,7 @@ add_lzt_test_executable(
   SOURCES
     src/test_ltracing_compat_ipc_event_helper.cpp
   LINK_LIBRARIES
+    ${ipc_libraries}
+    ${ipc_event_libraries}
     level_zero_tests::net
 )

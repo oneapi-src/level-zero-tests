@@ -15,8 +15,12 @@
 #include <string>
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+#include <boost/process.hpp>
 
 namespace lzt = level_zero_tests;
+namespace bipc = boost::interprocess;
 
 namespace {
 
@@ -129,6 +133,14 @@ protected:
     ze_event_handle_t hEvent;
     ep.create_event(hEvent, defaultEventDesc);
 
+    lzt::shared_ipc_event_data_t test_data = {hIpcEventPool};
+    bipc::shared_memory_object shm(bipc::create_only, "ipc_tracing_event_test",
+                                   bipc::read_write);
+    shm.truncate(sizeof(lzt::shared_ipc_event_data_t));
+    bipc::mapped_region region(shm, bipc::read_write);
+    std::memcpy(region.get_address(), &test_data,
+                sizeof(lzt::shared_ipc_event_data_t));
+
     // launch child
     boost::process::child c("./tracing/test_tracing_ipc_event_helper",
                             test_type_name.c_str());
@@ -137,6 +149,7 @@ protected:
     c.wait(); // wait for the process to exit
 
     // cleanup
+    bipc::shared_memory_object::remove("ipc_tracing_event_test");
     ep.destroy_event(hEvent);
 
     // hack to be able to use this class for ipc event test

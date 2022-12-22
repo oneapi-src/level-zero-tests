@@ -14,8 +14,12 @@
 #include <boost/process.hpp>
 #include <level_zero/ze_api.h>
 #include <level_zero/layers/zel_tracing_api.h>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+#include <boost/process.hpp>
 
 namespace lzt = level_zero_tests;
+namespace bipc = boost::interprocess;
 
 #ifdef __linux__
 
@@ -30,7 +34,16 @@ int main(int argc, char **argv) {
   }
 
   int ipc_descriptor = lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>();
-  ze_ipc_event_pool_handle_t hIpcEventPool = {};
+
+  lzt::shared_ipc_event_data_t shared_data;
+  bipc::shared_memory_object shm;
+  shm = bipc::shared_memory_object(bipc::open_only, "ipc_ltracing_event_test",
+                                    bipc::read_write);
+  shm.truncate(sizeof(lzt::shared_ipc_event_data_t));
+  bipc::mapped_region region(shm, bipc::read_only);
+  std::memcpy(&shared_data, region.get_address(), sizeof(lzt::shared_ipc_event_data_t));
+  ze_ipc_event_pool_handle_t hIpcEventPool = shared_data.handle;
+
   memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));
 

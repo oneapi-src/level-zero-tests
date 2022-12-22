@@ -31,6 +31,10 @@ const std::chrono::milliseconds CONNECTION_TIMEOUT = CONNECTION_WAIT * 10;
 
 #ifdef __linux__
 
+typedef struct {
+  ze_ipc_event_pool_handle_t handle;
+} shared_ipc_event_data_t;
+
 // declaration
 int read_fd_from_socket(int socket, size_t buffer_size);
 template <typename T> int receive_ipc_handle();
