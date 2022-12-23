@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: MIT
  *
  */
-
+#include <cmath>
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"
@@ -242,4 +242,39 @@ TEST_F(
     }
   }
 }
+
+class PerformanceModuleParamComputePerformanceFactorTest
+    : public lzt::SysmanCtsClass,
+      public ::testing::WithParamInterface<int> {};
+
+TEST_P(
+    PerformanceModuleParamComputePerformanceFactorTest,
+    GivenValidPerformanceHandleWhenSettingMultiplePerformanceFactorForComputeThenValidPerformanceFactorIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto performance_handles = lzt::get_performance_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto performance_handle : performance_handles) {
+      ASSERT_NE(nullptr, performance_handle);
+      zes_perf_properties_t perfProperties = {};
+      perfProperties = lzt::get_performance_properties(performance_handle);
+      if (perfProperties.engines & ZES_ENGINE_TYPE_FLAG_COMPUTE) {
+        auto initialFactor = lzt::get_performance_config(performance_handle);
+        double input_pfactor = static_cast<double>(GetParam());
+        double pFactor =
+            set_performance_factor(performance_handle, input_pfactor);
+        EXPECT_EQ(std::round(pFactor), input_pfactor);
+        lzt::set_performance_config(performance_handle, initialFactor);
+      }
+    }
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(TestCasesforComputePerformanceFactorVerification,
+                        PerformanceModuleParamComputePerformanceFactorTest,
+                        testing::Values(0, 25, 49, 50, 51, 75, 99, 100));
+
 } // namespace
