@@ -182,4 +182,90 @@ TEST_F(
     }
   }
 }
+
+static void workload_for_device() {
+  int m, k, n;
+  m = k = n = 5000;
+  std::vector<float> a(m * k, 1);
+  std::vector<float> b(k * n, 1);
+  std::vector<float> c(m * n, 0);
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
+  void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
+  void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
+  ze_module_handle_t module =
+      lzt::create_module(device, "sysman_matrix_multiplication.spv",
+                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_kernel_handle_t function =
+      lzt::create_function(module, "sysman_matrix_multiplication");
+  lzt::set_group_size(function, 16, 16, 1);
+  lzt::set_argument_value(function, 0, sizeof(a_buffer), &a_buffer);
+  lzt::set_argument_value(function, 1, sizeof(b_buffer), &b_buffer);
+  lzt::set_argument_value(function, 2, sizeof(m), &m);
+  lzt::set_argument_value(function, 3, sizeof(k), &k);
+  lzt::set_argument_value(function, 4, sizeof(n), &n);
+  lzt::set_argument_value(function, 5, sizeof(c_buffer), &c_buffer);
+  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
+  std::memcpy(a_buffer, a.data(), a.size() * sizeof(float));
+  std::memcpy(b_buffer, b.data(), b.size() * sizeof(float));
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  const int group_count_x = m / 16;
+  const int group_count_y = n / 16;
+  ze_group_count_t tg;
+  tg.groupCountX = group_count_x;
+  tg.groupCountY = group_count_y;
+  tg.groupCountZ = 1;
+  zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
+  lzt::synchronize(cmd_q, UINT64_MAX);
+  std::memcpy(c.data(), c_buffer, c.size() * sizeof(float));
+  lzt::destroy_command_queue(cmd_q);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_function(function);
+  lzt::free_memory(a_buffer);
+  lzt::free_memory(b_buffer);
+  lzt::free_memory(c_buffer);
+  lzt::destroy_module(module);
+}
+
+TEST_F(
+    EngineModuleTest,
+    GivenValidEngineHandleWhenGpuWorkloadIsSubmittedThenEngineActivityMeasuredIsHigher) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto engine_handles = lzt::get_engine_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto engine_handle : engine_handles) {
+      ASSERT_NE(nullptr, engine_handle);
+      auto properties = lzt::get_engine_properties(engine_handle);
+      if (properties.type == ZES_ENGINE_GROUP_COMPUTE_ALL) {
+        // Get pre-workload utilization
+        auto s1 = lzt::get_engine_activity(engine_handle);
+        auto s2 = lzt::get_engine_activity(engine_handle);
+        double pre_utilization = (static_cast<double>(s2.activeTime) -
+                                  static_cast<double>(s1.activeTime)) /
+                                 (static_cast<double>(s2.timestamp) -
+                                  static_cast<double>(s1.timestamp));
+        // submit workload and measure  utilization
+        s1 = lzt::get_engine_activity(engine_handle);
+        std::thread thread(workload_for_device);
+        thread.join();
+        s2 = lzt::get_engine_activity(engine_handle);
+        double post_utilization = (static_cast<double>(s2.activeTime) -
+                                   static_cast<double>(s1.activeTime)) /
+                                  (static_cast<double>(s2.timestamp) -
+                                   static_cast<double>(s1.timestamp));
+        // check if engine utilization increases with GPU workload
+        EXPECT_LT(pre_utilization, post_utilization);
+      }
+    }
+  }
+}
+
 } // namespace
