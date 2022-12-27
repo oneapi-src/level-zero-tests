@@ -214,6 +214,52 @@ TEST_F(
   }
 }
 
+static void eventListenThread(ze_driver_handle_t hDriver,
+                              std::vector<ze_device_handle_t> devices,
+                              uint32_t *numEventsGenerated) {
+  auto timeout = 5000;
+  // If we registered to receive events on any devices, start listening now
+  uint32_t numDeviceEvents = std::numeric_limits<int32_t>::max();
+  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  LOG_INFO << "Listening for device being detached ...";
+  lzt::listen_eventEx(hDriver, timeout, devices.size(), devices.data(),
+                      &numDeviceEvents, events.data());
+  *numEventsGenerated = numDeviceEvents;
+}
+
+TEST_F(
+    EventsTest,
+    GivenValidEventHandleAndBlockedForDeviceDetachEventWhenEventRegisterIsCalledWithNoEventsThenEventListenIsUnBlocked) {
+  uint32_t numEventsGenerated = std::numeric_limits<uint32_t>::max();
+  for (auto device : devices) {
+    lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_DETACH);
+  }
+  // Launch thread to listen to registered events
+  std::thread listenThread(eventListenThread, hDriver, devices,
+                           &numEventsGenerated);
+  // Wait till zesDriverEventListen API is called.
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+  // Now clear events to unblock listener
+  for (auto device : devices) {
+    lzt::register_event(device, 0);
+  }
+  // measure time bewteen clearing events to listening thread completion to
+  // detect timeout and unblocking of listen due to clearing of events
+  bool listen_timedout = false;
+  auto start_time = std::chrono::high_resolution_clock::now();
+  listenThread.join();
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto elapsed_time_microsec =
+      std::chrono::duration<long double, std::chrono::microseconds::period>(
+          end_time - start_time)
+          .count();
+  if ((elapsed_time_microsec / 1000) >= 2000) {
+    listen_timedout = true;
+  }
+  EXPECT_EQ(listen_timedout, false);
+  EXPECT_EQ(numEventsGenerated, 0);
+}
+
 TEST_F(
     EventsTest,
     GivenValidEventHandleWhenListeningEventExForDeviceAttachThenEventsAreTriggeredForDeviceAttach) {
