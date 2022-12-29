@@ -926,4 +926,31 @@ TEST_F(
     }
   }
 }
+
+TEST_F(
+    PowerModuleTest,
+    GivenPowerHandleWhenRequestingExtensionPowerPropertiesThenValidPowerDomainIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto p_power_handle : p_power_handles) {
+      zes_power_properties_t pProperties = {ZES_STRUCTURE_TYPE_POWER_PROPERTIES,
+                                            nullptr};
+      zes_power_ext_properties_t pExtProperties = {
+          ZES_STRUCTURE_TYPE_POWER_EXT_PROPERTIES, nullptr};
+      pProperties.pNext = &pExtProperties;
+
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zesPowerGetProperties(p_power_handle, &pProperties));
+
+      EXPECT_GT(pExtProperties.domain, ZES_POWER_DOMAIN_UNKNOWN);
+      EXPECT_LE(pExtProperties.domain, ZES_POWER_DOMAIN_STACK);
+    }
+  }
+}
+
 } // namespace
