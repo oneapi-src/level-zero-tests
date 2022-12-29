@@ -1688,4 +1688,148 @@ TEST_F(
   }
 }
 
+void run_multi_device_streamer_test(
+    const std::vector<ze_device_handle_t> &devices) {
+
+  LOG_INFO << "Testing multi-device metrics streamer";
+
+  if (devices.size() < 2) {
+    GTEST_SKIP() << "Skipping test as less than 2 devices are available";
+  }
+
+  auto device_0 = devices[0];
+  auto device_1 = devices[1];
+  auto command_queue_0 = lzt::create_command_queue(device_0);
+  auto command_queue_1 = lzt::create_command_queue(device_1);
+
+  auto command_list_0 = lzt::create_command_list(device_0);
+  auto command_list_1 = lzt::create_command_list(device_1);
+
+  auto metric_group_info_0 = lzt::get_metric_group_info(
+      device_0, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+  auto metric_group_info_1 = lzt::get_metric_group_info(
+      device_1, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+
+  metric_group_info_0 =
+      lzt::optimize_metric_group_info_list(metric_group_info_0);
+  metric_group_info_1 =
+      lzt::optimize_metric_group_info_list(metric_group_info_1);
+
+  auto groupInfo_0 = metric_group_info_0[0];
+  auto groupInfo_1 = metric_group_info_1[0];
+
+  lzt::activate_metric_groups(device_0, 1, &groupInfo_0.metricGroupHandle);
+  lzt::activate_metric_groups(device_1, 1, &groupInfo_1.metricGroupHandle);
+
+  LOG_INFO << "test metricGroup names " << groupInfo_0.metricGroupName << " "
+           << groupInfo_1.metricGroupName;
+
+  ze_event_handle_t eventHandle_0, eventHandle_1;
+  lzt::zeEventPool eventPool;
+  eventPool.create_event(eventHandle_0, ZE_EVENT_SCOPE_FLAG_HOST,
+                         ZE_EVENT_SCOPE_FLAG_HOST);
+  eventPool.create_event(eventHandle_1, ZE_EVENT_SCOPE_FLAG_HOST,
+                         ZE_EVENT_SCOPE_FLAG_HOST);
+
+  auto notifyEveryNReports = 3000;
+  auto samplingPeriod = 1000000;
+  auto metricStreamerHandle_0 = lzt::metric_streamer_open_for_device(
+      device_0, groupInfo_0.metricGroupHandle, eventHandle_0,
+      notifyEveryNReports, samplingPeriod);
+
+  auto metricStreamerHandle_1 = lzt::metric_streamer_open_for_device(
+      device_1, groupInfo_1.metricGroupHandle, eventHandle_1,
+      notifyEveryNReports, samplingPeriod);
+
+  ASSERT_NE(nullptr, metricStreamerHandle_0);
+  ASSERT_NE(nullptr, metricStreamerHandle_1);
+
+  void *a_buffer_0, *b_buffer_0, *c_buffer_0;
+  ze_group_count_t tg_0;
+
+  void *a_buffer_1, *b_buffer_1, *c_buffer_1;
+  ze_group_count_t tg_1;
+
+  auto function_0 =
+      load_gpu(device_0, &tg_0, &a_buffer_0, &b_buffer_0, &c_buffer_0);
+
+  auto function_1 =
+      load_gpu(device_1, &tg_1, &a_buffer_1, &b_buffer_1, &c_buffer_1);
+
+  lzt::append_launch_function(command_list_0, function_0, &tg_0, nullptr, 0,
+                              nullptr);
+  lzt::append_launch_function(command_list_1, function_1, &tg_1, nullptr, 0,
+                              nullptr);
+
+  lzt::close_command_list(command_list_0);
+  lzt::close_command_list(command_list_1);
+
+  lzt::execute_command_lists(command_queue_0, 1, &command_list_0, nullptr);
+  lzt::execute_command_lists(command_queue_1, 1, &command_list_1, nullptr);
+
+  lzt::synchronize(command_queue_0, std::numeric_limits<uint64_t>::max());
+  lzt::synchronize(command_queue_1, std::numeric_limits<uint64_t>::max());
+
+  auto eventResult_0 = zeEventQueryStatus(eventHandle_0);
+  auto eventResult_1 = zeEventQueryStatus(eventHandle_1);
+
+  if (ZE_RESULT_SUCCESS == eventResult_0 &&
+      ZE_RESULT_SUCCESS == eventResult_1) {
+
+  } else {
+    LOG_WARNING << "Non-Success zeEventQueryStatus: event_0: " << eventResult_0
+                << " event_1: " << eventResult_1;
+  }
+
+  std::vector<uint8_t> rawData_0, rawData_1;
+  lzt::metric_streamer_read_data(metricStreamerHandle_0, &rawData_0);
+  lzt::metric_streamer_read_data(metricStreamerHandle_1, &rawData_1);
+
+  lzt::validate_metrics(
+      groupInfo_0.metricGroupHandle,
+      lzt::metric_streamer_read_data_size(metricStreamerHandle_0),
+      rawData_0.data());
+  lzt::validate_metrics(
+      groupInfo_1.metricGroupHandle,
+      lzt::metric_streamer_read_data_size(metricStreamerHandle_1),
+      rawData_1.data());
+
+  // cleanup
+  lzt::deactivate_metric_groups(device_0);
+  lzt::deactivate_metric_groups(device_1);
+  lzt::metric_streamer_close(metricStreamerHandle_0);
+  lzt::metric_streamer_close(metricStreamerHandle_1);
+  lzt::destroy_function(function_0);
+  lzt::destroy_function(function_1);
+  lzt::free_memory(a_buffer_0);
+  lzt::free_memory(b_buffer_0);
+  lzt::free_memory(c_buffer_0);
+  lzt::free_memory(a_buffer_1);
+  lzt::free_memory(b_buffer_1);
+  lzt::free_memory(c_buffer_1);
+  lzt::destroy_command_list(command_list_0);
+  lzt::destroy_command_list(command_list_1);
+  lzt::destroy_command_queue(command_queue_0);
+  lzt::destroy_command_queue(command_queue_1);
+  eventPool.destroy_event(eventHandle_0);
+  eventPool.destroy_event(eventHandle_1);
+}
+
+TEST_F(
+    zetMetricStreamerTest,
+    GivenValidMetricGroupsWhenMultipleDevicesExecutingThenExpectValidMetrics) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  run_multi_device_streamer_test(devices);
+}
+
+TEST_F(
+    zetMetricStreamerTest,
+    GivenValidMetricGroupsWhenMultipleSubdevicesExecutingThenExpectValidMetrics) {
+  auto sub_devices = lzt::get_all_sub_devices();
+
+  run_multi_device_streamer_test(sub_devices);
+}
 } // namespace
