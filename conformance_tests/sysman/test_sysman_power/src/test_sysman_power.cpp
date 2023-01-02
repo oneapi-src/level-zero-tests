@@ -953,4 +953,45 @@ TEST_F(
   }
 }
 
+TEST_F(
+    PowerModuleTest,
+    GivenPowerHandleWhenRequestingExtensionPowerPropertiesThenValidDefaultLimitsAreReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto p_power_handle : p_power_handles) {
+      zes_power_properties_t pProperties = {ZES_STRUCTURE_TYPE_POWER_PROPERTIES,
+                                            nullptr};
+      zes_power_ext_properties_t pExtProperties = {
+          ZES_STRUCTURE_TYPE_POWER_EXT_PROPERTIES, nullptr};
+      zes_power_limit_ext_desc_t default_limits = {};
+      pExtProperties.defaultLimit = &default_limits;
+      pProperties.pNext = &pExtProperties;
+      // query extension properties
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zesPowerGetProperties(p_power_handle, &pProperties));
+      // verify default limits
+      EXPECT_GE(pExtProperties.defaultLimit->level, ZES_POWER_LEVEL_UNKNOWN);
+      EXPECT_LE(pExtProperties.defaultLimit->level,
+                ZES_POWER_LEVEL_INSTANTANEOUS);
+      EXPECT_GE(pExtProperties.defaultLimit->source, ZES_POWER_SOURCE_ANY);
+      EXPECT_LE(pExtProperties.defaultLimit->source, ZES_POWER_SOURCE_BATTERY);
+      EXPECT_GE(pExtProperties.defaultLimit->limitUnit, ZES_LIMIT_UNIT_UNKNOWN);
+      EXPECT_LE(pExtProperties.defaultLimit->limitUnit, ZES_LIMIT_UNIT_POWER);
+      if (!pExtProperties.defaultLimit->intervalValueLocked) {
+        EXPECT_GE(pExtProperties.defaultLimit->interval, 0u);
+        EXPECT_LE(pExtProperties.defaultLimit->interval, INT32_MAX);
+      }
+      if (!pExtProperties.defaultLimit->limitValueLocked) {
+        EXPECT_GE(pExtProperties.defaultLimit->limit, 0u);
+        EXPECT_LE(pExtProperties.defaultLimit->limit, INT32_MAX);
+      }
+    }
+  }
+}
+
 } // namespace
