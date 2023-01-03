@@ -418,169 +418,187 @@ TEST_F(
 TEST(
     CommandQueuePriorityTest,
     GivenConcurrentLogicalCommandQueuesWhenStartSynchronizedThenHighPriorityCompletesFirst) {
-  const int buff_size_high = 1000;
-  const int buff_size_low = 100000;
+  const int buff_size_high = 1 << 10;
+  const int buff_size_low = 1 << 20;
   const uint8_t value_high = 0x55;
   const uint8_t value_low = 0x22;
-  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  const ze_context_handle_t context = lzt::get_default_context();
-  ze_event_pool_desc_t ep_time_desc = {};
-  ep_time_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-  ep_time_desc.flags =
-      ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-  ep_time_desc.count = 4;
-  auto ep_time = lzt::create_event_pool(context, ep_time_desc);
-  ze_event_pool_desc_t ep_sync_desc = {};
-  ep_sync_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-  ep_sync_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-  ep_sync_desc.count = 1;
-  auto ep_sync = lzt::create_event_pool(context, ep_sync_desc);
-  ze_event_desc_t event_desc = {};
-  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
-  event_desc.index = 0;
-  event_desc.signal = 0;
-  event_desc.wait = 0;
-  auto event_compute_high = lzt::create_event(ep_time, event_desc);
-  auto event_sync = lzt::create_event(ep_sync, event_desc);
-  event_desc.index = 1;
-  auto event_compute_low = lzt::create_event(ep_time, event_desc);
-  event_desc.index = 2;
-  auto event_copy_high = lzt::create_event(ep_time, event_desc);
-  event_desc.index = 3;
-  auto event_copy_low = lzt::create_event(ep_time, event_desc);
+  std::vector<ze_device_handle_t> devices;
+  std::vector<ze_device_handle_t> sub_devices;
+  ze_device_handle_t device0 =
+      lzt::get_default_device(lzt::get_default_driver());
+  devices.push_back(device0);
+  if (lzt::get_ze_sub_device_count(device0) > 0) {
+    sub_devices = lzt::get_ze_sub_devices(device0);
+    devices.insert(devices.end(), sub_devices.begin(), sub_devices.end());
+    sub_devices.clear();
+  }
+  for (uint32_t num_low_priority_compute_queues = 5;
+       num_low_priority_compute_queues < 20;
+       num_low_priority_compute_queues++) {
+    LOG_INFO << "TESTING WITH " << num_low_priority_compute_queues
+             << " LOW-PRIORITY QUEUES";
+    uint32_t device_index = 0;
+    for (auto device : devices) {
+      if (device_index == 0) {
+        LOG_INFO << "Testing Root Device:  Index = " << device_index;
+      } else {
+        LOG_INFO << "Testing Sub Device:  Index = " << device_index;
+      }
+      const ze_context_handle_t context = lzt::get_default_context();
+      ze_event_pool_desc_t ep_time_desc = {};
+      ep_time_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+      ep_time_desc.flags =
+          ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP | ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+      ep_time_desc.count = 256;
+      auto ep_time = lzt::create_event_pool(context, ep_time_desc);
+      ze_event_pool_desc_t ep_sync_desc = {};
+      ep_sync_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+      ep_sync_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+      ep_sync_desc.count = 1;
+      auto ep_sync = lzt::create_event_pool(context, ep_sync_desc);
+      ze_event_desc_t event_desc = {};
+      event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+      event_desc.index = 0;
+      event_desc.signal = 0;
+      event_desc.wait = 0;
+      auto event_compute_high = lzt::create_event(ep_time, event_desc);
+      auto event_sync = lzt::create_event(ep_sync, event_desc);
+      std::vector<ze_event_handle_t> event_compute_lows;
 
-  auto cmdq_group_properties = lzt::get_command_queue_group_properties(device);
-  int copy_ordinal = -1;
-  for (int i = 0; i < cmdq_group_properties.size(); i++) {
-    if ((cmdq_group_properties[i].flags &
-         ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
-        !(cmdq_group_properties[i].flags &
-          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
+      auto cmdqueue_compute_high = lzt::create_command_queue(
+          device, static_cast<ze_command_queue_flag_t>(0),
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH, 0);
 
-      if (cmdq_group_properties[i].numQueues == 0)
-        continue;
+      std::vector<ze_command_queue_handle_t> cmdqueue_compute_lows;
+      std::vector<ze_command_list_handle_t> cmdlist_compute_lows;
 
-      copy_ordinal = i;
-      break;
+      std::vector<void *> buffer_compute_lows;
+      uint32_t index = event_desc.index;
+      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+        auto cmdqueue_compute_low = lzt::create_command_queue(
+            device, static_cast<ze_command_queue_flag_t>(0),
+            ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+            ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW, 0);
+        cmdqueue_compute_lows.push_back(cmdqueue_compute_low);
+
+        auto cmdlist_compute_low = lzt::create_command_list(device);
+        cmdlist_compute_lows.push_back(cmdlist_compute_low);
+
+        auto buffer_compute_low = lzt::allocate_shared_memory(buff_size_low);
+        buffer_compute_lows.push_back(buffer_compute_low);
+
+        event_desc.index = index++;
+        auto event_compute_low = lzt::create_event(ep_time, event_desc);
+        event_compute_lows.push_back(event_compute_low);
+      }
+
+      auto cmdlist_compute_high = lzt::create_command_list(device);
+      auto buffer_compute_high = lzt::allocate_shared_memory(buff_size_high);
+
+      lzt::append_wait_on_events(cmdlist_compute_high, 1, &event_sync);
+      lzt::append_memory_set(cmdlist_compute_high, buffer_compute_high,
+                             &value_high, buff_size_high, event_compute_high);
+      lzt::close_command_list(cmdlist_compute_high);
+
+      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+        auto cmdlist_compute_low = cmdlist_compute_lows[i];
+        auto buffer_compute_low = buffer_compute_lows[i];
+        auto event_compute_low = event_compute_lows[i];
+        lzt::append_wait_on_events(cmdlist_compute_low, 1, &event_sync);
+        lzt::append_memory_set(cmdlist_compute_low, buffer_compute_low,
+                               &value_low, buff_size_low, event_compute_low);
+        lzt::close_command_list(cmdlist_compute_low);
+      }
+
+      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+        auto cmdqueue_compute_low = cmdqueue_compute_lows[i];
+        auto cmdlist_compute_low = cmdlist_compute_lows[i];
+
+        lzt::execute_command_lists(cmdqueue_compute_low, 1,
+                                   &cmdlist_compute_low, nullptr);
+      }
+      lzt::execute_command_lists(cmdqueue_compute_high, 1,
+                                 &cmdlist_compute_high, nullptr);
+      lzt::signal_event_from_host(event_sync);
+
+      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+        auto cmdqueue_compute_low = cmdqueue_compute_lows[i];
+        lzt::synchronize(cmdqueue_compute_low, UINT64_MAX);
+      }
+      lzt::synchronize(cmdqueue_compute_high, UINT64_MAX);
+
+      uint8_t *uchar_compute_high = static_cast<uint8_t *>(buffer_compute_high);
+      for (size_t i = 0; i < buff_size_high; i++) {
+        EXPECT_EQ(value_high, uchar_compute_high[i]);
+      }
+
+      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+        auto buffer_compute_low = buffer_compute_lows[i];
+        uint8_t *uchar_compute_low = static_cast<uint8_t *>(buffer_compute_low);
+        for (size_t i = 0; i < buff_size_low; i++) {
+          EXPECT_EQ(value_low, uchar_compute_low[i]);
+        }
+      }
+
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_compute_high));
+
+      ze_kernel_timestamp_result_t event_compute_high_timestamp =
+          lzt::get_event_kernel_timestamp(event_compute_high);
+
+      uint32_t
+          number_of_low_priority_queues_finished_after_high_priority_queue = 0;
+      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+        auto event_compute_low = event_compute_lows[i];
+        EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_compute_low));
+        ze_kernel_timestamp_result_t event_compute_low_timestamp =
+            lzt::get_event_kernel_timestamp(event_compute_low);
+
+        if (event_compute_low_timestamp.global.kernelEnd >
+            event_compute_high_timestamp.global.kernelEnd) {
+          number_of_low_priority_queues_finished_after_high_priority_queue++;
+        }
+      }
+
+      if ((devices.size() > 1) && (device_index == 0)) {
+        EXPECT_EQ(
+            number_of_low_priority_queues_finished_after_high_priority_queue,
+            0u);
+      } else {
+        EXPECT_GE(
+            number_of_low_priority_queues_finished_after_high_priority_queue,
+            1u);
+      }
+      LOG_INFO
+          << "number_of_low_priority_queues_finished_after_high_priority_queue "
+          << " = "
+          << number_of_low_priority_queues_finished_after_high_priority_queue;
+      /*cleanup*/
+
+      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+        auto cmdqueue_compute_low = cmdqueue_compute_lows[i];
+        lzt::destroy_command_queue(cmdqueue_compute_low);
+        auto cmdlist_compute_low = cmdlist_compute_lows[i];
+        lzt::destroy_command_list(cmdlist_compute_low);
+        auto buffer_compute_low = buffer_compute_lows[i];
+        lzt::free_memory(buffer_compute_low);
+      }
+
+      lzt::free_memory(buffer_compute_high);
+      lzt::destroy_command_queue(cmdqueue_compute_high);
+      lzt::destroy_command_list(cmdlist_compute_high);
+
+      lzt::destroy_event(event_compute_high);
+
+      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+        auto event_compute_low = event_compute_lows[i];
+        lzt::destroy_event(event_compute_low);
+      }
+      lzt::destroy_event(event_sync);
+      lzt::destroy_event_pool(ep_sync);
+      device_index++;
     }
   }
-
-  if (copy_ordinal == -1) {
-    LOG_WARNING << "Not Enough Copy Engines to run test";
-    SUCCEED();
-    return;
-  }
-
-  auto cmdqueue_compute_high =
-      lzt::create_command_queue(device, static_cast<ze_command_queue_flag_t>(0),
-                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH, 0);
-  auto cmdqueue_compute_low =
-      lzt::create_command_queue(device, static_cast<ze_command_queue_flag_t>(0),
-                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW, 0);
-  auto cmdqueue_copy_high = lzt::create_command_queue(
-      device, static_cast<ze_command_queue_flag_t>(0),
-      ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH, copy_ordinal);
-  auto cmdqueue_copy_low = lzt::create_command_queue(
-      device, static_cast<ze_command_queue_flag_t>(0),
-      ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW, copy_ordinal);
-
-  auto cmdlist_compute_high = lzt::create_command_list();
-  auto cmdlist_copy_high =
-      lzt::create_command_list(context, device, 0, copy_ordinal);
-  auto cmdlist_compute_low = lzt::create_command_list();
-  auto cmdlist_copy_low =
-      lzt::create_command_list(context, device, 0, copy_ordinal);
-  auto buffer_compute_high = lzt::allocate_shared_memory(buff_size_high);
-  auto buffer_copy_high = lzt::allocate_shared_memory(buff_size_high);
-  auto buffer_compute_low = lzt::allocate_shared_memory(buff_size_low);
-  auto buffer_copy_low = lzt::allocate_shared_memory(buff_size_low);
-
-  lzt::append_wait_on_events(cmdlist_compute_high, 1, &event_sync);
-  lzt::append_memory_set(cmdlist_compute_high, buffer_compute_high, &value_high,
-                         buff_size_high, event_compute_high);
-  lzt::close_command_list(cmdlist_compute_high);
-
-  lzt::append_wait_on_events(cmdlist_compute_low, 1, &event_sync);
-  lzt::append_memory_set(cmdlist_compute_low, buffer_compute_low, &value_low,
-                         buff_size_low, event_compute_low);
-  lzt::close_command_list(cmdlist_compute_low);
-
-  lzt::append_wait_on_events(cmdlist_copy_high, 1, &event_sync);
-  lzt::append_memory_set(cmdlist_copy_high, buffer_copy_high, &value_high,
-                         buff_size_high, event_copy_high);
-  lzt::close_command_list(cmdlist_copy_high);
-
-  lzt::append_wait_on_events(cmdlist_copy_low, 1, &event_sync);
-  lzt::append_memory_set(cmdlist_copy_low, buffer_copy_low, &value_low,
-                         buff_size_low, event_copy_low);
-  lzt::close_command_list(cmdlist_copy_low);
-
-  lzt::execute_command_lists(cmdqueue_compute_low, 1, &cmdlist_compute_low,
-                             nullptr);
-  lzt::execute_command_lists(cmdqueue_compute_high, 1, &cmdlist_compute_high,
-                             nullptr);
-  lzt::execute_command_lists(cmdqueue_copy_low, 1, &cmdlist_copy_low, nullptr);
-  lzt::execute_command_lists(cmdqueue_copy_high, 1, &cmdlist_copy_high,
-                             nullptr);
-
-  lzt::signal_event_from_host(event_sync);
-  lzt::synchronize(cmdqueue_compute_high, UINT64_MAX);
-  lzt::synchronize(cmdqueue_compute_low, UINT64_MAX);
-  lzt::synchronize(cmdqueue_copy_high, UINT64_MAX);
-  lzt::synchronize(cmdqueue_copy_low, UINT64_MAX);
-
-  uint8_t *uchar_compute_high = static_cast<uint8_t *>(buffer_compute_high);
-  uint8_t *uchar_copy_high = static_cast<uint8_t *>(buffer_copy_high);
-  for (size_t i = 0; i < buff_size_high; i++) {
-    EXPECT_EQ(value_high, uchar_compute_high[i]);
-    EXPECT_EQ(value_high, uchar_copy_high[i]);
-  }
-  uint8_t *uchar_compute_low = static_cast<uint8_t *>(buffer_compute_low);
-  uint8_t *uchar_copy_low = static_cast<uint8_t *>(buffer_copy_low);
-  for (size_t i = 0; i < buff_size_low; i++) {
-    EXPECT_EQ(value_low, uchar_compute_low[i]);
-    EXPECT_EQ(value_low, uchar_copy_low[i]);
-  }
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_compute_high));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_compute_low));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_copy_high));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_copy_low));
-
-  ze_kernel_timestamp_result_t event_compute_low_timestamp =
-      lzt::get_event_kernel_timestamp(event_compute_low);
-  ze_kernel_timestamp_result_t event_compute_high_timestamp =
-      lzt::get_event_kernel_timestamp(event_compute_high);
-  ze_kernel_timestamp_result_t event_copy_low_timestamp =
-      lzt::get_event_kernel_timestamp(event_copy_low);
-  ze_kernel_timestamp_result_t event_copy_high_timestamp =
-      lzt::get_event_kernel_timestamp(event_copy_high);
-
-  EXPECT_GT(event_compute_low_timestamp.global.kernelEnd,
-            event_compute_high_timestamp.global.kernelEnd);
-  EXPECT_GT(event_copy_low_timestamp.global.kernelEnd,
-            event_copy_high_timestamp.global.kernelEnd);
-  /*cleanup*/
-  lzt::free_memory(buffer_compute_high);
-  lzt::free_memory(buffer_compute_low);
-  lzt::free_memory(buffer_copy_high);
-  lzt::free_memory(buffer_copy_low);
-  lzt::destroy_command_queue(cmdqueue_compute_high);
-  lzt::destroy_command_queue(cmdqueue_compute_low);
-  lzt::destroy_command_queue(cmdqueue_copy_high);
-  lzt::destroy_command_queue(cmdqueue_copy_low);
-  lzt::destroy_command_list(cmdlist_compute_high);
-  lzt::destroy_command_list(cmdlist_compute_low);
-  lzt::destroy_command_list(cmdlist_copy_high);
-  lzt::destroy_command_list(cmdlist_copy_low);
-  lzt::destroy_event(event_compute_high);
-  lzt::destroy_event(event_compute_low);
-  lzt::destroy_event(event_copy_high);
-  lzt::destroy_event(event_copy_low);
-  lzt::destroy_event(event_sync);
 }
 
 class CommandQueueCopyOnlyTest : public ::testing::Test {
