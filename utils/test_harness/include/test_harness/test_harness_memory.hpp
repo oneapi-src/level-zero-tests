@@ -30,6 +30,9 @@ void *allocate_host_memory(const size_t size, const size_t alignment,
 void *allocate_device_memory(const size_t size);
 void *allocate_device_memory(const size_t size, const size_t alignment);
 void *allocate_device_memory(const size_t size, const size_t alignment,
+                             const ze_device_mem_alloc_flags_t flags,
+                             ze_context_handle_t context);
+void *allocate_device_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t flags);
 void *allocate_device_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t flags,
@@ -47,6 +50,8 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
                              ze_context_handle_t context);
 void *allocate_shared_memory(const size_t size);
 void *allocate_shared_memory(const size_t size, ze_device_handle_t device);
+void *allocate_shared_memory(const size_t size, const size_t alignment,
+                             ze_context_handle_t context);
 void *allocate_shared_memory(const size_t size, const size_t alignment);
 void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t dev_flags,

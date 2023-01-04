@@ -769,18 +769,18 @@ TEST_P(
   void *ts_start = nullptr;
   void *ts_end = nullptr;
   if (GetParam() == "DeviceMemory") {
-    ts_start = lzt::allocate_device_memory(ts_size, 8);
-    ts_end = lzt::allocate_device_memory(ts_size, 8);
+    ts_start = lzt::allocate_device_memory(ts_size, 8, 0, context);
+    ts_end = lzt::allocate_device_memory(ts_size, 8, 0, context);
   } else if (GetParam() == "HostMemory") {
-    ts_start = lzt::allocate_host_memory(ts_size, 8);
-    ts_end = lzt::allocate_host_memory(ts_size, 8);
+    ts_start = lzt::allocate_host_memory(ts_size, 8, context);
+    ts_end = lzt::allocate_host_memory(ts_size, 8, context);
   } else {
     FAIL() << "Unsupported Input \"" << GetParam() << "\" for the Test";
     return;
   }
 
-  auto ts_readback_start = lzt::allocate_shared_memory(ts_size, 8);
-  auto ts_readback_end = lzt::allocate_shared_memory(ts_size, 8);
+  auto ts_readback_start = lzt::allocate_shared_memory(ts_size, 8, context);
+  auto ts_readback_end = lzt::allocate_shared_memory(ts_size, 8, context);
 
   // Prepare for copy operation
   const size_t copy_size = 8192;

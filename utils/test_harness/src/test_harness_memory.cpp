@@ -81,6 +81,14 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t flags,
+                             ze_context_handle_t context) {
+
+  auto device = zeDevice::get_instance()->get_device();
+  return allocate_device_memory(size, alignment, flags, device, context);
+}
+
+void *allocate_device_memory(const size_t size, const size_t alignment,
+                             const ze_device_mem_alloc_flags_t flags,
                              ze_device_handle_t device,
                              ze_context_handle_t context) {
 
@@ -129,6 +137,12 @@ void *allocate_shared_memory(const size_t size, ze_device_handle_t device) {
 }
 void *allocate_shared_memory(const size_t size, const size_t alignment) {
   return allocate_shared_memory(size, alignment, 0, 0);
+}
+
+void *allocate_shared_memory(const size_t size, const size_t alignment,
+                             ze_context_handle_t context) {
+  ze_device_handle_t device = zeDevice::get_instance()->get_device();
+  return allocate_shared_memory(size, alignment, 0, 0, device, context);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
