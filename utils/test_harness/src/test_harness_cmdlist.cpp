@@ -22,6 +22,11 @@ ze_command_list_handle_t create_command_list(ze_device_handle_t device) {
   return create_command_list(device, 0);
 }
 
+ze_command_list_handle_t create_command_list(ze_context_handle_t context,
+                                             ze_device_handle_t device) {
+  return create_command_list(context, device, 0);
+}
+
 ze_command_list_handle_t create_command_list(ze_device_handle_t device,
                                              ze_command_list_flags_t flags) {
   return create_command_list(lzt::get_default_context(), device, 0);

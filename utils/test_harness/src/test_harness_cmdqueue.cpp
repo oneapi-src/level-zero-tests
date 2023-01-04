@@ -28,6 +28,12 @@ ze_command_queue_handle_t create_command_queue(ze_device_handle_t device) {
                               ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 }
 
+ze_command_queue_handle_t create_command_queue(ze_context_handle_t context,
+                                               ze_device_handle_t device) {
+  return create_command_queue(context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                              ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+}
+
 ze_command_queue_handle_t
 create_command_queue(ze_device_handle_t device, ze_command_queue_flags_t flags,
                      ze_command_queue_mode_t mode,

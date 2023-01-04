@@ -250,8 +250,16 @@ protected:
   void *allocate_memory(int driver_index, int device_index,
                         int cross_device_index, ze_memory_type_t mem_type,
                         shared_memory_type shr_type, size_t size) {
+    return allocate_memory(driver_index, device_index, cross_device_index,
+                           mem_type, shr_type, size, contexts[driver_index]);
+  }
+
+  void *allocate_memory(int driver_index, int device_index,
+                        int cross_device_index, ze_memory_type_t mem_type,
+                        shared_memory_type shr_type, size_t size,
+                        ze_context_handle_t context) {
+
     auto device = devices[driver_index][device_index];
-    auto context = contexts[driver_index];
     auto mem_access_properties =
         memory_access_properties[driver_index][device_index];
     if (mem_type == ZE_MEMORY_TYPE_HOST) {
@@ -374,8 +382,8 @@ protected:
       return;
     }
     // set up
-    auto command_queue = lzt::create_command_queue(device);
-    auto command_list = lzt::create_command_list(device);
+    auto command_queue = lzt::create_command_queue(context, device);
+    auto command_list = lzt::create_command_list(context, device);
 
     auto module = lzt::create_module(device, "copy_module.spv");
     auto kernel = lzt::create_function(module, "copy_data_indirect");
@@ -386,10 +394,10 @@ protected:
     std::vector<uint32_t *> src_data_ptr_array, dst_data_ptr_array;
     src_data = static_cast<copy_data *>(allocate_memory(
         driver_index, device_index, cross_device_index, src_ptr_mem_type,
-        src_ptr_shr_type, size * sizeof(copy_data)));
+        src_ptr_shr_type, size * sizeof(copy_data), context));
     dst_data = static_cast<copy_data *>(allocate_memory(
         driver_index, device_index, cross_device_index, dst_ptr_mem_type,
-        dst_ptr_shr_type, size * sizeof(copy_data)));
+        dst_ptr_shr_type, size * sizeof(copy_data), context));
     if (src_data == nullptr || dst_data == nullptr) {
       if (src_data)
         free_memory(src_data, src_ptr_mem_type, src_ptr_shr_type);
@@ -401,10 +409,10 @@ protected:
     for (int i = 0; i < size; i++) {
       src_data_ptr_array.push_back(static_cast<uint32_t *>(allocate_memory(
           driver_index, device_index, cross_device_index, src_mem_type,
-          src_shr_type, size * sizeof(uint32_t))));
+          src_shr_type, size * sizeof(uint32_t), context)));
       dst_data_ptr_array.push_back(static_cast<uint32_t *>(allocate_memory(
           driver_index, device_index, cross_device_index, dst_mem_type,
-          dst_shr_type, size * sizeof(uint32_t))));
+          dst_shr_type, size * sizeof(uint32_t), context)));
       if (src_data_ptr_array[i] == nullptr ||
           dst_data_ptr_array[i] == nullptr) {
         // deallocate all previous memory allocations before skipping the test
