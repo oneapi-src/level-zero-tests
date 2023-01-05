@@ -10,6 +10,8 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
+#include <csignal>
+
 namespace lzt = level_zero_tests;
 
 ze_kernel_handle_t load_gpu(ze_device_handle_t device, ze_group_count_t *tg,
@@ -57,6 +59,21 @@ ze_kernel_handle_t load_gpu(ze_device_handle_t device, ze_group_count_t *tg,
   return function;
 }
 
+void interrupt_process() {
+
+  // wait for signal from parent process
+  while (true) {
+    std::string line;
+    std::getline(std::cin, line);
+    if (line == "stop") {
+      break;
+    }
+  }
+
+  LOG_WARNING << "Interrupting process";
+  std::raise(SIGINT);
+}
+
 int main(int argc, char **argv) {
 
   ze_result_t result = zeInit(0);
@@ -82,10 +99,14 @@ int main(int argc, char **argv) {
   zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                   nullptr);
 
+  // start a monitor thread
+  std::thread monitor(interrupt_process);
   lzt::close_command_list(commandList);
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
 
   lzt::synchronize(commandQueue, UINT64_MAX);
+
+  monitor.join();
 
   lzt::destroy_function(function);
   lzt::free_memory(a_buffer);

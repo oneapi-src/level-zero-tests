@@ -1514,12 +1514,7 @@ TEST(
   }
   // pick a metric group
   auto groupInfo = metricGroupInfo[0];
-  for (auto &_groupInfo : metricGroupInfo) {
-    if (_groupInfo.metricGroupName == "ComputeBasic") {
-      groupInfo = _groupInfo;
-      break;
-    }
-  }
+
   LOG_INFO << "Selected metric group: " << groupInfo.metricGroupName
            << " domain: " << groupInfo.domain;
 
@@ -1578,6 +1573,99 @@ TEST(
   metric_helper.wait();
 
   EXPECT_EQ(metric_helper.exit_code(), 0);
+
+  // cleanup
+  lzt::deactivate_metric_groups(device);
+  lzt::metric_streamer_close(metricStreamerHandle);
+  eventPool.destroy_event(eventHandle);
+}
+
+TEST(
+    zetMetricStreamProcessTest,
+    GivenWorkloadExecutingInSeparateProcessWhenStreamingMetricsAndSendInterruptThenExpectValidMetrics) {
+
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+
+  // setup monitor
+  auto metricGroupInfo = lzt::get_metric_group_info(
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+  metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+
+  if (metricGroupInfo.empty()) {
+    LOG_INFO << "No metric groups found";
+    return;
+  }
+  // pick a metric group
+  auto groupInfo = metricGroupInfo[0];
+
+  LOG_INFO << "Selected metric group: " << groupInfo.metricGroupName
+           << " domain: " << groupInfo.domain;
+
+  LOG_INFO << "Activating metric group: " << groupInfo.metricGroupName;
+  lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
+
+  ze_event_handle_t eventHandle;
+  lzt::zeEventPool eventPool;
+  eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
+                         ZE_EVENT_SCOPE_FLAG_HOST);
+
+  uint32_t notifyEveryNReports = 3000;
+  uint32_t samplingPeriod = 1000000;
+  zet_metric_streamer_handle_t metricStreamerHandle =
+      lzt::metric_streamer_open_for_device(device, groupInfo.metricGroupHandle,
+                                           eventHandle, notifyEveryNReports,
+                                           samplingPeriod);
+  ASSERT_NE(nullptr, metricStreamerHandle);
+
+  //================================================================================
+  LOG_INFO << "Starting workload in separate process";
+  fs::path helper_path(fs::current_path() / "metrics");
+  std::vector<fs::path> paths;
+  paths.push_back(helper_path);
+  fs::path helper = bp::search_path("test_metric_helper", paths);
+  bp::opstream child_input;
+  bp::child metric_helper(helper, bp::std_in < child_input);
+
+  // start monitor
+  do {
+    LOG_DEBUG << "Waiting for data (event synchronize)...";
+    lzt::event_host_synchronize(eventHandle,
+                                std::numeric_limits<uint64_t>::max());
+    lzt::event_host_reset(eventHandle);
+
+    // read data
+    size_t oneReportSize, allReportsSize, numReports;
+    oneReportSize =
+        lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
+    allReportsSize =
+        lzt::metric_streamer_read_data_size(metricStreamerHandle, UINT32_MAX);
+
+    LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
+              << ". All reports size:" << allReportsSize;
+
+    EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
+
+    std::vector<uint8_t> rawData;
+    lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
+    lzt::validate_metrics(
+        groupInfo.metricGroupHandle,
+        lzt::metric_streamer_read_data_size(metricStreamerHandle),
+        rawData.data());
+
+    // send interrupt
+    LOG_WARNING << "Sending interrupt to process";
+    child_input << "stop" << std::endl;
+
+    // wait 1 second
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    // expect helper has exited
+    EXPECT_FALSE(metric_helper.running());
+
+  } while (metric_helper.running());
+  LOG_WARNING << "Waiting for process to finish...";
+  metric_helper.wait();
 
   // cleanup
   lzt::deactivate_metric_groups(device);
