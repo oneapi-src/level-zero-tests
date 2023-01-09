@@ -79,4 +79,82 @@ TEST(
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE, zeModuleDestroy(nullptr));
 }
 
+class ModuleNegativeLocalMemoryTests : public ::testing::Test {
+
+public:
+  ModuleNegativeLocalMemoryTests() {
+    device_ = lzt::zeDevice::get_instance()->get_device();
+    module_ = lzt::create_module(device_, "local_memory_argument_kernel.spv");
+    cmd_list_ = lzt::create_command_list(device_);
+    cmd_queue_ = lzt::create_command_queue();
+  }
+
+  ~ModuleNegativeLocalMemoryTests() {
+    lzt::destroy_module(module_);
+    lzt::destroy_command_list(cmd_list_);
+    lzt::destroy_command_queue(cmd_queue_);
+  }
+
+protected:
+  ze_device_handle_t device_;
+  ze_module_handle_t module_;
+  ze_command_list_handle_t cmd_list_;
+  ze_command_queue_handle_t cmd_queue_;
+};
+
+TEST_F(
+    ModuleNegativeLocalMemoryTests,
+    GivenKernelWithSharedLocalMemoryLargerThanMaxSharedLocalMemorySizeThenOutOfMemoryErrorIsReturned) {
+  std::string kernel_name = "single_local";
+  lzt::FunctionArg arg;
+  std::vector<lzt::FunctionArg> args;
+
+  auto device_compute_properties = lzt::get_compute_properties(device_);
+
+  const int local_size =
+      (device_compute_properties.maxSharedLocalMemory + 1) * sizeof(uint8_t);
+  auto buff = lzt::allocate_host_memory(local_size);
+
+  arg.arg_size = local_size;
+  arg.arg_value = nullptr;
+  args.push_back(arg);
+
+  arg.arg_size = sizeof(buff);
+  arg.arg_value = &buff;
+  args.push_back(arg);
+
+  ze_kernel_handle_t function = lzt::create_function(module_, kernel_name);
+  ze_command_list_handle_t cmdlist = lzt::create_command_list(device_);
+  ze_command_queue_handle_t cmdq = lzt::create_command_queue(device_);
+  uint32_t group_size_x = 1;
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSuggestGroupSize(function, 1, 1, 1, &group_size_x,
+                                     &group_size_y, &group_size_z));
+
+  EXPECT_EQ(
+      ZE_RESULT_SUCCESS,
+      zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
+
+  int i = 0;
+  for (auto arg : args) {
+    EXPECT_EQ(
+        ZE_RESULT_SUCCESS,
+        zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));
+  }
+
+  ze_group_count_t thread_group_dimensions;
+  thread_group_dimensions.groupCountX = 1;
+  thread_group_dimensions.groupCountY = 1;
+  thread_group_dimensions.groupCountZ = 1;
+
+  EXPECT_EQ(ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY,
+            zeCommandListAppendLaunchKernel(cmdlist, function,
+                                            &thread_group_dimensions, nullptr,
+                                            0, nullptr));
+
+  lzt::free_memory(buff);
+}
+
 } // namespace
