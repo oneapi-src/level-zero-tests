@@ -62,8 +62,8 @@ protected:
     lzt::destroy_event_pool(ep);
     lzt::destroy_command_list(cmdlist);
     lzt::destroy_command_queue(cmdqueue);
-    lzt::destroy_module(module);
     lzt::destroy_function(kernel);
+    lzt::destroy_module(module);
     lzt::destroy_context(context);
   }
 
@@ -305,8 +305,8 @@ TEST_F(KernelEventProfilingCacheCoherencyTests,
   lzt::destroy_event_pool(ep);
   lzt::destroy_command_list(cmdlist);
   lzt::destroy_command_queue(cmdqueue);
-  lzt::destroy_module(module);
   lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
   lzt::destroy_context(context);
 }
 
