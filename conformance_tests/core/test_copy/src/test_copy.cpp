@@ -447,12 +447,42 @@ TEST_F(
 
 class zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<
-          size_t, size_t, size_t, ze_memory_type_t, ze_memory_type_t>> {
+      public ::testing::WithParamInterface<
+          std::tuple<size_t, size_t, size_t, ze_memory_type_t, ze_memory_type_t,
+                     std::string>> {
 protected:
   zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests() {
-    command_list = create_command_list();
-    command_queue = create_command_queue();
+    auto command_queue_group_property = std::get<5>(GetParam());
+    auto device = lzt::get_default_device(lzt::get_default_driver());
+    auto command_queue_groups = lzt::get_command_queue_group_properties(device);
+    auto chosen_ordinal = std::numeric_limits<size_t>::max();
+
+    for (size_t i = 0; i < command_queue_groups.size(); i++) {
+      if (command_queue_group_property == "Compute") {
+        if ((command_queue_groups[i].flags &
+             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) != 0) {
+          chosen_ordinal = i;
+          break;
+        }
+      } else if (command_queue_group_property == "CopyOnly") {
+        if ((command_queue_groups[i].flags ==
+             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
+            (command_queue_groups[i].numQueues != 0)) {
+          chosen_ordinal = i;
+          break;
+        }
+      }
+    }
+
+    if (chosen_ordinal == std::numeric_limits<size_t>::max()) {
+      return;
+    }
+
+    command_queue =
+        create_command_queue(device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                             ZE_COMMAND_QUEUE_PRIORITY_NORMAL, chosen_ordinal);
+    command_list = create_command_list(lzt::get_default_context(), device, 0,
+                                       chosen_ordinal);
 
     rows = std::get<0>(GetParam());
     columns = std::get<1>(GetParam());
@@ -507,6 +537,9 @@ protected:
   }
 
   ~zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests() {
+    if (command_queue == nullptr) {
+      return;
+    }
     destroy_command_list(command_list);
     destroy_command_queue(command_queue);
 
@@ -517,6 +550,12 @@ protected:
   }
 
   void test_copy_region() {
+
+    if (command_queue == nullptr) {
+      FAIL() << "Command Queue with supported properties could not be found!";
+      return;
+    }
+
     void *verification_memory = allocate_host_memory(memory_size);
 
     std::array<size_t, 3> widths = {1, columns / 2, columns};
@@ -574,8 +613,8 @@ protected:
     }
   }
 
-  ze_command_list_handle_t command_list;
-  ze_command_queue_handle_t command_queue;
+  ze_command_list_handle_t command_list = nullptr;
+  ze_command_queue_handle_t command_queue = nullptr;
 
   void *source_memory, *temp_src;
   void *destination_memory, *temp_dest;
@@ -594,6 +633,7 @@ TEST_P(
 
 auto memory_types = ::testing::Values(
     ZE_MEMORY_TYPE_DEVICE, ZE_MEMORY_TYPE_HOST, ZE_MEMORY_TYPE_SHARED);
+auto engine_types = ::testing::Values("Compute", "CopyOnly");
 INSTANTIATE_TEST_CASE_P(
     MemoryCopies,
     zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests,
@@ -601,7 +641,8 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::Values(8, 64),    // Cols
                        ::testing::Values(1, 8, 64), // Slices
                        memory_types,                // Source Memory Type
-                       memory_types                 // Destination Memory Type
+                       memory_types,                // Destination Memory Type
+                       engine_types                 // Engine type
                        ));
 class zeCommandListAppendMemoryCopyTests : public ::testing::Test {};
 
