@@ -944,8 +944,8 @@ TEST_F(
       std::vector<uint8_t> rawData;
       lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
 
-      lzt::deactivate_metric_groups(device);
       lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
@@ -1037,8 +1037,8 @@ TEST_F(
           lzt::metric_streamer_read_data_size(metricStreamerHandle),
           rawData.data());
 
-      lzt::deactivate_metric_groups(device);
       lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
@@ -1160,8 +1160,8 @@ TEST_F(
           lzt::metric_streamer_read_data_size(metricStreamerHandle),
           rawData.data(), true);
 
-      lzt::deactivate_metric_groups(device);
       lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
 
       for (auto &fData : functionDataBuf) {
         lzt::destroy_function(fData.function);
@@ -1262,8 +1262,8 @@ TEST_F(
       std::vector<uint8_t> rawData;
       lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
 
-      lzt::deactivate_metric_groups(device);
       lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
@@ -1364,8 +1364,8 @@ TEST_F(
           lzt::metric_streamer_read_data_size(metricStreamerHandle),
           rawData.data());
 
-      lzt::deactivate_metric_groups(device);
       lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
@@ -1482,8 +1482,8 @@ TEST_F(
           lzt::metric_streamer_read_data_size(metricStreamerHandle),
           rawData.data());
 
-      lzt::deactivate_metric_groups(device);
       lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
@@ -1575,8 +1575,8 @@ TEST(
   EXPECT_EQ(metric_helper.exit_code(), 0);
 
   // cleanup
-  lzt::deactivate_metric_groups(device);
   lzt::metric_streamer_close(metricStreamerHandle);
+  lzt::deactivate_metric_groups(device);
   eventPool.destroy_event(eventHandle);
 }
 
@@ -1763,8 +1763,8 @@ TEST_F(
           lzt::metric_streamer_read_data_size(metricStreamerHandle),
           rawData.data());
 
-      lzt::deactivate_metric_groups(device);
       lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
