@@ -5,6 +5,7 @@
 #
 
 add_subdirectory(test_sysman_pci)
+add_subdirectory(test_sysman_init)
 add_subdirectory(test_sysman_frequency)
 add_subdirectory(test_sysman_standby)
 add_subdirectory(test_sysman_power)

@@ -192,7 +192,7 @@ TEST(
         device_properties = lzt::get_device_properties(device);
         EXPECT_EQ(0, memcmp(properties.uuid.id, device_properties.uuid.id,
                             sizeof(properties.uuid.id)));
-        EXPECT_EQ(ZE_FABRIC_VERTEX_EXP_TYPE_SUBEVICE, properties.type);
+        EXPECT_EQ(ZE_FABRIC_VERTEX_EXP_TYPE_SUBDEVICE, properties.type);
         EXPECT_FALSE(properties.remote);
 
         ze_pci_ext_properties_t pciProperties{};
