@@ -89,6 +89,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_name.find("zeVirtualMemoryTests")!= -1) or \
                     (test_name.find("Cooperative")!= -1) or \
                     (test_name.find("zeMemFreeExtTests")!= -1) or \
+                    (test_name.find("zeMemFreeExtMultipleTests")!= -1) or \
                     re.search('fabric', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
             else:
