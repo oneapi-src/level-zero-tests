@@ -635,6 +635,86 @@ TEST_F(zeMemFreeExtTests, AllocateDeviceMemoryAndThenFreeWithDeferFreePolicy) {
             zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
 }
 
+class zeMemFreeExtMultipleTests : public ::testing::Test,
+                                  public ::testing::WithParamInterface<
+                                      std::tuple<size_t, uint32_t, uint32_t>> {
+};
+
+TEST_P(
+    zeMemFreeExtMultipleTests,
+    AllocateMultipleDeviceMemoryAndThenFreeWithDeferFreePolicyWhileBuffersInUse) {
+  if (!check_ext_version())
+    return;
+#define NUM_BUFFERS_MAX 100
+  const size_t size = std::get<0>(GetParam());
+  const size_t alignment = 1;
+  void *base = nullptr;
+  uint32_t num_buffers = std::get<1>(GetParam());
+  if (num_buffers > NUM_BUFFERS_MAX) {
+    num_buffers = NUM_BUFFERS_MAX;
+  }
+  uint32_t num_loops = std::get<2>(GetParam());
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+
+  uint8_t pattern[NUM_BUFFERS_MAX];
+  void *memory[NUM_BUFFERS_MAX];
+
+  ze_memory_free_ext_desc_t memfreedesc = {};
+  memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
+
+  for (uint32_t type = 0; type < 2; type++) {
+    if (type == 0) {
+      memfreedesc.freePolicy =
+          ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE;
+    } else {
+      memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE;
+    }
+
+    for (uint32_t count = 0; count < num_loops; count++) {
+      const ze_context_handle_t context = lzt::create_context();
+      auto cmdlist = lzt::create_command_list(context, device, 0, 0);
+      auto cmdqueue = lzt::create_command_queue(
+          context, device, static_cast<ze_command_queue_flag_t>(0),
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0);
+
+      for (uint32_t i = 0; i < num_buffers; i++) {
+        memory[i] =
+            lzt::allocate_device_memory(size, alignment, 0, 0, device, context);
+        EXPECT_NE(nullptr, memory[i]);
+        pattern[i] = rand() & 0xff;
+        lzt::append_memory_fill(cmdlist, memory[i], &pattern[i], 1, size,
+                                nullptr);
+      }
+
+      lzt::close_command_list(cmdlist);
+      lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+
+      for (uint32_t i = 0; i < num_buffers; i++) {
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeMemFreeExt(context, &memfreedesc, memory[i]));
+      }
+
+      lzt::synchronize(cmdqueue, UINT64_MAX);
+
+      for (uint32_t i = 0; i < num_buffers; i++) {
+        for (size_t j = 0; j++; j < size) {
+          ASSERT_EQ(static_cast<uint8_t *>(memory[i])[j], pattern[i]);
+        }
+      }
+      lzt::destroy_command_list(cmdlist);
+      lzt::destroy_command_queue(cmdqueue);
+      lzt::destroy_context(context);
+    }
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(
+    TestDeferAndBlockingPermuatations, zeMemFreeExtMultipleTests,
+    ::testing::Combine(::testing::Values(5000000, 10000000, 50000000,
+                                         100000000),
+                       ::testing::Values(5, 10), ::testing::Values(100)));
+
 #endif
 
 class zeHostMemGetAddressRangeSizeTests
