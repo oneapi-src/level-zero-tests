@@ -19,6 +19,7 @@
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "test_metric_utils.hpp"
 
 namespace lzt = level_zero_tests;
 namespace fs = boost::filesystem;
@@ -29,43 +30,6 @@ namespace bi = boost::interprocess;
 #include <level_zero/zet_api.h>
 
 namespace {
-
-ze_kernel_handle_t load_gpu(ze_device_handle_t device, ze_group_count_t *tg,
-                            void **a_buffer, void **b_buffer, void **c_buffer,
-                            int dimensions = 1024) {
-  int m, k, n;
-  m = k = n = dimensions;
-  std::vector<float> a(m * k, 1);
-  std::vector<float> b(k * n, 1);
-  std::vector<float> c(m * n, 0);
-  *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
-  *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
-  *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
-
-  std::memcpy(*a_buffer, a.data(), a.size() * sizeof(float));
-  std::memcpy(*b_buffer, b.data(), b.size() * sizeof(float));
-
-  int group_count_x = m / 16;
-  int group_count_y = n / 16;
-
-  tg->groupCountX = group_count_x;
-  tg->groupCountY = group_count_y;
-  tg->groupCountZ = 1;
-
-  ze_module_handle_t module =
-      lzt::create_module(device, "ze_matrix_multiplication.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
-  ze_kernel_handle_t function =
-      lzt::create_function(module, "matrix_multiplication");
-  lzt::set_group_size(function, 16, 16, 1);
-  lzt::set_argument_value(function, 0, sizeof(*a_buffer), a_buffer);
-  lzt::set_argument_value(function, 1, sizeof(*b_buffer), b_buffer);
-  lzt::set_argument_value(function, 2, sizeof(m), &m);
-  lzt::set_argument_value(function, 3, sizeof(k), &k);
-  lzt::set_argument_value(function, 4, sizeof(n), &n);
-  lzt::set_argument_value(function, 5, sizeof(*c_buffer), c_buffer);
-  return function;
-}
 
 class zetMetricGroupTest : public ::testing::Test {
 protected:
@@ -422,8 +386,8 @@ TEST_F(
                              ZE_EVENT_SCOPE_FLAG_HOST);
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
-      ze_kernel_handle_t function =
-          load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
 
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
@@ -505,8 +469,8 @@ void run_test(const ze_device_handle_t &device, bool reset, bool immediate) {
                            ZE_EVENT_SCOPE_FLAG_HOST);
     void *a_buffer, *b_buffer, *c_buffer;
     ze_group_count_t tg;
-    ze_kernel_handle_t function =
-        load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer);
 
     zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                     nullptr);
@@ -543,7 +507,8 @@ void run_test(const ze_device_handle_t &device, bool reset, bool immediate) {
       lzt::free_memory(c_buffer);
       lzt::destroy_function(function);
 
-      function = load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      function = get_matrix_multiplication_kernel(device, &tg, &a_buffer,
+                                                  &b_buffer, &c_buffer);
 
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
@@ -671,11 +636,11 @@ void run_multi_device_query_load_test(
   void *a_buffer_1, *b_buffer_1, *c_buffer_1;
   ze_group_count_t tg_1;
 
-  auto function_0 =
-      load_gpu(device_0, &tg_0, &a_buffer_0, &b_buffer_0, &c_buffer_0);
+  auto function_0 = get_matrix_multiplication_kernel(
+      device_0, &tg_0, &a_buffer_0, &b_buffer_0, &c_buffer_0);
 
-  auto function_1 =
-      load_gpu(device_1, &tg_1, &a_buffer_1, &b_buffer_1, &c_buffer_1);
+  auto function_1 = get_matrix_multiplication_kernel(
+      device_1, &tg_1, &a_buffer_1, &b_buffer_1, &c_buffer_1);
 
   lzt::append_launch_function(command_list_0, function_0, &tg_0, event_handle_0,
                               0, nullptr);
@@ -818,8 +783,8 @@ TEST_F(
                              ZE_EVENT_SCOPE_FLAG_HOST);
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
-      ze_kernel_handle_t function =
-          load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
 
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
@@ -913,8 +878,8 @@ TEST_F(
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
-      ze_kernel_handle_t function =
-          load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
 
@@ -1002,8 +967,8 @@ TEST_F(
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
-      ze_kernel_handle_t function =
-          load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
 
@@ -1106,8 +1071,9 @@ TEST_F(
       ASSERT_NE(nullptr, metricStreamerHandle);
 
       for (auto &fData : functionDataBuf) {
-        fData.function = load_gpu(device, &fData.tg, &fData.a_buffer,
-                                  &fData.b_buffer, &fData.c_buffer, 8192);
+        fData.function = get_matrix_multiplication_kernel(
+            device, &fData.tg, &fData.a_buffer, &fData.b_buffer,
+            &fData.c_buffer, 8192);
         zeCommandListAppendLaunchKernel(commandList, fData.function, &fData.tg,
                                         nullptr, 0, nullptr);
       }
@@ -1224,8 +1190,8 @@ TEST_F(
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
-      ze_kernel_handle_t function =
-          load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
 
@@ -1322,8 +1288,8 @@ TEST_F(
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
-      ze_kernel_handle_t function =
-          load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
 
@@ -1440,8 +1406,8 @@ TEST_F(
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
-      ze_kernel_handle_t function =
-          load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
 
@@ -1717,8 +1683,8 @@ TEST_F(
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
-      ze_kernel_handle_t function =
-          load_gpu(device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
 
       // Since immediate command list is used, using repeated command list
       // updates to capture metric data
@@ -1838,11 +1804,11 @@ void run_multi_device_streamer_test(
   void *a_buffer_1, *b_buffer_1, *c_buffer_1;
   ze_group_count_t tg_1;
 
-  auto function_0 =
-      load_gpu(device_0, &tg_0, &a_buffer_0, &b_buffer_0, &c_buffer_0);
+  auto function_0 = get_matrix_multiplication_kernel(
+      device_0, &tg_0, &a_buffer_0, &b_buffer_0, &c_buffer_0);
 
-  auto function_1 =
-      load_gpu(device_1, &tg_1, &a_buffer_1, &b_buffer_1, &c_buffer_1);
+  auto function_1 = get_matrix_multiplication_kernel(
+      device_1, &tg_1, &a_buffer_1, &b_buffer_1, &c_buffer_1);
 
   lzt::append_launch_function(command_list_0, function_0, &tg_0, nullptr, 0,
                               nullptr);

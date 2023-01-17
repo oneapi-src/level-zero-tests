@@ -5,6 +5,7 @@ add_lzt_test(
   NAME test_metric
   GROUP "/conformance_tests/tools/metrics"
   SOURCES
+    src/test_metric_utils.cpp
     src/test_metric.cpp
     src/main.cpp
   LINK_LIBRARIES
@@ -19,6 +20,7 @@ add_lzt_test_executable(
   GROUP "/conformance_tests/tools/metrics"
   PREFIX "metrics"
   SOURCES
+  src/test_metric_utils.cpp
   src/test_metric_helper.cpp
   LINK_LIBRARIES
   level_zero_tests::logging
