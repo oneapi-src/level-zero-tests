@@ -653,6 +653,7 @@ bool verify_metric_type(zet_metric_type_t metric_type) {
   case zet_metric_type_t::ZET_METRIC_TYPE_FLAG:
   case zet_metric_type_t::ZET_METRIC_TYPE_RATIO:
   case zet_metric_type_t::ZET_METRIC_TYPE_RAW:
+  case zet_metric_type_t::ZET_METRIC_TYPE_IP_EXP:
     break;
   default:
     metric_type_is_valid = false;

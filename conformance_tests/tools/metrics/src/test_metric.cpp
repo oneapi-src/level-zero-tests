@@ -91,7 +91,9 @@ TEST_F(
   std::vector<std::string> groupNameList;
   groupNameList = lzt::get_metric_group_name_list(
       device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+  LOG_INFO << "groupNameList size " << groupNameList.size();
   for (auto groupName : groupNameList) {
+    LOG_INFO << "testing metric groupName " << groupName;
     zet_metric_group_handle_t testMatchedGroupHandle = lzt::find_metric_group(
         device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
     EXPECT_NE(nullptr, testMatchedGroupHandle);
