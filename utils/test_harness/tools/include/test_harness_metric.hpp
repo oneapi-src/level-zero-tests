@@ -19,13 +19,18 @@ namespace level_zero_tests {
 typedef struct metricGroupInfo {
   zet_metric_group_handle_t metricGroupHandle;
   std::string metricGroupName;
+  std::string metricGroupDescription;
   uint32_t domain = 0;
+  uint32_t metricCount = 0;
 
   metricGroupInfo(zet_metric_group_handle_t handle, std::string name,
-                  uint32_t domain)
+                  std::string description, uint32_t domain, uint32_t count)
       : metricGroupHandle(handle), metricGroupName(std::move(name)),
-        domain(domain) {}
+        metricGroupDescription(std::move(description)), domain(domain),
+        metricCount(count) {}
 } metricGroupInfo_t;
+
+void logMetricGroupDebugInfo(const metricGroupInfo_t &metricGroupInfo);
 
 std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
     ze_device_handle_t device,
@@ -102,15 +107,23 @@ void append_metric_query_begin(zet_command_list_handle_t commandList,
 void append_metric_query_end(zet_command_list_handle_t commandList,
                              zet_metric_query_handle_t metricQueryHandle,
                              ze_event_handle_t eventHandle);
-void validate_metrics(zet_metric_group_handle_t matchedGroupHandle,
+
+void validate_metrics(zet_metric_group_handle_t hMetricGroup,
                       const size_t rawDataSize, const uint8_t *rawData,
                       bool requireOverflow = false);
+
+void validate_metrics(
+    zet_metric_group_handle_t hMetricGroup, const size_t rawDataSize,
+    const uint8_t *rawData, const char *metricNameForTest,
+    std::vector<std::vector<zet_typed_value_t>> &typedValuesFoundPerDevice);
+
 void validate_metrics_std(zet_metric_group_handle_t matchedGroupHandle,
                           const size_t rawDataSize, const uint8_t *rawData);
 // Consider 20% of the metric groups in each domain for test input as default
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
-    uint32_t percentOfMetricGroupForTest = 20);
+    uint32_t percentOfMetricGroupForTest = 20,
+    const char *MetricGroupName = nullptr);
 
 bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup);
 

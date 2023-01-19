@@ -50,6 +50,90 @@ get_metric_handles(zet_metric_group_handle_t metricGroup) {
   return phMetric;
 }
 
+void get_metric_properties(zet_metric_handle_t hMetric,
+                           zet_metric_properties_t *metricProperties) {
+  *metricProperties = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGetProperties(hMetric, metricProperties));
+}
+
+std::string metric_type_to_string(zet_metric_type_t metric_type) {
+  switch (metric_type) {
+  case zet_metric_type_t::ZET_METRIC_TYPE_DURATION:
+    return "ZET_METRIC_TYPE_DURATION";
+    break;
+  case zet_metric_type_t::ZET_METRIC_TYPE_EVENT:
+    return "ZET_METRIC_TYPE_EVENT";
+    break;
+  case zet_metric_type_t::ZET_METRIC_TYPE_EVENT_WITH_RANGE:
+    return "ZET_METRIC_TYPE_EVENT_WITH_RANGE";
+    break;
+  case zet_metric_type_t::ZET_METRIC_TYPE_THROUGHPUT:
+    return "ZET_METRIC_TYPE_EVENT_TYPE_THROUGHPUT";
+    break;
+  case zet_metric_type_t::ZET_METRIC_TYPE_TIMESTAMP:
+    return "ZET_METRIC_TYPE_EVENT_TYPE_TIMESTAMP";
+    break;
+  case zet_metric_type_t::ZET_METRIC_TYPE_FLAG:
+    return "ZET_METRIC_TYPE_EVENT_TYPE_FLAG";
+    break;
+  case zet_metric_type_t::ZET_METRIC_TYPE_RATIO:
+    return "ZET_METRIC_TYPE_EVENT_TYPE_RATIO";
+    break;
+  case zet_metric_type_t::ZET_METRIC_TYPE_RAW:
+    return "ZET_METRIC_TYPE_EVENT_TYPE_RAW";
+    break;
+  default:
+    LOG_WARNING << "invalid zet_metric_type_t encountered " << metric_type;
+    return "UNKNOWN TYPE";
+    break;
+  }
+}
+
+std::string metric_value_type_to_string(zet_value_type_t result_type) {
+  switch (result_type) {
+  case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
+    return "BOOL";
+  case zet_value_type_t::ZET_VALUE_TYPE_FLOAT32:
+    return "fp32";
+  case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
+    return "fp64";
+  case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
+    return "uint32_t";
+  case zet_value_type_t::ZET_VALUE_TYPE_UINT64:
+    return "uint64_t";
+  default:
+    return "UNKNOWN typed value";
+  }
+}
+
+void logMetricGroupDebugInfo(const metricGroupInfo_t &groupInfo) {
+  LOG_DEBUG << "#####################################";
+  LOG_DEBUG << "test metricGroup name " << groupInfo.metricGroupName;
+  LOG_DEBUG << "metric group description " << groupInfo.metricGroupDescription
+            << " domain " << groupInfo.domain << " metricCount "
+            << groupInfo.metricCount;
+
+  std::vector<zet_metric_handle_t> metricHandles;
+  metricHandles = lzt::get_metric_handles(groupInfo.metricGroupHandle);
+
+  for (auto metricHandle : metricHandles) {
+    zet_metric_properties_t metricProperties;
+    lzt::get_metric_properties(metricHandle, &metricProperties);
+    LOG_DEBUG << " ";
+    LOG_DEBUG << "metric name " << metricProperties.name;
+    LOG_DEBUG << " description " << metricProperties.description;
+    LOG_DEBUG << " component " << metricProperties.component;
+    LOG_DEBUG << " tierNumber " << metricProperties.tierNumber;
+    LOG_DEBUG << " metricType "
+              << metric_type_to_string(metricProperties.metricType);
+    LOG_DEBUG << " resultType "
+              << metric_value_type_to_string(metricProperties.resultType);
+    LOG_DEBUG << " resultUnits " << metricProperties.resultUnits;
+  }
+  LOG_DEBUG << "#####################################";
+};
+
 std::vector<ze_device_handle_t> get_metric_test_no_subdevices_list(void) {
   std::vector<ze_device_handle_t> testDevices;
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -114,7 +198,32 @@ bool check_metric_type_ip(ze_device_handle_t device, std::string groupName,
 
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
-    uint32_t percentOfMetricGroupForTest) {
+    uint32_t percentOfMetricGroupForTest, const char *metricGroupName) {
+
+  std::vector<metricGroupInfo_t> optimizedList;
+
+  const char *specificMetricGroupName = nullptr;
+
+  const char *metricGroupNameEnvironmentVariable =
+      std::getenv("LZT_METRIC_GROUPS_TEST_SPECIFIC");
+
+  if (metricGroupNameEnvironmentVariable != nullptr) {
+    specificMetricGroupName = metricGroupNameEnvironmentVariable;
+  } else if (metricGroupName != nullptr) {
+    specificMetricGroupName = metricGroupName;
+  }
+  if (specificMetricGroupName != nullptr) {
+    LOG_INFO << "specific group " << specificMetricGroupName;
+    for (auto const &metricGroupInfo : metricGroupInfoList) {
+      if (metricGroupInfo.metricGroupName.compare(specificMetricGroupName) ==
+          0) {
+        LOG_INFO << "specific name push_back "
+                 << metricGroupInfo.metricGroupName;
+        optimizedList.push_back(metricGroupInfo);
+        return optimizedList;
+      }
+    }
+  }
 
   std::map<uint32_t, std::vector<metricGroupInfo_t>> domainMetricGroupMap;
   // Split the metric group info based on domains
@@ -122,8 +231,9 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
     domainMetricGroupMap[metricGroupInfo.domain].push_back(metricGroupInfo);
   }
 
-  std::vector<metricGroupInfo_t> optimizedList;
   optimizedList.reserve(metricGroupInfoList.size());
+
+  // allow PERCENTAGE environment variable to override argument argument
   const char *valueString = std::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
   if (valueString != nullptr) {
     uint32_t value = atoi(valueString);
@@ -131,6 +241,7 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
         value != 0 ? value : percentOfMetricGroupForTest;
     percentOfMetricGroupForTest = std::min(percentOfMetricGroupForTest, 100u);
   }
+  LOG_INFO << "percentage of metric groups " << percentOfMetricGroupForTest;
 
   for (auto const &mapEntry : domainMetricGroupMap) {
     uint32_t newCount = static_cast<uint32_t>(std::max<double>(
@@ -139,6 +250,8 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
               std::back_inserter(optimizedList));
   }
 
+  LOG_INFO << "size of optimizedList based on percentage "
+           << optimizedList.size();
   return optimizedList;
 }
 
@@ -175,8 +288,9 @@ get_metric_group_info(ze_device_handle_t device,
       continue;
     }
 
-    matchedGroupsInfo.emplace_back(metricGroupHandle, metricGroupProp.name,
-                                   metricGroupProp.domain);
+    matchedGroupsInfo.emplace_back(
+        metricGroupHandle, metricGroupProp.name, metricGroupProp.description,
+        metricGroupProp.domain, metricGroupProp.metricCount);
   }
 
   return matchedGroupsInfo;
@@ -213,8 +327,9 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
     }
 
     LOG_DEBUG << "Test INCLUDES Metric name ... " << metricGroupProp.name;
-    matchedGroupsInfo.emplace_back(metricGroupHandle, metricGroupProp.name,
-                                   metricGroupProp.domain);
+    matchedGroupsInfo.emplace_back(
+        metricGroupHandle, metricGroupProp.name, metricGroupProp.description,
+        metricGroupProp.domain, metricGroupProp.metricCount);
     continue;
   }
 
@@ -502,9 +617,10 @@ void verify_typed_metric_value(zet_typed_value_t result,
   }
 }
 
-void validate_metrics(zet_metric_group_handle_t hMetricGroup,
-                      const size_t rawDataSize, const uint8_t *rawData,
-                      bool requireOverflow) {
+void validate_metrics_common(
+    zet_metric_group_handle_t hMetricGroup, const size_t rawDataSize,
+    const uint8_t *rawData, bool requireOverflow, const char *metricNameForTest,
+    std::vector<std::vector<zet_typed_value_t>> &typedValuesFound) {
 
   // Get set count and total metric value count
   uint32_t setCount = 0;
@@ -557,6 +673,8 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
   uint32_t startIndex = 0;
   for (uint32_t dataIndex = 0; dataIndex < setCount; dataIndex++) {
 
+    std::vector<zet_typed_value_t> valueVector;
+
     const uint32_t metricCountForDataIndex = metricValueSets[dataIndex];
     const uint32_t reportCount = metricCountForDataIndex / metricCount;
 
@@ -574,13 +692,44 @@ void validate_metrics(zet_metric_group_handle_t hMetricGroup,
         zet_typed_value_t typed_value =
             totalMetricValues[startIndex + metricIndex];
         verify_typed_metric_value(typed_value, properties.resultType);
+        if ((metricNameForTest != nullptr)) {
+          if (strncmp(metricNameForTest, properties.name,
+                      strnlen(metricNameForTest, 1024)) == 0) {
+            valueVector.push_back(typed_value);
+          }
+        }
       }
       LOG_DEBUG << "END METRIC INSTANCE";
+    }
+
+    LOG_DEBUG << "END METRIC SET";
+
+    if ((metricNameForTest != nullptr)) {
+      typedValuesFound.push_back(valueVector);
     }
 
     startIndex += metricCountForDataIndex;
   }
   assert(startIndex == totalMetricValueCount);
+}
+
+void validate_metrics(zet_metric_group_handle_t hMetricGroup,
+                      const size_t rawDataSize, const uint8_t *rawData,
+                      bool requireOverflow) {
+
+  static std::vector<std::vector<zet_typed_value_t>> dummyDataVector;
+
+  validate_metrics_common(hMetricGroup, rawDataSize, rawData, requireOverflow,
+                          nullptr, dummyDataVector);
+}
+
+void validate_metrics(
+    zet_metric_group_handle_t hMetricGroup, const size_t rawDataSize,
+    const uint8_t *rawData, const char *metricNameForTest,
+    std::vector<std::vector<zet_typed_value_t>> &typedValuesFoundPerDevice) {
+
+  validate_metrics_common(hMetricGroup, rawDataSize, rawData, false,
+                          metricNameForTest, typedValuesFoundPerDevice);
 }
 
 void validate_metrics_std(zet_metric_group_handle_t hMetricGroup,
