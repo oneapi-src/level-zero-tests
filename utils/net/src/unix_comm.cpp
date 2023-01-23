@@ -17,14 +17,13 @@
 namespace level_zero_tests {
 
 #ifdef __linux__
-int read_fd_from_socket(int unix_socket) {
+int read_fd_from_socket(int unix_socket, char *data) {
   int fd = -1;
-  char recv_buff[sizeof(int)] = {};
-  char cmsg_buff[CMSG_SPACE(sizeof(int))];
+  char cmsg_buff[CMSG_SPACE(ZE_MAX_IPC_HANDLE_SIZE)];
 
   struct iovec msg_buffer;
-  msg_buffer.iov_base = recv_buff;
-  msg_buffer.iov_len = sizeof(recv_buff);
+  msg_buffer.iov_base = data;
+  msg_buffer.iov_len = ZE_MAX_IPC_HANDLE_SIZE;
 
   struct msghdr msg_header = {};
   msg_header.msg_iov = &msg_buffer;
@@ -45,13 +44,12 @@ int read_fd_from_socket(int unix_socket) {
   return fd;
 }
 
-int write_fd_to_socket(int unix_socket, int fd) {
-  char send_buff[sizeof(int)];
-  char cmsg_buff[CMSG_SPACE(sizeof(int))];
+int write_fd_to_socket(int unix_socket, int fd, char *data) {
+  char cmsg_buff[CMSG_SPACE(ZE_MAX_IPC_HANDLE_SIZE)];
 
   struct iovec msg_buffer;
-  msg_buffer.iov_base = send_buff;
-  msg_buffer.iov_len = sizeof(*send_buff);
+  msg_buffer.iov_base = data;
+  msg_buffer.iov_len = ZE_MAX_IPC_HANDLE_SIZE;
 
   // build a msghdr containing the desriptor (fd)
   // fd is sent as ancillary data, i.e. msg_control

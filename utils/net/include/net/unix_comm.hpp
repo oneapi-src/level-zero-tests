@@ -15,8 +15,8 @@
 namespace level_zero_tests {
 
 #ifdef __linux__
-int read_fd_from_socket(int socket);
-int write_fd_to_socket(int socket, int fd);
+int read_fd_from_socket(int socket, char *data);
+int write_fd_to_socket(int socket, int fd, char *data);
 #endif
 
 const std::chrono::milliseconds CONNECTION_WAIT =

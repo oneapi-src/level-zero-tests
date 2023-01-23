@@ -33,16 +33,18 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  int ipc_descriptor = lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>();
+  ze_ipc_event_pool_handle_t hIpcEventPool{};
+  int ipc_descriptor =
+      lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>(hIpcEventPool.data);
 
   lzt::shared_ipc_event_data_t shared_data;
   bipc::shared_memory_object shm;
   shm = bipc::shared_memory_object(bipc::open_only, "ipc_ltracing_event_test",
-                                    bipc::read_write);
+                                   bipc::read_write);
   shm.truncate(sizeof(lzt::shared_ipc_event_data_t));
   bipc::mapped_region region(shm, bipc::read_only);
-  std::memcpy(&shared_data, region.get_address(), sizeof(lzt::shared_ipc_event_data_t));
-  ze_ipc_event_pool_handle_t hIpcEventPool = shared_data.handle;
+  std::memcpy(&shared_data, region.get_address(),
+              sizeof(lzt::shared_ipc_event_data_t));
 
   memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));

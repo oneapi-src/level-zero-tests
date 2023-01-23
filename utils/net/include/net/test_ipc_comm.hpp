@@ -36,13 +36,13 @@ typedef struct {
 } shared_ipc_event_data_t;
 
 // declaration
-int read_fd_from_socket(int socket, size_t buffer_size);
-template <typename T> int receive_ipc_handle();
-int write_fd_to_socket(int socket, int fd, size_t buffer_size);
+int read_fd_from_socket(int socket, char *data);
+template <typename T> int receive_ipc_handle(char *data);
+int write_fd_to_socket(int socket, int fd, char *data);
 template <typename T> void send_ipc_handle(const T &ipc_handle);
 
 // definition
-template <typename T> int receive_ipc_handle() {
+template <typename T> int receive_ipc_handle(char *data) {
   const char *socket_path = "ipc_socket";
 
   struct sockaddr_un local_addr, remote_addr;
@@ -81,7 +81,7 @@ template <typename T> int receive_ipc_handle() {
   LOG_DEBUG << "[Server] Connection accepted";
 
   int ipc_descriptor;
-  if ((ipc_descriptor = read_fd_from_socket(other_socket, sizeof(T))) < 0) {
+  if ((ipc_descriptor = read_fd_from_socket(other_socket, data)) < 0) {
     close(other_socket);
     close(unix_rcv_socket);
     perror("Server Connection Error");
@@ -126,7 +126,7 @@ template <typename T> void send_ipc_handle(const T &ipc_handle) {
   memcpy(static_cast<void *>(&ipc_handle_id), &ipc_handle,
          sizeof(ipc_handle_id));
   if (write_fd_to_socket(unix_send_socket, static_cast<int>(ipc_handle_id),
-                         sizeof(T)) < 0) {
+                         const_cast<char *>(ipc_handle.data))) {
     close(unix_send_socket);
     perror("Error: ");
     throw std::runtime_error("[Client] Error sending ipc handle");

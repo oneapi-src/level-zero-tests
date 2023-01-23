@@ -136,8 +136,9 @@ int main() {
   bipc::mapped_region region(shm, bipc::read_only);
   std::memcpy(&shared_data, region.get_address(), sizeof(shared_data_t));
 
-  int ipc_descriptor = lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>();
-  ze_ipc_event_pool_handle_t hIpcEventPool = shared_data.handle;
+  ze_ipc_event_pool_handle_t hIpcEventPool{};
+  int ipc_descriptor =
+      lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>(hIpcEventPool.data);
   memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));
 

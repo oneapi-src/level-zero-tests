@@ -112,7 +112,8 @@ int main(int argc, char **argv) {
 
   LOG_DEBUG << "Exporter Connected" << std::endl;
 
-  if (lzt::write_fd_to_socket(send_socket, export_fd.fd) < 0) {
+  char data[ZE_MAX_IPC_HANDLE_SIZE];
+  if (lzt::write_fd_to_socket(send_socket, export_fd.fd, data) < 0) {
     close(send_socket);
     perror("Import helper write error");
     throw std::runtime_error("Error sending memory handle");

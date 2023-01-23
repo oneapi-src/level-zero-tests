@@ -64,7 +64,8 @@ void IpcMemoryAccessTest::run_child(int size, ze_ipc_memory_flags_t flags) {
   ze_ipc_mem_handle_t ipc_handle;
   void *memory = nullptr;
 
-  int ipc_descriptor = lzt::receive_ipc_handle<ze_ipc_mem_handle_t>();
+  int ipc_descriptor =
+      lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
   memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));
 

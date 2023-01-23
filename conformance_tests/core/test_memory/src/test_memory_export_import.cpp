@@ -75,7 +75,8 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input) {
   }
   LOG_DEBUG << "[Server] Connection accepted";
 
-  if ((fd = lzt::read_fd_from_socket(other_socket)) < 0) {
+  char data[ZE_MAX_IPC_HANDLE_SIZE];
+  if ((fd = lzt::read_fd_from_socket(other_socket, data)) < 0) {
     close(other_socket);
     close(receive_socket);
     throw std::runtime_error("Failed to receive memory fd from exporter");
