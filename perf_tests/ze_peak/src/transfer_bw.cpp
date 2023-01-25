@@ -7,96 +7,50 @@
  */
 
 #include "../include/ze_peak.h"
+#include "../../common/include/common.hpp"
 
 long double ZePeak::_transfer_bw_gpu_copy(L0Context &context,
                                           void *destination_buffer,
                                           void *source_buffer,
                                           size_t buffer_size) {
-  Timer timer;
-  long double gbps = 0, timed = 0;
+  Timer<std::chrono::nanoseconds::period> timer;
+  long double gbps = 0;
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  for (uint32_t i = 0; i < warmup_iterations; i++) {
-    if (context.sub_device_count) {
-      result = zeCommandListAppendMemoryCopy(
-          context.cmd_list[current_sub_device_id], destination_buffer,
-          source_buffer, buffer_size, nullptr, 0, nullptr);
-      if (result) {
-        throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
-                                 std::to_string(result));
-      }
-    } else {
-      result = zeCommandListAppendMemoryCopy(context.command_list,
-                                             destination_buffer, source_buffer,
-                                             buffer_size, nullptr, 0, nullptr);
-      if (result) {
-        throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
-                                 std::to_string(result));
-      }
-    }
-    if (context.copy_command_list) {
-      result = zeCommandListAppendMemoryCopy(context.copy_command_list,
-                                             destination_buffer, source_buffer,
-                                             buffer_size, nullptr, 0, nullptr);
-      if (result) {
-        std::cout << "Error appending to copy command list";
-      }
-    }
+  auto cmd_l = context.command_list;
+  auto cmd_q = context.command_queue;
+
+  if (context.copy_command_queue) {
+    cmd_l = context.copy_command_list;
+    cmd_q = context.copy_command_queue;
+  } else if (context.sub_device_count) {
+    cmd_l = context.cmd_list[current_sub_device_id];
+    cmd_q = context.cmd_queue[current_sub_device_id];
   }
 
-  context.execute_commandlist_and_sync();
-  if (context.copy_command_queue)
-    context.execute_commandlist_and_sync(true);
+  SUCCESS_OR_TERMINATE(zeCommandListReset(cmd_l));
+  SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(cmd_l, destination_buffer,
+                                                     source_buffer, buffer_size,
+                                                     nullptr, 0, nullptr));
+  SUCCESS_OR_TERMINATE(zeCommandListClose(cmd_l));
+
+  for (uint32_t i = 0; i < warmup_iterations; i++) {
+    SUCCESS_OR_TERMINATE(
+        zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_l, nullptr));
+    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(cmd_q, UINT64_MAX));
+  }
 
   timer.start();
   for (uint32_t i = 0; i < iters; i++) {
-    if (context.sub_device_count) {
-      result = zeCommandListAppendMemoryCopy(
-          context.cmd_list[current_sub_device_id], destination_buffer,
-          source_buffer, buffer_size, nullptr, 0, nullptr);
-      if (result) {
-        throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
-                                 std::to_string(result));
-      }
-    } else {
-      result = zeCommandListAppendMemoryCopy(context.command_list,
-                                             destination_buffer, source_buffer,
-                                             buffer_size, nullptr, 0, nullptr);
-      if (result) {
-        throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
-                                 std::to_string(result));
-      }
-    }
+    SUCCESS_OR_TERMINATE(
+        zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_l, nullptr));
+    SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(cmd_q, UINT64_MAX));
   }
-
-  context.execute_commandlist_and_sync();
-  timed = timer.stopAndTime();
+  timer.end();
+  double timed = timer.period_minus_overhead();
   timed /= static_cast<long double>(iters);
 
-  gbps = calculate_gbps(timed, static_cast<long double>(buffer_size));
-
-  if (context.copy_command_queue) {
-    timer.start();
-    for (uint32_t i = 0; i < iters; i++) {
-      result = zeCommandListAppendMemoryCopy(context.copy_command_list,
-                                             destination_buffer, source_buffer,
-                                             buffer_size, nullptr, 0, nullptr);
-      if (result) {
-        throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
-                                 std::to_string(result));
-      }
-    }
-
-    context.execute_commandlist_and_sync(true);
-    timed = timer.stopAndTime();
-    timed /= static_cast<long double>(iters);
-
-    auto gbps = calculate_gbps(timed, static_cast<long double>(buffer_size));
-
-    std::cout << "\t With Blitter Engine on sub-device "
-              << current_sub_device_id << " :" << gbps << " GBPS\n";
-  }
-  return gbps;
+  return calculate_gbps(timed, static_cast<long double>(buffer_size));
 }
 
 long double ZePeak::_transfer_bw_host_copy(L0Context &context,
@@ -104,7 +58,7 @@ long double ZePeak::_transfer_bw_host_copy(L0Context &context,
                                            void *source_buffer,
                                            size_t buffer_size,
                                            bool shared_is_dest) {
-  Timer timer;
+  Timer<std::chrono::nanoseconds::period> timer;
   long double gbps = 0, timed = 0;
 
   ze_command_list_handle_t temp_cmd_list = nullptr;
@@ -310,29 +264,22 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
       max_number_of_allocated_items,
       context.device_compute_property.maxGroupSizeX, transfer_bw_max_size);
   size_t local_memory_size =
-      roundToMultipleOf(sizeof(float) * number_of_items, 8, SIZE_MAX);
-  void *local_memory_optimized = nullptr;
-#ifdef _WIN32
-  local_memory_optimized = _aligned_malloc(local_memory_size, 64);
-#else
-  local_memory_optimized = aligned_alloc(64, local_memory_size);
-#endif
-  if (!local_memory_optimized) {
-    throw std::runtime_error("Failed to allocate aligned memory");
-  }
-  float *local_memory = reinterpret_cast<float *>(local_memory_optimized);
-  for (uint32_t i = 0; i < static_cast<uint32_t>(number_of_items); i++) {
-    local_memory[i] = static_cast<float>(i);
+      static_cast<size_t>((number_of_items * sizeof(float)));
+  void *host_memory = nullptr;
+  ze_host_mem_alloc_desc_t host_desc = {};
+  result = zeMemAllocHost(context.context, &host_desc, local_memory_size, 1,
+                          &host_memory);
+  if (result) {
+    throw std::runtime_error("zeMemAllocHost failed: " +
+                             std::to_string(result));
   }
 
-  if (context.sub_device_count) {
-    number_of_items =
-        number_of_items - (number_of_items % context.sub_device_count);
-    if (verbose)
-      std::cout << "splitting the total work items ::" << number_of_items
-                << "across subdevices ::" << context.sub_device_count
-                << std::endl;
-    number_of_items = number_of_items / context.sub_device_count;
+  if (!host_memory) {
+    throw std::runtime_error("Failed to allocate host memory");
+  }
+  float *local_memory = reinterpret_cast<float *>(host_memory);
+  for (uint32_t i = 0; i < static_cast<uint32_t>(number_of_items); i++) {
+    local_memory[i] = static_cast<float>(i);
   }
 
   void *device_buffer;
@@ -347,10 +294,9 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
     dev_out_buf.resize(context.sub_device_count);
     uint32_t i = 0;
     for (auto device : context.sub_devices) {
-      result = zeMemAllocDevice(
-          context.context, &device_desc,
-          static_cast<size_t>((number_of_items * sizeof(float))), 1, device,
-          &dev_out_buf[i]);
+      result = zeMemAllocDevice(context.context, &device_desc,
+                                local_memory_size / context.sub_device_count, 1,
+                                device, &dev_out_buf[i]);
       if (result) {
         throw std::runtime_error("zeMemAllocDevice failed: " +
                                  std::to_string(result));
@@ -358,10 +304,8 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
       i++;
     }
   } else {
-    result =
-        zeMemAllocDevice(context.context, &device_desc,
-                         static_cast<size_t>(sizeof(float) * number_of_items),
-                         1, context.device, &device_buffer);
+    result = zeMemAllocDevice(context.context, &device_desc, local_memory_size,
+                              1, context.device, &device_buffer);
     if (result) {
       throw std::runtime_error("zeMemAllocDevice failed: " +
                                std::to_string(result));
@@ -377,14 +321,14 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
     current_sub_device_id = 0;
     for (auto i = 0; i < context.sub_device_count; i++) {
       gflops +=
-          _transfer_bw_gpu_copy(context, dev_out_buf[i], local_memory_optimized,
+          _transfer_bw_gpu_copy(context, dev_out_buf[i], host_memory,
                                 local_memory_size / context.sub_device_count);
       current_sub_device_id++;
     }
     gflops = gflops / context.sub_device_count;
   } else {
-    gflops = _transfer_bw_gpu_copy(context, device_buffer,
-                                   local_memory_optimized, local_memory_size);
+    gflops = _transfer_bw_gpu_copy(context, device_buffer, host_memory,
+                                   local_memory_size);
   }
   std::cout << "enqueueWriteBuffer : ";
   std::cout << gflops << " GBPS\n";
@@ -394,22 +338,21 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
     current_sub_device_id = 0;
     for (auto i = 0; i < context.sub_device_count; i++) {
       gflops +=
-          _transfer_bw_gpu_copy(context, local_memory_optimized, dev_out_buf[i],
+          _transfer_bw_gpu_copy(context, host_memory, dev_out_buf[i],
                                 local_memory_size / context.sub_device_count);
       current_sub_device_id++;
     }
     gflops = gflops / context.sub_device_count;
   } else {
-    gflops = _transfer_bw_gpu_copy(context, local_memory_optimized,
-                                   device_buffer, local_memory_size);
+    gflops = _transfer_bw_gpu_copy(context, host_memory, device_buffer,
+                                   local_memory_size);
   }
   std::cout << "enqueueReadBuffer : ";
   std::cout << gflops << " GBPS\n";
 
   current_sub_device_id = 0;
 
-  _transfer_bw_shared_memory(context, local_memory_size,
-                             local_memory_optimized);
+  _transfer_bw_shared_memory(context, local_memory_size, local_memory);
 
   if (context.sub_device_count) {
     for (auto output_buf : dev_out_buf) {
@@ -427,10 +370,12 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
   if (verbose)
     std::cout << "Device Buffer freed\n";
 
-#ifdef _WIN32
-  _aligned_free(local_memory_optimized);
-#else
-  free(local_memory_optimized);
-#endif
+  result = zeMemFree(context.context, local_memory);
+  if (result) {
+    throw std::runtime_error("zeMemFree failed: " + std::to_string(result));
+  }
+  if (verbose)
+    std::cout << "Host Buffer freed\n";
+
   print_test_complete();
 }

@@ -9,7 +9,18 @@
 #ifndef ZE_PEAK_H
 #define ZE_PEAK_H
 
-#include "../include/common.h"
+#include <chrono>
+#include <cstdint>
+#include <ctype.h>
+#include <fstream>
+#include <iostream>
+#include <math.h>
+#include <numeric>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <cstring>
+#include <vector>
 
 /* ze includes */
 #include <level_zero/ze_api.h>

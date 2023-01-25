@@ -7,14 +7,13 @@
  */
 
 #include "../include/ze_peak.h"
+#include "../../common/include/common.hpp"
+#include "../../common/include/common.hpp"
 #include <iomanip>
 
 #include <algorithm>
 
-#define ONE_KB (1 * 1024ULL)
-#define EIGHT_KB (8 * ONE_KB)
-#define ONE_MB (1 * 1024ULL * ONE_KB)
-#define FOUR_GB (4 * 1024ULL * ONE_MB)
+bool verbose = false;
 
 //---------------------------------------------------------------------
 // Utility function to load the binary spv file from a path
@@ -838,7 +837,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
   if (verbose)
     std::cout << "Group size set\n";
 
-  Timer timer;
+  Timer<std::chrono::nanoseconds::period> timer;
 
   if (type == TimingMeasurement::BANDWIDTH) {
     if (context.sub_device_count) {
@@ -1731,7 +1730,8 @@ TimingMeasurement ZePeak::is_bandwidth_with_event_timer(void) {
 
 long double ZePeak::calculate_gbps(long double period,
                                    long double buffer_size) {
-  return buffer_size / period / 1e3f;
+  period /= 1e9;                          // seconds
+  return (buffer_size / period) / ONE_GB; // Gigabytes per second
 }
 
 long double ZePeak::context_time_in_us(L0Context &context,

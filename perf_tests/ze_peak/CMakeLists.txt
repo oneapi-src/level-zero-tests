@@ -11,7 +11,6 @@ add_lzt_test(
   NAME ze_peak
   GROUP "/perf_tests"
   SOURCES
-    src/common.cpp
     src/options.cpp
     src/ze_peak.cpp
     src/global_bw.cpp

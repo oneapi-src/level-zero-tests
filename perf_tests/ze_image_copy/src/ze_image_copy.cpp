@@ -39,11 +39,6 @@ bool ZeImageCopy::is_json_output_enabled(void) {
   return JsonFileName.size() != 0;
 }
 
-uint64_t roundToMultipleOf(uint64_t number, uint64_t base, uint64_t maxValue) {
-  uint64_t n = (number > maxValue) ? maxValue : number;
-  return (n / base) * base;
-}
-
 void ZeImageCopy::test_initialize(void) {
   size_t buffer_size_tmp = level_zero_tests::num_bytes_per_pixel(Imagelayout) *
                            width * height * depth;

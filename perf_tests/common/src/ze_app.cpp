@@ -8,7 +8,7 @@
 
 #include "ze_app.hpp"
 
-#include "common.hpp"
+#include "../../common/include/common.hpp"
 
 #include <assert.h>
 

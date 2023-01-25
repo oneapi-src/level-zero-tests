@@ -13,6 +13,10 @@
 #include <string>
 #include <vector>
 
+#define ONE_KB (1 * 1024ULL)
+#define ONE_MB (1 * 1024ULL * ONE_KB)
+#define ONE_GB (1 * 1024ULL * ONE_MB)
+
 template <typename T = std::chrono::nanoseconds::period> class Timer {
 public:
   Timer() { overhead(); }
@@ -26,6 +30,11 @@ public:
     return std::chrono::duration<long double, T>(time_end - time_start)
                .count() -
            time_overhead;
+  }
+
+  long double stopAndTime() {
+    end();
+    return period_minus_overhead();
   }
 
   inline bool has_it_been(long long int moment) {
@@ -46,6 +55,12 @@ private:
     time_overhead = period.count();
   }
 };
+
+inline uint64_t roundToMultipleOf(uint64_t number, uint64_t base,
+                                  uint64_t maxValue) {
+  uint64_t n = (number > maxValue) ? maxValue : number;
+  return (n / base) * base;
+}
 
 extern bool verbose;
 

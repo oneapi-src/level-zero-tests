@@ -7,6 +7,7 @@
  */
 
 #include "../include/ze_peak.h"
+#include "../../common/include/common.hpp"
 
 void ZePeak::ze_peak_global_bw(L0Context &context) {
   long double timed_lo, timed_go, timed, gbps;

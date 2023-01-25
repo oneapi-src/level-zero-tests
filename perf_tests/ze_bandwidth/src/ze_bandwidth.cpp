@@ -8,7 +8,7 @@
 
 #include <level_zero/ze_api.h>
 
-#include "common.hpp"
+#include "../../common/include/common.hpp"
 #include "ze_app.hpp"
 #include "ze_bandwidth.hpp"
 
@@ -46,9 +46,7 @@ void ZeBandwidth::calculate_metrics(
   long double total_time_s;
 
   total_time_s = total_time_nsec / 1e9;
-  total_data_transfer /= static_cast<long double>(1e9); /* Units in Gigabytes */
-
-  total_bandwidth = total_data_transfer / total_time_s;
+  total_bandwidth = (total_data_transfer / total_time_s) / ONE_GB;
   total_latency = total_time_nsec / (1e3 * number_iterations);
 }
 
