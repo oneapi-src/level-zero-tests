@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <thread>
 
 #include <boost/filesystem.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>

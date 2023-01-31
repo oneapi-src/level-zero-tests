@@ -6,6 +6,8 @@
  *
  */
 
+#include <thread>
+
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"

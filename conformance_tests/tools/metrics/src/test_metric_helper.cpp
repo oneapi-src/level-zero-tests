@@ -12,6 +12,7 @@
 #include "test_metric_utils.hpp"
 
 #include <csignal>
+#include <thread>
 
 namespace lzt = level_zero_tests;
 
