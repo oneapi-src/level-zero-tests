@@ -449,13 +449,21 @@ void destroy_metric_query_pool(
 }
 
 zet_metric_query_handle_t
-metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle) {
+metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle,
+                    uint32_t index) {
   zet_metric_query_handle_t metricQueryHandle;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricQueryCreate(metricQueryPoolHandle, 0, &metricQueryHandle));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryCreate(metricQueryPoolHandle,
+                                                    index, &metricQueryHandle));
   EXPECT_NE(nullptr, metricQueryHandle);
 
   return metricQueryHandle;
+}
+
+zet_metric_query_handle_t
+metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle) {
+  zet_metric_query_handle_t metricQueryHandle;
+
+  return metric_query_create(metricQueryPoolHandle, 0);
 }
 
 void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle) {

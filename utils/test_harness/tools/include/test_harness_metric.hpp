@@ -72,6 +72,10 @@ void destroy_metric_query_pool(
     zet_metric_query_pool_handle_t metric_query_pool_handle);
 
 zet_metric_query_handle_t
+metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle,
+                    uint32_t index);
+
+zet_metric_query_handle_t
 metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle);
 
 void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle);
