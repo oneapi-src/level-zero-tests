@@ -175,9 +175,12 @@ TEST_P(
   const size_t size = 16;
 
   std::vector<ze_event_handle_t> host_to_dev_event(num_cmdq, nullptr);
-  ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
-                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.pNext = nullptr;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
 
   for (uint32_t i = 0; i < num_cmdq; i++) {
     mulcmdlist_immediate[i] = lzt::create_immediate_command_list(
@@ -186,6 +189,7 @@ TEST_P(
 
     buffer[i] = lzt::allocate_shared_memory(size);
     val[i] = static_cast<uint8_t>(i + 1);
+    event_desc.index = i;
     host_to_dev_event[i] = lzt::create_event(event_pool_handle, event_desc);
 
     // This should execute immediately
