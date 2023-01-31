@@ -1593,47 +1593,47 @@ TEST(
   paths.push_back(helper_path);
   fs::path helper = bp::search_path("test_metric_helper", paths);
   bp::opstream child_input;
-  bp::child metric_helper(helper, bp::std_in < child_input);
+  bp::child metric_helper(helper, "-i", bp::std_in < child_input);
 
   // start monitor
-  do {
-    LOG_DEBUG << "Waiting for data (event synchronize)...";
-    lzt::event_host_synchronize(eventHandle,
-                                std::numeric_limits<uint64_t>::max());
-    lzt::event_host_reset(eventHandle);
+  LOG_DEBUG << "Waiting for data (event synchronize)...";
+  lzt::event_host_synchronize(eventHandle,
+                              std::numeric_limits<uint64_t>::max());
+  lzt::event_host_reset(eventHandle);
 
-    // read data
-    size_t oneReportSize, allReportsSize, numReports;
-    oneReportSize =
-        lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
-    allReportsSize =
-        lzt::metric_streamer_read_data_size(metricStreamerHandle, UINT32_MAX);
+  // read data
+  size_t oneReportSize, allReportsSize, numReports;
+  oneReportSize = lzt::metric_streamer_read_data_size(metricStreamerHandle, 1);
+  allReportsSize =
+      lzt::metric_streamer_read_data_size(metricStreamerHandle, UINT32_MAX);
 
-    LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
-              << ". All reports size:" << allReportsSize;
+  LOG_DEBUG << "Event triggered. Single report size: " << oneReportSize
+            << ". All reports size:" << allReportsSize;
 
-    EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
+  EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-    std::vector<uint8_t> rawData;
-    lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-    lzt::validate_metrics(
-        groupInfo.metricGroupHandle,
-        lzt::metric_streamer_read_data_size(metricStreamerHandle),
-        rawData.data());
+  std::vector<uint8_t> rawData;
+  lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
+  lzt::validate_metrics(
+      groupInfo.metricGroupHandle,
+      lzt::metric_streamer_read_data_size(metricStreamerHandle),
+      rawData.data());
 
-    // send interrupt
-    LOG_WARNING << "Sending interrupt to process";
-    child_input << "stop" << std::endl;
+  // send interrupt
+  LOG_DEBUG << "Sending interrupt to process";
+  child_input << "stop" << std::endl;
 
-    // wait 1 second
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+  // wait 1 second
+  std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    // expect helper has exited
-    EXPECT_FALSE(metric_helper.running());
+  // expect helper has exited
+  EXPECT_FALSE(metric_helper.running());
 
-  } while (metric_helper.running());
-  LOG_WARNING << "Waiting for process to finish...";
-  metric_helper.wait();
+  if (metric_helper.running()) {
+    LOG_DEBUG << "Ending Helper";
+    metric_helper.terminate();
+  }
+  LOG_DEBUG << "Process exited";
 
   // cleanup
   lzt::deactivate_metric_groups(device);

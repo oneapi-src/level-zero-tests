@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,6 +18,7 @@ namespace lzt = level_zero_tests;
 void interrupt_process() {
 
   // wait for signal from parent process
+  LOG_DEBUG << "[Child] Waiting for signal from parent process";
   while (true) {
     std::string line;
     std::getline(std::cin, line);
@@ -26,7 +27,7 @@ void interrupt_process() {
     }
   }
 
-  LOG_WARNING << "Interrupting process";
+  LOG_DEBUG << "[Child] Interrupting process";
   std::raise(SIGINT);
 }
 
@@ -61,14 +62,27 @@ int main(int argc, char **argv) {
   zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                   nullptr);
 
-  // start a monitor thread
-  std::thread monitor(interrupt_process);
+  auto interrupt_test = false;
+  std::thread *tp = nullptr;
+  if (argc > 1) {
+    const std::string arg = argv[1];
+    LOG_DEBUG << "[Child] Option: " << arg << "\n";
+    if (arg == "-i") {
+      interrupt_test = true;
+      // start a monitor thread
+      tp = new std::thread(interrupt_process);
+    }
+  }
   lzt::close_command_list(commandList);
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
 
   lzt::synchronize(commandQueue, UINT64_MAX);
 
-  monitor.join();
+  if (interrupt_test) {
+    tp->join();
+    delete tp;
+    tp = nullptr;
+  }
 
   lzt::destroy_function(function);
   lzt::free_memory(a_buffer);
