@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: MIT
  *
  */
+
+#include <thread>
 #include <boost/program_options.hpp>
 
 #include "test_debug.hpp"
