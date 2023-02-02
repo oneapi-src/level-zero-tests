@@ -155,67 +155,150 @@ TEST_F(
   lzt::destroy_command_queue(cmdqueue);
 }
 
-TEST_F(
-    zeVirtualMemoryTests,
-    GivenMultiMappedReadWriteMemoryOnOneDeviceThenFillAndCopyWithMappedVirtualMemorySucceeds) {
-  ze_command_list_handle_t cmdlist = lzt::create_command_list(device);
+enum MemoryReservationTestType {
+  MEMORY_RESERVATION_SINGLE_DEVICE,
+  MEMORY_RESERVATION_SINGLE_ROOT_DEVICE_MULTI_SUB_DEVICES,
+  MEMORY_RESERVATION_MULTI_ROOT_DEVICES
+};
+
+void dataCheckMemoryReservations(enum MemoryReservationTestType type) {
+  ze_context_handle_t context = lzt::get_default_context();
+  ze_device_handle_t rootDevice = lzt::zeDevice::get_instance()->get_device();
+  std::vector<ze_device_handle_t> devices;
+  size_t pageSize = 0;
+  void *reservedVirtualMemory = nullptr;
+  std::vector<ze_physical_mem_handle_t> reservedPhysicalMemory;
+  size_t allocationSize = (1024 * 1024);
+  uint32_t numDevices, numSubDevices;
+
+  switch (type) {
+  case MemoryReservationTestType::MEMORY_RESERVATION_MULTI_ROOT_DEVICES:
+    numDevices = lzt::get_ze_device_count();
+    if (numDevices < 2) {
+      GTEST_SKIP() << "Multi Root Devices not found, skipping test";
+    }
+    allocationSize = allocationSize * numDevices;
+    devices = lzt::get_ze_devices(numDevices);
+    reservedPhysicalMemory.resize(numDevices);
+    break;
+  case MemoryReservationTestType::
+      MEMORY_RESERVATION_SINGLE_ROOT_DEVICE_MULTI_SUB_DEVICES:
+    numSubDevices = lzt::get_ze_sub_device_count(rootDevice);
+    if (numSubDevices < 2) {
+      GTEST_SKIP() << "Multi Sub Devices not found, skipping test";
+    }
+    allocationSize = allocationSize * numSubDevices;
+    devices = lzt::get_ze_sub_devices(rootDevice);
+    reservedPhysicalMemory.resize(numSubDevices);
+    break;
+  case MemoryReservationTestType::MEMORY_RESERVATION_SINGLE_DEVICE:
+    reservedPhysicalMemory.resize(2);
+    devices.resize(2);
+    devices[0] = rootDevice;
+    devices[1] = rootDevice;
+    break;
+  default:
+    FAIL() << "Invalid Memory Reservation Test Type";
+  }
+
+  ze_command_list_handle_t cmdlist = lzt::create_command_list(rootDevice);
   ze_command_queue_handle_t cmdqueue = lzt::create_command_queue();
 
-  allocationSize = 2097152 / 2;
-  ze_physical_mem_handle_t reservedPhysicalMemorySecondHalf;
-  lzt::query_page_size(context, device, allocationSize, &pageSize);
+  lzt::query_page_size(context, rootDevice, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemory);
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemorySecondHalf);
-  lzt::virtual_memory_reservation(context, nullptr, allocationSize * 2,
+  for (int i = 0; i < devices.size(); i++) {
+    lzt::physical_memory_allocation(context, devices[i], allocationSize,
+                                    &reservedPhysicalMemory[i]);
+  }
+  lzt::virtual_memory_reservation(context, nullptr,
+                                  allocationSize * devices.size(),
                                   &reservedVirtualMemory);
   EXPECT_NE(nullptr, reservedVirtualMemory);
 
-  ASSERT_EQ(zeVirtualMemMap(context, reservedVirtualMemory, allocationSize,
-                            reservedPhysicalMemory, 0,
-                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-            ZE_RESULT_SUCCESS);
-  uint64_t offsetAddr =
-      reinterpret_cast<uint64_t>(reservedVirtualMemory) + allocationSize;
-  ASSERT_EQ(zeVirtualMemMap(context, reinterpret_cast<void *>(offsetAddr),
-                            allocationSize, reservedPhysicalMemorySecondHalf, 0,
-                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-            ZE_RESULT_SUCCESS);
+  size_t offset = 0;
+  for (int i = 0; i < devices.size(); i++) {
+    uint64_t offsetAddr =
+        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
+    ASSERT_EQ(zeVirtualMemMap(context, reinterpret_cast<void *>(offsetAddr),
+                              allocationSize, reservedPhysicalMemory[i], 0,
+                              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+              ZE_RESULT_SUCCESS);
+    offset += allocationSize;
+  }
+
   int8_t pattern = 9;
-  void *memory = lzt::allocate_shared_memory(allocationSize * 2, pageSize);
-  lzt::append_memory_fill(cmdlist, reservedVirtualMemory, &pattern,
-                          sizeof(pattern), allocationSize, nullptr);
+  void *memory =
+      lzt::allocate_host_memory(allocationSize * devices.size(), pageSize);
+
+  offset = 0;
+  for (int i = 0; i < devices.size(); i++) {
+    uint64_t offsetAddr =
+        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
+    lzt::append_memory_fill(cmdlist, reinterpret_cast<void *>(offsetAddr),
+                            &pattern, sizeof(pattern), allocationSize, nullptr);
+    offset += allocationSize;
+  }
+
   lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
-  lzt::append_memory_fill(cmdlist, reinterpret_cast<void *>(offsetAddr),
-                          &pattern, sizeof(pattern), allocationSize, nullptr);
-  lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
-  lzt::append_memory_copy(cmdlist, memory, reservedVirtualMemory,
-                          allocationSize, nullptr);
-  lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
-  uint64_t offsetSharedAddr =
-      reinterpret_cast<uint64_t>(memory) + allocationSize;
-  lzt::append_memory_copy(cmdlist, reinterpret_cast<void *>(offsetSharedAddr),
-                          reinterpret_cast<void *>(offsetAddr), allocationSize,
-                          nullptr);
+
+  offset = 0;
+  for (int i = 0; i < devices.size(); i++) {
+    uint64_t offsetAddr =
+        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
+    uint64_t offsetHostAddr = reinterpret_cast<uint64_t>(memory) + offset;
+    lzt::append_memory_copy(cmdlist, reinterpret_cast<void *>(offsetHostAddr),
+                            reinterpret_cast<void *>(offsetAddr),
+                            allocationSize, nullptr);
+    offset += allocationSize;
+  }
+
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
   lzt::synchronize(cmdqueue, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
-  for (int i = 0; i < allocationSize * 2; i++) {
+  for (int i = 0; i < allocationSize * devices.size(); i++) {
     ASSERT_EQ(data[i], pattern);
   }
 
   lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
-  lzt::virtual_memory_unmap(context, reinterpret_cast<void *>(offsetAddr),
-                            allocationSize);
-  lzt::physical_memory_destroy(context, reservedPhysicalMemory);
-  lzt::physical_memory_destroy(context, reservedPhysicalMemorySecondHalf);
-  lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize * 2);
+
+  offset = 0;
+  for (int i = 0; i < devices.size(); i++) {
+    uint64_t offsetAddr =
+        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
+    lzt::virtual_memory_unmap(context, reinterpret_cast<void *>(offsetAddr),
+                              allocationSize);
+    lzt::physical_memory_destroy(context, reservedPhysicalMemory[i]);
+    offset += allocationSize;
+  }
+
+  lzt::virtual_memory_free(context, reservedVirtualMemory,
+                           allocationSize * devices.size());
   lzt::free_memory(memory);
   lzt::destroy_command_list(cmdlist);
   lzt::destroy_command_queue(cmdqueue);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenMultiMappedReadWriteMemoryOnOneDeviceThenFillAndCopyWithMappedVirtualMemorySucceeds) {
+  dataCheckMemoryReservations(
+      MemoryReservationTestType::MEMORY_RESERVATION_SINGLE_DEVICE);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenMultiMappedReadWriteMemoryOnSingleRootDeviceButAcrossSubDevicesThenFillAndCopyWithMappedVirtualMemorySucceeds) {
+  dataCheckMemoryReservations(
+      MemoryReservationTestType::
+          MEMORY_RESERVATION_SINGLE_ROOT_DEVICE_MULTI_SUB_DEVICES);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenMultiMappedReadWriteMemoryOnMultipleRootDevicesThenFillAndCopyWithMappedVirtualMemorySucceeds) {
+  dataCheckMemoryReservations(
+      MemoryReservationTestType::MEMORY_RESERVATION_MULTI_ROOT_DEVICES);
 }
 
 } // namespace
