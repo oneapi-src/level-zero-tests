@@ -905,8 +905,8 @@ TEST(ConcurrentCommandQueueExecutionTests,
   for (auto queue : queues) {
     lzt::destroy_command_list(queue.cmdlist);
     lzt::destroy_command_queue(queue.cmdqueue);
-    lzt::free_memory(queue.src_buff);
-    lzt::free_memory(queue.dst_buff);
+    lzt::free_memory(context, queue.src_buff);
+    lzt::free_memory(context, queue.dst_buff);
   }
   lzt::destroy_context(context);
 }
