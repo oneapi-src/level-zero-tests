@@ -51,6 +51,7 @@ typedef enum {
   MULTIPLE_CQ,
   MULTIPLE_IMM_CL,
   USE_TWO_DEVICES,
+  MULTI_DEVICE_RESOURCE_STRESS,
   MAX_DEBUG_TEST_TYPE_VALUE = 0xff, // Values greater than 0xFF are reserved
   DEBUG_TEST_TYPE_FORCE_UINT32 = 0x7fffffff
 } debug_test_type_t;

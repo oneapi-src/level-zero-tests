@@ -894,7 +894,210 @@ void use_two_devices(ze_context_handle_t context, ze_device_handle_t &device_0,
   }
 }
 
+void multidevice_resource_stress_test(ze_context_handle_t &context,
+                                      ze_device_handle_t &device_0,
+                                      ze_device_handle_t &device_1,
+                                      process_synchro &synchro,
+                                      debug_options &options) {
+
+  auto result = ZE_RESULT_SUCCESS;
+  auto size = 65536;
+  auto alignment = 8;
+
+  void *values =
+      lzt::allocate_device_memory(size, alignment, 0, device_0, context);
+  auto validation_buffer_0 = new uint8_t[size];
+
+  auto command_queue = lzt::create_command_queue(
+      context, device_0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+
+  ze_command_list_desc_t command_list_desc = {};
+  command_list_desc.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+  command_list_desc.pNext = nullptr;
+  command_list_desc.flags = 0;
+
+  ze_command_list_handle_t command_list;
+  result =
+      zeCommandListCreate(context, device_0, &command_list_desc, &command_list);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  auto fence = lzt::create_fence(command_queue);
+
+  std::vector<ze_device_handle_t> devices = {device_0, device_1};
+  ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
+                                          nullptr,
+                                          ZE_EVENT_POOL_FLAG_HOST_VISIBLE, 256};
+  auto event_pool = lzt::create_event_pool(context, event_pool_desc, devices);
+
+  ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
+                                ZE_EVENT_SCOPE_FLAG_HOST,
+                                ZE_EVENT_SCOPE_FLAG_HOST};
+  auto event = lzt::create_event(event_pool, event_desc);
+
+  std::vector<uint8_t> src(size);
+  std::fill_n(src.begin(), size, 1);
+  lzt::append_memory_copy(command_list, values, src.data(), size, event, 0,
+                          nullptr);
+  lzt::close_command_list(command_list);
+
+  result =
+      zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list, fence);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_ERROR << "[Application] " << __LINE__ << " FAIL: " << result;
+    exit(1);
+  }
+
+  lzt::reset_command_list(command_list);
+  fence = lzt::create_fence(command_queue);
+  event = lzt::create_event(event_pool, event_desc);
+  lzt::append_memory_copy(command_list, values, src.data(), size, event, 0,
+                          nullptr);
+  lzt::close_command_list(command_list);
+
+  result =
+      zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list, fence);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_ERROR << "[Application] " << __LINE__ << " FAIL: " << result;
+    exit(1);
+  }
+  lzt::event_host_synchronize(event, UINT64_MAX);
+  lzt::reset_command_list(command_list);
+
+  auto module = lzt::create_module(device_0, "debug_transform.spv",
+                                   ZE_MODULE_FORMAT_IL_SPIRV,
+                                   "-g -cl-opt-disable", nullptr);
+  auto kernel = lzt::create_function(module, "transform_kernel");
+
+  auto device_idx = 0;
+  lzt::set_argument_value(kernel, 0, sizeof(values), (&values));
+  lzt::set_argument_value(kernel, 1, sizeof(device_idx), &device_idx);
+
+  std::vector<uint32_t> WG(3);
+  lzt::suggest_group_size(kernel, size, 0, 0, WG[0], WG[1], WG[2]);
+  lzt::set_group_size(kernel, WG[0], WG[1], WG[2]);
+  event = lzt::create_event(event_pool, event_desc);
+
+  ze_group_count_t ZeThreadGroupDimensions = {size / WG[0], 1, 1};
+  lzt::append_launch_function(command_list, kernel, &ZeThreadGroupDimensions,
+                              event, 0, nullptr);
+  lzt::append_barrier(command_list);
+  lzt::append_memory_copy(command_list, validation_buffer_0, values, size,
+                          nullptr, 0, nullptr);
+  lzt::close_command_list(command_list);
+
+  result =
+      zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list, fence);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_ERROR << "[Application] " << __LINE__ << " FAIL: " << result;
+    exit(1);
+  }
+
+  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::reset_command_list(command_list);
+
+  // Device 1
+  void *values_1;
+  values_1 = lzt::allocate_device_memory(size, alignment, 0, device_1, context);
+  auto validation_buffer_1 = new uint8_t[size];
+
+  ze_command_queue_handle_t command_queue_1 = lzt::create_command_queue(
+      context, device_1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+
+  ze_command_list_handle_t command_list_1;
+  result = zeCommandListCreate(context, device_1, &command_list_desc,
+                               &command_list_1);
+  ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+  auto fence_1 = lzt::create_fence(command_queue_1);
+  auto event_1 = lzt::create_event(event_pool, event_desc);
+  lzt::append_memory_copy(command_list_1, values_1, src.data(), size, event_1,
+                          0, nullptr);
+  lzt::close_command_list(command_list_1);
+
+  result = zeCommandQueueExecuteCommandLists(command_queue_1, 1,
+                                             &command_list_1, fence_1);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_ERROR << "[Application] " << __LINE__ << " FAIL: " << result;
+    exit(1);
+  }
+
+  lzt::reset_command_list(command_list_1);
+  lzt::append_memory_copy(command_list_1, values_1, src.data(), size, event_1,
+                          0, nullptr);
+  lzt::close_command_list(command_list_1);
+
+  auto exec_result = zeCommandQueueExecuteCommandLists(
+      command_queue_1, 1, &command_list_1, fence_1);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_ERROR << "[Application] " << __LINE__ << " FAIL: " << result;
+    exit(1);
+  }
+  lzt::synchronize(command_queue_1, UINT64_MAX);
+  lzt::reset_command_list(command_list_1);
+
+  module = lzt::create_module(device_1, "debug_transform.spv",
+                              ZE_MODULE_FORMAT_IL_SPIRV, "-g -cl-opt-disable",
+                              nullptr);
+  kernel = lzt::create_function(module, "transform_kernel");
+
+  device_idx = 1;
+  lzt::set_argument_value(kernel, 0, sizeof(values_1), (&values_1));
+  lzt::set_argument_value(kernel, 1, sizeof(device_idx), &device_idx);
+
+  lzt::suggest_group_size(kernel, size, 0, 0, WG[0], WG[1], WG[2]);
+  lzt::set_group_size(kernel, WG[0], WG[1], WG[2]);
+
+  lzt::append_launch_function(command_list_1, kernel, &ZeThreadGroupDimensions,
+                              event_1, 0, nullptr);
+  lzt::append_barrier(command_list_1);
+  lzt::append_memory_copy(command_list_1, validation_buffer_1, values_1, size,
+                          nullptr, 0, nullptr);
+  lzt::close_command_list(command_list_1);
+
+  result = zeCommandQueueExecuteCommandLists(command_queue_1, 1,
+                                             &command_list_1, fence_1);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_ERROR << "[Application] " << __LINE__ << " FAIL: " << result;
+    exit(1);
+  }
+  lzt::synchronize(command_queue_1, UINT64_MAX);
+
+  // validation
+  for (int i = 0; i < size; i++) {
+    // Kernel function: values[xid] = values[xid] * 3 + 11 * (device_idx + 1);
+    auto val_0 = 1 * 3 + 11 * 1;
+    EXPECT_EQ(validation_buffer_0[i], val_0);
+
+    auto val_1 = 1 * 3 + 11 * 2;
+    EXPECT_EQ(validation_buffer_1[i], val_1);
+
+    if (::testing::Test::HasFailure()) {
+      exit(1);
+    }
+  }
+
+  // cleanup
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
+  lzt::destroy_fence(fence);
+  lzt::destroy_fence(fence_1);
+  lzt::destroy_event(event);
+  lzt::destroy_event(event_1);
+  lzt::destroy_event_pool(event_pool);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_list(command_list_1);
+  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_queue(command_queue_1);
+  lzt::free_memory(context, values);
+  lzt::free_memory(context, values_1);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  }
+}
+
 // ***************************************************************************************
+
 int main(int argc, char **argv) {
 
   static char enable_debug[] = "ZET_ENABLE_PROGRAM_DEBUGGING=1";
@@ -917,7 +1120,8 @@ int main(int argc, char **argv) {
   ze_device_handle_t device_0 = nullptr;
   ze_device_handle_t device_1 = nullptr;
 
-  if (options.test_selected != USE_TWO_DEVICES) {
+  if (options.test_selected != USE_TWO_DEVICES &&
+      options.test_selected != MULTI_DEVICE_RESOURCE_STRESS) {
 
     for (auto &root_device : lzt::get_devices(driver)) {
       if (options.use_sub_devices) {
@@ -1018,6 +1222,10 @@ int main(int argc, char **argv) {
     break;
   case USE_TWO_DEVICES:
     use_two_devices(context, device_0, device_1, synchro, options);
+    break;
+  case MULTI_DEVICE_RESOURCE_STRESS:
+    multidevice_resource_stress_test(context, device_0, device_1, synchro,
+                                     options);
     break;
   default:
 #ifdef EXTENDED_TESTS

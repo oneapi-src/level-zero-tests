@@ -11,11 +11,6 @@
 
 namespace lzt = level_zero_tests;
 
-#ifdef WIN32
-#include <windows.h>
-#include <tlhelp32.h>
-#endif
-
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 #include <mutex>
@@ -1965,12 +1960,14 @@ void MultiDeviceDebugTest::run_multidevice_single_application_test(
   synchro->notify_application();
 
   uint64_t gpu_buffer_va_0 = 0, gpu_buffer_va_1 = 0;
+  bool address_valid = false;
   LOG_DEBUG << "[Debugger]  Spawning Threads";
   std::thread first_thread(wait_for_events_interrupt_and_resume,
-                           debug_session_0, synchro, &gpu_buffer_va_0, device0);
+                           debug_session_0, synchro, &gpu_buffer_va_0, device0,
+                           &address_valid);
   std::thread second_thread(wait_for_events_interrupt_and_resume,
-                            debug_session_1, synchro, &gpu_buffer_va_1,
-                            device1);
+                            debug_session_1, synchro, &gpu_buffer_va_1, device1,
+                            &address_valid);
 
   synchro->wait_for_application_signal();
   if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va_0)) {
@@ -2023,4 +2020,31 @@ TEST_F(
   } else {
     run_multidevice_single_application_test(devices, false);
   }
+}
+
+TEST_F(
+    MultiDeviceDebugTest,
+    GivenApplicationUsingTwoDevicesWithLargeResourcesWhenDebugEnabledThenExecutionIsSuccessful) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  auto initial_count = devices.size();
+  devices.erase(std::remove_if(devices.begin(), devices.end(),
+                               [](ze_device_handle_t &device) {
+                                 return (!is_debug_supported(device));
+                               }),
+                devices.end());
+  auto final_count = devices.size();
+
+  if (final_count < 2) {
+    FAIL() << "Not enough "
+           << ((final_count < initial_count) ? "debug capable " : "")
+           << "devices to run multi-device test for driver";
+  }
+
+  debugHelper = launch_process(MULTI_DEVICE_RESOURCE_STRESS, nullptr, false);
+
+  debugHelper.wait();
+  LOG_INFO << "[Debugger] Application exited, checking exit code";
+  ASSERT_EQ(debugHelper.exit_code(), 0);
 }

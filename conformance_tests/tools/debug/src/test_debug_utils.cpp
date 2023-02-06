@@ -655,7 +655,7 @@ get_threads_in_slice(uint32_t slice, std::vector<ze_device_thread_t> threads) {
 
 void wait_for_events_interrupt_and_resume(
     const zet_debug_session_handle_t &debugSession, process_synchro *synchro,
-    uint64_t *gpu_buffer_va, ze_device_handle_t device) {
+    uint64_t *gpu_buffer_va, ze_device_handle_t device, bool *address_valid) {
 
   auto device_properties = lzt::get_device_properties(device);
 
@@ -688,8 +688,11 @@ void wait_for_events_interrupt_and_resume(
   zet_debug_memory_space_desc_t memory_space_desc = {};
 
   // we need to wait until address is valid
+  LOG_INFO << "[Debugger] Waiting until address " << std::hex << address_valid
+           << " is valid";
   while (!address_valid)
     ;
+
   memory_space_desc.address = *gpu_buffer_va;
   memory_space_desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
   memory_space_desc.stype = ZET_STRUCTURE_TYPE_DEBUG_MEMORY_SPACE_DESC;

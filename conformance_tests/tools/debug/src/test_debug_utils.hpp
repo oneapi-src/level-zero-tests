@@ -93,9 +93,8 @@ struct smaller_thread_functor {
   }
 };
 
-bool static address_valid = false;
 void wait_for_events_interrupt_and_resume(
     const zet_debug_session_handle_t &debugSession, process_synchro *synchro,
-    uint64_t *gpu_buffer_va, ze_device_handle_t device);
+    uint64_t *gpu_buffer_va, ze_device_handle_t device, bool *address_valid);
 
 #endif // TEST_DEBUG_UTILS_HPP

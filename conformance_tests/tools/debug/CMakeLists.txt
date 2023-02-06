@@ -1,4 +1,4 @@
-# Copyright (C) 2021 Intel Corporation
+# Copyright (C) 2021-2023 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 
@@ -21,6 +21,7 @@ add_lzt_test(
     debug_add
     debug_loop
     debug_loop_slm
+    debug_transform
 )
 
 add_lzt_test_executable(
