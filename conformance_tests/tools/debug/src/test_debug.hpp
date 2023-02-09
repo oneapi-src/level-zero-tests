@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -72,6 +72,38 @@ protected:
   void SetUp() override {
     synchro = new process_synchro(true, true);
 
+    auto driver = lzt::get_default_driver();
+    auto devices = lzt::get_devices(driver);
+
+    auto debug_capable_device = false;
+    for (auto device : devices) {
+      if (is_debug_supported(device)) {
+        debug_capable_device = true;
+        break;
+      }
+    }
+    if (!debug_capable_device) {
+      FAIL() << "[Debugger] No debug capable device found";
+    }
+
+    const testing::TestInfo *const test_info =
+        testing::UnitTest::GetInstance()->current_test_info();
+    std::string test_name =
+        test_info && test_info->name() ? test_info->name() : "";
+    std::transform(test_name.begin(), test_name.end(), test_name.begin(),
+                   ::tolower);
+    if (test_name.find("subdevice") != std::string::npos) {
+      auto subdevices = lzt::get_all_sub_devices();
+      if (!subdevices.empty()) {
+        if (!std::all_of(subdevices.begin(), subdevices.end(),
+                         is_debug_supported)) {
+          FAIL() << "[Debugger] Subdevice does not support debug";
+        }
+      } else {
+        GTEST_SKIP()
+            << "Device does not support subdevices, skipping subdevice test";
+      }
+    }
     auto one_module_event_per_kernel_string =
         getenv("LZT_DEBUG_ONE_MODULE_EVENT_PER_KERNEL");
     if (one_module_event_per_kernel_string) {

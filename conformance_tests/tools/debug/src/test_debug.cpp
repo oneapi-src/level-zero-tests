@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021-2022 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -35,10 +35,17 @@ TEST(
     GivenSubDeviceWhenGettingDebugPropertiesThenPropertiesReturnedSuccessfully) {
   auto driver = lzt::get_default_driver();
 
+  auto test_run = false;
   for (auto &device : lzt::get_devices(driver)) {
     for (auto &sub_device : lzt::get_ze_sub_devices(device)) {
+      test_run = true;
       zetDebugBaseSetup::is_debug_supported(sub_device);
     }
+  }
+
+  if (!test_run) {
+    GTEST_SKIP()
+        << "Device does not contain subdevices, skipping subdevice test";
   }
 }
 
@@ -239,8 +246,9 @@ TEST_F(
   }
 
   if (!test_run) {
-    GTEST_SKIP() << "No device with multiple supported subdevices available, "
-                    "test not run";
+    GTEST_SKIP()
+        << "No device with multiple supported subdevices available, test "
+           "not run";
   }
 }
 
@@ -260,9 +268,9 @@ TEST_F(
   auto final_count = devices.size();
 
   if (final_count < 2) {
-    LOG_WARNING << "Not enough "
-                << ((final_count < initial_count) ? "debug capable " : "")
-                << "devices to run multi-device test for driver";
+    GTEST_SKIP() << "Not enough "
+                 << ((final_count < initial_count) ? "debug capable " : "")
+                 << "devices to run multi-device test for driver";
   } else {
     run_multidevice_test(devices, false);
   }
@@ -372,9 +380,9 @@ TEST_F(
   auto final_count = devices.size();
 
   if (final_count < 2) {
-    LOG_WARNING << "Not enough "
-                << ((final_count < initial_count) ? "debug capable " : "")
-                << "devices to run multi-device test for driver";
+    GTEST_SKIP() << "Not enough "
+                 << ((final_count < initial_count) ? "debug capable " : "")
+                 << "devices to run multi-device test for driver";
   } else {
     run_attach_detach_to_multiple_applications_on_different_devs_test(devices,
                                                                       false);
@@ -772,7 +780,7 @@ TEST_F(zetDebugEventReadTest,
 TEST_F(zetDebugEventReadTest,
        GivenSubDeviceWhenCreatingMultipleModulesThenMultipleEventsReceived) {
   auto all_sub_devices = lzt::get_all_sub_devices();
-  run_test(all_sub_devices, true, MULTIPLE_MODULES_CREATED);
+  run_test(all_sub_devices, true, BASIC);
 }
 
 TEST_F(
@@ -1096,7 +1104,6 @@ TEST_F(
     zetDebugEventReadTest,
     GivenDebugDetachCalledOnSubDeviceWhenModuleCreateEventIsNotAckedThenKernelCompletesSuccessfully) {
   auto all_sub_devices = lzt::get_all_sub_devices();
-
   run_detach_no_ack_module_create_test(all_sub_devices, true);
 }
 
@@ -1179,7 +1186,8 @@ TEST(zetDebugRegisterSetTest,
 TEST(
     zetDebugRegisterSetTest,
     GivenSubDeviceWhenGettingRegisterSetPropertiesThenValidPropertiesReturned) {
-  run_register_set_properties_test(lzt::get_all_sub_devices());
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_register_set_properties_test(all_sub_devices);
 }
 
 void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
@@ -1886,8 +1894,8 @@ TEST_F(
     zetDebugThreadControlTest,
     GivenAlternatingInterruptingAndResumingThreadsOnSubDevicesWhenDebuggingThenKernelCompletesSuccessfully) {
 
-  auto devices = lzt::get_all_sub_devices();
-  run_alternate_stop_resume_test(devices, true);
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_alternate_stop_resume_test(all_sub_devices, true);
 }
 
 TEST_F(
@@ -1903,8 +1911,8 @@ TEST_F(
     zetDebugThreadControlTest,
     GivengInterruptingAndResumingThreadWhenDebuggingOnSubDevicesThenKernelCompletesSuccessfully) {
 
-  auto devices = lzt::get_all_sub_devices();
-  run_interrupt_resume_test(devices, true);
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_interrupt_resume_test(all_sub_devices, true);
 }
 
 TEST_F(zetDebugThreadControlTest,
@@ -1919,8 +1927,8 @@ TEST_F(
     zetDebugThreadControlTest,
     GivengInterruptingThreadNotRunningOnSubDeviceThenUnavailableEventIsReceived) {
 
-  auto devices = lzt::get_all_sub_devices();
-  run_unavailable_thread_test(devices, true);
+  auto all_sub_devices = lzt::get_all_sub_devices();
+  run_unavailable_thread_test(all_sub_devices, true);
 }
 
 void MultiDeviceDebugTest::run_multidevice_single_application_test(
@@ -2014,9 +2022,9 @@ TEST_F(
   auto final_count = devices.size();
 
   if (final_count < 2) {
-    LOG_WARNING << "Not enough "
-                << ((final_count < initial_count) ? "debug capable " : "")
-                << "devices to run multi-device test for driver";
+    GTEST_SKIP() << "Not enough "
+                 << ((final_count < initial_count) ? "debug capable " : "")
+                 << "devices to run multi-device test for driver";
   } else {
     run_multidevice_single_application_test(devices, false);
   }
@@ -2037,9 +2045,9 @@ TEST_F(
   auto final_count = devices.size();
 
   if (final_count < 2) {
-    FAIL() << "Not enough "
-           << ((final_count < initial_count) ? "debug capable " : "")
-           << "devices to run multi-device test for driver";
+    GTEST_SKIP() << "Not enough "
+                 << ((final_count < initial_count) ? "debug capable " : "")
+                 << "devices to run multi-device test for driver";
   }
 
   debugHelper = launch_process(MULTI_DEVICE_RESOURCE_STRESS, nullptr, false);
