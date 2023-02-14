@@ -49,6 +49,24 @@ TEST_F(zeVirtualMemoryTests,
 
 TEST_F(
     zeVirtualMemoryTests,
+    GivenValidStartAddressAndNewValidSizeThenGrowingVirtualReservationSucceeds) {
+
+  lzt::query_page_size(context, device, allocationSize, &pageSize);
+  allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
+  lzt::virtual_memory_reservation(context, nullptr, allocationSize,
+                                  &reservedVirtualMemory);
+  EXPECT_NE(nullptr, reservedVirtualMemory);
+  lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
+  lzt::query_page_size(context, device, allocationSize * 2, &pageSize);
+  allocationSize = lzt::create_page_aligned_size(allocationSize * 2, pageSize);
+  lzt::virtual_memory_reservation(context, reservedVirtualMemory,
+                                  allocationSize, &reservedVirtualMemory);
+  EXPECT_NE(nullptr, reservedVirtualMemory);
+  lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
     GivenVirtualMemoryReservationThenSettingTheMemoryAccessAttributeReturnsSuccess) {
   ze_memory_access_attribute_t access;
   ze_memory_access_attribute_t previousAccess;
