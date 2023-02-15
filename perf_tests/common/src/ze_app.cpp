@@ -102,7 +102,7 @@ void ZeApp::memoryAlloc(const uint32_t device_index, size_t size, void **ptr) {
   device_desc.ordinal = 0;
   device_desc.flags = 0;
 
-  SUCCESS_OR_TERMINATE(zeMemAllocDevice(context, &device_desc, size, 1,
+  SUCCESS_OR_TERMINATE(zeMemAllocDevice(context, &device_desc, size, 0,
                                         _devices[device_index], ptr));
 }
 

@@ -12,10 +12,10 @@ static const char *usage_str =
     "\n ze_bandwidth [OPTIONS]"
     "\n"
     "\n OPTIONS:"
-    "\n  -t, string               selectively run a particular test:"
+    "\n  -t, string               run a particular test [default:h2d, d2h]:"
     "\n      h2d or H2D                       run only Host-to-Device tests"
     "\n      d2h or D2H                       run only Device-to-Host tests "
-    "\n                            [default:  both]"
+    "\n      bidir                            run only bidirectional tests "
     "\n  -v                       enable verification"
     "\n                            [default:  disabled]"
     "\n  -i                       set number of iterations per transfer"
@@ -28,8 +28,18 @@ static const char *usage_str =
     "\n  -se                      select ending transfer size (bytes)"
     "\n                            [default: 2^30]"
     "\n  -q                       query for number of engines available"
-    "\n  -g, group                select engine group (default: 0)"
+    "\n  -g, group                select engine group (default: 0)."
+    "\n                            when using bidir tests, a comma-separated "
+    "list "
+    "\n                            of engine groups may be passed, for h2d and "
+    "d2h"
     "\n  -n, number               select engine index (default: 0)"
+    "\n                            when using bidir tests, a comma-separated "
+    "list "
+    "\n                            of engine groups may be passed, for h2d and "
+    "d2h"
+    "\n  --immediate              use immediate command lists (default: "
+    "disabled)"
     "\n  --csv                    output in csv format (default: disabled)"
     "\n  -h, --help               display help message"
     "\n";
@@ -89,21 +99,50 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       i++;
     } else if ((strcmp(argv[i], "-g") == 0)) {
       enable_fixed_ordinal_index = true;
-      if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
+      std::string queues_string = argv[i + 1];
+      const std::string comma = ",";
+
+      size_t pos = 0;
+      size_t start = 0;
+      std::string queue_string = "";
+      if ((pos = queues_string.find(comma, start)) != std::string::npos) {
+        queue_string = queues_string.substr(start, pos);
+        start = pos + 1;
+        command_queue_group_ordinal = atoi(queue_string.c_str());
+        queue_string = queues_string.substr(start, queues_string.length());
+        command_queue_group_ordinal1 = atoi(queue_string.c_str());
+      } else {
         command_queue_group_ordinal = atoi(argv[i + 1]);
+        command_queue_group_ordinal1 = command_queue_group_ordinal;
       }
       i++;
     } else if ((strcmp(argv[i], "--csv") == 0)) {
       csv_output = true;
-      i++;
+    } else if ((strcmp(argv[i], "--immediate") == 0)) {
+      use_immediate_command_list = true;
     } else if ((strcmp(argv[i], "-n") == 0)) {
-      if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
+      enable_fixed_ordinal_index = true;
+      std::string queues_string = argv[i + 1];
+      const std::string comma = ",";
+
+      size_t pos = 0;
+      size_t start = 0;
+      std::string queue_string = "";
+      if ((pos = queues_string.find(comma, start)) != std::string::npos) {
+        queue_string = queues_string.substr(start, pos);
+        start = pos + 1;
+        command_queue_index = atoi(queue_string.c_str());
+        queue_string = queues_string.substr(start, queues_string.length());
+        command_queue_index1 = atoi(queue_string.c_str());
+      } else {
         command_queue_index = atoi(argv[i + 1]);
+        command_queue_index1 = command_queue_index;
       }
       i++;
     } else if ((strcmp(argv[i], "-t") == 0)) {
-      run_host2dev = false;
-      run_dev2host = false;
+      run_host2dev = true;
+      run_dev2host = true;
+      run_bidirectional = true;
 
       if ((i + 1) >= argc) {
         std::cout << usage_str;
@@ -112,10 +151,19 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       if ((strcmp(argv[i + 1], "h2d") == 0) ||
           (strcmp(argv[i + 1], "H2D") == 0)) {
         run_host2dev = true;
+        run_dev2host = false;
+        run_bidirectional = false;
         i++;
       } else if ((strcmp(argv[i + 1], "d2h") == 0) ||
                  (strcmp(argv[i + 1], "D2H") == 0)) {
+        run_host2dev = false;
         run_dev2host = true;
+        run_bidirectional = false;
+        i++;
+      } else if ((strcmp(argv[i + 1], "bidir") == 0)) {
+        run_host2dev = false;
+        run_dev2host = false;
+        run_bidirectional = true;
         i++;
       } else {
         std::cout << usage_str;

@@ -83,7 +83,7 @@ void ZePeer::print_results(bool bidirectional, peer_test_t test_type,
   long double total_time_s = total_time_usec / 1e6;
 
   long double total_data_transfer =
-      buffer_size / static_cast<long double>(1e9); /* Units in Gigabytes */
+      buffer_size / static_cast<long double>(ONE_GB); /* Units in Gigabytes */
   if (bidirectional) {
     total_data_transfer = 2 * total_data_transfer;
   }

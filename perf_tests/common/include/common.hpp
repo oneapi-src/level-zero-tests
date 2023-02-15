@@ -13,9 +13,10 @@
 #include <string>
 #include <vector>
 
-#define ONE_KB (1 * 1024ULL)
-#define ONE_MB (1 * 1024ULL * ONE_KB)
-#define ONE_GB (1 * 1024ULL * ONE_MB)
+// Bandwidth reported in GBPS (10^9), instead of GiBPS (2^30).
+#define ONE_KB (1 * 1000ULL)
+#define ONE_MB (1 * ONE_KB * ONE_KB)
+#define ONE_GB (1 * ONE_KB * ONE_MB)
 
 template <typename T = std::chrono::nanoseconds::period> class Timer {
 public:
