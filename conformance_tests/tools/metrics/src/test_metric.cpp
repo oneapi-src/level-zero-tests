@@ -999,11 +999,11 @@ TEST_F(
       }
 
       std::vector<uint8_t> rawData;
-      lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-      lzt::validate_metrics(
-          groupInfo.metricGroupHandle,
-          lzt::metric_streamer_read_data_size(metricStreamerHandle),
-          rawData.data());
+      uint32_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
+                                     &rawData);
+      lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
+                            rawData.data());
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
@@ -1123,11 +1123,11 @@ TEST_F(
       }
 
       std::vector<uint8_t> rawData;
-      lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-      lzt::validate_metrics(
-          groupInfo.metricGroupHandle,
-          lzt::metric_streamer_read_data_size(metricStreamerHandle),
-          rawData.data(), true);
+      uint32_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
+                                     &rawData);
+      lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
+                            rawData.data(), true);
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
@@ -1327,11 +1327,11 @@ TEST_F(
       }
 
       std::vector<uint8_t> rawData;
-      lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-      lzt::validate_metrics(
-          groupInfo.metricGroupHandle,
-          lzt::metric_streamer_read_data_size(metricStreamerHandle),
-          rawData.data());
+      uint32_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
+                                     &rawData);
+      lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
+                            rawData.data());
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
@@ -1445,11 +1445,11 @@ TEST_F(
       }
 
       std::vector<uint8_t> rawData;
-      lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-      lzt::validate_metrics_std(
-          groupInfo.metricGroupHandle,
-          lzt::metric_streamer_read_data_size(metricStreamerHandle),
-          rawData.data());
+      uint32_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
+                                     &rawData);
+      lzt::validate_metrics_std(groupInfo.metricGroupHandle, rawDataSize,
+                                rawData.data());
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
@@ -1531,11 +1531,10 @@ TEST(
     EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
     std::vector<uint8_t> rawData;
-    lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-    lzt::validate_metrics(
-        groupInfo.metricGroupHandle,
-        lzt::metric_streamer_read_data_size(metricStreamerHandle),
-        rawData.data());
+    uint32_t rawDataSize = 0;
+    lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize, &rawData);
+    lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
+                          rawData.data());
 
   } while (metric_helper.running());
   LOG_INFO << "Waiting for process to finish...";
@@ -1552,7 +1551,6 @@ TEST(
 TEST(
     zetMetricStreamProcessTest,
     GivenWorkloadExecutingInSeparateProcessWhenStreamingMetricsAndSendInterruptThenExpectValidMetrics) {
-
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
 
@@ -1614,11 +1612,10 @@ TEST(
   EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
   std::vector<uint8_t> rawData;
-  lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-  lzt::validate_metrics(
-      groupInfo.metricGroupHandle,
-      lzt::metric_streamer_read_data_size(metricStreamerHandle),
-      rawData.data());
+  uint32_t rawDataSize = 0;
+  lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize, &rawData);
+  lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
+                        rawData.data());
 
   // send interrupt
   LOG_DEBUG << "Sending interrupt to process";
@@ -1726,11 +1723,11 @@ TEST_F(
       }
 
       std::vector<uint8_t> rawData;
-      lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-      lzt::validate_metrics(
-          groupInfo.metricGroupHandle,
-          lzt::metric_streamer_read_data_size(metricStreamerHandle),
-          rawData.data());
+      uint32_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
+                                     &rawData);
+      lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
+                            rawData.data());
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
@@ -1839,17 +1836,16 @@ void run_multi_device_streamer_test(
   }
 
   std::vector<uint8_t> rawData_0, rawData_1;
-  lzt::metric_streamer_read_data(metricStreamerHandle_0, &rawData_0);
-  lzt::metric_streamer_read_data(metricStreamerHandle_1, &rawData_1);
+  uint32_t rawDataSize_0 = 0, rawDataSize_1 = 0;
+  lzt::metric_streamer_read_data(metricStreamerHandle_0, rawDataSize_0,
+                                 &rawData_0);
+  lzt::metric_streamer_read_data(metricStreamerHandle_1, rawDataSize_1,
+                                 &rawData_1);
 
-  lzt::validate_metrics(
-      groupInfo_0.metricGroupHandle,
-      lzt::metric_streamer_read_data_size(metricStreamerHandle_0),
-      rawData_0.data());
-  lzt::validate_metrics(
-      groupInfo_1.metricGroupHandle,
-      lzt::metric_streamer_read_data_size(metricStreamerHandle_1),
-      rawData_1.data());
+  lzt::validate_metrics(groupInfo_0.metricGroupHandle, rawDataSize_0,
+                        rawData_0.data());
+  lzt::validate_metrics(groupInfo_1.metricGroupHandle, rawDataSize_1,
+                        rawData_1.data());
 
   // cleanup
   lzt::deactivate_metric_groups(device_0);

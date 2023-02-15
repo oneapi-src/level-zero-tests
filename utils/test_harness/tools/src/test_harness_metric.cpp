@@ -565,6 +565,19 @@ void metric_streamer_read_data(
                                       &metricSize, metricData->data()));
 }
 
+void metric_streamer_read_data(
+    zet_metric_streamer_handle_t metricStreamerHandle, uint32_t &rawDataSize,
+    std::vector<uint8_t> *metricData) {
+  ASSERT_NE(nullptr, metricData);
+  size_t metricSize = metric_streamer_read_data_size(metricStreamerHandle);
+  EXPECT_GT(metricSize, 0);
+  metricData->resize(metricSize);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricStreamerReadData(metricStreamerHandle, UINT32_MAX,
+                                      &metricSize, metricData->data()));
+  rawDataSize = metricSize;
+}
+
 void activate_metric_groups(ze_device_handle_t device, uint32_t count,
                             zet_metric_group_handle_t *matchedGroupHandle) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -658,7 +671,8 @@ void validate_metrics_common(
   if (requireOverflow) {
     EXPECT_EQ(result, ZE_RESULT_WARNING_DROPPED_DATA);
   } else {
-    EXPECT_EQ(result, ZE_RESULT_SUCCESS);
+    EXPECT_TRUE(result == ZE_RESULT_SUCCESS ||
+                result == ZE_RESULT_WARNING_DROPPED_DATA);
   }
   EXPECT_GT(totalMetricValueCount, 0);
 

@@ -131,6 +131,10 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
 
 bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup);
 
+void metric_streamer_read_data(
+    zet_metric_streamer_handle_t metricStreamerHandle, uint32_t &rawDataSize,
+    std::vector<uint8_t> *metricData);
+
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */
