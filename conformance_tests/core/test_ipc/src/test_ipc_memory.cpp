@@ -30,7 +30,7 @@ protected:
   bool child_exited = false;
 
   void run_child(int size, ze_ipc_memory_flags_t flags);
-  void run_parent(int size);
+  void run_parent(int size, bool reserved);
 
   void SetUp() override {
     pid = fork();
@@ -95,7 +95,7 @@ void IpcMemoryAccessTest::run_child(int size, ze_ipc_memory_flags_t flags) {
   }
 }
 
-void IpcMemoryAccessTest::run_parent(int size) {
+void IpcMemoryAccessTest::run_parent(int size, bool reserved) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -113,7 +113,15 @@ void IpcMemoryAccessTest::run_parent(int size) {
   void *buffer = lzt::allocate_host_memory(size);
   memset(buffer, 0, size);
   lzt::write_data_pattern(buffer, size, 1);
-  void *memory = lzt::allocate_device_memory(size);
+  size_t allocSize = size;
+  ze_physical_mem_handle_t reservedPhysicalMemory = {};
+  void *memory = nullptr;
+  if (reserved) {
+    memory = lzt::reserve_allocate_and_map_memory(context, device, allocSize,
+                                                  &reservedPhysicalMemory);
+  } else {
+    memory = lzt::allocate_device_memory(size);
+  }
   lzt::append_memory_copy(cl, memory, buffer, size);
   lzt::close_command_list(cl);
   lzt::execute_command_lists(cq, 1, &cl, nullptr);
@@ -140,7 +148,12 @@ void IpcMemoryAccessTest::run_parent(int size) {
     }
   }
 
-  lzt::free_memory(memory);
+  if (reserved) {
+    lzt::unmap_and_free_reserved_memory(context, memory, reservedPhysicalMemory,
+                                        allocSize);
+  } else {
+    lzt::free_memory(memory);
+  }
   lzt::free_memory(buffer);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
@@ -152,7 +165,7 @@ TEST_F(
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   const auto size = 4096;
   if (is_parent) {
-    run_parent(size);
+    run_parent(size, false);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
   }
@@ -163,7 +176,29 @@ TEST_F(
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   const auto size = 4096;
   if (is_parent) {
-    run_parent(size);
+    run_parent(size, false);
+  } else {
+    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
+  }
+}
+
+TEST_F(
+    IpcMemoryAccessTest,
+    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
+  const auto size = 4096;
+  if (is_parent) {
+    run_parent(size, true);
+  } else {
+    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
+  }
+}
+
+TEST_F(
+    IpcMemoryAccessTest,
+    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
+  const auto size = 4096;
+  if (is_parent) {
+    run_parent(size, true);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
   }

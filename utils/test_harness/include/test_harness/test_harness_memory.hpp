@@ -125,5 +125,11 @@ void virtual_memory_reservation_get_access(ze_context_handle_t context,
 void virtual_memory_reservation_set_access(ze_context_handle_t context,
                                            const void *ptr, size_t size,
                                            ze_memory_access_attribute_t access);
+void *reserve_allocate_and_map_memory(
+    ze_context_handle_t context, ze_device_handle_t device, size_t &allocSize,
+    ze_physical_mem_handle_t *reservedPhysicalMemory);
+void unmap_and_free_reserved_memory(
+    ze_context_handle_t context, void *reservedMemory,
+    ze_physical_mem_handle_t reservedPhysicalMemory, size_t allocSize);
 }; // namespace level_zero_tests
 #endif

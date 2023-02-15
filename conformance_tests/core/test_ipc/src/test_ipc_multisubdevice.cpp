@@ -22,7 +22,7 @@
 namespace {
 #ifdef __linux__
 
-void multi_sub_device_sender(size_t size) {
+void multi_sub_device_sender(size_t size, bool reserved) {
   zeInit(0);
 
   auto driver = lzt::get_default_driver();
@@ -82,7 +82,15 @@ void multi_sub_device_sender(size_t size) {
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
   ze_device_mem_alloc_flags_t flags = 0;
-  auto memory = lzt::allocate_device_memory(size, 1, flags, device, context);
+  size_t allocSize = size;
+  ze_physical_mem_handle_t reservedPhysicalMemory = {};
+  void *memory = nullptr;
+  if (reserved) {
+    memory = lzt::reserve_allocate_and_map_memory(context, device, allocSize,
+                                                  &reservedPhysicalMemory);
+  } else {
+    memory = lzt::allocate_device_memory(size, 1, flags, device, context);
+  }
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   lzt::write_data_pattern(buffer, size, 1);
@@ -187,7 +195,7 @@ void multi_sub_device_receiver(size_t size) {
 
 TEST(
     IpcMemoryAccessTest,
-    GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCMultiDeviceThenParentProcessReadsMemoryCorrectly) {
+    GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCMultiDeviceThenChildProcessReadsMemoryCorrectly) {
   size_t size = 4096;
 
   pid_t pid = fork();
@@ -210,7 +218,37 @@ TEST(
     } else if (pid > 0) {
       multi_sub_device_receiver(size);
     } else {
-      multi_sub_device_sender(size);
+      multi_sub_device_sender(size, false);
+    }
+  }
+}
+
+TEST(
+    IpcMemoryAccessTest,
+    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCMultiDeviceThenChildProcessReadsMemoryCorrectly) {
+  size_t size = 4096;
+
+  pid_t pid = fork();
+  if (pid < 0) {
+    throw std::runtime_error("Failed to fork child process");
+  } else if (pid > 0) {
+    int child_status;
+    pid_t client_pid = wait(&child_status);
+    if (client_pid <= 0) {
+      std::cerr << "Client terminated abruptly with error code "
+                << strerror(errno) << "\n";
+      std::terminate();
+    }
+    EXPECT_EQ(true, WIFEXITED(child_status));
+  } else {
+    pid_t ppid = getpid();
+    pid_t pid = fork();
+    if (pid < 0) {
+      throw std::runtime_error("Failed to fork child process");
+    } else if (pid > 0) {
+      multi_sub_device_receiver(size);
+    } else {
+      multi_sub_device_sender(size, true);
     }
   }
 }

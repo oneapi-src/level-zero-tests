@@ -293,6 +293,32 @@ void get_mem_alloc_properties(
   EXPECT_EQ(context, context_initial);
 }
 
+void *reserve_allocate_and_map_memory(
+    ze_context_handle_t context, ze_device_handle_t device, size_t &allocSize,
+    ze_physical_mem_handle_t *reservedPhysicalMemory) {
+  size_t pageSize = 0;
+  void *reservedMemory = nullptr;
+  lzt::query_page_size(context, device, allocSize, &pageSize);
+  allocSize = lzt::create_page_aligned_size(allocSize, pageSize);
+  lzt::physical_memory_allocation(context, device, allocSize,
+                                  reservedPhysicalMemory);
+  lzt::virtual_memory_reservation(context, nullptr, allocSize, &reservedMemory);
+  EXPECT_NE(nullptr, reservedMemory);
+  EXPECT_EQ(zeVirtualMemMap(context, reservedMemory, allocSize,
+                            *reservedPhysicalMemory, 0,
+                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+            ZE_RESULT_SUCCESS);
+  return reservedMemory;
+}
+
+void unmap_and_free_reserved_memory(
+    ze_context_handle_t context, void *reservedMemory,
+    ze_physical_mem_handle_t reservedPhysicalMemory, size_t allocSize) {
+  lzt::virtual_memory_unmap(context, reservedMemory, allocSize);
+  lzt::physical_memory_destroy(context, reservedPhysicalMemory);
+  lzt::virtual_memory_free(context, reservedMemory, allocSize);
+}
+
 void query_page_size(ze_context_handle_t context, ze_device_handle_t device,
                      size_t alloc_size, size_t *page_size) {
   EXPECT_EQ(zeVirtualMemQueryPageSize(context, device, alloc_size, page_size),
@@ -366,7 +392,11 @@ void virtual_memory_unmap(ze_context_handle_t context,
 }
 
 size_t create_page_aligned_size(size_t requested_size, size_t page_size) {
-  return (requested_size / page_size) * page_size;
+  if (page_size >= requested_size) {
+    return page_size;
+  } else {
+    return (requested_size / page_size) * page_size;
+  }
 }
 
 }; // namespace level_zero_tests
