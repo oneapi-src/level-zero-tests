@@ -7,6 +7,8 @@
  */
 #include "gtest/gtest.h"
 
+#include <vector>
+#include <algorithm>
 #include <boost/asio.hpp>
 #include <boost/process.hpp>
 #include <boost/filesystem.hpp>
@@ -49,6 +51,43 @@ TEST_F(
             zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
   lzt::destroy_context(context_);
   lzt::free_memory(memory_);
+}
+
+TEST_F(
+    zeIpcMemHandleTests,
+    GivenSameIpcMemoryHandleWhenOpeningIpcMemHandleMultipleTimesThenUniquePointersAreReturned) {
+  ze_result_t result = zeInit(0);
+  if (result) {
+    throw std::runtime_error("zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_TRACE << "Driver initialized";
+  level_zero_tests::print_platform_overview();
+
+  ze_driver_handle_t driver = lzt::get_default_driver();
+  ze_device_handle_t device = lzt::get_default_device(driver);
+  context_ = lzt::get_default_context();
+  memory_ = lzt::allocate_device_memory(1, 1, 0, device, context_);
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+
+  const int numIters = 2000;
+  std::vector<void *> ipcPointers(numIters);
+  ze_ipc_memory_flags_t ipcMemFlags;
+  for (int i = 0; i < numIters; i++) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeMemOpenIpcHandle(context_, device, ipc_mem_handle_, 0,
+                                 &ipcPointers[i]));
+    EXPECT_NE(nullptr, ipcPointers[i]);
+  }
+
+  std::sort(ipcPointers.begin(), ipcPointers.end());
+  EXPECT_EQ(std::adjacent_find(ipcPointers.begin(), ipcPointers.end()),
+            ipcPointers.end());
+
+  lzt::free_memory(memory_);
+  lzt::destroy_context(context_);
 }
 
 class zeIpcMemHandleCloseTests : public zeIpcMemHandleTests {

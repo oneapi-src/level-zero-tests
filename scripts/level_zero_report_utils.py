@@ -73,6 +73,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleCompiledWithOptimizationsWhenExecutingThenResultIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelScheduleHintsTests_GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelCreateTests_GivenValidFunctionWhenGettingPreferredGroupSizePropertiesThenReturn', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeIpcMemHandleTests_GivenSameIpcMemoryHandleWhenOpeningIpcMemHandleMultipleTimesThenUniquePointersAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeIpcMemHandleCloseTests_GivenValidPointerToDeviceMemoryAllocationBiasCachedWhenClosingIpcHandleThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverMemFreeTests_GivenValidSharedMemAllocationWhenFreeingSharedMemoryThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverMemFreeTests_GivenValidHostMemAllocationWhenFreeingHostMemoryThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
