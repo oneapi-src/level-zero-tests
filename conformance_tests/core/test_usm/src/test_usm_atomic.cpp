@@ -103,6 +103,7 @@ TEST_P(KernelAtomicLoadStoreTests,
   ze_memory_type_t input_memory_type = std::get<0>(GetParam());
   ze_memory_type_t output_memory_type = std::get<1>(GetParam());
   shared_memory_type shared_mem = std::get<2>(GetParam());
+  auto context = lzt::get_default_context();
 
   for (auto driver : lzt::get_all_driver_handles()) {
     unsigned device_id = 0;
@@ -163,12 +164,12 @@ TEST_P(KernelAtomicLoadStoreTests,
         input_data =
             static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
       } else if (input_memory_type == ZE_MEMORY_TYPE_DEVICE) {
-        input_data =
-            static_cast<int *>(lzt::allocate_device_memory(size * sizeof(int)));
+        input_data = static_cast<int *>(lzt::allocate_device_memory(
+            size * sizeof(int), 1, 0u, device, context));
       } else {
         if (shared_mem == SHARED_LOCAL) {
           input_data = static_cast<int *>(
-              lzt::allocate_shared_memory(size * sizeof(int)));
+              lzt::allocate_shared_memory(size * sizeof(int), device));
         } else {
           input_data = new int[size];
         }
@@ -178,12 +179,12 @@ TEST_P(KernelAtomicLoadStoreTests,
         output_data =
             static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
       } else if (output_memory_type == ZE_MEMORY_TYPE_DEVICE) {
-        output_data =
-            static_cast<int *>(lzt::allocate_device_memory(size * sizeof(int)));
+        output_data = static_cast<int *>(lzt::allocate_device_memory(
+            size * sizeof(int), 1, 0u, device, context));
       } else {
         if (shared_mem == SHARED_LOCAL) {
           output_data = static_cast<int *>(
-              lzt::allocate_shared_memory(size * sizeof(int)));
+              lzt::allocate_shared_memory(size * sizeof(int), device));
         } else {
           output_data = new int[size];
         }

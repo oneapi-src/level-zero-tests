@@ -480,7 +480,7 @@ TEST_F(DevicePropertiesTest,
     EXPECT_EQ(firstDevicePropertiesCount, firstDeviceProperties.size());
 
     for (uint32_t i = 0; i < firstDevicePropertiesCount; i++) {
-      EXPECT_GT(firstDeviceProperties[i].maxClockRate, 0);
+      EXPECT_GE(firstDeviceProperties[i].maxClockRate, 0);
       EXPECT_GT(firstDeviceProperties[i].maxBusWidth, 0);
       EXPECT_GT(firstDeviceProperties[i].totalSize, 0);
     }

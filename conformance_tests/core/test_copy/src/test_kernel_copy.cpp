@@ -49,8 +49,8 @@ TEST_P(KernelCopyTests,
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
       // set up
-      auto command_queue = lzt::create_command_queue();
-      auto command_list = lzt::create_command_list();
+      auto command_queue = lzt::create_command_queue(device);
+      auto command_list = lzt::create_command_list(device);
 
       auto module = lzt::create_module(device, "copy_module.spv");
       auto kernel = lzt::create_function(module, "copy_data");
@@ -62,10 +62,10 @@ TEST_P(KernelCopyTests,
         output_data =
             static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
       } else {
-        input_data =
-            static_cast<int *>(lzt::allocate_shared_memory(size * sizeof(int)));
-        output_data =
-            static_cast<int *>(lzt::allocate_shared_memory(size * sizeof(int)));
+        input_data = static_cast<int *>(
+            lzt::allocate_shared_memory(size * sizeof(int), device));
+        output_data = static_cast<int *>(
+            lzt::allocate_shared_memory(size * sizeof(int), device));
       }
 
       lzt::write_data_pattern(input_data, size * sizeof(int), 1);
@@ -111,8 +111,8 @@ TEST_P(KernelCopyTests,
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
       // set up
-      auto command_queue = lzt::create_command_queue();
-      auto command_list = lzt::create_command_list();
+      auto command_queue = lzt::create_command_queue(device);
+      auto command_list = lzt::create_command_list(device);
 
       auto module = lzt::create_module(device, "copy_module.spv");
       auto kernel = lzt::create_function(module, "copy_data_indirect");
@@ -134,15 +134,15 @@ TEST_P(KernelCopyTests,
         }
       } else { // shared memory
         input_data = static_cast<copy_data *>(
-            lzt::allocate_shared_memory(size * sizeof(copy_data)));
+            lzt::allocate_shared_memory(size * sizeof(copy_data), device));
         output_data = static_cast<copy_data *>(
-            lzt::allocate_shared_memory(size * sizeof(copy_data)));
+            lzt::allocate_shared_memory(size * sizeof(copy_data), device));
 
         for (int i = 0; i < size; i++) {
           input_data[i].data = static_cast<uint32_t *>(
-              lzt::allocate_shared_memory(size * sizeof(uint32_t)));
+              lzt::allocate_shared_memory(size * sizeof(uint32_t), device));
           output_data[i].data = static_cast<uint32_t *>(
-              lzt::allocate_shared_memory(size * sizeof(uint32_t)));
+              lzt::allocate_shared_memory(size * sizeof(uint32_t), device));
         }
       }
 
@@ -608,8 +608,8 @@ TEST_P(
   EXPECT_EQ(true, get_memory_info(dst_ptr_mem_type, dst_ptr_shr_type,
                                   dst_ptr_test_type));
 
-  EXPECT_GE(1, drivers.size());
-  EXPECT_GE(1, devices[0].size());
+  EXPECT_GE(drivers.size(), 1);
+  EXPECT_GE(devices[0].size(), 1);
 
   test_indirect_memory_kernel_copy(
       0, 0, src_mem_type, src_ptr_mem_type, dst_mem_type, dst_ptr_mem_type,

@@ -391,16 +391,13 @@ protected:
         }
         gpu_pattern_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
-                pattern_memory_size, 8, 0, use_this_ordinal_on_device_,
-                device_handle, context);
+                pattern_memory_size, 8, 0u, 0u, device_handle, context);
         gpu_expected_output_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
-                output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
-                context);
+                output_size_, 8, 0u, 0u, device_handle, context);
         gpu_found_output_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
-                output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
-                context);
+                output_size_, 8, 0u, 0u, device_handle, context);
       } else if (shr_mem_type == SHARED_SYSTEM) { // system allocation
         auto memory_access_cap =
             device_properties.sharedSystemAllocCapabilities;
@@ -440,18 +437,23 @@ protected:
         }
         gpu_pattern_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
-                pattern_memory_size, 8, 0, use_this_ordinal_on_device_,
-                device_handle, context);
+                pattern_memory_size, 8, 0, 0u, device_handle, context);
         gpu_expected_output_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
-                output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
-                context);
+                output_size_, 8, 0, 0u, device_handle, context);
         gpu_found_output_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
-                output_size_, 8, 0, use_this_ordinal_on_device_, device_handle,
-                context);
+                output_size_, 8, 0, 0u, device_handle, context);
         // overwrite device_handle to call run_function()
         device_handle = driver_info->device_handles[next_device_index];
+        if (!lzt::can_access_peer(
+                driver_info->device_handles[device_in_driver_index],
+                driver_info->device_handles[next_device_index])) {
+          LOG_INFO << "WARNING: Cannot access this memory on the next device, "
+                      "skipping";
+          free_drivers_info();
+          return;
+        }
       } else {
         LOG_INFO << "WARNING: Unknown memory type, skipping";
         free_drivers_info();
