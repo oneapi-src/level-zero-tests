@@ -62,6 +62,7 @@ typedef struct {
   uint64_t gpu_buffer_address;
   uint32_t gpu_thread_count;
   uint32_t child_application_pid;
+  uint32_t spill_mem_size;
 } debug_signals_t;
 
 class process_synchro {
@@ -98,11 +99,15 @@ public:
           &(static_cast<debug_signals_t *>(region->get_address())
                 ->child_application_pid);
 
+      spill_mem_size = &(static_cast<debug_signals_t *>(region->get_address())
+                             ->spill_mem_size);
+
       *debugger_signal = false;
       *debugee_signal = false;
       *gpu_buffer_address = 0;
       *gpu_thread_count = 0;
       *child_application_pid = 0;
+      *spill_mem_size = 0;
 
       bi::named_mutex::remove(debug_mutex_name.c_str());
       mutex = new bi::named_mutex(bi::create_only, debug_mutex_name.c_str());
@@ -134,6 +139,9 @@ public:
       child_application_pid =
           &(static_cast<debug_signals_t *>(region->get_address())
                 ->child_application_pid);
+
+      spill_mem_size = &(static_cast<debug_signals_t *>(region->get_address())
+                             ->spill_mem_size);
     }
   }
 
@@ -248,6 +256,16 @@ public:
     mutex->unlock();
   }
 
+  // To be used by application only:
+  void update_spill_mem_size(const uint32_t &spill_mem) {
+    if (!enabled)
+      return;
+    LOG_INFO << "[Application] Sharing spill memory size: " << spill_mem;
+    mutex->lock();
+    *spill_mem_size = spill_mem;
+    mutex->unlock();
+  }
+
   // To be used by Debugger only:
   bool get_app_gpu_buffer_address(uint64_t &gpu_address) {
     if ((!enabled) || (*gpu_buffer_address == 0))
@@ -269,6 +287,17 @@ public:
     gpu_threads = *gpu_thread_count;
     mutex->unlock();
     LOG_INFO << "[Debugger] Received number gpu thread to run: " << gpu_threads;
+
+    return true;
+  }
+
+  bool get_app_scratch_size(uint32_t &scratch_size) {
+    if ((!enabled) || (*spill_mem_size == 0))
+      return false;
+    mutex->lock();
+    scratch_size = *spill_mem_size;
+    mutex->unlock();
+    LOG_INFO << "[Debugger] Received scratch space size: " << scratch_size;
 
     return true;
   }
@@ -302,6 +331,7 @@ private:
   uint32_t *gpu_thread_count;
   uint32_t *child_application_pid;
   bool enabled;
+  uint32_t *spill_mem_size;
 };
 
 #endif // TEST_DEBUG_COMMON_HPP
