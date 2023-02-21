@@ -70,7 +70,7 @@ protected:
                        ZE_IMAGE_FORMAT_SWIZZLE_B,
                        ZE_IMAGE_FORMAT_SWIZZLE_A},
     img_desc.width = img_width;
-    img_desc.width = img_height;
+    img_desc.height = img_height;
     img_desc.depth = 1;
     img_desc.arraylevels = 0;
     img_desc.miplevels = 0;
