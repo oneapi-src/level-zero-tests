@@ -841,6 +841,13 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
   if (type == TimingMeasurement::BANDWIDTH) {
     if (context.sub_device_count) {
+      SUCCESS_OR_TERMINATE(
+          zeCommandListReset(context.cmd_list[current_sub_device_id]));
+    } else {
+      SUCCESS_OR_TERMINATE(zeCommandListReset(context.command_list));
+    }
+
+    if (context.sub_device_count) {
       if (verbose) {
         std::cout << "current_sub_device_id value is ::"
                   << current_sub_device_id << std::endl;
@@ -916,6 +923,13 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     single_event_create(event_pool, &function_event);
     if (verbose)
       std::cout << "Event Created\n";
+
+    if (context.sub_device_count) {
+      SUCCESS_OR_TERMINATE(
+          zeCommandListReset(context.cmd_list[current_sub_device_id]));
+    } else {
+      SUCCESS_OR_TERMINATE(zeCommandListReset(context.command_list));
+    }
 
     if (context.sub_device_count) {
       if (verbose) {
@@ -1077,7 +1091,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
     event_desc.index = 0;
     event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
-    event_desc.wait = 0;
+    event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
 
     event_desc.pNext = nullptr;
     result = zeEventCreate(kernel_launch_event_pool, &event_desc,
@@ -1088,6 +1102,13 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     }
     if (verbose)
       std::cout << "Event Created\n";
+
+    if (context.sub_device_count) {
+      SUCCESS_OR_TERMINATE(
+          zeCommandListReset(context.cmd_list[current_sub_device_id]));
+    } else {
+      SUCCESS_OR_TERMINATE(zeCommandListReset(context.command_list));
+    }
 
     if (context.sub_device_count) {
       if (verbose) {
@@ -1301,6 +1322,13 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     }
     if (verbose)
       std::cout << "Event Created\n";
+
+    if (context.sub_device_count) {
+      SUCCESS_OR_TERMINATE(
+          zeCommandListReset(context.cmd_list[current_sub_device_id]));
+    } else {
+      SUCCESS_OR_TERMINATE(zeCommandListReset(context.command_list));
+    }
 
     ze_device_properties_t device_properties = {
         ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
