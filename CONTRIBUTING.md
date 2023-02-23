@@ -79,6 +79,86 @@ do this.
 * (OpenCL C++) `clang -cc1 -emit-spirv -triple spir64-unknown-unknown -cl-std=c++ -I <libclcxx dir> -x cl -o test.spv test.cl`
 (Note: use "-triple spir-unknown-unknown" to generate 32-bit spv)
 
+## Test Feature Assignment
+
+When adding a new test one needs to ensure that the new test case has features and tags assigned for use in the Level Zero Test Report Generator.
+
+Each test case has features and tags assigned based on criteria in the following file:
+
+[level_zero_report_utils.py](scripts/level_zero_report_utils.py)
+
+These features are used in the test run script:
+
+[run_test_report.py](scripts/run_test_report.py)
+
+See here for details on the L0 Test Report Tool: [README.md](scripts/README.md)
+
+The features assigned are determined either manually by the test creator by updates to the python scripts or are associated to a given feature by naming convention.
+
+Three tags are assigned per test:
+
+* test_feature_tag = Overall Category of the Feature (discrete, advanced, basic, tools, negative, stress)
+  * discrete = Tests for features specific to discrete devices
+  * advanced = Tests using features that are considered not base functionality ie non-smoke tests
+  * basic = Very basic functionality of L0, tests used to determine if the L0 stack is functional.
+  * tools = Tests for Tools features.
+  * negative = Tests verifying error functionality.
+  * stress = Tests verifying longevity and high resource usage.
+* test_feature = General Feature being tested.
+  * oneAPI Level Zero Core Features
+    * Driver Handles
+    * Device Handling
+    * Barriers
+    * Command Lists
+    * Images
+    * Command Queues
+    * Fences
+    * Device Memory
+    * Host Memory
+    * Shared Memory
+    * Events
+    * Kernels
+    * Image Samplers
+    * Sub-Devices
+    * Allocation Residency
+    * Inter-Process Communication
+    * Peer-To-Peer
+    * Unified Shared Memory
+    * Thread Safety Support
+  * oneAPI Level Zero Tools Features
+    * Program Instrumentation
+    * API Tracing
+    * SysMan Frequency
+    * SysMan Device Properties
+    * SysMan PCIe
+    * SysMan Power
+    * SysMan Standby
+    * SysMan LEDs
+    * SysMan Memory
+    * SysMan Engines
+    * SysMan Temperature
+    * SysMan Power Supplies
+    * SysMan Fans
+    * SysMan Reliability & Stability
+    * SysMan Fabric
+    * SysMan Diagnostics
+    * SysMan Device Reset
+    * SysMan Device Properties
+    * SysMan Events
+    * SysMan Frequency
+    * SysMan Scheduler
+    * SysMan Firmware
+    * SysMan Perf Profiles
+    * Metrics
+    * Program Debug
+* test_section = grouping of the test associated with functionality being tested for overall test plans.
+  * tools = Tests spanning all oneAPI Level Zero Tools
+  * negative = Tests exercising support for handling negative/invalid user input, expected to be run with a validation layer ie ZE_ENABLE_VALIDATION_LAYER=1
+  * stress = Tests tests which exercise the maximum limits of a given oneAPI Level Zero Driver
+  * core = Tests spanning all oneAPI Level Zero Core Features, this is the oneAPI Level Zero Certification for Production Stability of an L0 Stack
+
+If a test does not get a feature assigned, then the run_test_report.py with fail with: `ERROR: test case " + test_name + " has no assigned feature`
+
 ## Sign Your Work
 
 Please use the sign-off line at the end of your patch. Your signature certifies
