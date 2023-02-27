@@ -80,8 +80,8 @@ protected:
 
     command_list_dev0 = lzt::create_command_list(dev0);
     command_list_dev1 = lzt::create_command_list(dev1);
-    command_q_dev0 = lzt::create_command_queue();
-    command_q_dev1 = lzt::create_command_queue();
+    command_q_dev0 = lzt::create_command_queue(dev0);
+    command_q_dev1 = lzt::create_command_queue(dev1);
 
     ze_event_pool_desc_t ep_desc = {};
     ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
