@@ -727,9 +727,11 @@ void Job::set_up_work(debug_options &options) {
                                 ? options.module_name_in
                                 : "debug_loop.spv";
 
-  std::string kernel_name = (options.use_custom_module == true)
-                                ? options.kernel_name_in
-                                : "long_kernel";
+  std::string kernel_name =
+      (options.use_custom_module == true)
+          ? (!options.kernel_name_in.empty() ? options.kernel_name_in
+                                             : "long_kernel")
+          : "long_kernel";
 
   LOG_INFO << "[Application] Creating Module";
 
