@@ -14,6 +14,8 @@ We encourage anyone who wants to contribute to submit
 * Don’t add `void` to empty argument lists
 * Use `std::unique_ptr` in place of `std::auto_ptr`
 
+## Naming Conventions
+
 In addition, use the following naming conventions:
 
 * Class - UpperCamelCase - `class MyClass`
@@ -50,6 +52,46 @@ cmake --build . --target clang-format
 
 [llvm_code_formatting]: https://llvm.org/docs/CodingStandards.html#source-code-formatting
 
+## Test Type Guidelines
+
+The tests written for oneAPI Level Zero should follow these guidelines depending on the test type written.
+
+All tests are meant to be written as "Vendor & Platform agnostic" to ensure usage on any Level Zero Driver and supported device.
+
+* Functional Tests
+  * All tests verifying functionality are written in Google Test Format, see here for a guide: https://google.github.io/googletest/
+    * Conformance
+      * Tests which verify the correct usage of oneAPI Level Zero APIs per the specification: https://spec.oneapi.io/level-zero/latest/index.html
+    * Negative
+      * Tests which verify the failure conditions described in the oneAPI Level Zero specification: https://spec.oneapi.io/level-zero/latest/index.html
+      * Is is strongly recommended to enable the environment variables ZE_ENABLE_VALIDATION_LAYER=1 and ZE_ENABLE_PARAMETER_VALIDATION=1 to enable the Validation Layer and verify the Parameters for these tests.
+      * NOTE: The test may or may not verify the error handling thru support in the Validation Layer, the error handling is expected to be present between the Level Zero Driver and the Validation Layer.
+    * Layer
+      * Tests which verify features specifically in the layer(s) supported by the oneAPI Level Zero Loader. See here for layers currently supported: https://github.com/oneapi-src/level-zero/tree/master/source/layers
+      * Test are expected to enable the tested layers during init. For example, ZE_ENABLE_TRACING_LAYER=1 is required for testing the Tracing Layer provided by the oneAPI Level Zero Loader.
+    * Stress
+      * Tests which stress the Level Zero Driver through resource limit testing and longevity.
+      * These test verify the correct usage of oneAPI Level Zero APIs per the specification: https://spec.oneapi.io/level-zero/latest/index.html.
+* Performance Tests
+  * Performance tests are not required to follow the Google Test Format as the Functional tests since the goal is not checking for binary pass/fail results.
+  * These tests are expected to demonstrate valid usage of oneAPI Level Zero APIs per the specification: https://spec.oneapi.io/level-zero/latest/index.html.
+  * Performance tests are meant to provide usecases to analyze the quality of a given Level Zero Driver or Device under test.
+
+## Code Review
+
+Quality Code Review of the oneAPI Level Zero Tests is important for all Maintainers and Contributors to ensure that valid test cases are added that verify the oneAPI Level Zero specification.
+
+### Review Checklist
+
+When performing a code review please refer to this checklist to guide your comments:
+
+* Does the code follow C++ Coding Standards? [C++ Coding Standards](#c-coding-standards)
+* Does the code follow the naming conventions? [Naming Conventions](#naming-conventions)
+* Are the tests using Level Zero Specification APIs per the spec? See here for the latest spec: https://spec.oneapi.io/level-zero/latest/index.html
+* Are the tests using Level Zero APIs "Vendor & Platform agnostic"?
+* Is the Code Modular or can the code be Modular? ie Can the code expand the test_harness to simplify the next written test (where applicable).
+* Can the code handle Multiple Driver or Device environments?
+
 ## Kernels (SPV Files)
 
 OpenCL C kernel source code (`.cl`) and binaries (`.spv`) should be placed in a
@@ -62,22 +104,29 @@ and commit them with your changes. A specialized build of clang is required to
 do this.
 
 ### Setup Clang to Build SPV From .cl
-* git clone -b khronos/spirv-3.6.1 https://github.com/KhronosGroup/SPIRV-LLVM.git llvm
-* export LLVM_SRC_ROOT=<path_to_llvm>
 
-* cd $LLVM_SRC_ROOT/tools
-* git clone -b spirv-1.1 https://github.com/KhronosGroup/SPIR clang
-* cd $LLVM_SRC_ROOT
-* mkdir build
-* cd build
-* cmake -G "Unix Makefiles" ../
-* make -j 4 (NOTE:careful with the number of threads you select, llvm compile can consume all the threads and resources on the system)
-* sudo make install
-* git clone https://github.com/KhronosGroup/libclcxx.git desired_path_to_opencl_cxx_headers
+```bash
+git clone https://github.com/llvm/llvm-project.git
+cd llvm-project/llvm/projects/
+git clone https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git
+cd ../..
+mkdir build
+cd build
+cmake -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm
+cmake ../llvm
+
+make llvm-spirv -j 8
+make clang -j 8
+
+sudo make -j 8 clang llvm-spirv install
+```
+
 ### Build SPV File From .cl
-* (OpenCL C) `clang -cc1 -emit-spirv -triple spir64-unknown-unknown -cl-std=CL2.0 -include opencl.h -x cl -o test.spv test.cl`
-* (OpenCL C++) `clang -cc1 -emit-spirv -triple spir64-unknown-unknown -cl-std=c++ -I <libclcxx dir> -x cl -o test.spv test.cl`
-(Note: use "-triple spir-unknown-unknown" to generate 32-bit spv)
+
+```bash
+clang -c -cl-std=CL2.0 -emit-llvm -target spir64 -o <filename>.bc <filename>.cl
+llvm-spirv <filename>.bc -o <filename>.spv
+```
 
 ## Test Feature Assignment
 
