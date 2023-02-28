@@ -425,7 +425,19 @@ TEST_F(
   }
 }
 
-void run_test(const ze_device_handle_t &device, bool reset, bool immediate) {
+typedef struct _metrict_query_test_options {
+  bool reset;
+  bool immediate;
+  bool wait_event;
+} metric_query_test_options;
+
+void run_test(const ze_device_handle_t &device,
+              metric_query_test_options options) {
+
+  auto immediate = options.immediate;
+  auto reset = options.reset;
+  auto wait_event = options.wait_event;
+
   ze_device_properties_t deviceProperties = {
       ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
   zeDeviceGetProperties(device, &deviceProperties);
@@ -465,20 +477,29 @@ void run_test(const ze_device_handle_t &device, bool reset, bool immediate) {
     lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
     lzt::append_metric_query_begin(commandList, metricQueryHandle);
     lzt::append_barrier(commandList, nullptr, 0, nullptr);
-    ze_event_handle_t eventHandle;
+    ze_event_handle_t eventHandle, wait_event_handle;
     lzt::zeEventPool eventPool;
 
     eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
+                           ZE_EVENT_SCOPE_FLAG_HOST);
+    eventPool.create_event(wait_event_handle, ZE_EVENT_SCOPE_FLAG_HOST,
                            ZE_EVENT_SCOPE_FLAG_HOST);
     void *a_buffer, *b_buffer, *c_buffer;
     ze_group_count_t tg;
     ze_kernel_handle_t function = get_matrix_multiplication_kernel(
         device, &tg, &a_buffer, &b_buffer, &c_buffer);
 
-    zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
+    zeCommandListAppendLaunchKernel(commandList, function, &tg,
+                                    wait_event ? wait_event_handle : nullptr, 0,
                                     nullptr);
-    lzt::append_barrier(commandList);
-    lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
+
+    if (wait_event) {
+      lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle,
+                                   1, &wait_event_handle);
+    } else {
+      lzt::append_barrier(commandList);
+      lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
+    }
 
     lzt::close_command_list(commandList);
     if (!immediate) {
@@ -554,7 +575,7 @@ TEST_F(
     GivenValidMetricGroupWhenEventBasedQueryIsCreatedThenExpectQueryToSucceed) {
 
   for (auto &device : devices) {
-    run_test(device, false, false);
+    run_test(device, {false, false, false});
   }
 }
 
@@ -562,7 +583,7 @@ TEST_F(
     zetMetricQueryLoadTest,
     GivenWorkloadExecutedWithMetricQueryWhenResettingQueryHandleThenResetSucceedsAndCanReuseHandle) {
   for (auto &device : devices) {
-    run_test(device, true, false);
+    run_test(device, {true, false, false});
   }
 }
 
@@ -571,7 +592,25 @@ TEST_F(
     GivenWorkloadExecutedOnImmediateCommandListWhenQueryingThenQuerySucceeds) {
 
   for (auto &device : devices) {
-    run_test(device, false, true);
+    run_test(device, {false, true, false});
+  }
+}
+
+TEST_F(
+    zetMetricQueryLoadTest,
+    GivenWorkloadExecutedWithWaitEventWhenMakingMetricQueryThenQuerySucceeds) {
+
+  for (auto &device : devices) {
+    run_test(device, {false, false, true});
+  }
+}
+
+TEST_F(
+    zetMetricQueryLoadTest,
+    GivenWorkloadExecutedWithWaitEventOnImmediateCommandListWhenMakingMetricQueryThenQuerySucceeds) {
+
+  for (auto &device : devices) {
+    run_test(device, {false, true, true});
   }
 }
 

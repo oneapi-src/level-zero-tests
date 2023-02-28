@@ -599,9 +599,18 @@ void append_metric_query_begin(zet_command_list_handle_t commandList,
 void append_metric_query_end(zet_command_list_handle_t commandList,
                              zet_metric_query_handle_t metricQueryHandle,
                              ze_event_handle_t eventHandle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetCommandListAppendMetricQueryEnd(commandList, metricQueryHandle,
-                                               eventHandle, 0, nullptr));
+  append_metric_query_end(commandList, metricQueryHandle, eventHandle, 0,
+                          nullptr);
+}
+
+void append_metric_query_end(zet_command_list_handle_t commandList,
+                             zet_metric_query_handle_t metricQueryHandle,
+                             ze_event_handle_t eventHandle,
+                             uint32_t numWaitEvents,
+                             ze_event_handle_t *waitEvents) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryEnd(
+                                   commandList, metricQueryHandle, eventHandle,
+                                   numWaitEvents, waitEvents));
 }
 
 void verify_typed_metric_value(zet_typed_value_t result,
