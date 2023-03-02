@@ -66,7 +66,7 @@ TEST_F(
 
   ze_driver_handle_t driver = lzt::get_default_driver();
   ze_device_handle_t device = lzt::get_default_device(driver);
-  context_ = lzt::get_default_context();
+  context_ = lzt::create_context();
   memory_ = lzt::allocate_device_memory(1, 1, 0, device, context_);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
