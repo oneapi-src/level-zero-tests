@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -24,13 +24,14 @@ namespace {
 #ifdef __linux__
 
 class IpcMemoryAccessTest : public ::testing::Test {
+public:
+  virtual void run_child(int size, ze_ipc_memory_flags_t flags);
+  void run_parent(int size, bool reserved);
+
 protected:
   pid_t pid;
   bool is_parent;
   bool child_exited = false;
-
-  void run_child(int size, ze_ipc_memory_flags_t flags);
-  void run_parent(int size, bool reserved);
 
   void SetUp() override {
     pid = fork();
@@ -203,7 +204,102 @@ TEST_F(
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
   }
 }
-#endif
+
+class IpcMemoryAccessSubDeviceTest : public IpcMemoryAccessTest {
+public:
+  void run_child(int size, ze_ipc_memory_flags_t flags) override;
+
+protected:
+  pid_t pid;
+  bool is_parent;
+  bool child_exited = false;
+
+  void SetUp() override {
+    pid = fork();
+    if (pid < 0) {
+      throw std::runtime_error("Failed to fork child process");
+    }
+    is_parent = pid > 0;
+  }
+
+  void TearDown() override {
+    if (is_parent && !child_exited) {
+      kill(pid, SIGTERM);
+      wait(nullptr);
+    }
+  }
+};
+
+void IpcMemoryAccessSubDeviceTest::run_child(int size,
+                                             ze_ipc_memory_flags_t flags) {
+  ze_result_t result = zeInit(0);
+  if (result) {
+    throw std::runtime_error("zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_DEBUG << "[Server] Driver initialized\n";
+
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::get_default_context();
+  auto device = lzt::zeDevice::get_instance()->get_device();
+  auto sub_devices = lzt::get_ze_sub_devices(device);
+
+  auto sub_device_count = sub_devices.size();
+
+  ze_ipc_mem_handle_t ipc_handle;
+  void *memory = nullptr;
+
+  int ipc_descriptor =
+      lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
+  memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
+         sizeof(ipc_descriptor));
+
+  // Open IPc buffer with root device
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
+
+  void *buffer = lzt::allocate_host_memory(size);
+  memset(buffer, 0, size);
+
+  // For each sub device found, use IPC buffer in a copy operation and validate
+  for (auto i = 0; i < sub_device_count; i++) {
+    auto cl = lzt::create_command_list(sub_devices[i]);
+    auto cq = lzt::create_command_queue(sub_devices[i]);
+
+    lzt::append_memory_copy(cl, buffer, memory, size);
+    lzt::close_command_list(cl);
+    lzt::execute_command_lists(cq, 1, &cl, nullptr);
+    lzt::synchronize(cq, UINT64_MAX);
+
+    LOG_DEBUG << "[Server] Validating buffer received correctly";
+    lzt::validate_data_pattern(buffer, size, 1);
+    lzt::destroy_command_list(cl);
+    lzt::destroy_command_queue(cq);
+  }
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
+  lzt::free_memory(buffer);
+  lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+
+TEST_F(
+    IpcMemoryAccessSubDeviceTest,
+    GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
+  const auto size = 4096;
+  if (is_parent) {
+    run_parent(size, true);
+  } else {
+    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
+  }
+}
+
+#endif // __linux__
 
 } // namespace
 
