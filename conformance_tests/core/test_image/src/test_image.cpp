@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -454,5 +454,117 @@ TEST(zeImageGetPropertiesTests,
     image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
   }
 }
+
+class zeImageGetAllocPropertiesExtTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_image_type_t, ze_image_format_type_t>> {};
+
+TEST_P(zeImageGetAllocPropertiesExtTests,
+       GivenValidImageThenSuccessIsReturned) {
+  ze_context_handle_t context = lzt::get_default_context();
+  ze_device_handle_t device =
+      lzt::get_default_device(lzt::get_default_driver());
+
+  const ze_image_type_t img_type = std::get<0>(GetParam());
+  const ze_image_format_type_t img_fmt_type = std::get<1>(GetParam());
+
+  std::vector<ze_image_format_layout_t> img_fmt_layouts;
+  switch (img_fmt_type) {
+  case ZE_IMAGE_FORMAT_TYPE_UINT: {
+    img_fmt_layouts = lzt::image_format_layout_uint;
+  } break;
+  case ZE_IMAGE_FORMAT_TYPE_SINT: {
+    img_fmt_layouts = lzt::image_format_layout_sint;
+  } break;
+  case ZE_IMAGE_FORMAT_TYPE_UNORM: {
+    img_fmt_layouts = lzt::image_format_layout_unorm;
+  } break;
+  case ZE_IMAGE_FORMAT_TYPE_SNORM: {
+    img_fmt_layouts = lzt::image_format_layout_snorm;
+  } break;
+  case ZE_IMAGE_FORMAT_TYPE_FLOAT: {
+    img_fmt_layouts = lzt::image_format_layout_float;
+  } break;
+  default: { EXPECT_TRUE(false); } break;
+  }
+
+  ze_device_image_properties_t device_img_properties;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetImageProperties(device, &device_img_properties));
+
+  uint32_t img_width = 1;
+  uint32_t img_height = 1;
+  uint32_t img_depth = 1;
+  uint32_t array_levels = 0;
+  if ((img_type == ZE_IMAGE_TYPE_1D) || (img_type == ZE_IMAGE_TYPE_1DARRAY)) {
+    img_width = device_img_properties.maxImageDims1D >> 1;
+  } else if ((img_type == ZE_IMAGE_TYPE_2D) ||
+             (img_type == ZE_IMAGE_TYPE_2DARRAY)) {
+    img_width = device_img_properties.maxImageDims2D >> 2;
+    img_height = device_img_properties.maxImageDims2D >> 2;
+  } else if (img_type == ZE_IMAGE_TYPE_3D) {
+    img_width = device_img_properties.maxImageDims3D >> 4;
+    img_height = device_img_properties.maxImageDims3D >> 4;
+    img_depth = device_img_properties.maxImageDims3D >> 4;
+  } else {
+    EXPECT_EQ(img_type, ZE_IMAGE_TYPE_BUFFER);
+    img_width = device_img_properties.maxImageBufferSize >> 1;
+  }
+
+  if (img_type == ZE_IMAGE_TYPE_1DARRAY) {
+    array_levels = std::min(1u, device_img_properties.maxImageArraySlices);
+  } else if (img_type == ZE_IMAGE_TYPE_2DARRAY) {
+    array_levels = std::min(2u, device_img_properties.maxImageArraySlices);
+  }
+
+  for (auto img_rw_flag : lzt::image_rw_flags) {
+    for (auto img_cache_flag : lzt::image_cache_flags) {
+      for (auto img_fmt_layout : img_fmt_layouts) {
+        ze_image_format_t img_fmt = {};
+        img_fmt.layout = img_fmt_layout;
+        img_fmt.type = img_fmt_type;
+        img_fmt.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
+        img_fmt.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
+        img_fmt.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
+        img_fmt.w = ZE_IMAGE_FORMAT_SWIZZLE_A;
+
+        ze_image_desc_t img_desc = {};
+        img_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+        img_desc.pNext = nullptr;
+        img_desc.flags = img_rw_flag | img_cache_flag;
+        img_desc.type = img_type;
+        img_desc.format = img_fmt;
+        img_desc.width = img_width;
+        img_desc.height = img_height;
+        img_desc.depth = img_depth;
+        img_desc.arraylevels = array_levels;
+        img_desc.miplevels = 0;
+
+        auto img = lzt::create_ze_image(context, device, img_desc);
+        if (img == nullptr) {
+          continue;
+        }
+        ze_image_allocation_ext_properties_t img_alloc_ext_properties;
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeImageGetAllocPropertiesExt(context, img,
+                                               &img_alloc_ext_properties));
+        lzt::destroy_ze_image(img);
+      }
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ImageGetAllocPropertiesExtTestsParameterization,
+    zeImageGetAllocPropertiesExtTests,
+    ::testing::Combine(
+        ::testing::Values(ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_1DARRAY,
+                          ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_2DARRAY,
+                          ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_BUFFER),
+        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT,
+                          ZE_IMAGE_FORMAT_TYPE_UNORM,
+                          ZE_IMAGE_FORMAT_TYPE_SNORM,
+                          ZE_IMAGE_FORMAT_TYPE_FLOAT)));
 
 } // namespace
