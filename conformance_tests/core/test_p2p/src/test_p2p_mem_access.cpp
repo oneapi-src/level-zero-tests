@@ -532,7 +532,8 @@ TEST_P(
     for (uint32_t j = i + 1; j < dev_access_scan_.size(); j++) {
       dev_p2p_properties = lzt::get_p2p_properties(dev_access_scan_[j].dev,
                                                    dev_access_scan_[i].dev);
-      if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
+      if ((lzt::can_access_peer(dev_access_scan_[j].dev,
+                                dev_access_scan_[i].dev)) &&
           (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS) &&
           ((dev_access_scan_[i]
                 .dev_mem_access_properties.sharedCrossDeviceAllocCapabilities &
@@ -563,7 +564,8 @@ TEST_P(
     }
     dev_p2p_properties = lzt::get_p2p_properties(
         dev_access_scan_[i].dev, dev_access_scan_[concurrent_index].dev);
-    if ((dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS) &&
+    if ((lzt::can_access_peer(dev_access_scan_[i].dev,
+                              dev_access_scan_[concurrent_index].dev)) &&
         (dev_p2p_properties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS)) {
       dev_access_.insert(dev_access_.begin(), dev_access_scan_[i]);
     }
