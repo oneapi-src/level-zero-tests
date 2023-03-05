@@ -244,7 +244,7 @@ TEST_P(P2PImageCopyMemory,
                                   input_png.raw_data(), event1);
   lzt::append_wait_on_events(command_list_dev0, 1, &event1);
 
-  // copy to dev 1 memory
+  // on dev0, copy dev0 image to dev1 memory
   lzt::append_image_copy_to_mem(command_list_dev0, target_mem, img_dev0,
                                 event2);
   lzt::append_wait_on_events(command_list_dev0, 1, &event2);
@@ -277,9 +277,7 @@ TEST_P(P2PImageCopyMemory,
   event_desc.index = 0;
   event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
   event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
-  auto event1 = lzt::create_event(ep, event_desc);
-  event_desc.index = 1;
-  auto event2 = lzt::create_event(ep, event_desc);
+  auto event = lzt::create_event(ep, event_desc);
 
   void *target_mem;
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
@@ -295,31 +293,29 @@ TEST_P(P2PImageCopyMemory,
         lzt::allocate_shared_memory(mem_size, 1, d_flags, h_flags, dev1);
   }
 
-  // Load image to dev0
-  lzt::append_image_copy_from_mem(command_list_dev0, img_dev0,
-                                  input_png.raw_data(), event1);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event1);
-  lzt::close_command_list(command_list_dev0);
-  lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT64_MAX);
-
-  // on dev1, copy from dev 0
-  lzt::append_image_copy_from_mem(command_list_dev1, img_dev0, target_mem,
-                                  event2);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event2);
-
-  // Copyback to host
-  lzt::append_memory_copy(command_list_dev1, output_png.raw_data(), target_mem,
+  // on dev1, load image to dev1 memory
+  lzt::append_memory_copy(command_list_dev1, target_mem, input_png.raw_data(),
                           mem_size);
   lzt::close_command_list(command_list_dev1);
   lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
   lzt::synchronize(command_q_dev1, UINT64_MAX);
 
+  // on dev0, copy from dev1 memory to dev0 image
+  lzt::append_image_copy_from_mem(command_list_dev0, img_dev0, target_mem,
+                                  event);
+  lzt::append_wait_on_events(command_list_dev0, 1, &event);
+
+  // Copyback to host
+  lzt::append_image_copy_to_mem(command_list_dev0, output_png.raw_data(),
+                                img_dev0, nullptr);
+  lzt::close_command_list(command_list_dev0);
+  lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
+  lzt::synchronize(command_q_dev0, UINT64_MAX);
+
   // compare results
   EXPECT_EQ(input_png, output_png);
 
-  lzt::destroy_event(event1);
-  lzt::destroy_event(event2);
+  lzt::destroy_event(event);
   lzt::free_memory(target_mem);
 }
 
