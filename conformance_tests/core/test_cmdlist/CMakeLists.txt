@@ -7,6 +7,7 @@ add_lzt_test(
   SOURCES
     src/test_cmdlist.cpp
     src/test_cmdlist_immediate.cpp
+    src/test_cmdlist_mixed.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
@@ -14,6 +15,7 @@ add_lzt_test(
   KERNELS
     cmdlist_add
     cmdlist_scratch
+    cmdlist_verify
   MEDIA
     "png/test_input.png"
 )
