@@ -97,7 +97,7 @@ ze_module_handle_t create_module(ze_context_handle_t context,
                                  const char *build_flags,
                                  ze_module_build_log_handle_t *p_build_log) {
   ze_result_t build_result = ZE_RESULT_SUCCESS;
-  return create_module(lzt::get_default_context(), device, filename, format,
+  return create_module(context, device, filename, format,
                        build_flags, p_build_log, &build_result);
 }
 
