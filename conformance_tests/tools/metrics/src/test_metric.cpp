@@ -1063,6 +1063,7 @@ TEST_F(
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndOverflowTriggeredThenExpectStreamerValidateError) {
 
   const uint32_t numberOfFunctionCalls = 8;
+  bool test_executed = false;
 
   struct {
     ze_kernel_handle_t function;
@@ -1098,6 +1099,8 @@ TEST_F(
     for (auto groupInfo : metricGroupInfo) {
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
+
+      test_executed = true;
 
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
@@ -1183,6 +1186,9 @@ TEST_F(
     }
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
+  }
+  if (!test_executed) {
+    GTEST_SKIP() << "no supported metrics groups for this test";
   }
 }
 
