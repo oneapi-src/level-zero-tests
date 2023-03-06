@@ -179,11 +179,11 @@ TEST_F(P2PImageCopy,
   lzt::append_wait_on_events(command_list_dev0, 1, &event1);
 
   // copy to dev 1
-  ze_image_region_t region = {0, 0, 0, img_width / 2, img_height / 2, 1};
+  ze_image_region_t region = {0, 0, 0, img_width, img_height / 2, 1};
   lzt::append_image_copy_region(command_list_dev0, img_dev1, img_dev0, &region,
                                 &region, event2);
   lzt::append_wait_on_events(command_list_dev0, 1, &event2);
-  region = {img_width / 2, img_height / 2, 0, img_width, img_height, 1};
+  region = {0, img_height / 2, 0, img_width, img_height / 2, 1};
   lzt::append_image_copy_region(command_list_dev0, img_dev1, img_dev0, &region,
                                 &region, event3);
   lzt::append_wait_on_events(command_list_dev0, 1, &event3);
