@@ -35,4 +35,26 @@ TEST(
               zeDeviceGet(driver, nullptr, nullptr));
   }
 }
+
+TEST(DeviceNegativeTests, GivenInvalidStypeWhen) {
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+  ze_device_properties_t props;
+  props.pNext = nullptr;
+  props.stype = (ze_structure_type_t)0xaaaa;
+  ASSERT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
+            zeDeviceGetProperties(device, &props));
+
+  props.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &props));
+
+  ze_device_properties_t props2;
+  props.pNext = &props2;
+  props2.pNext = nullptr;
+  props2.stype = (ze_structure_type_t)0xaaaa;
+
+  ASSERT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
+            zeDeviceGetProperties(device, &props));
+}
+
 } // namespace
