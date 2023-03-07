@@ -14,10 +14,30 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+static bool test_extension(ze_driver_handle_t driver, const char *ext_name) {
+  uint32_t ext_ver = 0;
+  auto ext_props = lzt::get_extension_properties(driver);
+  for (auto &prop : ext_props) {
+    if (strncmp(prop.name, ext_name, ZE_MAX_EXTENSION_NAME) == 0) {
+      ext_ver = prop.version;
+      break;
+    }
+  }
+  return (ext_ver != 0);
+}
+
 class zeImageViewCreateExtTests : public ::testing::Test {};
 
 TEST(zeImageViewCreateExtTests,
      GivenPlanarNV12ImageThenImageViewCreateExtReturnsSuccess) {
+  if (!test_extension(lzt::get_default_driver(), ZE_IMAGE_VIEW_EXT_NAME)) {
+    GTEST_SKIP() << "Missing ZE_extension_image_view support\n";
+  }
+  if (!test_extension(lzt::get_default_driver(),
+                      ZE_IMAGE_VIEW_PLANAR_EXT_NAME)) {
+    GTEST_SKIP() << "Missing ZE_extension_image_view_planar support\n";
+  }
+
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
@@ -99,6 +119,14 @@ TEST(zeImageViewCreateExtTests,
 
 TEST(zeImageViewCreateExtTests,
      GivenPlanarRGBPImageThenImageViewCreateExtReturnsSuccess) {
+  if (!test_extension(lzt::get_default_driver(), ZE_IMAGE_VIEW_EXT_NAME)) {
+    GTEST_SKIP() << "Missing ZE_extension_image_view support\n";
+  }
+  if (!test_extension(lzt::get_default_driver(),
+                      ZE_IMAGE_VIEW_PLANAR_EXT_NAME)) {
+    GTEST_SKIP() << "Missing ZE_extension_image_view_planar support\n";
+  }
+
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
