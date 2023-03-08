@@ -49,20 +49,50 @@ TEST_F(zeVirtualMemoryTests,
 
 TEST_F(
     zeVirtualMemoryTests,
-    GivenValidStartAddressAndNewValidSizeThenGrowingVirtualReservationSucceeds) {
+    GivenValidStartAddressAndNewValidSizeThenResizingVirtualReservationSucceeds) {
 
+  size_t largeAllocSize = allocationSize * 4;
+  lzt::query_page_size(context, device, largeAllocSize, &pageSize);
+  largeAllocSize = lzt::create_page_aligned_size(largeAllocSize, pageSize);
+  lzt::virtual_memory_reservation(context, nullptr, largeAllocSize,
+                                  &reservedVirtualMemory);
+  EXPECT_NE(nullptr, reservedVirtualMemory);
+  lzt::virtual_memory_free(context, reservedVirtualMemory, largeAllocSize);
+  size_t smallerAllocSize = allocationSize * 2;
+  lzt::query_page_size(context, device, smallerAllocSize, &pageSize);
+  smallerAllocSize = lzt::create_page_aligned_size(smallerAllocSize, pageSize);
+  lzt::virtual_memory_reservation(context, reservedVirtualMemory,
+                                  smallerAllocSize, &reservedVirtualMemory);
+  EXPECT_NE(nullptr, reservedVirtualMemory);
+  lzt::virtual_memory_free(context, reservedVirtualMemory, smallerAllocSize);
+}
+
+TEST_F(zeVirtualMemoryTests,
+       GivenVirtualReservationWithCustomStartAddressThenResizedPtrAllocated) {
+
+  void *originalPtr = nullptr;
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
   lzt::virtual_memory_reservation(context, nullptr, allocationSize,
-                                  &reservedVirtualMemory);
-  EXPECT_NE(nullptr, reservedVirtualMemory);
-  lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
-  lzt::query_page_size(context, device, allocationSize * 2, &pageSize);
-  allocationSize = lzt::create_page_aligned_size(allocationSize * 2, pageSize);
-  lzt::virtual_memory_reservation(context, reservedVirtualMemory,
-                                  allocationSize, &reservedVirtualMemory);
-  EXPECT_NE(nullptr, reservedVirtualMemory);
-  lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
+                                  &originalPtr);
+  EXPECT_NE(nullptr, originalPtr);
+
+  void *newUpdatedPtr = reinterpret_cast<void *>(
+      reinterpret_cast<size_t>(originalPtr) + allocationSize);
+  void *recievedPtr = nullptr;
+  lzt::virtual_memory_reservation(context, newUpdatedPtr, allocationSize,
+                                  &recievedPtr);
+  EXPECT_NE(nullptr, recievedPtr);
+  if (recievedPtr != newUpdatedPtr) {
+    lzt::virtual_memory_free(context, recievedPtr, allocationSize);
+    size_t updatedSize = allocationSize + allocationSize;
+    lzt::query_page_size(context, device, updatedSize, &pageSize);
+    updatedSize = lzt::create_page_aligned_size(updatedSize, pageSize);
+    void *largerPtr = nullptr;
+    lzt::virtual_memory_reservation(context, nullptr, updatedSize, &largerPtr);
+    EXPECT_NE(nullptr, largerPtr);
+    lzt::virtual_memory_free(context, originalPtr, allocationSize);
+  }
 }
 
 TEST_F(
