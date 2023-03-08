@@ -1302,7 +1302,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     ze_event_pool_handle_t kernel_launch_event_pool;
 
     single_event_pool_create(context, &kernel_launch_event_pool,
-                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                 ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP);
     if (verbose)
       std::cout << "Event Pool Created\n";
 
