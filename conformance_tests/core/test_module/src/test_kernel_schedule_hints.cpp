@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -87,6 +87,7 @@ TEST(zeKernelScheduleHintsTests,
     for (size_t i = 0; i < size; i++) {
       ASSERT_EQ(((uint8_t *)buffer)[i], addval);
     }
+    lzt::free_memory(context, buffer);
   }
 
   lzt::destroy_function(kernel);

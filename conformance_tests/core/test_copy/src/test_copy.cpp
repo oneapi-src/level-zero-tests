@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -229,12 +229,12 @@ TEST_P(
             << "Memory Fill did not match on sub-device";
       }
 
-      lzt::free_memory(memory);
+      lzt::free_memory(context, memory);
       lzt::destroy_command_list(command_list);
       lzt::destroy_command_queue(command_queue);
     }
   }
-  lzt::free_memory(host_memory);
+  lzt::free_memory(context, host_memory);
 
   if (!test_count) {
     LOG_WARNING << "No Sub-Device Memory Fill tests run";

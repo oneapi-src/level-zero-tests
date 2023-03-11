@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2021 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -98,8 +98,8 @@ void adjust_max_memory_allocation(
              << one_allocation_size << " to " << min_page_size;
     one_allocation_size = min_page_size; // increased
     while (number_of_all_alloc * one_allocation_size *
-            test_arguments.total_memory_size_limit >
-            total_allocation_size) {
+               test_arguments.total_memory_size_limit >
+           total_allocation_size) {
       number_of_all_alloc--;
     }
     total_allocation_size = number_of_all_alloc * one_allocation_size *
@@ -178,7 +178,7 @@ void get_mem_page_size(const ze_driver_handle_t &driver,
   mem_props.pNext = nullptr;
   mem_props.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   void *simple_allocation = nullptr;
-  lzt::allocate_mem(&simple_allocation, ze_memory_type_t(mem_type), 1);
+  lzt::allocate_mem(&simple_allocation, ze_memory_type_t(mem_type), 1, context);
   lzt::get_mem_alloc_properties(context, simple_allocation, &mem_props);
   page_size = mem_props.pageSize;
   lzt::free_memory(context, simple_allocation);

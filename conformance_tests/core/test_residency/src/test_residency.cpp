@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -121,7 +121,7 @@ TEST_F(
       ASSERT_EQ(temp->value, i + 1);
 
       temp2 = temp->next;
-      lzt::free_memory(temp);
+      lzt::free_memory(context, temp);
       temp = temp2;
     }
 
@@ -292,7 +292,7 @@ TEST_F(
       ASSERT_EQ(temp->value, i + 1);
 
       temp2 = temp->next;
-      lzt::free_memory(temp);
+      lzt::free_memory(context, temp);
       temp = temp2;
     }
 

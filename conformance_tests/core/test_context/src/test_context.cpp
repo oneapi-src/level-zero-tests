@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -50,7 +50,7 @@ protected:
       lzt::destroy_command_queue(cmdqueue);
     }
 
-    lzt::free_memory(buffer);
+    lzt::free_memory(context, buffer);
     delete[] ref_buffer;
   }
 

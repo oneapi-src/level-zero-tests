@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -681,6 +681,8 @@ TEST_P(CommandQueueCopyOnlyTestQueueMode,
 
   ASSERT_EQ(0, memcmp(dest, source, size));
 
+  lzt::free_memory(context, source);
+  lzt::free_memory(context, dest);
   lzt::destroy_command_list(cmdlist);
   lzt::destroy_command_queue(cmdqueue);
 }
@@ -820,12 +822,12 @@ TEST_P(
   EXPECT_NE(*ts_readback_start_alias, 0);
   EXPECT_NE(*ts_readback_end_alias, *ts_readback_start_alias);
 
-  lzt::free_memory(copy_source);
-  lzt::free_memory(copy_dest);
-  lzt::free_memory(ts_start);
-  lzt::free_memory(ts_end);
-  lzt::free_memory(ts_readback_start);
-  lzt::free_memory(ts_readback_end);
+  lzt::free_memory(context, copy_source);
+  lzt::free_memory(context, copy_dest);
+  lzt::free_memory(context, ts_start);
+  lzt::free_memory(context, ts_end);
+  lzt::free_memory(context, ts_readback_start);
+  lzt::free_memory(context, ts_readback_end);
 }
 
 INSTANTIATE_TEST_CASE_P(TestCopyOnlyQueueGlobalTimeStampDeviceAndHostMemory,

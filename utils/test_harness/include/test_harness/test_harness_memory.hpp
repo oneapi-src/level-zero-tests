@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 - 2021 Intel Corporation
+ * Copyright (C) 2019 - 2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -71,7 +71,8 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_host_mem_alloc_flags_t host_flags,
                              void *host_pNext, ze_device_handle_t device,
                              ze_context_handle_t context);
-void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size);
+void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
+                  ze_context_handle_t context);
 
 void free_memory(const void *ptr);
 void free_memory(ze_context_handle_t context, const void *ptr);

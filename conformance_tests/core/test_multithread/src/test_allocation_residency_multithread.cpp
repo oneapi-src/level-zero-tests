@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -123,7 +123,7 @@ void make_resident_evict_API(ze_module_handle_t module) {
       ASSERT_EQ(temp->value, i + 1);
 
       temp2 = temp->next;
-      lzt::free_memory(temp);
+      lzt::free_memory(context, temp);
       temp = temp2;
     }
 
@@ -210,7 +210,7 @@ void indirect_access_Kernel(ze_module_handle_t module) {
   for (int i = 0; i < size + 1; i++) {
     temp = data;
     data = temp->next;
-    lzt::free_memory(temp);
+    lzt::free_memory(context, temp);
   }
 }
 

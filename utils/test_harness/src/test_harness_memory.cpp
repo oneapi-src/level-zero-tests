@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 - 2021 Intel Corporation
+ * Copyright (C) 2019 - 2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -207,16 +207,19 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
   return memory;
 }
 
-void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size) {
+void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
+                  ze_context_handle_t context) {
   switch (mem_type) {
   case ZE_MEMORY_TYPE_HOST:
-    *memory = allocate_host_memory(size);
+    *memory = allocate_host_memory(size, 1, context);
     break;
-  case ZE_MEMORY_TYPE_DEVICE:
-    *memory = allocate_device_memory(size);
+  case ZE_MEMORY_TYPE_DEVICE: {
+    auto device = zeDevice::get_instance()->get_device();
+    *memory = allocate_device_memory(size, 1, 0, 0, device, context);
     break;
+  }
   case ZE_MEMORY_TYPE_SHARED:
-    *memory = allocate_shared_memory(size);
+    *memory = allocate_shared_memory(size, 1, context);
     break;
   case ZE_MEMORY_TYPE_UNKNOWN:
   default:
@@ -244,7 +247,7 @@ void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
                                      ze_ipc_mem_handle_t *mem_handle,
                                      void **memory, ze_memory_type_t mem_type,
                                      size_t size) {
-  allocate_mem(memory, mem_type, size);
+  allocate_mem(memory, mem_type, size, context);
   get_ipc_handle(context, mem_handle, *memory);
 }
 

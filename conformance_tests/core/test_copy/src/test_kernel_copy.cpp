@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -295,7 +295,7 @@ protected:
                 << "WARNING: Unable to allocate shared local memory, skipping";
             return nullptr;
           }
-          return lzt::allocate_shared_memory(size, device);
+          return lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
         } else { // shared cross
           auto cross_device = devices[driver_index][cross_device_index];
           auto memory_access_cap =
@@ -305,18 +305,20 @@ protected:
                 << "WARNING: Unable to allocate shared cross memory, skipping";
             return nullptr;
           }
-          return lzt::allocate_shared_memory(size, cross_device);
+          return lzt::allocate_shared_memory(size, 1, 0, 0, cross_device,
+                                             context);
         }
       }
     }
   }
 
-  void free_memory(void *ptr, ze_memory_type_t mem_type,
+  void free_memory(void *ptr, ze_context_handle_t context,
+                   ze_memory_type_t mem_type,
                    shared_memory_type shr_type = SHARED_LOCAL) {
     if (mem_type == ZE_MEMORY_TYPE_SHARED && shr_type == SHARED_SYSTEM) {
       free(ptr);
     } else {
-      lzt::free_memory(ptr);
+      lzt::free_memory(context, ptr);
     }
   }
 
@@ -400,9 +402,9 @@ protected:
         dst_ptr_shr_type, size * sizeof(copy_data), context));
     if (src_data == nullptr || dst_data == nullptr) {
       if (src_data)
-        free_memory(src_data, src_ptr_mem_type, src_ptr_shr_type);
+        free_memory(src_data, context, src_ptr_mem_type, src_ptr_shr_type);
       if (dst_data)
-        free_memory(dst_data, dst_ptr_mem_type, dst_ptr_shr_type);
+        free_memory(dst_data, context, dst_ptr_mem_type, dst_ptr_shr_type);
       return;
     }
 
@@ -417,17 +419,21 @@ protected:
           dst_data_ptr_array[i] == nullptr) {
         // deallocate all previous memory allocations before skipping the test
         for (int j = 0; j < i; j++) {
-          free_memory(src_data_ptr_array[j], src_mem_type, src_shr_type);
-          free_memory(dst_data_ptr_array[j], dst_mem_type, dst_shr_type);
+          free_memory(src_data_ptr_array[j], context, src_mem_type,
+                      src_shr_type);
+          free_memory(dst_data_ptr_array[j], context, dst_mem_type,
+                      dst_shr_type);
         }
         if (src_data_ptr_array[i])
-          free_memory(src_data_ptr_array[i], src_mem_type, src_shr_type);
+          free_memory(src_data_ptr_array[i], context, src_mem_type,
+                      src_shr_type);
         if (dst_data_ptr_array[i])
-          free_memory(dst_data_ptr_array[i], dst_mem_type, dst_shr_type);
+          free_memory(dst_data_ptr_array[i], context, dst_mem_type,
+                      dst_shr_type);
         if (src_data)
-          free_memory(src_data, src_ptr_mem_type, src_ptr_shr_type);
+          free_memory(src_data, context, src_ptr_mem_type, src_ptr_shr_type);
         if (dst_data)
-          free_memory(dst_data, dst_ptr_mem_type, dst_ptr_shr_type);
+          free_memory(dst_data, context, dst_ptr_mem_type, dst_ptr_shr_type);
         return;
       }
     }
@@ -559,8 +565,8 @@ protected:
     for (int i = 0; i < size; i++) {
       delete[] input_data[i].data;
       delete[] output_data[i].data;
-      free_memory(src_data_ptr_array[i], src_mem_type, src_shr_type);
-      free_memory(dst_data_ptr_array[i], dst_mem_type, dst_shr_type);
+      free_memory(src_data_ptr_array[i], context, src_mem_type, src_shr_type);
+      free_memory(dst_data_ptr_array[i], context, dst_mem_type, dst_shr_type);
     }
     delete[] input_data;
     delete[] output_data;
@@ -568,8 +574,8 @@ protected:
       delete[] src_data_host_ptr;
     if (dst_data_host_ptr)
       delete[] dst_data_host_ptr;
-    free_memory(src_data, src_ptr_mem_type, src_ptr_shr_type);
-    free_memory(dst_data, dst_ptr_mem_type, dst_ptr_shr_type);
+    free_memory(src_data, context, src_ptr_mem_type, src_ptr_shr_type);
+    free_memory(dst_data, context, dst_ptr_mem_type, dst_ptr_shr_type);
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
     lzt::destroy_command_list(command_list);

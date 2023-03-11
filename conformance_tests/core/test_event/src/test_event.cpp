@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -534,8 +534,8 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
     lzt::destroy_command_queue(cmdqueue);
     lzt::destroy_module(module);
     lzt::destroy_function(kernel);
-    lzt::free_memory(src_buffer);
-    lzt::free_memory(dst_buffer);
+    lzt::free_memory(context, src_buffer);
+    lzt::free_memory(context, dst_buffer);
   }
 
   // all devices can read it.

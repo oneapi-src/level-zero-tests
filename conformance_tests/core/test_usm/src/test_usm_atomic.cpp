@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -161,30 +161,30 @@ TEST_P(KernelAtomicLoadStoreTests,
 
       int *input_data, *output_data;
       if (input_memory_type == ZE_MEMORY_TYPE_HOST) {
-        input_data =
-            static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
+        input_data = static_cast<int *>(
+            lzt::allocate_host_memory(size * sizeof(int), 1, context));
       } else if (input_memory_type == ZE_MEMORY_TYPE_DEVICE) {
         input_data = static_cast<int *>(lzt::allocate_device_memory(
             size * sizeof(int), 1, 0u, device, context));
       } else {
         if (shared_mem == SHARED_LOCAL) {
-          input_data = static_cast<int *>(
-              lzt::allocate_shared_memory(size * sizeof(int), device));
+          input_data = static_cast<int *>(lzt::allocate_shared_memory(
+              size * sizeof(int), 1, 0, 0, device, context));
         } else {
           input_data = new int[size];
         }
       }
 
       if (output_memory_type == ZE_MEMORY_TYPE_HOST) {
-        output_data =
-            static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
+        output_data = static_cast<int *>(
+            lzt::allocate_host_memory(size * sizeof(int), 1, context));
       } else if (output_memory_type == ZE_MEMORY_TYPE_DEVICE) {
         output_data = static_cast<int *>(lzt::allocate_device_memory(
             size * sizeof(int), 1, 0u, device, context));
       } else {
         if (shared_mem == SHARED_LOCAL) {
-          output_data = static_cast<int *>(
-              lzt::allocate_shared_memory(size * sizeof(int), device));
+          output_data = static_cast<int *>(lzt::allocate_shared_memory(
+              size * sizeof(int), 1, 0, 0, device, context));
         } else {
           output_data = new int[size];
         }
@@ -207,9 +207,9 @@ TEST_P(KernelAtomicLoadStoreTests,
         }
       }
       if (input_data)
-        lzt::free_memory(input_data);
+        lzt::free_memory(context, input_data);
       if (output_data)
-        lzt::free_memory(output_data);
+        lzt::free_memory(context, output_data);
     }
   }
 }

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -86,7 +86,7 @@ TEST_F(
   EXPECT_EQ(std::adjacent_find(ipcPointers.begin(), ipcPointers.end()),
             ipcPointers.end());
 
-  lzt::free_memory(memory_);
+  lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
 }
 
@@ -105,7 +105,10 @@ protected:
                                          ZE_MEMORY_TYPE_DEVICE);
   }
 
-  void TearDown() { lzt::destroy_context(context_); }
+  void TearDown() {
+    lzt::free_memory(context_, memory_);
+    lzt::destroy_context(context_);
+  }
 };
 
 TEST_F(

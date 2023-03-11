@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -211,7 +211,7 @@ void run_server(int size, uint32_t device_x, uint32_t device_y,
       lzt::execute_command_lists(cq, 1, &cl, nullptr);
       lzt::synchronize(cq, UINT64_MAX);
       lzt::reset_command_list(cl);
-      lzt::free_memory(buffer);
+      lzt::free_memory(context, buffer);
     }
 
     sigset_t wset;
@@ -241,7 +241,7 @@ void run_server(int size, uint32_t device_x, uint32_t device_y,
 
     delete[] expected_buffer;
     free(buffer);
-    lzt::free_memory(memory);
+    lzt::free_memory(context, memory);
   }
 
   for (auto queue : queues) {
@@ -345,8 +345,8 @@ void run_client(int size, uint32_t device_x, uint32_t device_y,
       free(bi_host_buffer);
     }
 
-    lzt::free_memory(bi_buffer);
-    lzt::free_memory(buffer);
+    lzt::free_memory(context, bi_buffer);
+    lzt::free_memory(context, buffer);
   }
 
   for (auto queue : queues) {
