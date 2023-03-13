@@ -58,10 +58,10 @@ void IpcMemoryAccessTest::run_child(int size, ze_ipc_memory_flags_t flags) {
   LOG_DEBUG << "[Server] Driver initialized\n";
 
   auto driver = lzt::get_default_driver();
-  auto context = lzt::get_default_context();
+  auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
-  auto cl = lzt::create_command_list();
-  auto cq = lzt::create_command_queue();
+  auto cl = lzt::create_command_list(device);
+  auto cq = lzt::create_command_queue(device);
   ze_ipc_mem_handle_t ipc_handle;
   void *memory = nullptr;
 
@@ -73,7 +73,7 @@ void IpcMemoryAccessTest::run_child(int size, ze_ipc_memory_flags_t flags) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
 
-  void *buffer = lzt::allocate_host_memory(size);
+  void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
   lzt::append_memory_copy(cl, buffer, memory, size);
   lzt::close_command_list(cl);
@@ -84,7 +84,7 @@ void IpcMemoryAccessTest::run_child(int size, ze_ipc_memory_flags_t flags) {
   lzt::validate_data_pattern(buffer, size, 1);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
-  lzt::free_memory(buffer);
+  lzt::free_memory(context, buffer);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
   lzt::destroy_context(context);
@@ -105,13 +105,13 @@ void IpcMemoryAccessTest::run_parent(int size, bool reserved) {
   LOG_DEBUG << "[Client] Driver initialized\n";
 
   auto driver = lzt::get_default_driver();
-  auto context = lzt::get_default_context();
+  auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
-  auto cl = lzt::create_command_list();
-  auto cq = lzt::create_command_queue();
+  auto cl = lzt::create_command_list(device);
+  auto cq = lzt::create_command_queue(device);
   ze_ipc_mem_handle_t ipc_handle = {};
 
-  void *buffer = lzt::allocate_host_memory(size);
+  void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
   lzt::write_data_pattern(buffer, size, 1);
   size_t allocSize = size;
@@ -121,7 +121,7 @@ void IpcMemoryAccessTest::run_parent(int size, bool reserved) {
     memory = lzt::reserve_allocate_and_map_memory(context, device, allocSize,
                                                   &reservedPhysicalMemory);
   } else {
-    memory = lzt::allocate_device_memory(size);
+    memory = lzt::allocate_device_memory(size, 1, 0, context);
   }
   lzt::append_memory_copy(cl, memory, buffer, size);
   lzt::close_command_list(cl);
@@ -153,9 +153,9 @@ void IpcMemoryAccessTest::run_parent(int size, bool reserved) {
     lzt::unmap_and_free_reserved_memory(context, memory, reservedPhysicalMemory,
                                         allocSize);
   } else {
-    lzt::free_memory(memory);
+    lzt::free_memory(context, memory);
   }
-  lzt::free_memory(buffer);
+  lzt::free_memory(context, buffer);
   lzt::destroy_command_list(cl);
   lzt::destroy_command_queue(cq);
   lzt::destroy_context(context);
@@ -240,7 +240,7 @@ void IpcMemoryAccessSubDeviceTest::run_child(int size,
   LOG_DEBUG << "[Server] Driver initialized\n";
 
   auto driver = lzt::get_default_driver();
-  auto context = lzt::get_default_context();
+  auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
   auto sub_devices = lzt::get_ze_sub_devices(device);
 
@@ -258,7 +258,7 @@ void IpcMemoryAccessSubDeviceTest::run_child(int size,
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
 
-  void *buffer = lzt::allocate_host_memory(size);
+  void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
 
   // For each sub device found, use IPC buffer in a copy operation and validate
@@ -278,7 +278,7 @@ void IpcMemoryAccessSubDeviceTest::run_child(int size,
   }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
-  lzt::free_memory(buffer);
+  lzt::free_memory(context, buffer);
   lzt::destroy_context(context);
 
   if (::testing::Test::HasFailure()) {

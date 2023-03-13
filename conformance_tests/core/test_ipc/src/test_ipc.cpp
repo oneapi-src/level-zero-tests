@@ -44,13 +44,13 @@ TEST_F(
   }
   LOG_TRACE << "Driver initialized";
   level_zero_tests::print_platform_overview();
-  memory_ = lzt::allocate_device_memory(1);
   context_ = lzt::create_context();
+  memory_ = lzt::allocate_device_memory(1, 1, 0, context_);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
-  lzt::free_memory(memory_);
 }
 
 TEST_F(

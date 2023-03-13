@@ -38,13 +38,14 @@ ze_event_pool_desc_t defaultEventPoolDesc = {
     ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
     (ZE_EVENT_POOL_FLAG_HOST_VISIBLE | ZE_EVENT_POOL_FLAG_IPC), 10};
 
-static lzt::zeEventPool get_event_pool(bool multi_device, bool device_events) {
+static ze_event_pool_handle_t get_event_pool(bool multi_device,
+                                             bool device_events,
+                                             ze_context_handle_t context) {
   if (device_events) {
     defaultEventPoolDesc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
                             ZE_EVENT_POOL_FLAG_IPC, 10};
     LOG_INFO << "Testing device only events";
   }
-  lzt::zeEventPool ep;
   std::vector<ze_device_handle_t> devices;
   if (multi_device) {
     devices = lzt::get_devices(lzt::get_default_driver());
@@ -53,17 +54,19 @@ static lzt::zeEventPool get_event_pool(bool multi_device, bool device_events) {
         lzt::get_default_device(lzt::get_default_driver());
     devices.push_back(device);
   }
-  ep.InitEventPool(defaultEventPoolDesc, devices);
-  return ep;
+  return lzt::create_event_pool(context, defaultEventPoolDesc, devices);
 }
 
 static void parent_host_signals(ze_event_handle_t hEvent) {
   lzt::signal_event_from_host(hEvent);
 }
 
-static void parent_device_signals(ze_event_handle_t hEvent) {
-  auto cmdlist = lzt::create_command_list();
-  auto cmdqueue = lzt::create_command_queue();
+static void parent_device_signals(ze_event_handle_t hEvent,
+                                  ze_context_handle_t context) {
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+  auto cmdlist = lzt::create_command_list(context, device);
+  auto cmdqueue = lzt::create_command_queue(context, device);
   lzt::append_signal_event(cmdlist, hEvent);
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
@@ -99,18 +102,20 @@ static void run_ipc_event_test(parent_test_t parent_test,
       child_test == CHILD_TEST_DEVICE_READS) {
     device_events = true;
   }
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
 
-  auto ep = get_event_pool(multi_device, device_events);
+  auto ep = get_event_pool(multi_device, device_events, context);
   ze_ipc_event_pool_handle_t hIpcEventPool;
-  ep.get_ipc_handle(&hIpcEventPool);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventPoolGetIpcHandle(ep, &hIpcEventPool));
   if (testing::Test::HasFatalFailure())
     return; // Abort test if IPC Event handle failed
 
   ze_event_handle_t hEvent;
   if (device_events) {
-    ep.create_event(hEvent, defaultDeviceEventDesc);
+    hEvent = lzt::create_event(ep, defaultDeviceEventDesc);
   } else {
-    ep.create_event(hEvent, defaultEventDesc);
+    hEvent = lzt::create_event(ep, defaultEventDesc);
   }
   shared_data_t test_data = {parent_test, child_test, multi_device,
                              hIpcEventPool};
@@ -127,7 +132,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
     parent_host_signals(hEvent);
     break;
   case PARENT_TEST_DEVICE_SIGNALS:
-    parent_device_signals(hEvent);
+    parent_device_signals(hEvent, context);
     break;
   default:
     FAIL() << "Fatal test error";
@@ -138,7 +143,9 @@ static void run_ipc_event_test(parent_test_t parent_test,
 
   // cleanup
   bipc::shared_memory_object::remove("ipc_event_test");
-  ep.destroy_event(hEvent);
+  lzt::destroy_event(hEvent);
+  lzt::destroy_event_pool(ep);
+  lzt::destroy_context(context);
 #endif // linux
 }
 

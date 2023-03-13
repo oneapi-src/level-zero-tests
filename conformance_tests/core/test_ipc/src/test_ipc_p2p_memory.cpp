@@ -92,7 +92,7 @@ inline void init_process(ze_context_handle_t &context,
   init_driver();
 
   auto driver = lzt::get_default_driver();
-  context = lzt::get_default_context();
+  context = lzt::create_context(driver);
 
   uint32_t device_count = 0;
   zeDeviceGet(driver, &device_count, nullptr);
