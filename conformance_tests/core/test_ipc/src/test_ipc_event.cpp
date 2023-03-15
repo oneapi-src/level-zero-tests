@@ -190,6 +190,15 @@ TEST(
 
 TEST(
     zeIPCEventMultiDeviceTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromDevicePerspectiveForSingleThenMultiDevice) {
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS,
+                     false);
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
+                     true);
+}
+
+TEST(
+    zeIPCEventMultiDeviceTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromMultipleDevicePerspective) {
   run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
                      true);
