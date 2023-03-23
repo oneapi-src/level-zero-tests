@@ -613,6 +613,11 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                                    numWaitEvents, waitEvents));
 }
 
+void append_metric_memory_barrier(zet_command_list_handle_t commandList) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetCommandListAppendMetricMemoryBarrier(commandList));
+}
+
 void verify_typed_metric_value(zet_typed_value_t result,
                                zet_value_type_t metricValueType) {
   EXPECT_EQ(metricValueType, result.type);

@@ -116,6 +116,7 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                              ze_event_handle_t eventHandle,
                              uint32_t numWaitEvents,
                              ze_event_handle_t *waitEvents);
+void append_metric_memory_barrier(zet_command_list_handle_t commandList);
 void validate_metrics(zet_metric_group_handle_t hMetricGroup,
                       const size_t rawDataSize, const uint8_t *rawData,
                       bool requireOverflow = false);

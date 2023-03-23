@@ -335,6 +335,23 @@ TEST_F(
   lzt::destroy_command_list(commandList);
 }
 
+TEST_F(
+    zetMetricQueryTest,
+    GivenOnlyMetricQueryWithMetricMemoryBarrierWhenCommandListIsCreatedThenExpectCommandListToExecuteSucessfully) {
+  zet_command_list_handle_t commandList = lzt::create_command_list();
+  lzt::activate_metric_groups(device, 1, &matchedGroupHandle);
+  lzt::append_metric_query_begin(commandList, metricQueryHandle);
+  lzt::append_metric_memory_barrier(commandList);
+  lzt::append_metric_query_end(commandList, metricQueryHandle, nullptr);
+  lzt::close_command_list(commandList);
+  ze_command_queue_handle_t commandQueue = lzt::create_command_queue();
+  lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+  lzt::synchronize(commandQueue, UINT64_MAX);
+  lzt::deactivate_metric_groups(device);
+  lzt::destroy_command_queue(commandQueue);
+  lzt::destroy_command_list(commandList);
+}
+
 class zetMetricQueryLoadTest : public ::testing::Test {
 protected:
   std::vector<ze_device_handle_t> devices;
