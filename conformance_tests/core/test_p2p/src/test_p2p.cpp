@@ -14,6 +14,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "../headers/test_p2p_common.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -23,11 +24,10 @@ namespace {
 
 class zeP2PTests : public ::testing::Test,
                    public ::testing::WithParamInterface<
-                       std::tuple<ze_memory_type_t, size_t>> {
+                       std::tuple<lzt_p2p_memory_type_tests_t, size_t>> {
 protected:
   void SetUp() override {
-    ze_memory_type_t memory_type = std::get<0>(GetParam());
-    memory_type_ = memory_type;
+    p2p_memory_ = std::get<0>(GetParam());
     offset_ = std::get<1>(GetParam());
     ze_bool_t can_access;
     auto driver = lzt::get_default_driver();
@@ -39,16 +39,41 @@ protected:
 
       instance.dev = device;
       instance.dev_grp = driver;
-      if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
+      if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_DEVICE) {
         instance.src_region = lzt::allocate_device_memory(
             mem_size_ + offset_, 1, 0, device, context);
         instance.dst_region = lzt::allocate_device_memory(
             mem_size_ + offset_, 1, 0, device, context);
-      } else if (memory_type == ZE_MEMORY_TYPE_SHARED) {
+      } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_SHARED) {
         instance.src_region =
             lzt::allocate_shared_memory(mem_size_ + offset_, 1, 0, 0, device);
         instance.dst_region =
             lzt::allocate_shared_memory(mem_size_ + offset_, 1, 0, 0, device);
+      } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
+        size_t pageSize = 0;
+        lzt::query_page_size(context, device, mem_size_ + offset_, &pageSize);
+        mem_size_ =
+            lzt::create_page_aligned_size(mem_size_ + offset_, pageSize);
+        offset_ = 0;
+        lzt::physical_memory_allocation(context, device, mem_size_,
+                                        &instance.src_physical_region);
+        lzt::physical_memory_allocation(context, device, mem_size_,
+                                        &instance.dst_physical_region);
+        lzt::virtual_memory_reservation(context, nullptr, mem_size_,
+                                        &instance.src_region);
+        EXPECT_NE(nullptr, instance.src_region);
+        lzt::virtual_memory_reservation(context, nullptr, mem_size_,
+                                        &instance.dst_region);
+        EXPECT_NE(nullptr, instance.dst_region);
+
+        ASSERT_EQ(zeVirtualMemMap(context, instance.src_region, mem_size_,
+                                  instance.src_physical_region, 0,
+                                  ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+                  ZE_RESULT_SUCCESS);
+        ASSERT_EQ(zeVirtualMemMap(context, instance.dst_region, mem_size_,
+                                  instance.dst_physical_region, 0,
+                                  ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+                  ZE_RESULT_SUCCESS);
       } else {
         FAIL() << "Unexpected memory type";
       }
@@ -60,17 +85,47 @@ protected:
         DevInstance sub_device_instance;
         sub_device_instance.dev = sub_device;
         sub_device_instance.dev_grp = instance.dev_grp;
-        if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
+        if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_DEVICE) {
           sub_device_instance.src_region = lzt::allocate_device_memory(
               mem_size_ + offset_, 1, 0, sub_device, context);
           sub_device_instance.dst_region = lzt::allocate_device_memory(
               mem_size_ + offset_, 1, 0, sub_device, context);
 
-        } else if (memory_type == ZE_MEMORY_TYPE_SHARED) {
+        } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_SHARED) {
           sub_device_instance.src_region = lzt::allocate_shared_memory(
               mem_size_ + offset_, 1, 0, 0, sub_device);
           sub_device_instance.dst_region = lzt::allocate_shared_memory(
               mem_size_ + offset_, 1, 0, 0, sub_device);
+        } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
+          size_t pageSize = 0;
+          lzt::query_page_size(context, sub_device, mem_size_ + offset_,
+                               &pageSize);
+          mem_size_ =
+              lzt::create_page_aligned_size(mem_size_ + offset_, pageSize);
+          offset_ = 0;
+          lzt::physical_memory_allocation(
+              context, sub_device, mem_size_,
+              &sub_device_instance.src_physical_region);
+          lzt::physical_memory_allocation(
+              context, sub_device, mem_size_,
+              &sub_device_instance.dst_physical_region);
+          lzt::virtual_memory_reservation(context, nullptr, mem_size_,
+                                          &sub_device_instance.src_region);
+          EXPECT_NE(nullptr, sub_device_instance.src_region);
+          lzt::virtual_memory_reservation(context, nullptr, mem_size_,
+                                          &sub_device_instance.dst_region);
+          EXPECT_NE(nullptr, sub_device_instance.dst_region);
+
+          ASSERT_EQ(zeVirtualMemMap(context, sub_device_instance.src_region,
+                                    mem_size_,
+                                    sub_device_instance.src_physical_region, 0,
+                                    ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+                    ZE_RESULT_SUCCESS);
+          ASSERT_EQ(zeVirtualMemMap(context, sub_device_instance.dst_region,
+                                    mem_size_,
+                                    sub_device_instance.dst_physical_region, 0,
+                                    ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+                    ZE_RESULT_SUCCESS);
         } else {
           FAIL() << "Unexpected memory type";
         }
@@ -86,19 +141,43 @@ protected:
   void TearDown() override {
 
     for (auto instance : dev_instance_) {
-
+      auto context = lzt::get_default_context();
       lzt::destroy_command_queue(instance.cmd_q);
       lzt::destroy_command_list(instance.cmd_list);
 
-      lzt::free_memory(instance.src_region);
-      lzt::free_memory(instance.dst_region);
+      if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
+        lzt::virtual_memory_unmap(context, instance.src_region, mem_size_);
+        lzt::virtual_memory_unmap(context, instance.dst_region, mem_size_);
+        lzt::physical_memory_destroy(context, instance.src_physical_region);
+        lzt::physical_memory_destroy(context, instance.dst_physical_region);
+        lzt::virtual_memory_free(context, instance.src_region, mem_size_);
+        lzt::virtual_memory_free(context, instance.dst_region, mem_size_);
+      } else {
+        lzt::free_memory(instance.src_region);
+        lzt::free_memory(instance.dst_region);
+      }
 
       for (auto sub_device_instance : instance.sub_devices) {
         lzt::destroy_command_queue(sub_device_instance.cmd_q);
         lzt::destroy_command_list(sub_device_instance.cmd_list);
 
-        lzt::free_memory(sub_device_instance.src_region);
-        lzt::free_memory(sub_device_instance.dst_region);
+        if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
+          lzt::virtual_memory_unmap(context, sub_device_instance.src_region,
+                                    mem_size_);
+          lzt::virtual_memory_unmap(context, sub_device_instance.dst_region,
+                                    mem_size_);
+          lzt::physical_memory_destroy(context,
+                                       sub_device_instance.src_physical_region);
+          lzt::physical_memory_destroy(context,
+                                       sub_device_instance.dst_physical_region);
+          lzt::virtual_memory_free(context, sub_device_instance.src_region,
+                                   mem_size_);
+          lzt::virtual_memory_free(context, sub_device_instance.dst_region,
+                                   mem_size_);
+        } else {
+          lzt::free_memory(sub_device_instance.src_region);
+          lzt::free_memory(sub_device_instance.dst_region);
+        }
       }
     }
   }
@@ -108,6 +187,8 @@ protected:
     ze_driver_handle_t dev_grp;
     void *src_region;
     void *dst_region;
+    ze_physical_mem_handle_t src_physical_region;
+    ze_physical_mem_handle_t dst_physical_region;
     ze_command_list_handle_t cmd_list;
     ze_command_queue_handle_t cmd_q;
     std::vector<DevInstance> sub_devices;
@@ -118,7 +199,7 @@ protected:
   size_t mem_size_ = columns * rows * slices;
   size_t offset_;
   std::vector<DevInstance> dev_instance_;
-  ze_memory_type_t memory_type_;
+  lzt_p2p_memory_type_tests_t p2p_memory_;
 };
 
 TEST_P(
@@ -1215,9 +1296,11 @@ TEST_P(
 INSTANTIATE_TEST_CASE_P(
     GivenP2PDevicesWhenCopyingDeviceMemoryFromRemoteDeviceThenSuccessIsReturned_IP,
     zeP2PTests,
-    testing::Combine(
-        ::testing::Values(ZE_MEMORY_TYPE_DEVICE, ZE_MEMORY_TYPE_SHARED),
-        ::testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                          16, 32, 64, 128, 255, 510, 1021, 2043)));
+    testing::Combine(::testing::Values(LZT_P2P_MEMORY_TYPE_DEVICE,
+                                       LZT_P2P_MEMORY_TYPE_SHARED,
+                                       LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION),
+                     ::testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+                                       13, 14, 15, 16, 32, 64, 128, 255, 510,
+                                       1021, 2043)));
 
 } // namespace
