@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2022 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -60,7 +60,10 @@ class zeDriverAllocDeviceMemAlignmentTests
 
 TEST_P(zeDriverAllocDeviceMemAlignmentTests,
        GivenSizeAndAlignmentWhenAllocatingDeviceMemoryThenPointerIsAligned) {
-  EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory_) % alignment_);
+  EXPECT_NE(nullptr, memory_);
+  if (alignment_ != 0) {
+    EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory_) % alignment_);
+  }
 }
 
 INSTANTIATE_TEST_CASE_P(zeDriverAllocDeviceMemTestVarySizeAndAlignment,
@@ -260,7 +263,9 @@ TEST_P(zeDriverAllocSharedMemAlignmentTests,
   memory = lzt::allocate_shared_memory(size, alignment, dev_flags, host_flags,
                                        device, context);
   EXPECT_NE(nullptr, memory);
-  EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory) % alignment);
+  if (alignment != 0) {
+    EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory) % alignment);
+  }
   lzt::free_memory(context, memory);
   lzt::destroy_context(context);
 }
@@ -422,7 +427,9 @@ TEST_P(zeDriverAllocHostMemAlignmentTests,
                                      lzt::get_default_context());
 
   EXPECT_NE(nullptr, memory);
-  EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory) % alignment);
+  if (alignment != 0) {
+    EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory) % alignment);
+  }
 
   lzt::free_memory(memory);
 }

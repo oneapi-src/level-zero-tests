@@ -17,8 +17,9 @@ namespace level_zero_tests {
 
 const auto memory_allocation_sizes =
     ::testing::Values(1, 10, 100, 1000, 10000, 100000);
-const auto memory_allocation_alignments =
-    ::testing::Values(1, 2, 4, 8, 16, 32, 64);
+const auto memory_allocation_alignments = ::testing::Values(
+    0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384,
+    32768, 65536, 1u << 17, 1u << 18, 1u << 19, 1u << 20, 1u << 21, 1u << 22);
 
 void *allocate_host_memory(const size_t size);
 void *allocate_host_memory(const size_t size, const size_t alignment);
