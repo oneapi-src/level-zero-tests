@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -90,6 +90,7 @@ ze_command_list_handle_t create_immediate_command_list(
   descriptor.mode = mode;
   descriptor.priority = priority;
   descriptor.ordinal = ordinal;
+  descriptor.index = index;
   ze_command_list_handle_t command_list = nullptr;
   auto context_initial = context;
   auto device_initial = device;
