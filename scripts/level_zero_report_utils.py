@@ -88,6 +88,12 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleGetPropertiesReturnsValidNonZeroProperties', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverAllocSharedMemTestVarySizeAndAlignment_zeDriverAllocSharedMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeEventSignalScopeParameterizedTest_zeEventSignalScopeTests_GivenDifferentEventSignalScopeFlagsThenAppendSignalEventIsSuccessful', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeIpcMemHandleTests_GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithMuliplePutsThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeIpcMemHandleTests_GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithSinglePutThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeIpcMemHandleTests_GivenDeviceMemoryAllocationWhenGettingIpcMemoryHandleThenReleasingHandleWithPutThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_IpcMemoryAccessTest_GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectlyWithPutIpcHandle', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeIpcMemHandleTests_GivenDeviceMemoryAllocationWhenCallingPutIpcMemoryWithDifferentContextsReturnsSuccess', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeIpcMemHandleTests_GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithMuliplePutsThenTrailingGetSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (test_name.find("zeVirtualMemoryTests")!= -1) or \
                     (test_name.find("Cooperative")!= -1) or \
                     (test_name.find("zeMemFreeExtTests")!= -1) or \
