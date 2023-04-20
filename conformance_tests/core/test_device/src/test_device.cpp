@@ -156,6 +156,26 @@ TEST(
   ASSERT_GT(devices.size(), 0);
   for (auto device : devices) {
     auto properties = lzt::get_cache_properties(device);
+    for (auto cache_props : properties) {
+      EXPECT_GE(cache_props.cacheSize, 0);
+    }
+  }
+}
+
+TEST(
+    zeDeviceGetCachePropertiesTests,
+    GivenValidSubDeviceWhenRetrievingCachePropertiesThenValidPropertiesAreReturned) {
+  auto devices = lzt::get_ze_devices();
+
+  ASSERT_GT(devices.size(), 0);
+  for (auto device : devices) {
+    auto sub_devices = lzt::get_ze_sub_devices(device);
+    for (auto subdevice : sub_devices) {
+      auto properties = lzt::get_cache_properties(device);
+      for (auto cache_props : properties) {
+        EXPECT_GE(cache_props.cacheSize, 0);
+      }
+    }
   }
 }
 
