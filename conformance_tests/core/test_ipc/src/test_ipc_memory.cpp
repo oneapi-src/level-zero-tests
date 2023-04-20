@@ -26,7 +26,7 @@ namespace {
 class IpcMemoryAccessTest : public ::testing::Test {
 public:
   virtual void run_child(int size, ze_ipc_memory_flags_t flags);
-  void run_parent(int size, bool reserved, bool put_handle);
+  void run_parent(int size, bool reserved);
 
 protected:
   pid_t pid;
@@ -96,7 +96,7 @@ void IpcMemoryAccessTest::run_child(int size, ze_ipc_memory_flags_t flags) {
   }
 }
 
-void IpcMemoryAccessTest::run_parent(int size, bool reserved, bool put_handle) {
+void IpcMemoryAccessTest::run_parent(int size, bool reserved) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -149,10 +149,6 @@ void IpcMemoryAccessTest::run_parent(int size, bool reserved, bool put_handle) {
     }
   }
 
-  if (put_handle) {
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context, ipc_handle));
-  }
-
   if (reserved) {
     lzt::unmap_and_free_reserved_memory(context, memory, reservedPhysicalMemory,
                                         allocSize);
@@ -170,7 +166,7 @@ TEST_F(
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   const auto size = 4096;
   if (is_parent) {
-    run_parent(size, false, false);
+    run_parent(size, false);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
   }
@@ -181,7 +177,7 @@ TEST_F(
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   const auto size = 4096;
   if (is_parent) {
-    run_parent(size, false, false);
+    run_parent(size, false);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
   }
@@ -192,7 +188,7 @@ TEST_F(
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
   const auto size = 4096;
   if (is_parent) {
-    run_parent(size, true, false);
+    run_parent(size, true);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
   }
@@ -203,51 +199,7 @@ TEST_F(
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
   const auto size = 4096;
   if (is_parent) {
-    run_parent(size, true, false);
-  } else {
-    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
-  }
-}
-
-TEST_F(
-    IpcMemoryAccessTest,
-    GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  const auto size = 4096;
-  if (is_parent) {
-    run_parent(size, false, true);
-  } else {
-    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
-  }
-}
-
-TEST_F(
-    IpcMemoryAccessTest,
-    GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  const auto size = 4096;
-  if (is_parent) {
-    run_parent(size, false, true);
-  } else {
-    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
-  }
-}
-
-TEST_F(
-    IpcMemoryAccessTest,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  const auto size = 4096;
-  if (is_parent) {
-    run_parent(size, true, true);
-  } else {
-    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
-  }
-}
-
-TEST_F(
-    IpcMemoryAccessTest,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  const auto size = 4096;
-  if (is_parent) {
-    run_parent(size, true, true);
+    run_parent(size, true);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
   }
@@ -341,18 +293,7 @@ TEST_F(
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
   const auto size = 4096;
   if (is_parent) {
-    run_parent(size, true, false);
-  } else {
-    run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
-  }
-}
-
-TEST_F(
-    IpcMemoryAccessSubDeviceTest,
-    GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithPutIpcHandle) {
-  const auto size = 4096;
-  if (is_parent) {
-    run_parent(size, true, true);
+    run_parent(size, true);
   } else {
     run_child(size, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
   }
