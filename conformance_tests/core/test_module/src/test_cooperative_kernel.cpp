@@ -47,7 +47,7 @@ TEST_P(
 
   if (ordinal < 0) {
     LOG_WARNING << "No command queues that support cooperative kernels";
-    return;
+    GTEST_SKIP();
   }
   auto command_queue = lzt::create_command_queue(context, device, flags, mode,
                                                  priority, ordinal);

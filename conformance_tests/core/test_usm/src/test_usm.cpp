@@ -172,7 +172,7 @@ public:
       LOG_DEBUG
           << "Only one device is active, so just return without performing "
              "peer2peer access";
-      return;
+      GTEST_SKIP();
     }
     // For each combination of memory, iterate through all the valid devices
 
@@ -625,7 +625,7 @@ TEST_P(
        ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT) == 0) {
     LOG_WARNING << "Concurrent access for shared allocations unsupported by "
                    "device, skipping test";
-    return;
+    GTEST_SKIP();
   }
 
   size_t size_shared_memory = GetParam();
@@ -683,13 +683,13 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
   for (int i = 0; i < devices.size(); i++) {
     if (!lzt::can_access_peer(devices[0], devices[i])) {
       LOG_WARNING << "P2P Access not supported between devices, skipping test";
-      return;
+      GTEST_SKIP();
     }
   }
 
   if (devices.size() < 2) {
     LOG_WARNING << "Less than two devices, skipping test";
-    return;
+    GTEST_SKIP();
   }
 
   const size_t memory_size = 1024;

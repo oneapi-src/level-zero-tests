@@ -219,8 +219,7 @@ TEST_P(
 TEST_P(zeImmediateCommandListExecutionTests,
        GivenImmediateCommandListWhenAppendImageCopyThenVerifyCopyIsCorrect) {
   if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP() << "device does not support images, cannot run test";
   }
   lzt::zeImageCreateCommon img;
   // dest_host_image_upper is used to validate that the above image copy
@@ -300,8 +299,9 @@ TEST_P(
 
 TEST_P(zeImmediateCommandListExecutionTests,
        GivenImmediateCommandListWhenAppendWaitOnEventsThenSuccessIsReturned) {
-  if (mode == ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS)
-    return;
+  if (mode == ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
+    GTEST_SKIP();
+  }
   ze_event_handle_t event1 = nullptr;
   ep.create_event(event1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event1));
@@ -359,8 +359,7 @@ TEST_P(
     zeImmediateCommandListExecutionTests,
     GivenMultipleImmediateCommandListsThatHaveDependenciesThenAllTheCommandListsExecuteSuccessfully) {
   if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP() << "device does not support images, cannot run test";
   }
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");

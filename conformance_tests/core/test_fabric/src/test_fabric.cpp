@@ -64,13 +64,13 @@ TEST(
   auto devices = lzt::get_ze_devices();
   if (devices.size() < 1) {
     LOG_WARNING << "Test not executed due to not enough devices";
-    return;
+    GTEST_SKIP();
   }
 
   auto sub_devices = lzt::get_ze_sub_devices(devices[0]);
   if (sub_devices.size() < 2) {
     LOG_WARNING << "Test not executed due to not enough sub-devices";
-    return;
+    GTEST_SKIP();
   }
 
   bp::environment child_env = boost::this_process::environment();
@@ -294,7 +294,7 @@ TEST(zeFabricEdgeGetTests,
   auto vertex_count = vertices.size();
   if (vertex_count < 2) {
     LOG_WARNING << "Test not executed due to not enough vertices";
-    return;
+    GTEST_SKIP();
   }
 
   for (auto &vertex_a : vertices) {
@@ -312,7 +312,7 @@ TEST(
   auto vertex_count = vertices.size();
   if (vertex_count < 2) {
     LOG_WARNING << "Test not executed due to not enough vertices";
-    return;
+    GTEST_SKIP();
   }
 
   for (auto &vertex_a : vertices) {
@@ -333,18 +333,18 @@ TEST(
 
   if (lzt::get_ze_device_count() < 2) {
     LOG_WARNING << "Test not executed due to not enough devices";
-    return;
+    GTEST_SKIP();
   }
 
   auto devices = lzt::get_ze_devices();
   if (lzt::get_ze_sub_device_count(devices[0]) == 0) {
     LOG_WARNING << "Test not executed due to not enough sub devices";
-    return;
+    GTEST_SKIP();
   }
 
   if (lzt::get_ze_sub_device_count(devices[1]) == 0) {
     LOG_WARNING << "Test not executed due to not enough sub devices";
-    return;
+    GTEST_SKIP();
   }
 
   bool is_sub_device_connected = false;
@@ -388,7 +388,7 @@ TEST(zeFabricEdgeGetTests,
   auto vertex_count = vertices.size();
   if (vertex_count < 2) {
     LOG_WARNING << "Test not executed due to not enough vertices";
-    return;
+    GTEST_SKIP();
   }
 
   for (auto &vertex_a : vertices) {
@@ -416,7 +416,7 @@ TEST(zeFabricEdgeGetTests,
   std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
   if (edges.size() == 0) {
     LOG_WARNING << "Test not executed due to not enough edges";
-    return;
+    GTEST_SKIP();
   }
 
   for (auto &edge : edges) {
@@ -443,7 +443,7 @@ TEST(zeFabricEdgeGetTests, GivenValidFabricEdgesThenEdgePropertyUuidIsUnique) {
   std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
   if (edges.size() == 0) {
     LOG_WARNING << "Test not executed due to not enough edges";
-    return;
+    GTEST_SKIP();
   }
 
   std::vector<ze_uuid_t> uuids;
@@ -476,7 +476,7 @@ TEST(zeFabricEdgeGetTests,
   std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
   if (edges.size() == 0) {
     LOG_WARNING << "Test not executed due to not enough edges";
-    return;
+    GTEST_SKIP();
   }
 
   for (auto &edge : edges) {
@@ -520,18 +520,18 @@ TEST(
 
   if (lzt::get_ze_device_count() < 2) {
     LOG_WARNING << "Test not executed due to not enough devices";
-    return;
+    GTEST_SKIP();
   }
 
   auto devices = lzt::get_ze_devices();
   if (lzt::get_ze_sub_device_count(devices[0]) == 0) {
     LOG_WARNING << "Test not executed due to not enough sub devices";
-    return;
+    GTEST_SKIP();
   }
 
   if (lzt::get_ze_sub_device_count(devices[1]) == 0) {
     LOG_WARNING << "Test not executed due to not enough sub devices";
-    return;
+    GTEST_SKIP();
   }
 
   // Identify Edges between subdevices and find the least bandwidth
@@ -655,7 +655,7 @@ TEST_P(zeFabricEdgeCopyTests,
   std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
   if (edges.size() == 0) {
     LOG_WARNING << "Test not executed due to not enough edges";
-    return;
+    GTEST_SKIP();
   }
 
   uint32_t copy_size = GetParam();

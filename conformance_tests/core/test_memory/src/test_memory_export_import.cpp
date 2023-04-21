@@ -99,8 +99,7 @@ TEST(
   auto external_memory_properties = lzt::get_external_memory_properties(device);
   if (!(external_memory_properties.memoryAllocationExportTypes &
         ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
-    LOG_WARNING << "Device does not support exporting DMA_BUF";
-    return;
+    GTEST_SKIP() << "Device does not support exporting DMA_BUF";
   }
 
   ze_external_memory_export_desc_t export_desc = {};
@@ -179,7 +178,7 @@ TEST(zeDeviceGetExternalMemoryProperties,
   if (!(external_memory_properties.memoryAllocationImportTypes &
         ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
     LOG_WARNING << "Device does not support importing DMA_BUF";
-    return;
+    GTEST_SKIP();
   }
   auto command_queue = lzt::create_command_queue(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,

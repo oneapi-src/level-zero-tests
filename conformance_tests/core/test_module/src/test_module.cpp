@@ -1050,7 +1050,7 @@ TEST_F(
     LOG_WARNING
         << "size exceeds device max allocation size and driver does not "
            "support relaxed allocations, skipping test";
-    return;
+    GTEST_SKIP();
   }
 
   ze_relaxed_allocation_limits_exp_desc_t relaxed_allocation_limits_desc = {};
@@ -1072,7 +1072,7 @@ TEST_F(
   if (total_mem <= (device_properties.maxMemAllocSize +
                     validation_buffer_size * scale * 2 + head)) {
     LOG_WARNING << "Insufficient memory resources for test, skipping";
-    return;
+    GTEST_SKIP();
   }
   LOG_DEBUG << "Request device memory allocation size: " << size;
 
@@ -1212,7 +1212,7 @@ TEST_P(
   if (!supports_global_offset) {
     LOG_WARNING
         << "Driver does not support global offsets in kernel, skipping test";
-    return;
+    GTEST_SKIP();
   }
 
   auto base_size = 8;
@@ -1337,7 +1337,7 @@ TEST_P(
 
   if (!device_) {
     LOG_WARNING << "No sub-device for kernel execution test";
-    return;
+    GTEST_SKIP();
   }
   test_kernel_execution();
 }

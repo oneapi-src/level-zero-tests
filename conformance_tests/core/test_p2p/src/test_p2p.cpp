@@ -217,7 +217,7 @@ TEST_P(
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 Devices";
-    return;
+    GTEST_SKIP();
   }
 
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
@@ -324,7 +324,7 @@ TEST_P(
   for (uint32_t i = 0; i < dev_instance_.size(); i++) {
     if (dev_instance_[i].sub_devices.size() < 2) {
       LOG_INFO << "Test cannot be run with less than 2 SubDevices";
-      return;
+      GTEST_SKIP();
     }
 
     for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
@@ -444,7 +444,7 @@ TEST_P(
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 devices";
-    return;
+    GTEST_SKIP();
   }
 
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
@@ -505,7 +505,7 @@ TEST_P(
   for (uint32_t i = 0; i < dev_instance_.size(); i++) {
     if (dev_instance_[i].sub_devices.size() < 2) {
       LOG_INFO << "Test cannot be run with less than 2 SubDevices";
-      return;
+      GTEST_SKIP();
     }
     for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
@@ -588,7 +588,7 @@ TEST_P(
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 devices";
-    return;
+    GTEST_SKIP();
   }
 
   for (int region = 0; region < num_regions; region++) {
@@ -756,7 +756,7 @@ TEST_P(
 
         if (dev_instance_[i].sub_devices.size() < 2) {
           LOG_INFO << "Test cannot be run with less than 2 SubDevices";
-          return;
+          GTEST_SKIP();
         }
 
         for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
@@ -855,7 +855,7 @@ TEST_P(
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 Devices";
-    return;
+    GTEST_SKIP();
   }
 
   for (int region = 0; region < num_regions; region++) {
@@ -986,7 +986,7 @@ TEST_P(
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 Devices";
-    return;
+    GTEST_SKIP();
   }
 
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
@@ -1057,7 +1057,7 @@ TEST_P(
 
     if (dev_instance_[i].sub_devices.size() < 2) {
       LOG_INFO << "Test cannot be run with less than 2 SubDevices";
-      return;
+      GTEST_SKIP();
     }
 
     for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
@@ -1136,7 +1136,7 @@ TEST_P(zeP2PTests,
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 Devices";
-    return;
+    GTEST_SKIP();
   }
 
   for (uint32_t i = 1; i < dev_instance_.size(); i++) {
@@ -1216,7 +1216,7 @@ TEST_P(
 
     if (dev_instance_[i].sub_devices.size() < 2) {
       LOG_INFO << "Test cannot be run with less than 2 SubDevices";
-      return;
+      GTEST_SKIP();
     }
 
     for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {

@@ -107,8 +107,7 @@ TEST_F(ImageFormatTests,
        GivenImageFormatUINTWhenCopyingImageThenFormatIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UINT, true);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UINT, true);
@@ -136,8 +135,7 @@ TEST_F(ImageFormatTests,
        GivenImageFormatINTWhenCopyingImageThenFormatIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SINT, true);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SINT, true);
@@ -165,8 +163,7 @@ TEST_F(ImageFormatTests,
        GivenImageFormatFloatWhenCopyingImageThenFormatIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_FLOAT, true);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_FLOAT, true);
@@ -195,8 +192,7 @@ TEST_F(ImageFormatTests,
        GivenImageFormatUNORMWhenCopyingImageThenFormatIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UNORM, false);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UNORM, false);
@@ -224,8 +220,7 @@ TEST_F(ImageFormatTests,
        GivenImageFormatSNORMWhenCopyingImageThenFormatIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SNORM, false);
   img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SNORM, false);
@@ -308,8 +303,7 @@ TEST_P(ImageFormatLayoutTests,
        GivenImageFormatLayoutWhenCopyingImageThenFormatIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   auto driver = lzt::get_default_driver();
   for (auto device : lzt::get_devices(driver)) {

@@ -61,7 +61,7 @@ TEST_F(
     if (properties.flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
       LOG_INFO << "[" << properties.name << "] "
                << "Device has on demand page fault support - skipping";
-      return;
+      GTEST_SKIP();
     }
 
     // set up
@@ -147,7 +147,7 @@ TEST_F(
     if (properties.flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
       LOG_INFO << "[" << properties.name << "] "
                << "Device has on demand page fault support - skipping";
-      return;
+      GTEST_SKIP();
     }
 
     auto mem_access_props = lzt::get_memory_access_properties(device);
@@ -242,7 +242,7 @@ TEST_F(
     if (properties.flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
       LOG_INFO << "[" << properties.name << "] "
                << "Device has on demand page fault support - skipping";
-      return;
+      GTEST_SKIP();
     }
 
     // set up
@@ -318,7 +318,7 @@ TEST_F(
     if (properties.flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
       LOG_INFO << "[" << properties.name << "] "
                << "Device has on demand page fault support - skipping";
-      return;
+      GTEST_SKIP();
     }
 
     auto mem_access_props = lzt::get_memory_access_properties(device);
@@ -406,7 +406,7 @@ TEST_F(zeDeviceMakeImageResidentTests,
        GivenDeviceImageWhenMakingImageResidentThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   lzt::zeImageCreateCommon img;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextMakeImageResident(
@@ -421,7 +421,7 @@ TEST_F(zeContextEvictImageTests,
        GivenResidentDeviceImageWhenEvictingResidentImageThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   lzt::zeImageCreateCommon img;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextMakeImageResident(

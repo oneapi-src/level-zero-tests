@@ -269,7 +269,7 @@ TEST(
 
   if (devices.size() < 2) {
     LOG_WARNING << "Test not executed due to not enough devices";
-    return;
+    GTEST_SKIP();
   }
 
   uint32_t num_leaf_devices = 0;
@@ -303,7 +303,7 @@ TEST(
 
   if (lzt::get_ze_sub_device_count(devices[0]) < 2) {
     LOG_WARNING << "Test not executed due to not enough devices/sub_devices";
-    return;
+    GTEST_SKIP();
   }
 
   auto subdevices = lzt::get_ze_sub_devices(devices[0]);

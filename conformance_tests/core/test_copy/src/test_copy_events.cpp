@@ -144,9 +144,8 @@ TEST_F(
 
   if (!lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
-                   "device, skipping test";
-    return;
+    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
+                    "device, skipping test";
   }
 
   auto src_buffer = lzt::allocate_shared_memory(size);
@@ -196,9 +195,8 @@ TEST_F(
   // work
   if (!lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
-                   "device, skipping test";
-    return;
+    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
+                    "device, skipping test";
   }
 
   auto src_buffer = lzt::allocate_shared_memory(size);
@@ -238,9 +236,8 @@ TEST_F(
 
   if (!lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
-                   "device, skipping test";
-    return;
+    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
+                    "device, skipping test";
   }
 
   auto ref_buffer = lzt::allocate_shared_memory(size);
@@ -287,9 +284,8 @@ TEST_F(
 
   if (!lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
-                   "device, skipping test";
-    return;
+    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
+                    "device, skipping test";
   }
 
   auto ref_buffer = lzt::allocate_shared_memory(size);
@@ -333,9 +329,8 @@ TEST_F(
 
   if (!lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
-                   "device, skipping test";
-    return;
+    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
+                    "device, skipping test";
   }
 
   auto src_buffer = lzt::allocate_shared_memory(size);
@@ -386,9 +381,8 @@ TEST_F(
 
   if (!lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-    LOG_WARNING << "Concurrent access for shared allocations unsupported by "
-                   "device, skipping test";
-    return;
+    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
+                    "device, skipping test";
   }
 
   uint32_t width = 16;
@@ -454,8 +448,7 @@ TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
   if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP() << "device does not support images, cannot run test";
   }
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
@@ -515,8 +508,7 @@ TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
   if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP() << "device does not support images, cannot run test";
   }
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");

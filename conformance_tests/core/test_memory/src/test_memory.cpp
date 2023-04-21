@@ -512,7 +512,7 @@ class zeMemFreeExtTests : public ::testing::Test {};
 
 TEST_F(zeMemFreeExtTests, GetMemoryFreePolicyFlagsAndVerifySet) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 
   auto drivers = lzt::get_all_driver_handles();
   for (auto driver : drivers) {
@@ -540,7 +540,7 @@ TEST_F(zeMemFreeExtTests, GetMemoryFreePolicyFlagsAndVerifySet) {
 
 TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithBlockingFreePolicy) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 
   const size_t size = 1;
   const size_t alignment = 1;
@@ -558,7 +558,7 @@ TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithBlockingFreePolicy) {
 TEST_F(zeMemFreeExtTests,
        AllocateSharedMemoryAndThenFreeWithBlockingFreePolicy) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 
   const size_t size = 1;
   const size_t alignment = 1;
@@ -576,7 +576,7 @@ TEST_F(zeMemFreeExtTests,
 TEST_F(zeMemFreeExtTests,
        AllocateDeviceMemoryAndThenFreeWithBlockingFreePolicy) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 
   const size_t size = 1;
   const size_t alignment = 1;
@@ -593,7 +593,7 @@ TEST_F(zeMemFreeExtTests,
 
 TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithDeferFreePolicy) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 
   const size_t size = 1;
   const size_t alignment = 1;
@@ -610,7 +610,7 @@ TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithDeferFreePolicy) {
 
 TEST_F(zeMemFreeExtTests, AllocateSharedMemoryAndThenFreeWithDeferFreePolicy) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 
   const size_t size = 1;
   const size_t alignment = 1;
@@ -627,7 +627,7 @@ TEST_F(zeMemFreeExtTests, AllocateSharedMemoryAndThenFreeWithDeferFreePolicy) {
 
 TEST_F(zeMemFreeExtTests, AllocateDeviceMemoryAndThenFreeWithDeferFreePolicy) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 
   const size_t size = 1;
   const size_t alignment = 1;
@@ -651,7 +651,7 @@ TEST_P(
     zeMemFreeExtMultipleTests,
     AllocateMultipleDeviceMemoryAndThenFreeWithDeferFreePolicyWhileBuffersInUse) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 #define NUM_BUFFERS_MAX 100
   const size_t size = std::get<0>(GetParam());
   const size_t alignment = 1;

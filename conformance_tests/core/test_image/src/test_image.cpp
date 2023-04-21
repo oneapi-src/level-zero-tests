@@ -193,8 +193,7 @@ TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = false;
 
@@ -215,8 +214,7 @@ TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = false;
 
@@ -237,8 +235,7 @@ TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = false;
 
@@ -259,8 +256,7 @@ TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = false;
 
@@ -281,8 +277,7 @@ TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = false;
 
@@ -303,8 +298,7 @@ TEST(zeImageCreateTests,
      GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = false;
 
@@ -327,8 +321,7 @@ TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = true;
 
@@ -349,8 +342,7 @@ TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = true;
 
@@ -371,8 +363,7 @@ TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = true;
 
@@ -393,8 +384,7 @@ TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = true;
 
@@ -415,8 +405,7 @@ TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = true;
 
@@ -437,8 +426,7 @@ TEST(zeImageGetPropertiesTests,
      GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   bool properties_only = true;
 

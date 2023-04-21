@@ -68,8 +68,7 @@ TEST_F(ContextExCreateTests,
        GivenContextOnSomeDevicesWhenUsingContextThenSuccess) {
   // This test requires two or more devices
   if (devices.size() < 2) {
-    LOG_WARNING << "Less than two devices, skipping test";
-    return;
+    GTEST_SKIP() << "Less than two devices, skipping test";
   }
 
   // remove an element so test is creating context on only some devices.

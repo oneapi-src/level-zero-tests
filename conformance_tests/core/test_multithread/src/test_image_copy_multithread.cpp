@@ -116,8 +116,7 @@ TEST(
 
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 
@@ -140,8 +139,7 @@ TEST(
     GivenMultipleThreadsUsingSingleCommandQueueWhenCopyingImagesThenCopiedImagesAreCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 

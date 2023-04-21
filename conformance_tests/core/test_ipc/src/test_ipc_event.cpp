@@ -95,7 +95,6 @@ static void run_ipc_event_test(parent_test_t parent_test,
   if (multi_device && lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
-    return;
   }
   bool device_events = false;
   if (parent_test == PARENT_TEST_DEVICE_SIGNALS &&

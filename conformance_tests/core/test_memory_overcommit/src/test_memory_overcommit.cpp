@@ -366,7 +366,7 @@ protected:
       if ((memory_access_cap & ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
         LOG_INFO << "WARNING: Unable to allocate device memory, skipping";
         free_drivers_info();
-        return;
+        GTEST_SKIP();
       }
       gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_device_memory(
           pattern_memory_size, 8, 0, use_this_ordinal_on_device_, device_handle,
@@ -387,7 +387,7 @@ protected:
           LOG_INFO << "WARNING: Unable to allocate shared single device "
                       "memory, skipping";
           free_drivers_info();
-          return;
+          GTEST_SKIP();
         }
         gpu_pattern_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
@@ -405,7 +405,7 @@ protected:
           LOG_INFO
               << "WARNING: Unable to allocate shared system memory, skipping";
           free_drivers_info();
-          return;
+          GTEST_SKIP();
         }
         gpu_pattern_buffer = new uint64_t[output_count_];
         gpu_expected_output_buffer = new uint64_t[output_count_];
@@ -417,7 +417,7 @@ protected:
           LOG_INFO
               << "WARNING: Unable to allocate shared cross memory, skipping";
           free_drivers_info();
-          return;
+          GTEST_SKIP();
         }
         uint32_t next_device_index = device_in_driver_index;
         // find the first available device to use the memory
@@ -433,7 +433,7 @@ protected:
           LOG_INFO << "WARNING: Cannot find another device to launch kernel, "
                       "skipping";
           free_drivers_info();
-          return;
+          GTEST_SKIP();
         }
         gpu_pattern_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
@@ -452,12 +452,12 @@ protected:
           LOG_INFO << "WARNING: Cannot access this memory on the next device, "
                       "skipping";
           free_drivers_info();
-          return;
+          GTEST_SKIP();
         }
       } else {
         LOG_INFO << "WARNING: Unknown memory type, skipping";
         free_drivers_info();
-        return;
+        GTEST_SKIP();
       }
     }
 

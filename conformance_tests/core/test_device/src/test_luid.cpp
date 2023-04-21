@@ -51,7 +51,7 @@ bool luid_equal(
 
 TEST(zeLuidTests, GivenValidDevicesWhenRetrievingLuidThenValidValuesReturned) {
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
 
   auto devices = lzt::get_ze_devices();
   ASSERT_GT(devices.size(), 0);

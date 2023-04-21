@@ -132,9 +132,8 @@ TEST_F(
     GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectFirmwareFlashingSuccess) {
   auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
   if (nullptr == fwDirEnv) {
-    SUCCEED();
     LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY  not set";
-    return;
+    GTEST_SKIP();
   }
   std::vector<char> testFwImage;
   std::string fwDir(fwDirEnv);
@@ -154,9 +153,8 @@ TEST_F(
         std::string fwToLoad = fwDir + "/" + fwName + ".bin";
         std::ifstream inFileStream(fwToLoad, std::ios::binary | std::ios::ate);
         if (!inFileStream.is_open()) {
-          SUCCEED();
           LOG_INFO << "Skipping test as firmware image not found";
-          return;
+          GTEST_SKIP();
         }
         testFwImage.resize(inFileStream.tellg());
         inFileStream.seekg(0, inFileStream.beg);

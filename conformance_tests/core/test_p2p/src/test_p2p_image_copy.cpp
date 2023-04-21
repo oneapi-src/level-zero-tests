@@ -23,16 +23,14 @@ protected:
 
     auto devices = lzt::get_ze_devices(lzt::get_default_driver());
     if (devices.size() < 2) {
-      LOG_INFO << "WARNING:  Less than 2 devices found, cannot run test";
-      SUCCEED();
       skip = true;
+      GTEST_SKIP() << "WARNING:  Less than 2 devices found, cannot run test";
       return;
     }
     if (!lzt::can_access_peer(devices[0], devices[1])) {
-      LOG_INFO
-          << "dev0 and dev1 fail zeDeviceCanAccessPeer check, cannot run test";
-      SUCCEED();
       skip = true;
+      GTEST_SKIP()
+          << "dev0 and dev1 fail zeDeviceCanAccessPeer check, cannot run test";
       return;
     }
 
@@ -40,17 +38,15 @@ protected:
     dev1 = devices[1];
     auto img_prop = lzt::get_image_properties(dev0);
     if (!img_prop.maxReadImageArgs || !img_prop.maxWriteImageArgs) {
-      LOG_INFO << "device does not support images, cannot run test";
-      SUCCEED();
       skip = true;
+      GTEST_SKIP() << "device does not support images, cannot run test";
       return;
     }
 
     img_prop = lzt::get_image_properties(dev1);
     if (!img_prop.maxReadImageArgs || !img_prop.maxWriteImageArgs) {
-      LOG_INFO << "device does not support images, cannot run test";
-      SUCCEED();
       skip = true;
+      GTEST_SKIP() << "device does not support images, cannot run test";
       return;
     }
 

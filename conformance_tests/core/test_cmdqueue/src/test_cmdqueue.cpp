@@ -663,9 +663,7 @@ TEST_P(CommandQueueCopyOnlyTestQueueMode,
   ze_command_queue_handle_t cmdqueue;
   if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue, GetParam()) ==
       false) {
-    LOG_WARNING << "No Copy-Only command queue group found, can't run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP() << "No Copy-Only command queue group found, can't run test";
   }
 
   const size_t size = 1000;
@@ -694,14 +692,10 @@ TEST_P(CommandQueueCopyOnlyTestQueueMode,
   ze_command_queue_handle_t cmdqueue;
   if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue, GetParam()) ==
       false) {
-    LOG_WARNING << "No Copy-Only command queue group found, can't run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP() << "No Copy-Only command queue group found, can't run test";
   }
   if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP() << "device does not support images, cannot run test";
   }
   ze_image_handle_t ze_img_src, ze_img_dest;
   lzt::ImagePNG32Bit png_img_src, png_img_dest;
@@ -761,9 +755,7 @@ TEST_P(
   ze_command_list_handle_t cmdlist;
   ze_command_queue_handle_t cmdqueue;
   if (get_copy_only_cmd_queue_and_list(cmdlist, cmdqueue, true) == false) {
-    LOG_WARNING << "No Copy-Only command queue group found, can't run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP() << "No Copy-Only command queue group found, can't run test";
   }
 
   // Prepare for global time stamp

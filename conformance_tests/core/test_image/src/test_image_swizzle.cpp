@@ -112,7 +112,7 @@ TEST_F(
     GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   ze_image_desc_t image_descriptor_source = {};
   image_descriptor_source.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;

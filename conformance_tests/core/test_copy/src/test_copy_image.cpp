@@ -288,7 +288,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   test_image_copy();
 }
@@ -305,7 +305,7 @@ TEST_F(
     GivenDeviceImageAndHostImageWhenAppendingImageCopyRegionWithVariousRegionsThenImageIsCorrectAndSuccessIsReturned) {
   //  (C 1)
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   LOG_DEBUG << "Starting test of nullptr region." << std::endl;
   test_image_copy_region(nullptr);
@@ -402,7 +402,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingHostMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   void *buff_in_top = lzt::allocate_host_memory(image_size);
   void *buff_out_bot = lzt::allocate_host_memory(image_size);
@@ -420,7 +420,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingHostMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   void *buff_in = lzt::allocate_host_memory(image_size);
   void *buff_out = lzt::allocate_host_memory(image_size);
@@ -433,7 +433,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingDeviceMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   void *buff_in_top = lzt::allocate_device_memory(image_size);
   void *buff_out_bot = lzt::allocate_device_memory(image_size);
@@ -451,7 +451,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingDeviceMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   void *buff_in = lzt::allocate_device_memory(image_size);
   void *buff_out = lzt::allocate_device_memory(image_size);
@@ -464,7 +464,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingSharedMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   void *buff_in_top = lzt::allocate_shared_memory(image_size);
   void *buff_out_bot = lzt::allocate_shared_memory(image_size);
@@ -482,7 +482,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingSharedMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   void *buff_in = lzt::allocate_shared_memory(image_size);
   void *buff_out = lzt::allocate_shared_memory(image_size);
@@ -494,7 +494,7 @@ TEST_F(
 TEST_F(zeCommandListAppendImageCopyTests,
        GivenDeviceImageWhenAppendingImageCopyThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   img_ptr = new zeImageCreateCommon;
   lzt::append_image_copy(cl, img_ptr->dflt_device_image_,
@@ -505,7 +505,7 @@ TEST_F(zeCommandListAppendImageCopyTests,
 TEST_F(zeCommandListAppendImageCopyTests,
        GivenDeviceImageWhenAppendingImageCopyWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
 
   img_ptr = new zeImageCreateCommon;
@@ -527,7 +527,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
 
   img_ptr = new zeImageCreateCommon;
@@ -551,7 +551,7 @@ TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryAndFromMemoryWithOffsetsImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
 
   img_ptr = new zeImageCreateCommon;
@@ -583,7 +583,7 @@ TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
 
   img_ptr = new zeImageCreateCommon;
@@ -597,7 +597,7 @@ TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
 
   img_ptr = new zeImageCreateCommon;
@@ -614,7 +614,7 @@ TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
 
   img_ptr = new zeImageCreateCommon;
@@ -637,7 +637,7 @@ TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
 
   img_ptr = new zeImageCreateCommon;
@@ -667,7 +667,7 @@ TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
 
   img_ptr = new zeImageCreateCommon;
@@ -701,7 +701,7 @@ TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   img_ptr = new zeImageCreateCommon;
   ze_image_region_t source_region = {};
@@ -738,7 +738,7 @@ class zeCommandListAppendImageCopyToMemoryTests
 TEST_F(zeCommandListAppendImageCopyToMemoryTests,
        GivenDeviceImageWhenAppendingImageCopyToMemoryThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   img_ptr = new zeImageCreateCommon;
   void *device_memory =
@@ -754,7 +754,7 @@ TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   img_ptr = new zeImageCreateCommon;
   void *device_memory =
@@ -773,7 +773,7 @@ TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
-    return;
+    GTEST_SKIP();
   }
   img_ptr = new zeImageCreateCommon;
   void *device_memory =

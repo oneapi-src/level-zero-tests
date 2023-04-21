@@ -126,8 +126,7 @@ TEST_P(
 
   if (command_queue_group_properties.size() == 0) {
     LOG_WARNING << "Not enough command queues to run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {

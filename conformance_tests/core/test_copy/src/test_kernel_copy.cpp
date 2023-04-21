@@ -381,7 +381,7 @@ protected:
          dst_shr_type == SHARED_CROSS || dst_ptr_shr_type == SHARED_CROSS)) {
       LOG_INFO << "WARNING: cannot find alternative device to setup shared"
                   " cross devices, skipping...";
-      return;
+      GTEST_SKIP();
     }
     // set up
     auto command_queue = lzt::create_command_queue(context, device);

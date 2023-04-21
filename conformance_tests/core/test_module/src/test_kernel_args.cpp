@@ -129,7 +129,7 @@ TEST_F(KernelArgumentTests,
        GivenSeveral2DImagesWhenPassingToKernelThenCorrectResultIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   std::string kernel_name = "many_2d_images";
   lzt::FunctionArg arg;
@@ -176,7 +176,7 @@ TEST_F(KernelArgumentTests,
        GivenSeveralSamplersWhenPassingToKernelThenSuccessIsReturned) {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   std::string kernel_name = "many_samplers";
   lzt::FunctionArg arg;
@@ -210,11 +210,11 @@ TEST_F(KernelArgumentTests,
   */
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   std::string kernel_name = "many_args_all_types";
   lzt::FunctionArg arg;

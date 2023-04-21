@@ -324,8 +324,7 @@ TEST_F(
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
   lzt::zeImageCreateCommon img;
   std::vector<std::unique_ptr<std::thread>> threads;

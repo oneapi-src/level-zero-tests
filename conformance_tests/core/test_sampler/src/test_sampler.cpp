@@ -49,7 +49,7 @@ TEST_P(zeDeviceCreateSamplerTests,
        GivenSamplerDescriptorWhenCreatingSamplerThenNotNullSamplerIsReturned) {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   ze_sampler_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_SAMPLER_DESC;
@@ -79,7 +79,7 @@ TEST(zeSamplerTests,
      GivenSamplerWhenPassingAsFunctionArgumentThenSuccessIsReturned) {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   ze_sampler_handle_t sampler = lzt::create_sampler();
 
@@ -133,7 +133,7 @@ TEST_P(
     GivenSamplerWhenPassingAsFunctionArgumentThenOutputMatchesInKernelSampler) {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
-    return;
+    GTEST_SKIP();
   }
   lzt::ImagePNG32Bit input("test_input.png");
   int output_width = input.width() / 2;

@@ -207,7 +207,7 @@ TEST(zeDeviceGetP2PPropertiesTests,
   if (lzt::get_ze_device_count() < 2) {
     SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
 
   lzt::get_p2p_properties(devices[0], devices[1]);
@@ -230,7 +230,7 @@ TEST(zeDeviceCanAccessPeerTests,
   if (lzt::get_ze_device_count() < 2) {
     SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
 
   ze_bool_t a2b, b2a;
@@ -277,7 +277,7 @@ TEST(
 
   if (!supports_kernel_hints_ext) {
     LOG_WARNING << "Kernel Hints Ext not supported";
-    return;
+    GTEST_SKIP();
   }
 
   for (auto device : devices) {
@@ -367,9 +367,8 @@ void DevicePropertiesTest::freeDevicesBySku() {
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatcheThenDevicePropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
@@ -423,9 +422,8 @@ TEST_F(DevicePropertiesTest,
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenComputePropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
@@ -483,9 +481,8 @@ TEST_F(DevicePropertiesTest,
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenMemoryPropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
@@ -529,9 +526,8 @@ TEST_F(DevicePropertiesTest,
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenMemoryAccessPropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
@@ -563,9 +559,8 @@ TEST_F(DevicePropertiesTest,
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenCachePropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
@@ -591,9 +586,8 @@ TEST_F(DevicePropertiesTest,
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenPeerAccessPropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
@@ -618,9 +612,8 @@ TEST_F(DevicePropertiesTest,
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenSubDeviceCountsMatch) {
   if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {
@@ -651,9 +644,8 @@ bool areNativeKernelUuidsEqual(ze_native_kernel_uuid_t *uuid1,
 TEST_F(DevicePropertiesTest,
        GivenMultipleRootDevicesWhenSKUsMatchThenKernelPropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
-    SUCCEED();
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
-    return;
+    GTEST_SKIP();
   }
   for (DeviceHandlesBySku_t *iterSkuHandles :
        DevicePropertiesTest::deviceHandlesAllSkus) {

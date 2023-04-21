@@ -122,7 +122,7 @@ void zetMetricGroupTest::run_activate_deactivate_test(bool reactivate) {
   EXPECT_NE(0, groupHandleList.size());
   if (groupHandleList.size() < 2) {
     LOG_INFO << "Not enough metric groups to test multiple groups activation";
-    return;
+    GTEST_SKIP();
   }
   zet_metric_group_properties_t metric_group_properties = {};
   metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
@@ -1541,7 +1541,7 @@ TEST(
 
   if (metricGroupInfo.empty()) {
     LOG_INFO << "No metric groups found";
-    return;
+    GTEST_SKIP();
   }
   // pick a metric group
   auto groupInfo = metricGroupInfo[0];
@@ -1623,7 +1623,7 @@ TEST(
 
   if (metricGroupInfo.empty()) {
     LOG_INFO << "No metric groups found";
-    return;
+    GTEST_SKIP();
   }
   // pick a metric group
   auto groupInfo = metricGroupInfo[0];

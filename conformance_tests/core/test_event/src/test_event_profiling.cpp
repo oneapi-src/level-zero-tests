@@ -494,14 +494,14 @@ TEST_F(
   if (!supports_extended_timestamps) {
     LOG_WARNING << "driver does not support experimental timestamps query, "
                    "skipping test";
-    return;
+    GTEST_SKIP();
   }
 
   auto sub_device_count = lzt::get_ze_sub_device_count(device);
 
   if (!sub_device_count) {
     LOG_WARNING << "Device does not have any sub-devices";
-    return;
+    GTEST_SKIP();
   }
 
   auto context = lzt::create_context(driver);

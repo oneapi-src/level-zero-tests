@@ -60,10 +60,8 @@ protected:
     }
 
     if (devices.size() < 2) {
-      LOG_INFO << "WARNING:  Exiting test due to lack of multiple devices";
-      SUCCEED();
       skip = true;
-      return;
+      GTEST_SKIP() << "WARNING:  Exiting test due to lack of multiple devices";
     }
     get_devices_ = devices.size();
     LOG_INFO << "Detected " << get_devices_ << " devices";
@@ -431,8 +429,7 @@ TEST_P(zeP2PMemAccessTestsAtomicAccess,
   if (dev_access_.size() < 2) {
     LOG_INFO << "WARNING:  Exiting as no peer-to-peer atomic access capability";
     dev_access_.clear();
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
 
   kernel_name_ = std::get<0>(GetParam());
@@ -498,10 +495,8 @@ TEST_P(zeP2PMemAccessTestsConcurrentAccess,
     }
   }
   if (dev_access_.size() < 2) {
-    LOG_INFO
+    GTEST_SKIP()
         << "WARNING:  Exiting as no peer-to-peer concurrent access capability";
-    SUCCEED();
-    return;
   }
 
   // Find additional devices, if available
@@ -516,10 +511,8 @@ TEST_P(zeP2PMemAccessTestsConcurrentAccess,
   }
 
   if (dev_access_.size() < num_concurrent_devices) {
-    LOG_INFO << "WARNING:  Exiting as requested " << num_concurrent_devices
-             << "number of concurrent devices/subdevices not available";
-    SUCCEED();
-    return;
+    GTEST_SKIP() << "WARNING:  Exiting as requested " << num_concurrent_devices
+                 << "number of concurrent devices/subdevices not available";
   }
 
   LOG_INFO << "Testing " << num_concurrent_devices
@@ -589,10 +582,9 @@ TEST_P(
     }
   }
   if (dev_access_.size() < 2) {
-    LOG_INFO << "WARNING:  Exiting as no peer-to-peer concurrent-atomic access "
-                "capability";
-    SUCCEED();
-    return;
+    GTEST_SKIP()
+        << "WARNING:  Exiting as no peer-to-peer concurrent-atomic access "
+           "capability";
   }
 
   // Find additional devices, if available
@@ -612,8 +604,7 @@ TEST_P(
   if (dev_access_.size() < num_concurrent_devices) {
     LOG_INFO << "WARNING:  Exiting as requested " << num_concurrent_devices
              << "number of concurrent-atomic devices/subdevices not available";
-    SUCCEED();
-    return;
+    GTEST_SKIP();
   }
 
   LOG_INFO << "Testing " << num_concurrent_devices

@@ -42,7 +42,7 @@ TEST(zeKernelScheduleHintsTests,
      GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect) {
 
   if (!check_ext_version())
-    return;
+    GTEST_SKIP();
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
