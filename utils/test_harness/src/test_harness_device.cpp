@@ -374,4 +374,10 @@ void evict_memory(ze_device_handle_t device, void *memory, const size_t size) {
   EXPECT_EQ(device, device_initial);
 }
 
+ze_result_t get_device_status(ze_device_handle_t device) {
+  ze_result_t status;
+  status = zeDeviceGetStatus(device);
+  return status;
+}
+
 }; // namespace level_zero_tests

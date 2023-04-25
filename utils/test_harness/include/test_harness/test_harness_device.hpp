@@ -80,6 +80,7 @@ void set_kernel_cache_config(ze_kernel_handle_t kernel,
 
 void make_memory_resident(ze_device_handle_t device, void *memory,
                           const size_t size);
+ze_result_t get_device_status(ze_device_handle_t device);
 void evict_memory(ze_device_handle_t device, void *memory, const size_t size);
 #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
 ze_scheduling_hint_exp_properties_t

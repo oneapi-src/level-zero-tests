@@ -806,4 +806,33 @@ TEST(
   lzt::destroy_context(context);
 }
 
+TEST(DeviceStatusTest,
+     GivenValidDeviceHandlesWhenRequestingStatusThenSuccessReturned) {
+
+  for (auto device : lzt::get_ze_devices()) {
+    ze_result_t ret = lzt::get_device_status(device);
+    if (lzt::check_unsupported(ret)) {
+      return;
+    }
+    EXPECT_EQ(ZE_RESULT_SUCCESS, ret);
+  }
+}
+
+TEST(DeviceStatusTest,
+     GivenValidSubDeviceHandlesWhenRequestingStatusThenSuccessReturned) {
+
+  for (auto device : lzt::get_ze_devices()) {
+    std::vector<ze_device_handle_t> sub_devices =
+        lzt::get_ze_sub_devices(device);
+
+    for (auto sub_device : sub_devices) {
+      ze_result_t ret = lzt::get_device_status(sub_device);
+      if (lzt::check_unsupported(ret)) {
+        return;
+      }
+      EXPECT_EQ(ZE_RESULT_SUCCESS, ret);
+    }
+  }
+}
+
 } // namespace
