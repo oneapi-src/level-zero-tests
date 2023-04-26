@@ -12,6 +12,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -1047,10 +1048,9 @@ TEST_F(
   }
 
   if (!supports_relaxed_allocations) {
-    LOG_WARNING
+    GTEST_SKIP()
         << "size exceeds device max allocation size and driver does not "
            "support relaxed allocations, skipping test";
-    GTEST_SKIP();
   }
 
   ze_relaxed_allocation_limits_exp_desc_t relaxed_allocation_limits_desc = {};
@@ -1063,17 +1063,28 @@ TEST_F(
   auto mem_properties = lzt::get_memory_properties(device);
   auto total_mem = mem_properties[0].totalSize;
 
-  const auto head = 4096;
-  auto validation_buffer_size = head;
-  auto size = device_properties.maxMemAllocSize + head;
+  size_t head = 4096;
   const auto scale = 1000; // copying bigger chunks will reduce test time
-
+  LOG_DEBUG << "Memory Properties: " << mem_properties.size();
   LOG_DEBUG << "Total available memory: " << total_mem;
-  if (total_mem <= (device_properties.maxMemAllocSize +
-                    validation_buffer_size * scale * 2 + head)) {
-    LOG_WARNING << "Insufficient memory resources for test, skipping";
-    GTEST_SKIP();
+  LOG_DEBUG << "Max Mem alloc size: " << device_properties.maxMemAllocSize;
+
+  if (device_properties.maxMemAllocSize >= mem_properties[0].totalSize) {
+    GTEST_SKIP()
+        << "Device max memory allocation size is equal to or greater than "
+           "total memory, "
+           "skipping test";
   }
+  size_t difference =
+      mem_properties[0].totalSize - device_properties.maxMemAllocSize;
+  LOG_DEBUG << "Difference between total memory and max mem alloc size: "
+            << difference;
+  head = std::min(difference, head);
+  auto validation_buffer_size = head;
+  auto size = std::max(4000000000UL /*4 gigabytes*/,
+                       (unsigned long)device_properties.maxMemAllocSize) +
+              head;
+
   LOG_DEBUG << "Request device memory allocation size: " << size;
 
   uint8_t *validation_buffer, *reference_buffer, *head_buffer;
@@ -1135,6 +1146,7 @@ TEST_F(
 
   // validate
   size_t offset;
+  auto break_error = false;
   for (offset = 0; offset <= size - validation_buffer_size;
        offset += validation_buffer_size) {
     lzt::reset_command_list(command_list);
@@ -1147,8 +1159,28 @@ TEST_F(
     lzt::synchronize(command_queue, UINT64_MAX);
 
     if (offset) {
-      ASSERT_EQ(0, memcmp(validation_buffer, reference_buffer,
-                          validation_buffer_size));
+      auto comparison =
+          memcmp(validation_buffer, reference_buffer, validation_buffer_size);
+      EXPECT_EQ(0, comparison);
+
+      if (comparison) {
+        LOG_DEBUG << "Failed at offset: " << offset << std::endl;
+        LOG_DEBUG << "Finding Incorrect Value";
+        for (int j = 0; j < validation_buffer_size; j++) {
+          if (validation_buffer[j] != reference_buffer[j]) {
+            LOG_DEBUG << "index: " << std::dec << j << " val: " << std::hex
+                      << (int)validation_buffer[j] << "\tref: " << std::hex
+                      << (int)reference_buffer[j] << "\n";
+
+            break_error = true;
+            break;
+          }
+        }
+      }
+
+      if (break_error) {
+        FAIL() << "Done";
+      }
     } else {
       ASSERT_EQ(0, memcmp(validation_buffer, head_buffer, head));
       validation_buffer_size *= scale;
