@@ -75,3 +75,13 @@ add_lzt_test_executable(
     ${ipc_event_libraries}
     level_zero_tests::net
 )
+
+add_lzt_test(
+  NAME test_ipc_put_handle
+  GROUP "/conformance_tests/core"
+  SOURCES
+    src/test_ipc_put_handle.cpp
+  LINK_LIBRARIES
+    level_zero_tests::net
+    ${ipc_libraries}
+)

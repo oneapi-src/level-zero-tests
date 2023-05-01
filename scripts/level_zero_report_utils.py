@@ -94,6 +94,9 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_name.find("Cooperative")!= -1) or \
                     (test_name.find("zeMemFreeExtTests")!= -1) or \
                     (test_name.find("zeMemFreeExtMultipleTests")!= -1) or \
+                    (test_name.find("PutIpcMemoryAccessTest")!= -1) or \
+                    (test_name.find("zePutIpcMemHandleTests")!= -1) or \
+                    (test_name.find("PutIpcMemoryAccessSubDeviceTest")!= -1) or \
                     (re.search('L0_CTS_IpcMemoryAccessTest_GivenL0Physical', test_name, re.IGNORECASE)) or \
                     re.search('fabric', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
@@ -234,7 +237,7 @@ def assign_test_feature(test_binary: str, test_name: str):
             test_feature = "Sub-Devices"
         if test_binary == "test_residency":
             test_feature = "Allocation Residency"
-        if test_binary == "test_ipc" or test_binary == "test_ipc_memory":
+        if test_binary == "test_ipc" or test_binary == "test_ipc_memory" or test_binary == "test_ipc_put_handle":
             test_feature = "Inter-Process Communication"
         if test_binary == "test_event" and test_name.find("IpcEventHandle")!= -1:
             test_feature = "Inter-Process Communication"
