@@ -28,8 +28,8 @@
 #define INEQUALITY(IX) (RHS(IX) > LHS(IX))
 #define NITERS 500
 
-kernel void add_one(global int *vec) {
-  int v = vec[get_global_id(0)];
+kernel void add_one(global uchar *vec) {
+  int v = convert_int(vec[get_global_id(0)]);
 
   for (int i = 0; i < NITERS; i++) {
     if (INEQUALITY(v)) {
@@ -50,5 +50,5 @@ kernel void add_one(global int *vec) {
     }
   }
 
-  vec[get_global_id(0)] = v;
+  vec[get_global_id(0)] = convert_uchar(v % 256);
 }
