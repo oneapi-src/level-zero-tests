@@ -369,6 +369,7 @@ std::vector<zet_metric_group_properties_t> get_metric_group_properties(
   for (auto mGroup : metricGroup) {
     zet_metric_group_properties_t GroupProp = {};
     GroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    GroupProp.pNext = nullptr;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zetMetricGroupGetProperties(mGroup, &GroupProp));
     metricGroupProp.push_back(GroupProp);
