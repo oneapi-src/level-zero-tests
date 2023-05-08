@@ -60,6 +60,10 @@ get_register_set_properties(const ze_device_handle_t &device);
 void debug_clean_assert_true(bool condition,
                              boost::process::child &debug_helper);
 
+std::vector<zet_debug_regset_properties_t> get_thread_register_set_properties(
+    const zet_debug_session_handle_t &debug_session,
+    const ze_device_handle_t &device, const ze_device_thread_t &thread);
+
 void debug_read_registers(const zet_debug_session_handle_t &debug_session,
                           const ze_device_thread_t &device_thread,
                           const uint32_t type, const uint32_t start,
