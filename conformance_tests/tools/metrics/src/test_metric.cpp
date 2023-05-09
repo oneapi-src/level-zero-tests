@@ -1745,8 +1745,15 @@ TEST_F(
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
+      auto device_properties = lzt::get_device_properties(device);
+      const auto max_threads = device_properties.numSlices *
+                               device_properties.numSubslicesPerSlice *
+                               device_properties.numEUsPerSubslice *
+                               device_properties.numThreadsPerEU;
+      LOG_INFO << "Available threads: " << max_threads;
+      const auto dimensions = (max_threads > 4096 ? 1024 : 256);
       ze_kernel_handle_t function = get_matrix_multiplication_kernel(
-          device, &tg, &a_buffer, &b_buffer, &c_buffer);
+          device, &tg, &a_buffer, &b_buffer, &c_buffer, dimensions);
 
       // Since immediate command list is used, using repeated command list
       // updates to capture metric data
