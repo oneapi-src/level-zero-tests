@@ -15,6 +15,9 @@ int main(int argc, char **argv) {
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
 
+  static char enable_metrics[] = "ZET_ENABLE_METRICS=1";
+  putenv(enable_metrics);
+
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
