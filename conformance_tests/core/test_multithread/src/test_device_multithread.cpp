@@ -56,6 +56,7 @@ void device_thread_test(ze_driver_handle_t driver) {
   auto device_mem_access_props = lzt::get_memory_access_properties(device);
   auto device_cache_props = lzt::get_cache_properties(device);
   auto device_image_props = lzt::get_image_properties(device);
+  auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
 
   for (int i = 0; i < thread_iters; i++) {
     ASSERT_EQ(device, lzt::get_default_device(driver));
@@ -83,6 +84,14 @@ void device_thread_test(ze_driver_handle_t driver) {
     auto new_image_props = lzt::get_image_properties(device);
     ASSERT_EQ(0, memcmp(&device_image_props, &new_image_props,
                         sizeof(device_image_props)));
+    auto new_cmd_q_group_properties =
+        lzt::get_command_queue_group_properties(device);
+    ASSERT_EQ(cmd_q_group_properties.size(), new_cmd_q_group_properties.size());
+    for (int i = 0; i < cmd_q_group_properties.size(); i++) {
+      ASSERT_EQ(0, memcmp(&cmd_q_group_properties[i],
+                          &new_cmd_q_group_properties[i],
+                          sizeof(cmd_q_group_properties[i])));
+    }
   }
 }
 

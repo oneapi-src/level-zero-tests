@@ -56,6 +56,8 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListCopyEventTest_GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenImportingMemoryThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_DeviceCommandQueueGroupsTest_GivenValidDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_DeviceCommandQueueGroupsTest_GivenValidSubDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceStatusTest_GivenValidDeviceHandlesWhenRequestingStatusThenSuccessReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceStatusTest_GivenValidSubDeviceHandlesWhenRequestingStatusThenSuccessReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryPropertiesTests_GivenValidDeviceWhenRetrievingExternalMemoryPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \

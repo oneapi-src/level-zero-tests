@@ -835,4 +835,56 @@ TEST(DeviceStatusTest,
   }
 }
 
+TEST(
+    DeviceCommandQueueGroupsTest,
+    GivenValidDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder) {
+
+  for (auto device : lzt::get_ze_devices()) {
+    ze_result_t ret = lzt::get_device_status(device);
+    auto cmd_q_group_properties_0 =
+        lzt::get_command_queue_group_properties(device);
+    auto cmd_q_group_properties_1 =
+        lzt::get_command_queue_group_properties(device);
+    EXPECT_EQ(cmd_q_group_properties_0.size(), cmd_q_group_properties_1.size());
+
+    for (int i = 0; i < cmd_q_group_properties_0.size(); i++) {
+      EXPECT_EQ(cmd_q_group_properties_0[i].flags,
+                cmd_q_group_properties_1[i].flags);
+      EXPECT_EQ(cmd_q_group_properties_0[i].maxMemoryFillPatternSize,
+                cmd_q_group_properties_1[i].maxMemoryFillPatternSize);
+      EXPECT_EQ(cmd_q_group_properties_0[i].numQueues,
+                cmd_q_group_properties_1[i].numQueues);
+    }
+  }
+}
+
+TEST(
+    DeviceCommandQueueGroupsTest,
+    GivenValidSubDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder) {
+
+  for (auto device : lzt::get_ze_devices()) {
+    std::vector<ze_device_handle_t> sub_devices =
+        lzt::get_ze_sub_devices(device);
+
+    for (auto sub_device : sub_devices) {
+      ze_result_t ret = lzt::get_device_status(sub_device);
+      auto cmd_q_group_properties_0 =
+          lzt::get_command_queue_group_properties(sub_device);
+      auto cmd_q_group_properties_1 =
+          lzt::get_command_queue_group_properties(sub_device);
+      EXPECT_EQ(cmd_q_group_properties_0.size(),
+                cmd_q_group_properties_1.size());
+
+      for (int i = 0; i < cmd_q_group_properties_0.size(); i++) {
+        EXPECT_EQ(cmd_q_group_properties_0[i].flags,
+                  cmd_q_group_properties_1[i].flags);
+        EXPECT_EQ(cmd_q_group_properties_0[i].maxMemoryFillPatternSize,
+                  cmd_q_group_properties_1[i].maxMemoryFillPatternSize);
+        EXPECT_EQ(cmd_q_group_properties_0[i].numQueues,
+                  cmd_q_group_properties_1[i].numQueues);
+      }
+    }
+  }
+}
+
 } // namespace
