@@ -30,7 +30,31 @@ In addition, use the following naming conventions:
 * Namespace - snake_case - `namespace my_namespace`
 * Macro - CAPITALIZED_WITH_UNDERSCORES - `#define MY_MACRO`
 * Module - snake_case - `my_module`
-* GTEST Test cases will follow the [Given/When/Then naming convention][given_when_then]
+* GTEST Test cases:
+  * Test names SHALL follow the
+    [Given/When/Then naming convention][given_when_then].
+  * A test requiring **exactly one sub-device** SHALL include one of
+    `SingleSubDevice` or `OneSubDevice` in its name.
+  * A test requiring **at least one sub-device** SHALL include `SubDevice` in
+    its name.
+  * A test requiring **more than one sub-device** SHALL include one of
+    `MultipleSubDevice`, `DifferentSubDevice` or `TwoSubDevice` in its name.
+  * A test requiring **exactly zero sub-devices** SHALL include `NoSubDevice` in
+    its name.
+  * A test requiring **exactly one root device** SHALL include one of
+    `SingleRootDevice`, `SingleDevice`, `OneRootDevice` or `OneDevice` in its
+    name.
+  * A test requiring **at least one root device** MAY include one of
+    `RootDevice` or `Device` in its name.
+  * A test requiring **more than one root device** SHALL include one of
+    `MultipleRootDevice`, `MultipleDevice`, `DifferentRootDevice`,
+    `DifferentDevice`, `TwoRootDevice` or `TwoDevice` in its name.
+  * A test requiring **exactly zero root devices** SHALL include one of
+    `NoRootDevice` or `NoDevice` in its name.
+  * A test referring to both a sub-device and a root device SHALL refer to the
+    root device as a `RootDevice` instead of just a `Device`.
+  * A test requiring **image support** SHALL include one of `Image` or `Sampler`
+    in its name.
 
 [given_when_then]: https://martinfowler.com/bliki/GivenWhenThen.html
 

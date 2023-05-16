@@ -7,12 +7,19 @@ import re
 def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str,):
         test_feature_tag = ""
         if test_section == "Core":
+            # Include rules for "more than one" for devices from CONTRIBUTING.md
             if (test_name.find("MemAdvise")!= -1) or \
-                    (test_name.find("MultiDevice")!= -1) or \
+                    (test_name.find("MultipleRootDevice") != -1) or \
+                    (test_name.find("MultipleDevice") != -1) or \
+                    (test_name.find("DifferentRootDevice") != -1) or \
+                    (test_name.find("DifferentDevice") != -1) or \
+                    (test_name.find("TwoRootDevice") != -1) or \
+                    (test_name.find("TwoDevice") != -1) or \
+                    (test_name.find("MultipleSubDevice") != -1) or \
+                    (test_name.find("DifferentSubDevice") != -1) or \
+                    (test_name.find("TwoSubDevice") != -1) or \
                     (test_name.find("MemoryPrefetch")!= -1) or \
                     (test_name.find("MemAdvice")!= -1) or \
-                    (test_name.find("MultipleRootDevices") != -1) or \
-                    (test_name.find("MultipleSubDevices") != -1) or \
                     test_feature == "Peer-To-Peer" or \
                     test_feature == "Sub-Devices" or \
                     (test_feature == "Unified Shared Memory" and (test_name.find("SystemMemory") == -1)):
