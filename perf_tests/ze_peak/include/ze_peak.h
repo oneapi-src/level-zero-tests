@@ -117,8 +117,8 @@ public:
   uint32_t specified_device = 0;
   uint32_t global_bw_max_size = 1 << 29;
   uint32_t transfer_bw_max_size = 1 << 29;
-  uint32_t iters = 50;
-  uint32_t warmup_iterations = 10;
+  uint32_t iters = 20;
+  uint32_t warmup_iterations = 5;
   uint32_t current_sub_device_id = 0;
   uint32_t command_queue_group_ordinal = 0;
   uint32_t command_queue_index = 0;

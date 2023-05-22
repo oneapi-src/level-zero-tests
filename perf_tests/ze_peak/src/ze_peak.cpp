@@ -889,25 +889,35 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
     for (uint32_t i = 0; i < warmup_iterations; i++) {
       run_command_queue(context);
-    }
 
-    synchronize_command_queue(context);
+      if (context.sub_device_count) {
+        if (context.sub_device_count == current_sub_device_id + 1) {
+          current_sub_device_id = 0;
+          while (current_sub_device_id < context.sub_device_count) {
+            synchronize_command_queue(context);
+            current_sub_device_id++;
+          }
+        }
+      } else {
+        synchronize_command_queue(context);
+      }
+    }
 
     timer.start();
     for (uint32_t i = 0; i < iters; i++) {
       run_command_queue(context);
-    }
 
-    if (context.sub_device_count) {
-      if (context.sub_device_count == current_sub_device_id + 1) {
-        current_sub_device_id = 0;
-        while (current_sub_device_id < context.sub_device_count) {
-          synchronize_command_queue(context);
-          current_sub_device_id++;
+      if (context.sub_device_count) {
+        if (context.sub_device_count == current_sub_device_id + 1) {
+          current_sub_device_id = 0;
+          while (current_sub_device_id < context.sub_device_count) {
+            synchronize_command_queue(context);
+            current_sub_device_id++;
+          }
         }
+      } else {
+        synchronize_command_queue(context);
       }
-    } else {
-      synchronize_command_queue(context);
     }
     timed = timer.stopAndTime();
   } else if (type == TimingMeasurement::BANDWIDTH_EVENT_TIMING) {
