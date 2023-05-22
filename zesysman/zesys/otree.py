@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2020 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 import time
@@ -434,7 +434,6 @@ class TableNode(Node):
         pr("+-" + "-+-".join(["-" * len(h) for h in headers]) + "-+")
     def setText(self, text):
         super().setText(text)
-        self.text = text
         self.width = max(len(self.nodeOutput()), self.width)
 
 class IterationTableNode(TableNode, IterationNode):
