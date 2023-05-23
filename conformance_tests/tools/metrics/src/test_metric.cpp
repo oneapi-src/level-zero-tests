@@ -1422,7 +1422,7 @@ protected:
 
 TEST_F(
     zetMetricStreamerStdTest,
-    GivenValidMetricGroupWhenTimerBasedStreamerWithNoSubdevicesListIsCreatedWithAppendStreamerMarkerThenExpectStreamerAndSpecValidateToSucceed) {
+    GivenValidMetricGroupWhenTimerBasedStreamerWithNoSubDevicesListIsCreatedWithAppendStreamerMarkerThenExpectStreamerAndSpecValidateToSucceed) {
 
   for (auto device : devices) {
 
