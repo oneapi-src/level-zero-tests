@@ -387,8 +387,9 @@ protected:
 
 class zeP2PMemAccessTestsAtomicAccess : public zeP2PMemAccessTests {};
 
-TEST_P(zeP2PMemAccessTestsAtomicAccess,
-       GivenP2PDevicesWhenAtomicAccessOfPeerMemoryThenSuccessIsReturned) {
+TEST_P(
+    zeP2PMemAccessTestsAtomicAccess,
+    GivenMultipleDevicesWithP2PWhenAtomicAccessOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {
     return;
   }
