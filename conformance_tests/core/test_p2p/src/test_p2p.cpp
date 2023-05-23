@@ -1126,8 +1126,9 @@ TEST_P(
   }
 }
 
-TEST_P(zeP2PTests,
-       GivenMultipleDevicesWithP2PWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead) {
+TEST_P(
+    zeP2PTests,
+    GivenMultipleDevicesWithP2PWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead) {
 
   std::string module_name = "p2p_test.spv";
   std::string func_name = "multi_device_function";

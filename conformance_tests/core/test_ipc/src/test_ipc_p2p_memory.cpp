@@ -403,7 +403,7 @@ TEST_P(
 
 TEST_P(
     P2PIpcMemoryAccessTest,
-    GivenL0MemoryAllocatedInDeviceXAndDeviceYExportedToEachOtherSequentiallyWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceXAndDeviceYSequentially) {
+    GivenTwoDevicesAndL0MemoryAllocatedInDeviceXAndDeviceYExportedToEachOtherSequentiallyWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceXAndDeviceYSequentially) {
   size_t size = pow(2, std::get<0>(GetParam()));
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
