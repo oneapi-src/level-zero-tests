@@ -545,7 +545,7 @@ class zeP2PMemAccessTestsAtomicAndConcurrentAccess
 
 TEST_P(
     zeP2PMemAccessTestsAtomicAndConcurrentAccess,
-    GivenP2PDevicesWhenAtomicAndConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
+    GivenMultipleDevicesWithP2PWhenAtomicAndConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {
     return;
   }
