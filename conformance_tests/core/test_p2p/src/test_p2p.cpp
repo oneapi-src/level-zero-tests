@@ -204,7 +204,7 @@ protected:
 
 TEST_P(
     zeP2PTests,
-    GivenP2PDevicesWhenCopyingDeviceMemoryToAndFromRemoteDeviceThenSuccessIsReturned) {
+    GivenMultipleDevicesWithP2PWhenCopyingDeviceMemoryToAndFromRemoteDeviceThenSuccessIsReturned) {
 
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
   void *verification_memory1 = lzt::allocate_host_memory(mem_size_ + offset_);
@@ -440,7 +440,7 @@ TEST_P(
 
 TEST_P(
     zeP2PTests,
-    GivenP2PDevicesWhenSettingAndCopyingMemoryToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
+    GivenMultipleDevicesWithP2PWhenSettingAndCopyingMemoryToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 devices";
@@ -572,7 +572,7 @@ TEST_P(
 
 TEST_P(
     zeP2PTests,
-    GivenP2PDevicesWhenCopyingMemoryRegionToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
+    GivenMultipleDevicesWithP2PWhenCopyingMemoryRegionToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
 
   int test_count = 0;
   const size_t num_regions = 3;
@@ -977,7 +977,7 @@ TEST_P(
 
 TEST_P(
     zeP2PTests,
-    GivenP2PDevicesWhenKernelReadsRemoteDeviceMemoryWithDevicePointerOffsetThenCorrectDataIsRead) {
+    GivenMultipleDevicesWithP2PWhenKernelReadsRemoteDeviceMemoryWithDevicePointerOffsetThenCorrectDataIsRead) {
 
   std::string module_name = "p2p_test_offset_pointer.spv";
   std::string func_name = "multi_device_function";
@@ -1127,7 +1127,7 @@ TEST_P(
 }
 
 TEST_P(zeP2PTests,
-       GivenP2PDevicesWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead) {
+       GivenMultipleDevicesWithP2PWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead) {
 
   std::string module_name = "p2p_test.spv";
   std::string func_name = "multi_device_function";
@@ -1294,7 +1294,7 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_CASE_P(
-    GivenP2PDevicesWhenCopyingDeviceMemoryFromRemoteDeviceThenSuccessIsReturned_IP,
+    GivenMultipleDevicesWithP2PWhenCopyingDeviceMemoryFromRemoteDeviceThenSuccessIsReturned_IP,
     zeP2PTests,
     testing::Combine(::testing::Values(LZT_P2P_MEMORY_TYPE_DEVICE,
                                        LZT_P2P_MEMORY_TYPE_SHARED,
