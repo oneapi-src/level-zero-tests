@@ -367,7 +367,7 @@ void zetDebugAttachDetachTest::
 
 TEST_F(
     zetDebugAttachDetachTest,
-    GivenDeviceSupportsDebugAttachWhenAttachingToMultipleApplicationsThenAttachAndDetachIsSuccessful) {
+    GivenMultipleDevicesSupportDebugAttachWhenAttachingToMultipleApplicationsThenAttachAndDetachIsSuccessful) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
