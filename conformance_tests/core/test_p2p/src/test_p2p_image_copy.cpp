@@ -373,7 +373,7 @@ TEST_P(
 
 TEST_P(
     P2PImageCopyMemory,
-    GivenImageOnRemoteDeviceWhenCopiedFromMemoryOnLocalDeviceThenResultIsCorrect) {
+    GivenTwoDevicesAndImageOnRemoteDeviceWhenCopiedFromMemoryOnLocalDeviceThenResultIsCorrect) {
   if (skip)
     return;
 
