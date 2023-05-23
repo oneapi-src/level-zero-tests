@@ -202,7 +202,7 @@ TEST(
 
 TEST(
     IpcMemoryAccessTest,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCMultiDeviceThenChildProcessReadsMemoryCorrectly) {
+    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingMultipleDevicesWithIPCThenChildProcessReadsMemoryCorrectly) {
   size_t size = 4096;
 
   pid_t pid = fork();
