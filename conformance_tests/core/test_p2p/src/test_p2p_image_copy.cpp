@@ -154,8 +154,9 @@ TEST_F(
   lzt::destroy_event(event2);
 }
 
-TEST_F(P2PImageCopy,
-       GivenImageOnDeviceWhenRegionCopiedToOtherDeviceThenResultIsCorrect) {
+TEST_F(
+    P2PImageCopy,
+    GivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceThenResultIsCorrect) {
   if (skip)
     return;
 
