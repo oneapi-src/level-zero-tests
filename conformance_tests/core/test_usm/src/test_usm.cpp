@@ -572,7 +572,7 @@ TEST_P(
 
 TEST_P(
     zeDriverMemoryMigrationPageFaultTestsMultiDevice,
-    GivenMultiDeviceWhenMemoryAccessedFromHostAndDeviceAndPeerToPeerDataIsValidAndSuccessful) {
+    GivenMultipleDevicesWhenMemoryAccessedFromHostAndDeviceAndPeerToPeerDataIsValidAndSuccessful) {
 
   MemoryTestArguments_t test_arguments = {
       std::get<0>(GetParam()), // driver index
