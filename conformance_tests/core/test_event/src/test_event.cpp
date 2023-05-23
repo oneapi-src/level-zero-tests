@@ -561,7 +561,7 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices) {
 }
 
 TEST(MultiDeviceEventTests,
-     GivenMultipleDeviceEventPoolwhenSignalledFromOneDeviceThenAllDevicesRead) {
+     GivenMultipleDeviceEventPoolWhenSignalledFromOneDeviceThenAllDevicesRead) {
   auto devices = lzt::get_ze_devices();
   if (devices.size() < 2) {
     LOG_WARNING << "Less than two devices, skipping test";
