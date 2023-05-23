@@ -370,7 +370,7 @@ class P2PIpcMemoryAccessTest : public ::testing::Test,
 
 TEST_P(
     P2PIpcMemoryAccessTest,
-    GivenL0MemoryAllocatedInDeviceXExportedToDeviceYWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceYCorrectly) {
+    GivenTwoDevicesAndL0MemoryAllocatedInDeviceXExportedToDeviceYWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceYCorrectly) {
   size_t size = pow(2, std::get<0>(GetParam()));
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
