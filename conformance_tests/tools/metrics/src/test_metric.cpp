@@ -775,7 +775,7 @@ TEST_F(zetMetricQueryLoadTest,
 
 TEST_F(
     zetMetricQueryLoadTest,
-    GivenValidMetricGroupsWhenMultipleSubdevicesQueryThenExpectQueryToSucceed) {
+    GivenValidMetricGroupsWhenMultipleSubDevicesQueryThenExpectQueryToSucceed) {
   auto subdevices = lzt::get_all_sub_devices();
 
   run_multi_device_query_load_test(subdevices);
