@@ -216,7 +216,7 @@ void zetDebugAttachDetachTest::run_multidevice_test(
 
 TEST_F(
     zetDebugAttachDetachTest,
-    GivenApplicationsExecutingOnDifferentSubdevicesWhenAttachingThenDifferentDebuggersCanAttachAndDetachSuccessfully) {
+    GivenApplicationsExecutingOnDifferentSubDevicesWhenAttachingThenDifferentDebuggersCanAttachAndDetachSuccessfully) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
