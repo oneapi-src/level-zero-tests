@@ -209,8 +209,9 @@ class P2PImageCopyMemory
     : public P2PImageCopy,
       public ::testing::WithParamInterface<ze_memory_type_t> {};
 
-TEST_P(P2PImageCopyMemory,
-       GivenImageOnDeviceWhenCopiedToMemoryOnOtherDeviceThenResultIsCorrect) {
+TEST_P(
+    P2PImageCopyMemory,
+    GivenTwoDevicesAndImageOnDeviceWhenCopiedToMemoryOnOtherDeviceThenResultIsCorrect) {
   if (skip)
     return;
 
