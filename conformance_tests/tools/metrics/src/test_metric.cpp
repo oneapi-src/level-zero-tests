@@ -790,7 +790,7 @@ protected:
 
 TEST_F(
     zetMetricQueryLoadStdTest,
-    GivenValidMetricGroupWhenEventBasedQueryWithNoSubdevicesListIsCreatedThenExpectQueryAndSpecValidateToSucceed) {
+    GivenValidMetricGroupWhenEventBasedQueryWithNoSubDevicesListIsCreatedThenExpectQueryAndSpecValidateToSucceed) {
 
   for (auto device : devices) {
 
