@@ -195,7 +195,7 @@ void multi_sub_device_receiver(size_t size) {
 
 TEST(
     IpcMemoryAccessTest,
-    GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCMultiDeviceThenChildProcessReadsMemoryCorrectly) {
+    GivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCThenChildProcessReadsMemoryCorrectly) {
   size_t size = 4096;
 
   pid_t pid = fork();
