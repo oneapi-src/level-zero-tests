@@ -1951,7 +1951,7 @@ TEST_F(
 
 TEST_F(
     zetMetricStreamerTest,
-    GivenValidMetricGroupsWhenMultipleSubdevicesExecutingThenExpectValidMetrics) {
+    GivenValidMetricGroupsWhenMultipleSubDevicesExecutingThenExpectValidMetrics) {
   auto sub_devices = lzt::get_all_sub_devices();
 
   run_multi_device_streamer_test(sub_devices);
