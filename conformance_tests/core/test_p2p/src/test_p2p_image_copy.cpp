@@ -265,8 +265,9 @@ TEST_P(P2PImageCopyMemory,
   lzt::free_memory(target_mem);
 }
 
-TEST_P(P2PImageCopyMemory,
-       GivenImageOnDeviceWhenCopiedFromMemoryOnOtherDeviceThenResultIsCorrect) {
+TEST_P(
+    P2PImageCopyMemory,
+    GivenTwoDevicesAndImageOnDeviceWhenCopiedFromMemoryOnOtherDeviceThenResultIsCorrect) {
   if (skip)
     return;
 
