@@ -1735,6 +1735,29 @@ TEST_F(
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeImageViewCreateExtCallbacksWhenCallingzeImageViewCreateExtThenUserDataIsSetAndResultUnchanged) {
+
+  zelTracerImageViewCreateExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
+  zelTracerImageViewCreateExtRegisterCallback(
+      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
+
+  init_image();
+
+  ze_image_handle_t imageView;
+
+  lzt::enable_ltracer(tracer_handle);
+
+  ze_result_t result =
+      zeImageViewCreateExt(context, device, &image_desc, image, &imageView);
+
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+
+  zeImageDestroy(imageView);
+}
+
+TEST_F(
+    LCTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeImageViewCreateExpCallbacksWhenCallingzeImageViewCreateExpThenUserDataIsSetAndResultUnchanged) {
 
   zelTracerImageViewCreateExpRegisterCallback(
