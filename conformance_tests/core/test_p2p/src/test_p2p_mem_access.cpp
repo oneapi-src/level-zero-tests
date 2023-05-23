@@ -461,8 +461,9 @@ INSTANTIATE_TEST_CASE_P(
 
 class zeP2PMemAccessTestsConcurrentAccess : public zeP2PMemAccessTests {};
 
-TEST_P(zeP2PMemAccessTestsConcurrentAccess,
-       GivenP2PDevicesWhenConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
+TEST_P(
+    zeP2PMemAccessTestsConcurrentAccess,
+    GivenMultipleDevicesWithP2PWhenConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {
     return;
   }
