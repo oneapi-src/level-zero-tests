@@ -65,7 +65,7 @@ TEST_F(ContextExCreateTests,
 }
 
 TEST_F(ContextExCreateTests,
-       GivenContextOnSomeDevicesWhenUsingContextThenSuccess) {
+       GivenContextOnMultipleDevicesWhenUsingContextThenSuccess) {
   // This test requires two or more devices
   if (devices.size() < 2) {
     GTEST_SKIP() << "Less than two devices, skipping test";
