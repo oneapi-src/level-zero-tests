@@ -112,8 +112,9 @@ protected:
   bool skip = false;
 };
 
-TEST_F(P2PImageCopy,
-       GivenImageOnDeviceWhenCopiedToOtherDeviceThenResultIsCorrect) {
+TEST_F(
+    P2PImageCopy,
+    GivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceThenResultIsCorrect) {
   if (skip)
     return;
 
