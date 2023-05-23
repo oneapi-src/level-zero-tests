@@ -190,8 +190,9 @@ TEST(
   }
 }
 
-TEST(zeDeviceGetP2PPropertiesTests,
-     GivenValidDevicesWhenRetrievingP2PThenValidPropertiesAreReturned) {
+TEST(
+    zeDeviceGetP2PPropertiesTests,
+    GivenMultipleDevicesThatAreValidWhenRetrievingP2PThenValidPropertiesAreReturned) {
   auto drivers = lzt::get_all_driver_handles();
 
   ASSERT_GT(drivers.size(), 0)
