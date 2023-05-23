@@ -572,7 +572,7 @@ TEST(MultiDeviceEventTests,
 
 TEST(
     MultiDeviceEventTests,
-    GivenMultipleSubDevicesEventPoolwhenSignalledFromOneSubDeviceThenAllSubDevicesRead) {
+    GivenMultipleSubDevicesEventPoolWhenSignalledFromOneSubDeviceThenAllSubDevicesRead) {
   auto devices = lzt::get_ze_devices();
   bool test_run = false;
   for (auto device : devices) {
