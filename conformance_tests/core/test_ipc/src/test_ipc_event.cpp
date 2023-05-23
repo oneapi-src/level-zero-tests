@@ -174,22 +174,22 @@ TEST(
 }
 
 TEST(
-    zeIPCEventMultiDeviceTests,
+    zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromSecondDevicePerspective) {
   run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS,
                      true);
 }
 
 TEST(
-    zeIPCEventMultiDeviceTests,
+    zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromMultipleDevicePerspective) {
   run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
                      true);
 }
 
 TEST(
-    zeIPCEventMultiDeviceTests,
-    GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromDevicePerspectiveForSingleThenMultiDevice) {
+    zeIPCEventMultipleDeviceTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromDevicePerspectiveForSingleThenMultipleDevice) {
   run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS,
                      false);
   run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
@@ -197,7 +197,7 @@ TEST(
 }
 
 TEST(
-    zeIPCEventMultiDeviceTests,
+    zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromMultipleDevicePerspective) {
   run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
                      true);
