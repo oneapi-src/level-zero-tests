@@ -36,11 +36,12 @@ public:
             "Device ID of device to test");
     options(module_string, po::value<std::string>(&module_name_in),
             "spv file to use");
+    options(module_options_string, po::value<std::string>(&module_options_in),
+            "Build options for the module");
     options(
         "no_ipc",
         "Disable process controls so tests can be run without parent process");
     options(use_sub_devices_string, "run the test on subdevices if available");
-    auto index_string = "index";
     options(index_string, po::value<uint64_t>(&index_in),
             "Index of this debuggee");
 
@@ -71,6 +72,12 @@ public:
       use_custom_module = true;
       LOG_INFO << "[Application] Using Custom Module:  " << module_name_in;
     }
+
+    if (variables_map.count(module_options_string)) {
+      LOG_INFO << "[Application] Using Custom Module Options:  "
+               << module_options_in;
+    }
+
     if (variables_map.count("no_ipc")) {
       LOG_INFO << "[Application] Disabling IPC controls";
       enable_synchro = false;
@@ -85,6 +92,7 @@ public:
   bool use_sub_devices = false;
   std::string device_id_in = "";
   std::string module_name_in = "";
+  std::string module_options_in = "";
   std::string kernel_name_in = "";
   bool use_custom_module = false;
   debug_test_type_t test_selected = BASIC;

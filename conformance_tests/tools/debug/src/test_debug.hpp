@@ -27,7 +27,8 @@ class ProcessLauncher {
 public:
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
-                           std::string module_name, uint64_t index) {
+                           std::string module_name, std::string module_options,
+                           uint64_t index) {
 
     std::string device_id = " ";
     if (device) {
@@ -38,29 +39,61 @@ public:
     std::vector<fs::path> paths;
     paths.push_back(helper_path);
     fs::path helper = bp::search_path(bin_name, paths);
+
+    auto optionize = [](const char *option, std::string value) {
+      std::string option_string = " ";
+      if (!value.empty()) {
+        option_string = "--" + std::string(option) + "=" + value;
+      } else {
+        option_string = "--" + std::string(option);
+      }
+      return option_string;
+    };
+
     std::string module_name_option = " ";
     if (!module_name.empty()) {
-      module_name_option = "--module=" + module_name;
+      module_name_option = optionize(module_string, module_name);
     }
+    std::string module_build_options = " ";
+    if (!module_options.empty()) {
+      module_build_options = optionize(module_options_string, module_options);
+    }
+    bp::child debug_helper(
+        helper, optionize(test_type_string, std::to_string(test_type)),
 
-    bp::child debug_helper(helper, "--test_type=" + std::to_string(test_type),
-                           device ? ("--device_id=" + device_id) : " ",
-                           module_name_option,
-                           (use_sub_devices ? "--use_sub_devices" : " "),
-                           "--index=" + std::to_string(index));
+        device ? optionize(device_id_string, device_id) : " ",
+        module_name_option, module_build_options,
+        (use_sub_devices ? optionize(use_sub_devices_string, "") : " "),
+        optionize(index_string, std::to_string(index)));
 
     return debug_helper;
   }
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
+                           std::string module_name, uint64_t index) {
+    return launch_process(test_type, device, use_sub_devices, module_name, "",
+                          index);
+  }
+
+  bp::child launch_process(debug_test_type_t test_type,
+                           ze_device_handle_t device, bool use_sub_devices,
+                           std::string module_name,
+                           std::string module_options) {
+    return launch_process(test_type, device, use_sub_devices, module_name,
+                          module_options, 0);
+  }
+
+  bp::child launch_process(debug_test_type_t test_type,
+                           ze_device_handle_t device, bool use_sub_devices,
                            std::string module_name) {
-    return launch_process(test_type, device, use_sub_devices, module_name, 0);
+    return launch_process(test_type, device, use_sub_devices, module_name, "",
+                          0);
   }
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices) {
-    return launch_process(test_type, device, use_sub_devices, "", 0);
+    return launch_process(test_type, device, use_sub_devices, "", "", 0);
   }
 
 protected:

@@ -31,7 +31,9 @@ namespace bi = boost::interprocess;
 constexpr auto device_id_string = "device_id";
 constexpr auto use_sub_devices_string = "use_sub_devices";
 constexpr auto module_string = "module";
+constexpr auto module_options_string = "module_build_options";
 constexpr auto test_type_string = "test_type";
+constexpr auto index_string = "index";
 #ifdef _WIN32
 static void
 boost::interprocess::ipcdetail::get_shared_dir(std::string &shared_dir) {
