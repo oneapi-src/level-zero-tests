@@ -77,4 +77,10 @@ TEST_F(ContextExCreateTests,
   run_test(context, devices);
 }
 
+TEST(ContextStatusTest,
+     GivenContextCreateWhenUsingValidHandleThenContextGetStatusReturnsSuccess) {
+  auto context = lzt::get_default_context();
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeContextGetStatus(context));
+}
+
 } // namespace

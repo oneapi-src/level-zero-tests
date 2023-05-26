@@ -49,6 +49,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('context', test_name, re.IGNORECASE)) or \
                     (re.search('KernelOffset', test_name, re.IGNORECASE)) or \
                     (re.search('TestCopyOnly', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_ContextStatusTest_GivenContextCreateWhenUsingValidHandleThenContextGetStatusReturnsSuccess', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_TimestampsTest_GivenExecutedKernelWhenGettingGlobalTimestampsThenDeviceAndHostTimestampDurationsAreClose', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
