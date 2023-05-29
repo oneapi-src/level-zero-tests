@@ -20,11 +20,13 @@ namespace {
 
 class zeImmediateCommandListExecutionTests
     : public lzt::zeEventPoolTests,
-      public ::testing::WithParamInterface<ze_command_queue_mode_t> {
+      public ::testing::WithParamInterface<
+          std::tuple<ze_command_queue_mode_t, bool>> {
 
 protected:
   void SetUp() override {
-    mode = GetParam();
+    mode = std::get<0>(GetParam());
+    useEventsToSynchronize = std::get<1>(GetParam());
 
     if (mode == ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
       timeout = 0;
@@ -45,6 +47,7 @@ protected:
   ze_event_handle_t event0 = nullptr;
   ze_command_list_handle_t cmdlist_immediate = nullptr;
   ze_command_queue_mode_t mode;
+  bool useEventsToSynchronize = true;
   uint64_t timeout = UINT32_MAX - 1;
 };
 
@@ -64,7 +67,14 @@ TEST_P(
                          event0);
   // command queue execution should be immediate, and so no timeout required for
   // synchronize
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+  if (useEventsToSynchronize) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event0));
+  }
+
   for (size_t i = 0; i < size * sizeof(int); i++) {
     EXPECT_EQ(static_cast<uint8_t *>(buffer)[i], 0x1);
   }
@@ -111,7 +121,13 @@ TEST_P(
   // setting event on following instruction should flush memory
   lzt::append_launch_function(cmdlist_immediate, kernel, &tg, event0, 0,
                               nullptr);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+  if (useEventsToSynchronize) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event0));
+  }
   for (size_t i = 0; i < size; i++) {
     EXPECT_EQ(static_cast<int *>(buffer)[i], (addval + addval2));
   }
@@ -134,14 +150,26 @@ TEST_P(zeImmediateCommandListExecutionTests,
                           lzt::size_in_bytes(host_memory1), event0);
 
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    zeEventHostSynchronize(event0, timeout);
+    if (useEventsToSynchronize) {
+      zeEventHostSynchronize(event0, timeout);
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event0));
+    }
     zeEventHostReset(event0);
   }
   lzt::append_memory_copy(cmdlist_immediate, host_memory2.data(), device_memory,
                           lzt::size_in_bytes(host_memory2), event0);
 
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    zeEventHostSynchronize(event0, timeout);
+    if (useEventsToSynchronize) {
+      zeEventHostSynchronize(event0, timeout);
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event0));
+    }
   }
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
   lzt::free_memory(device_memory);
@@ -196,7 +224,13 @@ TEST_P(
     lzt::append_memory_set(mulcmdlist_immediate[i], buffer[i], &val[i], size,
                            host_to_dev_event[i]);
     if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-      zeEventHostSynchronize(host_to_dev_event[i], timeout);
+      if (useEventsToSynchronize) {
+        zeEventHostSynchronize(host_to_dev_event[i], timeout);
+      } else {
+        EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListHostSynchronize(
+                                         mulcmdlist_immediate[i], timeout));
+        EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(host_to_dev_event[i]));
+      }
     }
   }
 
@@ -234,7 +268,13 @@ TEST_P(zeImmediateCommandListExecutionTests,
   lzt::append_image_copy_from_mem(cmdlist_immediate, img.dflt_device_image_2_,
                                   img.dflt_host_image_.raw_data(), event0);
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    zeEventHostSynchronize(event0, timeout);
+    if (useEventsToSynchronize) {
+      zeEventHostSynchronize(event0, timeout);
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event0));
+    }
     zeEventHostReset(event0);
   }
   // Now, copy the image from the device to the device:
@@ -242,7 +282,13 @@ TEST_P(zeImmediateCommandListExecutionTests,
                          img.dflt_device_image_2_, event0);
 
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    zeEventHostSynchronize(event0, timeout);
+    if (useEventsToSynchronize) {
+      zeEventHostSynchronize(event0, timeout);
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event0));
+    }
     zeEventHostReset(event0);
   }
   // Finally copy the image from the device to the dest_host_image_upper for
@@ -252,7 +298,13 @@ TEST_P(zeImmediateCommandListExecutionTests,
                                 img.dflt_device_image_, event0);
 
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    zeEventHostSynchronize(event0, timeout);
+    if (useEventsToSynchronize) {
+      zeEventHostSynchronize(event0, timeout);
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event0));
+    }
     zeEventHostReset(event0);
   }
 
@@ -276,8 +328,15 @@ TEST_P(
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendEventReset(cmdlist_immediate, event0));
   zeCommandListAppendBarrier(cmdlist_immediate, event1, 0, nullptr);
-  if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS)
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event1, timeout));
+  if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
+    if (useEventsToSynchronize) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event1, timeout));
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+      ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event1));
+    }
+  }
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event0));
   ep.destroy_event(event1);
 }
@@ -290,16 +349,22 @@ TEST_P(
   ASSERT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event0));
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendSignalEvent(cmdlist_immediate, event0));
-  zeCommandListAppendBarrier(cmdlist_immediate, event1, 0, nullptr);
-  if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS)
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event1, timeout));
+  if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
+    if (useEventsToSynchronize) {
+      zeCommandListAppendBarrier(cmdlist_immediate, event1, 0, nullptr);
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event1, timeout));
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+    }
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
   ep.destroy_event(event1);
 }
 
 TEST_P(zeImmediateCommandListExecutionTests,
        GivenImmediateCommandListWhenAppendWaitOnEventsThenSuccessIsReturned) {
-  if (mode == ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
+  if (mode == ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS || !useEventsToSynchronize) {
     GTEST_SKIP();
   }
   ze_event_handle_t event1 = nullptr;
@@ -311,6 +376,7 @@ TEST_P(zeImmediateCommandListExecutionTests,
   zeEventHostSignal(event0);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event1, timeout));
+
   ep.destroy_event(event1);
 }
 
@@ -320,6 +386,8 @@ TEST_P(zeImmediateCommandListExecutionTests,
   void *memory = lzt::allocate_shared_memory(size);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendMemoryPrefetch(cmdlist_immediate, memory, size));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListHostSynchronize(cmdlist_immediate, timeout));
   lzt::free_memory(memory);
 }
 
@@ -331,6 +399,8 @@ TEST_P(zeImmediateCommandListExecutionTests,
             zeCommandListAppendMemAdvise(
                 cmdlist_immediate, lzt::zeDevice::get_instance()->get_device(),
                 memory, size, ZE_MEMORY_ADVICE_SET_READ_MOSTLY));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListHostSynchronize(cmdlist_immediate, timeout));
   lzt::free_memory(memory);
 }
 static ze_image_handle_t create_test_image(int height, int width) {
@@ -412,7 +482,13 @@ TEST_P(
   // use ImageCopyToMemory to dowload ImageB
   lzt::append_image_copy_to_mem(cmdlist_immediate_3, output.raw_data(),
                                 output_xeimage, hEvent4);
-  lzt::event_host_synchronize(hEvent4, UINT64_MAX);
+  if (useEventsToSynchronize) {
+    lzt::event_host_synchronize(hEvent4, UINT64_MAX);
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cmdlist_immediate_3, UINT64_MAX));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(hEvent4));
+  }
 
   // Verfy A matches B
   EXPECT_EQ(0,
@@ -487,7 +563,13 @@ TEST_P(
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
 
     // Synchronize executions
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+    if (useEventsToSynchronize) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+    }
+
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event0));
     lzt::event_host_synchronize(event2, UINT64_MAX);
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event1));
@@ -509,7 +591,13 @@ TEST_P(
     uint8_t zero = 0;
     lzt::append_memory_set(cmdlist_immediate, device_memory, &zero,
                            bufsize * sizeof(uint8_t), event0);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+    if (useEventsToSynchronize) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event0, timeout));
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event0));
+    }
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event0));
   }
 
@@ -521,10 +609,11 @@ TEST_P(
   lzt::destroy_command_queue(command_queue);
 }
 
-INSTANTIATE_TEST_CASE_P(TestCasesforCommandListImmediateCases,
-                        zeImmediateCommandListExecutionTests,
-                        testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                                        ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-                                        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS));
+INSTANTIATE_TEST_CASE_P(
+    TestCasesforCommandListImmediateCases, zeImmediateCommandListExecutionTests,
+    testing::Combine(testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                                     ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
+                                     ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+                     testing::Values(true, false)));
 
 } // namespace
