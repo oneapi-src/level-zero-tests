@@ -7,16 +7,21 @@
  */
 
 #include "gtest/gtest.h"
-
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include <condition_variable>
+#include <thread>
 
 namespace lzt = level_zero_tests;
 
 #include <level_zero/zes_api.h>
 
 namespace {
+
+std::mutex mem_mutex;
+std::condition_variable condition_variable;
+uint32_t ready = 0;
 
 class MemoryModuleTest : public lzt::SysmanCtsClass {};
 
@@ -295,4 +300,51 @@ TEST_F(
   lzt::destroy_command_list(command_list);
 }
 
+void getMemoryState(ze_device_handle_t device) {
+  uint32_t count = 0;
+  std::vector<zes_mem_handle_t> mem_handles =
+      lzt::get_mem_handles(device, count);
+  if (count == 0) {
+    FAIL() << "No handles found: "
+           << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+  }
+  std::unique_lock<std::mutex> lock(mem_mutex);
+  ready++;
+  condition_variable.notify_all();
+  condition_variable.wait(lock, [] { return ready == 2; });
+  for (auto mem_handle : mem_handles) {
+    ASSERT_NE(nullptr, mem_handle);
+    lzt::get_mem_state(mem_handle);
+  }
+}
+
+void getRasState(ze_device_handle_t device) {
+  uint32_t count = 0;
+  std::vector<zes_ras_handle_t> ras_handles =
+      lzt::get_ras_handles(device, count);
+  if (count == 0) {
+    FAIL() << "No handles found: "
+           << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+  }
+  std::unique_lock<std::mutex> lock(mem_mutex);
+  ready++;
+  condition_variable.notify_all();
+  condition_variable.wait(lock, [] { return ready == 2; });
+  for (auto ras_handle : ras_handles) {
+    ASSERT_NE(nullptr, ras_handle);
+    ze_bool_t clear = 0;
+    lzt::get_ras_state(ras_handle, clear);
+  }
+}
+
+TEST_F(
+    MemoryModuleTest,
+    GivenValidMemoryAndRasHandlesWhenGettingMemoryGetStateAndRasGetStateFromDifferentThreadsThenExpectBothToReturnSucess) {
+  for (auto device : devices) {
+    std::thread rasThread(getRasState, device);
+    std::thread memoryThread(getMemoryState, device);
+    rasThread.join();
+    memoryThread.join();
+  }
+}
 } // namespace
