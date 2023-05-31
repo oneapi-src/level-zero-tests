@@ -24,6 +24,7 @@ add_lzt_test(
     1000kernels
     cooperative_kernel
     multi_argument_kernel_test
+    multi_image_argument_kernel_test
     single_global_variable
     multiple_global_variables
     update_variable_on_device

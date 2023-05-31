@@ -24,12 +24,19 @@ public:
   KernelArgumentTests() {
     device_ = lzt::zeDevice::get_instance()->get_device();
     module_ = lzt::create_module(device_, "multi_argument_kernel_test.spv");
+    if (lzt::image_support()) {
+      image_module_ =
+          lzt::create_module(device_, "multi_image_argument_kernel_test.spv");
+    }
     cmd_list_ = lzt::create_command_list(device_);
     cmd_queue_ = lzt::create_command_queue();
   }
 
   ~KernelArgumentTests() {
     lzt::destroy_module(module_);
+    if (lzt::image_support()) {
+      lzt::destroy_module(image_module_);
+    }
     lzt::destroy_command_list(cmd_list_);
     lzt::destroy_command_queue(cmd_queue_);
   }
@@ -40,6 +47,7 @@ protected:
 
   ze_device_handle_t device_;
   ze_module_handle_t module_;
+  ze_module_handle_t image_module_;
   ze_command_list_handle_t cmd_list_;
   ze_command_queue_handle_t cmd_queue_;
 
@@ -148,7 +156,8 @@ TEST_F(KernelArgumentTests,
 
   // For each image, pixel value at coord ([imagenum],[imagenum])
   // will be written to coord ([imagenum+10],[imagenum+10])
-  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1,
+                                   args);
 
   for (int i = 0; i < num_images; i++) {
     uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1);
@@ -193,7 +202,8 @@ TEST_F(KernelArgumentTests,
   }
 
   // sampler kernel is a noop, nothing to check
-  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1,
+                                   args);
 
   for (int i = 0; i < num_samplers; i++) {
     lzt::destroy_sampler(samplers[i]);
@@ -280,7 +290,8 @@ TEST_F(KernelArgumentTests,
   // buffers[1] copied to buffers[3] using local mem as staging area
   // For each image, pixel value at coord ([imagenum],[imagenum])
   //   will be written to coord ([imagenum+10],[imagenum+10]) using sampler
-  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1,
+                                   args);
 
   EXPECT_EQ(*static_cast<int *>(buffers[0]), *static_cast<int *>(buffers[2]));
   EXPECT_EQ(*static_cast<int *>(buffers[1]), *static_cast<int *>(buffers[3]));
