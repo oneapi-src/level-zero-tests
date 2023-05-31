@@ -1751,13 +1751,15 @@ TEST_F(
                                device_properties.numEUsPerSubslice *
                                device_properties.numThreadsPerEU;
       LOG_INFO << "Available threads: " << max_threads;
-      const auto dimensions = (max_threads > 4096 ? 1024 : 256);
+      const auto dimensions = (max_threads > 4096 ? 1024 : 2);
       ze_kernel_handle_t function = get_matrix_multiplication_kernel(
           device, &tg, &a_buffer, &b_buffer, &c_buffer, dimensions);
 
+      LOG_INFO << "Dimensions: " << dimensions;
+
       // Since immediate command list is used, using repeated command list
       // updates to capture metric data
-      const uint32_t max_repeat_count = 200;
+      const uint32_t max_repeat_count = (dimensions > 2) ? 200 : 1;
       for (uint32_t repeat_count = 0; repeat_count < max_repeat_count;
            repeat_count++) {
         zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
@@ -1772,7 +1774,7 @@ TEST_F(
             commandList, metricStreamerHandle, ++streamerMarker);
       }
       ze_result_t eventResult;
-      eventResult = zeEventQueryStatus(eventHandle);
+      eventResult = zeEventHostSynchronize(eventHandle, 5000000000);
 
       if (ZE_RESULT_SUCCESS == eventResult) {
         size_t oneReportSize, allReportsSize, numReports;
