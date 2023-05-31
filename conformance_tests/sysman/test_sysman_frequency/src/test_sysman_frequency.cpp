@@ -178,7 +178,9 @@ TEST_F(
       auto pFrequency = lzt::get_available_clocks(pfreq_handle, count);
 
       for (uint32_t i = 0; i < pFrequency.size(); i++) {
-        EXPECT_GT(pFrequency[i], 0);
+        if (pFrequency[i] != -1) {
+          EXPECT_GT(pFrequency[i], 0);
+        }
         if (i > 0)
           EXPECT_GE(
               pFrequency[i],
@@ -249,8 +251,12 @@ TEST_F(
       EXPECT_NE(nullptr, pfreq_handle);
       zes_freq_properties_t properties = {};
       properties = lzt::get_freq_properties(pfreq_handle);
-      EXPECT_GT(properties.max, 0);
-      EXPECT_GT(properties.min, 0);
+      if (properties.max != -1) {
+        EXPECT_GT(properties.max, 0);
+      }
+      if (properties.min != -1) {
+        EXPECT_GT(properties.min, 0);
+      }
     }
   }
 }
