@@ -210,8 +210,9 @@ TEST_F(KernelArgumentTests,
   }
 }
 
-TEST_F(KernelArgumentTests,
-       GivenManyArgsOfAllTypesWhenPassingToKernelCorrectResultIsReturned) {
+TEST_F(
+    KernelArgumentTests,
+    GivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelCorrectResultIsReturned) {
   /*
   Kernel used for this test expects the following args:
   global int *buf1, global int *buf2, local int *local_buf, global int *buf3,
