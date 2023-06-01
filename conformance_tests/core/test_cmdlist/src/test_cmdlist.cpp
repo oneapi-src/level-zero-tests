@@ -259,7 +259,7 @@ TEST_F(zeCommandListResetTests,
 
 TEST_F(
     zeCommandListResetTests,
-    GivenResetCommandListWithVariousCommandsWhenExecutingMemoryFillThenOnlyMemoryFillExecuted) {
+    GivenResetCommandListWithVariousCommandsIncludingImageCommandsWhenExecutingMemoryFillThenOnlyMemoryFillExecuted) {
   run_reset_test(false);
 }
 TEST_F(
