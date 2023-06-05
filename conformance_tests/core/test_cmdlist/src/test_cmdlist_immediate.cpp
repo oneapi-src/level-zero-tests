@@ -30,6 +30,8 @@ protected:
 
     if (mode == ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
       timeout = 0;
+    } else {
+      timeout = UINT64_MAX - 1;
     }
 
     ep.InitEventPool(10);
@@ -48,7 +50,7 @@ protected:
   ze_command_list_handle_t cmdlist_immediate = nullptr;
   ze_command_queue_mode_t mode;
   bool useEventsToSynchronize = true;
-  uint64_t timeout = UINT32_MAX - 1;
+  uint64_t timeout = UINT64_MAX - 1;
 };
 
 TEST_P(
