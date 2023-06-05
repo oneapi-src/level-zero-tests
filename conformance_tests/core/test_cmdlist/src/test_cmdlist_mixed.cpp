@@ -84,7 +84,8 @@ class zeTestMixedCMDListsIndependentOverlapping
     : public zeMixedCMDListsTests,
       public ::testing::WithParamInterface<
           std::tuple<ze_command_queue_flags_t, ze_command_queue_flags_t,
-                     ze_command_queue_mode_t, ze_command_list_flags_t>> {};
+                     ze_command_queue_mode_t, ze_command_list_flags_t, bool>> {
+};
 
 TEST_P(
     zeTestMixedCMDListsIndependentOverlapping,
@@ -105,6 +106,7 @@ TEST_P(
   const ze_command_queue_flags_t cq_flags_copy = std::get<1>(GetParam());
   const ze_command_queue_mode_t cq_mode_copy = std::get<2>(GetParam());
   ze_command_list_flags_t cl_flags_compute = std::get<3>(GetParam());
+  const auto use_events_sync = std::get<4>(GetParam());
 
   // Create compute engine CMD queues, lists and host/device buffers
   for (auto &engine : compute_engines) {
@@ -205,8 +207,13 @@ TEST_P(
                               1, &events_fill[j]);
     }
     for (int j = 0; j < cls_copy_imm.size(); j++) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeEventHostSynchronize(events_copy[j], UINT64_MAX));
+      if (use_events_sync) {
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeEventHostSynchronize(events_copy[j], UINT64_MAX));
+      } else {
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeCommandListHostSynchronize(cls_copy_imm[j], UINT64_MAX));
+      }
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events_copy[j]));
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events_fill[j]));
     }
@@ -274,6 +281,7 @@ TEST_P(
   const ze_command_queue_flags_t cq_flags_copy = std::get<1>(GetParam());
   const ze_command_queue_mode_t cq_mode_compute = std::get<2>(GetParam());
   ze_command_list_flags_t cl_flags_copy = std::get<3>(GetParam());
+  const auto use_events_sync = std::get<4>(GetParam());
 
   // Create compute engine immediate CMD lists, events and host/device buffers
   for (auto &engine : compute_engines) {
@@ -369,7 +377,12 @@ TEST_P(
     lzt::append_barrier(cls_compute_imm[i]);
   }
   for (int i = 0; i < cls_compute_imm.size(); i++) {
-    lzt::event_host_synchronize(events[i], UINT64_MAX);
+    if (use_events_sync) {
+      lzt::event_host_synchronize(events[i], UINT64_MAX);
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cls_compute_imm[i], UINT64_MAX));
+    }
   }
 
   // Sync with copy engine queues
@@ -431,6 +444,7 @@ TEST_P(zeTestMixedCMDListsIndependentOverlapping,
   const ze_command_queue_flags_t cq_flags_imm = std::get<1>(GetParam());
   const ze_command_queue_mode_t cq_mode_imm = std::get<2>(GetParam());
   ze_command_list_flags_t cl_flags = std::get<3>(GetParam());
+  const auto use_events_sync = std::get<4>(GetParam());
 
   // One regular and one immediate CMD list for each compute engine
   for (auto &engine : compute_engines) {
@@ -522,7 +536,12 @@ TEST_P(zeTestMixedCMDListsIndependentOverlapping,
     lzt::append_barrier(cls_imm[i]);
   }
   for (int i = 0; i < cls_imm.size(); i++) {
-    lzt::event_host_synchronize(events[i], UINT64_MAX);
+    if (use_events_sync) {
+      lzt::event_host_synchronize(events[i], UINT64_MAX);
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cls_imm[i], UINT64_MAX));
+    }
   }
 
   // Sync with regular CMD lists
@@ -583,6 +602,7 @@ TEST_P(zeTestMixedCMDListsIndependentOverlapping,
   const ze_command_queue_flags_t cq_flags_imm = std::get<1>(GetParam());
   const ze_command_queue_mode_t cq_mode_imm = std::get<2>(GetParam());
   ze_command_list_flags_t cl_flags = std::get<3>(GetParam());
+  const auto use_events_sync = std::get<4>(GetParam());
 
   // One regular and one immediate CMD list for each copy engine
   for (auto &engine : copy_engines) {
@@ -669,8 +689,14 @@ TEST_P(zeTestMixedCMDListsIndependentOverlapping,
                               1, &events_fill[j]);
     }
     for (int j = 0; j < cls_imm.size(); j++) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeEventHostSynchronize(events_copy[j], UINT64_MAX));
+      if (use_events_sync) {
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeEventHostSynchronize(events_copy[j], UINT64_MAX));
+      } else {
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeCommandListHostSynchronize(cls_imm[j], UINT64_MAX));
+      }
+
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events_copy[j]));
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events_fill[j]));
     }
@@ -732,12 +758,13 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
                           ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
-                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT)));
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true, false)));
 
 class zeTestMixedCMDListsInterdependPairSameEngineType
     : public zeMixedCMDListsTests,
-      public ::testing::WithParamInterface<
-          std::tuple<bool, ze_command_queue_mode_t, ze_command_list_flag_t>> {
+      public ::testing::WithParamInterface<std::tuple<
+          bool, ze_command_queue_mode_t, ze_command_list_flag_t, bool>> {
 protected:
   void SetUp() override {
     ze_event_desc_t ev_desc = {};
@@ -778,6 +805,7 @@ TEST_P(
   const ze_command_queue_mode_t cq_mode_imm = std::get<1>(GetParam());
   const ze_command_list_flags_t cl_flags =
       std::get<2>(GetParam()) & ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY;
+  const auto use_events_sync = std::get<3>(GetParam());
 
   const uint32_t ordinal = engines[0].first;
   const uint32_t index = engines[0].second;
@@ -811,7 +839,11 @@ TEST_P(
   }
 
   lzt::synchronize(cq, UINT64_MAX);
-  lzt::event_host_synchronize(ev0, UINT64_MAX);
+  if (use_events_sync) {
+    lzt::event_host_synchronize(ev0, UINT64_MAX);
+  } else {
+    zeCommandListHostSynchronize(cl_imm, UINT64_MAX);
+  }
 
   lzt::query_event(ev0, ZE_RESULT_SUCCESS);
   lzt::query_event(ev1, ZE_RESULT_NOT_READY);
@@ -827,6 +859,7 @@ TEST_P(
   const ze_command_queue_mode_t cq_mode = std::get<1>(GetParam());
   const ze_command_list_flags_t cl_flags =
       std::get<2>(GetParam()) & ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY;
+  const auto use_events_sync = std::get<3>(GetParam());
 
   const uint32_t ordinal = engines[0].first;
   const uint32_t index = engines[0].second;
@@ -856,6 +889,10 @@ TEST_P(
   lzt::signal_event_from_host(ev0);
   lzt::execute_command_lists(cq, 1, &cl, nullptr);
 
+  if (!use_events_sync) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cl_imm, UINT64_MAX));
+  }
   lzt::synchronize(cq, UINT64_MAX);
   lzt::event_host_synchronize(ev0, UINT64_MAX);
 
@@ -879,13 +916,14 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
                           ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
-                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT)));
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true, false)));
 
 class zeTestMixedCMDListsInterdependPipelining
     : public zeMixedCMDListsTests,
       public ::testing::WithParamInterface<
           std::tuple<ze_command_queue_flags_t, ze_command_queue_flags_t,
-                     ze_command_list_flags_t>> {
+                     ze_command_list_flags_t, bool>> {
 protected:
   void SetUp() override {
     vec_hst = static_cast<uint8_t *>(lzt::allocate_host_memory(vec_sz));
@@ -915,6 +953,7 @@ TEST_P(
   const ze_command_queue_flags_t cq_flags_compute = std::get<0>(GetParam());
   const ze_command_queue_flags_t cq_flags_copy = std::get<1>(GetParam());
   ze_command_list_flags_t cl_flags_compute = std::get<2>(GetParam());
+  const auto use_events_sync = std::get<3>(GetParam());
 
   const bool is_explicit_compute =
       cq_flags_compute & ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY ? true : false;
@@ -1004,7 +1043,13 @@ TEST_P(
   // Once the last kernel launch is finished, the results should be back soon
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandQueueSynchronize(cq_compute, UINT64_MAX));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_h2d, UINT64_MAX));
+
+  if (use_events_sync) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_h2d, UINT64_MAX));
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cl_d2h_imm, UINT64_MAX));
+  }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
@@ -1038,6 +1083,7 @@ TEST_P(
   const ze_command_queue_flags_t cq_flags_compute = std::get<0>(GetParam());
   const ze_command_queue_flags_t cq_flags_copy = std::get<1>(GetParam());
   ze_command_list_flags_t cl_flags_copy = std::get<2>(GetParam());
+  const auto use_events_sync = std::get<3>(GetParam());
 
   const bool is_explicit_compute =
       cq_flags_compute & ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY ? true : false;
@@ -1131,6 +1177,10 @@ TEST_P(
 
   // The results should be back once the last copy queue is done
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cq_d2h, UINT64_MAX));
+  if (!use_events_sync) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cl_compute_imm, UINT64_MAX));
+  }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
@@ -1164,6 +1214,7 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
   ze_command_queue_flags_t cq_flags = std::get<0>(GetParam());
   ze_command_queue_flags_t cq_flags_imm = std::get<1>(GetParam());
   ze_command_list_flags_t cl_flags = std::get<2>(GetParam());
+  const auto use_events_sync = std::get<3>(GetParam());
 
   const auto ord_h2d_imm = compute_engines[0].first;
   const auto idx_h2d_imm = compute_engines[0].second;
@@ -1260,7 +1311,12 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
   // Once the last kernel launch is finished, the results should be back soon
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandQueueSynchronize(cq_compute, UINT64_MAX));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_h2d, UINT64_MAX));
+  if (use_events_sync) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_h2d, UINT64_MAX));
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cl_d2h_imm, UINT64_MAX));
+  }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
@@ -1293,6 +1349,7 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
   ze_command_queue_flags_t cq_flags = std::get<0>(GetParam());
   ze_command_queue_flags_t cq_flags_imm = std::get<1>(GetParam());
   ze_command_list_flags_t cl_flags = std::get<2>(GetParam());
+  const auto use_events_sync = std::get<3>(GetParam());
 
   const auto ord_fill = copy_engines[0].first;
   const auto idx_fill = copy_engines[0].second;
@@ -1352,6 +1409,7 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
     // Copy the filled block back to the host
     lzt::append_memory_copy(cl_copy, vec_hst + i * blk_sz, vec_dev + i * blk_sz,
                             blk_sz, nullptr, 1, &ev_copy);
+
     lzt::append_barrier(cl_copy);
     lzt::append_reset_event(cl_copy, ev_copy);
     lzt::append_signal_event(cl_copy, ev_fill);
@@ -1365,7 +1423,13 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
 
   // Once the last copy is finished, the results should be back soon
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cq_fill, UINT64_MAX));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_fill, UINT64_MAX));
+
+  if (use_events_sync) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_fill, UINT64_MAX));
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cl_copy, UINT64_MAX));
+  }
 
   lzt::query_event(ev_fill, ZE_RESULT_SUCCESS);
   lzt::query_event(ev_copy, ZE_RESULT_NOT_READY);
@@ -1396,6 +1460,7 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
                           ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
-                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT)));
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true, false)));
 
 } // namespace
