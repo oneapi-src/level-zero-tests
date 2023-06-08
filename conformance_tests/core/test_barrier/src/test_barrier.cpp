@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -17,38 +17,58 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-class zeCommandListAppendBarrierTests : public lzt::zeCommandListTests {};
+class zeCommandListAppendBarrierTests : public ::testing::Test {
+public:
+  void run(bool isImmediate) {
+    auto bundle = lzt::create_command_bundle(isImmediate);
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
+    lzt::destroy_command_bundle(bundle);
+  }
+};
 
 TEST_F(zeCommandListAppendBarrierTests,
        GivenEmptyCommandListWhenAppendingBarrierThenSuccessIsReturned) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(cl.command_list_, nullptr, 0, nullptr));
+  run(false);
+}
+
+TEST_F(
+    zeCommandListAppendBarrierTests,
+    GivenEmptyImmediateCommandListWhenAppendingBarrierThenSuccessIsReturned) {
+  run(true);
 }
 
 class zeEventPoolCommandListAppendBarrierTests : public ::testing::Test {};
 
-TEST_F(
-    zeEventPoolCommandListAppendBarrierTests,
-    GivenEmptyCommandListWhenAppendingBarrierWithEventThenSuccessIsReturned) {
+void RunAppendingBarrierWithEvent(bool isImmediate) {
   lzt::zeEventPool ep;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 1);
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
+  auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
   ze_event_handle_t event = nullptr;
   ep.create_event(event);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(cmd_list, event, 0, nullptr));
+            zeCommandListAppendBarrier(bundle.list, event, 0, nullptr));
   ep.destroy_event(event);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::destroy_context(context);
 }
 
 TEST_F(
     zeEventPoolCommandListAppendBarrierTests,
-    GivenEmptyCommandListWhenAppendingBarrierWithEventsThenSuccessIsReturned) {
+    GivenEmptyCommandListWhenAppendingBarrierWithEventThenSuccessIsReturned) {
+  RunAppendingBarrierWithEvent(false);
+}
+
+TEST_F(
+    zeEventPoolCommandListAppendBarrierTests,
+    GivenEmptyImmediateCommandListWhenAppendingBarrierWithEventThenSuccessIsReturned) {
+  RunAppendingBarrierWithEvent(true);
+}
+
+void RunAppendingBarrierWithEvents(bool isImmediate) {
   lzt::zeEventPool ep;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   const size_t event_count = 2;
@@ -56,20 +76,32 @@ TEST_F(
   ep.InitEventPool(context, 2);
   std::vector<ze_event_handle_t> events(event_count, nullptr);
   ep.create_events(events, event_count);
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
+  auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(cmd_list, nullptr, events.size(),
+            zeCommandListAppendBarrier(bundle.list, nullptr, events.size(),
                                        events.data()));
+  for (auto &ev : events) {
+    lzt::signal_event_from_host(ev);
+  }
   ep.destroy_events(events);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::destroy_context(context);
 }
 
 TEST_F(
     zeEventPoolCommandListAppendBarrierTests,
-    GivenEmptyCommandListWhenAppendingBarrierWithSignalEventAndWaitEventsThenSuccessIsReturned) {
+    GivenEmptyCommandListWhenAppendingBarrierWithEventsThenSuccessIsReturned) {
+  RunAppendingBarrierWithEvents(false);
+}
+
+TEST_F(
+    zeEventPoolCommandListAppendBarrierTests,
+    GivenEmptyImmediateCommandListWhenAppendingBarrierWithEventsThenSuccessIsReturned) {
+  RunAppendingBarrierWithEvents(true);
+}
+
+void RunAppendingBarrierWithSignalEventAndWaitEvents(bool isImmediate) {
   lzt::zeEventPool ep;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_event_handle_t event = nullptr;
@@ -80,19 +112,33 @@ TEST_F(
 
   ep.create_event(event);
   ep.create_events(events, event_count);
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
+  auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
   auto events_initial = events;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(cmd_list, event, events.size(),
+            zeCommandListAppendBarrier(bundle.list, event, events.size(),
                                        events.data()));
+  for (auto &ev : events) {
+    lzt::signal_event_from_host(ev);
+  }
   for (int i = 0; i < events.size(); i++) {
     ASSERT_EQ(events[i], events_initial[i]);
   }
   ep.destroy_events(events);
   ep.destroy_event(event);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::destroy_context(context);
+}
+
+TEST_F(
+    zeEventPoolCommandListAppendBarrierTests,
+    GivenEmptyCommandListWhenAppendingBarrierWithSignalEventAndWaitEventsThenSuccessIsReturned) {
+  RunAppendingBarrierWithSignalEventAndWaitEvents(false);
+}
+
+TEST_F(
+    zeEventPoolCommandListAppendBarrierTests,
+    GivenEmptyImmediateCommandListWhenAppendingBarrierWithSignalEventAndWaitEventsThenSuccessIsReturned) {
+  RunAppendingBarrierWithSignalEventAndWaitEvents(true);
 }
 
 void AppendMemoryRangesBarrierTest(
@@ -111,93 +157,135 @@ void AppendMemoryRangesBarrierTest(
                 command_list, ranges.size(), range_sizes.data(), ranges.data(),
                 signaling_event, waiting_events.size(), waiting_events.data()));
 
+  for (auto &ev : waiting_events) {
+    lzt::signal_event_from_host(ev);
+  }
+
   for (auto &range : ranges)
     lzt::free_memory(context, range);
 }
 
-class zeCommandListAppendMemoryRangesBarrierTests : public ::testing::Test {};
+class zeCommandListAppendMemoryRangesBarrierTests : public ::testing::Test {
+public:
+  void run(bool isImmediate) {
+    const ze_device_handle_t device =
+        lzt::zeDevice::get_instance()->get_device();
+    std::vector<ze_event_handle_t> waiting_events;
+    ze_context_handle_t context = lzt::create_context();
+    auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
+    AppendMemoryRangesBarrierTest(context, device, bundle.list, nullptr,
+                                  waiting_events);
+    lzt::destroy_command_bundle(bundle);
+    lzt::destroy_context(context);
+  }
+};
 
 TEST_F(
     zeCommandListAppendMemoryRangesBarrierTests,
     GivenEmptyCommandListWhenAppendingMemoryRangesBarrierThenSuccessIsReturned) {
-  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  std::vector<ze_event_handle_t> waiting_events;
-  ze_context_handle_t context = lzt::create_context();
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
-  AppendMemoryRangesBarrierTest(context, device, cmd_list, nullptr,
-                                waiting_events);
-  lzt::destroy_command_list(cmd_list);
-  lzt::destroy_context(context);
+  run(false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryRangesBarrierTests,
+    GivenEmptyImmediateCommandListWhenAppendingMemoryRangesBarrierThenSuccessIsReturned) {
+  run(true);
 }
 
 class zeEventPoolCommandListAppendMemoryRangesBarrierTests
     : public ::testing::Test {};
 
-TEST_F(
-    zeEventPoolCommandListAppendMemoryRangesBarrierTests,
-    GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventThenSuccessIsReturned) {
+void RunAppendingMemoryRangesBarrierSignalEvent(bool isImmediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   lzt::zeEventPool ep;
   ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 1);
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
+  auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
   ze_event_handle_t signaling_event = nullptr;
   std::vector<ze_event_handle_t> waiting_events;
 
   ep.create_event(signaling_event);
-  AppendMemoryRangesBarrierTest(context, device, cmd_list, signaling_event,
+  AppendMemoryRangesBarrierTest(context, device, bundle.list, signaling_event,
                                 waiting_events);
   ep.destroy_event(signaling_event);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::destroy_context(context);
 }
 
 TEST_F(
     zeEventPoolCommandListAppendMemoryRangesBarrierTests,
-    GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierWaitEventsThenSuccessIsReturned) {
+    GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventThenSuccessIsReturned) {
+  RunAppendingMemoryRangesBarrierSignalEvent(false);
+}
+
+TEST_F(
+    zeEventPoolCommandListAppendMemoryRangesBarrierTests,
+    GivenEmptyImmediateCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventThenSuccessIsReturned) {
+  RunAppendingMemoryRangesBarrierSignalEvent(true);
+}
+
+void RunAppendingMemoryRangesBarrierWaitEvents(bool isImmediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   const size_t event_count = 2;
   std::vector<ze_event_handle_t> waiting_events(event_count, nullptr);
   lzt::zeEventPool ep;
   ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 2);
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
+  auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
   ep.create_events(waiting_events, event_count);
   auto wait_events_initial = waiting_events;
-  AppendMemoryRangesBarrierTest(context, device, cmd_list, nullptr,
+  AppendMemoryRangesBarrierTest(context, device, bundle.list, nullptr,
                                 waiting_events);
   for (int i = 0; i < waiting_events.size(); i++) {
     ASSERT_EQ(waiting_events[i], wait_events_initial[i]);
   }
   ep.destroy_events(waiting_events);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_list(bundle.list);
   lzt::destroy_context(context);
 }
 
 TEST_F(
     zeEventPoolCommandListAppendMemoryRangesBarrierTests,
-    GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventAndWaitEventsThenSuccessIsReturned) {
+    GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierWaitEventsThenSuccessIsReturned) {
+  RunAppendingMemoryRangesBarrierWaitEvents(false);
+}
+
+TEST_F(
+    zeEventPoolCommandListAppendMemoryRangesBarrierTests,
+    GivenEmptyImmediateCommandListEventPoolWhenAppendingMemoryRangesBarrierWaitEventsThenSuccessIsReturned) {
+  RunAppendingMemoryRangesBarrierWaitEvents(true);
+}
+
+void RunAppendingMemoryRangesBarrierSignalEventAndWaitEvents(bool isImmediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   lzt::zeEventPool ep;
   ze_context_handle_t context = lzt::create_context();
   ep.InitEventPool(context, 3);
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
+  auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
   ze_event_handle_t signaling_event = nullptr;
   const size_t event_count = 2;
 
   std::vector<ze_event_handle_t> waiting_events(event_count, nullptr);
   ep.create_event(signaling_event);
   ep.create_events(waiting_events, event_count);
-  AppendMemoryRangesBarrierTest(context, device, cmd_list, signaling_event,
+  AppendMemoryRangesBarrierTest(context, device, bundle.list, signaling_event,
                                 waiting_events);
   ep.destroy_event(signaling_event);
   ep.destroy_events(waiting_events);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::destroy_context(context);
+}
+
+TEST_F(
+    zeEventPoolCommandListAppendMemoryRangesBarrierTests,
+    GivenEmptyCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventAndWaitEventsThenSuccessIsReturned) {
+  RunAppendingMemoryRangesBarrierSignalEventAndWaitEvents(false);
+}
+
+TEST_F(
+    zeEventPoolCommandListAppendMemoryRangesBarrierTests,
+    GivenEmptyImmediateCommandListEventPoolWhenAppendingMemoryRangesBarrierSignalEventAndWaitEventsThenSuccessIsReturned) {
+  RunAppendingMemoryRangesBarrierSignalEventAndWaitEvents(true);
 }
 
 class zeContextSystemBarrierTests : public ::testing::Test {};
@@ -213,9 +301,8 @@ TEST_F(zeContextSystemBarrierTests,
 
 class zeBarrierEventSignalingTests : public lzt::zeEventPoolTests {};
 
-TEST_F(
-    zeBarrierEventSignalingTests,
-    GivenEventSignaledWhenCommandListAppendingBarrierThenHostDetectsEventSuccessfully) {
+void RunEventSignaledWhenAppendingBarrierThenHostDetectsEvent(
+    lzt::zeEventPool ep, bool isImmediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_event_handle_t event_barrier_to_host = nullptr;
   ze_context_handle_t context = lzt::create_context();
@@ -226,80 +313,109 @@ TEST_F(
   void *dev_mem =
       lzt::allocate_device_memory(xfer_size, 1, 0, 0, device, context);
   void *host_mem = lzt::allocate_host_memory(xfer_size, 1, context);
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
+  auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, isImmediate);
   ep.create_event(event_barrier_to_host, ZE_EVENT_SCOPE_FLAG_HOST,
                   ZE_EVENT_SCOPE_FLAG_HOST);
-  lzt::append_memory_copy(cmd_list, dev_mem, inpa.data(), xfer_size, nullptr);
-  lzt::append_barrier(cmd_list, event_barrier_to_host, 0, nullptr);
-  lzt::append_memory_copy(cmd_list, host_mem, dev_mem, xfer_size, nullptr);
-  lzt::close_command_list(cmd_list);
-  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-  lzt::synchronize(cmd_q, UINT64_MAX);
+  lzt::append_memory_copy(bundle.list, dev_mem, inpa.data(), xfer_size,
+                          nullptr);
+  lzt::append_barrier(bundle.list, event_barrier_to_host, 0, nullptr);
+  lzt::append_memory_copy(bundle.list, host_mem, dev_mem, xfer_size, nullptr);
+  lzt::close_command_list(bundle.list);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+  } else {
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeEventHostSynchronize(event_barrier_to_host, UINT32_MAX - 1));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_barrier_to_host));
 
-  lzt::destroy_command_queue(cmd_q);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::free_memory(context, host_mem);
   lzt::free_memory(context, dev_mem);
   ep.destroy_event(event_barrier_to_host);
+  lzt::destroy_context(context);
+}
+
+TEST_F(
+    zeBarrierEventSignalingTests,
+    GivenEventSignaledWhenCommandListAppendingBarrierThenHostDetectsEventSuccessfully) {
+  RunEventSignaledWhenAppendingBarrierThenHostDetectsEvent(ep, false);
+}
+
+TEST_F(
+    zeBarrierEventSignalingTests,
+    GivenEventSignaledWhenImmediateCommandListAppendingBarrierThenHostDetectsEventSuccessfully) {
+  RunEventSignaledWhenAppendingBarrierThenHostDetectsEvent(ep, true);
+}
+
+void RunAppendingBarrierWaitsForEventsWhenHostAndSendSignals(
+    lzt::zeEventPool ep, bool isImmediate) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  uint32_t num_events = 6;
+  ASSERT_GE(num_events, 3);
+  ze_context_handle_t context = lzt::create_context();
+  ep.InitEventPool(context, 6);
+  std::vector<ze_event_handle_t> events_to_barrier(num_events, nullptr);
+  std::vector<int> inpa = {0, 1, 2,  3,  4,  5,  6,  7,
+                           8, 9, 10, 11, 12, 13, 14, 15};
+  size_t xfer_size = inpa.size() * sizeof(int);
+  void *dev_mem =
+      lzt::allocate_device_memory(xfer_size, 1, 0, 0, device, context);
+  void *host_mem = lzt::allocate_host_memory(xfer_size, 1, context);
+  auto bundle = lzt::create_command_bundle(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, isImmediate);
+  ep.create_events(events_to_barrier, num_events, ZE_EVENT_SCOPE_FLAG_HOST,
+                   ZE_EVENT_SCOPE_FLAG_HOST);
+  lzt::append_signal_event(bundle.list, events_to_barrier[0]);
+  lzt::append_memory_copy(bundle.list, dev_mem, inpa.data(), xfer_size,
+                          nullptr);
+  lzt::append_signal_event(bundle.list, events_to_barrier[1]);
+  lzt::append_barrier(bundle.list, nullptr, num_events,
+                      events_to_barrier.data());
+  lzt::append_memory_copy(bundle.list, host_mem, dev_mem, xfer_size, nullptr);
+  lzt::close_command_list(bundle.list);
+  if (!isImmediate) {
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+  }
+
+  for (uint32_t i = 2; i < num_events; i++) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(events_to_barrier[i]));
+  }
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
+  for (uint32_t i = 0; i < num_events; i++) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events_to_barrier[i]));
+  }
+
+  lzt::destroy_command_bundle(bundle);
+  lzt::free_memory(context, host_mem);
+  lzt::free_memory(context, dev_mem);
+  ep.destroy_events(events_to_barrier);
   lzt::destroy_context(context);
 }
 
 TEST_F(
     zeBarrierEventSignalingTests,
     GivenCommandListAppendingBarrierWaitsForEventsWhenHostAndCommandListSendSignalsThenCommandListExecutesSuccessfully) {
-  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  uint32_t num_events = 6;
-  ASSERT_GE(num_events, 3);
-  ze_context_handle_t context = lzt::create_context();
-  ep.InitEventPool(context, 6);
-  std::vector<ze_event_handle_t> events_to_barrier(num_events, nullptr);
-  std::vector<int> inpa = {0, 1, 2,  3,  4,  5,  6,  7,
-                           8, 9, 10, 11, 12, 13, 14, 15};
-  size_t xfer_size = inpa.size() * sizeof(int);
-  void *dev_mem =
-      lzt::allocate_device_memory(xfer_size, 1, 0, 0, device, context);
-  void *host_mem = lzt::allocate_host_memory(xfer_size, 1, context);
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  ep.create_events(events_to_barrier, num_events, ZE_EVENT_SCOPE_FLAG_HOST,
-                   ZE_EVENT_SCOPE_FLAG_HOST);
-  lzt::append_signal_event(cmd_list, events_to_barrier[0]);
-  lzt::append_memory_copy(cmd_list, dev_mem, inpa.data(), xfer_size, nullptr);
-  lzt::append_signal_event(cmd_list, events_to_barrier[1]);
-  lzt::append_barrier(cmd_list, nullptr, num_events, events_to_barrier.data());
-  lzt::append_memory_copy(cmd_list, host_mem, dev_mem, xfer_size, nullptr);
-  lzt::close_command_list(cmd_list);
-  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-
-  for (uint32_t i = 2; i < num_events; i++) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(events_to_barrier[i]));
-  }
-  lzt::synchronize(cmd_q, UINT64_MAX);
-  for (uint32_t i = 0; i < num_events; i++) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events_to_barrier[i]));
-  }
-
-  lzt::destroy_command_queue(cmd_q);
-  lzt::destroy_command_list(cmd_list);
-  lzt::free_memory(context, host_mem);
-  lzt::free_memory(context, dev_mem);
-  ep.destroy_events(events_to_barrier);
-  lzt::destroy_context(context);
+  RunAppendingBarrierWaitsForEventsWhenHostAndSendSignals(ep, false);
 }
 
 TEST_F(
     zeBarrierEventSignalingTests,
-    GivenEventSignaledWhenCommandListAppendingMemoryRangesBarrierThenHostDetectsEventSuccessfully) {
+    GivenImmediateCommandListAppendingBarrierWaitsForEventsWhenHostAndCommandListSendSignalsThenCommandListExecutesSuccessfully) {
+  RunAppendingBarrierWaitsForEventsWhenHostAndSendSignals(ep, true);
+}
+
+void RunEventSignaledWhenAppendingMemoryRangesBarrierThenHostDetectsEvent(
+    lzt::zeEventPool ep, bool isImmediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_event_handle_t event_barrier_to_host = nullptr;
   ze_context_handle_t context = lzt::create_context();
@@ -312,27 +428,29 @@ TEST_F(
       lzt::allocate_device_memory(xfer_size, 1, 0, 0, device, context);
   void *host_mem = lzt::allocate_host_memory(xfer_size, 1, context);
   std::vector<const void *> ranges{dev_mem, host_mem};
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
+  auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, isImmediate);
   ep.create_event(event_barrier_to_host, ZE_EVENT_SCOPE_FLAG_HOST,
                   ZE_EVENT_SCOPE_FLAG_HOST);
-  lzt::append_memory_copy(cmd_list, dev_mem, inpa.data(), xfer_size, nullptr);
-  lzt::append_memory_ranges_barrier(cmd_list, ranges.size(), range_sizes.data(),
-                                    ranges.data(), event_barrier_to_host, 0,
-                                    nullptr);
-  lzt::append_memory_copy(cmd_list, host_mem, dev_mem, xfer_size, nullptr);
-  lzt::close_command_list(cmd_list);
-  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-  lzt::synchronize(cmd_q, UINT64_MAX);
+  lzt::append_memory_copy(bundle.list, dev_mem, inpa.data(), xfer_size,
+                          nullptr);
+  lzt::append_memory_ranges_barrier(bundle.list, ranges.size(),
+                                    range_sizes.data(), ranges.data(),
+                                    event_barrier_to_host, 0, nullptr);
+  lzt::append_memory_copy(bundle.list, host_mem, dev_mem, xfer_size, nullptr);
+  lzt::close_command_list(bundle.list);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+  } else {
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeEventHostSynchronize(event_barrier_to_host, UINT32_MAX - 1));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_barrier_to_host));
 
-  lzt::destroy_command_queue(cmd_q);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::free_memory(context, host_mem);
   lzt::free_memory(context, dev_mem);
   ep.destroy_event(event_barrier_to_host);
@@ -341,7 +459,20 @@ TEST_F(
 
 TEST_F(
     zeBarrierEventSignalingTests,
-    GivenCommandListAppendingMemoryRangesBarrierWaitsForEventsWhenHostAndCommandListSendSignalsThenCommandListExecutesSuccessfully) {
+    GivenEventSignaledWhenCommandListAppendingMemoryRangesBarrierThenHostDetectsEventSuccessfully) {
+  RunEventSignaledWhenAppendingMemoryRangesBarrierThenHostDetectsEvent(ep,
+                                                                       false);
+}
+
+TEST_F(
+    zeBarrierEventSignalingTests,
+    GivenEventSignaledWhenImmediateCommandListAppendingMemoryRangesBarrierThenHostDetectsEventSuccessfully) {
+  RunEventSignaledWhenAppendingMemoryRangesBarrierThenHostDetectsEvent(ep,
+                                                                       true);
+}
+
+void RunAppendingMemoryRangesBarrierWaitsForEventsWhenHostAndSendSignals(
+    lzt::zeEventPool ep, bool isImmediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   uint32_t num_events = 6;
   ASSERT_GE(num_events, 3);
@@ -356,38 +487,55 @@ TEST_F(
       lzt::allocate_device_memory(xfer_size, 1, 0, 0, device, context);
   void *host_mem = lzt::allocate_host_memory(xfer_size, 1, context);
   std::vector<const void *> ranges{dev_mem, host_mem};
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
+  auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, isImmediate);
   ep.create_events(events_to_barrier, num_events, ZE_EVENT_SCOPE_FLAG_HOST,
                    ZE_EVENT_SCOPE_FLAG_HOST);
 
-  lzt::append_signal_event(cmd_list, events_to_barrier[0]);
-  lzt::append_memory_copy(cmd_list, dev_mem, inpa.data(), xfer_size, nullptr);
-  lzt::append_signal_event(cmd_list, events_to_barrier[1]);
-  lzt::append_memory_ranges_barrier(cmd_list, ranges.size(), range_sizes.data(),
-                                    ranges.data(), nullptr, num_events,
-                                    events_to_barrier.data());
-  lzt::append_memory_copy(cmd_list, host_mem, dev_mem, xfer_size, nullptr);
-  lzt::close_command_list(cmd_list);
-  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
+  lzt::append_signal_event(bundle.list, events_to_barrier[0]);
+  lzt::append_memory_copy(bundle.list, dev_mem, inpa.data(), xfer_size,
+                          nullptr);
+  lzt::append_signal_event(bundle.list, events_to_barrier[1]);
+  lzt::append_memory_ranges_barrier(bundle.list, ranges.size(),
+                                    range_sizes.data(), ranges.data(), nullptr,
+                                    num_events, events_to_barrier.data());
+  lzt::append_memory_copy(bundle.list, host_mem, dev_mem, xfer_size, nullptr);
+  lzt::close_command_list(bundle.list);
+  if (!isImmediate) {
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+  }
 
   for (uint32_t i = 2; i < num_events; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(events_to_barrier[i]));
   }
-  lzt::synchronize(cmd_q, UINT64_MAX);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
   for (uint32_t i = 0; i < num_events; i++) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events_to_barrier[i]));
   }
 
-  lzt::destroy_command_queue(cmd_q);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::free_memory(context, host_mem);
   lzt::free_memory(context, dev_mem);
   ep.destroy_events(events_to_barrier);
   lzt::destroy_context(context);
+}
+
+TEST_F(
+    zeBarrierEventSignalingTests,
+    GivenCommandListAppendingMemoryRangesBarrierWaitsForEventsWhenHostAndCommandListSendSignalsThenCommandListExecutesSuccessfully) {
+  RunAppendingMemoryRangesBarrierWaitsForEventsWhenHostAndSendSignals(ep,
+                                                                      false);
+}
+
+TEST_F(
+    zeBarrierEventSignalingTests,
+    GivenImmediateCommandListAppendingMemoryRangesBarrierWaitsForEventsWhenHostAndCommandListSendSignalsThenCommandListExecutesSuccessfully) {
+  RunAppendingMemoryRangesBarrierWaitsForEventsWhenHostAndSendSignals(ep, true);
 }
 
 enum BarrierType {
@@ -398,7 +546,8 @@ enum BarrierType {
 
 class zeBarrierKernelTests
     : public lzt::zeEventPoolTests,
-      public ::testing::WithParamInterface<enum BarrierType> {};
+      public ::testing::WithParamInterface<std::tuple<enum BarrierType, bool>> {
+};
 
 TEST_P(
     zeBarrierKernelTests,
@@ -406,11 +555,10 @@ TEST_P(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_context_handle_t context = lzt::create_context();
 
-  ze_command_list_handle_t cmd_list =
-      lzt::create_command_list(context, device, 0);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(
+  const bool isImmediate = std::get<1>(GetParam());
+  auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, isImmediate);
   size_t num_int = 1000;
   void *dev_buff = lzt::allocate_device_memory((num_int * sizeof(int)), 1, 0, 0,
                                                device, context);
@@ -418,7 +566,7 @@ TEST_P(
       lzt::allocate_host_memory((num_int * sizeof(int)), 1, context);
 
   int *p_host = static_cast<int *>(host_buff);
-  enum BarrierType barrier_type = GetParam();
+  enum BarrierType barrier_type = std::get<0>(GetParam());
 
   // Initialize host buffer with postive and negative integer values
   const int addval_1 = -100;
@@ -474,24 +622,24 @@ TEST_P(
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
-  lzt::append_memory_copy(cmd_list, dev_buff, host_buff, num_int * sizeof(int),
-                          signal_event_copy);
+  lzt::append_memory_copy(bundle.list, dev_buff, host_buff,
+                          num_int * sizeof(int), signal_event_copy);
   // Memory barrier to ensure memory coherency after copy to device memory
   if (barrier_type == BT_MEMORY_RANGES_BARRIER) {
     const std::vector<size_t> range_sizes{num_int * sizeof(int),
                                           num_int * sizeof(int)};
     std::vector<const void *> ranges{dev_buff, host_buff};
-    lzt::append_memory_ranges_barrier(cmd_list, ranges.size(),
+    lzt::append_memory_ranges_barrier(bundle.list, ranges.size(),
                                       range_sizes.data(), ranges.data(),
                                       nullptr, 0, nullptr);
   } else if (barrier_type == BT_GLOBAL_BARRIER) {
-    lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   }
-  lzt::append_launch_function(cmd_list, function_1, &tg, signal_event_func1,
+  lzt::append_launch_function(bundle.list, function_1, &tg, signal_event_func1,
                               num_wait, p_wait_event_func1);
   // Execution barrier to ensure function_1 completes before function_2 starts
   if (barrier_type != BT_EVENTS_BARRIER) {
-    lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   }
   ze_kernel_handle_t function_2 =
       lzt::create_function(module, "barrier_add_two_arrays");
@@ -499,12 +647,16 @@ TEST_P(
 
   lzt::set_argument_value(function_2, 0, sizeof(p_host), &p_host);
   lzt::set_argument_value(function_2, 1, sizeof(p_dev), &p_dev);
-  lzt::append_launch_function(cmd_list, function_2, &tg, nullptr, num_wait,
+  lzt::append_launch_function(bundle.list, function_2, &tg, nullptr, num_wait,
                               p_wait_event_func2);
 
-  lzt::close_command_list(cmd_list);
-  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-  lzt::synchronize(cmd_q, UINT64_MAX);
+  lzt::close_command_list(bundle.list);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+  } else {
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
   val = (2 * val_1) + addval_2;
   for (size_t i = 0; i < num_int; i++) {
     EXPECT_EQ(p_host[i], val);
@@ -514,18 +666,18 @@ TEST_P(
   lzt::destroy_function(function_2);
   lzt::destroy_function(function_1);
   lzt::destroy_module(module);
-  lzt::destroy_command_queue(cmd_q);
-  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_bundle(bundle);
   lzt::free_memory(context, host_buff);
   lzt::free_memory(context, dev_buff);
   ep.destroy_events(coherency_event);
   lzt::destroy_context(context);
 }
 
-INSTANTIATE_TEST_CASE_P(TestKernelWithBarrierAndMemoryRangesBarrier,
-                        zeBarrierKernelTests,
-                        testing::Values(BT_GLOBAL_BARRIER,
-                                        BT_MEMORY_RANGES_BARRIER,
-                                        BT_EVENTS_BARRIER));
+INSTANTIATE_TEST_SUITE_P(
+    TestKernelWithBarrierAndMemoryRangesBarrier, zeBarrierKernelTests,
+    ::testing::Combine(::testing::Values(BT_GLOBAL_BARRIER,
+                                         BT_MEMORY_RANGES_BARRIER,
+                                         BT_EVENTS_BARRIER),
+                       ::testing::Bool()));
 
 } // namespace

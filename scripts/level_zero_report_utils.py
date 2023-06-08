@@ -27,6 +27,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
             elif test_feature == "Allocation Residency" or \
                     (test_feature == "Barriers" and test_name.find("MemoryRange")!= -1) or \
                     (test_feature == "Barriers" and test_name.find("System")!= -1) or \
+                    (test_feature == "Barriers" and test_name.find("Immediate")!= -1) or \
                     (test_feature == "Command Lists" and test_name.find("Immediate")!= -1) or \
                     (test_feature == "Images" and test_name.find("Immediate")!= -1) or \
                     (test_feature == "Command Lists" and test_name.find("CreateImmediate")!= -1) or \

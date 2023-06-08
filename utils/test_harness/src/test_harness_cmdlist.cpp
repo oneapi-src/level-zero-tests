@@ -109,6 +109,101 @@ zeCommandList::~zeCommandList() {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list_));
 }
 
+zeCommandBundle create_command_bundle(bool isImmediate) {
+  return create_command_bundle(zeDevice::get_instance()->get_device(),
+                               isImmediate);
+}
+
+zeCommandBundle create_command_bundle(ze_device_handle_t device,
+                                      bool isImmediate) {
+  return create_command_bundle(device, 0, isImmediate);
+}
+
+zeCommandBundle create_command_bundle(ze_device_handle_t device,
+                                      ze_command_list_flags_t listFlags,
+                                      bool isImmediate) {
+  return create_command_bundle(lzt::get_default_context(), device, listFlags,
+                               isImmediate);
+}
+
+zeCommandBundle create_command_bundle(ze_context_handle_t context,
+                                      ze_device_handle_t device,
+                                      bool isImmediate) {
+  return create_command_bundle(context, device, 0, isImmediate);
+}
+
+zeCommandBundle create_command_bundle(ze_context_handle_t context,
+                                      ze_device_handle_t device,
+                                      ze_command_list_flags_t listFlags,
+                                      bool isImmediate) {
+  return create_command_bundle(context, device, listFlags, 0, isImmediate);
+}
+
+zeCommandBundle create_command_bundle(ze_context_handle_t context,
+                                      ze_device_handle_t device,
+                                      ze_command_list_flags_t listFlags,
+                                      uint32_t ordinal, bool isImmediate) {
+  return create_command_bundle(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, listFlags, ordinal, 0, isImmediate);
+}
+
+zeCommandBundle create_command_bundle(ze_device_handle_t device,
+                                      ze_command_queue_flags_t queueFlags,
+                                      ze_command_queue_mode_t mode,
+                                      ze_command_queue_priority_t priority,
+                                      ze_command_list_flags_t listFlags,
+                                      uint32_t ordinal, bool isImmediate) {
+  return create_command_bundle(lzt::get_default_context(), device, queueFlags,
+                               mode, priority, listFlags, ordinal, 0,
+                               isImmediate);
+}
+
+zeCommandBundle create_command_bundle(
+    ze_context_handle_t context, ze_device_handle_t device,
+    ze_command_queue_flags_t queueFlags, ze_command_queue_mode_t mode,
+    ze_command_queue_priority_t priority, ze_command_list_flags_t listFlags,
+    uint32_t ordinal, uint32_t index, bool isImmediate) {
+  ze_command_queue_desc_t queueDesc = {};
+  queueDesc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  queueDesc.pNext = nullptr;
+  queueDesc.ordinal = ordinal;
+  queueDesc.index = index;
+  queueDesc.flags = queueFlags;
+  queueDesc.mode = mode;
+  queueDesc.priority = priority;
+
+  auto context_initial = context;
+  auto device_initial = device;
+
+  ze_command_queue_handle_t queue = nullptr;
+  ze_command_list_handle_t list = nullptr;
+
+  if (isImmediate) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListCreateImmediate(context, device, &queueDesc, &list));
+    EXPECT_NE(nullptr, list);
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandQueueCreate(context, device, &queueDesc, &queue));
+    EXPECT_NE(nullptr, queue);
+
+    ze_command_list_desc_t listDesc = {};
+    listDesc.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+    listDesc.pNext = nullptr;
+    listDesc.commandQueueGroupOrdinal = ordinal;
+    listDesc.flags = listFlags;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListCreate(context, device, &listDesc, &list));
+    EXPECT_NE(nullptr, list);
+  }
+
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(device, device_initial);
+
+  return {queue, list};
+}
+
 void append_memory_set(ze_command_list_handle_t cl, void *dstptr,
                        const uint8_t *value, size_t size) {
   append_memory_set(cl, dstptr, value, size, nullptr);
@@ -551,6 +646,13 @@ void append_image_copy_region(ze_command_list_handle_t hCommandList,
   }
 }
 
+void synchronize_command_list_host(ze_command_list_handle_t cl,
+                                   uint64_t timeout) {
+  auto cl_initial = cl;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListHostSynchronize(cl, timeout));
+  EXPECT_EQ(cl_initial, cl);
+}
+
 void close_command_list(ze_command_list_handle_t cl) {
   auto command_list_initial = cl;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cl));
@@ -565,5 +667,12 @@ void reset_command_list(ze_command_list_handle_t cl) {
 
 void destroy_command_list(ze_command_list_handle_t cl) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cl));
+}
+
+void destroy_command_bundle(zeCommandBundle bundle) {
+  if (bundle.queue != nullptr) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(bundle.queue));
+  }
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(bundle.list));
 }
 }; // namespace level_zero_tests
