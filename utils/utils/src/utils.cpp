@@ -392,4 +392,15 @@ void save_binary_file(const std::vector<uint8_t> &data,
   LOG_EXIT_FUNCTION
 }
 
+uint32_t nextPowerOfTwo(uint32_t value) {
+  --value;
+  value |= value >> 1;
+  value |= value >> 2;
+  value |= value >> 4;
+  value |= value >> 8;
+  value |= value >> 16;
+  ++value;
+  return value;
+}
+
 } // namespace level_zero_tests

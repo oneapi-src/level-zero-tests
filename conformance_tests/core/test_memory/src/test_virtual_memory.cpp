@@ -203,6 +203,203 @@ TEST_F(
   lzt::destroy_command_queue(cmdqueue);
 }
 
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemoryThenMemoryCheckSucceeds) {
+  int numDevices = lzt::get_ze_device_count();
+  std::vector<ze_device_handle_t> devices;
+  size_t pageSize = 0;
+  std::vector<ze_physical_mem_handle_t> reservedPhysicalMemoryArray;
+  devices = lzt::get_ze_devices(numDevices);
+  reservedPhysicalMemoryArray.resize(numDevices);
+  if (numDevices == 1) {
+    reservedPhysicalMemoryArray.resize(2);
+    devices.resize(2);
+    devices[0] = device;
+    devices[1] = device;
+  }
+  ze_command_list_handle_t cmdlist = lzt::create_command_list(devices[0]);
+  ze_command_queue_handle_t cmdqueue = lzt::create_command_queue();
+
+  lzt::query_page_size(context, device, 0, &pageSize);
+  allocationSize = pageSize;
+  allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
+  for (int i = 0; i < devices.size(); i++) {
+    lzt::physical_memory_allocation(context, devices[i], allocationSize,
+                                    &reservedPhysicalMemoryArray[i]);
+  }
+
+  size_t totalAllocationSize = allocationSize * devices.size();
+  size_t virtualReservationSize = lzt::nextPowerOfTwo(totalAllocationSize);
+
+  lzt::virtual_memory_reservation(context, nullptr, virtualReservationSize,
+                                  &reservedVirtualMemory);
+  EXPECT_NE(nullptr, reservedVirtualMemory);
+
+  size_t offset = 0;
+  for (int i = 0; i < devices.size(); i++) {
+    void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
+        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset);
+    ASSERT_EQ(zeVirtualMemMap(context, reservedVirtualMemoryOffset,
+                              allocationSize, reservedPhysicalMemoryArray[i], 0,
+                              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+              ZE_RESULT_SUCCESS);
+    offset += allocationSize;
+  }
+
+  int8_t pattern = 9;
+  void *memory = lzt::allocate_shared_memory(totalAllocationSize, pageSize);
+  lzt::append_memory_fill(cmdlist, reservedVirtualMemory, &pattern,
+                          sizeof(pattern), totalAllocationSize, nullptr);
+  lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
+  lzt::append_memory_copy(cmdlist, memory, reservedVirtualMemory,
+                          totalAllocationSize, nullptr);
+  lzt::close_command_list(cmdlist);
+  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::synchronize(cmdqueue, UINT64_MAX);
+  uint8_t *data = reinterpret_cast<uint8_t *>(memory);
+  for (int i = 0; i < totalAllocationSize; i++) {
+    ASSERT_EQ(data[i], pattern);
+  }
+  offset = 0;
+  for (int i = 0; i < devices.size(); i++) {
+    void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
+        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset);
+    lzt::virtual_memory_unmap(context, reservedVirtualMemoryOffset,
+                              allocationSize);
+    lzt::physical_memory_destroy(context, reservedPhysicalMemoryArray[i]);
+  }
+  lzt::virtual_memory_free(context, reservedVirtualMemory,
+                           virtualReservationSize);
+  lzt::free_memory(memory);
+  lzt::destroy_command_list(cmdlist);
+  lzt::destroy_command_queue(cmdqueue);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKernelThenResultsinValidData) {
+  int numDevices = lzt::get_ze_device_count();
+  std::vector<ze_device_handle_t> devices;
+  size_t pageSize = 0;
+  std::vector<ze_physical_mem_handle_t> reservedPhysicalMemoryArray;
+  devices = lzt::get_ze_devices(numDevices);
+  reservedPhysicalMemoryArray.resize(numDevices);
+  if (numDevices == 1) {
+    reservedPhysicalMemoryArray.resize(2);
+    devices.resize(2);
+    devices[0] = device;
+    devices[1] = device;
+  }
+  ze_command_list_handle_t cmdlist = lzt::create_command_list(devices[0]);
+  ze_command_queue_handle_t cmdqueue = lzt::create_command_queue();
+
+  lzt::query_page_size(context, device, 0, &pageSize);
+  allocationSize = pageSize;
+  allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
+  for (int i = 0; i < devices.size(); i++) {
+    lzt::physical_memory_allocation(context, devices[i], allocationSize,
+                                    &reservedPhysicalMemoryArray[i]);
+  }
+  size_t totalAllocationSize = allocationSize * devices.size();
+  size_t virtualReservationSize = lzt::nextPowerOfTwo(totalAllocationSize);
+
+  lzt::virtual_memory_reservation(context, nullptr, virtualReservationSize,
+                                  &reservedVirtualMemory);
+  EXPECT_NE(nullptr, reservedVirtualMemory);
+
+  size_t offset = 0;
+  for (int i = 0; i < devices.size(); i++) {
+    void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
+        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset);
+    ASSERT_EQ(zeVirtualMemMap(context, reservedVirtualMemoryOffset,
+                              allocationSize, reservedPhysicalMemoryArray[i], 0,
+                              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+              ZE_RESULT_SUCCESS);
+    offset += allocationSize;
+  }
+  void *memory = lzt::allocate_shared_memory(totalAllocationSize, pageSize);
+  lzt::write_data_pattern(memory, totalAllocationSize, 1);
+  std::string module_name = "write_memory_pattern.spv";
+  ze_module_handle_t module = lzt::create_module(
+      lzt::zeDevice::get_instance()->get_device(), module_name);
+  std::string func_name = "write_memory_pattern";
+  lzt::FunctionArg arg;
+  std::vector<lzt::FunctionArg> args;
+
+  arg.arg_size = sizeof(uint8_t *);
+  arg.arg_value = &reservedVirtualMemory;
+  args.push_back(arg);
+  arg.arg_size = sizeof(int);
+  int size = static_cast<int>(totalAllocationSize);
+  arg.arg_value = &size;
+  args.push_back(arg);
+
+  ze_kernel_handle_t function = lzt::create_function(module, func_name);
+  uint32_t group_size_x = 1;
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeKernelSuggestGroupSize(function, 1, 1, 1, &group_size_x,
+                                     &group_size_y, &group_size_z));
+
+  EXPECT_EQ(
+      ZE_RESULT_SUCCESS,
+      zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
+
+  int i = 0;
+  for (auto arg : args) {
+    EXPECT_EQ(
+        ZE_RESULT_SUCCESS,
+        zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));
+  }
+
+  ze_group_count_t thread_group_dimensions;
+  thread_group_dimensions.groupCountX = 1;
+  thread_group_dimensions.groupCountY = 1;
+  thread_group_dimensions.groupCountZ = 1;
+
+  uint8_t pattern = 1;
+  lzt::append_memory_fill(cmdlist, reservedVirtualMemory, &pattern,
+                          sizeof(pattern), totalAllocationSize, nullptr);
+  lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
+                                   cmdlist, function, &thread_group_dimensions,
+                                   nullptr, 0, nullptr));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendBarrier(cmdlist, nullptr, 0, nullptr));
+
+  lzt::append_memory_copy(cmdlist, memory, reservedVirtualMemory,
+                          totalAllocationSize, nullptr);
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmdlist));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandQueueExecuteCommandLists(cmdqueue, 1, &cmdlist, nullptr));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmdqueue, UINT64_MAX));
+
+  lzt::validate_data_pattern(memory, totalAllocationSize, -1);
+
+  lzt::destroy_function(function);
+  lzt::destroy_module(module);
+  offset = 0;
+  for (int i = 0; i < devices.size(); i++) {
+    void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
+        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset);
+    lzt::virtual_memory_unmap(context, reservedVirtualMemoryOffset,
+                              allocationSize);
+    lzt::physical_memory_destroy(context, reservedPhysicalMemoryArray[i]);
+  }
+  lzt::virtual_memory_free(context, reservedVirtualMemory,
+                           virtualReservationSize);
+  lzt::free_memory(memory);
+  lzt::destroy_command_list(cmdlist);
+  lzt::destroy_command_queue(cmdqueue);
+}
+
 enum MemoryReservationTestType {
   MEMORY_RESERVATION_SINGLE_DEVICE,
   MEMORY_RESERVATION_SINGLE_ROOT_DEVICE_MULTI_SUB_DEVICES,
@@ -258,8 +455,9 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type) {
     lzt::physical_memory_allocation(context, devices[i], allocationSize,
                                     &reservedPhysicalMemory[i]);
   }
-  lzt::virtual_memory_reservation(context, nullptr,
-                                  allocationSize * devices.size(),
+  size_t virtualReservationSize =
+      lzt::nextPowerOfTwo(allocationSize * devices.size());
+  lzt::virtual_memory_reservation(context, nullptr, virtualReservationSize,
                                   &reservedVirtualMemory);
   EXPECT_NE(nullptr, reservedVirtualMemory);
 
@@ -321,7 +519,7 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type) {
   }
 
   lzt::virtual_memory_free(context, reservedVirtualMemory,
-                           allocationSize * devices.size());
+                           virtualReservationSize);
   lzt::free_memory(memory);
   lzt::destroy_command_list(cmdlist);
   lzt::destroy_command_queue(cmdqueue);

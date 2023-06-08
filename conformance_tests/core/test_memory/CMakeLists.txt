@@ -24,6 +24,7 @@ add_lzt_test(
     ${OS_SPECIFIC_LIBS}
   KERNELS
     unified_mem_test
+    write_memory_pattern
 )
 else()
 add_lzt_test(

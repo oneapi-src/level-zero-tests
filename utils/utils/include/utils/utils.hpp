@@ -48,6 +48,7 @@ void print_platform_overview();
 std::vector<uint8_t> load_binary_file(const std::string &file_path);
 void save_binary_file(const std::vector<uint8_t> &data,
                       const std::string &file_path);
+uint32_t nextPowerOfTwo(uint32_t value);
 
 template <typename T> int size_in_bytes(const std::vector<T> &v) {
   return static_cast<int>(sizeof(T) * v.size());
