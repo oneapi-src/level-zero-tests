@@ -119,6 +119,9 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_name.find("zePutIpcMemHandleTests")!= -1) or \
                     (test_name.find("PutIpcMemoryAccessSubDeviceTest")!= -1) or \
                     (re.search('L0_CTS_IpcMemoryAccessTest_GivenL0Physical', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenVpuOnlyFlagThenGpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturnedAndAtLeastOneDriverHandleIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenGpuOnlyFlagThenVpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturnedAndAtLeastOneDriverHandleIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenVpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturned', test_name, re.IGNORECASE)) or \
                     re.search('fabric', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
             else:

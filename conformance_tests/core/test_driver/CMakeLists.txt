@@ -22,6 +22,26 @@ add_lzt_test(
 )
 
 add_lzt_test(
+  NAME test_driver_init_flag_vpu
+  GROUP "/conformance_tests/core"
+  SOURCES
+    src/test_driver_init_flag_vpu.cpp
+    src/main.cpp
+  LINK_LIBRARIES
+    level_zero_tests::logging
+)
+
+add_lzt_test(
+  NAME test_driver_init_flag_vpu_gpu
+  GROUP "/conformance_tests/core"
+  SOURCES
+    src/test_driver_init_flag_vpu_gpu.cpp
+    src/main.cpp
+  LINK_LIBRARIES
+    level_zero_tests::logging
+)
+
+add_lzt_test(
   NAME test_driver
   GROUP "/conformance_tests/core"
   SOURCES
