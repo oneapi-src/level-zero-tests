@@ -1,22 +1,104 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
 
+#include <regex>
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
+#include <boost/process.hpp>
+#include <boost/filesystem.hpp>
+
+namespace bp = boost::process;
+namespace fs = boost::filesystem;
+
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 
 namespace {
+
+bool comparePciIdBusNumber(std::string &bdfString1, std::string &bdfString2) {
+  // bdf1[0] would be domain, bdf1[1] would be bus, bdf1[2] would be device
+  // bdf1[3] would be function
+  std::vector<int> bdf1;
+
+  // bdf2[0] would be domain, bdf2[1] would be bus, bdf2[2] would be device
+  // bdf2[3] would be function
+  std::vector<int> bdf2;
+
+  // Tokenize the input string based on ":" or "."
+  std::stringstream ss(bdfString1);
+  std::string token;
+  while (std::getline(ss, token, ':') || std::getline(ss, token, '.')) {
+    // Convert each token to an integer and store it in the vector
+    bdf1.push_back(std::stoi(token));
+  }
+
+  ss.str(""); // Clear the underlying string of ss
+  ss.clear(); // Reset error flags
+  ss << bdfString2;
+  while (std::getline(ss, token, ':') || std::getline(ss, token, '.')) {
+    // Convert each token to an integer and store it in the vector
+    bdf2.push_back(std::stoi(token));
+  }
+
+  if (bdf1[0] != bdf2[0]) {
+    return (bdf1[0] < bdf2[0]);
+  }
+
+  if (bdf1[1] != bdf2[1]) {
+    return (bdf1[1] < bdf2[1]);
+  }
+
+  if (bdf1[2] != bdf2[2]) {
+    return (bdf1[2] < bdf2[2]);
+  }
+
+  return bdf1[3] < bdf2[3];
+}
+
+static void run_child_process(uint32_t device_count,
+                              std::string enablePciIdDeviceOrder) {
+  auto env = boost::this_process::environment();
+  bp::environment child_env = env;
+  child_env["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = enablePciIdDeviceOrder;
+
+  fs::path helper_path(boost::filesystem::current_path() / "device");
+  std::vector<boost::filesystem::path> paths;
+  paths.push_back(helper_path);
+  bp::ipstream child_output;
+  fs::path helper = bp::search_path("test_pci_device_order_helper", paths);
+  bp::child get_devices_process(helper, child_env, bp::std_out > child_output);
+
+  const std::string child_fail = "zeInit failed";
+  std::vector<std::string> bdfString(device_count);
+  for (int i = 0; i < device_count; i++) {
+    std::getline(child_output, bdfString[i]);
+    // trim trailing whitespace from result_string
+    bdfString[i].erase(std::find_if(bdfString[i].rbegin(), bdfString[i].rend(),
+                                    [](int ch) { return !std::isspace(ch); })
+                           .base(),
+                       bdfString[i].end());
+    if (bdfString[i].compare(child_fail) == 0) {
+      FAIL() << "zeInit Failure in child process";
+    }
+  }
+  get_devices_process.wait();
+  std::vector<std::string> bdfStringSorted(bdfString.begin(), bdfString.end());
+  std::sort(bdfStringSorted.begin(), bdfStringSorted.end(),
+            comparePciIdBusNumber);
+  for (auto i = 0; i < device_count; i++) {
+    EXPECT_STREQ(bdfString[i].c_str(), bdfStringSorted[i].c_str());
+  }
+}
 
 TEST(zeDeviceGetTests,
      GivenZeroCountWhenRetrievingDevicesThenValidCountReturned) {
@@ -34,6 +116,20 @@ TEST(zeDeviceGetTests,
   for (auto device : devices) {
     EXPECT_NE(nullptr, device);
   }
+}
+
+TEST(
+    zeDeviceOrderingTests,
+    GivenPCIOrderingForcedWhenEnumeratingDevicesThenDevicesAreEnumeratedInIncreasingOrderOfTheirBDFAddresses) {
+  auto device_count = lzt::get_ze_device_count();
+
+  ASSERT_GT(device_count, 0);
+
+  auto devices = lzt::get_ze_devices(device_count);
+  for (auto device : devices) {
+    EXPECT_NE(nullptr, device);
+  }
+  run_child_process(device_count, "1");
 }
 
 TEST(zeDeviceGetDevicePropertiesTests,

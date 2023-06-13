@@ -70,6 +70,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_DeviceStatusTest_GivenValidDeviceHandlesWhenRequestingStatusThenSuccessReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceStatusTest_GivenValidSubDeviceHandlesWhenRequestingStatusThenSuccessReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryPropertiesTests_GivenValidDeviceWhenRetrievingExternalMemoryPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDeviceOrderingTests_GivenPCIOrderingForcedWhenEnumeratingDevicesThenDevicesAreEnumeratedInIncreasingOrderOfTheirBDFAddresses', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryFillThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully', test_name, re.IGNORECASE)) or \
