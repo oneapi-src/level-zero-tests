@@ -164,6 +164,49 @@ TEST(zeDeviceGetDevicePropertiesTests,
 }
 
 TEST(
+    zeDevicePciGetPropertiesTests,
+    GivenValidDeviceWhenRetrievingPciSpeedPropertiesThenValidPropertiesAreReturned) {
+
+  auto devices = lzt::get_ze_devices();
+  for (const auto &device : devices) {
+    ze_pci_ext_properties_t pciProperties{};
+    pciProperties.stype = ZE_STRUCTURE_TYPE_PCI_EXT_PROPERTIES;
+    pciProperties.pNext = nullptr;
+
+    if (ZE_RESULT_SUCCESS ==
+        zeDevicePciGetPropertiesExt(device, &pciProperties)) {
+
+      LOG_DEBUG << "pciProperties.address.domain : "
+                << pciProperties.address.domain << std::endl;
+      LOG_DEBUG << "pciProperties.address.bus : " << pciProperties.address.bus
+                << std::endl;
+      LOG_DEBUG << "pciProperties.address.device : "
+                << pciProperties.address.device << std::endl;
+      LOG_DEBUG << "pciProperties.address.function : "
+                << pciProperties.address.function << std::endl;
+      LOG_DEBUG << "pciProperties.maxSpeed.genVersion : "
+                << pciProperties.maxSpeed.genVersion << std::endl;
+      LOG_DEBUG << "pciProperties.maxSpeed.maxBandwidth : "
+                << pciProperties.maxSpeed.maxBandwidth << std::endl;
+      LOG_DEBUG << "pciProperties.maxSpeed.width : "
+                << pciProperties.maxSpeed.width << std::endl;
+
+      if (pciProperties.maxSpeed.genVersion != -1) {
+        EXPECT_NE(pciProperties.maxSpeed.genVersion, 0);
+      }
+
+      if (pciProperties.maxSpeed.maxBandwidth != -1) {
+        EXPECT_NE(pciProperties.maxSpeed.maxBandwidth, 0);
+      }
+
+      if (pciProperties.maxSpeed.width != -1) {
+        EXPECT_NE(pciProperties.maxSpeed.width, 0);
+      }
+    }
+  }
+}
+
+TEST(
     zeDeviceGetComputePropertiesTests,
     GivenValidDeviceWhenRetrievingComputePropertiesThenValidPropertiesAreReturned) {
 
