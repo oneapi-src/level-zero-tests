@@ -288,6 +288,28 @@ TEST(
 #endif
 }
 
+TEST(
+    zeDeviceGetModulePropertiesTests,
+    GivenValidDeviceWhenRetrievingFloatAtomicPropertiesThenValidPropertiesReturned) {
+
+  auto devices = lzt::get_ze_devices();
+  ASSERT_GT(devices.size(), 0);
+
+  for (auto device : devices) {
+    auto properties = lzt::get_device_module_float_atomic_properties(device);
+    auto supported_atomic_flags =
+        ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_LOAD_STORE |
+        ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_ADD |
+        ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_MIN_MAX |
+        ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_LOAD_STORE |
+        ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_ADD |
+        ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_MIN_MAX;
+    EXPECT_NE(0u, supported_atomic_flags & properties.fp16Flags);
+    EXPECT_NE(0u, supported_atomic_flags & properties.fp32Flags);
+    EXPECT_NE(0u, supported_atomic_flags & properties.fp64Flags);
+  }
+}
+
 typedef struct DeviceHandlesBySku_ {
   uint32_t vendorId;
   uint32_t deviceId;

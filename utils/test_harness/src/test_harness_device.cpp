@@ -292,6 +292,21 @@ get_device_module_properties(ze_device_handle_t device) {
   return properties;
 }
 
+ze_float_atomic_ext_properties_t
+get_device_module_float_atomic_properties(ze_device_handle_t device) {
+
+  ze_device_module_properties_t properties;
+  ze_float_atomic_ext_properties_t float_atomic_properties{};
+  memset(&properties, 0, sizeof(properties));
+  properties = {ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES};
+  float_atomic_properties.stype = ZE_STRUCTURE_TYPE_FLOAT_ATOMIC_EXT_PROPERTIES;
+  float_atomic_properties.pNext = nullptr;
+  properties.pNext = &float_atomic_properties;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetModuleProperties(device, &properties));
+  return float_atomic_properties;
+}
+
 #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
 ze_scheduling_hint_exp_properties_t
 get_device_kernel_schedule_hints(ze_device_handle_t device) {

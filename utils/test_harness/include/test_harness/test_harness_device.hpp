@@ -82,6 +82,8 @@ void make_memory_resident(ze_device_handle_t device, void *memory,
                           const size_t size);
 ze_result_t get_device_status(ze_device_handle_t device);
 void evict_memory(ze_device_handle_t device, void *memory, const size_t size);
+ze_float_atomic_ext_properties_t
+get_device_module_float_atomic_properties(ze_device_handle_t device);
 #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
 ze_scheduling_hint_exp_properties_t
 get_device_kernel_schedule_hints(ze_device_handle_t device);
