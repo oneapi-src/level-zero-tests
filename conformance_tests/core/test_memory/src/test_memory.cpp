@@ -47,7 +47,7 @@ TEST_P(
     GivenAllocationFlagsAndSizeAndAlignmentWhenAllocatingDeviceMemoryThenNotNullPointerIsReturned) {
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     zeDriverAllocDeviceMemTestVaryFlagsAndSizeAndAlignment,
     zeDriverAllocDeviceMemParamsTests,
     ::testing::Combine(
@@ -66,11 +66,11 @@ TEST_P(zeDriverAllocDeviceMemAlignmentTests,
   }
 }
 
-INSTANTIATE_TEST_CASE_P(zeDriverAllocDeviceMemTestVarySizeAndAlignment,
-                        zeDriverAllocDeviceMemAlignmentTests,
-                        ::testing::Combine(::testing::Values(0),
-                                           lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(zeDriverAllocDeviceMemTestVarySizeAndAlignment,
+                         zeDriverAllocDeviceMemAlignmentTests,
+                         ::testing::Combine(::testing::Values(0),
+                                            lzt::memory_allocation_sizes,
+                                            lzt::memory_allocation_alignments));
 
 class zeMemGetAllocPropertiesTests : public zeDriverAllocDeviceMemTests {};
 
@@ -114,11 +114,11 @@ TEST_P(
   lzt::get_mem_alloc_properties(context, memory_, &memory_properties);
 }
 
-INSTANTIATE_TEST_CASE_P(zeMemGetAllocPropertiesTestVaryFlagsAndSizeAndAlignment,
-                        zeMemGetAllocPropertiesTests,
-                        ::testing::Combine(::testing::Values(0),
-                                           lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(
+    zeMemGetAllocPropertiesTestVaryFlagsAndSizeAndAlignment,
+    zeMemGetAllocPropertiesTests,
+    ::testing::Combine(::testing::Values(0), lzt::memory_allocation_sizes,
+                       lzt::memory_allocation_alignments));
 
 class zeDriverMemGetAddressRangeTests : public zeDriverAllocDeviceMemTests {};
 
@@ -155,7 +155,7 @@ TEST_P(
   EXPECT_GE(addr_range_size, size_);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     zeDriverMemGetAddressRangeTestVaryFlagsAndSizeAndAlignment,
     zeDriverMemGetAddressRangeTests,
     ::testing::Combine(::testing::Values(0), lzt::memory_allocation_sizes,
@@ -187,7 +187,7 @@ class zeDriverAllocSharedMemTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<ze_device_mem_alloc_flag_t, ze_host_mem_alloc_flag_t,
-                     size_t, size_t>> {};
+                     size_t, size_t, bool>> {};
 TEST_P(
     zeDriverAllocSharedMemTests,
     GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryThenNotNullPointerIsReturned) {
@@ -195,6 +195,7 @@ TEST_P(
   const ze_host_mem_alloc_flag_t host_flags = std::get<1>(GetParam());
   const size_t size = std::get<2>(GetParam());
   const size_t alignment = std::get<3>(GetParam());
+  const bool is_immediate = std::get<4>(GetParam());
 
   void *memory = nullptr;
   auto driver = lzt::get_default_driver();
@@ -207,7 +208,7 @@ TEST_P(
                                        device, context);
   EXPECT_NE(nullptr, memory);
   memset(memory, pattern, size);
-  for (size_t i = 0; i++; i < size) {
+  for (size_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern);
   }
   lzt::free_memory(context, memory);
@@ -218,21 +219,28 @@ TEST_P(
   EXPECT_NE(nullptr, memory);
   const int pattern2 = 0x55;
 
-  auto cmdlist = lzt::create_immediate_command_list(
+  auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
-  lzt::append_memory_fill(cmdlist, memory, &pattern2, 1, size, nullptr);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
-  for (size_t i = 0; i++; i < size) {
+  lzt::append_memory_fill(bundle.list, memory, &pattern2, 1, size, nullptr);
+
+  if (!is_immediate) {
+    lzt::close_command_list(bundle.list);
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
+
+  for (size_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern2);
   }
 
-  lzt::destroy_command_list(cmdlist);
+  lzt::destroy_command_bundle(bundle);
   lzt::free_memory(context, memory);
   lzt::destroy_context(context);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestSharedMemFlagPermutations, zeDriverAllocSharedMemTests,
     ::testing::Combine(
         ::testing::Values(0, ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_CACHED,
@@ -242,10 +250,14 @@ INSTANTIATE_TEST_CASE_P(
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED,
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_WRITE_COMBINED,
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_INITIAL_PLACEMENT),
-        lzt::memory_allocation_sizes, lzt::memory_allocation_alignments));
+        lzt::memory_allocation_sizes, lzt::memory_allocation_alignments,
+        ::testing::Bool()));
 
 class zeDriverAllocSharedMemAlignmentTests
-    : public zeDriverAllocSharedMemTests {};
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_device_mem_alloc_flag_t, ze_host_mem_alloc_flag_t,
+                     size_t, size_t>> {};
 
 TEST_P(zeDriverAllocSharedMemAlignmentTests,
        GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned) {
@@ -270,12 +282,12 @@ TEST_P(zeDriverAllocSharedMemAlignmentTests,
   lzt::destroy_context(context);
 }
 
-INSTANTIATE_TEST_CASE_P(zeDriverAllocSharedMemTestVarySizeAndAlignment,
-                        zeDriverAllocSharedMemAlignmentTests,
-                        ::testing::Combine(::testing::Values(0),
-                                           ::testing::Values(0),
-                                           lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(zeDriverAllocSharedMemTestVarySizeAndAlignment,
+                         zeDriverAllocSharedMemAlignmentTests,
+                         ::testing::Combine(::testing::Values(0),
+                                            ::testing::Values(0),
+                                            lzt::memory_allocation_sizes,
+                                            lzt::memory_allocation_alignments));
 
 class zeSharedMemGetPropertiesTests
     : public ::testing::Test,
@@ -296,10 +308,10 @@ TEST_P(zeSharedMemGetPropertiesTests,
   lzt::free_memory(memory);
 }
 
-INSTANTIATE_TEST_CASE_P(TestSharedMemGetPropertiesPermutations,
-                        zeSharedMemGetPropertiesTests,
-                        ::testing::Combine(lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(TestSharedMemGetPropertiesPermutations,
+                         zeSharedMemGetPropertiesTests,
+                         ::testing::Combine(lzt::memory_allocation_sizes,
+                                            lzt::memory_allocation_alignments));
 
 class zeSharedMemGetAddressRangeTests : public ::testing::Test {};
 
@@ -372,10 +384,10 @@ TEST_P(
   lzt::free_memory(memory);
 }
 
-INSTANTIATE_TEST_CASE_P(TestSharedMemGetAddressRangePermutations,
-                        zeSharedMemGetAddressRangeParameterizedTests,
-                        ::testing::Combine(lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(TestSharedMemGetAddressRangePermutations,
+                         zeSharedMemGetAddressRangeParameterizedTests,
+                         ::testing::Combine(lzt::memory_allocation_sizes,
+                                            lzt::memory_allocation_alignments));
 class zeDriverAllocHostMemTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
@@ -404,7 +416,7 @@ TEST_P(
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(lzt::get_default_context(), memory));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestHostMemParameterCombinations, zeDriverAllocHostMemTests,
     ::testing::Combine(
         ::testing::Values(0, ZE_HOST_MEM_ALLOC_FLAG_BIAS_CACHED,
@@ -434,11 +446,11 @@ TEST_P(zeDriverAllocHostMemAlignmentTests,
   lzt::free_memory(memory);
 }
 
-INSTANTIATE_TEST_CASE_P(zeDriverAllocHostMemTestVarySizeAndAlignment,
-                        zeDriverAllocHostMemAlignmentTests,
-                        ::testing::Combine(::testing::Values(0),
-                                           lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(zeDriverAllocHostMemTestVarySizeAndAlignment,
+                         zeDriverAllocHostMemAlignmentTests,
+                         ::testing::Combine(::testing::Values(0),
+                                            lzt::memory_allocation_sizes,
+                                            lzt::memory_allocation_alignments));
 
 class zeHostMemPropertiesTests
     : public ::testing::Test,
@@ -462,10 +474,10 @@ TEST_P(
   lzt::free_memory(memory);
 }
 
-INSTANTIATE_TEST_CASE_P(TestHostMemGetPropertiesParameterCombinations,
-                        zeHostMemPropertiesTests,
-                        ::testing::Combine(lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(TestHostMemGetPropertiesParameterCombinations,
+                         zeHostMemPropertiesTests,
+                         ::testing::Combine(lzt::memory_allocation_sizes,
+                                            lzt::memory_allocation_alignments));
 
 class zeHostMemGetAddressRangeTests : public ::testing::Test {};
 
@@ -642,29 +654,33 @@ TEST_F(zeMemFreeExtTests, AllocateDeviceMemoryAndThenFreeWithDeferFreePolicy) {
             zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
 }
 
-class zeMemFreeExtMultipleTests : public ::testing::Test,
-                                  public ::testing::WithParamInterface<
-                                      std::tuple<size_t, uint32_t, uint32_t>> {
-};
+class zeMemFreeExtMultipleTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<size_t, uint32_t, uint32_t, bool>> {};
 
 TEST_P(
     zeMemFreeExtMultipleTests,
     AllocateMultipleDeviceMemoryAndThenFreeWithDeferFreePolicyWhileBuffersInUse) {
   if (!check_ext_version())
     GTEST_SKIP();
-#define NUM_BUFFERS_MAX 100
+  const size_t num_buffers_max = 100;
   const size_t size = std::get<0>(GetParam());
   const size_t alignment = 1;
   void *base = nullptr;
   uint32_t num_buffers = std::get<1>(GetParam());
-  if (num_buffers > NUM_BUFFERS_MAX) {
-    num_buffers = NUM_BUFFERS_MAX;
+  if (num_buffers > num_buffers_max) {
+    num_buffers = num_buffers_max;
   }
   uint32_t num_loops = std::get<2>(GetParam());
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
-  uint8_t pattern[NUM_BUFFERS_MAX];
-  void *memory[NUM_BUFFERS_MAX];
+  const bool is_immediate = std::get<3>(GetParam());
+
+  uint8_t pattern[num_buffers_max];
+  uint8_t *dev_fill_buf[num_buffers_max];
+  uint8_t *dev_copy_buf[num_buffers_max];
+  uint8_t *host_verify_buf[num_buffers_max];
 
   ze_memory_free_ext_desc_t memfreedesc = {};
   memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
@@ -679,48 +695,77 @@ TEST_P(
 
     for (uint32_t count = 0; count < num_loops; count++) {
       const ze_context_handle_t context = lzt::create_context();
-      auto cmdlist = lzt::create_command_list(context, device, 0, 0);
-      auto cmdqueue = lzt::create_command_queue(
-          context, device, static_cast<ze_command_queue_flag_t>(0),
-          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-          0);
+      auto bundle = lzt::create_command_bundle(
+          context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+          ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
       for (uint32_t i = 0; i < num_buffers; i++) {
-        memory[i] =
-            lzt::allocate_device_memory(size, alignment, 0, 0, device, context);
-        EXPECT_NE(nullptr, memory[i]);
+        dev_fill_buf[i] = static_cast<uint8_t *>(lzt::allocate_device_memory(
+            size, alignment, 0, 0, device, context));
+        EXPECT_NE(nullptr, dev_fill_buf[i]);
+        dev_copy_buf[i] = static_cast<uint8_t *>(lzt::allocate_device_memory(
+            size, alignment, 0, 0, device, context));
+        EXPECT_NE(nullptr, dev_copy_buf[i]);
         pattern[i] = rand() & 0xff;
-        lzt::append_memory_fill(cmdlist, memory[i], &pattern[i], 1, size,
-                                nullptr);
+        host_verify_buf[i] = new uint8_t[size]();
+        EXPECT_NE(nullptr, host_verify_buf[i]);
       }
 
-      lzt::close_command_list(cmdlist);
-      lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+      for (uint32_t i = 0; i < num_buffers; i++) {
+        lzt::append_memory_fill(bundle.list, dev_fill_buf[i], &pattern[i], 1,
+                                size, nullptr);
+        lzt::append_barrier(bundle.list);
+        lzt::append_memory_copy(bundle.list, dev_copy_buf[i], dev_fill_buf[i],
+                                size);
+        lzt::append_barrier(bundle.list);
+        lzt::append_memory_copy(bundle.list, host_verify_buf[i],
+                                dev_copy_buf[i], size);
+        lzt::append_barrier(bundle.list);
+      }
+
+      if (!is_immediate) {
+        lzt::close_command_list(bundle.list);
+        lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      }
 
       for (uint32_t i = 0; i < num_buffers; i++) {
         EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeMemFreeExt(context, &memfreedesc, memory[i]));
+                  zeMemFreeExt(context, &memfreedesc, dev_fill_buf[i]));
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeMemFreeExt(context, &memfreedesc, dev_copy_buf[i]));
       }
 
-      lzt::synchronize(cmdqueue, UINT64_MAX);
+      if (is_immediate) {
+        lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+      } else {
+        lzt::synchronize(bundle.queue, UINT64_MAX);
+      }
 
       for (uint32_t i = 0; i < num_buffers; i++) {
-        for (size_t j = 0; j++; j < size) {
-          ASSERT_EQ(static_cast<uint8_t *>(memory[i])[j], pattern[i]);
+        bool failed = false;
+        for (size_t j = 0; j < size; j++) {
+          if (host_verify_buf[i][j] != pattern[i]) {
+            failed = true;
+            break;
+          }
+        }
+        delete[] host_verify_buf[i];
+        if (failed) {
+          GTEST_FAIL() << "Verification failed";
+          break;
         }
       }
-      lzt::destroy_command_list(cmdlist);
-      lzt::destroy_command_queue(cmdqueue);
+      lzt::destroy_command_bundle(bundle);
       lzt::destroy_context(context);
     }
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestDeferAndBlockingPermuatations, zeMemFreeExtMultipleTests,
-    ::testing::Combine(::testing::Values(5000000, 10000000, 50000000,
-                                         100000000),
-                       ::testing::Values(5, 10), ::testing::Values(100)));
+    ::testing::Combine(::testing::Values(500000, 1000000, 5000000, 10000000),
+                       ::testing::Values(5, 10), ::testing::Values(100),
+                       ::testing::Bool()));
 
 #endif
 
@@ -746,10 +791,10 @@ TEST_P(
   lzt::free_memory(memory);
 }
 
-INSTANTIATE_TEST_CASE_P(TestHostMemGetAddressRangeSizeTests,
-                        zeHostMemGetAddressRangeSizeTests,
-                        ::testing::Combine(lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(TestHostMemGetAddressRangeSizeTests,
+                         zeHostMemGetAddressRangeSizeTests,
+                         ::testing::Combine(lzt::memory_allocation_sizes,
+                                            lzt::memory_allocation_alignments));
 
 class zeHostMemGetAddressRangeParameterTests
     : public ::testing::Test,
@@ -789,10 +834,10 @@ TEST_P(
   lzt::free_memory(memory);
 }
 
-INSTANTIATE_TEST_CASE_P(zeHostMemGetAddressRangeParameterizedTests,
-                        zeHostMemGetAddressRangeParameterTests,
-                        ::testing::Combine(lzt::memory_allocation_sizes,
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(zeHostMemGetAddressRangeParameterizedTests,
+                         zeHostMemGetAddressRangeParameterTests,
+                         ::testing::Combine(lzt::memory_allocation_sizes,
+                                            lzt::memory_allocation_alignments));
 
 class zeHostSystemMemoryHostTests : public ::testing::Test {
 protected:

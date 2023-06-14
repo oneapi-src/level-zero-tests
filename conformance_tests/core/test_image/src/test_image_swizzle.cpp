@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -21,24 +21,21 @@ namespace {
 class zeCommandListAppendImageCopyWithSwizzleTests : public ::testing::Test {
 protected:
   zeCommandListAppendImageCopyWithSwizzleTests() {
-    command_list = lzt::create_command_list();
-    command_queue = lzt::create_command_queue();
     module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
                                 "image_swizzle_tests.spv");
   }
 
   ~zeCommandListAppendImageCopyWithSwizzleTests() {
-    lzt::destroy_command_queue(command_queue);
-    lzt::destroy_command_list(command_list);
     lzt::destroy_module(module);
   }
 
   ze_image_handle_t create_image_desc_format(ze_image_format_type_t format_type,
                                              bool layout32);
-  void run_test(void *inbuff, void *outbuff, std::string kernel_name);
 
-  ze_command_list_handle_t command_list;
-  ze_command_queue_handle_t command_queue;
+public:
+  void run_test(void *inbuff, void *outbuff, std::string kernel_name,
+                bool is_immediate);
+
   ze_image_handle_t img_in, img_out;
   ze_module_handle_t module;
   const int image_height = 32;
@@ -47,12 +44,14 @@ protected:
 };
 
 void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
-    void *inbuff, void *outbuff, std::string kernel_name) {
+    void *inbuff, void *outbuff, std::string kernel_name, bool is_immediate) {
+
+  auto bundle = lzt::create_command_bundle(is_immediate);
 
   uint32_t group_size_x, group_size_y, group_size_z;
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
-  lzt::append_image_copy_from_mem(command_list, img_in, inbuff, nullptr);
-  lzt::append_barrier(command_list, nullptr, 0, nullptr);
+  lzt::append_image_copy_from_mem(bundle.list, img_in, inbuff, nullptr);
+  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeKernelSuggestGroupSize(kernel, image_width, image_height, 1,
                                      &group_size_x, &group_size_y,
@@ -65,13 +64,17 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
 
   ze_group_count_t group_dems = {image_width / group_size_x,
                                  image_height / group_size_y, 1};
-  lzt::append_launch_function(command_list, kernel, &group_dems, nullptr, 0,
+  lzt::append_launch_function(bundle.list, kernel, &group_dems, nullptr, 0,
                               nullptr);
-  lzt::append_barrier(command_list, nullptr, 0, nullptr);
-  lzt::append_image_copy_to_mem(command_list, outbuff, img_out, nullptr);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_image_copy_to_mem(bundle.list, outbuff, img_out, nullptr);
+  lzt::close_command_list(bundle.list);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+  } else {
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
   lzt::destroy_function(kernel);
 }
 
@@ -107,9 +110,8 @@ zeCommandListAppendImageCopyWithSwizzleTests::create_image_desc_format(
   return image;
 }
 
-TEST_F(
-    zeCommandListAppendImageCopyWithSwizzleTests,
-    GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturned) {
+void RunGivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernel(
+    zeCommandListAppendImageCopyWithSwizzleTests &test, bool is_immediate) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -124,11 +126,11 @@ TEST_F(
   image_descriptor_source.format.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
   image_descriptor_source.format.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
   image_descriptor_source.format.w = ZE_IMAGE_FORMAT_SWIZZLE_A;
-  image_descriptor_source.height = image_height;
-  image_descriptor_source.width = image_width;
+  image_descriptor_source.height = test.image_height;
+  image_descriptor_source.width = test.image_width;
   image_descriptor_source.depth = 1;
   image_descriptor_source.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
-  img_in = lzt::create_ze_image(image_descriptor_source);
+  test.img_in = lzt::create_ze_image(image_descriptor_source);
 
   ze_image_desc_t image_descriptor_dest = {};
   image_descriptor_dest.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
@@ -140,24 +142,24 @@ TEST_F(
   image_descriptor_dest.format.y = ZE_IMAGE_FORMAT_SWIZZLE_B;
   image_descriptor_dest.format.z = ZE_IMAGE_FORMAT_SWIZZLE_G;
   image_descriptor_dest.format.w = ZE_IMAGE_FORMAT_SWIZZLE_R;
-  image_descriptor_dest.height = image_height;
-  image_descriptor_dest.width = image_width;
+  image_descriptor_dest.height = test.image_height;
+  image_descriptor_dest.width = test.image_width;
   image_descriptor_dest.depth = 1;
   image_descriptor_dest.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
-  img_out = lzt::create_ze_image(image_descriptor_dest);
+  test.img_out = lzt::create_ze_image(image_descriptor_dest);
 
   uint32_t *inbuff =
-      (uint32_t *)lzt::allocate_host_memory(image_size * sizeof(uint32_t));
+      (uint32_t *)lzt::allocate_host_memory(test.image_size * sizeof(uint32_t));
   uint32_t *outbuff =
-      (uint32_t *)lzt::allocate_host_memory(image_size * sizeof(uint32_t));
+      (uint32_t *)lzt::allocate_host_memory(test.image_size * sizeof(uint32_t));
 
-  for (int i = 0; i < image_size; i++) {
+  for (int i = 0; i < test.image_size; i++) {
     inbuff[i] = 0x12345678;
   }
 
-  run_test(inbuff, outbuff, "image_swizzle_test");
+  test.run_test(inbuff, outbuff, "image_swizzle_test", is_immediate);
 
-  for (int i = 0; i < image_size; i++) {
+  for (int i = 0; i < test.image_size; i++) {
     EXPECT_EQ(outbuff[i], 0x78563412); // After swizzle from RGBA to AGBR the
                                        // data format will be reversed from 12
                                        // 34 56 78 -> 78 56 34 12
@@ -165,6 +167,20 @@ TEST_F(
 
   lzt::free_memory(outbuff);
   lzt::free_memory(inbuff);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyWithSwizzleTests,
+    GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturned) {
+  RunGivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernel(
+      *this, false);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyWithSwizzleTests,
+    GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelOnImmediateCmdListThenImageIsCorrectAndSuccessIsReturned) {
+  RunGivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernel(
+      *this, true);
 }
 
 } // namespace

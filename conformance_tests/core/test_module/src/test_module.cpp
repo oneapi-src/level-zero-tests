@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -89,9 +89,8 @@ create_module_vector(ze_device_handle_t device,
 }
 class zeModuleCreateTests : public ::testing::Test {};
 
-TEST_F(
-    zeModuleCreateTests,
-    GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerThenPointerPointsToValidGlobalVariable) {
+void RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(
+    bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -103,26 +102,40 @@ TEST_F(
   int *typed_global_pointer;
 
   for (auto mod : module) {
-    auto cmd_list = lzt::create_command_list();
-    auto cmd_queue = lzt::create_command_queue();
+    auto bundle = lzt::create_command_bundle(is_immediate);
     global_pointer = nullptr;
     ASSERT_EQ(ZE_RESULT_SUCCESS,
               zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
                                        &global_pointer));
     EXPECT_NE(nullptr, global_pointer);
     void *memory = lzt::allocate_shared_memory(sizeof(expected_value));
-    lzt::append_memory_copy(cmd_list, memory, global_pointer,
+    lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_value));
-    lzt::close_command_list(cmd_list);
-    lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
-    lzt::synchronize(cmd_queue, UINT64_MAX);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(bundle.list);
+      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      lzt::synchronize(bundle.queue, UINT64_MAX);
+    }
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_value, *typed_global_pointer);
     lzt::free_memory(memory);
-    lzt::destroy_command_list(cmd_list);
-    lzt::destroy_command_queue(cmd_queue);
+    lzt::destroy_command_bundle(bundle);
     lzt::destroy_module(mod);
   }
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerThenPointerPointsToValidGlobalVariable) {
+  RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(false);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerOnImmediateCmdListThenPointerPointsToValidGlobalVariable) {
+  RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(true);
 }
 
 TEST_F(
@@ -156,10 +169,8 @@ TEST_F(
   }
 }
 
-TEST_F(
-    zeModuleCreateTests,
-    GivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointersThenAllPointersPointToValidGlobalVariable) {
-
+void RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(
+    bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -171,8 +182,7 @@ TEST_F(
 
   for (auto mod : module) {
     for (int i = 0; i < global_count; ++i) {
-      auto cmd_list = lzt::create_command_list();
-      auto cmd_queue = lzt::create_command_queue();
+      auto bundle = lzt::create_command_bundle(is_immediate);
       std::string global_name = "global_" + std::to_string(i);
       global_pointer = nullptr;
       ASSERT_EQ(ZE_RESULT_SUCCESS,
@@ -180,15 +190,18 @@ TEST_F(
                                          &global_pointer));
       EXPECT_NE(nullptr, global_pointer);
       void *memory = lzt::allocate_shared_memory(sizeof(i));
-      lzt::append_memory_copy(cmd_list, memory, global_pointer, sizeof(i));
-      lzt::close_command_list(cmd_list);
-      lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
-      lzt::synchronize(cmd_queue, UINT64_MAX);
+      lzt::append_memory_copy(bundle.list, memory, global_pointer, sizeof(i));
+      if (is_immediate) {
+        lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(bundle.list);
+        lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+        lzt::synchronize(bundle.queue, UINT64_MAX);
+      }
       typed_global_pointer = static_cast<int *>(memory);
       EXPECT_EQ(i, *typed_global_pointer);
       lzt::free_memory(memory);
-      lzt::destroy_command_list(cmd_list);
-      lzt::destroy_command_queue(cmd_queue);
+      lzt::destroy_command_bundle(bundle);
     }
     lzt::destroy_module(mod);
   }
@@ -196,7 +209,18 @@ TEST_F(
 
 TEST_F(
     zeModuleCreateTests,
-    GivenGlobalPointerWhenUpdatingGlobalVariableOnDeviceThenGlobalPointerPointsToUpdatedVariable) {
+    GivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointersThenAllPointersPointToValidGlobalVariable) {
+  RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(false);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointersOnImmediateCmdListThenAllPointersPointToValidGlobalVariable) {
+  RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(true);
+}
+
+void RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(
+    bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -209,36 +233,55 @@ TEST_F(
   const int expected_updated_value = 2;
 
   for (auto mod : module) {
-    auto cmd_list = lzt::create_command_list();
-    auto cmd_queue = lzt::create_command_queue();
+    auto bundle = lzt::create_command_bundle(is_immediate);
     global_pointer = nullptr;
     ASSERT_EQ(ZE_RESULT_SUCCESS,
               zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
                                        &global_pointer));
     EXPECT_NE(nullptr, global_pointer);
     void *memory = lzt::allocate_shared_memory(sizeof(expected_initial_value));
-    lzt::append_memory_copy(cmd_list, memory, global_pointer,
+    lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_initial_value));
-    lzt::close_command_list(cmd_list);
-    lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
-    lzt::synchronize(cmd_queue, UINT64_MAX);
+    lzt::close_command_list(bundle.list);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+    } else {
+      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      lzt::synchronize(bundle.queue, UINT64_MAX);
+    }
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_initial_value, *typed_global_pointer);
     lzt::create_and_execute_function(device, mod, "test", 1, nullptr);
-    lzt::reset_command_list(cmd_list);
-    lzt::append_memory_copy(cmd_list, memory, global_pointer,
+    lzt::reset_command_list(bundle.list);
+    lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_updated_value));
-    lzt::close_command_list(cmd_list);
-    lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
-    lzt::synchronize(cmd_queue, UINT64_MAX);
+    lzt::close_command_list(bundle.list);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+    } else {
+      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      lzt::synchronize(bundle.queue, UINT64_MAX);
+    }
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_updated_value, *typed_global_pointer);
     lzt::free_memory(memory);
-    lzt::destroy_command_list(cmd_list);
-    lzt::destroy_command_queue(cmd_queue);
+    lzt::destroy_command_bundle(bundle);
     lzt::destroy_module(mod);
   }
 }
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenGlobalPointerWhenUpdatingGlobalVariableOnDeviceThenGlobalPointerPointsToUpdatedVariable) {
+  RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(false);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenGlobalPointerWhenUpdatingGlobalVariableOnDeviceWithImmediateCmdListThenGlobalPointerPointsToUpdatedVariable) {
+  RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(true);
+}
+
 TEST_F(
     zeModuleCreateTests,
     GivenValidSpecConstantsWhenCreatingModuleThenExpectSpecConstantInKernelGetsUpdates) {
@@ -292,9 +335,8 @@ TEST_F(
   lzt::destroy_module(module_spec);
 }
 
-TEST_F(
-    zeModuleCreateTests,
-    GivenModuleWithFunctionWhenRetrievingFunctionPointerThenCallToKernelWithFunctionPointerSucceeds) {
+void RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(
+    bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   void *values = lzt::allocate_shared_memory(sizeof(int));
   std::vector<lzt::FunctionArg> args;
@@ -312,8 +354,7 @@ TEST_F(
                                        &function_pointer));
   ASSERT_NE(nullptr, function_pointer);
   ze_kernel_handle_t function = lzt::create_function(module, function_name);
-  ze_command_list_handle_t cmdlist = lzt::create_command_list(device);
-  ze_command_queue_handle_t cmdq = lzt::create_command_queue(device);
+  auto bundle = lzt::create_command_bundle(device, is_immediate);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
@@ -337,22 +378,28 @@ TEST_F(
   thread_group_dimensions.groupCountY = 1;
   thread_group_dimensions.groupCountZ = 1;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
-                                   cmdlist, function, &thread_group_dimensions,
-                                   nullptr, 0, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendLaunchKernel(bundle.list, function,
+                                            &thread_group_dimensions, nullptr,
+                                            0, nullptr));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(cmdlist, nullptr, 0, nullptr));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmdlist));
+            zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(bundle.list));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueExecuteCommandLists(cmdq, 1, &cmdlist, nullptr));
+  if (is_immediate) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(bundle.list, UINT64_MAX));
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
+                                     bundle.queue, 1, &bundle.list, nullptr));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmdq, UINT64_MAX));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandQueueSynchronize(bundle.queue, UINT64_MAX));
+  }
 
   lzt::destroy_function(function);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(cmdq));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cmdlist));
+  lzt::destroy_command_bundle(bundle);
   int result = *(int *)values;
   // val = 1;
   // function_pointer add_int will add 1
@@ -363,6 +410,18 @@ TEST_F(
 
   lzt::destroy_module(module);
   lzt::free_memory(values);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleWithFunctionWhenRetrievingFunctionPointerThenCallToKernelWithFunctionPointerSucceeds) {
+  RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(false);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleWithFunctionWhenRetrievingFunctionPointerThenCallToKernelWithFunctionPointerOnImmediateCmdListSucceeds) {
+  RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(true);
 }
 
 TEST_F(
@@ -457,8 +516,7 @@ TEST_F(
   lzt::destroy_module(module);
 }
 
-TEST_F(zeModuleCreateTests,
-       GivenModuleCompiledWithOptimizationsWhenExecutingThenResultIsCorrect) {
+void RunGivenModuleCompiledWithOptimizationsWhenExecuting(bool is_immediate) {
   std::string l0_opt[3] = {"-ze-opt-level=0", "-ze-opt-level=1",
                            "-ze-opt-level=2"};
   std::string igc_opt[3] = {"-ze-opt-level=O0", "-ze-opt-level=O1",
@@ -483,8 +541,7 @@ TEST_F(zeModuleCreateTests,
     std::string native(buffer.begin(), buffer.end());
     ASSERT_NE(native.find(igc_opt[i]), std::string::npos);
     auto kernel = lzt::create_function(module, "module_add_constant");
-    ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
-    ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+    auto bundle = lzt::create_command_bundle(device, is_immediate);
     int *input =
         (int *)lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device);
     memset(input, 0, 16 * sizeof(int));
@@ -495,21 +552,35 @@ TEST_F(zeModuleCreateTests,
     lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
     ze_group_count_t group_dim = {1, 1, 1};
-    lzt::append_launch_function(cmd_list, kernel, &group_dim, nullptr, 0,
+    lzt::append_launch_function(bundle.list, kernel, &group_dim, nullptr, 0,
                                 nullptr);
 
-    lzt::close_command_list(cmd_list);
-    lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-    lzt::synchronize(cmd_q, UINT64_MAX);
+    lzt::close_command_list(bundle.list);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+    } else {
+      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      lzt::synchronize(bundle.queue, UINT64_MAX);
+    }
 
     EXPECT_EQ(input[0], addval);
 
     lzt::free_memory(input);
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
-    lzt::destroy_command_list(cmd_list);
-    lzt::destroy_command_queue(cmd_q);
+    lzt::destroy_command_bundle(bundle);
   }
+}
+
+TEST_F(zeModuleCreateTests,
+       GivenModuleCompiledWithOptimizationsWhenExecutingThenResultIsCorrect) {
+  RunGivenModuleCompiledWithOptimizationsWhenExecuting(false);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleCompiledWithOptimizationsWhenExecutingOnImmediateCmdListThenResultIsCorrect) {
+  RunGivenModuleCompiledWithOptimizationsWhenExecuting(true);
 }
 
 TEST_F(zeModuleCreateTests,
@@ -547,7 +618,7 @@ protected:
   void run_test(ze_module_handle_t mod, ze_group_count_t th_group_dim,
                 uint32_t group_size_x, uint32_t group_size_y,
                 uint32_t group_size_z, bool signal_to_host,
-                bool signal_from_host, enum TestType type) {
+                bool signal_from_host, enum TestType type, bool is_immediate) {
     uint32_t num_events = std::min(group_size_x, static_cast<uint32_t>(6));
     ze_event_handle_t event_kernel_to_host = nullptr;
     ze_kernel_handle_t function;
@@ -584,8 +655,9 @@ protected:
     }
 
     function = lzt::create_function(mod, "module_add_constant");
-    ze_command_list_handle_t cmd_list = lzt::create_command_list(device_);
-    ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device_);
+    auto bundle = lzt::create_command_bundle(
+        device_, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, is_immediate);
     memset(input_a, 0, 16);
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -622,13 +694,13 @@ protected:
     auto wait_events_initial = events_host_to_kernel;
     if (type == FUNCTION) {
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
-                                       cmd_list, function, &th_group_dim,
+                                       bundle.list, function, &th_group_dim,
                                        signal_event, num_wait, p_wait_events));
     } else if (type == FUNCTION_INDIRECT) {
       ze_group_count_t *tg_dim = static_cast<ze_group_count_t *>(args_buff);
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernelIndirect(
-                                       cmd_list, function, tg_dim, signal_event,
-                                       num_wait, p_wait_events));
+                                       bundle.list, function, tg_dim,
+                                       signal_event, num_wait, p_wait_events));
 
       // Intentionally update args_buff after Launch API
       memcpy(args_buff, &th_group_dim, sizeof(ze_group_count_t));
@@ -666,7 +738,7 @@ protected:
       auto functions_initial = function_list;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeCommandListAppendLaunchMultipleKernelsIndirect(
-                    cmd_list, 2, function_list.data(), num_launch_arg,
+                    bundle.list, 2, function_list.data(), num_launch_arg,
                     mult_tg_dim, signal_event, num_wait, p_wait_events));
       for (int i = 0; i < function_list.size(); i++) {
         ASSERT_EQ(function_list[i], functions_initial[i]);
@@ -680,12 +752,14 @@ protected:
       EXPECT_EQ(events_host_to_kernel[i], wait_events_initial[i]);
     }
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendBarrier(cmd_list, nullptr, 0, nullptr));
+              zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmd_list));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(bundle.list));
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_list, nullptr));
+    if (!is_immediate) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
+                                       bundle.queue, 1, &bundle.list, nullptr));
+    }
 
     if (signal_from_host) {
       for (uint32_t i = 0; i < num_events; i++) {
@@ -694,7 +768,13 @@ protected:
       }
     }
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmd_q, UINT64_MAX));
+    if (is_immediate) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(bundle.list, UINT64_MAX));
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandQueueSynchronize(bundle.queue, UINT64_MAX));
+    }
 
     if (signal_to_host) {
       EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -714,8 +794,7 @@ protected:
       }
       lzt::destroy_function(mult_function);
     }
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(cmd_q));
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cmd_list));
+    lzt::destroy_command_bundle(bundle);
     lzt::destroy_function(function);
     lzt::free_memory(host_buff);
     lzt::free_memory(mult_in);
@@ -946,7 +1025,7 @@ TEST_F(zeKernelCreateTests,
 
 class zeKernelLaunchTests
     : public ::zeKernelCreateTests,
-      public ::testing::WithParamInterface<enum TestType> {
+      public ::testing::WithParamInterface<std::tuple<enum TestType, bool>> {
 protected:
   void test_kernel_execution();
 };
@@ -963,7 +1042,8 @@ void zeKernelLaunchTests::test_kernel_execution() {
   uint32_t group_size_z;
   ze_group_count_t thread_group_dimensions;
 
-  enum TestType test_type = GetParam();
+  enum TestType test_type = std::get<0>(GetParam());
+  const bool is_immediate = std::get<1>(GetParam());
 
   std::vector<int> dim = {1, 2, 3};
   std::vector<uint32_t> tg_count = {1, 2, 3, 4};
@@ -997,7 +1077,7 @@ void zeKernelLaunchTests::test_kernel_execution() {
           for (auto sig1 : sig_to_host) {
             for (auto sig2 : sig_from_host) {
               run_test(mod, thread_group_dimensions, group_size_x, group_size_y,
-                       group_size_z, sig1, sig2, test_type);
+                       group_size_z, sig1, sig2, test_type, is_immediate);
             }
           }
         }
@@ -1009,26 +1089,27 @@ void zeKernelLaunchTests::test_kernel_execution() {
 TEST_P(
     zeKernelLaunchTests,
     GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecution) {
+  if (std::get<1>(GetParam())) {
+    GTEST_SKIP() << "Immediate command lists are unsupported at the moment";
+  }
   test_kernel_execution();
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestFunctionAndFunctionIndirectAndMultipleFunctionsIndirect,
     zeKernelLaunchTests,
-    testing::Values(FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT));
+    ::testing::Combine(::testing::Values(FUNCTION, FUNCTION_INDIRECT,
+                                         MULTIPLE_INDIRECT),
+                       ::testing::Bool()));
 
-TEST_F(
-    zeKernelLaunchTests,
-    GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully) {
-
+void RunGivenBufferLargerThan4GBWhenExecutingFunction(bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto context = lzt::create_context(driver);
 
-  auto command_queue = lzt::create_command_queue(
+  auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   auto module = lzt::create_module(
       context, device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV,
@@ -1124,8 +1205,8 @@ TEST_F(
   lzt::suggest_group_size(kernel, head, 1, 1, group_size_x, group_size_y,
                           group_size_z);
   if (group_size_x > device_compute_properties.maxGroupSizeX) {
-    LOG_WARNING
-        << "Suggested group size is larger than max group size, setting to max";
+    LOG_WARNING << "Suggested group size is larger than max group size, "
+                   "setting to max";
     group_size_x = device_compute_properties.maxGroupSizeX;
   }
 
@@ -1135,28 +1216,36 @@ TEST_F(
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
-  lzt::append_memory_fill(command_list, device_buffer, &pattern,
-                          sizeof(pattern), size, nullptr);
-  lzt::append_barrier(command_list);
-  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+  lzt::append_memory_fill(bundle.list, device_buffer, &pattern, sizeof(pattern),
+                          size, nullptr);
+  lzt::append_barrier(bundle.list);
+  lzt::append_launch_function(bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::close_command_list(bundle.list);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+  } else {
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
 
   // validate
   size_t offset;
   auto break_error = false;
   for (offset = 0; offset <= size - validation_buffer_size;
        offset += validation_buffer_size) {
-    lzt::reset_command_list(command_list);
+    lzt::reset_command_list(bundle.list);
     lzt::append_memory_copy(
-        command_list, validation_buffer,
+        bundle.list, validation_buffer,
         static_cast<void *>(static_cast<uint8_t *>(device_buffer) + offset),
         validation_buffer_size);
-    lzt::close_command_list(command_list);
-    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT64_MAX);
+    lzt::close_command_list(bundle.list);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+    } else {
+      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      lzt::synchronize(bundle.queue, UINT64_MAX);
+    }
 
     if (offset) {
       auto comparison =
@@ -1189,14 +1278,18 @@ TEST_F(
   }
 
   if (offset < size) {
-    lzt::reset_command_list(command_list);
+    lzt::reset_command_list(bundle.list);
     lzt::append_memory_copy(
-        command_list, validation_buffer,
+        bundle.list, validation_buffer,
         static_cast<void *>(static_cast<uint8_t *>(device_buffer) + offset),
         size - offset);
-    lzt::close_command_list(command_list);
-    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT64_MAX);
+    lzt::close_command_list(bundle.list);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+    } else {
+      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      lzt::synchronize(bundle.queue, UINT64_MAX);
+    }
 
     ASSERT_EQ(0, memcmp(validation_buffer, reference_buffer, (size - offset)));
   }
@@ -1207,14 +1300,26 @@ TEST_F(
   lzt::free_memory(context, device_buffer);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(bundle);
   lzt::destroy_context(context);
 }
 
-class zeKernelLaunchTestsP : public ::testing::Test,
-                             public ::testing::WithParamInterface<
-                                 std::tuple<uint32_t, uint32_t, uint32_t>> {};
+TEST_F(
+    zeKernelLaunchTests,
+    GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully) {
+  RunGivenBufferLargerThan4GBWhenExecutingFunction(false);
+}
+
+TEST_F(
+    zeKernelLaunchTests,
+    GivenBufferLargerThan4GBWhenExecutingFunctionOnImmediateCmdListThenFunctionExecutesSuccessfully) {
+  RunGivenBufferLargerThan4GBWhenExecutingFunction(true);
+}
+
+class zeKernelLaunchTestsP
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<uint32_t, uint32_t, uint32_t, bool>> {};
 
 TEST_P(
     zeKernelLaunchTestsP,
@@ -1224,10 +1329,10 @@ TEST_P(
   auto device = lzt::get_default_device(driver);
   auto context = lzt::create_context(driver);
 
-  auto command_queue = lzt::create_command_queue(
+  const bool is_immediate = std::get<3>(GetParam());
+  auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
   auto module = lzt::create_module(context, device, "module_add.spv",
                                    ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
   auto kernel = lzt::create_function(module, "module_add_constant_3");
@@ -1242,8 +1347,8 @@ TEST_P(
   }
 
   if (!supports_global_offset) {
-    LOG_WARNING
-        << "Driver does not support global offsets in kernel, skipping test";
+    LOG_WARNING << "Driver does not support global offsets in kernel, "
+                   "skipping test";
     GTEST_SKIP();
   }
 
@@ -1298,15 +1403,19 @@ TEST_P(
   LOG_DEBUG << "[Z] Size: " << group_size_z
             << " Count: " << group_count.groupCountZ;
 
-  lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
-  lzt::append_barrier(command_list);
-  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+  lzt::append_memory_copy(bundle.list, buffer_b, buffer_a, size);
+  lzt::append_barrier(bundle.list);
+  lzt::append_launch_function(bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
-  lzt::append_barrier(command_list);
-  lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::append_barrier(bundle.list);
+  lzt::append_memory_copy(bundle.list, buffer_a, buffer_b, size);
+  lzt::close_command_list(bundle.list);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+  } else {
+    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+    lzt::synchronize(bundle.queue, UINT64_MAX);
+  }
 
   // validation
   for (int x = 0; x < base_size; x++) {
@@ -1329,19 +1438,18 @@ TEST_P(
   // cleanup
   lzt::free_memory(context, buffer_a);
   lzt::free_memory(context, buffer_b);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(bundle);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
   lzt::destroy_context(context);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     KernelOffsetTests, zeKernelLaunchTestsP,
     ::testing::Combine(::testing::Values(0, 1, 4,
                                          7), // 0, 1, base_size/2, base_size-1
                        ::testing::Values(0, 1, 4, 7),
-                       ::testing::Values(0, 1, 4, 7)));
+                       ::testing::Values(0, 1, 4, 7), ::testing::Bool()));
 
 class zeKernelLaunchSubDeviceTests : public zeKernelLaunchTests {
 protected:
@@ -1371,13 +1479,18 @@ TEST_P(
     LOG_WARNING << "No sub-device for kernel execution test";
     GTEST_SKIP();
   }
+  if (std::get<1>(GetParam())) {
+    GTEST_SKIP() << "Immediate command lists are unsupported at the moment";
+  }
   test_kernel_execution();
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestFunctionAndFunctionIndirectAndMultipleFunctionsIndirect,
     zeKernelLaunchSubDeviceTests,
-    testing::Values(FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT));
+    ::testing::Combine(::testing::Values(FUNCTION, FUNCTION_INDIRECT,
+                                         MULTIPLE_INDIRECT),
+                       ::testing::Bool()));
 
 class ModuleGetKernelNamesTests
     : public ::testing::Test,
@@ -1409,9 +1522,9 @@ TEST_P(
   lzt::destroy_module(module);
 }
 
-INSTANTIATE_TEST_CASE_P(ModuleGetKernelNamesParamTests,
-                        ModuleGetKernelNamesTests,
-                        ::testing::Values(0, 1, 10, 100, 1000));
+INSTANTIATE_TEST_SUITE_P(ModuleGetKernelNamesParamTests,
+                         ModuleGetKernelNamesTests,
+                         ::testing::Values(0, 1, 10, 100, 1000));
 TEST(
     zeKernelSetIntermediateCacheConfigTest,
     GivenValidkernelHandleWhileSettingIntermediateCacheConfigurationThenSuccessIsReturned) {

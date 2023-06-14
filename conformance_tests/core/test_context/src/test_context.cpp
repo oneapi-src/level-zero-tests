@@ -26,7 +26,7 @@ protected:
   }
 
   void run_test(ze_context_handle_t context,
-                std::vector<ze_device_handle_t> devices) {
+                std::vector<ze_device_handle_t> devices, bool is_immediate) {
 
     const size_t buff_size = 256;
     auto buffer = lzt::allocate_host_memory(buff_size, 1, context);
@@ -36,18 +36,20 @@ protected:
 
     for (auto device : devices) {
       memset(buffer, 0, buff_size);
-      auto cmdlist = lzt::create_command_list(context, device, 0);
-      auto cmdqueue = lzt::create_command_queue(
+      auto bundle = lzt::create_command_bundle(
           context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-          ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-      lzt::append_memory_set(cmdlist, buffer, &val, buff_size);
-      lzt::close_command_list(cmdlist);
-      lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-      lzt::synchronize(cmdqueue, UINT64_MAX);
+          ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::append_memory_set(bundle.list, buffer, &val, buff_size);
+      if (is_immediate) {
+        lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(bundle.list);
+        lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+        lzt::synchronize(bundle.queue, UINT64_MAX);
+      }
 
       ASSERT_EQ(memcmp(ref_buffer, buffer, buff_size), 0);
-      lzt::destroy_command_list(cmdlist);
-      lzt::destroy_command_queue(cmdqueue);
+      lzt::destroy_command_bundle(bundle);
     }
 
     lzt::free_memory(context, buffer);
@@ -61,7 +63,14 @@ protected:
 TEST_F(ContextExCreateTests,
        GivenContextOnAllDevicesWhenUsingContextThenSuccess) {
   auto context = lzt::create_context_ex(driver);
-  run_test(context, devices);
+  run_test(context, devices, false);
+}
+
+TEST_F(
+    ContextExCreateTests,
+    GivenContextOnAllDevicesWhenUsingContextWithImmediateCmdListThenSuccess) {
+  auto context = lzt::create_context_ex(driver);
+  run_test(context, devices, true);
 }
 
 TEST_F(ContextExCreateTests,
@@ -74,7 +83,21 @@ TEST_F(ContextExCreateTests,
   // remove an element so test is creating context on only some devices.
   devices.pop_back();
   auto context = lzt::create_context_ex(driver, devices);
-  run_test(context, devices);
+  run_test(context, devices, false);
+}
+
+TEST_F(
+    ContextExCreateTests,
+    GivenContextOnMultipleDevicesWhenUsingContextWithImmediateCmdListThenSuccess) {
+  // This test requires two or more devices
+  if (devices.size() < 2) {
+    GTEST_SKIP() << "Less than two devices, skipping test";
+  }
+
+  // remove an element so test is creating context on only some devices.
+  devices.pop_back();
+  auto context = lzt::create_context_ex(driver, devices);
+  run_test(context, devices, true);
 }
 
 TEST(ContextStatusTest,

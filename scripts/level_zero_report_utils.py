@@ -80,6 +80,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionOnImmediateCmdListThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_IndependentCMDListsOverlappingParameterization_zeTestMixedCMDListsIndependentOverlapping_GivenRegularAndImmCMDListsOnComputeEngineThenCorrectResultsAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_IndependentCMDListsOverlappingParameterization_zeTestMixedCMDListsIndependentOverlapping_GivenRegularAndImmCMDListsOnCopyEngineThenCorrectResultsAreReturned', test_name, re.IGNORECASE)) or \
@@ -95,6 +96,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeModuleProgramTests_GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleCreateTests_GivenValidDeviceAndBinaryFileWhenCreatingStatelessKernelModuleThenReturnSuccessfulAndDestroyModule', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleCompiledWithOptimizationsWhenExecutingThenResultIsCorrect', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeModuleCreateTests_GivenModuleCompiledWithOptimizationsWhenExecutingOnImmediateCmdListThenResultIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelScheduleHintsTests_GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelCreateTests_GivenValidFunctionWhenGettingPreferredGroupSizePropertiesThenReturn', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeIpcMemHandleTests_GivenSameIpcMemoryHandleWhenOpeningIpcMemHandleMultipleTimesThenUniquePointersAreReturned', test_name, re.IGNORECASE)) or \

@@ -63,7 +63,7 @@ TEST_F(
 
 TEST_F(
     zeCommandListDestroyTests,
-    GivenValidDeviceAndImmediateediateCommandListDescriptorWhenDestroyingCommandListThenSuccessIsReturned) {
+    GivenValidDeviceAndImmediateCommandListDescriptorWhenDestroyingCommandListThenSuccessIsReturned) {
   run(true);
 }
 
