@@ -15,7 +15,7 @@
 #include <vector>
 
 std::string print_allocation_type(ze_memory_type_t);
-
+uint64_t get_page_size();
 template <typename T>
 T *allocate_memory(const ze_context_handle_t &context,
                    const ze_device_handle_t &device, ze_memory_type_t mem_type,

@@ -22,6 +22,10 @@ uint64_t total_available_host_memory() {
   return total_bytes;
 }
 
+uint64_t get_page_size() {
+  const long page_size = sysconf(_SC_PAGE_SIZE);
+  return page_size;
+}
 #endif
 
 #if defined(_WIN64) || defined(_WIN64) || defined(_WIN32)
@@ -30,6 +34,7 @@ uint64_t total_available_host_memory() {
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <Sysinfoapi.h>
 
 uint64_t total_available_host_memory() {
   MEMORYSTATUSEX stat;
@@ -37,6 +42,12 @@ uint64_t total_available_host_memory() {
   GlobalMemoryStatusEx(&stat);
 
   return stat.ullAvailVirtual;
+}
+uint64_t get_page_size() {
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  const long page_size = si.dwPageSize;
+  return page_size;
 }
 
 #endif
