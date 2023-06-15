@@ -35,12 +35,151 @@ namespace {
 class zetMetricGroupTest : public ::testing::Test {
 protected:
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<ze_device_handle_t> devices;
 
   zetMetricGroupTest() {}
   ~zetMetricGroupTest() {}
 
+  void SetUp() { devices = lzt::get_metric_test_device_list(); }
+
   void run_activate_deactivate_test(bool reactivate);
 };
+
+TEST_F(
+    zetMetricGroupTest,
+    GivenValidMetricGroupWhenReadingClockResolutionAndBitsThenResultsDependOnDomain) {
+
+  for (auto deviceh : devices) {
+
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(deviceh, &deviceProperties);
+    LOG_INFO << "test device name " << deviceProperties.name << " uuid "
+             << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    std::vector<zet_metric_group_handle_t> metricGroupHandles =
+        lzt::get_metric_group_handles(deviceh);
+    std::vector<zet_metric_group_handle_t> differentDomainsMetricGroupHandles =
+        {};
+
+    zet_metric_group_properties_t metricGroupProp = {};
+    metricGroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    metricGroupProp.pNext = nullptr;
+
+    std::vector<uint32_t> metricDomains = {};
+
+    for (auto metricGroupHandle : metricGroupHandles) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
+                                       metricGroupHandle, &metricGroupProp));
+
+      bool found = false;
+      for (auto metricDomain : metricDomains) {
+        if (metricGroupProp.domain == metricDomain) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        differentDomainsMetricGroupHandles.push_back(metricGroupHandle);
+        metricDomains.push_back(metricGroupProp.domain);
+      }
+    }
+
+    zet_metric_global_timestamps_resolution_exp_t metricsTimestampProperties =
+        {};
+    metricsTimestampProperties.stype =
+        ZET_STRUCTURE_TYPE_GLOBAL_METRICS_TIMESTAMPS_EXP_PROPERTIES;
+    metricsTimestampProperties.pNext = nullptr;
+    metricGroupProp.pNext = &metricsTimestampProperties;
+
+    for (auto metricGroupHandle : differentDomainsMetricGroupHandles) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
+                                       metricGroupHandle, &metricGroupProp));
+      LOG_INFO << "Metric group name: " << metricGroupProp.name
+               << ". Metric Domain: " << metricGroupProp.domain
+               << ". Timer Resolution: "
+               << metricsTimestampProperties.timerResolution << ". Valid Bits "
+               << metricsTimestampProperties.timestampValidBits;
+    }
+  }
+}
+
+TEST_F(zetMetricGroupTest,
+       GivenValidMetricGroupWhenReadingTimestampsThenResultsDependOnDomain) {
+
+  for (auto deviceh : devices) {
+
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(deviceh, &deviceProperties);
+    LOG_INFO << "test device name " << deviceProperties.name << " uuid "
+             << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    std::vector<zet_metric_group_handle_t> metricGroupHandles =
+        lzt::get_metric_group_handles(deviceh);
+    std::vector<zet_metric_group_handle_t> differentDomainsMetricGroupHandles =
+        {};
+
+    zet_metric_group_properties_t metricGroupProp = {};
+    metricGroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    metricGroupProp.pNext = nullptr;
+
+    std::vector<uint32_t> metricDomains = {};
+
+    for (auto metricGroupHandle : metricGroupHandles) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
+                                       metricGroupHandle, &metricGroupProp));
+
+      bool found = false;
+      for (auto metricDomain : metricDomains) {
+        if (metricGroupProp.domain == metricDomain) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        differentDomainsMetricGroupHandles.push_back(metricGroupHandle);
+        metricDomains.push_back(metricGroupProp.domain);
+      }
+    }
+
+    uint64_t globalTimestamp;
+    uint64_t metricTimestamp;
+    ze_bool_t synchronizedWithHost;
+
+    for (auto metricGroupHandle : differentDomainsMetricGroupHandles) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
+                                       metricGroupHandle, &metricGroupProp));
+      synchronizedWithHost = true;
+      LOG_INFO << "Metric group name: " << metricGroupProp.name
+               << ". Metric Domain: " << metricGroupProp.domain;
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetGlobalTimestampsExp(
+                                       metricGroupHandle, synchronizedWithHost,
+                                       &globalTimestamp, &metricTimestamp));
+      LOG_INFO << "Host timestamp " << globalTimestamp
+               << ". Metrics timestamp: " << metricTimestamp;
+
+      synchronizedWithHost = false;
+      LOG_INFO << "Metric group name: " << metricGroupProp.name
+               << ". Metric Domain: " << metricGroupProp.domain;
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetGlobalTimestampsExp(
+                                       metricGroupHandle, synchronizedWithHost,
+                                       &globalTimestamp, &metricTimestamp));
+      LOG_INFO << "Device timestamp " << globalTimestamp
+               << ". Metrics timestamp: " << metricTimestamp;
+    }
+  }
+}
 
 TEST_F(
     zetMetricGroupTest,
