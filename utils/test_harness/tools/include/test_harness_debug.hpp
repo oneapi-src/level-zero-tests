@@ -73,6 +73,8 @@ void debug_write_registers(const zet_debug_session_handle_t &debug_session,
                            const uint32_t type, const uint32_t start,
                            const uint32_t count, void *buffer);
 
+std::vector<uint8_t> get_debug_info(const zet_module_handle_t &module);
+
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_DEBUG_HPP */

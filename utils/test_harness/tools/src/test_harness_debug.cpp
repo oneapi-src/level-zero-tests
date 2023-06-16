@@ -225,4 +225,19 @@ void debug_write_registers(const zet_debug_session_handle_t &debug_session,
                                    count, buffer));
 }
 
+std::vector<uint8_t> get_debug_info(const zet_module_handle_t &module_handle) {
+  size_t size = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetModuleGetDebugInfo(module_handle,
+                                  ZET_MODULE_DEBUG_INFO_FORMAT_ELF_DWARF, &size,
+                                  nullptr));
+
+  std::vector<uint8_t> debug_info(size);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetModuleGetDebugInfo(module_handle,
+                                  ZET_MODULE_DEBUG_INFO_FORMAT_ELF_DWARF, &size,
+                                  debug_info.data()));
+  return debug_info;
+}
+
 } // namespace level_zero_tests

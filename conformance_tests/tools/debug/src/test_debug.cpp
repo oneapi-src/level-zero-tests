@@ -2056,3 +2056,24 @@ TEST_F(
   LOG_INFO << "[Debugger] Application exited, checking exit code";
   ASSERT_EQ(debugHelper.exit_code(), 0);
 }
+
+TEST(zetModuleGetDebugInfoTest,
+     GivenValidModuleWhenGettingDebugInfoThenValidDebugInfoIsReturned) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  auto context = lzt::create_context(driver);
+
+  for (auto &device : devices) {
+    auto module =
+        lzt::create_module(context, device, "debug_add.spv",
+                           ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+    auto debug_info = lzt::get_debug_info(module);
+    ASSERT_NE(debug_info.size(), 0);
+    ASSERT_EQ(debug_info[1], 'E');
+    ASSERT_EQ(debug_info[2], 'L');
+    ASSERT_EQ(debug_info[3], 'F');
+
+    lzt::destroy_module(module);
+  }
+  lzt::destroy_context(context);
+}
