@@ -5,9 +5,10 @@
  * SPDX-License-Identifier: MIT
  *
  */
-
+#ifdef __linux
 #include <sys/socket.h>
 #include <sys/un.h>
+#endif
 
 #include <chrono>
 #include <thread>
@@ -15,7 +16,11 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#ifdef __linux
 #include "net/unix_comm.hpp"
+#endif
+#include <iostream>
+#include <fstream>
 
 namespace lzt = level_zero_tests;
 
@@ -26,8 +31,6 @@ namespace lzt = level_zero_tests;
   (C) Send that fd to a unix local socket
 */
 int main(int argc, char **argv) {
-  const char *socket_path = "external_memory_socket";
-
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
     LOG_WARNING << "zeInit failed";
@@ -38,6 +41,8 @@ int main(int argc, char **argv) {
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
+#ifdef __linux__
+  const char *socket_path = "external_memory_socket";
   auto external_memory_properties = lzt::get_external_memory_properties(device);
   if (!(external_memory_properties.memoryAllocationExportTypes &
         ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
@@ -133,4 +138,121 @@ int main(int argc, char **argv) {
   lzt::destroy_command_queue(command_queue);
   lzt::destroy_context(context);
   exit(0);
+#else
+  auto external_memory_properties = lzt::get_external_memory_properties(device);
+  std::string handle_type;
+  std::cin >> handle_type;
+  if (atoi(handle_type.c_str()) ==
+      lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32) {
+    if (!(external_memory_properties.memoryAllocationExportTypes &
+          ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32)) {
+      LOG_WARNING << "Device does not support importing OPAQUE_WIN32\n";
+      exit(1);
+    }
+  } else if (atoi(handle_type.c_str()) ==
+             lzt::lztWin32HandleTestType::LZT_KMT_WIN32) {
+    if (!(external_memory_properties.memoryAllocationExportTypes &
+          ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT)) {
+      LOG_WARNING << "Device does not support importing WIN32 KMT Handle\n";
+      exit(1);
+    }
+  } else {
+    exit(1);
+  }
+
+  HANDLE hPipe;
+  uint64_t targetHandle;
+  BOOL pipeCommandSuccess = FALSE;
+  DWORD bytesRead, pipeMode;
+  LPTSTR externalMemoryTestPipeName =
+      TEXT("\\\\.\\pipe\\external_memory_socket");
+
+  while (1) {
+    hPipe = CreateFile(externalMemoryTestPipeName, GENERIC_READ | GENERIC_WRITE,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                       0, NULL);
+    if (hPipe != INVALID_HANDLE_VALUE)
+      break;
+
+    if (GetLastError() != ERROR_PIPE_BUSY) {
+      LOG_ERROR << "Could not open pipe with Error " << GetLastError()
+                << std::endl;
+      return -1;
+    }
+
+    if (!WaitNamedPipe(externalMemoryTestPipeName, 20000)) {
+      LOG_ERROR << "WaitNamedPipe timedout " << GetLastError() << std::endl;
+      return -1;
+    }
+  }
+
+  // The pipe connected; change to message-read mode.
+
+  pipeMode = PIPE_READMODE_MESSAGE;
+  pipeCommandSuccess = SetNamedPipeHandleState(hPipe, &pipeMode, NULL, NULL);
+  if (!pipeCommandSuccess) {
+    LOG_ERROR << "SetNamedPipeHandleState failed with Error " << GetLastError()
+              << std::endl;
+  }
+
+  do {
+    pipeCommandSuccess =
+        ReadFile(hPipe, &targetHandle, sizeof(uint64_t), &bytesRead, NULL);
+    if (!pipeCommandSuccess && GetLastError() != ERROR_MORE_DATA)
+      break;
+  } while (!pipeCommandSuccess); // repeat loop if ERROR_MORE_DATA
+
+  auto command_queue = lzt::create_command_queue(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  auto command_list = lzt::create_command_list(context, device, 0, 0);
+
+  void *imported_memory;
+  auto size = 1024;
+
+  // set up request to import the external memory handle
+  auto driver_properties = lzt::get_driver_properties(driver);
+  ze_external_memory_import_win32_handle_t import_handle = {};
+  import_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_WIN32;
+  if (atoi(handle_type.c_str()) ==
+      lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32) {
+    import_handle.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32;
+  } else if (atoi(handle_type.c_str()) ==
+             lzt::lztWin32HandleTestType::LZT_KMT_WIN32) {
+    import_handle.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT;
+  } else {
+    exit(1);
+  }
+
+  import_handle.handle = reinterpret_cast<void *>(targetHandle);
+
+  ze_device_mem_alloc_desc_t device_alloc_desc = {};
+  device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+  device_alloc_desc.pNext = &import_handle;
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
+                             &imported_memory));
+
+  auto verification_memory =
+      lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+  lzt::append_memory_copy(command_list, verification_memory, imported_memory,
+                          size);
+
+  lzt::close_command_list(command_list);
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+  lzt::synchronize(command_queue, UINT64_MAX);
+
+  for (size_t i = 0; i < size; i++) {
+    EXPECT_EQ(static_cast<uint8_t *>(verification_memory)[i],
+              0xAB); // this pattern is written in the parent
+  }
+
+  lzt::free_memory(context, imported_memory);
+  lzt::free_memory(context, verification_memory);
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_context(context);
+  exit(0);
+
+#endif
 }

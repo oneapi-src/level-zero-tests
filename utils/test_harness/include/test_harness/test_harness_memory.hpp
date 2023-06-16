@@ -15,6 +15,15 @@
 
 namespace level_zero_tests {
 
+enum lztWin32HandleTestType {
+  LZT_OPAQUE_WIN32 = 0,
+  LZT_KMT_WIN32,
+  LZT_D3D11_TEXTURE_WIN32,
+  LZT_D3D11_TEXTURE_KMT_WIN32,
+  LZT_D3D12_HEAP_WIN32,
+  LZT_D3D12_RESOURCE_WIN32
+};
+
 const auto memory_allocation_sizes =
     ::testing::Values(1, 10, 100, 1000, 10000, 100000);
 const auto memory_allocation_alignments = ::testing::Values(
