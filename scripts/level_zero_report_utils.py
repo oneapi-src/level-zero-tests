@@ -44,6 +44,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_feature == "Kernels" and test_name.find("GlobalPointer")!= -1) or \
                     (test_feature == "Kernels" and test_name.find("FunctionPointer")!= -1) or \
                     (test_feature == "Driver Handles" and test_name.find("GetExtentionFunction")!= -1) or \
+                    (test_feature == "Shared Memory" and test_name.find("Immediate")!= -1) or \
                     (test_feature == "Unified Shared Memory" and test_name.find("SystemMemory")!= -1) or \
                     (test_feature == "Events" and test_name.find("Profiling")!= -1) or \
                     (test_feature == "Kernels" and test_name.find("Constants")!= -1) or \

@@ -187,57 +187,72 @@ class zeDriverAllocSharedMemTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<ze_device_mem_alloc_flag_t, ze_host_mem_alloc_flag_t,
-                     size_t, size_t, bool>> {};
+                     size_t, size_t>> {
+
+public:
+  void RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest(
+      bool is_immediate) {
+    const ze_device_mem_alloc_flag_t dev_flags = std::get<0>(GetParam());
+    const ze_host_mem_alloc_flag_t host_flags = std::get<1>(GetParam());
+    const size_t size = std::get<2>(GetParam());
+    const size_t alignment = std::get<3>(GetParam());
+
+    void *memory = nullptr;
+    auto driver = lzt::get_default_driver();
+    auto device = lzt::get_default_device(driver);
+    auto context = lzt::create_context();
+
+    const uint8_t pattern = 0x55;
+    // Access from host first
+    memory = lzt::allocate_shared_memory(size, alignment, dev_flags, host_flags,
+                                         device, context);
+    EXPECT_NE(nullptr, memory);
+    memset(memory, pattern, size);
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern);
+    }
+    lzt::free_memory(context, memory);
+
+    // Access from device first
+    memory = lzt::allocate_shared_memory(size, alignment, dev_flags, host_flags,
+                                         device, context);
+    EXPECT_NE(nullptr, memory);
+    const uint8_t pattern2 = 0x55;
+
+    auto bundle = lzt::create_command_bundle(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+
+    lzt::append_memory_fill(bundle.list, memory, &pattern2, 1, size, nullptr);
+
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(bundle.list);
+      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      lzt::synchronize(bundle.queue, UINT64_MAX);
+    }
+
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern2);
+    }
+
+    lzt::destroy_command_bundle(bundle);
+    lzt::free_memory(context, memory);
+    lzt::destroy_context(context);
+  }
+};
+
 TEST_P(
     zeDriverAllocSharedMemTests,
     GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryThenNotNullPointerIsReturned) {
-  const ze_device_mem_alloc_flag_t dev_flags = std::get<0>(GetParam());
-  const ze_host_mem_alloc_flag_t host_flags = std::get<1>(GetParam());
-  const size_t size = std::get<2>(GetParam());
-  const size_t alignment = std::get<3>(GetParam());
-  const bool is_immediate = std::get<4>(GetParam());
+  RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest(false);
+}
 
-  void *memory = nullptr;
-  auto driver = lzt::get_default_driver();
-  auto device = lzt::get_default_device(driver);
-  auto context = lzt::create_context();
-
-  const int pattern = 0x55;
-  // Access from host first
-  memory = lzt::allocate_shared_memory(size, alignment, dev_flags, host_flags,
-                                       device, context);
-  EXPECT_NE(nullptr, memory);
-  memset(memory, pattern, size);
-  for (size_t i = 0; i < size; i++) {
-    ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern);
-  }
-  lzt::free_memory(context, memory);
-
-  // Access from device first
-  memory = lzt::allocate_shared_memory(size, alignment, dev_flags, host_flags,
-                                       device, context);
-  EXPECT_NE(nullptr, memory);
-  const int pattern2 = 0x55;
-
-  auto bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
-
-  lzt::append_memory_fill(bundle.list, memory, &pattern2, 1, size, nullptr);
-
-  if (!is_immediate) {
-    lzt::close_command_list(bundle.list);
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
-
-  for (size_t i = 0; i < size; i++) {
-    ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern2);
-  }
-
-  lzt::destroy_command_bundle(bundle);
-  lzt::free_memory(context, memory);
-  lzt::destroy_context(context);
+TEST_P(
+    zeDriverAllocSharedMemTests,
+    GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryOnImmediateCmdListThenNotNullPointerIsReturned) {
+  RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest(true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -250,8 +265,7 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED,
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_WRITE_COMBINED,
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_INITIAL_PLACEMENT),
-        lzt::memory_allocation_sizes, lzt::memory_allocation_alignments,
-        ::testing::Bool()));
+        lzt::memory_allocation_sizes, lzt::memory_allocation_alignments));
 
 class zeDriverAllocSharedMemAlignmentTests
     : public ::testing::Test,
