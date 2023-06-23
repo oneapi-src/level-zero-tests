@@ -97,6 +97,43 @@ TEST(
   }
 }
 
+TEST(
+    zeDeviceP2PBandwidthExpProperties,
+    GivenValidDevicesWhenRetrievingP2PBandwidthPropertiesThenValidPropertiesAreReturned) {
+  auto drivers = lzt::get_all_driver_handles();
+  ASSERT_GT(drivers.size(), 0);
+  std::vector<ze_device_handle_t> devices;
+  for (auto driver : drivers) {
+    devices = lzt::get_ze_devices();
+    if (devices.size() > 1)
+      break;
+  }
+
+  if (!check_ext_version())
+    GTEST_SKIP();
+
+  if (devices.size() <= 1) {
+    LOG_INFO << "WARNING: Exiting as multiple devices do not exist";
+    GTEST_SKIP();
+  }
+
+  ze_device_p2p_properties_t P2PProps = {};
+  ze_device_p2p_bandwidth_exp_properties_t P2PBandwidthProps;
+  P2PProps.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
+  P2PProps.pNext = &P2PBandwidthProps;
+
+  for (uint32_t dev_1 = 0; dev_1 < devices.size(); ++dev_1) {
+    for (uint32_t dev_2 = 0; dev_2 < devices.size(); ++dev_2) {
+      ASSERT_EQ(
+          zeDeviceGetP2PProperties(devices[dev_1], devices[dev_2], &P2PProps),
+          ZE_RESULT_SUCCESS);
+      ASSERT_GE((((ze_device_p2p_bandwidth_exp_properties_t *)(P2PProps.pNext))
+                     ->logicalBandwidth),
+                0);
+    }
+  }
+}
+
 } // namespace
 
 #else
