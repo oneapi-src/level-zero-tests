@@ -62,33 +62,11 @@ TEST_F(
       LOG_INFO << "test device is a root device";
     }
 
-    std::vector<zet_metric_group_handle_t> metricGroupHandles =
-        lzt::get_metric_group_handles(deviceh);
-    std::vector<zet_metric_group_handle_t> differentDomainsMetricGroupHandles =
-        {};
-
+    auto differentDomainsMetricGroupHandles =
+        lzt::get_metric_groups_with_different_domains(deviceh, 1);
     zet_metric_group_properties_t metricGroupProp = {};
     metricGroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
     metricGroupProp.pNext = nullptr;
-
-    std::vector<uint32_t> metricDomains = {};
-
-    for (auto metricGroupHandle : metricGroupHandles) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
-                                       metricGroupHandle, &metricGroupProp));
-
-      bool found = false;
-      for (auto metricDomain : metricDomains) {
-        if (metricGroupProp.domain == metricDomain) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        differentDomainsMetricGroupHandles.push_back(metricGroupHandle);
-        metricDomains.push_back(metricGroupProp.domain);
-      }
-    }
 
     zet_metric_global_timestamps_resolution_exp_t metricsTimestampProperties =
         {};
@@ -125,33 +103,11 @@ TEST_F(zetMetricGroupTest,
       LOG_INFO << "test device is a root device";
     }
 
-    std::vector<zet_metric_group_handle_t> metricGroupHandles =
-        lzt::get_metric_group_handles(deviceh);
-    std::vector<zet_metric_group_handle_t> differentDomainsMetricGroupHandles =
-        {};
-
+    auto differentDomainsMetricGroupHandles =
+        lzt::get_metric_groups_with_different_domains(deviceh, 1);
     zet_metric_group_properties_t metricGroupProp = {};
     metricGroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
     metricGroupProp.pNext = nullptr;
-
-    std::vector<uint32_t> metricDomains = {};
-
-    for (auto metricGroupHandle : metricGroupHandles) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
-                                       metricGroupHandle, &metricGroupProp));
-
-      bool found = false;
-      for (auto metricDomain : metricDomains) {
-        if (metricGroupProp.domain == metricDomain) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        differentDomainsMetricGroupHandles.push_back(metricGroupHandle);
-        metricDomains.push_back(metricGroupProp.domain);
-      }
-    }
 
     uint64_t globalTimestamp;
     uint64_t metricTimestamp;
@@ -416,6 +372,63 @@ TEST_F(zetMetricGroupTest,
     lzt::deactivate_metric_groups(device);
   }
 }
+
+#ifdef ZET_EXPORT_METRICS_DATA_EXP_NAME
+TEST_F(
+    zetMetricGroupTest,
+    GivenValidMetricGroupWhenMetricGroupGetExportDataExpIsCalledThenReturnSuccess) {
+
+  for (auto deviceh : devices) {
+
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(deviceh, &deviceProperties);
+    LOG_INFO << "test device name " << deviceProperties.name << " uuid "
+             << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    std::vector<zet_metric_group_handle_t> test_metric_groups =
+        lzt::get_metric_groups_with_different_domains(deviceh, 1);
+
+    ASSERT_GT(test_metric_groups.size(), 0u);
+    for (auto &test_metric_group : test_metric_groups) {
+
+      lzt::activate_metric_groups(deviceh, 1, &test_metric_group);
+      zet_metric_streamer_handle_t metric_streamer_handle =
+          lzt::metric_streamer_open_for_device(deviceh, test_metric_group,
+                                               nullptr, 100, 100000);
+      auto report_size =
+          lzt::metric_streamer_read_data_size(metric_streamer_handle, 1);
+      lzt::metric_streamer_close(metric_streamer_handle);
+
+      std::vector<uint8_t> raw_data(report_size);
+      size_t export_data_size = 0;
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zetMetricGroupGetExportDataExp(test_metric_group,
+                                               raw_data.data(), report_size,
+                                               &export_data_size, nullptr));
+      EXPECT_GT(export_data_size, 0);
+      std::vector<uint8_t> exported_data(export_data_size);
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zetMetricGroupGetExportDataExp(
+                    test_metric_group, raw_data.data(), report_size,
+                    &export_data_size, exported_data.data()));
+    }
+  }
+}
+#else
+#ifdef __linux__
+#warning                                                                       \
+    "ZET_EXPORT_METRICS_DATA_EXP_NAME support not found, not building tests for it"
+#else
+#pragma message(                                                               \
+    "warning: ZET_EXPORT_METRICS_DATA_EXP_NAME support not found, not building tests for it")
+#endif
+#endif // ifdef ZET_EXPORT_METRICS_DATA_EXP_NAME
 
 class zetMetricQueryTest : public zetMetricGroupTest {
 protected:
@@ -2095,4 +2108,5 @@ TEST_F(
 
   run_multi_device_streamer_test(sub_devices);
 }
+
 } // namespace

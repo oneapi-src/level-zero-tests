@@ -872,4 +872,48 @@ bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup) {
   return !invalid_type_encountered;
 }
 
+std::vector<zet_metric_group_handle_t>
+get_metric_groups_with_different_domains(const ze_device_handle_t device,
+                                         uint32_t metric_groups_per_domain) {
+  std::vector<zet_metric_group_handle_t> metric_group_handles =
+      lzt::get_metric_group_handles(device);
+
+  zet_metric_group_properties_t metric_group_property = {};
+  metric_group_property.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+  metric_group_property.pNext = nullptr;
+
+  std::vector<uint32_t> unique_domains = {};
+  std::vector<zet_metric_group_handle_t> unique_domain_metric_group_list = {};
+
+  // Identify unique domains
+  for (auto metric_group_handle : metric_group_handles) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricGroupGetProperties(metric_group_handle,
+                                          &metric_group_property));
+    if (std::find(unique_domains.begin(), unique_domains.end(),
+                  metric_group_property.domain) == unique_domains.end()) {
+      unique_domains.push_back(metric_group_property.domain);
+    }
+  }
+
+  // Collect metric groups for each domain
+  for (auto &domain : unique_domains) {
+    uint32_t metric_group_count = 0;
+    for (auto metric_group_handle : metric_group_handles) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zetMetricGroupGetProperties(metric_group_handle,
+                                            &metric_group_property));
+      if (metric_group_property.domain == domain) {
+        unique_domain_metric_group_list.push_back(metric_group_handle);
+        ++metric_group_count;
+      }
+
+      if (metric_group_count >= metric_groups_per_domain) {
+        break;
+      }
+    }
+  }
+  return unique_domain_metric_group_list;
+}
+
 } // namespace level_zero_tests
