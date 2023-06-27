@@ -36,21 +36,20 @@ struct copy_data {
   uint32_t *data;
 };
 
-class KernelCopyTests
-    : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<ze_memory_type_t, int>> {
-};
+class KernelCopyTests : public ::testing::Test,
+                        public ::testing::WithParamInterface<
+                            std::tuple<ze_memory_type_t, int, bool>> {};
 
 TEST_P(KernelCopyTests,
        GivenDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
   ze_memory_type_t memory_type = std::get<0>(GetParam());
   int offset = std::get<1>(GetParam());
+  bool is_immediate = std::get<2>(GetParam());
 
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
       // set up
-      auto command_queue = lzt::create_command_queue(device);
-      auto command_list = lzt::create_command_list(device);
+      auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
 
       auto module = lzt::create_module(device, "copy_module.spv");
       auto kernel = lzt::create_function(module, "copy_data");
@@ -83,12 +82,17 @@ TEST_P(KernelCopyTests,
       group_count.groupCountY = 1;
       group_count.groupCountZ = 1;
 
-      lzt::append_launch_function(command_list, kernel, &group_count, nullptr,
-                                  0, nullptr);
+      lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
+                                  nullptr, 0, nullptr);
 
-      lzt::close_command_list(command_list);
-      lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-      lzt::synchronize(command_queue, UINT64_MAX);
+      if (is_immediate) {
+        lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(cmd_bundle.list);
+        lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                   nullptr);
+        lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+      }
 
       ASSERT_EQ(0, memcmp(input_data, output_data + offset,
                           (size - offset) * sizeof(int)));
@@ -98,8 +102,7 @@ TEST_P(KernelCopyTests,
       lzt::free_memory(output_data);
       lzt::destroy_function(kernel);
       lzt::destroy_module(module);
-      lzt::destroy_command_list(command_list);
-      lzt::destroy_command_queue(command_queue);
+      lzt::destroy_command_bundle(cmd_bundle);
     }
   }
 }
@@ -108,11 +111,11 @@ TEST_P(KernelCopyTests,
        GivenInDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
   ze_memory_type_t memory_type = std::get<0>(GetParam());
   int offset = std::get<1>(GetParam());
+  bool is_immediate = std::get<2>(GetParam());
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
       // set up
-      auto command_queue = lzt::create_command_queue(device);
-      auto command_list = lzt::create_command_list(device);
+      auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
 
       auto module = lzt::create_module(device, "copy_module.spv");
       auto kernel = lzt::create_function(module, "copy_data_indirect");
@@ -178,12 +181,17 @@ TEST_P(KernelCopyTests,
       group_count.groupCountY = 1;
       group_count.groupCountZ = 1;
 
-      lzt::append_launch_function(command_list, kernel, &group_count, nullptr,
-                                  0, nullptr);
+      lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
+                                  nullptr, 0, nullptr);
 
-      lzt::close_command_list(command_list);
-      lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-      lzt::synchronize(command_queue, UINT64_MAX);
+      if (is_immediate) {
+        lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(cmd_bundle.list);
+        lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                   nullptr);
+        lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+      }
 
       for (int i = 0; i < size; i++) {
         ASSERT_EQ(0, memcmp(input_data[i].data, output_data[i].data + offset,
@@ -199,23 +207,23 @@ TEST_P(KernelCopyTests,
       lzt::free_memory(output_data);
       lzt::destroy_function(kernel);
       lzt::destroy_module(module);
-      lzt::destroy_command_list(command_list);
-      lzt::destroy_command_queue(command_queue);
+      lzt::destroy_command_bundle(cmd_bundle);
     }
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LZT, KernelCopyTests,
     ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_HOST,
                                          ZE_MEMORY_TYPE_SHARED),
-                       ::testing::Values(0, 1, size / 4, size / 2)));
+                       ::testing::Values(0, 1, size / 4, size / 2),
+                       ::testing::Bool()));
 
 class KernelCopyTestsWithIndirectMemoryTypes
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<test_memory_type, test_memory_type, test_memory_type,
-                     test_memory_type, int>> {
+                     test_memory_type, int, bool>> {
 
 protected:
   void SetUp() override {
@@ -369,7 +377,8 @@ protected:
       shared_memory_type src_shr_type = SHARED_LOCAL,
       shared_memory_type src_ptr_shr_type = SHARED_LOCAL,
       shared_memory_type dst_shr_type = SHARED_LOCAL,
-      shared_memory_type dst_ptr_shr_type = SHARED_LOCAL) {
+      shared_memory_type dst_ptr_shr_type = SHARED_LOCAL,
+      bool is_immediate = false) {
 
     auto driver = drivers[driver_index];
     auto device = devices[driver_index][device_index];
@@ -384,8 +393,7 @@ protected:
       GTEST_SKIP();
     }
     // set up
-    auto command_queue = lzt::create_command_queue(context, device);
-    auto command_list = lzt::create_command_list(context, device);
+    auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
 
     auto module = lzt::create_module(device, "copy_module.spv");
     auto kernel = lzt::create_function(module, "copy_data_indirect");
@@ -453,11 +461,11 @@ protected:
     // copy input data to src_data
     if (src_mem_type == ZE_MEMORY_TYPE_DEVICE) {
       for (int i = 0; i < size; i++) {
-        lzt::append_memory_copy(command_list, src_data_ptr_array[i],
+        lzt::append_memory_copy(cmd_bundle.list, src_data_ptr_array[i],
                                 input_data[i].data, size * sizeof(uint32_t),
                                 nullptr);
       }
-      lzt::append_barrier(command_list, nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     } else {
       for (int i = 0; i < size; i++) {
         memcpy(src_data_ptr_array[i], input_data[i].data,
@@ -471,9 +479,9 @@ protected:
       for (int i = 0; i < size; i++) {
         src_data_host_ptr[i].data = src_data_ptr_array[i];
       }
-      lzt::append_memory_copy(command_list, src_data, src_data_host_ptr,
+      lzt::append_memory_copy(cmd_bundle.list, src_data, src_data_host_ptr,
                               size * sizeof(copy_data), nullptr);
-      lzt::append_barrier(command_list, nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     } else {
       for (int i = 0; i < size; i++) {
         src_data[i].data = src_data_ptr_array[i];
@@ -486,9 +494,9 @@ protected:
       for (int i = 0; i < size; i++) {
         dst_data_host_ptr[i].data = dst_data_ptr_array[i];
       }
-      lzt::append_memory_copy(command_list, dst_data, dst_data_host_ptr,
+      lzt::append_memory_copy(cmd_bundle.list, dst_data, dst_data_host_ptr,
                               size * sizeof(copy_data), nullptr);
-      lzt::append_barrier(command_list, nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     } else {
       for (int i = 0; i < size; i++) {
         dst_data[i].data = dst_data_ptr_array[i];
@@ -528,23 +536,28 @@ protected:
     group_count.groupCountY = 1;
     group_count.groupCountZ = 1;
 
-    lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
-                                nullptr);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
+                                0, nullptr);
 
     // copy dst_data to output_data for device memory
     if (dst_mem_type == ZE_MEMORY_TYPE_DEVICE) {
-      lzt::append_barrier(command_list, nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
       for (int i = 0; i < size; i++) {
-        lzt::append_memory_copy(command_list, output_data[i].data,
+        lzt::append_memory_copy(cmd_bundle.list, output_data[i].data,
                                 dst_data_ptr_array[i], size * sizeof(uint32_t),
                                 nullptr);
       }
-      lzt::append_barrier(command_list, nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     }
 
-    lzt::close_command_list(command_list);
-    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT64_MAX);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
 
     // copy dst_data to output_data for non-device memory
     if (dst_mem_type != ZE_MEMORY_TYPE_DEVICE) {
@@ -578,8 +591,7 @@ protected:
     free_memory(dst_data, context, dst_ptr_mem_type, dst_ptr_shr_type);
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
-    lzt::destroy_command_list(command_list);
-    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_bundle(cmd_bundle);
   }
 
   std::vector<ze_driver_handle_t> drivers;
@@ -597,6 +609,7 @@ TEST_P(
   test_memory_type dst_test_type = std::get<2>(GetParam());
   test_memory_type dst_ptr_test_type = std::get<3>(GetParam());
   int offset = std::get<4>(GetParam());
+  bool is_immediate = std::get<5>(GetParam());
 
   ze_memory_type_t src_mem_type;
   ze_memory_type_t src_ptr_mem_type;
@@ -617,12 +630,13 @@ TEST_P(
   EXPECT_GE(drivers.size(), 1);
   EXPECT_GE(devices[0].size(), 1);
 
-  test_indirect_memory_kernel_copy(
-      0, 0, src_mem_type, src_ptr_mem_type, dst_mem_type, dst_ptr_mem_type,
-      offset, src_shr_type, src_ptr_shr_type, dst_shr_type, dst_ptr_shr_type);
+  test_indirect_memory_kernel_copy(0, 0, src_mem_type, src_ptr_mem_type,
+                                   dst_mem_type, dst_ptr_mem_type, offset,
+                                   src_shr_type, src_ptr_shr_type, dst_shr_type,
+                                   dst_ptr_shr_type, is_immediate);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LZT, KernelCopyTestsWithIndirectMemoryTypes,
     ::testing::Combine(::testing::Values(USM_HOST, USM_DEVICE, USM_SHARED_LOCAL,
                                          USM_SHARED_CROSS, USM_SHARED_SYSTEM),
@@ -632,6 +646,6 @@ INSTANTIATE_TEST_CASE_P(
                                          USM_SHARED_CROSS, USM_SHARED_SYSTEM),
                        ::testing::Values(USM_HOST, USM_DEVICE, USM_SHARED_LOCAL,
                                          USM_SHARED_CROSS, USM_SHARED_SYSTEM),
-                       ::testing::Values(0)));
+                       ::testing::Values(0), ::testing::Bool()));
 
 } // namespace

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -23,171 +23,243 @@ namespace lzt = level_zero_tests;
 namespace {
 
 class zeCommandListEventTests : public ::testing::Test {
-protected:
+public:
   zeCommandListEventTests() {
     ep.create_event(hEvent, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-    cmdqueue = lzt::create_command_queue();
-    cmdlist = lzt::create_command_list();
   }
 
-  ~zeCommandListEventTests() {
-    ep.destroy_event(hEvent);
-    lzt::destroy_command_queue(cmdqueue);
-    lzt::destroy_command_list(cmdlist);
-  }
+  ~zeCommandListEventTests() { ep.destroy_event(hEvent); }
 
-  ze_command_list_handle_t cmdlist;
-  ze_command_queue_handle_t cmdqueue;
   ze_event_handle_t hEvent;
   size_t size = 16;
   lzt::zeEventPool ep;
 };
 
+void RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto src_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(src_buffer, 0x1, test.size);
+  memset(dst_buffer, 0x0, test.size);
+
+  // Verify Host Reads Event as unset
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
+
+  // Execute and verify GPU reads event
+  lzt::append_memory_copy(cmd_bundle.list, dst_buffer, src_buffer, test.size,
+                          test.hEvent);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
+
+  // Verify Host Reads Event as set
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(test.hEvent, UINT64_MAX));
+
+  // Verify Memory Copy completed
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
+
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
+  lzt::free_memory(src_buffer);
+  lzt::free_memory(dst_buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
+}
+
 TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
+  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+      *this, false);
+}
 
-  auto src_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(src_buffer, 0x1, size);
-  memset(dst_buffer, 0x0, size);
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly) {
+  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+      *this, true);
+}
+
+void RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto ref_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(ref_buffer, 0x1, test.size);
+  memset(dst_buffer, 0x0, test.size);
+  const uint8_t one = 1;
 
   // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_copy(cmdlist, dst_buffer, src_buffer, size, hEvent);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::append_memory_set(cmd_bundle.list, dst_buffer, &one, test.size,
+                         test.hEvent);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Verify Host Reads Event as set
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(test.hEvent, UINT64_MAX));
 
-  // Verify Memory Copy completed
-  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+  // Verify Memory Set completed
+  EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
 
-  lzt::synchronize(cmdqueue, UINT64_MAX);
-  lzt::free_memory(src_buffer);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
+  lzt::free_memory(ref_buffer);
   lzt::free_memory(dst_buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 TEST_F(
     zeCommandListEventTests,
     GivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
+  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+      *this, false);
+}
 
-  auto ref_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(ref_buffer, 0x1, size);
-  memset(dst_buffer, 0x0, size);
-  const uint8_t one = 1;
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemorySetThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly) {
+  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+      *this, true);
+}
+
+void RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  uint32_t width = 16;
+  uint32_t height = 16;
+  test.size = height * width;
+  auto src_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(src_buffer, 0x1, test.size);
+  memset(dst_buffer, 0x0, test.size);
 
   // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_set(cmdlist, dst_buffer, &one, size, hEvent);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
+  ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
+  lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
+                                 src_buffer, &sr, width, 0, test.hEvent);
+  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Verify Host Reads Event as set
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(test.hEvent, UINT64_MAX));
 
   // Verify Memory Set completed
-  EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, size));
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
-  lzt::synchronize(cmdqueue, UINT64_MAX);
-  lzt::free_memory(ref_buffer);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
+  lzt::free_memory(src_buffer);
   lzt::free_memory(dst_buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
-
-  uint32_t width = 16;
-  uint32_t height = 16;
-  size = height * width;
-  auto src_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(src_buffer, 0x1, size);
-  memset(dst_buffer, 0x0, size);
-
-  // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
-
-  // Execute and verify GPU reads event
-  ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
-  ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
-  lzt::append_memory_copy_region(cmdlist, dst_buffer, &dr, width, 0, src_buffer,
-                                 &sr, width, 0, hEvent);
-  lzt::append_barrier(cmdlist, nullptr, 0, nullptr);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-
-  // Verify Host Reads Event as set
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
-
-  // Verify Memory Set completed
-  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
-
-  lzt::synchronize(cmdqueue, UINT64_MAX);
-  lzt::free_memory(src_buffer);
-  lzt::free_memory(dst_buffer);
+  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+      *this, false);
 }
 
 TEST_F(
     zeCommandListEventTests,
-    GivenMemoryCopiesWithDependenciesWhenExecutingCommandListThenCommandsCompletesSuccessfully) {
+    GivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly) {
+  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+      *this, true);
+}
 
+void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
   if (!lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
     GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
                     "device, skipping test";
   }
-
-  auto src_buffer = lzt::allocate_shared_memory(size);
-  auto temp_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(src_buffer, 0x1, size);
-  memset(temp_buffer, 0xFF, size);
-  memset(dst_buffer, 0x0, size);
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto src_buffer = lzt::allocate_shared_memory(test.size);
+  auto temp_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(src_buffer, 0x1, test.size);
+  memset(temp_buffer, 0xFF, test.size);
+  memset(dst_buffer, 0x0, test.size);
   ze_event_handle_t hEvent1;
-  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_copy(cmdlist, temp_buffer, src_buffer, size, hEvent, 0,
-                          nullptr);
-  lzt::append_memory_copy(cmdlist, dst_buffer, temp_buffer, size, nullptr, 1,
-                          &hEvent1);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::append_memory_copy(cmd_bundle.list, temp_buffer, src_buffer, test.size,
+                          test.hEvent, 0, nullptr);
+  lzt::append_memory_copy(cmd_bundle.list, dst_buffer, temp_buffer, test.size,
+                          nullptr, 1, &hEvent1);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Verify Copy Waits for Signal
-  lzt::event_host_synchronize(hEvent, UINT64_MAX);
+  lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
-  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
+  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
 
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   // Verify Memory Copy completed
-  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
   lzt::free_memory(src_buffer);
   lzt::free_memory(temp_buffer);
   lzt::free_memory(dst_buffer);
   lzt::destroy_event(hEvent1);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
+
 TEST_F(
     zeCommandListEventTests,
-    GivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+    GivenMemoryCopiesWithDependenciesWhenExecutingCommandListThenCommandsCompletesSuccessfully) {
+  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(*this,
+                                                                   false);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopiesWithDependenciesWhenExecutingImmediateCommandListThenCommandsCompletesSuccessfully) {
+  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(*this, true);
+}
+
+void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
@@ -199,86 +271,125 @@ TEST_F(
                     "device, skipping test";
   }
 
-  auto src_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(src_buffer, 0x1, size);
-  memset(dst_buffer, 0x0, size);
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto src_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(src_buffer, 0x1, test.size);
+  memset(dst_buffer, 0x0, test.size);
 
   // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_copy(cmdlist, dst_buffer, src_buffer, size, nullptr, 1,
-                          &hEvent);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::append_memory_copy(cmd_bundle.list, dst_buffer, src_buffer, test.size,
+                          nullptr, 1, &test.hEvent);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Verify Copy Waits for Signal
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
+  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));
 
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   // Verify Memory Copy completed
-  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
   lzt::free_memory(src_buffer);
   lzt::free_memory(dst_buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(*this, false);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopyThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(*this, true);
+}
+
+void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
+  if (!lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
+                    "device, skipping test";
+  }
+
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto ref_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(ref_buffer, 0x1, test.size);
+  const uint8_t zero = 0;
+  const uint8_t one = 1;
+
+  ze_event_handle_t hEvent1;
+  test.ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+  // Verify Host Reads Event as unset
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
+
+  // Execute and verify GPU reads event
+  lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &zero, sizeof(zero),
+                          test.size, test.hEvent, 0, nullptr);
+  lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &one, sizeof(one),
+                          test.size, nullptr, 1, &hEvent1);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
+
+  lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
+  // Verify Device waits for Signal
+  EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
+
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
+
+  // Verify Memory Fill completed
+  EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
+
+  lzt::free_memory(ref_buffer);
+  lzt::free_memory(dst_buffer);
+  lzt::destroy_event(hEvent1);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 TEST_F(
     zeCommandListEventTests,
     GivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListThenCommandCompletesSuccessfully) {
-
-  if (!lzt::is_concurrent_memory_access_supported(
-          lzt::get_default_device(lzt::get_default_driver()))) {
-    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
-                    "device, skipping test";
-  }
-
-  auto ref_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(ref_buffer, 0x1, size);
-  const uint8_t zero = 0;
-  const uint8_t one = 1;
-
-  ze_event_handle_t hEvent1;
-  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-
-  // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
-
-  // Execute and verify GPU reads event
-  lzt::append_memory_fill(cmdlist, dst_buffer, &zero, sizeof(zero), size,
-                          hEvent, 0, nullptr);
-  lzt::append_memory_fill(cmdlist, dst_buffer, &one, sizeof(one), size, nullptr,
-                          1, &hEvent1);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-
-  lzt::event_host_synchronize(hEvent, UINT64_MAX);
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
-  // Verify Device waits for Signal
-  EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, size));
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
-
-  lzt::synchronize(cmdqueue, UINT64_MAX);
-
-  // Verify Memory Fill completed
-  EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, size));
-
-  lzt::free_memory(ref_buffer);
-  lzt::free_memory(dst_buffer);
-  lzt::destroy_event(hEvent1);
+  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(*this,
+                                                                   false);
 }
+
 TEST_F(
     zeCommandListEventTests,
-    GivenMemoryFillThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+    GivenMemoryFillsThatSignalAndWaitWhenExecutingImmediateCommandListThenCommandCompletesSuccessfully) {
+  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(*this, true);
+}
+
+void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
@@ -288,44 +399,63 @@ TEST_F(
                     "device, skipping test";
   }
 
-  auto ref_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(ref_buffer, 0x1, size);
-  memset(dst_buffer, 0x0, size);
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto ref_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(ref_buffer, 0x1, test.size);
+  memset(dst_buffer, 0x0, test.size);
   const uint8_t one = 1;
 
   // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_fill(cmdlist, dst_buffer, &one, sizeof(one), size, nullptr,
-                          1, &hEvent);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &one, sizeof(one),
+                          test.size, nullptr, 1, &test.hEvent);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Verify Device waits for Signal
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, size));
+  EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));
 
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   // Verify Memory Fill completed
-  EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, size));
+  EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
 
   lzt::free_memory(ref_buffer);
   lzt::free_memory(dst_buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 TEST_F(
     zeCommandListEventTests,
-    GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully) {
+    GivenMemoryFillThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(*this, false);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryFillThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(*this, true);
+}
+
+void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
   uint32_t width = 16;
   uint32_t height = 16;
-  size = height * width;
+  test.size = height * width;
 
   if (!lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
@@ -333,49 +463,72 @@ TEST_F(
                     "device, skipping test";
   }
 
-  auto src_buffer = lzt::allocate_shared_memory(size);
-  auto temp_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(src_buffer, 0x1, size);
-  memset(temp_buffer, 0xFF, size);
-  memset(dst_buffer, 0x0, size);
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto src_buffer = lzt::allocate_shared_memory(test.size);
+  auto temp_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(src_buffer, 0x1, test.size);
+  memset(temp_buffer, 0xFF, test.size);
+  memset(dst_buffer, 0x0, test.size);
   ze_event_handle_t hEvent1;
-  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify Device reads event
   ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
   ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
-  lzt::append_memory_copy_region(cmdlist, temp_buffer, &dr, width, 0,
-                                 src_buffer, &sr, width, 0, hEvent, 0, nullptr);
-  lzt::append_memory_copy_region(cmdlist, dst_buffer, &dr, width, 0,
+  lzt::append_memory_copy_region(cmd_bundle.list, temp_buffer, &dr, width, 0,
+                                 src_buffer, &sr, width, 0, test.hEvent, 0,
+                                 nullptr);
+  lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
                                  temp_buffer, &sr, width, 0, nullptr, 1,
                                  &hEvent1);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Verify Copy Waits for Signal
-  lzt::event_host_synchronize(hEvent, UINT64_MAX);
+  lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
-  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
+  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
 
   // Signal Event On Host
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   // Verify Memory Set completed
-  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
   lzt::free_memory(src_buffer);
   lzt::free_memory(temp_buffer);
   lzt::free_memory(dst_buffer);
   lzt::destroy_event(hEvent1);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
+
 TEST_F(
     zeCommandListEventTests,
-    GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+    GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully) {
+  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(*this,
+                                                                       false);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopyRegionWithDependenciesWhenExecutingImmediateCommandListThenCommandCompletesSuccessfully) {
+  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(*this,
+                                                                       true);
+}
+
+void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
@@ -387,38 +540,61 @@ TEST_F(
 
   uint32_t width = 16;
   uint32_t height = 16;
-  size = height * width;
-  auto src_buffer = lzt::allocate_shared_memory(size);
-  auto dst_buffer = lzt::allocate_shared_memory(size);
-  memset(src_buffer, 0x1, size);
-  memset(dst_buffer, 0x0, size);
+  test.size = height * width;
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto src_buffer = lzt::allocate_shared_memory(test.size);
+  auto dst_buffer = lzt::allocate_shared_memory(test.size);
+  memset(src_buffer, 0x1, test.size);
+  memset(dst_buffer, 0x0, test.size);
 
   // Verify Host Reads Event as unset
-  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hEvent, 0));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify Device reads event
   ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
   ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
-  lzt::append_memory_copy_region(cmdlist, dst_buffer, &dr, width, 0, src_buffer,
-                                 &sr, width, 0, nullptr, 1, &hEvent);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
+                                 src_buffer, &sr, width, 0, nullptr, 1,
+                                 &test.hEvent);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Verify Copy Waits for Signal
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, size));
+  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
 
   // Signal Event On Host
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   // Verify Memory Set completed
-  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
+  EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
   lzt::free_memory(src_buffer);
   lzt::free_memory(dst_buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(*this,
+                                                                       false);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(*this,
+                                                                       true);
 }
 
 static ze_image_handle_t create_test_image(int height, int width) {
@@ -444,12 +620,12 @@ static ze_image_handle_t create_test_image(int height, int width) {
   return image;
 }
 
-TEST_F(
-    zeCommandListEventTests,
-    GivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
+void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
   if (!(lzt::image_support())) {
     GTEST_SKIP() << "device does not support images, cannot run test";
   }
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
   int width = input.width();
@@ -458,31 +634,34 @@ TEST_F(
   auto input_xeimage = create_test_image(height, width);
   auto output_xeimage = create_test_image(height, width);
   ze_event_handle_t hEvent1, hEvent2, hEvent3, hEvent4;
-  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-  ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-  ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-  ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   // Use ImageCopyFromMemory to upload ImageA
-  lzt::append_image_copy_from_mem(cmdlist, input_xeimage, input.raw_data(),
-                                  hEvent1);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent1);
+  lzt::append_image_copy_from_mem(cmd_bundle.list, input_xeimage,
+                                  input.raw_data(), hEvent1);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent1);
   // use ImageCopy to copy A -> B
-  lzt::append_image_copy(cmdlist, output_xeimage, input_xeimage, hEvent2);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent2);
+  lzt::append_image_copy(cmd_bundle.list, output_xeimage, input_xeimage,
+                         hEvent2);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent2);
   // use ImageCopyRegion to copy part of A -> B
   ze_image_region_t sr = {0, 0, 0, 1, 1, 1};
   ze_image_region_t dr = {0, 0, 0, 1, 1, 1};
-  lzt::append_image_copy_region(cmdlist, output_xeimage, input_xeimage, &dr,
-                                &sr, hEvent3);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent3);
+  lzt::append_image_copy_region(cmd_bundle.list, output_xeimage, input_xeimage,
+                                &dr, &sr, hEvent3);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent3);
   // use ImageCopyToMemory to dowload ImageB
-  lzt::append_image_copy_to_mem(cmdlist, output.raw_data(), output_xeimage,
-                                hEvent4);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent4);
+  lzt::append_image_copy_to_mem(cmd_bundle.list, output.raw_data(),
+                                output_xeimage, hEvent4);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent4);
   // execute commands
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Make sure all events signaled from host perspective
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent1, UINT64_MAX));
@@ -494,22 +673,41 @@ TEST_F(
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
   // cleanup
-  ep.destroy_event(hEvent1);
-  ep.destroy_event(hEvent2);
-  ep.destroy_event(hEvent3);
-  ep.destroy_event(hEvent4);
+  test.ep.destroy_event(hEvent1);
+  test.ep.destroy_event(hEvent2);
+  test.ep.destroy_event(hEvent3);
+  test.ep.destroy_event(hEvent4);
   lzt::destroy_ze_image(input_xeimage);
   lzt::destroy_ze_image(output_xeimage);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 TEST_F(
     zeCommandListEventTests,
-    GivenImageCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+    GivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
+  RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+      *this, false);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenImageCopyThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly) {
+  RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
+      *this, true);
+}
+
+void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
+    zeCommandListEventTests &test, bool is_immediate) {
   if (!(lzt::image_support())) {
     GTEST_SKIP() << "device does not support images, cannot run test";
   }
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
   int width = input.width();
@@ -518,32 +716,34 @@ TEST_F(
   auto input_xeimage = create_test_image(height, width);
   auto output_xeimage = create_test_image(height, width);
   ze_event_handle_t hEvent0, hEvent1, hEvent2, hEvent3, hEvent4;
-  ep.create_event(hEvent0, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-  ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-  ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-  ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-  ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent0, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent1, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent2, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+  test.ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
-  lzt::append_signal_event(cmdlist, hEvent0);
+  lzt::append_signal_event(cmd_bundle.list, hEvent0);
 
   // Use ImageCopyFromMemory to upload ImageA
-  lzt::append_image_copy_from_mem(cmdlist, input_xeimage, input.raw_data(),
-                                  hEvent1, 1, &hEvent0);
+  lzt::append_image_copy_from_mem(cmd_bundle.list, input_xeimage,
+                                  input.raw_data(), hEvent1, 1, &hEvent0);
   // use ImageCopy to copy A -> B
-  lzt::append_image_copy(cmdlist, output_xeimage, input_xeimage, hEvent2, 1,
-                         &hEvent1);
+  lzt::append_image_copy(cmd_bundle.list, output_xeimage, input_xeimage,
+                         hEvent2, 1, &hEvent1);
   // use ImageCopyRegion to copy part of A -> B
   ze_image_region_t sr = {0, 0, 0, 1, 1, 1};
   ze_image_region_t dr = {0, 0, 0, 1, 1, 1};
-  lzt::append_image_copy_region(cmdlist, output_xeimage, input_xeimage, &dr,
-                                &sr, hEvent3, 1, &hEvent2);
+  lzt::append_image_copy_region(cmd_bundle.list, output_xeimage, input_xeimage,
+                                &dr, &sr, hEvent3, 1, &hEvent2);
   // use ImageCopyToMemory to dowload ImageB
-  lzt::append_image_copy_to_mem(cmdlist, output.raw_data(), output_xeimage,
-                                hEvent4, 1, &hEvent3);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent4);
+  lzt::append_image_copy_to_mem(cmd_bundle.list, output.raw_data(),
+                                output_xeimage, hEvent4, 1, &hEvent3);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent4);
   // execute commands
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   // Make sure all events signaled from host perspective
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent0, UINT64_MAX));
@@ -556,20 +756,36 @@ TEST_F(
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
   // cleanup
-  ep.destroy_event(hEvent0);
-  ep.destroy_event(hEvent1);
-  ep.destroy_event(hEvent2);
-  ep.destroy_event(hEvent3);
-  ep.destroy_event(hEvent4);
+  test.ep.destroy_event(hEvent0);
+  test.ep.destroy_event(hEvent1);
+  test.ep.destroy_event(hEvent2);
+  test.ep.destroy_event(hEvent3);
+  test.ep.destroy_event(hEvent4);
   lzt::destroy_ze_image(input_xeimage);
   lzt::destroy_ze_image(output_xeimage);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST(
-    zeCommandListCopyEventTest,
-    GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfully) {
+TEST_F(
+    zeCommandListEventTests,
+    GivenImageCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(*this, false);
+}
+
+TEST_F(
+    zeCommandListEventTests,
+    GivenImageCopyThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(*this, true);
+}
+
+void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
+    bool is_immediate) {
   const size_t size = 1024;
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -594,17 +810,12 @@ TEST(
     }
     test_run = true;
 
-    auto command_queue_0 = lzt::create_command_queue(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, copy_ordinals[0]);
-    auto command_queue_1 = lzt::create_command_queue(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, copy_ordinals[1]);
-
-    auto command_list_0 =
-        lzt::create_command_list(context, device, 0, copy_ordinals[0]);
-    auto command_list_1 =
-        lzt::create_command_list(context, device, 0, copy_ordinals[1]);
+    auto cmd_bundle_0 = lzt::create_command_bundle(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, copy_ordinals[0], 0, is_immediate);
+    auto cmd_bundle_1 = lzt::create_command_bundle(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, copy_ordinals[1], 0, is_immediate);
 
     ze_event_pool_desc_t event_pool_desc = {};
     event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
@@ -628,18 +839,26 @@ TEST(
     memset(dst_buffer, 0x0, size);
 
     // Execute and verify GPU reads event
-    lzt::append_memory_copy(command_list_0, temp_buffer, src_buffer, size,
+    lzt::append_memory_copy(cmd_bundle_0.list, temp_buffer, src_buffer, size,
                             event, 0, nullptr);
-    lzt::append_memory_copy(command_list_1, dst_buffer, temp_buffer, size,
+    lzt::append_memory_copy(cmd_bundle_1.list, dst_buffer, temp_buffer, size,
                             nullptr, 1, &event);
-    lzt::close_command_list(command_list_0);
-    lzt::close_command_list(command_list_1);
 
-    lzt::execute_command_lists(command_queue_1, 1, &command_list_1, nullptr);
-    lzt::execute_command_lists(command_queue_0, 1, &command_list_0, nullptr);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle_0.list, UINT64_MAX);
+      lzt::synchronize_command_list_host(cmd_bundle_1.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle_0.list);
+      lzt::close_command_list(cmd_bundle_1.list);
 
-    lzt::synchronize(command_queue_0, UINT64_MAX);
-    lzt::synchronize(command_queue_1, UINT64_MAX);
+      lzt::execute_command_lists(cmd_bundle_1.queue, 1, &cmd_bundle_1.list,
+                                 nullptr);
+      lzt::execute_command_lists(cmd_bundle_0.queue, 1, &cmd_bundle_0.list,
+                                 nullptr);
+
+      lzt::synchronize(cmd_bundle_0.queue, UINT64_MAX);
+      lzt::synchronize(cmd_bundle_1.queue, UINT64_MAX);
+    }
 
     // Verify Memory Copy completed
     EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
@@ -649,16 +868,28 @@ TEST(
     lzt::free_memory(context, dst_buffer);
     lzt::destroy_event(event);
     lzt::destroy_event_pool(event_pool);
-    lzt::destroy_command_list(command_list_0);
-    lzt::destroy_command_queue(command_queue_0);
-    lzt::destroy_command_list(command_list_1);
-    lzt::destroy_command_queue(command_queue_1);
+    lzt::destroy_command_bundle(cmd_bundle_0);
+    lzt::destroy_command_bundle(cmd_bundle_1);
   }
   lzt::destroy_context(context);
 
   if (!test_run) {
     LOG_WARNING << "Less than 2 engines that support copy, test not run";
   }
+}
+
+TEST(
+    zeCommandListCopyEventTest,
+    GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfully) {
+  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
+      false);
+}
+
+TEST(
+    zeCommandListCopyEventTest,
+    GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsThenCopiesCompleteSuccessfully) {
+  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
+      true);
 }
 
 } // namespace

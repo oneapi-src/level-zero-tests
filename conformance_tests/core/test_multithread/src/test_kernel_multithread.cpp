@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -25,14 +25,14 @@ constexpr size_t output_size_ = output_count_ * sizeof(uint64_t);
 constexpr size_t pattern_memory_size = 512;
 constexpr size_t pattern_memory_count =
     pattern_memory_size >> 3; // array of uint64_t
-void run_functions(ze_command_queue_handle_t, ze_command_list_handle_t,
+void run_functions(lzt::zeCommandBundle cmd_bundle, bool is_immediate,
                    ze_kernel_handle_t, ze_kernel_handle_t, void *, size_t,
                    uint16_t, uint64_t *, uint64_t *, uint64_t *, uint64_t *,
                    size_t);
 
-void thread_kernel_create_destroy(ze_module_handle_t module_handle) {
-  ze_command_queue_handle_t command_queue = lzt::create_command_queue();
-  ze_command_list_handle_t command_list = lzt::create_command_list();
+void thread_kernel_create_destroy(ze_module_handle_t module_handle,
+                                  bool is_immediate) {
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
   ze_kernel_flags_t flag = 0;
   /* Prepare the fill function */
@@ -67,7 +67,7 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle) {
               0x0);
     uint16_t pattern_base = std::rand() % 0xFFFF;
     uint16_t pattern_base_1 = std::rand() % 0xFFFF;
-    run_functions(command_queue, command_list, fill_function, test_function,
+    run_functions(cmd_bundle, is_immediate, fill_function, test_function,
                   gpu_pattern_buffer, pattern_memory_count, pattern_base,
                   host_expected_output_buffer, gpu_expected_output_buffer,
                   host_found_output_buffer, gpu_found_output_buffer,
@@ -102,7 +102,11 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle) {
     EXPECT_EQ(false, host_test_failure);
   }
 
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   delete[] host_expected_output_buffer;
   delete[] host_found_output_buffer;
@@ -111,12 +115,10 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle) {
   level_zero_tests::free_memory(gpu_found_output_buffer);
   lzt::destroy_function(fill_function);
   lzt::destroy_function(test_function);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
-void run_functions(ze_command_queue_handle_t command_queue,
-                   ze_command_list_handle_t command_list,
+void run_functions(lzt::zeCommandBundle cmd_bundle, bool is_immediate,
                    ze_kernel_handle_t fill_function,
                    ze_kernel_handle_t test_function, void *pattern_memory,
                    size_t pattern_memory_count, uint16_t sub_pattern,
@@ -174,36 +176,39 @@ void run_functions(ze_command_queue_handle_t command_queue,
   LOG_DEBUG << "thread group dimension is ::" << threadGroup;
   ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
 
-  lzt::append_memory_copy(command_list, gpu_expected_output_buffer,
+  lzt::append_memory_copy(cmd_bundle.list, gpu_expected_output_buffer,
                           host_expected_output_buffer,
                           output_count * sizeof(uint64_t), nullptr);
-  lzt::append_memory_copy(command_list, gpu_found_output_buffer,
+  lzt::append_memory_copy(cmd_bundle.list, gpu_found_output_buffer,
                           host_found_output_buffer,
                           output_count * sizeof(uint64_t), nullptr);
 
   // Access to pattern buffer from device using the compute kernel to fill
   // data.
-  lzt::append_launch_function(command_list, fill_function,
+  lzt::append_launch_function(cmd_bundle.list, fill_function,
                               &thread_group_dimensions, nullptr, 0, nullptr);
-  lzt::append_barrier(command_list, nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
   // Access to pattern buffer from device using the compute kernel to test
   // data.
-  lzt::append_launch_function(command_list, test_function,
+  lzt::append_launch_function(cmd_bundle.list, test_function,
                               &thread_group_dimensions, nullptr, 0, nullptr);
-  lzt::append_barrier(command_list, nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
 
-  lzt::append_memory_copy(command_list, host_expected_output_buffer,
+  lzt::append_memory_copy(cmd_bundle.list, host_expected_output_buffer,
                           gpu_expected_output_buffer,
                           output_count * sizeof(uint64_t), nullptr);
-  lzt::append_memory_copy(command_list, host_found_output_buffer,
+  lzt::append_memory_copy(cmd_bundle.list, host_found_output_buffer,
                           gpu_found_output_buffer,
                           output_count * sizeof(uint64_t), nullptr);
-  lzt::close_command_list(command_list);
 
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
-
-  lzt::reset_command_list(command_list);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    lzt::reset_command_list(cmd_bundle.list);
+  }
 }
 
 void thread_module_create_destroy() {
@@ -246,7 +251,30 @@ TEST(zeKernelSubmissionMultithreadTest,
 
   for (uint32_t i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
-                                               module_handle);
+                                               module_handle, false);
+  }
+
+  for (int i = 0; i < num_threads; i++) {
+    threads[i]->join();
+  }
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+}
+
+TEST(
+    zeKernelSubmissionMultithreadTest,
+    GivenMultipleThreadsWhenPerformingKernelSubmissionsOnImmediateCmdListThenSuccessIsReturned) {
+  LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
+  std::array<std::unique_ptr<std::thread>, num_threads> threads;
+
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+  ze_module_handle_t module_handle =
+      lzt::create_module(device, "test_fill_device_memory.spv");
+
+  for (uint32_t i = 0; i < num_threads; i++) {
+    threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
+                                               module_handle, true);
   }
 
   for (int i = 0; i < num_threads; i++) {

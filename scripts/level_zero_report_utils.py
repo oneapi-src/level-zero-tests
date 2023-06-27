@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2021 Intel Corporation
+# Copyright (C) 2021-2023 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 import re
@@ -62,8 +62,11 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_TimestampsTest_GivenExecutedKernelWhenGettingGlobalTimestampsThenDeviceAndHostTimestampDurationsAreClose', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillVerificationTests_GivenHostMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillVerificationTests_GivenDeviceMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendWriteGlobalTimestampTest_GivenCommandListWhenAppendingWriteGlobalTimestampThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListCopyEventTest_GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListCopyEventTest_GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsThenCopiesCompleteSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenImportingMemoryThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceCommandQueueGroupsTest_GivenValidDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder', test_name, re.IGNORECASE)) or \
@@ -73,16 +76,25 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryPropertiesTests_GivenValidDeviceWhenRetrievingExternalMemoryPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceOrderingTests_GivenPCIOrderingForcedWhenEnumeratingDevicesThenDevicesAreEnumeratedInIncreasingOrderOfTheirBDFAddresses', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryFillsThatSignalAndWaitWhenExecutingImmediateCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryFillThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryFillThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopiesWithDependenciesWhenExecutingCommandListThenCommandsCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopiesWithDependenciesWhenExecutingImmediateCommandListThenCommandsCompletesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionOnImmediateCmdListThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionWithDependenciesWhenExecutingImmediateCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListEventTests_GivenMemorySetThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_IndependentCMDListsOverlappingParameterization_zeTestMixedCMDListsIndependentOverlapping_GivenRegularAndImmCMDListsOnComputeEngineThenCorrectResultsAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_IndependentCMDListsOverlappingParameterization_zeTestMixedCMDListsIndependentOverlapping_GivenRegularAndImmCMDListsOnCopyEngineThenCorrectResultsAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_IndependentCMDListsOverlappingParameterization_zeTestMixedCMDListsIndependentOverlapping_GivenRegularCMDListOnComputeEngineAndImmCMDListOnCopyEngineThenCorrectResultsAreReturned', test_name, re.IGNORECASE)) or \
