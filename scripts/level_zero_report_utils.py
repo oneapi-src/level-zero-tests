@@ -130,6 +130,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeDeviceGetModulePropertiesTests_GivenValidDeviceWhenRetrievingFloatAtomicPropertiesThenValidPropertiesReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDevicePciGetPropertiesTests_GivenValidDeviceWhenRetrievingPciSpeedPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceP2PBandwidthExpProperties_GivenValidDevicesWhenRetrievingP2PBandwidthPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \
+                    (test_name.find("ParamAppendMemCopy")!= -1) or \
                     (test_name.find("zeVirtualMemoryTests")!= -1) or \
                     (test_name.find("Cooperative")!= -1) or \
                     (test_name.find("zeMemFreeExtTests")!= -1) or \

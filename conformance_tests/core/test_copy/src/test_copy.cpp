@@ -825,4 +825,131 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_MEMORY_ADVICE_BIAS_UNCACHED),
         ::testing::Bool()));
 
+class zeCommandListAppendMemoryCopyParameterizedTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_memory_type_t, ze_memory_type_t>> {
+public:
+  void launchParamAppendMemCopy(ze_device_handle_t device, int *src_memory,
+                                int *dst_memory, size_t size) {
+    auto cq = lzt::create_command_queue(device);
+    auto cl = lzt::create_command_list(device);
+    const int8_t src_pattern = 1;
+    const int8_t dst_pattern = 0;
+
+    int *expected_data =
+        static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
+    int *verify_data =
+        static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
+
+    lzt::append_memory_fill(cl, static_cast<void *>(expected_data),
+                            static_cast<const void *>(&src_pattern),
+                            sizeof(int), size * sizeof(int), nullptr);
+    lzt::append_memory_fill(cl, static_cast<void *>(verify_data),
+                            static_cast<const void *>(&dst_pattern),
+                            sizeof(int), size * sizeof(int), nullptr);
+
+    EXPECT_NE(expected_data, nullptr);
+    EXPECT_NE(verify_data, nullptr);
+
+    lzt::append_memory_fill(cl, static_cast<void *>(src_memory),
+                            static_cast<const void *>(&src_pattern),
+                            sizeof(uint8_t), size * sizeof(int), nullptr);
+
+    lzt::append_memory_fill(cl, static_cast<void *>(dst_memory),
+                            static_cast<const void *>(&dst_pattern),
+                            sizeof(uint8_t), size * sizeof(int), nullptr);
+
+    lzt::append_barrier(cl, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cl, static_cast<void *>(dst_memory),
+                            static_cast<void *>(src_memory),
+                            size * sizeof(int));
+
+    lzt::append_barrier(cl, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cl, verify_data, static_cast<void *>(dst_memory),
+                            size * sizeof(int));
+    lzt::append_memory_copy(cl, expected_data, static_cast<void *>(src_memory),
+                            size * sizeof(int));
+    lzt::close_command_list(cl);
+    lzt::execute_command_lists(cq, 1, &cl, nullptr);
+    lzt::synchronize(cq, UINT64_MAX);
+
+    EXPECT_EQ(0, memcmp(expected_data, verify_data, size * sizeof(int)));
+
+    lzt::destroy_command_list(cl);
+    lzt::destroy_command_queue(cq);
+    lzt::free_memory(expected_data);
+    lzt::free_memory(verify_data);
+  }
+};
+
+TEST_P(
+    zeCommandListAppendMemoryCopyParameterizedTests,
+    GivenParameterizedSourceAndDestinationMemAllocTypesWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+  ze_memory_type_t src_memory_type = std::get<0>(GetParam());
+  ze_memory_type_t dst_memory_type = std::get<1>(GetParam());
+
+  auto context = lzt::get_default_context();
+  const size_t size = 16;
+
+  for (auto driver : lzt::get_all_driver_handles()) {
+    for (auto device : lzt::get_devices(driver)) {
+
+      int *src_memory = nullptr;
+      int *dst_memory = nullptr;
+
+      switch (src_memory_type) {
+      case ZE_MEMORY_TYPE_DEVICE:
+        src_memory = static_cast<int *>(lzt::allocate_device_memory(
+            size * sizeof(int), 1, 0u, device, context));
+        break;
+      case ZE_MEMORY_TYPE_HOST:
+        src_memory = static_cast<int *>(
+            lzt::allocate_host_memory(size * sizeof(int), 1, context));
+        break;
+      case ZE_MEMORY_TYPE_SHARED:
+        src_memory = static_cast<int *>(lzt::allocate_shared_memory(
+            size * sizeof(int), 1, 0, 0, device, context));
+        break;
+      default:
+        LOG_WARNING << "Unhandled memory type for parameterized append memory "
+                       "copy test: "
+                    << src_memory_type;
+      }
+      switch (dst_memory_type) {
+      case ZE_MEMORY_TYPE_DEVICE:
+        dst_memory = static_cast<int *>(lzt::allocate_device_memory(
+            size * sizeof(int), 1, 0u, device, context));
+        break;
+      case ZE_MEMORY_TYPE_HOST:
+        dst_memory = static_cast<int *>(
+            lzt::allocate_host_memory(size * sizeof(int), 1, context));
+        break;
+      case ZE_MEMORY_TYPE_SHARED:
+        dst_memory = static_cast<int *>(lzt::allocate_shared_memory(
+            size * sizeof(int), 1, 0, 0, device, context));
+        break;
+      default:
+        LOG_WARNING << "Unhandled memory type for parameterized append memory "
+                       "copy test: "
+                    << dst_memory_type;
+      }
+
+      EXPECT_NE(src_memory, nullptr);
+      EXPECT_NE(dst_memory, nullptr);
+
+      launchParamAppendMemCopy(device, src_memory, dst_memory, size);
+
+      if (dst_memory)
+        lzt::free_memory(context, dst_memory);
+      if (src_memory)
+        lzt::free_memory(context, src_memory);
+    }
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(ParamAppendMemCopy,
+                        zeCommandListAppendMemoryCopyParameterizedTests,
+                        ::testing::Combine(memory_types, memory_types));
+
 } // namespace
