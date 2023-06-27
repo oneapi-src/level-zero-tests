@@ -100,7 +100,11 @@ std::vector<ze_kernel_timestamp_result_t>
 get_event_timestamps_exp(const ze_event_handle_t &event,
                          const ze_device_handle_t &device, uint32_t count);
 #endif // ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
-
+void get_event_kernel_timestamps_from_mapped_timestamp_event(
+    const ze_event_handle_t &event, const ze_device_handle_t &device,
+    std::vector<ze_kernel_timestamp_result_t> &kernel_timestamp_buffer,
+    std::vector<ze_synchronized_timestamp_result_ext_t>
+        &synchronized_timestamp_buffer);
 class zeEventPoolTests : public ::testing::Test {
 protected:
   zeEventPool ep;

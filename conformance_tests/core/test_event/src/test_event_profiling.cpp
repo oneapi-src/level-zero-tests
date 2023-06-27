@@ -17,15 +17,34 @@
 
 namespace {
 
-class EventProfilingTests : public ::testing::Test {
+class EventProfilingTests : public ::testing::Test,
+                            public ::testing::WithParamInterface<bool> {
 protected:
+  bool use_mapped_timestamp = false;
   void SetUp() override {
     context = lzt::create_context();
     const ze_device_handle_t device =
         lzt::zeDevice::get_instance()->get_device();
-    ep = lzt::create_event_pool(context, 10,
-                                (ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
-                                 ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP));
+    use_mapped_timestamp = GetParam();
+
+    if (use_mapped_timestamp) {
+      const auto driver = lzt::get_default_driver();
+      if (!lzt::check_if_extension_supported(
+              driver, "ZE_extension_event_query_kernel_timestamps")) {
+        LOG_WARNING << "driver does not support "
+                       "ZE_extension_event_query_kernel_timestamps, "
+                       "skipping test";
+        GTEST_SKIP();
+      }
+
+      ep = lzt::create_event_pool(context, 10,
+                                  (ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                   ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP));
+    } else {
+      ep = lzt::create_event_pool(context, 10,
+                                  (ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                   ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP));
+    }
     ze_event_desc_t event_desc = {};
     event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
     event_desc.index = 0;
@@ -67,6 +86,28 @@ protected:
     lzt::destroy_context(context);
   }
 
+  void verify_mapped_timestamp_values() {
+    std::vector<ze_kernel_timestamp_result_t> kernel_timestamp_buffer{};
+    std::vector<ze_synchronized_timestamp_result_ext_t>
+        synchronized_timestamp_buffer{};
+
+    lzt::get_event_kernel_timestamps_from_mapped_timestamp_event(
+        event, lzt::zeDevice::get_instance()->get_device(),
+        kernel_timestamp_buffer, synchronized_timestamp_buffer);
+    EXPECT_GT(kernel_timestamp_buffer.size(), 0u);
+    for (uint32_t index = 0u; index < kernel_timestamp_buffer.size(); index++) {
+      EXPECT_GT(kernel_timestamp_buffer[index].global.kernelStart, 0);
+      EXPECT_GT(kernel_timestamp_buffer[index].global.kernelEnd, 0);
+      EXPECT_GT(kernel_timestamp_buffer[index].context.kernelStart, 0);
+      EXPECT_GT(kernel_timestamp_buffer[index].context.kernelEnd, 0);
+
+      EXPECT_GT(synchronized_timestamp_buffer[index].global.kernelStart, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[index].global.kernelEnd, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[index].context.kernelStart, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[index].context.kernelEnd, 0);
+    }
+  }
+
   void *src_buffer;
   void *dst_buffer;
   ze_context_handle_t context;
@@ -78,7 +119,7 @@ protected:
   ze_kernel_handle_t kernel;
 };
 
-TEST_F(
+TEST_P(
     EventProfilingTests,
     GivenProfilingEventWhenCommandCompletesThenTimestampsAreRelationallyCorrect) {
 
@@ -86,32 +127,42 @@ TEST_F(
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
   lzt::synchronize(cmdqueue, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
-  ze_kernel_timestamp_result_t timestamp =
-      lzt::get_event_kernel_timestamp(event);
 
-  EXPECT_GT(timestamp.global.kernelStart, 0);
-  EXPECT_GT(timestamp.global.kernelEnd, 0);
-  EXPECT_GT(timestamp.context.kernelStart, 0);
-  EXPECT_GT(timestamp.context.kernelEnd, 0);
+  if (use_mapped_timestamp) {
+    verify_mapped_timestamp_values();
+  } else {
+    ze_kernel_timestamp_result_t timestamp =
+        lzt::get_event_kernel_timestamp(event);
+
+    EXPECT_GT(timestamp.global.kernelStart, 0);
+    EXPECT_GT(timestamp.global.kernelEnd, 0);
+    EXPECT_GT(timestamp.context.kernelStart, 0);
+    EXPECT_GT(timestamp.context.kernelEnd, 0);
+  }
 }
 
-TEST_F(EventProfilingTests,
+TEST_P(EventProfilingTests,
        GivenSetProfilingEventWhenResettingEventThenEventStatusNotReady) {
 
   lzt::close_command_list(cmdlist);
   lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
   lzt::synchronize(cmdqueue, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
-  ze_kernel_timestamp_result_t timestamp =
-      lzt::get_event_kernel_timestamp(event);
+  if (use_mapped_timestamp) {
+    verify_mapped_timestamp_values();
+  } else {
+    ze_kernel_timestamp_result_t timestamp =
+        lzt::get_event_kernel_timestamp(event);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryKernelTimestamp(event, &timestamp));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event));
-  EXPECT_EQ(ZE_RESULT_NOT_READY,
-            zeEventQueryKernelTimestamp(event, &timestamp));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeEventQueryKernelTimestamp(event, &timestamp));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event));
+    EXPECT_EQ(ZE_RESULT_NOT_READY,
+              zeEventQueryKernelTimestamp(event, &timestamp));
+  }
 }
 
-TEST_F(EventProfilingTests,
+TEST_P(EventProfilingTests,
        GivenRegularAndTimestampEventPoolsWhenProfilingThenTimestampsStillWork) {
   const int mem_size = 1000;
   auto other_buffer = lzt::allocate_host_memory(mem_size, 1, context);
@@ -133,13 +184,18 @@ TEST_F(EventProfilingTests,
   lzt::synchronize(cmdqueue, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
   lzt::event_host_synchronize(regular_event, UINT64_MAX);
-  ze_kernel_timestamp_result_t timestamp =
-      lzt::get_event_kernel_timestamp(event);
 
-  EXPECT_GT(timestamp.global.kernelStart, 0);
-  EXPECT_GT(timestamp.global.kernelEnd, 0);
-  EXPECT_GT(timestamp.context.kernelStart, 0);
-  EXPECT_GT(timestamp.context.kernelEnd, 0);
+  if (use_mapped_timestamp) {
+    verify_mapped_timestamp_values();
+  } else {
+    ze_kernel_timestamp_result_t timestamp =
+        lzt::get_event_kernel_timestamp(event);
+
+    EXPECT_GT(timestamp.global.kernelStart, 0);
+    EXPECT_GT(timestamp.global.kernelEnd, 0);
+    EXPECT_GT(timestamp.context.kernelStart, 0);
+    EXPECT_GT(timestamp.context.kernelEnd, 0);
+  }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event));
 
@@ -152,6 +208,9 @@ TEST_F(EventProfilingTests,
   lzt::destroy_event(regular_event);
   lzt::destroy_event_pool(ep_no_timestamps);
 }
+
+INSTANTIATE_TEST_CASE_P(VerifyEventProfilingTests, EventProfilingTests,
+                        ::testing::Values(false, true));
 
 class EventProfilingCacheCoherencyTests
     : public ::testing::Test,
@@ -574,4 +633,221 @@ TEST_F(
     "warning: ZE_EVENT_QUERY_TIMESTAMPS_EXP support not found, not building tests for it")
 #endif
 #endif // ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
+
+class EventMappedTimestampProfilingTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<bool> {
+protected:
+  bool use_immediate_cmd_lists = false;
+  void SetUp() override {
+    context = lzt::create_context();
+    auto driver = lzt::get_default_driver();
+    if (!lzt::check_if_extension_supported(
+            driver, "ZE_extension_event_query_kernel_timestamps")) {
+      LOG_WARNING << "driver does not support "
+                     "ZE_extension_event_query_kernel_timestamps, "
+                     "skipping test";
+      GTEST_SKIP();
+    }
+
+    ep = lzt::create_event_pool(context, 10,
+                                (ZE_EVENT_POOL_FLAG_HOST_VISIBLE |
+                                 ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP));
+    use_immediate_cmd_lists = GetParam();
+    event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    event_desc.index = 0;
+    event_desc.signal = 0;
+    event_desc.wait = 0;
+    size_t buff_size = size * sizeof(int);
+    src_buffer = lzt::allocate_host_memory(buff_size, 1, context);
+    dst_buffer = lzt::allocate_host_memory(buff_size, 1, context);
+    memset(src_buffer, 0, buff_size);
+  }
+
+  void TearDown() override {
+
+    lzt::free_memory(context, src_buffer);
+    lzt::free_memory(context, dst_buffer);
+    lzt::destroy_event_pool(ep);
+    lzt::destroy_context(context);
+  }
+
+  void *src_buffer;
+  void *dst_buffer;
+  ze_context_handle_t context;
+  ze_event_pool_handle_t ep;
+  ze_event_desc_t event_desc = {};
+  size_t size = 10000;
+  ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+};
+
+TEST_P(
+    EventMappedTimestampProfilingTests,
+    GivenEventMappedTimestampWhenCommandCompletesThenTimestampsAreRelationallyCorrect) {
+
+  ze_command_list_handle_t cmdlist{};
+  ze_command_queue_handle_t cmdqueue{};
+  ze_module_handle_t module{};
+  ze_kernel_handle_t kernel{};
+
+  std::vector<ze_device_handle_t> test_devices = lzt::get_all_sub_devices();
+  test_devices.push_back(lzt::get_default_device(lzt::get_default_driver()));
+
+  ze_event_handle_t event = lzt::create_event(ep, event_desc);
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
+
+  for (auto &test_device : test_devices) {
+
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(test_device, &deviceProperties);
+
+    LOG_INFO << "test device name " << deviceProperties.name << " uuid "
+             << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    // Prepare Command list
+    if (use_immediate_cmd_lists) {
+      cmdlist = lzt::create_immediate_command_list(test_device);
+    } else {
+      cmdlist = lzt::create_command_list(context, test_device, 0);
+      cmdqueue = lzt::create_command_queue(context, test_device, 0,
+                                           ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                                           ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+    }
+
+    // Prepare Kernel
+    module = lzt::create_module(context, test_device, "profile_add.spv",
+                                ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+    kernel = lzt::create_function(module, "profile_add_constant");
+    lzt::set_group_size(kernel, 1, 1, 1);
+    lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
+    lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
+    const int addval = 0x11223344;
+    lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
+    lzt::append_launch_function(cmdlist, kernel, &args, event, 0, nullptr);
+
+    // Execute
+    if (!use_immediate_cmd_lists) {
+      lzt::close_command_list(cmdlist);
+      lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+      lzt::synchronize(cmdqueue, UINT64_MAX);
+    }
+    lzt::event_host_synchronize(event, UINT64_MAX);
+
+    // Read and verify timestamps
+    std::vector<ze_kernel_timestamp_result_t> kernel_timestamp_buffer;
+    std::vector<ze_synchronized_timestamp_result_ext_t>
+        synchronized_timestamp_buffer;
+    lzt::get_event_kernel_timestamps_from_mapped_timestamp_event(
+        event, test_device, kernel_timestamp_buffer,
+        synchronized_timestamp_buffer);
+    uint64_t previous_maximum_sync_ts = std::numeric_limits<uint64_t>::min();
+
+    EXPECT_GT(kernel_timestamp_buffer.size(), 0u);
+    for (uint32_t index = 0u; index < kernel_timestamp_buffer.size(); index++) {
+      EXPECT_GT(kernel_timestamp_buffer[index].global.kernelStart, 0);
+      EXPECT_GT(kernel_timestamp_buffer[index].global.kernelEnd, 0);
+      EXPECT_GT(kernel_timestamp_buffer[index].context.kernelStart, 0);
+      EXPECT_GT(kernel_timestamp_buffer[index].context.kernelEnd, 0);
+
+      EXPECT_GT(synchronized_timestamp_buffer[index].global.kernelStart, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[index].global.kernelEnd, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[index].context.kernelStart, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[index].context.kernelEnd, 0);
+
+      LOG_DEBUG
+          << "\n\n [1]synchronized_timestamp_buffer[index].global.kernelStart "
+             ": "
+          << synchronized_timestamp_buffer[index].global.kernelStart;
+      LOG_DEBUG << "\n synchronized_timestamp_buffer[index].global.kernelEnd : "
+                << synchronized_timestamp_buffer[index].global.kernelEnd;
+      LOG_DEBUG
+          << "\n synchronized_timestamp_buffer[index].context.kernelStart : "
+          << synchronized_timestamp_buffer[index].context.kernelStart;
+      LOG_DEBUG
+          << "\n synchronized_timestamp_buffer[index].context.kernelEnd : "
+          << synchronized_timestamp_buffer[index].context.kernelEnd;
+
+      previous_maximum_sync_ts =
+          std::max(previous_maximum_sync_ts,
+                   synchronized_timestamp_buffer[index].global.kernelStart);
+      previous_maximum_sync_ts =
+          std::max(previous_maximum_sync_ts,
+                   synchronized_timestamp_buffer[index].global.kernelEnd);
+    }
+
+    lzt::event_host_reset(event);
+    lzt::reset_command_list(cmdlist);
+    lzt::append_launch_function(cmdlist, kernel, &args, event, 0, nullptr);
+    if (!use_immediate_cmd_lists) {
+      lzt::close_command_list(cmdlist);
+      lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+      lzt::synchronize(cmdqueue, UINT64_MAX);
+    }
+
+    lzt::event_host_synchronize(event, UINT64_MAX);
+    kernel_timestamp_buffer.clear();
+    std::vector<ze_synchronized_timestamp_result_ext_t>
+        current_synchronized_timestamp_buffer;
+
+    lzt::get_event_kernel_timestamps_from_mapped_timestamp_event(
+        event, lzt::zeDevice::get_instance()->get_device(),
+        kernel_timestamp_buffer, current_synchronized_timestamp_buffer);
+    uint64_t current_minimum_sync_ts = std::numeric_limits<uint64_t>::max();
+
+    for (uint32_t index = 0u; index < kernel_timestamp_buffer.size(); index++) {
+      EXPECT_GT(current_synchronized_timestamp_buffer[index].global.kernelStart,
+                0);
+      EXPECT_GT(current_synchronized_timestamp_buffer[index].global.kernelEnd,
+                0);
+      EXPECT_GT(
+          current_synchronized_timestamp_buffer[index].context.kernelStart, 0);
+      EXPECT_GT(current_synchronized_timestamp_buffer[index].context.kernelEnd,
+                0);
+      current_minimum_sync_ts = std::min(
+          current_minimum_sync_ts,
+          current_synchronized_timestamp_buffer[index].global.kernelStart);
+      current_minimum_sync_ts = std::min(
+          current_minimum_sync_ts,
+          current_synchronized_timestamp_buffer[index].global.kernelEnd);
+
+      LOG_DEBUG
+          << "\n\n [1]synchronized_timestamp_buffer[index].global.kernelStart "
+             ": "
+          << synchronized_timestamp_buffer[index].global.kernelStart;
+      LOG_DEBUG << "\n synchronized_timestamp_buffer[index].global.kernelEnd : "
+                << synchronized_timestamp_buffer[index].global.kernelEnd;
+      LOG_DEBUG
+          << "\n synchronized_timestamp_buffer[index].context.kernelStart : "
+          << synchronized_timestamp_buffer[index].context.kernelStart;
+      LOG_DEBUG
+          << "\n synchronized_timestamp_buffer[index].context.kernelEnd : "
+          << synchronized_timestamp_buffer[index].context.kernelEnd;
+    }
+
+    LOG_DEBUG << "current_minimum_sync_ts : " << current_minimum_sync_ts
+              << " | previous_maximum_sync_ts : " << previous_maximum_sync_ts
+              << std::endl;
+    EXPECT_GE(current_minimum_sync_ts, previous_maximum_sync_ts);
+
+    lzt::destroy_command_list(cmdlist);
+    if (!use_immediate_cmd_lists) {
+      lzt::destroy_command_queue(cmdqueue);
+    }
+    lzt::destroy_function(kernel);
+    lzt::destroy_module(module);
+    lzt::event_host_reset(event);
+  }
+  lzt::destroy_event(event);
+}
+
+INSTANTIATE_TEST_CASE_P(VerifyEventMappedTimestampProfilingTests,
+                        EventMappedTimestampProfilingTests,
+                        ::testing::Values(true, false));
+
 } // namespace

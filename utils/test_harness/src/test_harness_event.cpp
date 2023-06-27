@@ -88,6 +88,36 @@ get_event_kernel_timestamp(ze_event_handle_t event) {
   return value;
 }
 
+void get_event_kernel_timestamps_from_mapped_timestamp_event(
+    const ze_event_handle_t &event, const ze_device_handle_t &device,
+    std::vector<ze_kernel_timestamp_result_t> &kernel_timestamp_buffer,
+    std::vector<ze_synchronized_timestamp_result_ext_t>
+        &synchronized_timestamp_buffer) {
+
+  uint32_t count = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventQueryKernelTimestampsExt(event, device, &count, nullptr));
+  EXPECT_GT(count, 0);
+
+  ze_event_query_kernel_timestamps_results_ext_properties_t properties{};
+  properties.pNext = nullptr;
+  properties.stype =
+      ZE_STRUCTURE_TYPE_EVENT_QUERY_KERNEL_TIMESTAMPS_RESULTS_EXT_PROPERTIES;
+
+  kernel_timestamp_buffer.clear();
+  synchronized_timestamp_buffer.clear();
+
+  kernel_timestamp_buffer.resize(count);
+  synchronized_timestamp_buffer.resize(count);
+
+  properties.pKernelTimestampsBuffer = kernel_timestamp_buffer.data();
+  properties.pSynchronizedTimestampsBuffer =
+      synchronized_timestamp_buffer.data();
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryKernelTimestampsExt(
+                                   event, device, &count, &properties));
+}
+
 double
 get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
                               const ze_device_handle_t &device,
