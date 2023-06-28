@@ -121,20 +121,22 @@ void get_event_kernel_timestamps_from_mapped_timestamp_event(
 double
 get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
                               const ze_device_handle_t &device,
-                              const ze_driver_handle_t driver) {
+                              const ze_driver_handle_t driver,
+                              const ze_structure_type_t property_type) {
 
   double global_time_ns;
-  auto device_properties = lzt::get_device_properties(device);
+  auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
-      ~(-1 << device_properties.kernelTimestampValidBits);
-  ze_api_version_t api_version;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetApiVersion(driver, &api_version));
+      ~(-1L << device_properties.kernelTimestampValidBits);
+
   double timer_period;
-  if (api_version <= ZE_API_VERSION_1_0) {
+  if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
+    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
+  } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
     timer_period = static_cast<double>(timestamp_freq);
   } else {
-    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
+    LOG_INFO << "INVALID DEVICE_PROPERTY_TYPE";
   }
 
   global_time_ns =
@@ -151,21 +153,24 @@ get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
 double
 get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
                                const ze_device_handle_t &device,
-                               const ze_driver_handle_t driver) {
+                               const ze_driver_handle_t driver,
+                               const ze_structure_type_t property_type) {
 
   double context_time_ns;
   auto device_properties = lzt::get_device_properties(device);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
-      ~(-1 << device_properties.kernelTimestampValidBits);
-  ze_api_version_t api_version;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetApiVersion(driver, &api_version));
+      ~(-1L << device_properties.kernelTimestampValidBits);
+
   double timer_period;
-  if (api_version <= ZE_API_VERSION_1_0) {
+  if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
+    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
+  } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
     timer_period = static_cast<double>(timestamp_freq);
   } else {
-    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
+    LOG_INFO << "INVALID DEVICE_PROPERTY_TYPE";
   }
+
   context_time_ns =
       (timestamp->context.kernelEnd >= timestamp->context.kernelStart)
           ? (timestamp->context.kernelEnd - timestamp->context.kernelStart) *

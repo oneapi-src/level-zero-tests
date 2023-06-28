@@ -1175,6 +1175,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
     uint64_t timer_resolution_ns = device_properties.timerResolution;
     uint32_t device_timestamp_bits = device_properties.timestampValidBits;
     uint32_t kernel_timestamp_bits = device_properties.kernelTimestampValidBits;
+    // seems a little odd to do this, but...
     uint32_t timestamp_bits =
         std::min(device_timestamp_bits, kernel_timestamp_bits);
 
@@ -1273,6 +1274,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
                                  std::to_string(result));
       }
 
+      // don't know if this is correct.  seems a little odd.
       uint64_t timestamp_mask = (1ull << timestamp_bits) - 1;
       uint64_t masked_device_time = device_timestamp & timestamp_mask;
       uint64_t masked_kernel_time =
@@ -1787,7 +1789,7 @@ long double ZePeak::context_time_in_us(L0Context &context,
 
   const uint64_t timestamp_freq = context.device_property.timerResolution;
   const uint64_t timestamp_max_value =
-      ~(-1 << context.device_property.kernelTimestampValidBits);
+      ~(-1L << context.device_property.kernelTimestampValidBits);
   context_time_ns =
       (ts_result.global.kernelEnd >= ts_result.global.kernelStart)
           ? (ts_result.global.kernelEnd - ts_result.global.kernelStart) *

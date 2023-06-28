@@ -84,11 +84,15 @@ get_event_kernel_timestamp(ze_event_handle_t event);
 double
 get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
                               const ze_device_handle_t &device,
-                              const ze_driver_handle_t driver);
+                              const ze_driver_handle_t driver,
+                              const ze_structure_type_t property_type =
+                                  ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES);
 double
 get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
                                const ze_device_handle_t &device,
-                               const ze_driver_handle_t driver);
+                               const ze_driver_handle_t driver,
+                               const ze_structure_type_t property_type =
+                                   ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES);
 
 #ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
 uint32_t get_timestamp_count(const ze_event_handle_t &event,
