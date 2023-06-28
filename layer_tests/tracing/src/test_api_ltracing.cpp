@@ -133,10 +133,11 @@ protected:
 
     lzt::shared_ipc_event_data_t test_data = {hIpcEventPool};
     bipc::shared_memory_object shm(bipc::create_only, "ipc_ltracing_event_test",
-                                  bipc::read_write);
+                                   bipc::read_write);
     shm.truncate(sizeof(lzt::shared_ipc_event_data_t));
     bipc::mapped_region region(shm, bipc::read_write);
-    std::memcpy(region.get_address(), &test_data, sizeof(lzt::shared_ipc_event_data_t));
+    std::memcpy(region.get_address(), &test_data,
+                sizeof(lzt::shared_ipc_event_data_t));
 
     // launch child
     boost::process::child c("./tracing/test_ltracing_ipc_event_helper",
@@ -203,9 +204,9 @@ protected:
     ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelCreate(module, &kernel_desc, &kernel));
   }
 
-  void init_image() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeImageCreate(context, device, &image_desc, &image));
+  bool init_image() {
+    return ZE_RESULT_SUCCESS ==
+           zeImageCreate(context, device, &image_desc, &image);
   }
 
   void init_memory() {
@@ -564,13 +565,18 @@ TEST_F(
   prologues.Context.pfnMakeImageResidentCb = lzt::lprologue_callback;
   epilogues.Context.pfnMakeImageResidentCb = lzt::lepilogue_callback;
 
-  init_image();
+  if (!init_image()) {
+    LOG_WARNING << "test not executed because "
+                   "images are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
 
-  ze_result_t initial_result =
-      zeContextMakeImageResident(context, device, image);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeContextMakeImageResident(context, device, image));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeContextMakeImageResident(context, device, image));
 }
 
 TEST_F(
@@ -579,12 +585,17 @@ TEST_F(
   prologues.Context.pfnEvictImageCb = lzt::lprologue_callback;
   epilogues.Context.pfnEvictImageCb = lzt::lepilogue_callback;
 
-  init_image();
+  if (!init_image()) {
+    LOG_WARNING << "test not executed because "
+                   "images are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
 
-  ze_result_t initial_result = zeContextEvictImage(context, device, image);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeContextEvictImage(context, device, image));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeContextEvictImage(context, device, image));
 }
 
 TEST_F(
@@ -1049,6 +1060,72 @@ TEST_F(
 
 TEST_F(
     LTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeCommandListAppendMemoryCopyFromContextCallbacksWhenCallingzeCommandListAppendMemoryCopyFromContextThenUserDataIsSetAndResultUnchanged) {
+
+  prologues.CommandList.pfnAppendMemoryCopyFromContextCb =
+      lzt::lprologue_callback;
+  epilogues.CommandList.pfnAppendMemoryCopyFromContextCb =
+      lzt::lepilogue_callback;
+
+  init_command_list();
+
+  const size_t size = 4 * 1024;
+  ze_context_handle_t src_context = lzt::create_context();
+  ze_context_handle_t dflt_context = lzt::get_default_context();
+  EXPECT_NE(src_context, dflt_context);
+
+  void *host_memory_src_ctx = lzt::allocate_host_memory(size, 1, src_context);
+  void *host_memory_dflt_ctx = lzt::allocate_host_memory(size);
+
+  ze_result_t initial_result = zeCommandListAppendMemoryCopyFromContext(
+      command_list, host_memory_dflt_ctx, src_context, host_memory_src_ctx,
+      size, nullptr, 0, 0);
+
+  zeCommandListReset(command_list);
+
+  ready_ltracer(tracer_handle, prologues, epilogues);
+
+  ASSERT_EQ(initial_result, zeCommandListAppendMemoryCopyFromContext(
+                                command_list, host_memory_dflt_ctx, src_context,
+                                host_memory_src_ctx, size, nullptr, 0, 0));
+
+  lzt::free_memory(host_memory_src_ctx);
+  lzt::free_memory(host_memory_dflt_ctx);
+  lzt::destroy_context(src_context);
+}
+
+TEST_F(
+    LTracingPrologueEpilogueTests,
+    GivenEnabledTracerWithzeCommandListAppendQueryKernelTimestampsCallbacksWhenCallingzeCommandListAppendQueryKernelTimestampsThenUserDataIsSetAndResultUnchanged) {
+
+  prologues.CommandList.pfnAppendQueryKernelTimestampsCb =
+      lzt::lprologue_callback;
+  epilogues.CommandList.pfnAppendQueryKernelTimestampsCb =
+      lzt::lepilogue_callback;
+
+  void *timestamp_buffer = lzt::allocate_host_memory(
+      sizeof(ze_kernel_timestamp_result_t), 8, context);
+  ze_kernel_timestamp_result_t *tsResult =
+      static_cast<ze_kernel_timestamp_result_t *>(timestamp_buffer);
+
+  init_command_list();
+
+  ze_result_t initial_result = zeCommandListAppendQueryKernelTimestamps(
+      command_list, 0, nullptr, &tsResult, nullptr, nullptr, 0, nullptr);
+
+  zeCommandListReset(command_list);
+
+  ready_ltracer(tracer_handle, prologues, epilogues);
+
+  ASSERT_EQ(initial_result, zeCommandListAppendQueryKernelTimestamps(
+                                command_list, 0, nullptr, &tsResult, nullptr,
+                                nullptr, 0, nullptr));
+
+  lzt::free_memory(timestamp_buffer);
+}
+
+TEST_F(
+    LTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyRegionCallbacksWhenCallingzeCommandListAppendMemoryCopyRegionThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryCopyRegionCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendMemoryCopyRegionCb = lzt::lepilogue_callback;
@@ -1085,17 +1162,23 @@ TEST_F(
 
   ze_image_handle_t src_image;
   ze_image_handle_t dst_image;
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, device, &image_desc, &src_image));
+
+  ze_result_t result = zeImageCreate(context, device, &image_desc, &src_image);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "images are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
+  ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+
   ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeImageCreate(context, device, &image_desc, &dst_image));
 
-  ze_result_t initial_result = zeCommandListAppendImageCopy(
-      command_list, dst_image, src_image, nullptr, 0, nullptr);
-
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendImageCopy(command_list, dst_image, src_image,
                                          nullptr, 0, nullptr));
 
@@ -1113,21 +1196,23 @@ TEST_F(
 
   ze_image_handle_t src_image;
   ze_image_handle_t dst_image;
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, device, &image_desc, &src_image));
+  ze_result_t result = zeImageCreate(context, device, &image_desc, &src_image);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "images are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
+  ASSERT_EQ(ZE_RESULT_SUCCESS, result);
   ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeImageCreate(context, device, &image_desc, &dst_image));
 
-  ze_result_t initial_result =
-      zeCommandListAppendImageCopyRegion(command_list, dst_image, src_image,
-                                         nullptr, nullptr, nullptr, 0, nullptr);
-  zeCommandListReset(command_list);
-
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeCommandListAppendImageCopyRegion(
-                                command_list, dst_image, src_image, nullptr,
-                                nullptr, nullptr, 0, nullptr));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyRegion(
+                                   command_list, dst_image, src_image, nullptr,
+                                   nullptr, nullptr, 0, nullptr));
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(src_image));
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(dst_image));
@@ -1143,15 +1228,17 @@ TEST_F(
 
   init_command_list();
   init_memory();
-  init_image();
-
-  ze_result_t initial_result = zeCommandListAppendImageCopyFromMemory(
-      command_list, image, memory, nullptr, nullptr, 0, nullptr);
-  zeCommandListReset(command_list);
+  if (!init_image()) {
+    LOG_WARNING << "test not executed because "
+                   "images are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendImageCopyFromMemory(
                 command_list, image, memory, nullptr, nullptr, 0, nullptr));
 }
@@ -1164,15 +1251,17 @@ TEST_F(
 
   init_command_list();
   init_memory();
-  init_image();
-
-  ze_result_t initial_result = zeCommandListAppendImageCopyToMemory(
-      command_list, memory, image, nullptr, nullptr, 0, nullptr);
-  zeCommandListReset(command_list);
+  if (!init_image()) {
+    LOG_WARNING << "test not executed because "
+                   "images are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendImageCopyToMemory(command_list, memory, image,
                                                  nullptr, nullptr, 0, nullptr));
 }
@@ -1551,14 +1640,11 @@ TEST_F(
   prologues.Image.pfnCreateCb = lzt::lprologue_callback;
   epilogues.Image.pfnCreateCb = lzt::lepilogue_callback;
 
-  ze_result_t initial_result =
-      zeImageCreate(context, device, &image_desc, &image);
-
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(image));
-  ASSERT_EQ(initial_result,
-            zeImageCreate(context, device, &image_desc, &image));
+  ze_result_t result = zeImageCreate(context, device, &image_desc, &image);
+  ASSERT_TRUE((result == ZE_RESULT_SUCCESS) ||
+              (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE));
 }
 
 TEST_F(
@@ -1567,12 +1653,12 @@ TEST_F(
   prologues.Image.pfnGetPropertiesCb = lzt::lprologue_callback;
   epilogues.Image.pfnGetPropertiesCb = lzt::lepilogue_callback;
 
-  ze_result_t initial_result =
-      zeImageGetProperties(device, &image_desc, &image_properties);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
-            zeImageGetProperties(device, &image_desc, &image_properties));
+  ze_result_t result =
+      zeImageGetProperties(device, &image_desc, &image_properties);
+  ASSERT_TRUE((result == ZE_RESULT_SUCCESS) ||
+              (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE));
 }
 
 TEST_F(
@@ -1581,7 +1667,13 @@ TEST_F(
   prologues.Image.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.Image.pfnDestroyCb = lzt::lepilogue_callback;
 
-  init_image();
+  if (!init_image()) {
+    LOG_WARNING << "test not executed because "
+                   "images are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
   ze_result_t initial_result = zeImageDestroy(image);
   ready_ltracer(tracer_handle, prologues, epilogues);
   init_image();
@@ -1841,16 +1933,13 @@ TEST_F(
   prologues.Sampler.pfnCreateCb = lzt::lprologue_callback;
   epilogues.Sampler.pfnCreateCb = lzt::lepilogue_callback;
 
-  ze_result_t initial_result =
-      zeSamplerCreate(context, device, &sampler_desc, &sampler);
-  if (initial_result == ZE_RESULT_SUCCESS) {
-    zeSamplerDestroy(sampler);
-  }
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result,
-            zeSamplerCreate(context, device, &sampler_desc, &sampler));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
+  ze_result_t result =
+      zeSamplerCreate(context, device, &sampler_desc, &sampler);
+  ASSERT_TRUE((result == ZE_RESULT_SUCCESS) ||
+              (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) ||
+              (result == ZE_RESULT_ERROR_UNINITIALIZED));
 }
 
 TEST_F(
@@ -1859,16 +1948,21 @@ TEST_F(
   prologues.Sampler.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.Sampler.pfnDestroyCb = lzt::lepilogue_callback;
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeSamplerCreate(context, device, &sampler_desc, &sampler));
-
-  ze_result_t initial_result = zeSamplerDestroy(sampler);
+  ze_result_t result =
+      zeSamplerCreate(context, device, &sampler_desc, &sampler);
+  if ((result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) ||
+      (result = ZE_RESULT_ERROR_UNINITIALIZED)) {
+    LOG_WARNING << "test not executed because "
+                   "sampler is not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
+  EXPECT_EQ(result, ZE_RESULT_SUCCESS);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeSamplerCreate(context, device, &sampler_desc, &sampler));
-  ASSERT_EQ(initial_result, zeSamplerDestroy(sampler));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
 }
 
 } // namespace
