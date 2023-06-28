@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
       device_properties.numSlices * device_properties.numSubslicesPerSlice *
       device_properties.numEUsPerSubslice * device_properties.numThreadsPerEU;
   LOG_INFO << "Available threads: " << max_threads;
-  const auto dimensions = (max_threads > 4096 ? 8192 : 256);
+  const auto dimensions = (max_threads > 4096 ? 1024 : 2);
   void *a_buffer, *b_buffer, *c_buffer;
   ze_kernel_handle_t function = get_matrix_multiplication_kernel(
       device, &tg, &a_buffer, &b_buffer, &c_buffer, dimensions);
