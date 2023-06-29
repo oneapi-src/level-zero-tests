@@ -207,6 +207,36 @@ std::string to_string(const ze_image_format_layout_t layout) {
     return "ZE_IMAGE_FORMAT_LAYOUT_Y216";
   } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_P216) {
     return "ZE_IMAGE_FORMAT_LAYOUT_P216";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_P8) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_P8";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_YUY2) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_YUY2";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_A8P8) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_A8P8";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_IA44) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_IA44";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_AI44) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_AI44";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_Y416) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_Y416";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_Y210) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_Y210";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_I420) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_I420";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_YV12) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_YV12";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_400P) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_400P";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_422H) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_422H";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_422V) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_422V";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_444P) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_444P";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_RGBP) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_RGBP";
+  } else if (layout == ZE_IMAGE_FORMAT_LAYOUT_BRGP) {
+    return "ZE_IMAGE_FORMAT_LAYOUT_BRGP";
   } else {
     return "Unknown ze_image_format_layout_t value: " +
            std::to_string(static_cast<int>(layout));
