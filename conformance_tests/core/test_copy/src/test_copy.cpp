@@ -39,6 +39,52 @@ TEST_F(
   free_memory(memory);
 }
 
+void maxMemoryFillTest(bool isImmediate) {
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+  auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
+  auto device_properties = lzt::get_device_properties(device);
+  auto max_alloc_memsize = device_properties.maxMemAllocSize;
+
+  for (int i = 0; i < cmd_q_group_properties.size(); i++) {
+    auto bundle = lzt::create_command_bundle(lzt::get_default_context(), device,
+                                             0, i, isImmediate);
+    size_t size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
+    int pattern_size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
+    if (cmd_q_group_properties[i].maxMemoryFillPatternSize >
+        max_alloc_memsize) {
+      pattern_size = 1;
+      size = 4096;
+    }
+    void *memory = allocate_device_memory(size);
+    const uint8_t pattern = 0x00;
+
+    lzt::append_memory_fill(bundle.list, memory, &pattern, pattern_size, size,
+                            nullptr);
+
+    close_command_list(bundle.list);
+    if (!isImmediate) {
+      execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
+      synchronize(bundle.queue, UINT64_MAX);
+    }
+    free_memory(memory);
+    reset_command_list(bundle.list);
+    lzt::destroy_command_bundle(bundle);
+  }
+}
+
+TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned) {
+  maxMemoryFillTest(false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned) {
+  maxMemoryFillTest(true);
+}
+
 TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
