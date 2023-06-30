@@ -130,13 +130,13 @@ get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
   uint64_t timestamp_max_val =
       ~(-1L << device_properties.kernelTimestampValidBits);
 
-  double timer_period;
+  double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
     timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
   } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
     timer_period = static_cast<double>(timestamp_freq);
   } else {
-    LOG_INFO << "INVALID DEVICE_PROPERTY_TYPE";
+    LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
   }
 
   global_time_ns =
@@ -162,13 +162,13 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
   uint64_t timestamp_max_val =
       ~(-1L << device_properties.kernelTimestampValidBits);
 
-  double timer_period;
+  double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
     timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
   } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
     timer_period = static_cast<double>(timestamp_freq);
   } else {
-    LOG_INFO << "INVALID DEVICE_PROPERTY_TYPE";
+    LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
   }
 
   context_time_ns =
