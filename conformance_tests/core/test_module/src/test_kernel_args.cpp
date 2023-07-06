@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -28,8 +28,6 @@ public:
       image_module_ =
           lzt::create_module(device_, "multi_image_argument_kernel_test.spv");
     }
-    cmd_list_ = lzt::create_command_list(device_);
-    cmd_queue_ = lzt::create_command_queue();
   }
 
   ~KernelArgumentTests() {
@@ -37,19 +35,16 @@ public:
     if (lzt::image_support()) {
       lzt::destroy_module(image_module_);
     }
-    lzt::destroy_command_list(cmd_list_);
-    lzt::destroy_command_queue(cmd_queue_);
   }
 
-protected:
-  void set_image_pixel(ze_image_handle_t image, int x, int y, uint32_t val);
-  uint32_t get_image_pixel(ze_image_handle_t image, int x, int y);
+  void set_image_pixel(ze_image_handle_t image, int x, int y, uint32_t val,
+                       bool is_immediate);
+  uint32_t get_image_pixel(ze_image_handle_t image, int x, int y,
+                           bool is_immediate);
 
   ze_device_handle_t device_;
   ze_module_handle_t module_;
   ze_module_handle_t image_module_;
-  ze_command_list_handle_t cmd_list_;
-  ze_command_queue_handle_t cmd_queue_;
 
   const int img_height = 20;
   const int img_width = 20;
@@ -83,28 +78,41 @@ static ze_image_handle_t create_2d_uint_test_image(int width, int height) {
 }
 
 void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, int x, int y,
-                                          uint32_t val) {
+                                          uint32_t val, bool is_immediate) {
 
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   lzt::ImagePNG32Bit temp_png(img_height, img_width);
   temp_png.set_pixel(x, y, val);
-  lzt::append_image_copy_from_mem(cmd_list_, image, temp_png.raw_data(),
+  lzt::append_image_copy_from_mem(cmd_bundle.list, image, temp_png.raw_data(),
                                   nullptr);
-  lzt::close_command_list(cmd_list_);
-  lzt::execute_command_lists(cmd_queue_, 1, &cmd_list_, nullptr);
-  lzt::synchronize(cmd_queue_, UINT64_MAX);
-  lzt::reset_command_list(cmd_list_);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    lzt::reset_command_list(cmd_bundle.list);
+  }
+  lzt::destroy_command_bundle(cmd_bundle);
   return;
 }
 
 uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image, int x,
-                                              int y) {
+                                              int y, bool is_immediate) {
 
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   lzt::ImagePNG32Bit temp_png(img_height, img_width);
-  lzt::append_image_copy_to_mem(cmd_list_, temp_png.raw_data(), image, nullptr);
-  lzt::close_command_list(cmd_list_);
-  lzt::execute_command_lists(cmd_queue_, 1, &cmd_list_, nullptr);
-  lzt::synchronize(cmd_queue_, UINT64_MAX);
-  lzt::reset_command_list(cmd_list_);
+  lzt::append_image_copy_to_mem(cmd_bundle.list, temp_png.raw_data(), image,
+                                nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    lzt::reset_command_list(cmd_bundle.list);
+  }
+  lzt::destroy_command_bundle(cmd_bundle);
   return temp_png.get_pixel(x, y);
 }
 
@@ -133,12 +141,8 @@ TEST_F(KernelArgumentTests,
   }
 }
 
-TEST_F(KernelArgumentTests,
-       GivenSeveral2DImagesWhenPassingToKernelThenCorrectResultIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
+void RunGivenSeveral2DImagesWhenPassingToKernelTest(KernelArgumentTests &test,
+                                                    bool is_immediate) {
   std::string kernel_name = "many_2d_images";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -146,9 +150,9 @@ TEST_F(KernelArgumentTests,
   ze_image_handle_t images[num_images];
 
   for (int i = 0; i < num_images; i++) {
-    images[i] = create_2d_uint_test_image(img_width, img_height);
+    images[i] = create_2d_uint_test_image(test.img_width, test.img_height);
     // set pixel to test value;
-    set_image_pixel(images[i], i + 1, i + 1, i + 1);
+    test.set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
     arg.arg_size = sizeof(images[i]);
     arg.arg_value = &images[i];
     args.push_back(arg);
@@ -156,16 +160,36 @@ TEST_F(KernelArgumentTests,
 
   // For each image, pixel value at coord ([imagenum],[imagenum])
   // will be written to coord ([imagenum+10],[imagenum+10])
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1,
-                                   args);
+  lzt::create_and_execute_function(test.device_, test.image_module_,
+                                   kernel_name, 1, args);
 
   for (int i = 0; i < num_images; i++) {
-    uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1);
+    uint32_t pixel =
+        test.get_image_pixel(images[i], i + 1, i + 1, is_immediate);
     EXPECT_EQ(pixel, i + 1);
-    pixel = get_image_pixel(images[i], i + 11, i + 11);
+    pixel = test.get_image_pixel(images[i], i + 11, i + 11, is_immediate);
     EXPECT_EQ(pixel, i + 1);
     lzt::destroy_ze_image(images[i]);
   }
+}
+
+TEST_F(KernelArgumentTests,
+       GivenSeveral2DImagesWhenPassingToKernelThenCorrectResultIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenSeveral2DImagesWhenPassingToKernelTest(*this, false);
+}
+
+TEST_F(
+    KernelArgumentTests,
+    GivenSeveral2DImagesWhenPassingToKernelOnImmediateCmdListThenCorrectResultIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenSeveral2DImagesWhenPassingToKernelTest(*this, true);
 }
 
 bool sampler_support() {
@@ -210,23 +234,14 @@ TEST_F(KernelArgumentTests,
   }
 }
 
-TEST_F(
-    KernelArgumentTests,
-    GivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelCorrectResultIsReturned) {
+void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
+    KernelArgumentTests &test, bool is_immediate) {
   /*
   Kernel used for this test expects the following args:
   global int *buf1, global int *buf2, local int *local_buf, global int *buf3,
   global int *buf4, image2d_t image1, image2d_t image2, image2d_t image3,
   image2d_t image4, image2d_t image5, sampler_t samp1, sampler_t samp2
   */
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  if (!(sampler_support())) {
-    LOG_INFO << "device does not support sampler, cannot run test";
-    GTEST_SKIP();
-  }
   std::string kernel_name = "many_args_all_types";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -267,9 +282,9 @@ TEST_F(
   ze_image_handle_t images[num_images];
 
   for (int i = 0; i < num_images; i++) {
-    images[i] = create_2d_uint_test_image(img_width, img_height);
+    images[i] = create_2d_uint_test_image(test.img_width, test.img_height);
     // set pixel to test value;
-    set_image_pixel(images[i], i + 1, i + 1, i + 1);
+    test.set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
     arg.arg_size = sizeof(images[i]);
     arg.arg_value = &images[i];
     args.push_back(arg);
@@ -291,8 +306,8 @@ TEST_F(
   // buffers[1] copied to buffers[3] using local mem as staging area
   // For each image, pixel value at coord ([imagenum],[imagenum])
   //   will be written to coord ([imagenum+10],[imagenum+10]) using sampler
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1,
-                                   args);
+  lzt::create_and_execute_function(test.device_, test.image_module_,
+                                   kernel_name, 1, args);
 
   EXPECT_EQ(*static_cast<int *>(buffers[0]), *static_cast<int *>(buffers[2]));
   EXPECT_EQ(*static_cast<int *>(buffers[1]), *static_cast<int *>(buffers[3]));
@@ -303,12 +318,41 @@ TEST_F(
     lzt::destroy_sampler(samplers[i]);
   }
   for (int i = 0; i < num_images; i++) {
-    uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1);
+    uint32_t pixel =
+        test.get_image_pixel(images[i], i + 1, i + 1, is_immediate);
     EXPECT_EQ(pixel, i + 1);
-    pixel = get_image_pixel(images[i], i + 11, i + 11);
+    pixel = test.get_image_pixel(images[i], i + 11, i + 11, is_immediate);
     EXPECT_EQ(pixel, i + 1);
     lzt::destroy_ze_image(images[i]);
   }
+}
+
+TEST_F(
+    KernelArgumentTests,
+    GivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelCorrectResultIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  if (!(sampler_support())) {
+    LOG_INFO << "device does not support sampler, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(*this, false);
+}
+
+TEST_F(
+    KernelArgumentTests,
+    GivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelOnImmediateCmdListCorrectResultIsReturned) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  if (!(sampler_support())) {
+    LOG_INFO << "device does not support sampler, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(*this, true);
 }
 
 TEST_F(KernelArgumentTests,

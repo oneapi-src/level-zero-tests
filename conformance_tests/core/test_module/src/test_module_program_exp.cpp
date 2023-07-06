@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -37,19 +37,13 @@ bool check_ext_version() {
   }
 }
 
-TEST(zeModuleProgramTests,
-     GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned) {
-
-  if (!check_ext_version())
-    GTEST_SKIP();
-
+void RunGivenModulesWithLinkageDependenciesWhenCreatingTest(bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
   void *result_buffer =
       lzt::allocate_shared_memory(sizeof(int), 1, 0, 0, device, context);
 
@@ -76,11 +70,15 @@ TEST(zeModuleProgramTests,
 
   ze_group_count_t group_count = {1, 1, 1};
 
-  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+  lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   int expectedResult = (x + y);
 
@@ -88,15 +86,29 @@ TEST(zeModuleProgramTests,
 
   // Cleanup
   lzt::free_memory(context, result_buffer);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_function(kernel);
   lzt::destroy_module(out_module);
   lzt::destroy_context(context);
+}
+
+TEST(zeModuleProgramTests,
+     GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned) {
+  if (!check_ext_version())
+    GTEST_SKIP();
+  RunGivenModulesWithLinkageDependenciesWhenCreatingTest(false);
+}
+
+TEST(
+    zeModuleProgramTests,
+    GivenModulesWithLinkageDependenciesWhenCreatingOnImmediateCmdListThenSuccessIsReturned) {
+  if (!check_ext_version())
+    GTEST_SKIP();
+  RunGivenModulesWithLinkageDependenciesWhenCreatingTest(true);
 }
 
 } // namespace
 
 #else
 #warning "ZE_MODULE_PROGRAM_EXP support not found, not building tests for it"
-#endif //#ifdef ZE_MODULE_PROGRAM_EXP_VERSION_CURRENT
+#endif // #ifdef ZE_MODULE_PROGRAM_EXP_VERSION_CURRENT

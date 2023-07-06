@@ -225,10 +225,8 @@ TEST_F(
   }
 }
 
-TEST_F(
-    zeContextMakeResidentTests,
-    GivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagThenMemoryIsMadeResidentAndUpdatedCorrectly) {
-
+void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
+    bool is_immediate) {
   const size_t size = 5;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
@@ -246,8 +244,7 @@ TEST_F(
     }
 
     // set up
-    auto command_list = lzt::create_command_list(device);
-    auto command_queue = lzt::create_command_queue(device);
+    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
 
     module = lzt::create_module(device, "residency_tests.spv");
     kernel = lzt::create_function(module, ZE_KERNEL_FLAG_FORCE_RESIDENCY,
@@ -277,12 +274,16 @@ TEST_F(
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
     lzt::set_argument_value(kernel, 1, sizeof(size_t), &size);
-    lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
-                                nullptr);
-    lzt::close_command_list(command_list);
-
-    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT64_MAX);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
+                                0, nullptr);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
 
     // cleanup
     temp = data;
@@ -298,15 +299,24 @@ TEST_F(
 
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
-    lzt::destroy_command_list(command_list);
-    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_bundle(cmd_bundle);
   }
 }
 
 TEST_F(
     zeContextMakeResidentTests,
-    GivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagThenMemoryIsMadeResidentAndUpdatedCorrectly) {
+    GivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagThenMemoryIsMadeResidentAndUpdatedCorrectly) {
+  RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(false);
+}
 
+TEST_F(
+    zeContextMakeResidentTests,
+    GivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagOnImmediateCmdListThenMemoryIsMadeResidentAndUpdatedCorrectly) {
+  RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(true);
+}
+
+void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
+    bool is_immediate) {
   const size_t size = 5;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
@@ -329,8 +339,7 @@ TEST_F(
                 "system memory";
     }
     // set up
-    auto command_list = lzt::create_command_list(device);
-    auto command_queue = lzt::create_command_queue(device);
+    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
 
     module = lzt::create_module(device, "residency_tests.spv");
     kernel = lzt::create_function(module, ZE_KERNEL_FLAG_FORCE_RESIDENCY,
@@ -359,11 +368,16 @@ TEST_F(
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
     lzt::set_argument_value(kernel, 1, sizeof(size_t), &size);
-    lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
-                                nullptr);
-    lzt::close_command_list(command_list);
-    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT64_MAX);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
+                                0, nullptr);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
 
     // cleanup
     temp = data;
@@ -380,9 +394,20 @@ TEST_F(
 
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
-    lzt::destroy_command_list(command_list);
-    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_bundle(cmd_bundle);
   }
+}
+
+TEST_F(
+    zeContextMakeResidentTests,
+    GivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagThenMemoryIsMadeResidentAndUpdatedCorrectly) {
+  RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(false);
+}
+
+TEST_F(
+    zeContextMakeResidentTests,
+    GivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagOnImmediateCmdListThenMemoryIsMadeResidentAndUpdatedCorrectly) {
+  RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(true);
 }
 
 class zeContextEvictMemoryTests : public zeContextMakeResidentTests {};

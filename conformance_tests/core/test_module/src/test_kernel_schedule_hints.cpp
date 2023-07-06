@@ -38,11 +38,7 @@ bool check_ext_version() {
   }
 }
 
-TEST(zeKernelScheduleHintsTests,
-     GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect) {
-
-  if (!check_ext_version())
-    GTEST_SKIP();
+void RunGivenKernelScheduleHintWhenRunningKernelTest(bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -65,24 +61,27 @@ TEST(zeKernelScheduleHintsTests,
     memset(buffer, 0, size);
     lzt::set_argument_value(kernel, 0, sizeof(buffer), &buffer);
     lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
-    auto cmdlist = lzt::create_command_list(context, device, 0);
-    auto cmdqueue = lzt::create_command_queue(
+    auto cmd_bundle = lzt::create_command_bundle(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
     lzt::set_group_size(kernel, 256, 1, 1);
     ze_group_count_t group_count = {};
     group_count.groupCountX = 1;
     group_count.groupCountY = 1;
     group_count.groupCountZ = 1;
-    lzt::append_launch_function(cmdlist, kernel, &group_count, nullptr, 0,
-                                nullptr);
-    lzt::close_command_list(cmdlist);
-    lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-    lzt::synchronize(cmdqueue, UINT64_MAX);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
+                                0, nullptr);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
 
-    lzt::destroy_command_list(cmdlist);
-    lzt::destroy_command_queue(cmdqueue);
+    lzt::destroy_command_bundle(cmd_bundle);
 
     for (size_t i = 0; i < size; i++) {
       ASSERT_EQ(((uint8_t *)buffer)[i], addval);
@@ -94,9 +93,25 @@ TEST(zeKernelScheduleHintsTests,
   lzt::destroy_module(module);
   lzt::destroy_context(context);
 }
+
+TEST(zeKernelScheduleHintsTests,
+     GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect) {
+  if (!check_ext_version())
+    GTEST_SKIP();
+  RunGivenKernelScheduleHintWhenRunningKernelTest(false);
+}
+
+TEST(
+    zeKernelScheduleHintsTests,
+    GivenKernelScheduleHintWhenRunningKernelOnImmediateCmdListThenResultIsCorrect) {
+  if (!check_ext_version())
+    GTEST_SKIP();
+  RunGivenKernelScheduleHintWhenRunningKernelTest(true);
+}
+
 } // namespace
 
 #else
 #warning                                                                       \
     "ZE_KERNEL_SCHEDULING_HINTS_EXP support not found, not building tests for it"
-#endif //#ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
+#endif // #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME

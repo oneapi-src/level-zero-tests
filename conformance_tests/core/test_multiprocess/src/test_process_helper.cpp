@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -20,13 +20,13 @@ int main(int argc, char **argv) {
   LOG_INFO << "child";
 
   int proc_number = std::stoi(argv[1]);
+  bool is_immediate = std::stoi(argv[2]) == 0 ? false : true;
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
   int deviceIndex = proc_number % devices.size();
   auto device = devices[deviceIndex];
-  auto command_list = lzt::create_command_list(device);
-  auto command_queue = lzt::create_command_queue(device);
+  auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
 
   auto module =
       lzt::create_module(devices[deviceIndex], "multi_process_add.spv");
@@ -64,12 +64,17 @@ int main(int argc, char **argv) {
   lzt::set_argument_value(kernel, 0, sizeof(input_a), &input_a);
   lzt::set_argument_value(kernel, 1, sizeof(input_b), &input_b);
 
-  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+  lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
 
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
+  lzt::destroy_command_bundle(cmd_bundle);
 
   // verify kernel execution
   for (int i = 0; i < memory_size; i++) {

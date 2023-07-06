@@ -110,7 +110,7 @@ void get_event_kernel_timestamps_from_mapped_timestamp_event(
     std::vector<ze_synchronized_timestamp_result_ext_t>
         &synchronized_timestamp_buffer);
 class zeEventPoolTests : public ::testing::Test {
-protected:
+public:
   zeEventPool ep;
 };
 

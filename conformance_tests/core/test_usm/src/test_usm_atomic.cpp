@@ -32,15 +32,14 @@ const std::vector<shared_memory_type> shared_memory_types = {SHARED_LOCAL,
 
 class KernelAtomicLoadStoreTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<
-          std::tuple<ze_memory_type_t, ze_memory_type_t, shared_memory_type>> {
+      public ::testing::WithParamInterface<std::tuple<
+          ze_memory_type_t, ze_memory_type_t, shared_memory_type, bool>> {
 
 public:
   void launchAtomicLoadStore(ze_device_handle_t device, int *input_data,
-                             int *output_data) {
+                             int *output_data, bool is_immediate) {
     // set up
-    auto command_queue = lzt::create_command_queue(device);
-    auto command_list = lzt::create_command_list(device);
+    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
 
     int *expected_data =
         static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
@@ -51,13 +50,13 @@ public:
     EXPECT_NE(expected_data, nullptr);
     EXPECT_NE(verify_data, nullptr);
 
-    lzt::append_memory_fill(command_list, static_cast<void *>(input_data),
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(input_data),
                             static_cast<const void *>(&input_pattern),
                             sizeof(uint8_t), size * sizeof(int), nullptr);
-    lzt::append_memory_fill(command_list, static_cast<void *>(output_data),
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(output_data),
                             static_cast<const void *>(&output_pattern),
                             sizeof(uint8_t), size * sizeof(int), nullptr);
-    lzt::append_barrier(command_list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
 
     auto module = lzt::create_module(device, "test_usm_atomic.spv");
     auto kernel = lzt::create_function(module, "atomic_copy_kernel");
@@ -72,27 +71,31 @@ public:
     group_count.groupCountY = 1;
     group_count.groupCountZ = 1;
 
-    lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
-                                nullptr);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
+                                0, nullptr);
 
-    lzt::append_barrier(command_list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
 
-    lzt::append_memory_copy(command_list, expected_data, input_data,
+    lzt::append_memory_copy(cmd_bundle.list, expected_data, input_data,
                             size * sizeof(int));
-    lzt::append_memory_copy(command_list, static_cast<void *>(verify_data),
+    lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(verify_data),
                             static_cast<void *>(output_data),
                             size * sizeof(int), nullptr);
-    lzt::close_command_list(command_list);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
 
-    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT64_MAX);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
 
     EXPECT_EQ(0, memcmp(verify_data, expected_data, size * sizeof(int)));
 
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
-    lzt::destroy_command_list(command_list);
-    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_bundle(cmd_bundle);
     lzt::free_memory(expected_data);
     lzt::free_memory(verify_data);
   }
@@ -103,6 +106,7 @@ TEST_P(KernelAtomicLoadStoreTests,
   ze_memory_type_t input_memory_type = std::get<0>(GetParam());
   ze_memory_type_t output_memory_type = std::get<1>(GetParam());
   shared_memory_type shared_mem = std::get<2>(GetParam());
+  bool is_immediate = std::get<3>(GetParam());
   auto context = lzt::get_default_context();
 
   for (auto driver : lzt::get_all_driver_handles()) {
@@ -193,7 +197,7 @@ TEST_P(KernelAtomicLoadStoreTests,
       EXPECT_NE(input_data, nullptr);
       EXPECT_NE(output_data, nullptr);
 
-      launchAtomicLoadStore(device, input_data, output_data);
+      launchAtomicLoadStore(device, input_data, output_data, is_immediate);
 
       // cleanup
       if (shared_mem == SHARED_SYSTEM) {
@@ -214,10 +218,11 @@ TEST_P(KernelAtomicLoadStoreTests,
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LZT, KernelAtomicLoadStoreTests,
     ::testing::Combine(::testing::ValuesIn(atomic_memory_types),
                        ::testing::ValuesIn(atomic_memory_types),
-                       ::testing::ValuesIn(shared_memory_types)));
+                       ::testing::ValuesIn(shared_memory_types),
+                       ::testing::Bool()));
 
 } // namespace

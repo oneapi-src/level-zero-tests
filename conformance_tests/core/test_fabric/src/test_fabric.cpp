@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -584,7 +584,7 @@ TEST(
 
 static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
                                       ze_fabric_vertex_handle_t &vertex_b,
-                                      uint32_t copy_size) {
+                                      uint32_t copy_size, bool is_immediate) {
 
   ze_device_handle_t device_a{}, device_b{};
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeFabricVertexGetDeviceExp(vertex_a, &device_a));
@@ -596,10 +596,8 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
                " to (vertex: "
             << vertex_b << " device: " << device_b << ")" << std::endl;
 
-  auto cmdlist_a = lzt::create_command_list(device_a);
-  auto cmdqueue_a = lzt::create_command_queue(device_a);
-  auto cmdlist_b = lzt::create_command_list(device_b);
-  auto cmdqueue_b = lzt::create_command_queue(device_b);
+  auto cmd_bundle_a = lzt::create_command_bundle(device_a, is_immediate);
+  auto cmd_bundle_b = lzt::create_command_bundle(device_b, is_immediate);
 
   const size_t size = copy_size;
   auto memory_a = lzt::allocate_shared_memory(size, device_a);
@@ -609,28 +607,43 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
   const int pattern_size = 1;
 
   // Fill with default pattern for both devices
-  lzt::append_memory_fill(cmdlist_a, memory_a, &pattern_a, pattern_size, size,
-                          nullptr);
-  lzt::append_barrier(cmdlist_a, nullptr, 0, nullptr);
-  lzt::close_command_list(cmdlist_a);
-  lzt::execute_command_lists(cmdqueue_a, 1, &cmdlist_a, nullptr);
-  lzt::synchronize(cmdqueue_a, UINT64_MAX);
-  lzt::reset_command_list(cmdlist_a);
+  lzt::append_memory_fill(cmd_bundle_a.list, memory_a, &pattern_a, pattern_size,
+                          size, nullptr);
+  lzt::append_barrier(cmd_bundle_a.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_a.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_a.list);
+    lzt::execute_command_lists(cmd_bundle_a.queue, 1, &cmd_bundle_a.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_a.queue, UINT64_MAX);
+    lzt::reset_command_list(cmd_bundle_a.list);
+  }
 
-  lzt::append_memory_fill(cmdlist_b, memory_b, &pattern_b, pattern_size, size,
-                          nullptr);
-  lzt::append_barrier(cmdlist_b, nullptr, 0, nullptr);
-  lzt::close_command_list(cmdlist_b);
-  lzt::execute_command_lists(cmdqueue_b, 1, &cmdlist_b, nullptr);
-  lzt::synchronize(cmdqueue_b, UINT64_MAX);
-  lzt::reset_command_list(cmdlist_b);
+  lzt::append_memory_fill(cmd_bundle_b.list, memory_b, &pattern_b, pattern_size,
+                          size, nullptr);
+  lzt::append_barrier(cmd_bundle_b.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_b.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_b.list);
+    lzt::execute_command_lists(cmd_bundle_b.queue, 1, &cmd_bundle_b.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_b.queue, UINT64_MAX);
+    lzt::reset_command_list(cmd_bundle_b.list);
+  }
 
   // Do memory copy between devices
-  lzt::append_memory_copy(cmdlist_a, memory_b, memory_a, size);
-  lzt::append_barrier(cmdlist_a, nullptr, 0, nullptr);
-  lzt::close_command_list(cmdlist_a);
-  lzt::execute_command_lists(cmdqueue_a, 1, &cmdlist_a, nullptr);
-  lzt::synchronize(cmdqueue_a, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle_a.list, memory_b, memory_a, size);
+  lzt::append_barrier(cmd_bundle_a.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_a.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_a.list);
+    lzt::execute_command_lists(cmd_bundle_a.queue, 1, &cmd_bundle_a.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_a.queue, UINT64_MAX);
+  }
 
   for (uint32_t i = 0; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(memory_b)[i], pattern_a)
@@ -638,16 +651,15 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
   }
 
   lzt::free_memory(memory_a);
-  lzt::destroy_command_queue(cmdqueue_a);
-  lzt::destroy_command_list(cmdlist_a);
+  lzt::destroy_command_bundle(cmd_bundle_a);
 
   lzt::free_memory(memory_b);
-  lzt::destroy_command_queue(cmdqueue_b);
-  lzt::destroy_command_list(cmdlist_b);
+  lzt::destroy_command_bundle(cmd_bundle_b);
 }
 
-class zeFabricEdgeCopyTests : public ::testing::Test,
-                              public ::testing::WithParamInterface<uint32_t> {};
+class zeFabricEdgeCopyTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<std::tuple<uint32_t, bool>> {};
 
 TEST_P(zeFabricEdgeCopyTests,
        GivenValidFabricEdgesThenCopyIsSuccessfulBetweenThem) {
@@ -658,21 +670,23 @@ TEST_P(zeFabricEdgeCopyTests,
     GTEST_SKIP();
   }
 
-  uint32_t copy_size = GetParam();
+  uint32_t copy_size = std::get<0>(GetParam());
   LOG_DEBUG << "Test Copy Size " << copy_size;
+  bool is_immediate = std::get<1>(GetParam());
 
   for (auto &edge : edges) {
     ze_fabric_vertex_handle_t vertex_a = nullptr, vertex_b = nullptr;
     ASSERT_EQ(ZE_RESULT_SUCCESS,
               zeFabricEdgeGetVerticesExp(edge, &vertex_a, &vertex_b));
 
-    fabric_vertex_copy_memory(vertex_a, vertex_b, copy_size);
+    fabric_vertex_copy_memory(vertex_a, vertex_b, copy_size, is_immediate);
   }
 }
 
-INSTANTIATE_TEST_CASE_P(zeFabricEdgeCopyTestAlignedAllocations,
-                        zeFabricEdgeCopyTests,
-                        ::testing::Values(1024u * 1024u, 64u * 1024u,
-                                          8u * 1024u, 1u * 1024u, 64u, 1u));
+INSTANTIATE_TEST_SUITE_P(
+    zeFabricEdgeCopyTestAlignedAllocations, zeFabricEdgeCopyTests,
+    ::testing::Combine(::testing::Values(1024u * 1024u, 64u * 1024u, 8u * 1024u,
+                                         1u * 1024u, 64u, 1u),
+                       ::testing::Bool()));
 
 } // namespace

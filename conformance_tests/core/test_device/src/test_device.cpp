@@ -867,18 +867,14 @@ TEST(
   }
 }
 
-TEST(
-    TimestampsTest,
-    GivenExecutedKernelWhenGettingGlobalTimestampsThenDeviceAndHostTimestampDurationsAreClose) {
-
+void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto context = lzt::create_context(driver);
 
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   auto module = lzt::create_module(context, device, "module_add.spv",
                                    ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
@@ -913,15 +909,19 @@ TEST(
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
-  lzt::append_memory_copy(command_list, buffer_b, buffer_a, size);
-  lzt::append_barrier(command_list);
-  lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
+  lzt::append_memory_copy(cmd_bundle.list, buffer_b, buffer_a, size);
+  lzt::append_barrier(cmd_bundle.list);
+  lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
-  lzt::append_barrier(command_list);
-  lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::append_barrier(cmd_bundle.list);
+  lzt::append_memory_copy(cmd_bundle.list, buffer_a, buffer_b, size);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   auto timestamps_1 = lzt::get_global_timestamps(device);
 
@@ -961,11 +961,22 @@ TEST(
   // cleanup
   lzt::free_memory(context, buffer_a);
   lzt::free_memory(context, buffer_b);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
   lzt::destroy_context(context);
+}
+
+TEST(
+    TimestampsTest,
+    GivenExecutedKernelWhenGettingGlobalTimestampsThenDeviceAndHostTimestampDurationsAreClose) {
+  RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(false);
+}
+
+TEST(
+    TimestampsTest,
+    GivenExecutedKernelWhenGettingGlobalTimestampsOnImmediateCmdListThenDeviceAndHostTimestampDurationsAreClose) {
+  RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(true);
 }
 
 TEST(DeviceStatusTest,

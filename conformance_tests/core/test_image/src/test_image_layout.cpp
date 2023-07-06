@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -20,7 +20,7 @@ namespace {
 enum TestType { IMAGE_OBJECT_ONLY, ONE_KERNEL_ONLY, TWO_KERNEL_CONVERT };
 
 class ImageLayoutTests : public ::testing::Test {
-protected:
+public:
   ImageLayoutTests() {
     module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
                                 "image_layout_tests.spv");
@@ -29,15 +29,15 @@ protected:
   void run_test(ze_image_type_t image_type,
                 ze_image_format_layout_t base_layout,
                 ze_image_format_layout_t convert_layout,
-                ze_image_format_type_t format_type, enum TestType test) {
+                ze_image_format_type_t format_type, enum TestType test,
+                bool is_immediate) {
     LOG_INFO << "RUN_TEST";
     LOG_INFO << "image type " << image_type;
     LOG_INFO << "base layout " << base_layout;
     LOG_INFO << "conver layout " << convert_layout;
     LOG_INFO << "format type " << format_type;
     ze_result_t result;
-    command_list = lzt::create_command_list();
-    command_queue = lzt::create_command_queue();
+    cmd_bundle = lzt::create_command_bundle(is_immediate);
     std::string kernel_name = get_kernel(format_type);
     LOG_DEBUG << "kernel_name = " << kernel_name;
     ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
@@ -104,13 +104,14 @@ protected:
     }
 
     // copy input buff to image_in object
-    lzt::append_image_copy_from_mem(command_list, image_in, buffer_in, nullptr);
-    lzt::append_barrier(command_list);
+    lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
+                                    nullptr);
+    lzt::append_barrier(cmd_bundle.list);
     if (test == IMAGE_OBJECT_ONLY) {
       LOG_DEBUG << "IMAGE_OBJECT_ONLY";
-      lzt::append_image_copy_to_mem(command_list, buffer_out, image_in,
+      lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_in,
                                     nullptr);
-      lzt::append_barrier(command_list);
+      lzt::append_barrier(cmd_bundle.list);
     } else {
       // call kernel to copy image_in -> image_convert
       uint32_t group_size_x, group_size_y, group_size_z;
@@ -136,14 +137,14 @@ protected:
           static_cast<uint32_t>(image_height / group_size_y),
           static_cast<uint32_t>(image_depth / group_size_z)};
 
-      lzt::append_launch_function(command_list, kernel, &group_dems, nullptr, 0,
-                                  nullptr);
-      lzt::append_barrier(command_list);
+      lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr,
+                                  0, nullptr);
+      lzt::append_barrier(cmd_bundle.list);
 
       if (test == ONE_KERNEL_ONLY) {
         LOG_DEBUG << "ONE_KERNEL_ONLY";
-        lzt::append_image_copy_to_mem(command_list, buffer_out, image_convert,
-                                      nullptr);
+        lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out,
+                                      image_convert, nullptr);
       } else {
         LOG_DEBUG << "TWO_KERNEL_CONVERT";
         // call kernel to copy image_convert -> image_out
@@ -169,28 +170,32 @@ protected:
                       static_cast<uint32_t>(image_height / group_size_y),
                       static_cast<uint32_t>(image_depth / group_size_z)};
 
-        lzt::append_launch_function(command_list, kernel, &group_dems, nullptr,
-                                    0, nullptr);
+        lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems,
+                                    nullptr, 0, nullptr);
         // finalize, copy to buffer_out
-        lzt::append_barrier(command_list);
-        lzt::append_image_copy_to_mem(command_list, buffer_out, image_out,
+        lzt::append_barrier(cmd_bundle.list);
+        lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_out,
                                       nullptr);
       }
       LOG_DEBUG << "group_size_x = " << group_size_x
                 << " group_size_y = " << group_size_y
                 << " group_size_z = " << group_size_z;
     }
-    lzt::close_command_list(command_list);
-    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT64_MAX);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
     LOG_DEBUG << "buffer size = " << buffer_size;
 
     // compare results
     EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
     lzt::free_memory(buffer_in);
     lzt::free_memory(buffer_out);
-    lzt::destroy_command_queue(command_queue);
-    lzt::destroy_command_list(command_list);
+    lzt::destroy_command_bundle(cmd_bundle);
   }
 
   ~ImageLayoutTests() { lzt::destroy_module(module); }
@@ -204,8 +209,7 @@ protected:
   size_t get_components(ze_image_format_layout_t layout);
   size_t get_pixel_bytes(ze_image_format_layout_t layout);
   std::string get_kernel(ze_image_format_type_t format_type);
-  ze_command_list_handle_t command_list;
-  ze_command_queue_handle_t command_queue;
+  lzt::zeCommandBundle cmd_bundle;
   ze_module_handle_t module;
 };
 
@@ -340,12 +344,8 @@ ze_image_handle_t ImageLayoutTests::create_image_desc_layout(
   return image;
 }
 
-TEST_F(ImageLayoutTests,
-       GivenImageLayoutWhenConvertingImageToMemoryThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
+void RunGivenImageLayoutWhenConvertingImageToMemoryTest(ImageLayoutTests &test,
+                                                        bool is_immediate) {
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT,
                       ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
@@ -359,7 +359,8 @@ TEST_F(ImageLayoutTests,
   for (auto image : image_type) {
     for (auto format : format_type) {
       for (auto layout : layout_type) {
-        run_test(image, layout, layout, format, IMAGE_OBJECT_ONLY);
+        test.run_test(image, layout, layout, format, IMAGE_OBJECT_ONLY,
+                      is_immediate);
       }
     }
   }
@@ -368,8 +369,8 @@ TEST_F(ImageLayoutTests,
                             ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4};
   for (auto image : image_type) {
     for (auto layout : layout_type_unorm) {
-      run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_UNORM,
-               IMAGE_OBJECT_ONLY);
+      test.run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_UNORM,
+                    IMAGE_OBJECT_ONLY, is_immediate);
     }
   }
 
@@ -381,19 +382,33 @@ TEST_F(ImageLayoutTests,
   LOG_DEBUG << "IMAGE OBJECT ONLY TESTS: FLOAT";
   for (auto image : image_type) {
     for (auto layout : layout_type_float) {
-      run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_FLOAT,
-               IMAGE_OBJECT_ONLY);
+      test.run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_FLOAT,
+                    IMAGE_OBJECT_ONLY, is_immediate);
     }
   }
 }
 
-TEST_F(
-    ImageLayoutTests,
-    GivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
+TEST_F(ImageLayoutTests,
+       GivenImageLayoutWhenConvertingImageToMemoryThenBufferResultIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
+  RunGivenImageLayoutWhenConvertingImageToMemoryTest(*this, false);
+}
+
+TEST_F(
+    ImageLayoutTests,
+    GivenImageLayoutWhenConvertingImageToMemoryOnImmediateCmdListThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageLayoutWhenConvertingImageToMemoryTest(*this, true);
+}
+
+void RunGivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryTest(
+    ImageLayoutTests &test, bool is_immediate) {
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT};
   auto layout_type = {ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_8_8,
@@ -408,7 +423,8 @@ TEST_F(
   for (auto image : image_type) {
     for (auto format : format_type) {
       for (auto layout : layout_type) {
-        run_test(image, layout, layout, format, ONE_KERNEL_ONLY);
+        test.run_test(image, layout, layout, format, ONE_KERNEL_ONLY,
+                      is_immediate);
       }
     }
   }
@@ -416,11 +432,28 @@ TEST_F(
 
 TEST_F(
     ImageLayoutTests,
-    GivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
+    GivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
+  RunGivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryTest(
+      *this, false);
+}
+
+TEST_F(
+    ImageLayoutTests,
+    GivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryOnImmediateCmdListThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryTest(
+      *this, false);
+}
+
+void RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryTest(
+    ImageLayoutTests &test, bool is_immediate) {
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
   auto layout_type = {ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_8_8,
@@ -434,7 +467,8 @@ TEST_F(
   for (auto image : image_type) {
     for (auto format : format_type) {
       for (auto layout : layout_type) {
-        run_test(image, layout, layout, format, ONE_KERNEL_ONLY);
+        test.run_test(image, layout, layout, format, ONE_KERNEL_ONLY,
+                      is_immediate);
       }
     }
   }
@@ -443,8 +477,47 @@ TEST_F(
                             ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4};
   for (auto image : image_type) {
     for (auto layout : layout_type_unorm) {
-      run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_UNORM,
-               ONE_KERNEL_ONLY);
+      test.run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_UNORM,
+                    ONE_KERNEL_ONLY, is_immediate);
+    }
+  }
+}
+
+TEST_F(
+    ImageLayoutTests,
+    GivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryTest(
+      *this, false);
+}
+
+TEST_F(
+    ImageLayoutTests,
+    GivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryOnImmediateCmdListThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryTest(
+      *this, true);
+}
+
+void RunGivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryTest(
+    ImageLayoutTests &test, bool is_immediate) {
+  auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
+  auto layout_type = {
+      ZE_IMAGE_FORMAT_LAYOUT_16,          ZE_IMAGE_FORMAT_LAYOUT_16_16,
+      ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_LAYOUT_32,
+      ZE_IMAGE_FORMAT_LAYOUT_32_32,       ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32,
+      ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,  ZE_IMAGE_FORMAT_LAYOUT_11_11_10};
+  LOG_DEBUG << "ONE KERNEL ONLY TESTS: FLOAT";
+  for (auto image : image_type) {
+    for (auto layout : layout_type) {
+      test.run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_FLOAT,
+                    ONE_KERNEL_ONLY, is_immediate);
     }
   }
 }
@@ -456,18 +529,69 @@ TEST_F(
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
+  RunGivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryTest(
+      *this, false);
+}
+
+TEST_F(
+    ImageLayoutTests,
+    GivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryOnImmediateCmdListThenBufferResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryTest(
+      *this, true);
+}
+
+void RunGivenIntImageLayoutWhenKernelConvertingImageTest(ImageLayoutTests &test,
+                                                         bool is_immediate) {
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
-  auto layout_type = {
-      ZE_IMAGE_FORMAT_LAYOUT_16,          ZE_IMAGE_FORMAT_LAYOUT_16_16,
-      ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_LAYOUT_32,
-      ZE_IMAGE_FORMAT_LAYOUT_32_32,       ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32,
-      ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,  ZE_IMAGE_FORMAT_LAYOUT_11_11_10};
-  LOG_DEBUG << "ONE KERNEL ONLY TESTS: FLOAT";
+  auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT};
+  LOG_DEBUG << "TWO_KERNEL_CONVERT TESTS: UINT AND SINT";
   for (auto image : image_type) {
-    for (auto layout : layout_type) {
-      run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_FLOAT,
-               ONE_KERNEL_ONLY);
+    for (auto format : format_type) {
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
+                    format, TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_32,
+                    format, TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16, ZE_IMAGE_FORMAT_LAYOUT_32,
+                    format, TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8,
+                    ZE_IMAGE_FORMAT_LAYOUT_16_16, format, TWO_KERNEL_CONVERT,
+                    is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8,
+                    ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT,
+                    is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16_16,
+                    ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT,
+                    is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
+                    ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format,
+                    TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
+                    ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
+                    TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+                    ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
+                    TWO_KERNEL_CONVERT, is_immediate);
     }
+  }
+  for (auto image : image_type) {
+    test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+                  ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_TYPE_UINT,
+                  TWO_KERNEL_CONVERT, is_immediate);
+    test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+                  ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_TYPE_UINT,
+                  TWO_KERNEL_CONVERT, is_immediate);
+#ifdef DEBUG_HANG
+    test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+                  ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_TYPE_SINT,
+                  TWO_KERNEL_CONVERT, is_immediate);
+    test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+                  ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_TYPE_SINT,
+                  TWO_KERNEL_CONVERT, is_immediate);
+#endif
   }
 }
 
@@ -478,46 +602,53 @@ TEST_F(
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
+  RunGivenIntImageLayoutWhenKernelConvertingImageTest(*this, false);
+}
+
+TEST_F(
+    ImageLayoutTests,
+    GivenIntImageLayoutWhenKernelConvertingImageOnImmediateCmdListThenReverseKernelConvertedResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenIntImageLayoutWhenKernelConvertingImageTest(*this, true);
+}
+
+void RunGivenNormImageLayoutWhenKernelConvertingImageTest(
+    ImageLayoutTests &test, bool is_immediate) {
   auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
-  auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT};
-  LOG_DEBUG << "TWO_KERNEL_CONVERT TESTS: UINT AND SINT";
+  auto format_type = {ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
+  LOG_DEBUG << "TWO_KERNEL_CONVERT TESTS: UNORM AND SNORM";
   for (auto image : image_type) {
     for (auto format : format_type) {
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_32,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16, ZE_IMAGE_FORMAT_LAYOUT_32,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8, ZE_IMAGE_FORMAT_LAYOUT_16_16,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8, ZE_IMAGE_FORMAT_LAYOUT_32_32,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16_16,
-               ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-               ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-               ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
-               ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT);
-    }
-  }
-  for (auto image : image_type) {
-    run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-             ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_TYPE_UINT,
-             TWO_KERNEL_CONVERT);
-    run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-             ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_TYPE_UINT,
-             TWO_KERNEL_CONVERT);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
+                    format, TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8,
+                    ZE_IMAGE_FORMAT_LAYOUT_16_16, format, TWO_KERNEL_CONVERT,
+                    is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
+                    ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format,
+                    TWO_KERNEL_CONVERT, is_immediate);
 #ifdef DEBUG_HANG
-    run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-             ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_TYPE_SINT,
-             TWO_KERNEL_CONVERT);
-    run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-             ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_TYPE_SINT,
-             TWO_KERNEL_CONVERT);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_32,
+                    format, TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8,
+                    ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT,
+                    is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16, ZE_IMAGE_FORMAT_LAYOUT_32,
+                    format, TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16_16,
+                    ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT,
+                    is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
+                    ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
+                    TWO_KERNEL_CONVERT, is_immediate);
+      test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+                    ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
+                    TWO_KERNEL_CONVERT, is_immediate);
 #endif
+    }
   }
 }
 
@@ -528,33 +659,17 @@ TEST_F(
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
-  auto format_type = {ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
-  LOG_DEBUG << "TWO_KERNEL_CONVERT TESTS: UNORM AND SNORM";
-  for (auto image : image_type) {
-    for (auto format : format_type) {
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8, ZE_IMAGE_FORMAT_LAYOUT_16_16,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-               ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format, TWO_KERNEL_CONVERT);
-#ifdef DEBUG_HANG
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_32,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8, ZE_IMAGE_FORMAT_LAYOUT_32_32,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16, ZE_IMAGE_FORMAT_LAYOUT_32,
-               format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16_16,
-               ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-               ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT);
-      run_test(image, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
-               ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT);
-#endif
-    }
+  RunGivenNormImageLayoutWhenKernelConvertingImageTest(*this, false);
+}
+
+TEST_F(
+    ImageLayoutTests,
+    GivenNormImageLayoutWhenKernelConvertingImageOnImmediateCmdListThenReverseKernelConvertedResultIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
   }
+  RunGivenNormImageLayoutWhenKernelConvertingImageTest(*this, true);
 }
 
 } // namespace

@@ -43,10 +43,12 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_feature == "Kernels" and test_name.find("Cache")!= -1) or \
                     (test_feature == "Kernels" and test_name.find("GlobalPointer")!= -1) or \
                     (test_feature == "Kernels" and test_name.find("FunctionPointer")!= -1) or \
+                    (test_feature == "Kernels" and test_name.find("Immediate")!= -1) or \
                     (test_feature == "Driver Handles" and test_name.find("GetExtentionFunction")!= -1) or \
                     (test_feature == "Shared Memory" and test_name.find("Immediate")!= -1) or \
                     (test_feature == "Unified Shared Memory" and test_name.find("SystemMemory")!= -1) or \
                     (test_feature == "Events" and test_name.find("Profiling")!= -1) or \
+                    (test_feature == "Events" and test_name.find("Immediate")!= -1) or \
                     (test_feature == "Kernels" and test_name.find("Constants")!= -1) or \
                     (test_feature == "Images") or \
                     (test_feature == "Image Samplers") or \
@@ -60,6 +62,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('TestCopyOnly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_ContextStatusTest_GivenContextCreateWhenUsingValidHandleThenContextGetStatusReturnsSuccess', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_TimestampsTest_GivenExecutedKernelWhenGettingGlobalTimestampsThenDeviceAndHostTimestampDurationsAreClose', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_TimestampsTest_GivenExecutedKernelWhenGettingGlobalTimestampsOnImmediateCmdListThenDeviceAndHostTimestampDurationsAreClose', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillVerificationTests_GivenHostMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly', test_name, re.IGNORECASE)) or \
@@ -107,6 +110,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_InterdependCMDListsPipeliningParameterization_zeTestMixedCMDListsInterdependPipelining_GivenRegularCMDListOnCopyEngineAndImmCMDListOnComputeEngineThenCorrectResultsAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_IpcMemoryAccessTest_GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleProgramTests_GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeModuleProgramTests_GivenModulesWithLinkageDependenciesWhenCreatingOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleCreateTests_GivenValidDeviceAndBinaryFileWhenCreatingStatelessKernelModuleThenReturnSuccessfulAndDestroyModule', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleCompiledWithOptimizationsWhenExecutingThenResultIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleCompiledWithOptimizationsWhenExecutingOnImmediateCmdListThenResultIsCorrect', test_name, re.IGNORECASE)) or \

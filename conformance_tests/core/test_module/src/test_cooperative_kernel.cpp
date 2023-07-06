@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,8 +18,9 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-class CooperativeKernelTests : public ::testing::Test,
-                               public ::testing::WithParamInterface<int> {};
+class CooperativeKernelTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<std::tuple<int, bool>> {};
 
 TEST_P(
     CooperativeKernelTests,
@@ -49,9 +50,9 @@ TEST_P(
     LOG_WARNING << "No command queues that support cooperative kernels";
     GTEST_SKIP();
   }
-  auto command_queue = lzt::create_command_queue(context, device, flags, mode,
-                                                 priority, ordinal);
-  auto command_list = lzt::create_command_list(context, device, 0, ordinal);
+  auto is_immediate = std::get<1>(GetParam());
+  auto cmd_bundle = lzt::create_command_bundle(
+      context, device, flags, mode, priority, 0, ordinal, 0, is_immediate);
 
   // Set up input vector data
   const size_t data_size = 4096;
@@ -60,7 +61,7 @@ TEST_P(
                                                 0, 0, device, context);
   memcpy(input_data, kernel_data, data_size * sizeof(uint64_t));
 
-  auto row_num = GetParam();
+  auto row_num = std::get<0>(GetParam());
   uint32_t groups_x = 1;
 
   module = lzt::create_module(context, device, "cooperative_kernel.spv",
@@ -87,11 +88,15 @@ TEST_P(
   ze_group_count_t args = {groups_x, 1, 1};
   ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendLaunchCooperativeKernel(
-                command_list, kernel, &args, nullptr, 0, nullptr));
+                cmd_bundle.list, kernel, &args, nullptr, 0, nullptr));
 
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   // Validate the kernel completed successfully and correctly
   uint64_t val = 0;
@@ -101,15 +106,14 @@ TEST_P(
   }
 
   lzt::free_memory(context, input_data);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
+    // 62 is the max row such that no calculation will overflow max uint64 value
     GroupNumbers, CooperativeKernelTests,
-    ::testing::Values(0, 1, 5, 10, 50,
-                      62)); // 62 is the max row such that no calculation will
-                            // overflow max uint64 value
+    ::testing::Combine(::testing::Values(0, 1, 5, 10, 50, 62),
+                       ::testing::Bool()));
 
 } // namespace

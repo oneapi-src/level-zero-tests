@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -19,14 +19,13 @@ namespace lzt = level_zero_tests;
 namespace {
 
 class ImageFormatTests : public ::testing::Test {
-protected:
+public:
   ze_image_handle_t create_image_desc_format(ze_image_format_type_t format_type,
                                              bool layout32);
   void run_test(void *inbuff, void *outbuff, std::string kernel_name,
-                ze_device_handle_t device);
+                ze_device_handle_t device, bool is_immediate);
 
-  ze_command_list_handle_t command_list;
-  ze_command_queue_handle_t command_queue;
+  lzt::zeCommandBundle cmd_bundle;
   ze_image_handle_t img_in, img_out;
   const int image_height = 32;
   const int image_width = 32;
@@ -35,16 +34,15 @@ protected:
 
 void ImageFormatTests::run_test(void *inbuff, void *outbuff,
                                 std::string kernel_name,
-                                ze_device_handle_t device) {
+                                ze_device_handle_t device, bool is_immediate) {
 
   uint32_t group_size_x, group_size_y, group_size_z;
-  command_list = lzt::create_command_list(device);
-  command_queue = lzt::create_command_queue(device);
+  cmd_bundle = lzt::create_command_bundle(device, is_immediate);
   ze_module_handle_t module =
       lzt::create_module(device, "image_formats_tests.spv");
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
-  lzt::append_image_copy_from_mem(command_list, img_in, inbuff, nullptr);
-  lzt::append_barrier(command_list, nullptr, 0, nullptr);
+  lzt::append_image_copy_from_mem(cmd_bundle.list, img_in, inbuff, nullptr);
+  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeKernelSuggestGroupSize(kernel, image_width, image_height, 1,
                                      &group_size_x, &group_size_y,
@@ -57,18 +55,21 @@ void ImageFormatTests::run_test(void *inbuff, void *outbuff,
 
   ze_group_count_t group_dems = {image_width / group_size_x,
                                  image_height / group_size_y, 1};
-  lzt::append_launch_function(command_list, kernel, &group_dems, nullptr, 0,
+  lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr, 0,
                               nullptr);
-  lzt::append_barrier(command_list, nullptr, 0, nullptr);
-  lzt::append_image_copy_to_mem(command_list, outbuff, img_out, nullptr);
-  lzt::append_barrier(command_list, nullptr, 0, nullptr);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  lzt::append_image_copy_to_mem(cmd_bundle.list, outbuff, img_out, nullptr);
+  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  lzt::destroy_command_queue(command_queue);
-  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 ze_image_handle_t
@@ -103,28 +104,69 @@ ImageFormatTests::create_image_desc_format(ze_image_format_type_t format_type,
   return image;
 }
 
+void RunGivenImageFormatUINTWhenCopyingImageTest(ImageFormatTests &test,
+                                                 bool is_immediate) {
+  test.img_in = test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UINT, true);
+  test.img_out = test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UINT, true);
+  uint32_t *inbuff =
+      (uint32_t *)lzt::allocate_host_memory(test.image_size * sizeof(uint32_t));
+  uint32_t *outbuff =
+      (uint32_t *)lzt::allocate_host_memory(test.image_size * sizeof(uint32_t));
+
+  for (int i = 0; i < test.image_size; i++) {
+    inbuff[i] = 1;
+  }
+
+  test.run_test(inbuff, outbuff, "image_format_uint",
+                lzt::get_default_device(lzt::get_default_driver()),
+                is_immediate);
+
+  for (int i = 0; i < test.image_size; i++) {
+    EXPECT_EQ(outbuff[i], 2);
+  }
+
+  lzt::free_memory(outbuff);
+  lzt::free_memory(inbuff);
+}
+
 TEST_F(ImageFormatTests,
        GivenImageFormatUINTWhenCopyingImageThenFormatIsCorrect) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UINT, true);
-  img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UINT, true);
-  uint32_t *inbuff =
-      (uint32_t *)lzt::allocate_host_memory(image_size * sizeof(uint32_t));
-  uint32_t *outbuff =
-      (uint32_t *)lzt::allocate_host_memory(image_size * sizeof(uint32_t));
+  RunGivenImageFormatUINTWhenCopyingImageTest(*this, false);
+}
 
-  for (int i = 0; i < image_size; i++) {
-    inbuff[i] = 1;
+TEST_F(
+    ImageFormatTests,
+    GivenImageFormatUINTWhenCopyingImageOnImmediateCmdListThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageFormatUINTWhenCopyingImageTest(*this, true);
+}
+
+void RunGivenImageFormatINTWhenCopyingImageTest(ImageFormatTests &test,
+                                                bool is_immediate) {
+  test.img_in = test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SINT, true);
+  test.img_out = test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SINT, true);
+  int32_t *inbuff =
+      (int32_t *)lzt::allocate_host_memory(test.image_size * sizeof(int32_t));
+  int32_t *outbuff =
+      (int32_t *)lzt::allocate_host_memory(test.image_size * sizeof(int32_t));
+
+  for (int i = 0; i < test.image_size; i++) {
+    inbuff[i] = -1;
   }
 
-  run_test(inbuff, outbuff, "image_format_uint",
-           lzt::get_default_device(lzt::get_default_driver()));
+  test.run_test(inbuff, outbuff, "image_format_int",
+                lzt::get_default_device(lzt::get_default_driver()),
+                is_immediate);
 
-  for (int i = 0; i < image_size; i++) {
-    EXPECT_EQ(outbuff[i], 2);
+  for (int i = 0; i < test.image_size; i++) {
+    EXPECT_EQ(outbuff[i], -2);
   }
 
   lzt::free_memory(outbuff);
@@ -137,22 +179,40 @@ TEST_F(ImageFormatTests,
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SINT, true);
-  img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SINT, true);
-  int32_t *inbuff =
-      (int32_t *)lzt::allocate_host_memory(image_size * sizeof(int32_t));
-  int32_t *outbuff =
-      (int32_t *)lzt::allocate_host_memory(image_size * sizeof(int32_t));
+  RunGivenImageFormatINTWhenCopyingImageTest(*this, false);
+}
 
-  for (int i = 0; i < image_size; i++) {
-    inbuff[i] = -1;
+TEST_F(
+    ImageFormatTests,
+    GivenImageFormatINTWhenCopyingImageOnImmediateCmdListThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageFormatINTWhenCopyingImageTest(*this, true);
+}
+
+void RunGivenImageFormatFloatWhenCopyingImageTest(ImageFormatTests &test,
+                                                  bool is_immediate) {
+  test.img_in = test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_FLOAT, true);
+  test.img_out =
+      test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_FLOAT, true);
+  float *inbuff =
+      (float *)lzt::allocate_host_memory(test.image_size * sizeof(float));
+  float *outbuff =
+      (float *)lzt::allocate_host_memory(test.image_size * sizeof(float));
+
+  for (int i = 0; i < test.image_size; i++) {
+    inbuff[i] = 3.5;
   }
 
-  run_test(inbuff, outbuff, "image_format_int",
-           lzt::get_default_device(lzt::get_default_driver()));
+  test.run_test(inbuff, outbuff, "image_format_float",
+                lzt::get_default_device(lzt::get_default_driver()),
+                is_immediate);
 
-  for (int i = 0; i < image_size; i++) {
-    EXPECT_EQ(outbuff[i], -2);
+  for (int i = 0; i < test.image_size; i++) {
+    EXPECT_LT(outbuff[i], 3.5);
+    EXPECT_GT(outbuff[i], 3.0);
   }
 
   lzt::free_memory(outbuff);
@@ -165,23 +225,40 @@ TEST_F(ImageFormatTests,
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_FLOAT, true);
-  img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_FLOAT, true);
-  float *inbuff =
-      (float *)lzt::allocate_host_memory(image_size * sizeof(float));
-  float *outbuff =
-      (float *)lzt::allocate_host_memory(image_size * sizeof(float));
+  RunGivenImageFormatFloatWhenCopyingImageTest(*this, false);
+}
 
-  for (int i = 0; i < image_size; i++) {
-    inbuff[i] = 3.5;
+TEST_F(
+    ImageFormatTests,
+    GivenImageFormatFloatWhenCopyingImageOnImmediateCmdListThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageFormatFloatWhenCopyingImageTest(*this, true);
+}
+
+void RunGivenImageFormatUNORMWhenCopyingImageTest(ImageFormatTests &test,
+                                                  bool is_immediate) {
+  test.img_in =
+      test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UNORM, false);
+  test.img_out =
+      test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UNORM, false);
+  uint16_t *inbuff =
+      (uint16_t *)lzt::allocate_host_memory(test.image_size * sizeof(uint16_t));
+  uint16_t *outbuff =
+      (uint16_t *)lzt::allocate_host_memory(test.image_size * sizeof(uint16_t));
+
+  for (int i = 0; i < test.image_size; i++) {
+    inbuff[i] = 0;
   }
 
-  run_test(inbuff, outbuff, "image_format_float",
-           lzt::get_default_device(lzt::get_default_driver()));
+  test.run_test(inbuff, outbuff, "image_format_unorm",
+                lzt::get_default_device(lzt::get_default_driver()),
+                is_immediate);
 
-  for (int i = 0; i < image_size; i++) {
-    EXPECT_LT(outbuff[i], 3.5);
-    EXPECT_GT(outbuff[i], 3.0);
+  for (int i = 0; i < test.image_size; i++) {
+    EXPECT_EQ(outbuff[i], 65535);
   }
 
   lzt::free_memory(outbuff);
@@ -194,22 +271,40 @@ TEST_F(ImageFormatTests,
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UNORM, false);
-  img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_UNORM, false);
-  uint16_t *inbuff =
-      (uint16_t *)lzt::allocate_host_memory(image_size * sizeof(uint16_t));
-  uint16_t *outbuff =
-      (uint16_t *)lzt::allocate_host_memory(image_size * sizeof(uint16_t));
+  RunGivenImageFormatUNORMWhenCopyingImageTest(*this, false);
+}
 
-  for (int i = 0; i < image_size; i++) {
-    inbuff[i] = 0;
+TEST_F(
+    ImageFormatTests,
+    GivenImageFormatUNORMWhenCopyingImageOnImmediateCmdListThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageFormatUNORMWhenCopyingImageTest(*this, true);
+}
+
+void RunGivenImageFormatSNORMWhenCopyingImageTest(ImageFormatTests &test,
+                                                  bool is_immediate) {
+  test.img_in =
+      test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SNORM, false);
+  test.img_out =
+      test.create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SNORM, false);
+  int16_t *inbuff =
+      (int16_t *)lzt::allocate_host_memory(test.image_size * sizeof(int16_t));
+  int16_t *outbuff =
+      (int16_t *)lzt::allocate_host_memory(test.image_size * sizeof(int16_t));
+
+  for (int i = 0; i < test.image_size; i++) {
+    inbuff[i] = -32768;
   }
 
-  run_test(inbuff, outbuff, "image_format_unorm",
-           lzt::get_default_device(lzt::get_default_driver()));
+  test.run_test(inbuff, outbuff, "image_format_snorm",
+                lzt::get_default_device(lzt::get_default_driver()),
+                is_immediate);
 
-  for (int i = 0; i < image_size; i++) {
-    EXPECT_EQ(outbuff[i], 65535);
+  for (int i = 0; i < test.image_size; i++) {
+    EXPECT_EQ(outbuff[i], 32767);
   }
 
   lzt::free_memory(outbuff);
@@ -222,31 +317,22 @@ TEST_F(ImageFormatTests,
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  img_in = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SNORM, false);
-  img_out = create_image_desc_format(ZE_IMAGE_FORMAT_TYPE_SNORM, false);
-  int16_t *inbuff =
-      (int16_t *)lzt::allocate_host_memory(image_size * sizeof(int16_t));
-  int16_t *outbuff =
-      (int16_t *)lzt::allocate_host_memory(image_size * sizeof(int16_t));
-
-  for (int i = 0; i < image_size; i++) {
-    inbuff[i] = -32768;
-  }
-
-  run_test(inbuff, outbuff, "image_format_snorm",
-           lzt::get_default_device(lzt::get_default_driver()));
-
-  for (int i = 0; i < image_size; i++) {
-    EXPECT_EQ(outbuff[i], 32767);
-  }
-
-  lzt::free_memory(outbuff);
-  lzt::free_memory(inbuff);
+  RunGivenImageFormatSNORMWhenCopyingImageTest(*this, false);
 }
 
-class ImageFormatLayoutTests
-    : public ImageFormatTests,
-      public ::testing::WithParamInterface<ze_image_format_layout_t> {
+TEST_F(
+    ImageFormatTests,
+    GivenImageFormatSNORMWhenCopyingImageOnImmediateCmdListThenFormatIsCorrect) {
+  if (!(lzt::image_support())) {
+    LOG_INFO << "device does not support images, cannot run test";
+    GTEST_SKIP();
+  }
+  RunGivenImageFormatSNORMWhenCopyingImageTest(*this, true);
+}
+
+class ImageFormatLayoutTests : public ImageFormatTests,
+                               public ::testing::WithParamInterface<
+                                   std::tuple<ze_image_format_layout_t, bool>> {
 public:
   template <typename T>
   void set_up_buffers(T *&inbuff, T *&outbuff, int size_multiplier = 1);
@@ -315,7 +401,8 @@ TEST_P(ImageFormatLayoutTests,
       continue;
     }
 
-    auto layout = GetParam();
+    auto layout = std::get<0>(GetParam());
+    auto is_immediate = std::get<1>(GetParam());
     ze_image_desc_t image_descriptor = {};
     image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
     image_descriptor.type = ZE_IMAGE_TYPE_2D;
@@ -337,7 +424,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint8_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_one_component", device);
+      run_test(inbuff, outbuff, "image_format_layout_one_component", device,
+               is_immediate);
       verify_buffer(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -348,7 +436,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint16_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_one_component", device);
+      run_test(inbuff, outbuff, "image_format_layout_one_component", device,
+               is_immediate);
       verify_buffer(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -361,7 +450,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint32_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_one_component", device);
+      run_test(inbuff, outbuff, "image_format_layout_one_component", device,
+               is_immediate);
       verify_buffer(outbuff, 1, false);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -374,7 +464,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint16_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_two_components", device);
+      run_test(inbuff, outbuff, "image_format_layout_two_components", device,
+               is_immediate);
       verify_buffer(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -385,7 +476,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint32_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_two_components", device);
+      run_test(inbuff, outbuff, "image_format_layout_two_components", device,
+               is_immediate);
       verify_buffer(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -396,7 +488,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint64_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_two_components", device);
+      run_test(inbuff, outbuff, "image_format_layout_two_components", device,
+               is_immediate);
       verify_buffer(outbuff, 1, false);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -409,7 +502,7 @@ TEST_P(ImageFormatLayoutTests,
       uint16_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
       run_test(inbuff, outbuff, "image_format_layout_three_components_unorm",
-               device);
+               device, is_immediate);
       verify_buffer_float(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -421,7 +514,7 @@ TEST_P(ImageFormatLayoutTests,
       uint32_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
       run_test(inbuff, outbuff, "image_format_layout_three_components_float",
-               device);
+               device, is_immediate);
       verify_buffer_float(outbuff, false);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -434,7 +527,7 @@ TEST_P(ImageFormatLayoutTests,
       uint16_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
       run_test(inbuff, outbuff, "image_format_layout_four_components_unorm",
-               device);
+               device, is_immediate);
       verify_buffer_float(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -446,7 +539,7 @@ TEST_P(ImageFormatLayoutTests,
       uint16_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
       run_test(inbuff, outbuff, "image_format_layout_four_components_unorm",
-               device);
+               device, is_immediate);
       verify_buffer_float(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -457,7 +550,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint32_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_four_components", device);
+      run_test(inbuff, outbuff, "image_format_layout_four_components", device,
+               is_immediate);
       verify_buffer(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -468,7 +562,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint32_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_four_components", device);
+      run_test(inbuff, outbuff, "image_format_layout_four_components", device,
+               is_immediate);
       verify_buffer(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -479,7 +574,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint64_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff);
-      run_test(inbuff, outbuff, "image_format_layout_four_components", device);
+      run_test(inbuff, outbuff, "image_format_layout_four_components", device,
+               is_immediate);
       verify_buffer(outbuff);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -490,7 +586,8 @@ TEST_P(ImageFormatLayoutTests,
       img_out = lzt::create_ze_image(image_descriptor);
       uint64_t *inbuff, *outbuff;
       set_up_buffers(inbuff, outbuff, 2);
-      run_test(inbuff, outbuff, "image_format_layout_four_components", device);
+      run_test(inbuff, outbuff, "image_format_layout_four_components", device,
+               is_immediate);
       verify_buffer(outbuff, 2, false);
       lzt::free_memory(outbuff);
       lzt::free_memory(inbuff);
@@ -502,24 +599,23 @@ TEST_P(ImageFormatLayoutTests,
   }
 }
 
-INSTANTIATE_TEST_CASE_P(LayoutParameterization, ImageFormatLayoutTests,
-                        ::testing::Values(ZE_IMAGE_FORMAT_LAYOUT_8,
-                                          ZE_IMAGE_FORMAT_LAYOUT_16,
-                                          ZE_IMAGE_FORMAT_LAYOUT_32,
-                                          ZE_IMAGE_FORMAT_LAYOUT_8_8,
-                                          ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-                                          ZE_IMAGE_FORMAT_LAYOUT_16_16,
-                                          ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+INSTANTIATE_TEST_SUITE_P(
+    LayoutParameterization, ImageFormatLayoutTests,
+    ::testing::Combine(
+        ::testing::Values(
+            ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
+            ZE_IMAGE_FORMAT_LAYOUT_32, ZE_IMAGE_FORMAT_LAYOUT_8_8,
+            ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_LAYOUT_16_16,
+            ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
 
-                                          ZE_IMAGE_FORMAT_LAYOUT_32_32,
-                                          ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32,
+            ZE_IMAGE_FORMAT_LAYOUT_32_32, ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32,
 
-                                          ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+            ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
 
-                                          ZE_IMAGE_FORMAT_LAYOUT_11_11_10,
+            ZE_IMAGE_FORMAT_LAYOUT_11_11_10,
 
-                                          ZE_IMAGE_FORMAT_LAYOUT_5_6_5,
-                                          ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1,
-                                          ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4));
+            ZE_IMAGE_FORMAT_LAYOUT_5_6_5, ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1,
+            ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4),
+        ::testing::Bool()));
 
 } // namespace

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -17,15 +17,18 @@
 
 namespace {
 
-class EventProfilingTests : public ::testing::Test,
-                            public ::testing::WithParamInterface<bool> {
+class EventProfilingTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<std::tuple<bool, bool>> {
 protected:
   bool use_mapped_timestamp = false;
+  bool is_immediate = false;
   void SetUp() override {
     context = lzt::create_context();
     const ze_device_handle_t device =
         lzt::zeDevice::get_instance()->get_device();
-    use_mapped_timestamp = GetParam();
+    use_mapped_timestamp = std::get<0>(GetParam());
+    is_immediate = std::get<1>(GetParam());
 
     if (use_mapped_timestamp) {
       const auto driver = lzt::get_default_driver();
@@ -58,10 +61,9 @@ protected:
     dst_buffer = lzt::allocate_host_memory(buff_size, 1, context);
     const int addval = 0x11223344;
     memset(src_buffer, 0, buff_size);
-    cmdlist = lzt::create_command_list(context, device, 0);
-    cmdqueue = lzt::create_command_queue(context, device, 0,
-                                         ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                                         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+    cmd_bundle = lzt::create_command_bundle(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
     module = lzt::create_module(context, device, "profile_add.spv",
                                 ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
     kernel = lzt::create_function(module, "profile_add_constant");
@@ -70,7 +72,8 @@ protected:
     lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
     lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
     lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
-    lzt::append_launch_function(cmdlist, kernel, &args, event, 0, nullptr);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &args, event, 0,
+                                nullptr);
   }
 
   void TearDown() override {
@@ -79,8 +82,7 @@ protected:
     lzt::free_memory(context, dst_buffer);
     lzt::destroy_event(event);
     lzt::destroy_event_pool(ep);
-    lzt::destroy_command_list(cmdlist);
-    lzt::destroy_command_queue(cmdqueue);
+    lzt::destroy_command_bundle(cmd_bundle);
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
     lzt::destroy_context(context);
@@ -113,8 +115,7 @@ protected:
   ze_context_handle_t context;
   ze_event_pool_handle_t ep;
   ze_event_handle_t event;
-  ze_command_list_handle_t cmdlist;
-  ze_command_queue_handle_t cmdqueue;
+  lzt::zeCommandBundle cmd_bundle;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
 };
@@ -123,9 +124,13 @@ TEST_P(
     EventProfilingTests,
     GivenProfilingEventWhenCommandCompletesThenTimestampsAreRelationallyCorrect) {
 
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
   lzt::event_host_synchronize(event, UINT64_MAX);
 
   if (use_mapped_timestamp) {
@@ -144,9 +149,13 @@ TEST_P(
 TEST_P(EventProfilingTests,
        GivenSetProfilingEventWhenResettingEventThenEventStatusNotReady) {
 
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
   lzt::event_host_synchronize(event, UINT64_MAX);
   if (use_mapped_timestamp) {
     verify_mapped_timestamp_values();
@@ -176,12 +185,16 @@ TEST_P(EventProfilingTests,
   regular_event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   auto regular_event = lzt::create_event(ep_no_timestamps, regular_event_desc);
 
-  lzt::append_memory_set(cmdlist, other_buffer, &value1, mem_size,
+  lzt::append_memory_set(cmd_bundle.list, other_buffer, &value1, mem_size,
                          regular_event);
-  lzt::append_wait_on_events(cmdlist, 1, &regular_event);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &regular_event);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
   lzt::event_host_synchronize(event, UINT64_MAX);
   lzt::event_host_synchronize(regular_event, UINT64_MAX);
 
@@ -199,7 +212,7 @@ TEST_P(EventProfilingTests,
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event));
 
-  for (int i = 0; i++; i < mem_size) {
+  for (int i = 0; i < mem_size; i++) {
     uint8_t byte = ((uint8_t *)other_buffer)[i];
     ASSERT_EQ(byte, value1);
   }
@@ -209,12 +222,14 @@ TEST_P(EventProfilingTests,
   lzt::destroy_event_pool(ep_no_timestamps);
 }
 
-INSTANTIATE_TEST_CASE_P(VerifyEventProfilingTests, EventProfilingTests,
-                        ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(VerifyEventProfilingTests, EventProfilingTests,
+                         ::testing::Combine(::testing::Bool(),
+                                            ::testing::Bool()));
 
 class EventProfilingCacheCoherencyTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<ze_event_pool_flags_t> {};
+      public ::testing::WithParamInterface<
+          std::tuple<ze_event_pool_flags_t, bool>> {};
 
 TEST_P(EventProfilingCacheCoherencyTests,
        GivenEventWhenUsingEventToSyncThenCacheIsCoherent) {
@@ -222,12 +237,12 @@ TEST_P(EventProfilingCacheCoherencyTests,
   const uint8_t value = 0x55;
   ze_context_handle_t context = lzt::create_context();
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  auto ep = lzt::create_event_pool(context, 10, GetParam());
+  auto ep = lzt::create_event_pool(context, 10, std::get<0>(GetParam()));
+  bool is_immediate = std::get<1>(GetParam());
 
-  auto cmdlist = lzt::create_command_list(context, device, 0);
-  auto cmdqueue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   auto buffer1 = lzt::allocate_device_memory(size, 8, 0, 0, device, context);
   auto buffer2 = lzt::allocate_device_memory(size, 8, 0, 0, device, context);
@@ -252,19 +267,21 @@ TEST_P(EventProfilingCacheCoherencyTests,
   event_desc.index = 5;
   auto event5 = lzt::create_event(ep, event_desc);
 
-  lzt::append_memory_set(cmdlist, buffer1, &value, size, event1);
-  lzt::append_wait_on_events(cmdlist, 1, &event1);
-  lzt::append_memory_copy(cmdlist, buffer2, buffer1, size,
+  lzt::append_memory_set(cmd_bundle.list, buffer1, &value, size, event1);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &event1);
+  lzt::append_memory_copy(cmd_bundle.list, buffer2, buffer1, size,
                           event2); // Note: Need to add wait on events
-  lzt::append_wait_on_events(cmdlist, 1, &event2);
-  lzt::append_memory_copy(cmdlist, buffer3, buffer2, size, event3);
-  lzt::append_wait_on_events(cmdlist, 1, &event3);
-  lzt::append_memory_copy(cmdlist, buffer4, buffer3, size, event4);
-  lzt::append_wait_on_events(cmdlist, 1, &event4);
-  lzt::append_memory_copy(cmdlist, buffer5, buffer4, size, event5);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &event2);
+  lzt::append_memory_copy(cmd_bundle.list, buffer3, buffer2, size, event3);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &event3);
+  lzt::append_memory_copy(cmd_bundle.list, buffer4, buffer3, size, event4);
+  lzt::append_wait_on_events(cmd_bundle.list, 1, &event4);
+  lzt::append_memory_copy(cmd_bundle.list, buffer5, buffer4, size, event5);
 
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+  }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event5, UINT64_MAX));
   std::unique_ptr<uint8_t> output(new uint8_t[size]);
@@ -286,19 +303,20 @@ TEST_P(EventProfilingCacheCoherencyTests,
   lzt::free_memory(context, buffer4);
   lzt::free_memory(context, buffer5);
   lzt::destroy_context(context);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
-INSTANTIATE_TEST_CASE_P(CacheCoherencyTimeStampEventVsRegularEvent,
-                        EventProfilingCacheCoherencyTests,
-                        ::testing::Values(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP |
-                                              ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
-                                          ZE_EVENT_POOL_FLAG_HOST_VISIBLE));
+INSTANTIATE_TEST_SUITE_P(
+    CacheCoherencyTimeStampEventVsRegularEvent,
+    EventProfilingCacheCoherencyTests,
+    ::testing::Combine(::testing::Values(ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP |
+                                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE,
+                                         ZE_EVENT_POOL_FLAG_HOST_VISIBLE),
+                       ::testing::Bool()));
 
 class KernelEventProfilingCacheCoherencyTests : public ::testing::Test {};
 
-TEST_F(KernelEventProfilingCacheCoherencyTests,
-       GivenKernelEventWhenUsingEventToSyncThenCacheIsCoherent) {
-
+void RunGivenKernelEventWhenUsingEventToSyncTest(bool is_immediate) {
   ze_context_handle_t context = lzt::create_context();
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   auto ep = lzt::create_event_pool(
@@ -324,11 +342,9 @@ TEST_F(KernelEventProfilingCacheCoherencyTests,
       static_cast<ze_kernel_timestamp_result_t *>(timestamp_buffer);
   const int addval = 0x11223344;
   memset(src_buffer, 0, buff_size);
-  ze_command_list_handle_t cmdlist =
-      lzt::create_command_list(context, device, 0);
-  ze_command_queue_handle_t cmdqueue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
   ze_module_handle_t module =
       lzt::create_module(context, device, "profile_add.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
@@ -339,19 +355,26 @@ TEST_F(KernelEventProfilingCacheCoherencyTests,
   lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
   lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
   lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
-  lzt::append_launch_function(cmdlist, kernel, &args, event, 0, nullptr);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendQueryKernelTimestamps(
-                cmdlist, 1, &event, tsResult, nullptr, nullptr, 1, &event));
-  lzt::append_memory_copy(cmdlist, xfr_buffer, dst_buffer, buff_size);
-  lzt::append_memory_copy(cmdlist, src_buffer, xfr_buffer, buff_size);
+  lzt::append_launch_function(cmd_bundle.list, kernel, &args, event, 0,
+                              nullptr);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendQueryKernelTimestamps(
+                                   cmd_bundle.list, 1, &event, tsResult,
+                                   nullptr, nullptr, 1, &event));
+  lzt::append_barrier(cmd_bundle.list);
+  lzt::append_memory_copy(cmd_bundle.list, xfr_buffer, dst_buffer, buff_size);
+  lzt::append_barrier(cmd_bundle.list);
+  lzt::append_memory_copy(cmd_bundle.list, src_buffer, xfr_buffer, buff_size);
 
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
   lzt::event_host_synchronize(event, UINT64_MAX);
 
-  for (int i = 0; i++; i < size) {
+  for (int i = 0; i < size; i++) {
     int value = ((int *)src_buffer)[i];
     ASSERT_EQ(value, addval);
   }
@@ -362,16 +385,27 @@ TEST_F(KernelEventProfilingCacheCoherencyTests,
   lzt::free_memory(context, timestamp_buffer);
   lzt::destroy_event(event);
   lzt::destroy_event_pool(ep);
-  lzt::destroy_command_list(cmdlist);
-  lzt::destroy_command_queue(cmdqueue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
   lzt::destroy_context(context);
 }
 
+TEST_F(KernelEventProfilingCacheCoherencyTests,
+       GivenKernelEventWhenUsingEventToSyncThenCacheIsCoherent) {
+  RunGivenKernelEventWhenUsingEventToSyncTest(false);
+}
+
+TEST_F(
+    KernelEventProfilingCacheCoherencyTests,
+    GivenKernelEventWhenUsingEventToSyncOnImmediateCmdListThenCacheIsCoherent) {
+  RunGivenKernelEventWhenUsingEventToSyncTest(true);
+}
+
 static void kernel_timestamp_event_test(ze_context_handle_t context,
                                         std::vector<ze_device_handle_t> devices,
-                                        ze_driver_handle_t driver) {
+                                        ze_driver_handle_t driver,
+                                        bool is_immediate) {
   const size_t size = 1000;
   auto device0 = devices[0];
   auto device1 = devices[1];
@@ -382,15 +416,12 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   event_pool_desc.count = 1;
   auto event_pool = lzt::create_event_pool(context, event_pool_desc, devices);
 
-  auto command_queue0 = lzt::create_command_queue(
+  auto cmd_bundle0 = lzt::create_command_bundle(
       context, device0, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list0 = lzt::create_command_list(context, device0, 0, 0);
-
-  auto command_queue1 = lzt::create_command_queue(
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle1 = lzt::create_command_bundle(
       context, device1, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list1 = lzt::create_command_list(context, device1, 0, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -414,9 +445,13 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   lzt::set_argument_value(kernel0, 0, sizeof(src_buffer0), &src_buffer0);
   lzt::set_argument_value(kernel0, 1, sizeof(dst_buffer0), &dst_buffer0);
   lzt::set_argument_value(kernel0, 2, sizeof(addval), &addval);
-  lzt::append_launch_function(command_list0, kernel0, &args, event, 0, nullptr);
-  lzt::close_command_list(command_list0);
-  lzt::execute_command_lists(command_queue0, 1, &command_list0, nullptr);
+  lzt::append_launch_function(cmd_bundle0.list, kernel0, &args, event, 0,
+                              nullptr);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle0.list);
+    lzt::execute_command_lists(cmd_bundle0.queue, 1, &cmd_bundle0.list,
+                               nullptr);
+  }
 
   ze_kernel_timestamp_result_t *time_result0 = nullptr;
   time_result0 =
@@ -432,15 +467,15 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   // with accessibility to event
   auto event_initial = event;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendQueryKernelTimestamps(
-                                   command_list1, 1, &event, time_result0,
+                                   cmd_bundle1.list, 1, &event, time_result0,
                                    nullptr, nullptr, 1, &event));
   EXPECT_EQ(event, event_initial);
-  lzt::append_barrier(command_list1);
+  lzt::append_barrier(cmd_bundle1.list);
 
   // Verify kernel timestamp event can be added for reset
   // to second commandlist/device
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendEventReset(command_list1, event));
+            zeCommandListAppendEventReset(cmd_bundle1.list, event));
 
   auto module1 =
       lzt::create_module(context, device1, "profile_add.spv",
@@ -456,17 +491,26 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   lzt::set_argument_value(kernel1, 1, sizeof(dst_buffer1), &dst_buffer1);
   lzt::set_argument_value(kernel1, 2, sizeof(addval), &addval);
   // Re-use event on second device
-  lzt::append_launch_function(command_list1, kernel1, &args, event, 0, nullptr);
+  lzt::append_launch_function(cmd_bundle1.list, kernel1, &args, event, 0,
+                              nullptr);
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendQueryKernelTimestamps(
-                                   command_list1, 1, &event, time_result1,
+                                   cmd_bundle1.list, 1, &event, time_result1,
                                    nullptr, nullptr, 1, &event));
 
-  lzt::close_command_list(command_list1);
-  lzt::execute_command_lists(command_queue1, 1, &command_list1, nullptr);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle1.list);
+    lzt::execute_command_lists(cmd_bundle1.queue, 1, &cmd_bundle1.list,
+                               nullptr);
+  }
 
-  lzt::synchronize(command_queue0, UINT64_MAX);
-  lzt::synchronize(command_queue1, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle0.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle1.list, UINT64_MAX);
+  } else {
+    lzt::synchronize(cmd_bundle0.queue, UINT64_MAX);
+    lzt::synchronize(cmd_bundle1.queue, UINT64_MAX);
+  }
 
   // timeresutlt0 and timeresult1 should be populated with nonzero
   // durations
@@ -485,10 +529,8 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   lzt::free_memory(context, time_result1);
   lzt::free_memory(context, src_buffer1);
   lzt::free_memory(context, dst_buffer1);
-  lzt::destroy_command_list(command_list0);
-  lzt::destroy_command_queue(command_queue0);
-  lzt::destroy_command_list(command_list1);
-  lzt::destroy_command_queue(command_queue1);
+  lzt::destroy_command_bundle(cmd_bundle0);
+  lzt::destroy_command_bundle(cmd_bundle1);
   lzt::destroy_function(kernel0);
   lzt::destroy_module(module0);
   lzt::destroy_function(kernel1);
@@ -506,7 +548,22 @@ TEST_F(
     LOG_WARNING << "Less than 2 devices, skipping test";
   } else {
     auto context = lzt::create_context(driver);
-    kernel_timestamp_event_test(context, devices, driver);
+    kernel_timestamp_event_test(context, devices, driver, false);
+    lzt::destroy_context(context);
+  }
+}
+
+TEST_F(
+    KernelEventProfilingCacheCoherencyTests,
+    GivenKernelTimestampEventsWhenUsingMultipleDevicesOnImmediateCmdListThenBothDevicesCanAccessAndUpdateEvent) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+
+  if (devices.size() < 2) {
+    LOG_WARNING << "Less than 2 devices, skipping test";
+  } else {
+    auto context = lzt::create_context(driver);
+    kernel_timestamp_event_test(context, devices, driver, true);
     lzt::destroy_context(context);
   }
 }
@@ -524,7 +581,29 @@ TEST_F(
     }
     test_run = true;
     auto context = lzt::create_context(driver);
-    kernel_timestamp_event_test(context, sub_devices, driver);
+    kernel_timestamp_event_test(context, sub_devices, driver, false);
+    lzt::destroy_context(context);
+  }
+
+  if (!test_run) {
+    LOG_WARNING << "Less than two sub devices, skipping test";
+  }
+}
+
+TEST_F(
+    KernelEventProfilingCacheCoherencyTests,
+    GivenKernelTimestampEventsWhenUsingMultipleSubDevicesOnImmediateCmdListThenBothDevicesCanAccessAndUpdateEvent) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  auto test_run = false;
+  for (auto device : devices) {
+    auto sub_devices = lzt::get_ze_sub_devices(device);
+    if (sub_devices.size() < 2) {
+      continue;
+    }
+    test_run = true;
+    auto context = lzt::create_context(driver);
+    kernel_timestamp_event_test(context, sub_devices, driver, true);
     lzt::destroy_context(context);
   }
 
@@ -534,9 +613,8 @@ TEST_F(
 }
 
 #ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
-TEST_F(
-    KernelEventProfilingCacheCoherencyTests,
-    GivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsThenSuccessReturned) {
+void RunGivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsTest(
+    bool is_immediate) {
 
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
@@ -572,10 +650,9 @@ TEST_F(
   event_pool_desc.count = 1;
   auto event_pool = lzt::create_event_pool(context, event_pool_desc);
 
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -599,11 +676,15 @@ TEST_F(
   lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
   lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
   lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
-  lzt::append_launch_function(command_list, kernel, &args, event, 0, nullptr);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-
-  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::append_launch_function(cmd_bundle.list, kernel, &args, event, 0,
+                              nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   auto timestamp_results = lzt::get_event_timestamps_exp(event, device);
 
@@ -617,12 +698,23 @@ TEST_F(
   // cleanup
   lzt::free_memory(context, src_buffer);
   lzt::free_memory(context, dst_buffer);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
   lzt::destroy_event_pool(event_pool);
   lzt::destroy_context(context);
+}
+
+TEST_F(
+    KernelEventProfilingCacheCoherencyTests,
+    GivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsThenSuccessReturned) {
+  RunGivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsTest(false);
+}
+
+TEST_F(
+    KernelEventProfilingCacheCoherencyTests,
+    GivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsOnImmediateCmdListThenSuccessReturned) {
+  RunGivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsTest(true);
 }
 #else
 #ifdef __linux__
@@ -846,8 +938,8 @@ TEST_P(
   lzt::destroy_event(event);
 }
 
-INSTANTIATE_TEST_CASE_P(VerifyEventMappedTimestampProfilingTests,
-                        EventMappedTimestampProfilingTests,
-                        ::testing::Values(true, false));
+INSTANTIATE_TEST_SUITE_P(VerifyEventMappedTimestampProfilingTests,
+                         EventMappedTimestampProfilingTests,
+                         ::testing::Values(true, false));
 
 } // namespace

@@ -874,12 +874,12 @@ INSTANTIATE_TEST_SUITE_P(
 class zeCommandListAppendMemoryCopyParameterizedTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<ze_memory_type_t, ze_memory_type_t>> {
+          std::tuple<ze_memory_type_t, ze_memory_type_t, bool>> {
 public:
   void launchParamAppendMemCopy(ze_device_handle_t device, int *src_memory,
-                                int *dst_memory, size_t size) {
-    auto cq = lzt::create_command_queue(device);
-    auto cl = lzt::create_command_list(device);
+                                int *dst_memory, size_t size,
+                                bool is_immediate) {
+    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
     const int8_t src_pattern = 1;
     const int8_t dst_pattern = 0;
 
@@ -888,42 +888,48 @@ public:
     int *verify_data =
         static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
 
-    lzt::append_memory_fill(cl, static_cast<void *>(expected_data),
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(expected_data),
                             static_cast<const void *>(&src_pattern),
                             sizeof(int), size * sizeof(int), nullptr);
-    lzt::append_memory_fill(cl, static_cast<void *>(verify_data),
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(verify_data),
                             static_cast<const void *>(&dst_pattern),
                             sizeof(int), size * sizeof(int), nullptr);
 
     EXPECT_NE(expected_data, nullptr);
     EXPECT_NE(verify_data, nullptr);
 
-    lzt::append_memory_fill(cl, static_cast<void *>(src_memory),
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(src_memory),
                             static_cast<const void *>(&src_pattern),
                             sizeof(uint8_t), size * sizeof(int), nullptr);
 
-    lzt::append_memory_fill(cl, static_cast<void *>(dst_memory),
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(dst_memory),
                             static_cast<const void *>(&dst_pattern),
                             sizeof(uint8_t), size * sizeof(int), nullptr);
 
-    lzt::append_barrier(cl, nullptr, 0, nullptr);
-    lzt::append_memory_copy(cl, static_cast<void *>(dst_memory),
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_memory),
                             static_cast<void *>(src_memory),
                             size * sizeof(int));
 
-    lzt::append_barrier(cl, nullptr, 0, nullptr);
-    lzt::append_memory_copy(cl, verify_data, static_cast<void *>(dst_memory),
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.list, verify_data,
+                            static_cast<void *>(dst_memory),
                             size * sizeof(int));
-    lzt::append_memory_copy(cl, expected_data, static_cast<void *>(src_memory),
+    lzt::append_memory_copy(cmd_bundle.list, expected_data,
+                            static_cast<void *>(src_memory),
                             size * sizeof(int));
-    lzt::close_command_list(cl);
-    lzt::execute_command_lists(cq, 1, &cl, nullptr);
-    lzt::synchronize(cq, UINT64_MAX);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
 
     EXPECT_EQ(0, memcmp(expected_data, verify_data, size * sizeof(int)));
 
-    lzt::destroy_command_list(cl);
-    lzt::destroy_command_queue(cq);
+    lzt::destroy_command_bundle(cmd_bundle);
     lzt::free_memory(expected_data);
     lzt::free_memory(verify_data);
   }
@@ -934,6 +940,7 @@ TEST_P(
     GivenParameterizedSourceAndDestinationMemAllocTypesWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
   ze_memory_type_t src_memory_type = std::get<0>(GetParam());
   ze_memory_type_t dst_memory_type = std::get<1>(GetParam());
+  bool is_immediate = std::get<2>(GetParam());
 
   auto context = lzt::get_default_context();
   const size_t size = 16;
@@ -984,7 +991,8 @@ TEST_P(
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
 
-      launchParamAppendMemCopy(device, src_memory, dst_memory, size);
+      launchParamAppendMemCopy(device, src_memory, dst_memory, size,
+                               is_immediate);
 
       if (dst_memory)
         lzt::free_memory(context, dst_memory);
@@ -994,8 +1002,9 @@ TEST_P(
   }
 }
 
-INSTANTIATE_TEST_CASE_P(ParamAppendMemCopy,
-                        zeCommandListAppendMemoryCopyParameterizedTests,
-                        ::testing::Combine(memory_types, memory_types));
+INSTANTIATE_TEST_SUITE_P(ParamAppendMemCopy,
+                         zeCommandListAppendMemoryCopyParameterizedTests,
+                         ::testing::Combine(memory_types, memory_types,
+                                            ::testing::Bool()));
 
 } // namespace
