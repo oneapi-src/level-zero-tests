@@ -103,6 +103,64 @@ public:
     lzt::destroy_command_bundle(cmd_bundle);
   }
 
+  void test_image_copy_ext(bool is_immediate) {
+    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+
+    uint32_t *padded_buffer_src =
+        (uint32_t *)malloc(image_width * 2 * image_height * sizeof(uint32_t));
+    uint32_t *padded_buffer_dst =
+        (uint32_t *)malloc(image_width * 2 * image_height * sizeof(uint32_t));
+    memset(padded_buffer_src, 0,
+           image_width * 2 * image_height * sizeof(uint32_t));
+    memset(padded_buffer_dst, 0,
+           image_width * 2 * image_height * sizeof(uint32_t));
+
+    copy_raw_image_data_to_padded_buffer(padded_buffer_src,
+                                         png_img_src.raw_data(), image_width,
+                                         image_height, image_width * 2);
+
+    lzt::append_image_copy_from_mem_ext(cmd_bundle.list, ze_img_src,
+                                        padded_buffer_src, image_width * 2, 0,
+                                        nullptr);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_image_copy(cmd_bundle.list, ze_img_dest, ze_img_src, nullptr);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_image_copy_to_mem_ext(cmd_bundle.list, padded_buffer_dst,
+                                      ze_img_dest, image_width * 2, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
+
+    EXPECT_EQ(true,
+              std::equal(padded_buffer_src,
+                         padded_buffer_src + (image_height * 2 * image_height),
+                         padded_buffer_dst));
+
+    free(padded_buffer_dst);
+    free(padded_buffer_src);
+    lzt::destroy_command_bundle(cmd_bundle);
+  }
+
+  void copy_raw_image_data_to_padded_buffer(uint32_t *padded_buffer,
+                                            uint32_t *src_image_data,
+                                            uint32_t image_width,
+                                            uint32_t image_height,
+                                            uint32_t row_pitch) {
+    if (image_width <= row_pitch) {
+      for (int row = 0; row < image_height; row++) {
+        std::copy(padded_buffer + (row * row_pitch),
+                  padded_buffer + (row * row_pitch) + image_width,
+                  src_image_data + (row * image_width));
+      }
+    }
+  }
+
   void test_image_copy_region(const ze_image_region_t *region,
                               bool is_immediate) {
     auto cmd_bundle = lzt::create_command_bundle(is_immediate);
@@ -335,6 +393,24 @@ TEST_F(
     GTEST_SKIP();
   }
   test_image_copy(true);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyWithCopyExtThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  test_image_copy_ext(false);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyWithCopyExtOnImmediateCmdListThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  test_image_copy_ext(true);
 }
 
 static inline ze_image_region_t init_region(uint32_t originX, uint32_t originY,

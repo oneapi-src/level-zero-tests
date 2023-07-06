@@ -170,6 +170,48 @@ void append_image_copy(ze_command_list_handle_t hCommandList,
                        ze_event_handle_t hEvent, uint32_t num_wait_events,
                        ze_event_handle_t *wait_events);
 
+void append_image_copy_to_mem_ext(ze_command_list_handle_t hCommandList,
+                                  void *dst, ze_image_handle_t src,
+                                  uint32_t destRowPitch,
+                                  uint32_t destSlicePitch,
+                                  ze_event_handle_t hEvent);
+void append_image_copy_to_mem_ext(ze_command_list_handle_t hCommandList,
+                                  void *dst, ze_image_handle_t src,
+                                  ze_image_region_t region,
+                                  uint32_t destRowPitch,
+                                  uint32_t destSlicePitch,
+                                  ze_event_handle_t hEvent);
+void append_image_copy_to_mem_ext(
+    ze_command_list_handle_t hCommandList, void *dst, ze_image_handle_t src,
+    uint32_t destRowPitch, uint32_t destSlicePitch, ze_event_handle_t hEvent,
+    uint32_t num_wait_events, ze_event_handle_t *wait_events);
+void append_image_copy_to_mem_ext(
+    ze_command_list_handle_t hCommandList, void *dst, ze_image_handle_t src,
+    ze_image_region_t region, uint32_t destRowPitch, uint32_t destSlicePitch,
+    ze_event_handle_t hEvent, uint32_t num_wait_events,
+    ze_event_handle_t *wait_events);
+
+void append_image_copy_from_mem_ext(ze_command_list_handle_t hCommandList,
+                                    ze_image_handle_t dst, void *src,
+                                    uint32_t srcRowPitch,
+                                    uint32_t srcSlicePitch,
+                                    ze_event_handle_t hEvent);
+void append_image_copy_from_mem_ext(ze_command_list_handle_t hCommandList,
+                                    ze_image_handle_t dst, void *src,
+                                    ze_image_region_t region,
+                                    uint32_t srcRowPitch,
+                                    uint32_t srcSlicePitch,
+                                    ze_event_handle_t hEvent);
+void append_image_copy_from_mem_ext(
+    ze_command_list_handle_t hCommandList, ze_image_handle_t dst, void *src,
+    uint32_t srcRowPitch, uint32_t srcSlicePitch, ze_event_handle_t hEvent,
+    uint32_t num_wait_events, ze_event_handle_t *wait_events);
+void append_image_copy_from_mem_ext(
+    ze_command_list_handle_t hCommandList, ze_image_handle_t dst, void *src,
+    ze_image_region_t region, uint32_t srcRowPitch, uint32_t srcSlicePitch,
+    ze_event_handle_t hEvent, uint32_t num_wait_events,
+    ze_event_handle_t *wait_events);
+
 void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
                                 ze_image_handle_t dst, void *src,
                                 ze_event_handle_t hEvent);
