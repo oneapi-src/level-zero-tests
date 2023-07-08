@@ -15,6 +15,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_name.find("DifferentDevice") != -1) or \
                     (test_name.find("TwoRootDevice") != -1) or \
                     (test_name.find("TwoDevice") != -1) or \
+                    (test_name.find("RemoteDevice") != -1) or \
                     (test_name.find("MultipleSubDevice") != -1) or \
                     (test_name.find("DifferentSubDevice") != -1) or \
                     (test_name.find("TwoSubDevice") != -1) or \

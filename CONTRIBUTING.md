@@ -48,7 +48,8 @@ In addition, use the following naming conventions:
     `RootDevice` or `Device` in its name.
   * A test requiring **more than one root device** SHALL include one of
     `MultipleRootDevice`, `MultipleDevice`, `DifferentRootDevice`,
-    `DifferentDevice`, `TwoRootDevice` or `TwoDevice` in its name.
+    `DifferentDevice`, `TwoRootDevice`, `TwoDevice` or `RemoteDevice` in its
+    name.
   * A test requiring **exactly zero root devices** SHALL include one of
     `NoRootDevice` or `NoDevice` in its name.
   * A test referring to both a sub-device and a root device SHALL refer to the
