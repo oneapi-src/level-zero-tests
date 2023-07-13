@@ -412,9 +412,11 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
                                 ? options.module_name_in
                                 : "debug_loop.spv";
 
-  std::string kernel_name = (options.use_custom_module == true)
-                                ? options.kernel_name_in
-                                : "long_kernel";
+  std::string kernel_name =
+      (options.use_custom_module == true)
+          ? (!options.kernel_name_in.empty() ? options.kernel_name_in
+                                             : "long_kernel")
+          : "long_kernel";
   bool slm = false;
   size_t slm_buffer_size =
       512; // NOTE: Not all SKUs have same SLM so can go too big.
