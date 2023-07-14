@@ -348,18 +348,3 @@ def assign_test_feature(test_binary: str, test_name: str):
 
         return test_feature, test_section
 
-def create_test_name(suite_name: str, test_binary: str, line: str):
-        test_section = "None"
-        updated_suite_name = suite_name.split('/')  # e.g., 'GivenXWhenYThenZ'
-        test_suite_name = updated_suite_name[0]
-        if (len(updated_suite_name) > 1):
-            test_suite_name += "_" + updated_suite_name[1]
-        parameterized_case_name = line.split()[0]  # e.g., 'GivenXWhenYThenZ/1  # GetParam() = (0)' or just 'GivenXWhenYThenZ' if not parameterized
-        case_name = parameterized_case_name.split('/')[0]  # e.g., 'GivenXWhenYThenZ'
-        if (test_binary.find("_errors") != -1):
-            test_name = "L0_NEG_" + test_suite_name + "_" + case_name
-            test_section = "Negative"
-        else:
-            test_name = "L0_CTS_" + test_suite_name + "_" + case_name
-
-        return test_name, case_name, test_section

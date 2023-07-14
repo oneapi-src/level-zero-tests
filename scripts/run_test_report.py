@@ -279,6 +279,22 @@ def run_test_report(test_plan: [], test_run_timeout: int, log_prefix: str):
     else:
         return 0
 
+def create_test_name(suite_name: str, test_binary: str, line: str):
+        test_section = "None"
+        updated_suite_name = suite_name.split('/')  # e.g., 'GivenXWhenYThenZ'
+        test_suite_name = updated_suite_name[0]
+        if (len(updated_suite_name) > 1):
+            test_suite_name += "_" + updated_suite_name[1]
+        parameterized_case_name = line.split()[0]  # e.g., 'GivenXWhenYThenZ/1  # GetParam() = (0)' or just 'GivenXWhenYThenZ' if not parameterized
+        case_name = parameterized_case_name.split('/')[0]  # e.g., 'GivenXWhenYThenZ'
+        if (test_binary.find("_errors") != -1):
+            test_name = "L0_NEG_" + test_suite_name + "_" + case_name
+            test_section = "Negative"
+        else:
+            test_name = "L0_CTS_" + test_suite_name + "_" + case_name
+
+        return test_name, case_name, test_section
+
 def generate_test_case(binary_and_path: str,
                     suite_name: str,
                     test_binary: str,
@@ -289,7 +305,7 @@ def generate_test_case(binary_and_path: str,
                     exclude_features: str,
                     exclude_regex: str
                     ):
-        test_name, case_name, test_section = level_zero_report_utils.create_test_name(suite_name, test_binary, line)
+        test_name, case_name, test_section = create_test_name(suite_name, test_binary, line)
         if test_name.find("DISABLED") != -1:
             return
         test_filter = "--gtest_filter=*" + case_name + "*"
