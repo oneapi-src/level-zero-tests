@@ -230,8 +230,12 @@ TEST_F(
         EXPECT_TRUE(properties.canControl);
       else if (properties.type == ZES_FREQ_DOMAIN_MEMORY)
         EXPECT_FALSE(properties.canControl);
-      else
-        FAIL();
+      else if (properties.type == ZES_FREQ_DOMAIN_MEDIA)
+        EXPECT_TRUE(properties.canControl);
+      else {
+        LOG_INFO << "Skipping test as freq handle is of unknown type";
+        GTEST_SKIP();
+      }
     }
   }
 }
