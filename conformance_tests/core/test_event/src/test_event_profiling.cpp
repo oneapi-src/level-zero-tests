@@ -78,14 +78,38 @@ protected:
 
   void TearDown() override {
 
-    lzt::free_memory(context, src_buffer);
-    lzt::free_memory(context, dst_buffer);
-    lzt::destroy_event(event);
-    lzt::destroy_event_pool(ep);
-    lzt::destroy_command_bundle(cmd_bundle);
-    lzt::destroy_function(kernel);
-    lzt::destroy_module(module);
-    lzt::destroy_context(context);
+    if (src_buffer != nullptr) {
+      lzt::free_memory(context, src_buffer);
+      src_buffer = nullptr;
+    }
+    if (dst_buffer != nullptr) {
+      lzt::free_memory(context, dst_buffer);
+      dst_buffer = nullptr;
+    }
+    if (event != nullptr) {
+      lzt::destroy_event(event);
+      event = nullptr;
+    }
+    if (ep != nullptr) {
+      lzt::destroy_event_pool(ep);
+      ep = nullptr;
+    }
+    if (cmd_bundle.list != nullptr || cmd_bundle.queue != nullptr) {
+      lzt::destroy_command_bundle(cmd_bundle);
+    }
+
+    if (kernel != nullptr) {
+      lzt::destroy_function(kernel);
+      kernel = nullptr;
+    }
+    if (module != nullptr) {
+      lzt::destroy_module(module);
+      module = nullptr;
+    }
+    if (context != nullptr) {
+      lzt::destroy_context(context);
+      context = nullptr;
+    }
   }
 
   void verify_mapped_timestamp_values() {
@@ -110,14 +134,14 @@ protected:
     }
   }
 
-  void *src_buffer;
-  void *dst_buffer;
-  ze_context_handle_t context;
-  ze_event_pool_handle_t ep;
-  ze_event_handle_t event;
-  lzt::zeCommandBundle cmd_bundle;
-  ze_module_handle_t module;
-  ze_kernel_handle_t kernel;
+  void *src_buffer = nullptr;
+  void *dst_buffer = nullptr;
+  ze_context_handle_t context = nullptr;
+  ze_event_pool_handle_t ep = nullptr;
+  ze_event_handle_t event = nullptr;
+  lzt::zeCommandBundle cmd_bundle{};
+  ze_module_handle_t module = nullptr;
+  ze_kernel_handle_t kernel = nullptr;
 };
 
 TEST_P(
@@ -758,16 +782,30 @@ protected:
 
   void TearDown() override {
 
-    lzt::free_memory(context, src_buffer);
-    lzt::free_memory(context, dst_buffer);
-    lzt::destroy_event_pool(ep);
-    lzt::destroy_context(context);
+    if (src_buffer != nullptr) {
+      lzt::free_memory(context, src_buffer);
+      src_buffer = nullptr;
+    }
+    if (dst_buffer != nullptr) {
+      lzt::free_memory(context, dst_buffer);
+      dst_buffer = nullptr;
+    }
+
+    if (ep != nullptr) {
+      lzt::destroy_event_pool(ep);
+      ep = nullptr;
+    }
+
+    if (context != nullptr) {
+      lzt::destroy_context(context);
+      context = nullptr;
+    }
   }
 
-  void *src_buffer;
-  void *dst_buffer;
-  ze_context_handle_t context;
-  ze_event_pool_handle_t ep;
+  void *src_buffer = nullptr;
+  void *dst_buffer = nullptr;
+  ze_context_handle_t context = nullptr;
+  ze_event_pool_handle_t ep = nullptr;
   ze_event_desc_t event_desc = {};
   size_t size = 10000;
   ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};

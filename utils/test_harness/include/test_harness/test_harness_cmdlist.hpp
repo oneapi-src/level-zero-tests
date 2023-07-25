@@ -24,8 +24,8 @@ public:
 };
 
 struct zeCommandBundle {
-  ze_command_queue_handle_t queue;
-  ze_command_list_handle_t list;
+  ze_command_queue_handle_t queue = nullptr;
+  ze_command_list_handle_t list = nullptr;
 };
 
 ze_command_list_handle_t create_command_list(ze_context_handle_t context,
