@@ -84,6 +84,13 @@ uint32_t get_ze_sub_device_count(ze_device_handle_t device) {
   return count;
 }
 
+ze_device_handle_t get_root_device(ze_device_handle_t device) {
+  ze_device_handle_t root_device = nullptr;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetRootDevice(device, &root_device));
+  return root_device;
+}
+
 std::vector<ze_device_handle_t> get_ze_sub_devices(ze_device_handle_t device) {
   return get_ze_sub_devices(device, get_ze_sub_device_count(device));
 }
