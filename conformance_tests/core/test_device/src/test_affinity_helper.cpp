@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -51,6 +51,15 @@ int main(int argc, char **argv) {
   }
 
   char *val = getenv("ZE_AFFINITY_MASK");
+  char *device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
+  bool test_device_count = false;
+
+  if (device_hierarchy) {
+    if (strcmp(device_hierarchy, "FLAT") == 0 ||
+        strcmp(device_hierarchy, "COMBINED") == 0) {
+      test_device_count = true;
+    }
+  }
 
   for (auto driver : lzt::get_all_driver_handles()) {
     ze_driver_properties_t driver_properties = {};
@@ -72,12 +81,17 @@ int main(int argc, char **argv) {
       uint32_t num_leaf_devices = 0;
 
       auto devices = lzt::get_devices(driver);
+      auto device_count = lzt::get_device_count(driver);
 
       for (auto device : devices) {
         num_leaf_devices += get_leaf_device_count(device);
       }
 
-      std::cout << SUCCESS_PREFIX << ":" << num_leaf_devices << std::endl;
+      if (test_device_count) {
+        std::cout << SUCCESS_PREFIX << ":" << device_count << std::endl;
+      } else {
+        std::cout << SUCCESS_PREFIX << ":" << num_leaf_devices << std::endl;
+      }
 
       exit(0);
     }

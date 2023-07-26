@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -38,10 +38,12 @@ std::string get_result(bp::ipstream &stream) {
 }
 
 static void run_child_process(std::string driver_id, std::string affinity_mask,
-                              uint32_t num_devices_mask) {
+                              uint32_t num_devices_mask,
+                              std::string device_hierarchy) {
   auto env = boost::this_process::environment();
   bp::environment child_env = env;
   child_env["ZE_AFFINITY_MASK"] = affinity_mask;
+  child_env["ZE_FLAT_DEVICE_HIERARCHY"] = device_hierarchy;
 
   fs::path helper_path(boost::filesystem::current_path() / "device");
   std::vector<boost::filesystem::path> paths;
@@ -53,6 +55,7 @@ static void run_child_process(std::string driver_id, std::string affinity_mask,
   get_devices_process.wait();
 
   LOG_INFO << "[Affinity Mask: " << affinity_mask << "]";
+  LOG_INFO << "[Device Hierarchy: " << device_hierarchy << "]";
 
   int num_devices_child = -1;
   std::string result_string;
@@ -144,7 +147,9 @@ uint16_t get_leaf_device_count(ze_device_handle_t device) {
 std::string get_affinity_mask_string(ze_device_handle_t device,
                                      uint32_t &input_mask,
                                      uint16_t parent_index, uint16_t my_index,
-                                     uint16_t &devices_present) {
+                                     uint16_t &devices_present,
+                                     bool sub_devices_as_devices,
+                                     size_t sub_device_count) {
 
   std::stringstream output_mask;
   auto device_count = get_device_count(device);
@@ -153,7 +158,12 @@ std::string get_affinity_mask_string(ze_device_handle_t device,
       // tell my parent that I am present
       devices_present++;
       // add this device to output mask
-      output_mask << my_index;
+      if (sub_devices_as_devices) {
+        uint16_t sub_device_index = sub_device_count * parent_index + my_index;
+        output_mask << sub_device_index;
+      } else {
+        output_mask << my_index;
+      }
     }
     input_mask >>= 1;
   } else { // device has subdevices
@@ -162,8 +172,9 @@ std::string get_affinity_mask_string(ze_device_handle_t device,
     devices_present = 0;
     auto subdevices = lzt::get_ze_sub_devices(device);
     for (auto &sub_device : subdevices) {
-      auto result = get_affinity_mask_string(sub_device, input_mask, my_index,
-                                             sub_device_index, devices_present);
+      auto result = get_affinity_mask_string(
+          sub_device, input_mask, my_index, sub_device_index, devices_present,
+          sub_devices_as_devices, subdevices.size());
       if (!result.empty()) {
         temp_output_mask << result + ",";
       }
@@ -177,24 +188,33 @@ std::string get_affinity_mask_string(ze_device_handle_t device,
     // strings**
     // if none of our descendants are present, then do nothing
     if (devices_present == device_count) {
-      output_mask << my_index;
+      if (sub_devices_as_devices && device_count > 1) {
+        auto temp_string = temp_output_mask.str();
+        if (temp_string.size() > 1) {
+          temp_string.erase(temp_string.end() - 1);
+        }
+        output_mask << temp_string;
+      } else {
+        output_mask << my_index;
+      }
     } else if (devices_present == 1) {
     } else {
-
       auto temp_string = temp_output_mask.str();
       if (temp_string.size() > 1) {
         temp_string.erase(temp_string.end() - 1);
       }
-      auto prefix = std::to_string(my_index) + ".";
-      if (!temp_string.empty()) {
-        temp_string.insert(0, prefix);
+      if (sub_devices_as_devices) {
+      } else {
+        auto prefix = std::to_string(my_index) + ".";
+        if (!temp_string.empty()) {
+          temp_string.insert(0, prefix);
+        }
+        auto pos = temp_string.find(",");
+        while (pos != std::string::npos) {
+          temp_string.insert(pos + 1, prefix);
+          pos = temp_string.find(",", pos + 1);
+        }
       }
-      auto pos = temp_string.find(",");
-      while (pos != std::string::npos) {
-        temp_string.insert(pos + 1, prefix);
-        pos = temp_string.find(",", pos + 1);
-      }
-
       output_mask << temp_string;
     }
   }
@@ -237,9 +257,9 @@ TEST(
       for (int root_device = 0; root_device < devices.size(); root_device++) {
         uint16_t device_present = 0;
 
-        auto temp_string =
-            get_affinity_mask_string(devices[root_device], temp_mask,
-                                     parent_index, root_device, device_present);
+        auto temp_string = get_affinity_mask_string(
+            devices[root_device], temp_mask, parent_index, root_device,
+            device_present, false, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
             affinity_mask_string += ",";
@@ -256,7 +276,189 @@ TEST(
       memset(&driver_properties.uuid.id[4], 0, 4);
 
       run_child_process(lzt::to_string(driver_properties.uuid),
-                        affinity_mask_string, num_devices_mask);
+                        affinity_mask_string, num_devices_mask, "COMPOSITE");
+    }
+  }
+}
+
+TEST(
+    TestDeviceHierarchy,
+    GivenDeviceHierarchyFlatThenGivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
+
+  for (auto driver : lzt::get_all_driver_handles()) {
+    auto devices = lzt::get_devices(driver);
+    uint32_t num_leaf_devices = 0;
+    if (devices.empty()) {
+      continue;
+    }
+    int root_device_index = 0;
+    for (auto device : devices) {
+      num_leaf_devices += get_leaf_device_count(device);
+      root_device_index++;
+    }
+
+    // in each mask, either a device is present or it is not,
+    // so for N devices there are 2^N possible masks
+    auto num_masks = 1 << num_leaf_devices;
+    for (uint32_t mask = 0; mask < num_masks; mask++) {
+      uint32_t num_devices_mask = 0;
+      auto temp = mask;
+      while (temp) {
+        num_devices_mask += temp & 0x1;
+        temp >>= 1;
+      }
+      // an unset mask means all devices should be returned
+      if (num_devices_mask == 0) {
+        num_devices_mask = num_leaf_devices;
+      }
+
+      // build this affinity mask string
+      auto temp_mask = mask;
+      std::string affinity_mask_string;
+      uint16_t parent_index = 0;
+      for (int root_device = 0; root_device < devices.size(); root_device++) {
+        uint16_t device_present = 0;
+
+        auto temp_string = get_affinity_mask_string(
+            devices[root_device], temp_mask, parent_index, root_device,
+            device_present, true, 0);
+        if (!temp_string.empty()) {
+          if (!affinity_mask_string.empty()) {
+            affinity_mask_string += ",";
+          }
+          affinity_mask_string += temp_string;
+        }
+        parent_index++;
+      }
+
+      // launch child process with constructed mask
+      auto driver_properties = lzt::get_driver_properties(driver);
+      // most significant 32-bits of UUID are timestamp, which can change, so
+      // zero-out least significant 32-bits are driver version
+      memset(&driver_properties.uuid.id[4], 0, 4);
+
+      run_child_process(lzt::to_string(driver_properties.uuid),
+                        affinity_mask_string, num_devices_mask, "FLAT");
+    }
+  }
+}
+
+TEST(
+    TestDeviceHierarchy,
+    GivenDeviceHierarchyCombinedThenGivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
+
+  for (auto driver : lzt::get_all_driver_handles()) {
+    auto devices = lzt::get_devices(driver);
+    uint32_t num_leaf_devices = 0;
+    if (devices.empty()) {
+      continue;
+    }
+    for (auto device : devices) {
+      num_leaf_devices += get_leaf_device_count(device);
+    }
+
+    // in each mask, either a device is present or it is not,
+    // so for N devices there are 2^N possible masks
+    auto num_masks = 1 << num_leaf_devices;
+    for (uint32_t mask = 0; mask < num_masks; mask++) {
+      uint32_t num_devices_mask = 0;
+      auto temp = mask;
+      while (temp) {
+        num_devices_mask += temp & 0x1;
+        temp >>= 1;
+      }
+      // an unset mask means all devices should be returned
+      if (num_devices_mask == 0) {
+        num_devices_mask = num_leaf_devices;
+      }
+
+      // build this affinity mask string
+      auto temp_mask = mask;
+      std::string affinity_mask_string;
+      uint16_t parent_index = 0;
+      for (int root_device = 0; root_device < devices.size(); root_device++) {
+        uint16_t device_present = 0;
+
+        auto temp_string = get_affinity_mask_string(
+            devices[root_device], temp_mask, parent_index, root_device,
+            device_present, true, 0);
+        if (!temp_string.empty()) {
+          if (!affinity_mask_string.empty()) {
+            affinity_mask_string += ",";
+          }
+          affinity_mask_string += temp_string;
+        }
+        parent_index++;
+      }
+
+      // launch child process with constructed mask
+      auto driver_properties = lzt::get_driver_properties(driver);
+      // most significant 32-bits of UUID are timestamp, which can change, so
+      // zero-out least significant 32-bits are driver version
+      memset(&driver_properties.uuid.id[4], 0, 4);
+
+      run_child_process(lzt::to_string(driver_properties.uuid),
+                        affinity_mask_string, num_devices_mask, "COMBINED");
+    }
+  }
+}
+
+TEST(
+    TestDeviceHierarchy,
+    GivenDeviceHierarchyCompositeThenGivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
+
+  for (auto driver : lzt::get_all_driver_handles()) {
+    auto devices = lzt::get_devices(driver);
+    uint32_t num_leaf_devices = 0;
+    if (devices.empty()) {
+      continue;
+    }
+    for (auto device : devices) {
+      num_leaf_devices += get_leaf_device_count(device);
+    }
+
+    // in each mask, either a device is present or it is not,
+    // so for N devices there are 2^N possible masks
+    auto num_masks = 1 << num_leaf_devices;
+    for (uint32_t mask = 0; mask < num_masks; mask++) {
+      uint32_t num_devices_mask = 0;
+      auto temp = mask;
+      while (temp) {
+        num_devices_mask += temp & 0x1;
+        temp >>= 1;
+      }
+      // an unset mask means all devices should be returned
+      if (num_devices_mask == 0) {
+        num_devices_mask = num_leaf_devices;
+      }
+
+      // build this affinity mask string
+      auto temp_mask = mask;
+      std::string affinity_mask_string;
+      uint16_t parent_index = 0;
+      for (int root_device = 0; root_device < devices.size(); root_device++) {
+        uint16_t device_present = 0;
+
+        auto temp_string = get_affinity_mask_string(
+            devices[root_device], temp_mask, parent_index, root_device,
+            device_present, false, 0);
+        if (!temp_string.empty()) {
+          if (!affinity_mask_string.empty()) {
+            affinity_mask_string += ",";
+          }
+          affinity_mask_string += temp_string;
+        }
+        parent_index++;
+      }
+
+      // launch child process with constructed mask
+      auto driver_properties = lzt::get_driver_properties(driver);
+      // most significant 32-bits of UUID are timestamp, which can change, so
+      // zero-out least significant 32-bits are driver version
+      memset(&driver_properties.uuid.id[4], 0, 4);
+
+      run_child_process(lzt::to_string(driver_properties.uuid),
+                        affinity_mask_string, num_devices_mask, "COMPOSITE");
     }
   }
 }
@@ -285,14 +487,15 @@ TEST(
   auto driver_properties = lzt::get_driver_properties(driver);
   memset(&driver_properties.uuid.id[4], 0, 4);
   run_child_process(lzt::to_string(driver_properties.uuid), mask1,
-                    num_leaf_devices);
+                    num_leaf_devices, "COMPOSITE");
   run_child_process(lzt::to_string(driver_properties.uuid), mask2,
-                    get_leaf_device_count(devices[0]));
+                    get_leaf_device_count(devices[0]), "COMPOSITE");
   run_child_process(lzt::to_string(driver_properties.uuid), mask3,
-                    get_leaf_device_count(devices[1]));
+                    get_leaf_device_count(devices[1]), "COMPOSITE");
   run_child_process(lzt::to_string(driver_properties.uuid), mask4,
                     get_leaf_device_count(devices[0]) +
-                        get_leaf_device_count(devices[1]));
+                        get_leaf_device_count(devices[1]),
+                    "COMPOSITE");
 }
 
 TEST(
@@ -315,15 +518,16 @@ TEST(
   auto driver_properties = lzt::get_driver_properties(driver);
   memset(&driver_properties.uuid.id[4], 0, 4);
   run_child_process(lzt::to_string(driver_properties.uuid), mask1,
-                    get_leaf_device_count(devices[0]));
+                    get_leaf_device_count(devices[0]), "COMPOSITE");
 
   run_child_process(lzt::to_string(driver_properties.uuid), mask2,
-                    get_leaf_device_count(subdevices[0]));
+                    get_leaf_device_count(subdevices[0]), "COMPOSITE");
   run_child_process(lzt::to_string(driver_properties.uuid), mask3,
-                    get_leaf_device_count(subdevices[1]));
+                    get_leaf_device_count(subdevices[1]), "COMPOSITE");
   run_child_process(lzt::to_string(driver_properties.uuid), mask4,
                     get_leaf_device_count(subdevices[0]) +
-                        get_leaf_device_count(subdevices[1]));
+                        get_leaf_device_count(subdevices[1]),
+                    "COMPOSITE");
 
   //
 }
