@@ -16,6 +16,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
 
   for (size_t local_device_id_iter = 0;
        local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
+    size_t queue_index_iter = 0;
     for (size_t remote_device_id_iter = 0;
          remote_device_id_iter < remote_device_ids.size();
          remote_device_id_iter++) {
@@ -28,7 +29,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
       }
 
       uint32_t queue_index =
-          queues[remote_device_id_iter % static_cast<uint32_t>(queues.size())];
+          queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
 
       if (transfer_type == PEER_WRITE) {
         SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
@@ -58,6 +59,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
   // destinations, copies are batched.
   for (size_t local_device_id_iter = 0;
        local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
+    size_t queue_index_iter = 0;
     for (size_t remote_device_id_iter = 0;
          remote_device_id_iter < remote_device_ids.size();
          remote_device_id_iter++) {
@@ -70,7 +72,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
       }
 
       uint32_t queue_index =
-          queues[remote_device_id_iter % static_cast<uint32_t>(queues.size())];
+          queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
 
       SUCCESS_OR_TERMINATE(zeCommandListClose(
           ze_peer_devices[local_device_id].engines[queue_index].second));
@@ -84,6 +86,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
+      size_t queue_index_iter = 0;
       for (size_t remote_device_id_iter = 0;
            remote_device_id_iter < remote_device_ids.size();
            remote_device_id_iter++) {
@@ -95,8 +98,8 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
           continue;
         }
 
-        uint32_t queue_index = queues[remote_device_id_iter %
-                                      static_cast<uint32_t>(queues.size())];
+        uint32_t queue_index =
+            queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
 
         SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
 
@@ -142,6 +145,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
            local_device_id_iter++) {
+        size_t queue_index_iter = 0;
         for (size_t remote_device_id_iter = 0;
              remote_device_id_iter < remote_device_ids.size();
              remote_device_id_iter++) {
@@ -153,8 +157,8 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
             continue;
           }
 
-          uint32_t queue_index = queues[remote_device_id_iter %
-                                        static_cast<uint32_t>(queues.size())];
+          uint32_t queue_index =
+              queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
 
           SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
               ze_peer_devices[local_device_id].engines[queue_index].first, 1,
@@ -190,6 +194,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
            local_device_id_iter++) {
+        size_t queue_index_iter = 0;
         for (size_t remote_device_id_iter = 0;
              remote_device_id_iter < remote_device_ids.size();
              remote_device_id_iter++) {
@@ -201,8 +206,8 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
             continue;
           }
 
-          uint32_t queue_index = queues[remote_device_id_iter %
-                                        static_cast<uint32_t>(queues.size())];
+          uint32_t queue_index =
+              queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
 
           SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
               ze_peer_devices[local_device_id].engines[queue_index].first,
@@ -225,6 +230,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
+      size_t queue_index_iter = 0;
       for (size_t remote_device_id_iter = 0;
            remote_device_id_iter < remote_device_ids.size();
            remote_device_id_iter++) {
@@ -235,8 +241,8 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
           continue;
         }
 
-        uint32_t queue_index = queues[remote_device_id_iter %
-                                      static_cast<uint32_t>(queues.size())];
+        uint32_t queue_index =
+            queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
 
         std::cout << "\tDevice " << local_device_id << " - Device "
                   << remote_device_id << " using queue " << queue_index << ": ";
@@ -268,6 +274,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
 
   for (size_t local_device_id_iter = 0;
        local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
+    size_t queue_index_iter = 0;
     for (size_t remote_device_id_iter = 0;
          remote_device_id_iter < remote_device_ids.size();
          remote_device_id_iter++) {
@@ -280,7 +287,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
       }
 
       uint32_t queue_index =
-          queues[remote_device_id_iter % static_cast<uint32_t>(queues.size())];
+          queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
       uint32_t device_id = local_device_id;
       if (use_queue_in_destination) {
         device_id = remote_device_id;
@@ -307,6 +314,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
   // destinations, copies are batched.
   for (size_t local_device_id_iter = 0;
        local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
+    size_t queue_index_iter = 0;
     for (size_t remote_device_id_iter = 0;
          remote_device_id_iter < remote_device_ids.size();
          remote_device_id_iter++) {
@@ -319,7 +327,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
       }
 
       uint32_t queue_index =
-          queues[remote_device_id_iter % static_cast<uint32_t>(queues.size())];
+          queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
       uint32_t device_id = local_device_id;
       if (use_queue_in_destination) {
         device_id = remote_device_id;
@@ -336,6 +344,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
+      size_t queue_index_iter = 0;
       for (size_t remote_device_id_iter = 0;
            remote_device_id_iter < remote_device_ids.size();
            remote_device_id_iter++) {
@@ -346,8 +355,8 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
           continue;
         }
 
-        uint32_t queue_index = queues[remote_device_id_iter %
-                                      static_cast<uint32_t>(queues.size())];
+        uint32_t queue_index =
+            queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
         uint32_t device_id = local_device_id;
         if (use_queue_in_destination) {
           device_id = remote_device_id;
@@ -390,6 +399,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
            local_device_id_iter++) {
+        size_t queue_index_iter = 0;
         for (size_t remote_device_id_iter = 0;
              remote_device_id_iter < remote_device_ids.size();
              remote_device_id_iter++) {
@@ -401,8 +411,8 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
             continue;
           }
 
-          uint32_t queue_index = queues[remote_device_id_iter %
-                                        static_cast<uint32_t>(queues.size())];
+          uint32_t queue_index =
+              queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
           uint32_t device_id = local_device_id;
           if (use_queue_in_destination) {
             device_id = remote_device_id;
@@ -440,6 +450,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
            local_device_id_iter++) {
+        size_t queue_index_iter = 0;
         for (size_t remote_device_id_iter = 0;
              remote_device_id_iter < remote_device_ids.size();
              remote_device_id_iter++) {
@@ -451,8 +462,8 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
             continue;
           }
 
-          uint32_t queue_index = queues[remote_device_id_iter %
-                                        static_cast<uint32_t>(queues.size())];
+          uint32_t queue_index =
+              queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
           uint32_t device_id = local_device_id;
           if (use_queue_in_destination) {
             device_id = remote_device_id;
@@ -475,6 +486,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
+      size_t queue_index_iter = 0;
       for (size_t remote_device_id_iter = 0;
            remote_device_id_iter < remote_device_ids.size();
            remote_device_id_iter++) {
@@ -485,8 +497,8 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
           continue;
         }
 
-        uint32_t queue_index = queues[remote_device_id_iter %
-                                      static_cast<uint32_t>(queues.size())];
+        uint32_t queue_index =
+            queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
 
         std::cout << "\tDevice " << local_device_id << " - Device "
                   << remote_device_id << " using queue " << queue_index << ": ";
