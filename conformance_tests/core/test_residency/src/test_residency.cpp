@@ -39,6 +39,44 @@ TEST_F(zeContextMakeResidentTests,
                 lzt::zeDevice::get_instance()->get_device(), memory_, size_));
 }
 
+TEST(
+    zeContextMakeResidentMultiDeviceTests,
+    GivenDeviceMemoryWhenMakingMemoryResidentOnMultipleDevicesWithP2PSupportThenSuccessIsReturned) {
+  auto devices = lzt::get_ze_devices(lzt::get_default_driver());
+  if (devices.size() < 2) {
+    LOG_INFO << "Test cannot be run with less than 2 Devices";
+    GTEST_SKIP();
+  }
+  size_t size = 1024;
+  for (uint32_t i = 0; i < devices.size(); i++) {
+    for (uint32_t j = 0; j < devices.size(); j++) {
+      if (i == j) {
+        continue;
+      }
+      if (!lzt::can_access_peer(devices[i], devices[j])) {
+        LOG_INFO << "FAILURE:  Device-to-Device access disabled";
+        GTEST_SKIP();
+      } else if (!lzt::can_access_peer(devices[j], devices[i])) {
+        LOG_INFO << "FAILURE:  Device-to-Device access disabled";
+        GTEST_SKIP();
+      } else {
+        void *memory = lzt::allocate_device_memory(size, 1, 0, devices[j],
+                                                   lzt::get_default_context());
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeContextMakeMemoryResident(lzt::get_default_context(),
+                                              devices[i], memory, size));
+        lzt::free_memory(memory);
+        memory = lzt::allocate_device_memory(size, 1, 0, devices[i],
+                                             lzt::get_default_context());
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeContextMakeMemoryResident(lzt::get_default_context(),
+                                              devices[j], memory, size));
+        lzt::free_memory(memory);
+      }
+    }
+  }
+}
+
 typedef struct _node {
   uint32_t value;
   struct _node *next;
