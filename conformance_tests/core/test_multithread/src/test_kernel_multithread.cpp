@@ -13,25 +13,22 @@
 #include <thread>
 #include <array>
 
-namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 
 namespace {
 
-constexpr size_t num_threads = 16;
-constexpr size_t num_iterations = 2000;
-constexpr uint32_t output_count_ = 64;
-constexpr size_t output_size_ = output_count_ * sizeof(uint64_t);
-constexpr size_t pattern_memory_size = 512;
-constexpr size_t pattern_memory_count =
-    pattern_memory_size >> 3; // array of uint64_t
-void run_functions(lzt::zeCommandBundle cmd_bundle, bool is_immediate,
-                   ze_kernel_handle_t, ze_kernel_handle_t, void *, size_t,
-                   uint16_t, uint64_t *, uint64_t *, uint64_t *, uint64_t *,
-                   size_t);
+const int num_threads = 16;
+const int num_iterations = 2000;
+const uint32_t pattern_memory_count = 64;
+const uint32_t pattern_memory_size = pattern_memory_count * sizeof(uint64_t);
+const uint32_t output_count = pattern_memory_count;
+const uint32_t output_size = pattern_memory_size;
+void run_functions(lzt::zeCommandBundle &, bool, ze_kernel_handle_t,
+                   ze_kernel_handle_t, void *, uint16_t, uint64_t *, uint64_t *,
+                   uint64_t *, uint64_t *);
 
 void thread_kernel_create_destroy(ze_module_handle_t module_handle,
-                                  bool is_immediate) {
+                                  int thread_id, bool is_immediate) {
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
   ze_kernel_flags_t flag = 0;
@@ -42,92 +39,74 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle,
   ze_kernel_handle_t test_function =
       lzt::create_function(module_handle, flag, "test_device_memory");
 
-  // create pattern buffer on which device  will perform writes using the
+  // Create pattern buffer on which device will perform writes using the
   // compute kernel, create found and expected/gold buffers which are used to
   // validate the data written by device
-  uint64_t *gpu_pattern_buffer;
-  gpu_pattern_buffer = (uint64_t *)level_zero_tests::allocate_shared_memory(
-      pattern_memory_size, 8);
-  uint64_t *gpu_expected_output_buffer;
-  gpu_expected_output_buffer =
-      (uint64_t *)level_zero_tests::allocate_device_memory(output_size_, 8);
-  uint64_t *gpu_found_output_buffer;
-  gpu_found_output_buffer =
-      (uint64_t *)level_zero_tests::allocate_device_memory(output_size_, 8);
-  uint64_t *host_expected_output_buffer = new uint64_t[output_count_];
-  uint64_t *host_found_output_buffer = new uint64_t[output_size_];
+  auto gpu_pattern_buffer =
+      (uint64_t *)lzt::allocate_shared_memory(pattern_memory_size, 8);
+  auto gpu_expected_output_buffer =
+      (uint64_t *)lzt::allocate_device_memory(output_size, 8);
+  auto gpu_found_output_buffer =
+      (uint64_t *)lzt::allocate_device_memory(output_size, 8);
+  auto host_expected_output_buffer = new uint64_t[output_count]();
+  auto host_found_output_buffer = new uint64_t[output_count]();
 
-  for (uint32_t i = 0; i < num_iterations; i++) {
+  for (int i = 0; i < num_iterations; i++) {
     std::fill(host_expected_output_buffer,
-              host_expected_output_buffer + output_count_, 0);
-    std::fill(host_found_output_buffer,
-              host_found_output_buffer + output_count_, 0);
+              host_expected_output_buffer + output_count, 0);
+    std::fill(host_found_output_buffer, host_found_output_buffer + output_count,
+              0);
     // Access to pattern buffer from host.
-    std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count,
-              0x0);
+    std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count, 0);
     uint16_t pattern_base = std::rand() % 0xFFFF;
-    uint16_t pattern_base_1 = std::rand() % 0xFFFF;
     run_functions(cmd_bundle, is_immediate, fill_function, test_function,
-                  gpu_pattern_buffer, pattern_memory_count, pattern_base,
-                  host_expected_output_buffer, gpu_expected_output_buffer,
-                  host_found_output_buffer, gpu_found_output_buffer,
-                  output_count_);
+                  gpu_pattern_buffer, pattern_base, host_expected_output_buffer,
+                  gpu_expected_output_buffer, host_found_output_buffer,
+                  gpu_found_output_buffer);
 
-    bool memory_test_failure = false;
-    for (uint32_t i = 0; i < output_count_; i++) {
-      if (host_expected_output_buffer[i] || host_found_output_buffer[i]) {
-        LOG_DEBUG << "Index of difference " << i << " found "
-                  << host_found_output_buffer[i] << " expected "
-                  << host_expected_output_buffer[i];
-        memory_test_failure = true;
+    for (uint32_t j = 0; j < output_count; j++) {
+      if (host_expected_output_buffer[j] || host_found_output_buffer[j]) {
+        FAIL() << "Test buffer mismatch on thread " << thread_id
+               << " iteration " << i << ". Index = " << j
+               << ", found = " << host_found_output_buffer[j]
+               << ", expected = " << host_expected_output_buffer[j]
+               << ", real = " << ((j << sizeof(uint16_t) * 8) + pattern_base);
         break;
       }
     }
-
-    EXPECT_EQ(false, memory_test_failure);
 
     // Access to pattern buffer from host
-    bool host_test_failure = false;
-    for (uint32_t i = 0; i < pattern_memory_count; i++) {
-      if (gpu_pattern_buffer[i] !=
-          ((i << (sizeof(uint16_t) * 8)) + pattern_base)) {
-        LOG_DEBUG << "Index of difference " << i << " found "
-                  << gpu_pattern_buffer[i] << " expected "
-                  << ((i << (sizeof(uint16_t) * 8)) + pattern_base);
-        host_test_failure = true;
+    for (uint32_t j = 0; j < pattern_memory_count; j++) {
+      if (gpu_pattern_buffer[j] !=
+          ((j << (sizeof(uint16_t) * 8)) + pattern_base)) {
+        FAIL() << "GPU buffer mismatch on thread " << thread_id << " iteration "
+               << i << ". Index = " << j
+               << ", buffer = " << gpu_pattern_buffer[j]
+               << ", real = " << ((j << (sizeof(uint16_t) * 8)) + pattern_base);
         break;
       }
     }
-
-    EXPECT_EQ(false, host_test_failure);
-  }
-
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
   }
 
   delete[] host_expected_output_buffer;
   delete[] host_found_output_buffer;
-  level_zero_tests::free_memory(gpu_pattern_buffer);
-  level_zero_tests::free_memory(gpu_expected_output_buffer);
-  level_zero_tests::free_memory(gpu_found_output_buffer);
+  lzt::free_memory(gpu_pattern_buffer);
+  lzt::free_memory(gpu_expected_output_buffer);
+  lzt::free_memory(gpu_found_output_buffer);
   lzt::destroy_function(fill_function);
   lzt::destroy_function(test_function);
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-void run_functions(lzt::zeCommandBundle cmd_bundle, bool is_immediate,
+void run_functions(lzt::zeCommandBundle &cmd_bundle, bool is_immediate,
                    ze_kernel_handle_t fill_function,
                    ze_kernel_handle_t test_function, void *pattern_memory,
-                   size_t pattern_memory_count, uint16_t sub_pattern,
-                   uint64_t *host_expected_output_buffer,
+                   uint16_t pattern_base, uint64_t *host_expected_output_buffer,
                    uint64_t *gpu_expected_output_buffer,
                    uint64_t *host_found_output_buffer,
-                   uint64_t *gpu_found_output_buffer, size_t output_count) {
+                   uint64_t *gpu_found_output_buffer) {
 
-  // set the thread group size to make sure all the device threads are
+  // Set the thread group size to make sure all the device threads are
   // occupied
   uint32_t groupSizeX, groupSizeY, groupSizeZ;
   size_t groupSize;
@@ -144,31 +123,27 @@ void run_functions(lzt::zeCommandBundle cmd_bundle, bool is_immediate,
   lzt::set_argument_value(fill_function, 0, sizeof(pattern_memory),
                           &pattern_memory);
 
-  lzt::set_argument_value(fill_function, 1, sizeof(pattern_memory_count),
-                          &pattern_memory_count);
-
-  lzt::set_argument_value(fill_function, 2, sizeof(sub_pattern), &sub_pattern);
+  lzt::set_argument_value(fill_function, 1, sizeof(pattern_base),
+                          &pattern_base);
 
   lzt::set_group_size(test_function, groupSizeX, groupSizeY, groupSizeZ);
 
   lzt::set_argument_value(test_function, 0, sizeof(pattern_memory),
                           &pattern_memory);
 
-  lzt::set_argument_value(test_function, 1, sizeof(pattern_memory_count),
-                          &pattern_memory_count);
+  lzt::set_argument_value(test_function, 1, sizeof(pattern_base),
+                          &pattern_base);
 
-  lzt::set_argument_value(test_function, 2, sizeof(sub_pattern), &sub_pattern);
-
-  lzt::set_argument_value(test_function, 3, sizeof(gpu_expected_output_buffer),
+  lzt::set_argument_value(test_function, 2, sizeof(gpu_expected_output_buffer),
                           &gpu_expected_output_buffer);
 
-  lzt::set_argument_value(test_function, 4, sizeof(gpu_found_output_buffer),
+  lzt::set_argument_value(test_function, 3, sizeof(gpu_found_output_buffer),
                           &gpu_found_output_buffer);
 
-  lzt::set_argument_value(test_function, 5, sizeof(output_count),
+  lzt::set_argument_value(test_function, 4, sizeof(output_count),
                           &output_count);
 
-  // if groupSize is greater then memory count, then at least one thread group
+  // If groupSize is greater than memory count, then at least one thread group
   // should be dispatched
   uint32_t threadGroup = pattern_memory_count / groupSize > 1
                              ? pattern_memory_count / groupSize
@@ -212,8 +187,7 @@ void run_functions(lzt::zeCommandBundle cmd_bundle, bool is_immediate,
 }
 
 void thread_module_create_destroy() {
-  for (uint32_t i = 0; i < num_iterations; i++) {
-
+  for (int i = 0; i < num_iterations; i++) {
     auto driver = lzt::get_default_driver();
     auto device = lzt::get_default_device(driver);
     ze_module_handle_t module_handle =
@@ -230,7 +204,7 @@ TEST(
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
-  for (uint32_t i = 0; i < num_threads; i++) {
+  for (int i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_module_create_destroy);
   }
 
@@ -249,9 +223,9 @@ TEST(zeKernelSubmissionMultithreadTest,
   ze_module_handle_t module_handle =
       lzt::create_module(device, "test_fill_device_memory.spv");
 
-  for (uint32_t i = 0; i < num_threads; i++) {
+  for (int i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
-                                               module_handle, false);
+                                               module_handle, i, false);
   }
 
   for (int i = 0; i < num_threads; i++) {
@@ -272,9 +246,9 @@ TEST(
   ze_module_handle_t module_handle =
       lzt::create_module(device, "test_fill_device_memory.spv");
 
-  for (uint32_t i = 0; i < num_threads; i++) {
+  for (int i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
-                                               module_handle, true);
+                                               module_handle, i, true);
   }
 
   for (int i = 0; i < num_threads; i++) {
