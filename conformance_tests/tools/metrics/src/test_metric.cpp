@@ -71,7 +71,7 @@ TEST_F(
     zet_metric_global_timestamps_resolution_exp_t metricsTimestampProperties =
         {};
     metricsTimestampProperties.stype =
-        ZET_STRUCTURE_TYPE_GLOBAL_METRICS_TIMESTAMPS_EXP_PROPERTIES;
+        ZET_STRUCTURE_TYPE_METRIC_GLOBAL_TIMESTAMPS_RESOLUTION_EXP;
     metricsTimestampProperties.pNext = nullptr;
     metricGroupProp.pNext = &metricsTimestampProperties;
 
