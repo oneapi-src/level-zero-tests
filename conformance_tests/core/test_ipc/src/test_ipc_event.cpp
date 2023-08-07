@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -62,23 +62,27 @@ static void parent_host_signals(ze_event_handle_t hEvent) {
 }
 
 static void parent_device_signals(ze_event_handle_t hEvent,
-                                  ze_context_handle_t context) {
+                                  ze_context_handle_t context,
+                                  bool isImmediate) {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
-  auto cmdlist = lzt::create_command_list(context, device);
-  auto cmdqueue = lzt::create_command_queue(context, device);
-  lzt::append_signal_event(cmdlist, hEvent);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  auto cmdbundle = lzt::create_command_bundle(context, device, isImmediate);
+  lzt::append_signal_event(cmdbundle.list, hEvent);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(cmdbundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmdbundle.list);
+    lzt::execute_command_lists(cmdbundle.queue, 1, &cmdbundle.list, nullptr);
+    lzt::synchronize(cmdbundle.queue, UINT64_MAX);
+  }
 
   // cleanup
-  lzt::destroy_command_list(cmdlist);
-  lzt::destroy_command_queue(cmdqueue);
+  lzt::destroy_command_bundle(cmdbundle);
 }
 
 static void run_ipc_event_test(parent_test_t parent_test,
-                               child_test_t child_test, bool multi_device) {
+                               child_test_t child_test, bool multi_device,
+                               bool isImmediate) {
 #ifdef __linux__
   bipc::shared_memory_object::remove("ipc_event_test");
   // launch child
@@ -89,7 +93,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
   }
-  LOG_INFO << "IPC Parent zeinit";
+  LOG_INFO << "IPC Parent zeInit";
   level_zero_tests::print_platform_overview();
 
   if (multi_device && lzt::get_ze_device_count() < 2) {
@@ -117,7 +121,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
     hEvent = lzt::create_event(ep, defaultEventDesc);
   }
   shared_data_t test_data = {parent_test, child_test, multi_device,
-                             hIpcEventPool};
+                             isImmediate};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));
@@ -131,7 +135,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
     parent_host_signals(hEvent);
     break;
   case PARENT_TEST_DEVICE_SIGNALS:
-    parent_device_signals(hEvent, context);
+    parent_device_signals(hEvent, context, isImmediate);
     break;
   default:
     FAIL() << "Fatal test error";
@@ -151,32 +155,63 @@ static void run_ipc_event_test(parent_test_t parent_test,
 TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromHostPerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_HOST_READS, false);
-}
-
-TEST(
-    zeIPCEventTests,
-    GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromHostPerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false);
-}
-
-TEST(
-    zeIPCEventTests,
-    GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS,
+  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_HOST_READS, false,
                      false);
 }
 
 TEST(
     zeIPCEventTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromHostPerspective) {
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false,
+                     false);
+}
+
+TEST(
+    zeIPCEventTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromHostPerspective) {
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false,
+                     true);
+}
+
+TEST(
+    zeIPCEventTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromDevicePerspective) {
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false,
+                     false);
+}
+
+TEST(
+    zeIPCEventTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromDevicePerspective) {
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false,
+                     true);
+}
+
+TEST(
+    zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false);
+  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false,
+                     false);
+}
+
+TEST(
+    zeIPCEventTests,
+    GivenTwoProcessesWhenEventSignaledByHostInParentOnImmediateCmdListThenEventSetinChildFromDevicePerspective) {
+  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false,
+                     true);
 }
 
 TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromSecondDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS,
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS, true,
+                     false);
+}
+
+TEST(
+    zeIPCEventMultipleDeviceTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromSecondDevicePerspective) {
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS, true,
                      true);
 }
 
@@ -184,23 +219,46 @@ TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromMultipleDevicePerspective) {
   run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
-                     true);
+                     true, false);
+}
+
+TEST(
+    zeIPCEventMultipleDeviceTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromMultipleDevicePerspective) {
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
+                     true, true);
 }
 
 TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromDevicePerspectiveForSingleThenMultipleDevice) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS,
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false,
                      false);
   run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
+                     true, false);
+}
+
+TEST(
+    zeIPCEventMultipleDeviceTests,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromDevicePerspectiveForSingleThenMultipleDevice) {
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false,
                      true);
+  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
+                     true, true);
 }
 
 TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromMultipleDevicePerspective) {
   run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
-                     true);
+                     true, false);
+}
+
+TEST(
+    zeIPCEventMultipleDeviceTests,
+    GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildOnImmediateCmdListFromMultipleDevicePerspective) {
+  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
+                     true, true);
 }
 
 } // namespace

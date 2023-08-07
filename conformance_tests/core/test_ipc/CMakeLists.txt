@@ -1,4 +1,4 @@
-# Copyright (C) 2019 - 2021 Intel Corporation
+# Copyright (C) 2019 - 2023 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 set(ipc_libraries
@@ -8,7 +8,7 @@ set(ipc_libraries
 )
 
 if(UNIX)
-    list(APPEND ipc_event_libraries rt)
+    list(APPEND ipc_rt_libraries rt)
 endif()
 
 add_lzt_test(
@@ -21,7 +21,7 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::net
     ${ipc_libraries}
-    ${ipc_event_libraries}
+    ${ipc_rt_libraries}
 )
 
 add_lzt_test(
@@ -32,6 +32,7 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::net
     ${ipc_libraries}
+    ${ipc_rt_libraries}
 )
 
 add_lzt_test(
@@ -72,7 +73,31 @@ add_lzt_test_executable(
     src/test_ipc_event_helper.cpp
   LINK_LIBRARIES
     ${ipc_libraries}
-    ${ipc_event_libraries}
+    ${ipc_rt_libraries}
+    level_zero_tests::net
+)
+
+add_lzt_test_executable(
+  NAME test_ipc_memory_helper
+  GROUP "/conformance_tests/core"
+  PREFIX "ipc"  # install to prefix so it's not confused for a test
+  SOURCES
+    src/test_ipc_memory_helper.cpp
+  LINK_LIBRARIES
+    ${ipc_libraries}
+    ${ipc_rt_libraries}
+    level_zero_tests::net
+)
+
+add_lzt_test_executable(
+  NAME test_ipc_put_handle_helper
+  GROUP "/conformance_tests/core"
+  PREFIX "ipc"  # install to prefix so it's not confused for a test
+  SOURCES
+    src/test_ipc_put_handle_helper.cpp
+  LINK_LIBRARIES
+    ${ipc_libraries}
+    ${ipc_rt_libraries}
     level_zero_tests::net
 )
 
@@ -84,4 +109,5 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::net
     ${ipc_libraries}
+    ${ipc_rt_libraries}
 )

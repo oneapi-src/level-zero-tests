@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,7 +18,6 @@
 
 #include <level_zero/ze_api.h>
 
-namespace lzt = level_zero_tests;
 namespace bipc = boost::interprocess;
 
 #ifdef __linux__
@@ -46,8 +45,8 @@ static void child_host_reads(ze_event_pool_handle_t hEventPool) {
 }
 
 static void child_device_reads(ze_event_pool_handle_t hEventPool,
-                               bool device_events,
-                               ze_context_handle_t context) {
+                               bool device_events, ze_context_handle_t context,
+                               bool isImmediate) {
   ze_event_handle_t hEvent;
   if (device_events) {
     zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent);
@@ -56,76 +55,88 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool,
   }
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
-  auto cmdlist = lzt::create_command_list(context, device);
-  auto cmdqueue = lzt::create_command_queue(context, device);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent);
-  lzt::close_command_list(cmdlist);
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  auto cmdbundle = lzt::create_command_bundle(context, device, isImmediate);
+  lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(cmdbundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmdbundle.list);
+    lzt::execute_command_lists(cmdbundle.queue, 1, &cmdbundle.list, nullptr);
+    lzt::synchronize(cmdbundle.queue, UINT64_MAX);
+  }
 
   // cleanup
-  lzt::destroy_command_list(cmdlist);
-  lzt::destroy_command_queue(cmdqueue);
+  lzt::destroy_command_bundle(cmdbundle);
   zeEventDestroy(hEvent);
 }
 
 static void child_device2_reads(ze_event_pool_handle_t hEventPool,
-                                ze_context_handle_t context) {
+                                ze_context_handle_t context, bool isImmediate) {
   ze_event_handle_t hEvent;
   zeEventCreate(hEventPool, &defaultEventDesc, &hEvent);
   auto devices = lzt::get_ze_devices();
-  auto cmdlist = lzt::create_command_list(context, devices[1]);
-  auto cmdqueue = lzt::create_command_queue(context, devices[1]);
-  lzt::append_wait_on_events(cmdlist, 1, &hEvent);
-  lzt::close_command_list(cmdlist);
+  auto cmdbundle = lzt::create_command_bundle(context, devices[1], isImmediate);
+  lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
   printf("execute second device\n");
-  lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
-  lzt::synchronize(cmdqueue, UINT64_MAX);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(cmdbundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmdbundle.list);
+    lzt::execute_command_lists(cmdbundle.queue, 1, &cmdbundle.list, nullptr);
+    lzt::synchronize(cmdbundle.queue, UINT64_MAX);
+  }
 
   // cleanup
-  lzt::reset_command_list(cmdlist);
-  lzt::destroy_command_list(cmdlist);
-  lzt::destroy_command_queue(cmdqueue);
+  lzt::reset_command_list(cmdbundle.list);
+  lzt::destroy_command_bundle(cmdbundle);
   zeEventDestroy(hEvent);
 }
+
 static void child_multi_device_reads(ze_event_pool_handle_t hEventPool,
-                                     ze_context_handle_t context) {
+                                     ze_context_handle_t context,
+                                     bool isImmediate) {
   ze_event_handle_t hEvent;
   zeEventCreate(hEventPool, &defaultEventDesc, &hEvent);
   auto devices = lzt::get_ze_devices();
-  auto cmdlist1 = lzt::create_command_list(context, devices[0]);
-  auto cmdqueue1 = lzt::create_command_queue(context, devices[0]);
-  lzt::append_wait_on_events(cmdlist1, 1, &hEvent);
-  lzt::close_command_list(cmdlist1);
+  auto cmdbundle1 =
+      lzt::create_command_bundle(context, devices[0], isImmediate);
+  lzt::append_wait_on_events(cmdbundle1.list, 1, &hEvent);
   printf("execute device[0]\n");
-  lzt::execute_command_lists(cmdqueue1, 1, &cmdlist1, nullptr);
-  lzt::synchronize(cmdqueue1, UINT64_MAX);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(cmdbundle1.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmdbundle1.list);
+    lzt::execute_command_lists(cmdbundle1.queue, 1, &cmdbundle1.list, nullptr);
+    lzt::synchronize(cmdbundle1.queue, UINT64_MAX);
+  }
 
-  auto cmdlist2 = lzt::create_command_list(context, devices[1]);
-  auto cmdqueue2 = lzt::create_command_queue(context, devices[1]);
-  lzt::append_wait_on_events(cmdlist2, 1, &hEvent);
-  lzt::close_command_list(cmdlist2);
+  auto cmdbundle2 =
+      lzt::create_command_bundle(context, devices[1], isImmediate);
+  lzt::append_wait_on_events(cmdbundle2.list, 1, &hEvent);
   printf("execute device[1]\n");
-  lzt::execute_command_lists(cmdqueue2, 1, &cmdlist2, nullptr);
-  lzt::synchronize(cmdqueue2, UINT64_MAX);
+  if (isImmediate) {
+    lzt::synchronize_command_list_host(cmdbundle2.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmdbundle2.list);
+    lzt::execute_command_lists(cmdbundle2.queue, 1, &cmdbundle2.list, nullptr);
+    lzt::synchronize(cmdbundle2.queue, UINT64_MAX);
+  }
   // cleanup
-  lzt::reset_command_list(cmdlist1);
-  lzt::reset_command_list(cmdlist2);
-  lzt::destroy_command_list(cmdlist1);
-  lzt::destroy_command_queue(cmdqueue1);
-  lzt::destroy_command_list(cmdlist2);
-  lzt::destroy_command_queue(cmdqueue2);
+  lzt::reset_command_list(cmdbundle1.list);
+  lzt::reset_command_list(cmdbundle2.list);
+  lzt::destroy_command_bundle(cmdbundle1);
+  lzt::destroy_command_bundle(cmdbundle2);
   zeEventDestroy(hEvent);
 }
 
 int main() {
-
-  ze_result_t result;
-  if (zeInit(0) != ZE_RESULT_SUCCESS) {
+  ze_result_t result = zeInit(0);
+  if (result != ZE_RESULT_SUCCESS) {
     LOG_DEBUG << "Child exit due to zeInit failure";
     exit(1);
   }
-  LOG_INFO << "IPC Child zeinit";
+  LOG_INFO << "IPC Child zeInit";
+
   shared_data_t shared_data;
   int count = 0;
   int retries = 1000;
@@ -153,6 +164,7 @@ int main() {
   memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));
 
+  const bool isImmediate = shared_data.is_immediate;
   ze_event_pool_handle_t hEventPool = 0;
   LOG_INFO << "IPC Child open event handle";
   lzt::open_ipc_event_handle(context, hIpcEventPool, &hEventPool);
@@ -174,13 +186,13 @@ int main() {
     child_host_reads(hEventPool);
     break;
   case CHILD_TEST_DEVICE_READS:
-    child_device_reads(hEventPool, device_events, context);
+    child_device_reads(hEventPool, device_events, context, isImmediate);
     break;
   case CHILD_TEST_DEVICE2_READS:
-    child_device2_reads(hEventPool, context);
+    child_device2_reads(hEventPool, context, isImmediate);
     break;
   case CHILD_TEST_MULTI_DEVICE_READS:
-    child_multi_device_reads(hEventPool, context);
+    child_multi_device_reads(hEventPool, context, isImmediate);
     break;
   default:
     LOG_DEBUG << "Unrecognized test case";
@@ -195,6 +207,6 @@ int main() {
   }
   exit(0);
 }
-#else // windows
+#else // Windows
 int main() { exit(0); }
 #endif

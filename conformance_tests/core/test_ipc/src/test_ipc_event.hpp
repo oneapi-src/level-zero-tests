@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -25,7 +25,7 @@ typedef struct {
   parent_test_t parent_type;
   child_test_t child_type;
   bool multi_device;
-  ze_ipc_event_pool_handle_t handle;
+  bool is_immediate;
 } shared_data_t;
 
 #endif
