@@ -121,6 +121,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeIpcMemHandleCloseTests_GivenValidPointerToDeviceMemoryAllocationBiasCachedWhenClosingIpcHandleThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverMemFreeTests_GivenValidSharedMemAllocationWhenFreeingSharedMemoryThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverMemFreeTests_GivenValidHostMemAllocationWhenFreeingHostMemoryThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDriverGetLastErrorDescription_GivenValidDriverWhenRetreivingErrorDescriptionThenValidStringIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverAllocSharedMemTestVarySizeAndAlignment_zeDriverAllocSharedMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingDeviceMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverAllocHostMemTestVarySizeAndAlignment_zeDriverAllocHostMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingHostMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverAllocDeviceMemTestVarySizeAndAlignment_zeDriverAllocDeviceMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingDeviceMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \

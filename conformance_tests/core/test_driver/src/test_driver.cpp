@@ -57,4 +57,14 @@ TEST(zeDriverGetIPCPropertiesTests,
   }
 }
 
+TEST(zeDriverGetLastErrorDescription,
+     GivenValidDriverWhenRetreivingErrorDescriptionThenValidStringIsReturned) {
+  lzt::ze_init();
+
+  auto drivers = lzt::get_all_driver_handles();
+  for (auto driver : drivers) {
+    lzt::get_last_error_description(driver);
+  }
+}
+
 } // namespace

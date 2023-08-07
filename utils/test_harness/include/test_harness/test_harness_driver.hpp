@@ -25,7 +25,7 @@ std::vector<ze_driver_extension_properties_t>
 get_extension_properties(ze_driver_handle_t driver);
 bool check_if_extension_supported(ze_driver_handle_t driver,
                                   const char *check_extension_name);
-
+const char *get_last_error_description(ze_driver_handle_t driver);
 }; // namespace level_zero_tests
 
 #endif

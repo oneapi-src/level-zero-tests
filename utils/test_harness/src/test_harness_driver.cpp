@@ -94,4 +94,11 @@ bool check_if_extension_supported(ze_driver_handle_t driver,
   return false;
 }
 
+const char *get_last_error_description(ze_driver_handle_t driver) {
+  const char *pStr = nullptr;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetLastErrorDescription(driver, &pStr));
+  EXPECT_NE(nullptr, pStr);
+  return pStr;
+}
+
 }; // namespace level_zero_tests
