@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -12,10 +12,13 @@
 #include <vector>
 
 #include <level_zero/zet_api.h>
+#include <level_zero/zes_api.h>
 
 #include "utils/utils_string.hpp"
 
 namespace level_zero_tests {
+
+zes_driver_handle_t get_default_zes_driver();
 
 ze_context_handle_t get_default_context();
 ze_device_handle_t get_default_device(ze_driver_handle_t driver);

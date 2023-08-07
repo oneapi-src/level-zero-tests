@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -17,10 +17,16 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class TempModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define TEMPERATURE_TEST TempModuleZesTest
+#else // USE_ZESINIT
 class TempModuleTest : public lzt::SysmanCtsClass {};
+#define TEMPERATURE_TEST TempModuleTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    TempModuleTest,
+    TEMPERATURE_TEST,
     GivenComponentCountZeroWhenRetrievingTempHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -33,7 +39,7 @@ TEST_F(
 }
 
 TEST_F(
-    TempModuleTest,
+    TEMPERATURE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanTempThenNotNullTempHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -50,7 +56,7 @@ TEST_F(
   }
 }
 TEST_F(
-    TempModuleTest,
+    TEMPERATURE_TEST,
     GivenInvalidComponentCountWhenRetrievingTempHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -67,7 +73,7 @@ TEST_F(
 }
 
 TEST_F(
-    TempModuleTest,
+    TEMPERATURE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarTempHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -90,7 +96,7 @@ TEST_F(
   }
 }
 TEST_F(
-    TempModuleTest,
+    TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -113,7 +119,7 @@ TEST_F(
   }
 }
 TEST_F(
-    TempModuleTest,
+    TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -142,7 +148,7 @@ TEST_F(
 }
 
 TEST_F(
-    TempModuleTest,
+    TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempConfigurationThenValidTempConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -171,7 +177,7 @@ TEST_F(
   }
 }
 TEST_F(
-    TempModuleTest,
+    TEMPERATURE_TEST,
     GivenValidTempHandleWhenSettingTempConfigurationThenExpectzesSysmanTemperatureSetConfigFollowedByzesSysmanTemperatureGetConfigToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -234,7 +240,7 @@ TEST_F(
   }
 }
 
-TEST_F(TempModuleTest,
+TEST_F(TEMPERATURE_TEST,
        GivenValidTempHandleWhenRetrievingTempStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -10,6 +10,7 @@
 #define level_zero_tests_ZE_TEST_HARNESS_DEVICE_HPP
 
 #include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
 #include <mutex>
 
@@ -32,6 +33,7 @@ private:
 ze_device_handle_t get_root_device(ze_device_handle_t device);
 uint32_t get_ze_device_count();
 uint32_t get_ze_device_count(ze_driver_handle_t driver);
+std::vector<zes_device_handle_t> get_zes_devices();
 std::vector<ze_device_handle_t> get_ze_devices();
 std::vector<ze_device_handle_t> get_ze_devices(uint32_t count);
 std::vector<ze_device_handle_t> get_ze_devices(ze_driver_handle_t driver);

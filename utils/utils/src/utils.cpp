@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -14,6 +14,66 @@
 #include <fstream>
 
 namespace level_zero_tests {
+
+uint32_t get_zes_driver_handle_count() {
+  uint32_t count = 0;
+  ze_result_t result = zesDriverGet(&count, nullptr);
+
+  if (result) {
+    throw std::runtime_error("zesDriverGet failed: " + to_string(result));
+  }
+  return count;
+}
+
+std::vector<zes_driver_handle_t> get_all_zes_driver_handles() {
+  ze_result_t result = ZE_RESULT_SUCCESS;
+  uint32_t driver_handle_count = get_zes_driver_handle_count();
+
+  std::vector<zes_driver_handle_t> driver_handles(driver_handle_count);
+
+  result = zesDriverGet(&driver_handle_count, driver_handles.data());
+
+  if (result) {
+    throw std::runtime_error("zesDriverGet failed: " + to_string(result));
+  }
+  return driver_handles;
+}
+
+zes_driver_handle_t get_default_zes_driver() {
+  ze_result_t result = ZE_RESULT_SUCCESS;
+
+  static zes_driver_handle_t driver = nullptr;
+  int default_idx = 0;
+
+  if (driver)
+    return driver;
+
+  char *user_driver_index = getenv("LZT_DEFAULT_DRIVER_IDX");
+  if (user_driver_index != nullptr) {
+    default_idx = std::stoi(user_driver_index);
+  }
+
+  std::vector<zes_driver_handle_t> drivers =
+      level_zero_tests::get_all_zes_driver_handles();
+  if (drivers.size() == 0) {
+    throw std::runtime_error("zesDriverGet failed: " + to_string(result));
+  }
+
+  if (default_idx >= drivers.size()) {
+    LOG_ERROR << "Default Driver index " << default_idx
+              << " invalid on this machine.";
+    throw std::runtime_error("Get Default Driver failed");
+  }
+  driver = drivers[default_idx];
+  if (!driver) {
+    LOG_ERROR << "Invalid Driver handle at index " << default_idx;
+    throw std::runtime_error("Get Default Driver failed");
+  }
+
+  LOG_INFO << "Default Driver retrieved at index " << default_idx;
+
+  return driver;
+}
 
 ze_context_handle_t get_default_context() {
   ze_result_t result = ZE_RESULT_SUCCESS;

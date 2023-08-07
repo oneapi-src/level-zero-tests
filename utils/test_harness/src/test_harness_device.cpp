@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -8,6 +8,7 @@
 
 #include "test_harness/test_harness_device.hpp"
 #include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
 #include "utils/utils.hpp"
 
 namespace lzt = level_zero_tests;
@@ -34,6 +35,42 @@ ze_driver_handle_t zeDevice::get_driver() { return get_instance()->driver_; }
 zeDevice::zeDevice() {
   device_ = nullptr;
   driver_ = nullptr;
+}
+
+uint32_t get_zes_device_count(zes_driver_handle_t driver) {
+  uint32_t count = 0;
+  auto driver_initial = driver;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceGet(driver, &count, nullptr));
+  EXPECT_EQ(driver, driver_initial);
+
+  return count;
+}
+
+uint32_t get_zes_device_count() {
+  return get_zes_device_count(lzt::get_default_zes_driver());
+}
+
+std::vector<zes_device_handle_t> get_zes_devices(uint32_t count,
+                                                 zes_driver_handle_t driver) {
+  uint32_t count_out = count;
+  std::vector<zes_device_handle_t> devices(count);
+
+  auto driver_initial = driver;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceGet(driver, &count_out, devices.data()));
+  EXPECT_EQ(driver, driver_initial);
+  if (count == get_zes_device_count())
+    EXPECT_EQ(count_out, count);
+
+  return devices;
+}
+
+std::vector<zes_device_handle_t> get_zes_devices(uint32_t count) {
+  return get_zes_devices(count, lzt::get_default_zes_driver());
+}
+
+std::vector<zes_device_handle_t> get_zes_devices() {
+  return get_zes_devices(get_zes_device_count());
 }
 
 uint32_t get_ze_device_count() {

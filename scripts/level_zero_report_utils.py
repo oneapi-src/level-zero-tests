@@ -207,6 +207,8 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "SysMan Engines"
     elif test_binary == "test_sysman_temperature":
         test_feature = "SysMan Temperature"
+    elif test_binary == "test_sysman_temperature_zesinit":
+        test_feature = "SysMan Temperature"
     elif test_binary == "test_sysman_psu":
         test_feature = "SysMan Power Supplies"
     elif test_binary == "test_sysman_fan":

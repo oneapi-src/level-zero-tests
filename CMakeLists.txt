@@ -1,4 +1,4 @@
-# Copyright (C) 2019 Intel Corporation
+# Copyright (C) 2019-2023 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
@@ -132,7 +132,7 @@ endfunction()
 function(add_lzt_test_executable)
     set(options "")
     set(oneValueArgs NAME PREFIX GROUP EXTENDED)
-    set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS KERNELSCUSTOM MEDIA)
+    set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS KERNELSCUSTOM MEDIA DEFINES)
     cmake_parse_arguments(ADD_LZT_TEST_EXECUTABLE
       "${options}" "${oneValueArgs}" "${multiValueArgs}"
       ${ARGN}
@@ -198,6 +198,11 @@ function(add_lzt_test_executable)
     endif()
 
     add_executable(${ADD_LZT_TEST_EXECUTABLE_NAME} ${ADD_LZT_TEST_EXECUTABLE_SOURCES})
+
+    target_compile_definitions(${ADD_LZT_TEST_EXECUTABLE_NAME}
+      PRIVATE
+      ${ADD_LZT_TEST_EXECUTABLE_DEFINES}
+    )
 
     target_link_libraries(${ADD_LZT_TEST_EXECUTABLE_NAME}
       PRIVATE
