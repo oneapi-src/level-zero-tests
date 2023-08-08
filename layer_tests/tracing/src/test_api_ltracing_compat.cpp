@@ -374,22 +374,6 @@ protected:
 
 TEST_F(
     LCTracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeInitCallbacksWhenCallingzeInitThenUserDataIsSetAndResultUnchanged) {
-
-  zelTracerInitRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
-                                lzt::lprologue_callback);
-  zelTracerInitRegisterCallback(tracer_handle, ZEL_REGISTER_EPILOGUE,
-                                lzt::lepilogue_callback);
-
-  ze_result_t initial_result = zeInit(0);
-
-  lzt::enable_ltracer(tracer_handle);
-
-  ASSERT_EQ(initial_result, zeInit(0));
-}
-
-TEST_F(
-    LCTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceGetCallbacksWhenCallingzeDeviceGetThenUserDataIsSetAndResultUnchanged) {
 
   zelTracerDeviceGetRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,

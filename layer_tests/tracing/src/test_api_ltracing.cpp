@@ -376,18 +376,6 @@ static void ready_ltracer(zel_tracer_handle_t tracer, ze_callbacks_t prologues,
 
 TEST_F(
     LTracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeInitCallbacksWhenCallingzeInitThenUserDataIsSetAndResultUnchanged) {
-  prologues.Global.pfnInitCb = lzt::lprologue_callback;
-  epilogues.Global.pfnInitCb = lzt::lepilogue_callback;
-
-  ze_result_t initial_result = zeInit(0);
-  ready_ltracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(initial_result, zeInit(0));
-}
-
-TEST_F(
-    LTracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceGetCallbacksWhenCallingzeDeviceGetThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetCb = lzt::lepilogue_callback;

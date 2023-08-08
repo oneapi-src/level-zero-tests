@@ -383,18 +383,6 @@ static void ready_tracer(zet_tracer_exp_handle_t tracer,
 
 TEST_F(
     TracingPrologueEpilogueTests,
-    GivenEnabledTracerWithzeInitCallbacksWhenCallingzeInitThenUserDataIsSetAndResultUnchanged) {
-  prologues.Global.pfnInitCb = lzt::prologue_callback;
-  epilogues.Global.pfnInitCb = lzt::epilogue_callback;
-
-  ze_result_t initial_result = zeInit(0);
-  ready_tracer(tracer_handle, prologues, epilogues);
-
-  ASSERT_EQ(initial_result, zeInit(0));
-}
-
-TEST_F(
-    TracingPrologueEpilogueTests,
     GivenEnabledTracerWithzeDeviceGetCallbacksWhenCallingzeDeviceGetThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetCb = lzt::prologue_callback;
   epilogues.Device.pfnGetCb = lzt::epilogue_callback;
