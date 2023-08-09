@@ -263,7 +263,8 @@ TEST(
 
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
-  ze_module_handle_t module = lzt::create_module(device, "residency_tests.spv");
+  ze_module_handle_t module =
+      lzt::create_module(device, "residency_tests_multi_thread.spv");
 
   for (int i = 0; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
@@ -287,7 +288,8 @@ TEST(
 
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
-  ze_module_handle_t module = lzt::create_module(device, "residency_tests.spv");
+  ze_module_handle_t module =
+      lzt::create_module(device, "residency_tests_multi_thread.spv");
 
   for (int i = 0; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
@@ -311,7 +313,8 @@ TEST(
 
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
-  ze_module_handle_t module = lzt::create_module(device, "residency_tests.spv");
+  ze_module_handle_t module =
+      lzt::create_module(device, "residency_tests_multi_thread.spv");
 
   for (int i = 0; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(

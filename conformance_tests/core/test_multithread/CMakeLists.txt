@@ -20,5 +20,5 @@ add_lzt_test(
     level_zero_tests::logging
     level_zero_tests::utils
   KERNELS
-    test_fill_device_memory
-    residency_tests)
+    test_fill_device_memory_multi_thread
+    residency_tests_multi_thread)

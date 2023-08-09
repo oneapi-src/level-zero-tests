@@ -32,5 +32,5 @@ add_lzt_test(
       level_zero_tests::utils
       level_zero_tests::utils
     KERNELS
-      test_fill_device_memory
+      test_fill_device_memory_usm
       test_usm_atomic)

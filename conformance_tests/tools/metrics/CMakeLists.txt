@@ -12,7 +12,7 @@ add_lzt_test(
     level_zero_tests::logging
     level_zero_tests::utils
   KERNELS
-    ze_matrix_multiplication
+    ze_matrix_multiplication_metrics
 )
 
 add_lzt_test_executable(

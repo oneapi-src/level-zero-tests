@@ -191,7 +191,7 @@ void thread_module_create_destroy() {
     auto driver = lzt::get_default_driver();
     auto device = lzt::get_default_device(driver);
     ze_module_handle_t module_handle =
-        lzt::create_module(device, "test_fill_device_memory.spv");
+        lzt::create_module(device, "test_fill_device_memory_multi_thread.spv");
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
   }
 }
@@ -221,7 +221,7 @@ TEST(zeKernelSubmissionMultithreadTest,
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   ze_module_handle_t module_handle =
-      lzt::create_module(device, "test_fill_device_memory.spv");
+      lzt::create_module(device, "test_fill_device_memory_multi_thread.spv");
 
   for (int i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
@@ -244,7 +244,7 @@ TEST(
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   ze_module_handle_t module_handle =
-      lzt::create_module(device, "test_fill_device_memory.spv");
+      lzt::create_module(device, "test_fill_device_memory_multi_thread.spv");
 
   for (int i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,

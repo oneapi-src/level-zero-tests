@@ -36,7 +36,7 @@ TEST(
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
             zeModuleCreate(lzt::get_default_context(), device, nullptr, nullptr,
                            nullptr)); // Invalid module description
-  const std::string filename = "ze_matrix_multiplication.spv";
+  const std::string filename = "ze_matrix_multiplication_errors.spv";
   ze_module_desc_t module_description = {};
   module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   const std::vector<uint8_t> binary_file =
@@ -57,7 +57,7 @@ TEST(
     GivenInvalidFileFormatwhileCallingzeModuleCreateThenInvalidEnumerationIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_module_handle_t module;
-  const std::string filename = "ze_matrix_multiplication.spv";
+  const std::string filename = "ze_matrix_multiplication_errors.spv";
   const std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file(filename);
   ze_module_desc_t module_description = {};

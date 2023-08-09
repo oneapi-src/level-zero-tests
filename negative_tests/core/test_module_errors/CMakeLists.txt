@@ -12,5 +12,5 @@ add_lzt_test(
     level_zero_tests::utils
   KERNELS
     local_memory_argument_kernel
-    ze_matrix_multiplication
+    ze_matrix_multiplication_errors
 )

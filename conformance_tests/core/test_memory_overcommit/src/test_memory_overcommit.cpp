@@ -487,8 +487,8 @@ protected:
     LOG_INFO << "PREPARE TO RUN END";
 
     LOG_INFO << "call create module";
-    ze_module_handle_t module_handle =
-        create_module(context, device_handle, "test_fill_device_memory.spv");
+    ze_module_handle_t module_handle = create_module(
+        context, device_handle, "test_fill_device_memory_overcommit.spv");
 
     LOG_INFO << "call run_functions";
     run_functions(device_handle, module_handle, gpu_pattern_buffer,
