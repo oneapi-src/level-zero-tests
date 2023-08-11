@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -248,28 +248,37 @@ void destroy_function(ze_kernel_handle_t kernel) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(kernel));
 }
 
+ze_kernel_properties_t get_kernel_properties(ze_kernel_handle_t kernel) {
+  ze_kernel_properties_t properties{};
+  properties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
+  properties.pNext = nullptr;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelGetProperties(kernel, &properties));
+  return properties;
+}
+
 // Currently limited to creating function with 1d group and single argument.
 // Expand as needed.
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
                                  std::string func_name, int group_size,
-                                 void *arg) {
+                                 void *arg, bool is_immediate) {
   std::vector<FunctionArg> args;
   if (arg != nullptr) {
     FunctionArg func_arg{sizeof(arg), &arg};
     args.push_back(func_arg);
   }
-  create_and_execute_function(device, module, func_name, group_size, args);
+  create_and_execute_function(device, module, func_name, group_size, args,
+                              is_immediate);
 }
 
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
                                  std::string func_name, int group_size,
-                                 const std::vector<FunctionArg> &args) {
+                                 const std::vector<FunctionArg> &args,
+                                 bool is_immediate) {
 
   ze_kernel_handle_t function = create_function(module, func_name);
-  ze_command_list_handle_t cmdlist = create_command_list(device);
-  ze_command_queue_handle_t cmdq = create_command_queue(device);
+  zeCommandBundle cmd_bundle = create_command_bundle(device, is_immediate);
   uint32_t group_size_x = group_size;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
@@ -280,6 +289,9 @@ void create_and_execute_function(ze_device_handle_t device,
   EXPECT_EQ(
       ZE_RESULT_SUCCESS,
       zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
+
+  ze_kernel_properties_t function_properties = get_kernel_properties(function);
+  EXPECT_EQ(function_properties.numKernelArgs, args.size());
 
   int i = 0;
   for (auto arg : args) {
@@ -293,22 +305,29 @@ void create_and_execute_function(ze_device_handle_t device,
   thread_group_dimensions.groupCountY = 1;
   thread_group_dimensions.groupCountZ = 1;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
-                                   cmdlist, function, &thread_group_dimensions,
-                                   nullptr, 0, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendLaunchKernel(cmd_bundle.list, function,
+                                            &thread_group_dimensions, nullptr,
+                                            0, nullptr));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(cmdlist, nullptr, 0, nullptr));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmdlist));
+            zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
+  if (is_immediate) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(cmd_bundle.list, UINT64_MAX));
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmd_bundle.list));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueExecuteCommandLists(cmdq, 1, &cmdlist, nullptr));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandQueueExecuteCommandLists(cmd_bundle.queue, 1,
+                                                &cmd_bundle.list, nullptr));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmdq, UINT64_MAX));
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandQueueSynchronize(cmd_bundle.queue, UINT64_MAX));
+  }
 
   destroy_function(function);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(cmdq));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cmdlist));
+  destroy_command_bundle(cmd_bundle);
 }
 
 void kernel_set_indirect_access(ze_kernel_handle_t hKernel,

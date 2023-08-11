@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -42,8 +42,9 @@ const auto sampler_filter_modes = ::testing::Values(
 
 class zeDeviceCreateSamplerTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<
-          ze_sampler_address_mode_t, ze_sampler_filter_mode_t, ze_bool_t>> {};
+      public ::testing::WithParamInterface<
+          std::tuple<ze_sampler_address_mode_t, ze_sampler_filter_mode_t,
+                     ze_bool_t, bool>> {};
 
 TEST_P(zeDeviceCreateSamplerTests,
        GivenSamplerDescriptorWhenCreatingSamplerThenNotNullSamplerIsReturned) {
@@ -70,13 +71,14 @@ TEST_P(zeDeviceCreateSamplerTests,
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
 }
 
-INSTANTIATE_TEST_CASE_P(SamplerCreationCombinations, zeDeviceCreateSamplerTests,
-                        ::testing::Combine(sampler_address_modes,
-                                           sampler_filter_modes,
-                                           ::testing::Values(true, false)));
+INSTANTIATE_TEST_SUITE_P(SamplerCreationCombinations,
+                         zeDeviceCreateSamplerTests,
+                         ::testing::Combine(sampler_address_modes,
+                                            sampler_filter_modes,
+                                            ::testing::Values(true, false),
+                                            ::testing::Values(false)));
 
-TEST(zeSamplerTests,
-     GivenSamplerWhenPassingAsFunctionArgumentThenSuccessIsReturned) {
+void RunGivenSamplerWhenPassingAsFunctionArgumentTest(bool is_immediate) {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
@@ -96,9 +98,20 @@ TEST(zeSamplerTests,
   args.push_back(arg);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name, 1, args);
+                                   module, func_name, 1, args, is_immediate);
   lzt::destroy_module(module);
   lzt::destroy_sampler(sampler);
+}
+
+TEST(zeSamplerTests,
+     GivenSamplerWhenPassingAsFunctionArgumentThenSuccessIsReturned) {
+  RunGivenSamplerWhenPassingAsFunctionArgumentTest(false);
+}
+
+TEST(
+    zeSamplerTests,
+    GivenSamplerWhenPassingAsFunctionArgumentOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenSamplerWhenPassingAsFunctionArgumentTest(true);
 }
 
 static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image,
@@ -149,6 +162,7 @@ TEST_P(
   auto address_mode = std::get<0>(GetParam());
   auto filter_mode = std::get<1>(GetParam());
   auto normalize = std::get<2>(GetParam());
+  auto is_immediate = std::get<3>(GetParam());
 
   auto sampler = lzt::create_sampler(address_mode, filter_mode, normalize);
 
@@ -228,11 +242,12 @@ TEST_P(
   args_inhost.push_back(arg);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name_inhost, 1, args_inhost);
+                                   module, func_name_inhost, 1, args_inhost,
+                                   is_immediate);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name_inkernel, 1,
-                                   args_inkernel);
+                                   module, func_name_inkernel, 1, args_inkernel,
+                                   is_immediate);
 
   lzt::copy_image_to_mem(output_xeimage_host, output_inhost);
   lzt::copy_image_to_mem(output_xeimage_kernel, output_inkernel);
@@ -248,9 +263,10 @@ TEST_P(
   lzt::destroy_ze_image(output_xeimage_kernel);
 }
 
-INSTANTIATE_TEST_CASE_P(SamplerKernelExecuteTests, zeDeviceExecuteSamplerTests,
-                        ::testing::Combine(sampler_address_modes,
-                                           sampler_filter_modes,
-                                           ::testing::Values(true, false)));
+INSTANTIATE_TEST_SUITE_P(SamplerKernelExecuteTests, zeDeviceExecuteSamplerTests,
+                         ::testing::Combine(sampler_address_modes,
+                                            sampler_filter_modes,
+                                            ::testing::Values(true, false),
+                                            ::testing::Bool()));
 
 } // namespace

@@ -87,10 +87,24 @@ create_module_vector(ze_device_handle_t device,
   return (create_module_vector_and_log(device, build_flag, filename_prefix,
                                        nullptr));
 }
-class zeModuleCreateTests : public ::testing::Test {};
 
-void RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(
-    bool is_immediate) {
+class zeModuleCreateTests : public ::testing::Test {
+protected:
+  void RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(
+      bool is_immediate);
+  void RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(
+      bool is_immediate);
+  void
+  RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(bool is_immediate);
+  void RunGivenValidSpecConstantsWhenCreatingModuleTest(bool is_immediate);
+  void
+  RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(bool is_immediate);
+  void RunGivenModuleCompiledWithOptimizationsWhenExecuting(bool is_immediate);
+};
+
+void zeModuleCreateTests::
+    RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(
+        bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -169,8 +183,9 @@ TEST_F(
   }
 }
 
-void RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(
-    bool is_immediate) {
+void zeModuleCreateTests::
+    RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(
+        bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -219,8 +234,8 @@ TEST_F(
   RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(true);
 }
 
-void RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(
-    bool is_immediate) {
+void zeModuleCreateTests::
+    RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -251,7 +266,8 @@ void RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(
     }
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_initial_value, *typed_global_pointer);
-    lzt::create_and_execute_function(device, mod, "test", 1, nullptr);
+    lzt::create_and_execute_function(device, mod, "test", 1, nullptr,
+                                     is_immediate);
     lzt::reset_command_list(bundle.list);
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_updated_value));
@@ -282,9 +298,8 @@ TEST_F(
   RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(true);
 }
 
-TEST_F(
-    zeModuleCreateTests,
-    GivenValidSpecConstantsWhenCreatingModuleThenExpectSpecConstantInKernelGetsUpdates) {
+void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest(
+    bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
   ze_result_t build_result = ZE_RESULT_ERROR_UNKNOWN;
@@ -295,7 +310,8 @@ TEST_F(
   ASSERT_EQ(build_result, ZE_RESULT_SUCCESS);
   std::string kernel_name = "test";
   void *buff = lzt::allocate_host_memory(sizeof(uint64_t));
-  lzt::create_and_execute_function(device, module, kernel_name, 1, buff);
+  lzt::create_and_execute_function(device, module, kernel_name, 1, buff,
+                                   is_immediate);
   uint64_t data = *static_cast<uint64_t *>(buff);
   const uint64_t expected_initial_value = 160;
   EXPECT_EQ(expected_initial_value, data);
@@ -327,7 +343,7 @@ TEST_F(
   kernel_name = "test";
   void *buff_spec = lzt::allocate_host_memory(sizeof(uint64_t));
   lzt::create_and_execute_function(device, module_spec, kernel_name, 1,
-                                   buff_spec);
+                                   buff_spec, is_immediate);
   data = *static_cast<uint64_t *>(buff_spec);
   const uint64_t expected_updated_value = 190;
   EXPECT_EQ(expected_updated_value, data);
@@ -335,8 +351,20 @@ TEST_F(
   lzt::destroy_module(module_spec);
 }
 
-void RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(
-    bool is_immediate) {
+TEST_F(
+    zeModuleCreateTests,
+    GivenValidSpecConstantsWhenCreatingModuleThenExpectSpecConstantInKernelGetsUpdates) {
+  RunGivenValidSpecConstantsWhenCreatingModuleTest(false);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenValidSpecConstantsWhenCreatingModuleThenExpectSpecConstantInKernelGetsUpdatesOnImmediateCmdList) {
+  RunGivenValidSpecConstantsWhenCreatingModuleTest(true);
+}
+
+void zeModuleCreateTests::
+    RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   void *values = lzt::allocate_shared_memory(sizeof(int));
   std::vector<lzt::FunctionArg> args;
@@ -516,7 +544,8 @@ TEST_F(
   lzt::destroy_module(module);
 }
 
-void RunGivenModuleCompiledWithOptimizationsWhenExecuting(bool is_immediate) {
+void zeModuleCreateTests::RunGivenModuleCompiledWithOptimizationsWhenExecuting(
+    bool is_immediate) {
   std::string l0_opt[3] = {"-ze-opt-level=0", "-ze-opt-level=1",
                            "-ze-opt-level=2"};
   std::string igc_opt[3] = {"-ze-opt-level=O0", "-ze-opt-level=O1",
@@ -1028,6 +1057,7 @@ class zeKernelLaunchTests
       public ::testing::WithParamInterface<std::tuple<enum TestType, bool>> {
 protected:
   void test_kernel_execution();
+  void RunGivenBufferLargerThan4GBWhenExecutingFunction(bool is_immediate);
 };
 
 void zeKernelLaunchTests::test_kernel_execution() {
@@ -1102,7 +1132,8 @@ INSTANTIATE_TEST_SUITE_P(
                                          MULTIPLE_INDIRECT),
                        ::testing::Bool()));
 
-void RunGivenBufferLargerThan4GBWhenExecutingFunction(bool is_immediate) {
+void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
+    bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto context = lzt::create_context(driver);

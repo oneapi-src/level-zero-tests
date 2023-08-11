@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -41,6 +41,8 @@ int main(int argc, char **argv) {
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
+  bool is_immediate = (argv[2][0] != '0');
+
 #ifdef __linux__
   const char *socket_path = "external_memory_socket";
   auto external_memory_properties = lzt::get_external_memory_properties(device);
@@ -68,18 +70,21 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   uint8_t pattern = 0xAB;
-  lzt::append_memory_fill(command_list, exported_memory, &pattern,
+  lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
 
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   ze_external_memory_export_fd_t export_fd = {};
   export_fd.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_FD;
@@ -134,8 +139,7 @@ int main(int argc, char **argv) {
 
   LOG_DEBUG << "Exporter cleaning up" << std::endl;
   lzt::free_memory(context, exported_memory);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
   exit(0);
 #else
@@ -202,10 +206,9 @@ int main(int argc, char **argv) {
       break;
   } while (!pipeCommandSuccess); // repeat loop if ERROR_MORE_DATA
 
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   void *imported_memory;
   auto size = 1024;
@@ -235,12 +238,16 @@ int main(int argc, char **argv) {
 
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
-  lzt::append_memory_copy(command_list, verification_memory, imported_memory,
+  lzt::append_memory_copy(cmd_bundle.list, verification_memory, imported_memory,
                           size);
 
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   for (size_t i = 0; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(verification_memory)[i],
@@ -249,8 +256,7 @@ int main(int argc, char **argv) {
 
   lzt::free_memory(context, imported_memory);
   lzt::free_memory(context, verification_memory);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
   exit(0);
 

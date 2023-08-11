@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -24,11 +24,12 @@ namespace {
 
 class zeP2PTests : public ::testing::Test,
                    public ::testing::WithParamInterface<
-                       std::tuple<lzt_p2p_memory_type_tests_t, size_t>> {
+                       std::tuple<lzt_p2p_memory_type_tests_t, size_t, bool>> {
 protected:
   void SetUp() override {
     p2p_memory_ = std::get<0>(GetParam());
     offset_ = std::get<1>(GetParam());
+    is_immediate_ = std::get<2>(GetParam());
     ze_bool_t can_access;
     auto driver = lzt::get_default_driver();
     auto context = lzt::get_default_context();
@@ -78,8 +79,7 @@ protected:
         FAIL() << "Unexpected memory type";
       }
 
-      instance.cmd_list = lzt::create_command_list(device);
-      instance.cmd_q = lzt::create_command_queue(device);
+      instance.cmd_bundle = lzt::create_command_bundle(device, is_immediate_);
 
       for (auto sub_device : lzt::get_ze_sub_devices(device)) {
         DevInstance sub_device_instance;
@@ -129,8 +129,8 @@ protected:
         } else {
           FAIL() << "Unexpected memory type";
         }
-        sub_device_instance.cmd_list = lzt::create_command_list(sub_device);
-        sub_device_instance.cmd_q = lzt::create_command_queue(sub_device);
+        sub_device_instance.cmd_bundle =
+            lzt::create_command_bundle(sub_device, is_immediate_);
         instance.sub_devices.push_back(sub_device_instance);
       }
 
@@ -142,8 +142,7 @@ protected:
 
     for (auto instance : dev_instance_) {
       auto context = lzt::get_default_context();
-      lzt::destroy_command_queue(instance.cmd_q);
-      lzt::destroy_command_list(instance.cmd_list);
+      lzt::destroy_command_bundle(instance.cmd_bundle);
 
       if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
         lzt::virtual_memory_unmap(context, instance.src_region, mem_size_);
@@ -158,8 +157,7 @@ protected:
       }
 
       for (auto sub_device_instance : instance.sub_devices) {
-        lzt::destroy_command_queue(sub_device_instance.cmd_q);
-        lzt::destroy_command_list(sub_device_instance.cmd_list);
+        lzt::destroy_command_bundle(sub_device_instance.cmd_bundle);
 
         if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
           lzt::virtual_memory_unmap(context, sub_device_instance.src_region,
@@ -189,8 +187,7 @@ protected:
     void *dst_region;
     ze_physical_mem_handle_t src_physical_region;
     ze_physical_mem_handle_t dst_physical_region;
-    ze_command_list_handle_t cmd_list;
-    ze_command_queue_handle_t cmd_q;
+    lzt::zeCommandBundle cmd_bundle;
     std::vector<DevInstance> sub_devices;
   };
   const uint32_t columns = 8;
@@ -200,6 +197,7 @@ protected:
   size_t offset_;
   std::vector<DevInstance> dev_instance_;
   lzt_p2p_memory_type_tests_t p2p_memory_;
+  bool is_immediate_ = false;
 };
 
 TEST_P(
@@ -239,25 +237,28 @@ TEST_P(
         src_offset = 0;
         dst_offset = offset_;
       }
-      lzt::append_memory_copy(dev_instance_[i].cmd_list,
+      lzt::append_memory_copy(dev_instance_[i].cmd_bundle.list,
                               dev_instance_[i].src_region,
                               initial_pattern_memory, mem_size_ + src_offset);
-      lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
-      lzt::append_memory_copy(dev_instance_[i - 1].cmd_list,
+      lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0,
+                          nullptr);
+      lzt::append_memory_copy(dev_instance_[i - 1].cmd_bundle.list,
                               dev_instance_[i - 1].src_region,
                               initial_pattern_memory, mem_size_ + src_offset);
-      lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.list, nullptr, 0,
+                          nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i].cmd_list,
+          dev_instance_[i].cmd_bundle.list,
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i - 1].dst_region) +
               dst_offset),
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i].src_region) + src_offset),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
+      lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0,
+                          nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i - 1].cmd_list,
+          dev_instance_[i - 1].cmd_bundle.list,
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i].dst_region) + dst_offset),
           static_cast<void *>(
@@ -265,31 +266,42 @@ TEST_P(
               src_offset),
           mem_size_, nullptr);
 
-      lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.list, nullptr, 0,
+                          nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i].cmd_list, verification_memory1,
+          dev_instance_[i].cmd_bundle.list, verification_memory1,
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i - 1].dst_region) +
               dst_offset),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
+      lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0,
+                          nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i - 1].cmd_list, verification_memory2,
+          dev_instance_[i - 1].cmd_bundle.list, verification_memory2,
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i].dst_region) + dst_offset),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
-      lzt::close_command_list(dev_instance_[i - 1].cmd_list);
-      lzt::close_command_list(dev_instance_[i].cmd_list);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.list, nullptr, 0,
+                          nullptr);
 
-      lzt::execute_command_lists(dev_instance_[i - 1].cmd_q, 1,
-                                 &dev_instance_[i - 1].cmd_list, nullptr);
-      lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
-                                 &dev_instance_[i].cmd_list, nullptr);
-      lzt::synchronize(dev_instance_[i - 1].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i - 1].cmd_list);
-      lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].cmd_list);
+      if (is_immediate_) {
+        lzt::synchronize_command_list_host(dev_instance_[i - 1].cmd_bundle.list,
+                                           UINT64_MAX);
+        lzt::synchronize_command_list_host(dev_instance_[i].cmd_bundle.list,
+                                           UINT64_MAX);
+      } else {
+        lzt::close_command_list(dev_instance_[i - 1].cmd_bundle.list);
+        lzt::close_command_list(dev_instance_[i].cmd_bundle.list);
+        lzt::execute_command_lists(dev_instance_[i - 1].cmd_bundle.queue, 1,
+                                   &dev_instance_[i - 1].cmd_bundle.list,
+                                   nullptr);
+        lzt::execute_command_lists(dev_instance_[i].cmd_bundle.queue, 1,
+                                   &dev_instance_[i].cmd_bundle.list, nullptr);
+        lzt::synchronize(dev_instance_[i - 1].cmd_bundle.queue, UINT64_MAX);
+        lzt::reset_command_list(dev_instance_[i - 1].cmd_bundle.list);
+        lzt::synchronize(dev_instance_[i].cmd_bundle.queue, UINT64_MAX);
+        lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+      }
 
       uint8_t *src =
           static_cast<uint8_t *>(initial_pattern_memory) + src_offset;
@@ -350,18 +362,19 @@ TEST_P(
           src_offset = 0;
           dst_offset = offset_;
         }
-        lzt::append_memory_copy(dev_instance_[i].sub_devices[j].cmd_list,
+        lzt::append_memory_copy(dev_instance_[i].sub_devices[j].cmd_bundle.list,
                                 dev_instance_[i].sub_devices[j].src_region,
                                 initial_pattern_memory, mem_size_ + src_offset);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr,
-                            0, nullptr);
-        lzt::append_memory_copy(dev_instance_[i].sub_devices[j - 1].cmd_list,
-                                dev_instance_[i].sub_devices[j - 1].src_region,
-                                initial_pattern_memory, mem_size_ + src_offset);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list,
+        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
                             nullptr, 0, nullptr);
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j].cmd_list,
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+            dev_instance_[i].sub_devices[j - 1].src_region,
+            initial_pattern_memory, mem_size_ + src_offset);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+                            nullptr, 0, nullptr);
+        lzt::append_memory_copy(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list,
             static_cast<void *>(
                 static_cast<uint8_t *>(
                     dev_instance_[i].sub_devices[j - 1].dst_region) +
@@ -371,10 +384,10 @@ TEST_P(
                     dev_instance_[i].sub_devices[j].src_region) +
                 src_offset),
             mem_size_, nullptr);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr,
-                            0, nullptr);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
+                            nullptr, 0, nullptr);
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j - 1].cmd_list,
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
             static_cast<void *>(
                 static_cast<uint8_t *>(
                     dev_instance_[i].sub_devices[j].dst_region) +
@@ -384,40 +397,55 @@ TEST_P(
                     dev_instance_[i].sub_devices[j - 1].src_region) +
                 src_offset),
             mem_size_, nullptr);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list,
+        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
                             nullptr, 0, nullptr);
 
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j].cmd_list, verification_memory1,
+            dev_instance_[i].sub_devices[j].cmd_bundle.list,
+            verification_memory1,
             static_cast<void *>(
                 static_cast<uint8_t *>(
                     dev_instance_[i].sub_devices[j - 1].dst_region) +
                 dst_offset),
             mem_size_, nullptr);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr,
-                            0, nullptr);
+        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
+                            nullptr, 0, nullptr);
 
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j - 1].cmd_list, verification_memory2,
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+            verification_memory2,
             static_cast<void *>(
                 static_cast<uint8_t *>(
                     dev_instance_[i].sub_devices[j].dst_region) +
                 dst_offset),
             mem_size_, nullptr);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list,
+        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
                             nullptr, 0, nullptr);
-        lzt::close_command_list(dev_instance_[i].sub_devices[j - 1].cmd_list);
-        lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
-        lzt::execute_command_lists(
-            dev_instance_[i].sub_devices[j - 1].cmd_q, 1,
-            &dev_instance_[i].sub_devices[j - 1].cmd_list, nullptr);
-        lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
-                                   &dev_instance_[i].sub_devices[j].cmd_list,
-                                   nullptr);
-        lzt::synchronize(dev_instance_[i].sub_devices[j - 1].cmd_q, UINT64_MAX);
-        lzt::reset_command_list(dev_instance_[i].sub_devices[j - 1].cmd_list);
-        lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
-        lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+        if (is_immediate_) {
+          lzt::synchronize_command_list_host(
+              dev_instance_[i].sub_devices[j - 1].cmd_bundle.list, UINT64_MAX);
+          lzt::synchronize_command_list_host(
+              dev_instance_[i].sub_devices[j].cmd_bundle.list, UINT64_MAX);
+        } else {
+          lzt::close_command_list(
+              dev_instance_[i].sub_devices[j - 1].cmd_bundle.list);
+          lzt::close_command_list(
+              dev_instance_[i].sub_devices[j].cmd_bundle.list);
+          lzt::execute_command_lists(
+              dev_instance_[i].sub_devices[j - 1].cmd_bundle.queue, 1,
+              &dev_instance_[i].sub_devices[j - 1].cmd_bundle.list, nullptr);
+          lzt::execute_command_lists(
+              dev_instance_[i].sub_devices[j].cmd_bundle.queue, 1,
+              &dev_instance_[i].sub_devices[j].cmd_bundle.list, nullptr);
+          lzt::synchronize(dev_instance_[i].sub_devices[j - 1].cmd_bundle.queue,
+                           UINT64_MAX);
+          lzt::reset_command_list(
+              dev_instance_[i].sub_devices[j - 1].cmd_bundle.list);
+          lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_bundle.queue,
+                           UINT64_MAX);
+          lzt::reset_command_list(
+              dev_instance_[i].sub_devices[j].cmd_bundle.list);
+        }
 
         uint8_t *src =
             static_cast<uint8_t *>(initial_pattern_memory) + src_offset;
@@ -460,35 +488,48 @@ TEST_P(
     // Set memory region on device i - 1 and copy to device i
 
     lzt::append_memory_set(
-        dev_instance_[i - 1].cmd_list,
+        dev_instance_[i - 1].cmd_bundle.list,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i - 1].src_region) + offset_),
         &value_after, mem_size_);
     if (offset_ > 0) {
-      lzt::append_memory_set(dev_instance_[i - 1].cmd_list,
+      lzt::append_memory_set(dev_instance_[i - 1].cmd_bundle.list,
                              dev_instance_[i - 1].src_region, &value_before,
                              offset_);
     }
-    lzt::append_barrier(dev_instance_[i - 1].cmd_list, nullptr, 0, nullptr);
+    lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.list, nullptr, 0,
+                        nullptr);
     lzt::append_memory_copy(
-        dev_instance_[i - 1].cmd_list, dev_instance_[i].dst_region,
+        dev_instance_[i - 1].cmd_bundle.list, dev_instance_[i].dst_region,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i - 1].src_region) + offset_),
         mem_size_, nullptr);
-    lzt::close_command_list(dev_instance_[i - 1].cmd_list);
-    lzt::execute_command_lists(dev_instance_[i - 1].cmd_q, 1,
-                               &dev_instance_[i - 1].cmd_list, nullptr);
-    lzt::synchronize(dev_instance_[i - 1].cmd_q, UINT64_MAX);
-    lzt::reset_command_list(dev_instance_[i - 1].cmd_list);
+    if (is_immediate_) {
+      lzt::synchronize_command_list_host(dev_instance_[i - 1].cmd_bundle.list,
+                                         UINT64_MAX);
+    } else {
+      lzt::close_command_list(dev_instance_[i - 1].cmd_bundle.list);
+      lzt::execute_command_lists(dev_instance_[i - 1].cmd_bundle.queue, 1,
+                                 &dev_instance_[i - 1].cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(dev_instance_[i - 1].cmd_bundle.queue, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i - 1].cmd_bundle.list);
+    }
 
-    // Copy memory region from device i to shared mem, and verify it is correct
-    lzt::append_memory_copy(dev_instance_[i].cmd_list, shr_mem,
+    // Copy memory region from device i to shared mem, and verify it is
+    // correct
+    lzt::append_memory_copy(dev_instance_[i].cmd_bundle.list, shr_mem,
                             dev_instance_[i].dst_region, mem_size_, nullptr);
-    lzt::close_command_list(dev_instance_[i].cmd_list);
-    lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
-                               &dev_instance_[i].cmd_list, nullptr);
-    lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
-    lzt::reset_command_list(dev_instance_[i].cmd_list);
+    if (is_immediate_) {
+      lzt::synchronize_command_list_host(dev_instance_[i].cmd_bundle.list,
+                                         UINT64_MAX);
+    } else {
+      lzt::close_command_list(dev_instance_[i].cmd_bundle.list);
+      lzt::execute_command_lists(dev_instance_[i].cmd_bundle.queue, 1,
+                                 &dev_instance_[i].cmd_bundle.list, nullptr);
+      lzt::synchronize(dev_instance_[i].cmd_bundle.queue, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    }
 
     for (uint32_t j = 0; j < mem_size_; j++) {
       ASSERT_EQ(shr_mem[j], value_after)
@@ -521,45 +562,62 @@ TEST_P(
       // Set memory region on device i - 1 and copy to device i
 
       lzt::append_memory_set(
-          dev_instance_[i].sub_devices[j - 1].cmd_list,
+          dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
           static_cast<void *>(
               static_cast<uint8_t *>(
                   dev_instance_[i].sub_devices[j - 1].src_region) +
               offset_),
           &value_after, mem_size_);
       if (offset_ > 0) {
-        lzt::append_memory_set(dev_instance_[i].sub_devices[j - 1].cmd_list,
-                               dev_instance_[i].sub_devices[j - 1].src_region,
-                               &value_before, offset_);
+        lzt::append_memory_set(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+            dev_instance_[i].sub_devices[j - 1].src_region, &value_before,
+            offset_);
       }
-      lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_list, nullptr,
-                          0, nullptr);
+      lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+                          nullptr, 0, nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j - 1].cmd_list,
+          dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
           dev_instance_[i].sub_devices[j].dst_region,
           static_cast<void *>(
               static_cast<uint8_t *>(
                   dev_instance_[i].sub_devices[j - 1].src_region) +
               offset_),
           mem_size_, nullptr);
-      lzt::close_command_list(dev_instance_[i].sub_devices[j - 1].cmd_list);
-      lzt::execute_command_lists(dev_instance_[i].sub_devices[j - 1].cmd_q, 1,
-                                 &dev_instance_[i].sub_devices[j - 1].cmd_list,
-                                 nullptr);
-      lzt::synchronize(dev_instance_[i].sub_devices[j - 1].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j - 1].cmd_list);
+      if (is_immediate_) {
+        lzt::synchronize_command_list_host(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list);
+        lzt::execute_command_lists(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.queue, 1,
+            &dev_instance_[i].sub_devices[j - 1].cmd_bundle.list, nullptr);
+        lzt::synchronize(dev_instance_[i].sub_devices[j - 1].cmd_bundle.queue,
+                         UINT64_MAX);
+        lzt::reset_command_list(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list);
+      }
 
       // Copy memory region from device i to shared mem, and verify it is
       // correct
-      lzt::append_memory_copy(dev_instance_[i].sub_devices[j].cmd_list, shr_mem,
-                              dev_instance_[i].sub_devices[j].dst_region,
-                              mem_size_, nullptr);
-      lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
-      lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
-                                 &dev_instance_[i].sub_devices[j].cmd_list,
-                                 nullptr);
-      lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+      lzt::append_memory_copy(
+          dev_instance_[i].sub_devices[j].cmd_bundle.list, shr_mem,
+          dev_instance_[i].sub_devices[j].dst_region, mem_size_, nullptr);
+      if (is_immediate_) {
+        lzt::synchronize_command_list_host(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+        lzt::execute_command_lists(
+            dev_instance_[i].sub_devices[j].cmd_bundle.queue, 1,
+            &dev_instance_[i].sub_devices[j].cmd_bundle.list, nullptr);
+        lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_bundle.queue,
+                         UINT64_MAX);
+        lzt::reset_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      }
 
       for (uint32_t k = 0; k < mem_size_; k++) {
         ASSERT_EQ(shr_mem[k], value_after)
@@ -641,36 +699,52 @@ TEST_P(
           continue;
         }
         test_count++;
-        lzt::append_memory_copy(ptr_dev_src->cmd_list, ptr_dev_src->src_region,
-                                initial_pattern_memory, mem_size_ + src_offset);
-        lzt::close_command_list(ptr_dev_src->cmd_list);
-        lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                   &ptr_dev_src->cmd_list, nullptr);
-        lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-        lzt::reset_command_list(ptr_dev_src->cmd_list);
+        lzt::append_memory_copy(ptr_dev_src->cmd_bundle.list,
+                                ptr_dev_src->src_region, initial_pattern_memory,
+                                mem_size_ + src_offset);
+        if (is_immediate_) {
+          lzt::synchronize_command_list_host(ptr_dev_src->cmd_bundle.list,
+                                             UINT64_MAX);
+        } else {
+          lzt::close_command_list(ptr_dev_src->cmd_bundle.list);
+          lzt::execute_command_lists(ptr_dev_src->cmd_bundle.queue, 1,
+                                     &ptr_dev_src->cmd_bundle.list, nullptr);
+          lzt::synchronize(ptr_dev_src->cmd_bundle.queue, UINT64_MAX);
+          lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+        }
 
         lzt::append_memory_copy_region(
-            ptr_dev_src->cmd_list,
+            ptr_dev_src->cmd_bundle.list,
             static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
             &dest_region, columns, columns * rows,
             static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
             &src_region, columns, columns * rows, nullptr);
 
-        lzt::close_command_list(ptr_dev_src->cmd_list);
-        lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                   &ptr_dev_src->cmd_list, nullptr);
-        lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-        lzt::reset_command_list(ptr_dev_src->cmd_list);
+        if (is_immediate_) {
+          lzt::synchronize_command_list_host(ptr_dev_src->cmd_bundle.list,
+                                             UINT64_MAX);
+        } else {
+          lzt::close_command_list(ptr_dev_src->cmd_bundle.list);
+          lzt::execute_command_lists(ptr_dev_src->cmd_bundle.queue, 1,
+                                     &ptr_dev_src->cmd_bundle.list, nullptr);
+          lzt::synchronize(ptr_dev_src->cmd_bundle.queue, UINT64_MAX);
+          lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+        }
 
         lzt::append_memory_copy(
-            ptr_dev_dst->cmd_list, verification_memory,
+            ptr_dev_dst->cmd_bundle.list, verification_memory,
             static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
             mem_size_);
-        lzt::close_command_list(ptr_dev_dst->cmd_list);
-        lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1,
-                                   &ptr_dev_dst->cmd_list, nullptr);
-        lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
-        lzt::reset_command_list(ptr_dev_dst->cmd_list);
+        if (is_immediate_) {
+          lzt::synchronize_command_list_host(ptr_dev_dst->cmd_bundle.list,
+                                             UINT64_MAX);
+        } else {
+          lzt::close_command_list(ptr_dev_dst->cmd_bundle.list);
+          lzt::execute_command_lists(ptr_dev_dst->cmd_bundle.queue, 1,
+                                     &ptr_dev_dst->cmd_bundle.list, nullptr);
+          lzt::synchronize(ptr_dev_dst->cmd_bundle.queue, UINT64_MAX);
+          lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
+        }
 
         for (int z = 0; z < depth; z++) {
           for (int y = 0; y < height; y++) {
@@ -776,36 +850,51 @@ TEST_P(
 
           test_count++;
           lzt::append_memory_copy(
-              ptr_dev_src->cmd_list, ptr_dev_src->src_region,
+              ptr_dev_src->cmd_bundle.list, ptr_dev_src->src_region,
               initial_pattern_memory, mem_size_ + src_offset);
-          lzt::close_command_list(ptr_dev_src->cmd_list);
-          lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                     &ptr_dev_src->cmd_list, nullptr);
-          lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-          lzt::reset_command_list(ptr_dev_src->cmd_list);
+          if (is_immediate_) {
+            lzt::synchronize_command_list_host(ptr_dev_src->cmd_bundle.list,
+                                               UINT64_MAX);
+          } else {
+            lzt::close_command_list(ptr_dev_src->cmd_bundle.list);
+            lzt::execute_command_lists(ptr_dev_src->cmd_bundle.queue, 1,
+                                       &ptr_dev_src->cmd_bundle.list, nullptr);
+            lzt::synchronize(ptr_dev_src->cmd_bundle.queue, UINT64_MAX);
+            lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+          }
 
           lzt::append_memory_copy_region(
-              ptr_dev_src->cmd_list,
+              ptr_dev_src->cmd_bundle.list,
               static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
               &dest_region, columns, columns * rows,
               static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
               &src_region, columns, columns * rows, nullptr);
 
-          lzt::close_command_list(ptr_dev_src->cmd_list);
-          lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                     &ptr_dev_src->cmd_list, nullptr);
-          lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-          lzt::reset_command_list(ptr_dev_src->cmd_list);
+          if (is_immediate_) {
+            lzt::synchronize_command_list_host(ptr_dev_src->cmd_bundle.list,
+                                               UINT64_MAX);
+          } else {
+            lzt::close_command_list(ptr_dev_src->cmd_bundle.list);
+            lzt::execute_command_lists(ptr_dev_src->cmd_bundle.queue, 1,
+                                       &ptr_dev_src->cmd_bundle.list, nullptr);
+            lzt::synchronize(ptr_dev_src->cmd_bundle.queue, UINT64_MAX);
+            lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+          }
 
           lzt::append_memory_copy(
-              ptr_dev_dst->cmd_list, verification_memory,
+              ptr_dev_dst->cmd_bundle.list, verification_memory,
               static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
               mem_size_);
-          lzt::close_command_list(ptr_dev_dst->cmd_list);
-          lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1,
-                                     &ptr_dev_dst->cmd_list, nullptr);
-          lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
-          lzt::reset_command_list(ptr_dev_dst->cmd_list);
+          if (is_immediate_) {
+            lzt::synchronize_command_list_host(ptr_dev_dst->cmd_bundle.list,
+                                               UINT64_MAX);
+          } else {
+            lzt::close_command_list(ptr_dev_dst->cmd_bundle.list);
+            lzt::execute_command_lists(ptr_dev_dst->cmd_bundle.queue, 1,
+                                       &ptr_dev_dst->cmd_bundle.list, nullptr);
+            lzt::synchronize(ptr_dev_dst->cmd_bundle.queue, UINT64_MAX);
+            lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
+          }
 
           for (int z = 0; z < depth; z++) {
             for (int y = 0; y < height; y++) {
@@ -913,36 +1002,54 @@ TEST_P(
 
             test_count++;
             lzt::append_memory_copy(
-                ptr_dev_src->cmd_list, ptr_dev_src->src_region,
+                ptr_dev_src->cmd_bundle.list, ptr_dev_src->src_region,
                 initial_pattern_memory, mem_size_ + src_offset);
-            lzt::close_command_list(ptr_dev_src->cmd_list);
-            lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                       &ptr_dev_src->cmd_list, nullptr);
-            lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-            lzt::reset_command_list(ptr_dev_src->cmd_list);
+            if (is_immediate_) {
+              lzt::synchronize_command_list_host(ptr_dev_src->cmd_bundle.list,
+                                                 UINT64_MAX);
+            } else {
+              lzt::close_command_list(ptr_dev_src->cmd_bundle.list);
+              lzt::execute_command_lists(ptr_dev_src->cmd_bundle.queue, 1,
+                                         &ptr_dev_src->cmd_bundle.list,
+                                         nullptr);
+              lzt::synchronize(ptr_dev_src->cmd_bundle.queue, UINT64_MAX);
+              lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+            }
 
             lzt::append_memory_copy_region(
-                ptr_dev_src->cmd_list,
+                ptr_dev_src->cmd_bundle.list,
                 static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
                 &dest_region, columns, columns * rows,
                 static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
                 &src_region, columns, columns * rows, nullptr);
 
-            lzt::close_command_list(ptr_dev_src->cmd_list);
-            lzt::execute_command_lists(ptr_dev_src->cmd_q, 1,
-                                       &ptr_dev_src->cmd_list, nullptr);
-            lzt::synchronize(ptr_dev_src->cmd_q, UINT64_MAX);
-            lzt::reset_command_list(ptr_dev_src->cmd_list);
+            if (is_immediate_) {
+              lzt::synchronize_command_list_host(ptr_dev_src->cmd_bundle.list,
+                                                 UINT64_MAX);
+            } else {
+              lzt::close_command_list(ptr_dev_src->cmd_bundle.list);
+              lzt::execute_command_lists(ptr_dev_src->cmd_bundle.queue, 1,
+                                         &ptr_dev_src->cmd_bundle.list,
+                                         nullptr);
+              lzt::synchronize(ptr_dev_src->cmd_bundle.queue, UINT64_MAX);
+              lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+            }
 
             lzt::append_memory_copy(
-                ptr_dev_dst->cmd_list, verification_memory,
+                ptr_dev_dst->cmd_bundle.list, verification_memory,
                 static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
                 mem_size_);
-            lzt::close_command_list(ptr_dev_dst->cmd_list);
-            lzt::execute_command_lists(ptr_dev_dst->cmd_q, 1,
-                                       &ptr_dev_dst->cmd_list, nullptr);
-            lzt::synchronize(ptr_dev_dst->cmd_q, UINT64_MAX);
-            lzt::reset_command_list(ptr_dev_dst->cmd_list);
+            if (is_immediate_) {
+              lzt::synchronize_command_list_host(ptr_dev_dst->cmd_bundle.list,
+                                                 UINT64_MAX);
+            } else {
+              lzt::close_command_list(ptr_dev_dst->cmd_bundle.list);
+              lzt::execute_command_lists(ptr_dev_dst->cmd_bundle.queue, 1,
+                                         &ptr_dev_dst->cmd_bundle.list,
+                                         nullptr);
+              lzt::synchronize(ptr_dev_dst->cmd_bundle.queue, UINT64_MAX);
+              lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
+            }
 
             for (int z = 0; z < depth; z++) {
               for (int y = 0; y < height; y++) {
@@ -1004,39 +1111,50 @@ TEST_P(
     uint8_t value_after = rand() & 0x7f;
 
     lzt::append_memory_set(
-        dev_instance_[i].cmd_list,
+        dev_instance_[i].cmd_bundle.list,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         &value_after, mem_size_);
     if (offset_ > 0) {
-      lzt::append_memory_set(dev_instance_[i].cmd_list,
+      lzt::append_memory_set(dev_instance_[i].cmd_bundle.list,
                              dev_instance_[i].src_region, &value_before,
                              offset_);
     }
-    lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
-    lzt::close_command_list(dev_instance_[i].cmd_list);
-    lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
-                               &dev_instance_[i].cmd_list, nullptr);
-    lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
-    lzt::reset_command_list(dev_instance_[i].cmd_list);
+    lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0, nullptr);
+    if (is_immediate_) {
+      lzt::synchronize_command_list_host(dev_instance_[i].cmd_bundle.list,
+                                         UINT64_MAX);
+    } else {
+      lzt::close_command_list(dev_instance_[i].cmd_bundle.list);
+      lzt::execute_command_lists(dev_instance_[i].cmd_bundle.queue, 1,
+                                 &dev_instance_[i].cmd_bundle.list, nullptr);
+      lzt::synchronize(dev_instance_[i].cmd_bundle.queue, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    }
 
     // device (i - 1) will modify memory allocated for device i
     lzt::create_and_execute_function(
         dev_instance_[i - 1].dev, module, func_name, 1,
         static_cast<void *>(
-            static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_));
+            static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
+        is_immediate_);
 
     // copy memory to shared region and verify it is correct
     lzt::append_memory_copy(
-        dev_instance_[i].cmd_list, shr_mem,
+        dev_instance_[i].cmd_bundle.list, shr_mem,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         mem_size_, nullptr);
-    lzt::close_command_list(dev_instance_[i].cmd_list);
-    lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
-                               &dev_instance_[i].cmd_list, nullptr);
-    lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
-    lzt::reset_command_list(dev_instance_[i].cmd_list);
+    if (is_immediate_) {
+      lzt::synchronize_command_list_host(dev_instance_[i].cmd_bundle.list,
+                                         UINT64_MAX);
+    } else {
+      lzt::close_command_list(dev_instance_[i].cmd_bundle.list);
+      lzt::execute_command_lists(dev_instance_[i].cmd_bundle.queue, 1,
+                                 &dev_instance_[i].cmd_bundle.list, nullptr);
+      lzt::synchronize(dev_instance_[i].cmd_bundle.queue, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    }
     ASSERT_EQ(shr_mem[0], value_after + 1)
         << "Memory Copied from Device did not match.";
 
@@ -1078,47 +1196,64 @@ TEST_P(
       uint8_t value_after = rand() & 0x7f;
 
       lzt::append_memory_set(
-          dev_instance_[i].sub_devices[j].cmd_list,
+          dev_instance_[i].sub_devices[j].cmd_bundle.list,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
           &value_after, mem_size_);
       if (offset_ > 0) {
-        lzt::append_memory_set(dev_instance_[i].sub_devices[j].cmd_list,
+        lzt::append_memory_set(dev_instance_[i].sub_devices[j].cmd_bundle.list,
                                dev_instance_[i].sub_devices[j].src_region,
                                &value_before, offset_);
       }
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
-                          nullptr);
-      lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
-      lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
-                                 &dev_instance_[i].sub_devices[j].cmd_list,
-                                 nullptr);
-      lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
+                          nullptr, 0, nullptr);
+      if (is_immediate_) {
+        lzt::synchronize_command_list_host(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+        lzt::execute_command_lists(
+            dev_instance_[i].sub_devices[j].cmd_bundle.queue, 1,
+            &dev_instance_[i].sub_devices[j].cmd_bundle.list, nullptr);
+        lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_bundle.queue,
+                         UINT64_MAX);
+        lzt::reset_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      }
 
       // device (i - 1) will modify memory allocated for device i
       lzt::create_and_execute_function(
           dev_instance_[i].sub_devices[j - 1].dev, module, func_name, 1,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
-                              offset_));
+                              offset_),
+          is_immediate_);
 
       // copy memory to shared region and verify it is correct
       lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j].cmd_list, shr_mem,
+          dev_instance_[i].sub_devices[j].cmd_bundle.list, shr_mem,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
-                          nullptr);
-      lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
-      lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
-                                 &dev_instance_[i].sub_devices[j].cmd_list,
-                                 nullptr);
-      lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
+                          nullptr, 0, nullptr);
+      if (is_immediate_) {
+        lzt::synchronize_command_list_host(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+        lzt::execute_command_lists(
+            dev_instance_[i].sub_devices[j].cmd_bundle.queue, 1,
+            &dev_instance_[i].sub_devices[j].cmd_bundle.list, nullptr);
+        lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_bundle.queue,
+                         UINT64_MAX);
+        lzt::reset_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      }
       ASSERT_EQ(shr_mem[0], value_after + 1)
           << "Memory Copied from SubDevice did not match.";
       lzt::destroy_module(module);
@@ -1155,21 +1290,26 @@ TEST_P(
     uint8_t value_after = rand() & 0x7f;
 
     lzt::append_memory_set(
-        dev_instance_[i].cmd_list,
+        dev_instance_[i].cmd_bundle.list,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         &value_after, mem_size_);
     if (offset_ > 0) {
-      lzt::append_memory_set(dev_instance_[i].cmd_list,
+      lzt::append_memory_set(dev_instance_[i].cmd_bundle.list,
                              dev_instance_[i].src_region, &value_before,
                              offset_);
     }
-    lzt::append_barrier(dev_instance_[i].cmd_list, nullptr, 0, nullptr);
-    lzt::close_command_list(dev_instance_[i].cmd_list);
-    lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
-                               &dev_instance_[i].cmd_list, nullptr);
-    lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
-    lzt::reset_command_list(dev_instance_[i].cmd_list);
+    lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0, nullptr);
+    if (is_immediate_) {
+      lzt::synchronize_command_list_host(dev_instance_[i].cmd_bundle.list,
+                                         UINT64_MAX);
+    } else {
+      lzt::close_command_list(dev_instance_[i].cmd_bundle.list);
+      lzt::execute_command_lists(dev_instance_[i].cmd_bundle.queue, 1,
+                                 &dev_instance_[i].cmd_bundle.list, nullptr);
+      lzt::synchronize(dev_instance_[i].cmd_bundle.queue, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    }
 
     lzt::FunctionArg arg;
     std::vector<lzt::FunctionArg> args;
@@ -1184,19 +1324,24 @@ TEST_P(
 
     // device (i - 1) will modify memory allocated for device i
     lzt::create_and_execute_function(dev_instance_[i - 1].dev, module,
-                                     func_name, 1, args);
+                                     func_name, 1, args, is_immediate_);
 
     // copy memory to shared region and verify it is correct
     lzt::append_memory_copy(
-        dev_instance_[i].cmd_list, shr_mem,
+        dev_instance_[i].cmd_bundle.list, shr_mem,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         mem_size_, nullptr);
-    lzt::close_command_list(dev_instance_[i].cmd_list);
-    lzt::execute_command_lists(dev_instance_[i].cmd_q, 1,
-                               &dev_instance_[i].cmd_list, nullptr);
-    lzt::synchronize(dev_instance_[i].cmd_q, UINT64_MAX);
-    lzt::reset_command_list(dev_instance_[i].cmd_list);
+    if (is_immediate_) {
+      lzt::synchronize_command_list_host(dev_instance_[i].cmd_bundle.list,
+                                         UINT64_MAX);
+    } else {
+      lzt::close_command_list(dev_instance_[i].cmd_bundle.list);
+      lzt::execute_command_lists(dev_instance_[i].cmd_bundle.queue, 1,
+                                 &dev_instance_[i].cmd_bundle.list, nullptr);
+      lzt::synchronize(dev_instance_[i].cmd_bundle.queue, UINT64_MAX);
+      lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    }
     ASSERT_EQ(shr_mem[0], value_after + 1)
         << "Memory Copied from Device did not match.";
 
@@ -1238,24 +1383,32 @@ TEST_P(
       uint8_t value_after = rand() & 0x7f;
 
       lzt::append_memory_set(
-          dev_instance_[i].sub_devices[j].cmd_list,
+          dev_instance_[i].sub_devices[j].cmd_bundle.list,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
           &value_after, mem_size_);
       if (offset_ > 0) {
-        lzt::append_memory_set(dev_instance_[i].sub_devices[j].cmd_list,
+        lzt::append_memory_set(dev_instance_[i].sub_devices[j].cmd_bundle.list,
                                dev_instance_[i].sub_devices[j].src_region,
                                &value_before, offset_);
       }
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
-                          nullptr);
-      lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
-      lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
-                                 &dev_instance_[i].sub_devices[j].cmd_list,
-                                 nullptr);
-      lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
+                          nullptr, 0, nullptr);
+      if (is_immediate_) {
+        lzt::synchronize_command_list_host(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+        lzt::execute_command_lists(
+            dev_instance_[i].sub_devices[j].cmd_bundle.queue, 1,
+            &dev_instance_[i].sub_devices[j].cmd_bundle.list, nullptr);
+        lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_bundle.queue,
+                         UINT64_MAX);
+        lzt::reset_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      }
 
       lzt::FunctionArg arg;
       std::vector<lzt::FunctionArg> args;
@@ -1270,23 +1423,32 @@ TEST_P(
 
       // device (i - 1) will modify memory allocated for device i
       lzt::create_and_execute_function(dev_instance_[i].sub_devices[j - 1].dev,
-                                       module, func_name, 1, args);
+                                       module, func_name, 1, args,
+                                       is_immediate_);
 
       // copy memory to shared region and verify it is correct
       lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j].cmd_list, shr_mem,
+          dev_instance_[i].sub_devices[j].cmd_bundle.list, shr_mem,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_list, nullptr, 0,
-                          nullptr);
-      lzt::close_command_list(dev_instance_[i].sub_devices[j].cmd_list);
-      lzt::execute_command_lists(dev_instance_[i].sub_devices[j].cmd_q, 1,
-                                 &dev_instance_[i].sub_devices[j].cmd_list,
-                                 nullptr);
-      lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_q, UINT64_MAX);
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_list);
+      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
+                          nullptr, 0, nullptr);
+      if (is_immediate_) {
+        lzt::synchronize_command_list_host(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list, UINT64_MAX);
+      } else {
+        lzt::close_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+        lzt::execute_command_lists(
+            dev_instance_[i].sub_devices[j].cmd_bundle.queue, 1,
+            &dev_instance_[i].sub_devices[j].cmd_bundle.list, nullptr);
+        lzt::synchronize(dev_instance_[i].sub_devices[j].cmd_bundle.queue,
+                         UINT64_MAX);
+        lzt::reset_command_list(
+            dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      }
       ASSERT_EQ(shr_mem[0], value_after + 1)
           << "Memory Copied from SubDevice did not match.";
       lzt::destroy_module(module);
@@ -1294,7 +1456,7 @@ TEST_P(
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     GivenMultipleDevicesWithP2PWhenCopyingDeviceMemoryFromRemoteDeviceThenSuccessIsReturned_IP,
     zeP2PTests,
     testing::Combine(::testing::Values(LZT_P2P_MEMORY_TYPE_DEVICE,
@@ -1302,6 +1464,7 @@ INSTANTIATE_TEST_CASE_P(
                                        LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION),
                      ::testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
                                        13, 14, 15, 16, 32, 64, 128, 255, 510,
-                                       1021, 2043)));
+                                       1021, 2043),
+                     ::testing::Bool()));
 
 } // namespace

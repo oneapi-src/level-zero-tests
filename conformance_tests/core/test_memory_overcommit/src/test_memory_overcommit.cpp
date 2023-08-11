@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2022 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -24,7 +24,7 @@ enum shared_memory_type { SHARED_LOCAL, SHARED_CROSS, SHARED_SYSTEM };
 class zeDriverMemoryOvercommitTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<uint32_t, uint32_t, uint32_t>> {
+          std::tuple<uint32_t, uint32_t, uint32_t, bool>> {
 protected:
   ze_module_handle_t create_module(ze_context_handle_t context,
                                    const ze_device_handle_t device,
@@ -51,13 +51,13 @@ protected:
   }
 
   void run_functions(const ze_device_handle_t device, ze_module_handle_t module,
-                     void *pattern_memory, size_t pattern_memory_count,
+                     void *pattern_memory, uint64_t pattern_memory_count,
                      uint16_t sub_pattern,
                      uint64_t *host_expected_output_buffer,
                      uint64_t *gpu_expected_output_buffer,
                      uint64_t *host_found_output_buffer,
-                     uint64_t *gpu_found_output_buffer, size_t output_count,
-                     ze_context_handle_t context) {
+                     uint64_t *gpu_found_output_buffer, uint32_t output_count,
+                     ze_context_handle_t context, bool is_immediate) {
     ze_kernel_desc_t fill_function_description = {};
     fill_function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
 
@@ -123,75 +123,60 @@ protected:
               zeKernelSetArgumentValue(test_function, 5, sizeof(output_count),
                                        &output_count));
 
-    ze_command_list_desc_t command_list_description = {};
-    command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
-
-    command_list_description.pNext = nullptr;
-
-    ze_command_list_handle_t command_list = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListCreate(context, device, &command_list_description,
-                                  &command_list));
+    auto cmd_bundle = lzt::create_command_bundle(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
     ze_group_count_t thread_group_dimensions = {1, 1, 1};
 
-    lzt::append_memory_copy(command_list, gpu_expected_output_buffer,
+    lzt::append_memory_copy(cmd_bundle.list, gpu_expected_output_buffer,
                             host_expected_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
-    lzt::append_memory_copy(command_list, gpu_found_output_buffer,
+    lzt::append_memory_copy(cmd_bundle.list, gpu_found_output_buffer,
                             host_found_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendLaunchKernel(command_list, fill_function,
+              zeCommandListAppendLaunchKernel(cmd_bundle.list, fill_function,
                                               &thread_group_dimensions, nullptr,
                                               0, nullptr));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
+              zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendLaunchKernel(command_list, test_function,
+              zeCommandListAppendLaunchKernel(cmd_bundle.list, test_function,
                                               &thread_group_dimensions, nullptr,
                                               0, nullptr));
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
+              zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
 
-    lzt::append_memory_copy(command_list, host_expected_output_buffer,
+    lzt::append_memory_copy(cmd_bundle.list, host_expected_output_buffer,
                             gpu_expected_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
 
-    lzt::append_memory_copy(command_list, host_found_output_buffer,
+    lzt::append_memory_copy(cmd_bundle.list, host_found_output_buffer,
                             gpu_found_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
 
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
+              zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(command_list));
+    if (is_immediate) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandListHostSynchronize(cmd_bundle.list, UINT64_MAX));
+    } else {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmd_bundle.list));
 
-    const uint32_t command_queue_id = 0;
-    ze_command_queue_desc_t command_queue_description = {};
-    command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandQueueExecuteCommandLists(cmd_bundle.queue, 1,
+                                                  &cmd_bundle.list, nullptr));
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zeCommandQueueSynchronize(cmd_bundle.queue, UINT64_MAX));
+    }
 
-    command_queue_description.pNext = nullptr;
-    command_queue_description.ordinal = command_queue_id;
-    command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-    command_queue_description.flags = 0;
-
-    ze_command_queue_handle_t command_queue = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueCreate(context, device, &command_queue_description,
-                                   &command_queue));
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
-                                     command_queue, 1, &command_list, nullptr));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(command_queue, UINT64_MAX));
-
-    lzt::destroy_command_queue(command_queue);
-    lzt::destroy_command_list(command_list);
+    lzt::destroy_command_bundle(cmd_bundle);
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(fill_function));
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(test_function));
   }
@@ -326,7 +311,8 @@ protected:
                               uint32_t device_in_driver_index,
                               uint32_t memory_size_multiple,
                               ze_memory_type_t memory_type,
-                              shared_memory_type shr_mem_type = SHARED_LOCAL) {
+                              shared_memory_type shr_mem_type,
+                              bool is_immediate) {
 
     LOG_INFO << "TEST ARGUMENTS "
              << "driver_index " << driver_index << " device_in_driver_index "
@@ -354,7 +340,8 @@ protected:
         driver_info->device_memory_properties[device_in_driver_index].totalSize;
 
     size_t pattern_memory_size = memory_size_multiple * maxSharedLocalMemory;
-    size_t pattern_memory_count = pattern_memory_size >> 3; // array of uint64_t
+    uint64_t pattern_memory_count =
+        pattern_memory_size >> 3; // array of uint64_t
 
     uint64_t *gpu_pattern_buffer;
     uint64_t *gpu_expected_output_buffer;
@@ -495,7 +482,7 @@ protected:
                   pattern_memory_count, pattern_base,
                   host_expected_output_buffer, gpu_expected_output_buffer,
                   host_found_output_buffer, gpu_found_output_buffer,
-                  output_count_, context);
+                  output_count_, context, is_immediate);
 
     LOG_INFO << "call free memory";
     if (memory_type == ZE_MEMORY_TYPE_SHARED && shr_mem_type == SHARED_SYSTEM) {
@@ -570,6 +557,8 @@ protected:
      * multiple.
      */
     uint32_t memory_size_multiple;
+    /* Whether to use immediate command list in the test */
+    bool is_immediate;
   } MemoryTestArguments_t;
 
   uint32_t use_this_ordinal_on_device_ = 0;
@@ -584,15 +573,18 @@ TEST_P(
   MemoryTestArguments_t test_arguments = {
       std::get<0>(GetParam()), // driver index
       std::get<1>(GetParam()), // device index within driver
-      std::get<2>(GetParam())  // memory size multiple, rounded up to uint16_t
+      std::get<2>(GetParam()), // memory size multiple, rounded up to uint16_t
+      std::get<3>(GetParam())  // immediate command list
   };
 
   uint32_t driver_index = test_arguments.driver_index;
   uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
   uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
+  bool is_immediate = test_arguments.is_immediate;
 
   test_memory_overcommit(driver_index, device_in_driver_index,
-                         memory_size_multiple, ZE_MEMORY_TYPE_DEVICE);
+                         memory_size_multiple, ZE_MEMORY_TYPE_DEVICE,
+                         SHARED_LOCAL, is_immediate);
 }
 
 TEST_P(
@@ -602,15 +594,18 @@ TEST_P(
   MemoryTestArguments_t test_arguments = {
       std::get<0>(GetParam()), // driver index
       std::get<1>(GetParam()), // device index within driver
-      std::get<2>(GetParam())  // memory size multiple, rounded up to uint16_t
+      std::get<2>(GetParam()), // memory size multiple, rounded up to uint16_t
+      std::get<3>(GetParam())  // immediate command list
   };
 
   uint32_t driver_index = test_arguments.driver_index;
   uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
   uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
+  bool is_immediate = test_arguments.is_immediate;
 
   test_memory_overcommit(driver_index, device_in_driver_index,
-                         memory_size_multiple, ZE_MEMORY_TYPE_SHARED);
+                         memory_size_multiple, ZE_MEMORY_TYPE_SHARED,
+                         SHARED_LOCAL, is_immediate);
 }
 
 TEST_P(
@@ -620,16 +615,18 @@ TEST_P(
   MemoryTestArguments_t test_arguments = {
       std::get<0>(GetParam()), // driver index
       std::get<1>(GetParam()), // device index within driver
-      std::get<2>(GetParam())  // memory size multiple, rounded up to uint16_t
+      std::get<2>(GetParam()), // memory size multiple, rounded up to uint16_t
+      std::get<3>(GetParam())  // immediate command list
   };
 
   uint32_t driver_index = test_arguments.driver_index;
   uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
   uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
+  bool is_immediate = test_arguments.is_immediate;
 
   test_memory_overcommit(driver_index, device_in_driver_index,
                          memory_size_multiple, ZE_MEMORY_TYPE_SHARED,
-                         SHARED_SYSTEM);
+                         SHARED_SYSTEM, is_immediate);
 }
 
 TEST_P(
@@ -639,21 +636,23 @@ TEST_P(
   MemoryTestArguments_t test_arguments = {
       std::get<0>(GetParam()), // driver index
       std::get<1>(GetParam()), // device index within driver
-      std::get<2>(GetParam())  // memory size multiple, rounded up to uint16_t
+      std::get<2>(GetParam()), // memory size multiple, rounded up to uint16_t
+      std::get<3>(GetParam())  // immediate command list
   };
 
   uint32_t driver_index = test_arguments.driver_index;
   uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
   uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
+  bool is_immediate = test_arguments.is_immediate;
 
   test_memory_overcommit(driver_index, device_in_driver_index,
                          memory_size_multiple, ZE_MEMORY_TYPE_SHARED,
-                         SHARED_CROSS);
+                         SHARED_CROSS, is_immediate);
 }
-INSTANTIATE_TEST_CASE_P(TestAllInputPermuntations,
-                        zeDriverMemoryOvercommitTests,
-                        ::testing::Combine(::testing::Values(0),
-                                           ::testing::Values(0),
-                                           ::testing::Values(1, 2, 4)));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestAllInputPermuntations, zeDriverMemoryOvercommitTests,
+    ::testing::Combine(::testing::Values(0), ::testing::Values(0),
+                       ::testing::Values(1, 2, 4), ::testing::Bool()));
 
 } // namespace

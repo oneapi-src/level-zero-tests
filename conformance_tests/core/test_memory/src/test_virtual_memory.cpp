@@ -23,11 +23,11 @@ namespace {
 
 class zeVirtualMemoryTests : public ::testing::Test {
 protected:
-  zeVirtualMemoryTests() {
+  void SetUp() override {
     context = lzt::get_default_context();
     device = lzt::zeDevice::get_instance()->get_device();
   }
-  ~zeVirtualMemoryTests() {}
+  void TearDown() override {}
 
 public:
   ze_context_handle_t context;
@@ -191,10 +191,10 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
                           test.allocationSize, nullptr);
-  lzt::close_command_list(bundle.list);
   if (is_immediate) {
     lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
   } else {
+    lzt::close_command_list(bundle.list);
     lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
     lzt::synchronize(bundle.queue, UINT64_MAX);
   }
@@ -239,7 +239,8 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
     devices[0] = test.device;
     devices[1] = test.device;
   }
-  auto bundle = lzt::create_command_bundle(devices[0], is_immediate);
+  auto bundle =
+      lzt::create_command_bundle(test.context, devices[0], is_immediate);
 
   lzt::query_page_size(test.context, test.device, 0, &test.pageSize);
   test.allocationSize = test.pageSize;
@@ -278,10 +279,10 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
                           totalAllocationSize, nullptr);
-  lzt::close_command_list(bundle.list);
   if (is_immediate) {
     lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
   } else {
+    lzt::close_command_list(bundle.list);
     lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
     lzt::synchronize(bundle.queue, UINT64_MAX);
   }
@@ -296,6 +297,7 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
     lzt::virtual_memory_unmap(test.context, reservedVirtualMemoryOffset,
                               test.allocationSize);
     lzt::physical_memory_destroy(test.context, reservedPhysicalMemoryArray[i]);
+    offset += test.allocationSize;
   }
   lzt::virtual_memory_free(test.context, test.reservedVirtualMemory,
                            virtualReservationSize);
@@ -330,7 +332,8 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
     devices[0] = test.device;
     devices[1] = test.device;
   }
-  auto bundle = lzt::create_command_bundle(devices[0], is_immediate);
+  auto bundle =
+      lzt::create_command_bundle(test.context, devices[0], is_immediate);
 
   lzt::query_page_size(test.context, test.device, 0, &test.pageSize);
   test.allocationSize = test.pageSize;
@@ -417,12 +420,12 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
                           totalAllocationSize, nullptr);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(bundle.list));
-
   if (is_immediate) {
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandListHostSynchronize(bundle.list, UINT64_MAX));
   } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(bundle.list));
+
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
                                      bundle.queue, 1, &bundle.list, nullptr));
 
@@ -441,6 +444,7 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
     lzt::virtual_memory_unmap(test.context, reservedVirtualMemoryOffset,
                               test.allocationSize);
     lzt::physical_memory_destroy(test.context, reservedPhysicalMemoryArray[i]);
+    offset += test.allocationSize;
   }
   lzt::virtual_memory_free(test.context, test.reservedVirtualMemory,
                            virtualReservationSize);
@@ -560,10 +564,10 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
     offset += allocationSize;
   }
 
-  lzt::close_command_list(bundle.list);
   if (is_immediate) {
     lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
   } else {
+    lzt::close_command_list(bundle.list);
     lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
     lzt::synchronize(bundle.queue, UINT64_MAX);
   }

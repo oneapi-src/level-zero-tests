@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -34,7 +34,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 #ifdef __linux__
-static int get_imported_fd(std::string driver_id, bp::opstream &child_input) {
+static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
+                           bool is_immediate) {
   int fd;
   const char *socket_path = "external_memory_socket";
 
@@ -43,7 +44,9 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input) {
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
   fs::path helper = bp::search_path("test_import_helper", paths);
-  bp::child import_memory_helper(helper, driver_id, bp::std_in < child_input);
+  bp::child import_memory_helper(
+      helper, bp::args({driver_id, is_immediate ? "1" : "0"}),
+      bp::std_in < child_input);
   import_memory_helper.detach();
 
   struct sockaddr_un local_addr, remote_addr;
@@ -96,16 +99,17 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input) {
 }
 #else
 static int send_handle(std::string driver_id, bp::opstream &child_input,
-                       uint64_t handle,
-                       lzt::lztWin32HandleTestType handleType) {
+                       uint64_t handle, lzt::lztWin32HandleTestType handleType,
+                       bool is_immediate) {
   // launch a new process that exports memory
   fs::path helper_path(fs::current_path() / "memory");
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
   bp::ipstream output;
   fs::path helper = bp::search_path("test_import_helper", paths);
-  bp::child import_memory_helper(helper, driver_id,
-                                 bp::std_in<child_input, bp::std_out> output);
+  bp::child import_memory_helper(
+      helper, bp::args({driver_id, is_immediate ? "1" : "0"}),
+      bp::std_in<child_input, bp::std_out> output);
   HANDLE targetHandle;
   auto result =
       DuplicateHandle(GetCurrentProcess(), reinterpret_cast<HANDLE>(handle),
@@ -165,11 +169,19 @@ static int send_handle(std::string driver_id, bp::opstream &child_input,
 }
 #endif
 
-#ifdef __linux__
-TEST(
-    zeDeviceGetExternalMemoryProperties,
-    GivenValidDeviceWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData) {
+class zeDeviceGetExternalMemoryProperties : public ::testing::Test {
+protected:
+  void RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(bool is_immediate);
+  void RunGivenValidDeviceWhenImportingMemoryTest(bool is_immediate);
+  void
+  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(bool is_immediate);
+  void
+  RunGivenValidDeviceWhenImportingMemoryWithKMTHandleTest(bool is_immediate);
+};
 
+#ifdef __linux__
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -194,19 +206,22 @@ TEST(
             zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
                              &exported_memory));
 
-  // fill the allocated memory with some pattern so we can verify
+  // Fill the allocated memory with some pattern so we can verify
   // it was exported successfully
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   uint8_t pattern = 0xAB;
-  lzt::append_memory_fill(command_list, exported_memory, &pattern,
+  lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   // set up request to export the external memory handle
   ze_external_memory_export_fd_t export_fd = {};
@@ -238,15 +253,13 @@ TEST(
   }
 
   // cleanup
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory(context, exported_memory);
   lzt::destroy_context(context);
 }
 
-TEST(zeDeviceGetExternalMemoryProperties,
-     GivenValidDeviceWhenImportingMemoryThenImportedBufferHasCorrectData) {
-
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenImportingMemoryTest(bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
@@ -258,10 +271,9 @@ TEST(zeDeviceGetExternalMemoryProperties,
     LOG_WARNING << "Device does not support importing DMA_BUF";
     GTEST_SKIP();
   }
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   void *imported_memory;
   auto size = 1024;
@@ -269,8 +281,8 @@ TEST(zeDeviceGetExternalMemoryProperties,
   // set up request to import the external memory handle
   auto driver_properties = lzt::get_driver_properties(driver);
   bp::opstream child_input;
-  auto imported_fd =
-      get_imported_fd(lzt::to_string(driver_properties.uuid), child_input);
+  auto imported_fd = get_imported_fd(lzt::to_string(driver_properties.uuid),
+                                     child_input, is_immediate);
   ze_external_memory_import_fd_t import_fd = {};
   import_fd.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_FD;
   import_fd.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF;
@@ -285,12 +297,15 @@ TEST(zeDeviceGetExternalMemoryProperties,
 
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
-  lzt::append_memory_copy(command_list, verification_memory, imported_memory,
+  lzt::append_memory_copy(cmd_bundle.list, verification_memory, imported_memory,
                           size);
-
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   LOG_DEBUG << "Importer sending done msg " << std::endl;
   // import helper can now call free on its handle to memory
@@ -305,26 +320,34 @@ TEST(zeDeviceGetExternalMemoryProperties,
   // cleanup
   lzt::free_memory(context, imported_memory);
   lzt::free_memory(context, verification_memory);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
 }
-TEST(
-    zeDeviceGetExternalMemoryProperties,
-    GivenValidDeviceWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData) {
+
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(bool is_immediate) {
   GTEST_SKIP() << "Test Not Supported on Linux";
 }
-TEST(
-    zeDeviceGetExternalMemoryProperties,
-    GivenValidDeviceWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData) {
+
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenImportingMemoryWithKMTHandleTest(bool is_immediate) {
   GTEST_SKIP() << "Test Not Supported on Linux";
 }
+
 #else
 
-TEST(
-    zeDeviceGetExternalMemoryProperties,
-    GivenValidDeviceWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData) {
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(bool is_immediate) {
+  GTEST_SKIP() << "Test Not Supported on Windows";
+}
 
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenImportingMemoryTest(bool is_immediate) {
+  GTEST_SKIP() << "Test Not Supported on Windows";
+}
+
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
@@ -352,18 +375,20 @@ TEST(
     FAIL() << "Error allocating device memory to be imported\n";
   }
 
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   uint8_t pattern = 0xAB;
-  lzt::append_memory_fill(command_list, exported_memory, &pattern,
+  lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
-
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   ze_external_memory_export_win32_handle_t export_handle = {};
   export_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_WIN32;
@@ -377,22 +402,19 @@ TEST(
   int child_result =
       send_handle(lzt::to_string(driver_properties.uuid), child_input,
                   reinterpret_cast<uint64_t>(export_handle.handle),
-                  lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
+                  lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32, is_immediate);
 
   // cleanup
   lzt::free_memory(context, exported_memory);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
   if (child_result != 0) {
     FAIL() << "Child Failed import\n";
   }
 }
 
-TEST(
-    zeDeviceGetExternalMemoryProperties,
-    GivenValidDeviceWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData) {
-
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenImportingMemoryWithKMTHandleTest(bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
@@ -420,18 +442,20 @@ TEST(
     FAIL() << "Error allocating device memory to be imported\n";
   }
 
-  auto command_list = lzt::create_command_list(context, device, 0, 0);
-  auto command_queue = lzt::create_command_queue(
+  auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   uint8_t pattern = 0xAB;
-  lzt::append_memory_fill(command_list, exported_memory, &pattern,
+  lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
-
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  lzt::synchronize(command_queue, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   ze_external_memory_export_win32_handle_t export_handle = {};
   export_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_WIN32;
@@ -445,22 +469,69 @@ TEST(
   int child_result =
       send_handle(lzt::to_string(driver_properties.uuid), child_input,
                   reinterpret_cast<uint64_t>(export_handle.handle),
-                  lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
+                  lzt::lztWin32HandleTestType::LZT_KMT_WIN32, is_immediate);
 
   LOG_DEBUG << "Exporter sending done msg " << std::endl;
 
   // cleanup
   lzt::free_memory(context, exported_memory);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
   if (child_result != 0) {
     FAIL() << "Child Failed import\n";
   }
 }
-#endif
 
-TEST(
+#endif // __linux__
+
+TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData) {
+  RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(false);
+}
+
+TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenExportingMemoryAsDMABufOnImmediateCmdListThenHostCanMMAPBufferContainingValidData) {
+  RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(true);
+}
+
+TEST_F(zeDeviceGetExternalMemoryProperties,
+       GivenValidDeviceWhenImportingMemoryThenImportedBufferHasCorrectData) {
+  RunGivenValidDeviceWhenImportingMemoryTest(false);
+}
+
+TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData) {
+  RunGivenValidDeviceWhenImportingMemoryTest(true);
+}
+
+TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData) {
+  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(false);
+}
+
+TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
+  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(true);
+}
+
+TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData) {
+  RunGivenValidDeviceWhenImportingMemoryWithKMTHandleTest(false);
+}
+
+TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
+  RunGivenValidDeviceWhenImportingMemoryWithKMTHandleTest(true);
+}
+
+TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3DTextureThenResourceSuccessfullyExported) {
 
@@ -495,7 +566,7 @@ TEST(
   lzt::destroy_context(context);
 }
 
-TEST(
+TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3DTextureKmtThenResourceSuccessfullyExported) {
 
@@ -530,7 +601,7 @@ TEST(
   lzt::destroy_context(context);
 }
 
-TEST(
+TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3D12HeapThenResourceSuccessfullyExported) {
 
@@ -565,7 +636,7 @@ TEST(
   lzt::destroy_context(context);
 }
 
-TEST(
+TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported) {
 

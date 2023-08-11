@@ -103,12 +103,6 @@ ze_command_list_handle_t create_immediate_command_list(
   return command_list;
 }
 
-zeCommandList::zeCommandList() { command_list_ = create_command_list(); }
-
-zeCommandList::~zeCommandList() {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list_));
-}
-
 zeCommandBundle create_command_bundle(bool isImmediate) {
   return create_command_bundle(zeDevice::get_instance()->get_device(),
                                isImmediate);
@@ -164,6 +158,9 @@ zeCommandBundle create_command_bundle(
     ze_command_queue_flags_t queueFlags, ze_command_queue_mode_t mode,
     ze_command_queue_priority_t priority, ze_command_list_flags_t listFlags,
     uint32_t ordinal, uint32_t index, bool isImmediate) {
+  if (!(queueFlags & ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY)) {
+    EXPECT_EQ(0, index);
+  }
   ze_command_queue_desc_t queueDesc = {};
   queueDesc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
   queueDesc.pNext = nullptr;

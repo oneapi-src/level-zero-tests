@@ -23,23 +23,49 @@ using namespace level_zero_tests;
 
 namespace {
 
-class zeCommandListAppendMemoryFillTests : public ::testing::Test {};
+class zeCommandListAppendMemoryFillTests : public ::testing::Test {
+protected:
+  void RunMaxMemoryFillTest(bool is_immediate);
+  void RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillTest(
+      bool is_immediate);
+  void RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(
+      bool is_immediate);
+  void RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      bool is_immediate);
+};
 
-TEST_F(
-    zeCommandListAppendMemoryFillTests,
-    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturned) {
-  lzt::zeCommandList cl;
+void zeCommandListAppendMemoryFillTests::
+    RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillTest(
+        bool is_immediate) {
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 4096;
   void *memory = allocate_device_memory(size);
   const uint8_t pattern = 0x00;
   const int pattern_size = 1;
 
-  lzt::append_memory_fill(cl.command_list_, memory, &pattern, pattern_size,
-                          size, nullptr);
+  lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
+                          nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  }
+  lzt::destroy_command_bundle(cmd_bundle);
   free_memory(memory);
 }
 
-void maxMemoryFillTest(bool isImmediate) {
+TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturned) {
+  RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillTest(false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillTest(true);
+}
+
+void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
+    bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
@@ -48,7 +74,7 @@ void maxMemoryFillTest(bool isImmediate) {
 
   for (int i = 0; i < cmd_q_group_properties.size(); i++) {
     auto bundle = lzt::create_command_bundle(lzt::get_default_context(), device,
-                                             0, i, isImmediate);
+                                             0, i, is_immediate);
     size_t size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
     int pattern_size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
     if (cmd_q_group_properties[i].maxMemoryFillPatternSize >
@@ -62,13 +88,15 @@ void maxMemoryFillTest(bool isImmediate) {
     lzt::append_memory_fill(bundle.list, memory, &pattern, pattern_size, size,
                             nullptr);
 
-    close_command_list(bundle.list);
-    if (!isImmediate) {
+    if (is_immediate) {
+      synchronize_command_list_host(bundle.list, UINT64_MAX);
+    } else {
+      close_command_list(bundle.list);
       execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
       synchronize(bundle.queue, UINT64_MAX);
+      reset_command_list(bundle.list);
     }
     free_memory(memory);
-    reset_command_list(bundle.list);
     lzt::destroy_command_bundle(bundle);
   }
 }
@@ -76,20 +104,20 @@ void maxMemoryFillTest(bool isImmediate) {
 TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned) {
-  maxMemoryFillTest(false);
+  RunMaxMemoryFillTest(false);
 }
 
 TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned) {
-  maxMemoryFillTest(true);
+  RunMaxMemoryFillTest(true);
 }
 
-TEST_F(
-    zeCommandListAppendMemoryFillTests,
-    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
+void zeCommandListAppendMemoryFillTests::
+    RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(
+        bool is_immediate) {
   lzt::zeEventPool ep;
-  lzt::zeCommandList cl;
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 4096;
   void *memory = allocate_device_memory(size);
   const uint8_t pattern = 0x00;
@@ -97,18 +125,33 @@ TEST_F(
   const int pattern_size = 1;
 
   ep.create_event(hEvent);
-  lzt::append_memory_fill(cl.command_list_, memory, &pattern, pattern_size,
-                          size, hEvent);
+  lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
+                          hEvent);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  }
   ep.destroy_event(hEvent);
-
+  lzt::destroy_command_bundle(cmd_bundle);
   free_memory(memory);
 }
 
 TEST_F(
     zeCommandListAppendMemoryFillTests,
-    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned) {
+    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
+  RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true);
+}
+
+void zeCommandListAppendMemoryFillTests::
+    RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+        bool is_immediate) {
   lzt::zeEventPool ep;
-  lzt::zeCommandList cl;
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 4096;
   void *memory = allocate_device_memory(size);
   const uint8_t pattern = 0x00;
@@ -117,18 +160,41 @@ TEST_F(
 
   ep.create_event(hEvent);
   auto hEvent_before = hEvent;
-  lzt::append_memory_fill(cl.command_list_, memory, &pattern, pattern_size,
-                          size, nullptr, 1, &hEvent);
+  lzt::signal_event_from_host(hEvent);
+  lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
+                          nullptr, 1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  }
   ep.destroy_event(hEvent);
-
+  lzt::destroy_command_bundle(cmd_bundle);
   free_memory(memory);
 }
 
+TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned) {
+  RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      true);
+}
+
 class zeCommandListAppendMemoryFillVerificationTests : public ::testing::Test {
+protected:
+  void RunGivenHostMemoryWhenExecutingAMemoryFillTest(bool is_immediate);
+  void RunGivenSharedMemoryWhenExecutingAMemoryFillTest(bool is_immediate);
+  void RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(bool is_immediate);
 };
 
-void RunGivenHostMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
+void zeCommandListAppendMemoryFillVerificationTests::
+    RunGivenHostMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
   size_t size = 16;
   auto memory = allocate_host_memory(size);
   uint8_t pattern = 0xAB;
@@ -166,7 +232,8 @@ TEST_F(
   RunGivenHostMemoryWhenExecutingAMemoryFillTest(true);
 }
 
-void RunGivenSharedMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
+void zeCommandListAppendMemoryFillVerificationTests::
+    RunGivenSharedMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
   size_t size = 16;
   auto memory = allocate_shared_memory(size);
   uint8_t pattern = 0xAB;
@@ -204,7 +271,8 @@ TEST_F(
   RunGivenSharedMemoryWhenExecutingAMemoryFillTest(true);
 }
 
-void RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
+void zeCommandListAppendMemoryFillVerificationTests::
+    RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
   size_t size = 16;
   auto memory = allocate_device_memory(size);
   auto local_mem = allocate_host_memory(size);
@@ -380,41 +448,61 @@ INSTANTIATE_TEST_SUITE_P(VaryPatternSize,
                                                               32, 64, 128),
                                             ::testing::Bool()));
 
-class zeCommandListCommandQueueTests : public ::testing::Test {
-protected:
-  zeCommandList cl;
-  zeCommandQueue cq;
-};
+class zeCommandListCommandQueueTests : public ::testing::Test {};
 
 class zeCommandListAppendMemoryCopyWithDataVerificationTests
-    : public zeCommandListCommandQueueTests {};
+    : public zeCommandListCommandQueueTests {
+protected:
+  void RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(
+      bool is_immediate);
+  void RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(
+      bool is_immediate);
+};
 
-TEST_F(
-    zeCommandListAppendMemoryCopyWithDataVerificationTests,
-    GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+void zeCommandListAppendMemoryCopyWithDataVerificationTests::
+    RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(
+        bool is_immediate) {
   const size_t size = 4 * 1024;
   std::vector<uint8_t> host_memory1(size), host_memory2(size, 0);
   void *device_memory = allocate_device_memory(size_in_bytes(host_memory1));
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
   lzt::write_data_pattern(host_memory1.data(), size, 1);
 
-  append_memory_copy(cl.command_list_, device_memory, host_memory1.data(),
+  append_memory_copy(cmd_bundle.list, device_memory, host_memory1.data(),
                      size_in_bytes(host_memory1), nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
-  append_memory_copy(cl.command_list_, host_memory2.data(), device_memory,
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  append_memory_copy(cmd_bundle.list, host_memory2.data(), device_memory,
                      size_in_bytes(host_memory2), nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
-  close_command_list(cl.command_list_);
-  execute_command_lists(cq.command_queue_, 1, &cl.command_list_, nullptr);
-  synchronize(cq.command_queue_, UINT64_MAX);
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    close_command_list(cmd_bundle.list);
+    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
   free_memory(device_memory);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
-    GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+    GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+  RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyWithDataVerificationTests,
+    GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
+  RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(true);
+}
+
+void zeCommandListAppendMemoryCopyWithDataVerificationTests::
+    RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(
+        bool is_immediate) {
   const size_t size = 1024;
   // number of transfers to device memory
   const size_t num_dev_mem_copy = 8;
@@ -423,39 +511,65 @@ TEST_F(
   std::vector<uint8_t> host_memory1(size), host_memory2(size, 0);
   void *device_memory = allocate_device_memory(
       num_dev_mem_copy * (size_in_bytes(host_memory1) + addr_alignment));
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
   lzt::write_data_pattern(host_memory1.data(), size, 1);
 
   uint8_t *char_src_ptr = static_cast<uint8_t *>(device_memory);
   uint8_t *char_dst_ptr = char_src_ptr;
-  append_memory_copy(cl.command_list_, static_cast<void *>(char_dst_ptr),
+  append_memory_copy(cmd_bundle.list, static_cast<void *>(char_dst_ptr),
                      host_memory1.data(), size, nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
   for (uint32_t i = 1; i < num_dev_mem_copy; i++) {
     char_src_ptr = char_dst_ptr;
     char_dst_ptr += (size + addr_alignment);
-    append_memory_copy(cl.command_list_, static_cast<void *>(char_dst_ptr),
+    append_memory_copy(cmd_bundle.list, static_cast<void *>(char_dst_ptr),
                        static_cast<void *>(char_src_ptr), size, nullptr);
-    append_barrier(cl.command_list_, nullptr, 0, nullptr);
+    append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
   }
-  append_memory_copy(cl.command_list_, host_memory2.data(),
+  append_memory_copy(cmd_bundle.list, host_memory2.data(),
                      static_cast<void *>(char_dst_ptr), size, nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
-  close_command_list(cl.command_list_);
-  execute_command_lists(cq.command_queue_, 1, &cl.command_list_, nullptr);
-  synchronize(cq.command_queue_, UINT64_MAX);
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    close_command_list(cmd_bundle.list);
+    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
 
   free_memory(device_memory);
+  lzt::destroy_command_bundle(cmd_bundle);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyWithDataVerificationTests,
+    GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+  RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyWithDataVerificationTests,
+    GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
+  RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(true);
 }
 
 class zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests
-    : public zeCommandListCommandQueueTests {};
+    : public zeCommandListCommandQueueTests {
+protected:
+  void
+  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
+      bool is_immediate);
+  void
+  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
+      bool is_immediate);
+};
 
-TEST_F(
-    zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
-    GivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
+    RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
+        bool is_immediate) {
   const size_t size = 4 * 1024;
   ze_context_handle_t src_context = lzt::create_context();
   ze_context_handle_t dflt_context = lzt::get_default_context();
@@ -470,27 +584,32 @@ TEST_F(
   void *device_memory_src_ctx = lzt::allocate_device_memory(
       size, 1, 0, 0, zeDevice::get_instance()->get_device(), src_context);
   void *device_memory_dflt_ctx = lzt::allocate_device_memory(size);
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
   lzt::write_data_pattern(host_memory_src_ctx, size, 1);
 
-  append_memory_copy(src_context, cl.command_list_, device_memory_dflt_ctx,
+  append_memory_copy(src_context, cmd_bundle.list, device_memory_dflt_ctx,
                      host_memory_src_ctx, size, nullptr, 0, nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
-  append_memory_copy(dflt_context, cl.command_list_, device_memory_src_ctx,
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  append_memory_copy(dflt_context, cmd_bundle.list, device_memory_src_ctx,
                      device_memory_dflt_ctx, size, nullptr, 0, nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
-  append_memory_copy(src_context, cl.command_list_, shared_memory_dflt_ctx,
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  append_memory_copy(src_context, cmd_bundle.list, shared_memory_dflt_ctx,
                      device_memory_src_ctx, size, nullptr, 0, nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
-  append_memory_copy(dflt_context, cl.command_list_, shared_memory_src_ctx,
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  append_memory_copy(dflt_context, cmd_bundle.list, shared_memory_src_ctx,
                      device_memory_dflt_ctx, size, nullptr, 0, nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
-  append_memory_copy(src_context, cl.command_list_, host_memory_dflt_ctx,
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  append_memory_copy(src_context, cmd_bundle.list, host_memory_dflt_ctx,
                      shared_memory_src_ctx, size, nullptr, 0, nullptr);
-  append_barrier(cl.command_list_, nullptr, 0, nullptr);
-  close_command_list(cl.command_list_);
-  execute_command_lists(cq.command_queue_, 1, &cl.command_list_, nullptr);
-  synchronize(cq.command_queue_, UINT64_MAX);
+  append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    close_command_list(cmd_bundle.list);
+    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   lzt::validate_data_pattern(host_memory_dflt_ctx, size, 1);
   free_memory(src_context, host_memory_src_ctx);
@@ -499,11 +618,26 @@ TEST_F(
   free_memory(shared_memory_dflt_ctx);
   free_memory(src_context, device_memory_src_ctx);
   free_memory(device_memory_dflt_ctx);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
-    GivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsThenSuccessIsReturnedAndCopyIsCorrect) {
+    GivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
+      false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
+    GivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
+  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
+      true);
+}
+
+void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
+    RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
+        bool is_immediate) {
   const size_t size = 4 * 1024;
   ze_context_handle_t src_context = lzt::create_context();
   ze_context_handle_t dflt_context = lzt::get_default_context();
@@ -519,21 +653,26 @@ TEST_F(
   void *device_memory_src_ctx = lzt::allocate_device_memory(
       size, 1, 0, 0, zeDevice::get_instance()->get_device(), src_context);
   void *device_memory_dflt_ctx = lzt::allocate_device_memory(size);
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
   lzt::write_data_pattern(host_memory_src_ctx, size, 1);
 
-  append_memory_copy(src_context, cl.command_list_, device_memory_dflt_ctx,
+  append_memory_copy(src_context, cmd_bundle.list, device_memory_dflt_ctx,
                      host_memory_src_ctx, size, hEvent1, 0, nullptr);
-  append_barrier(cl.command_list_, hEvent2, 1, &hEvent1);
-  append_memory_copy(dflt_context, cl.command_list_, device_memory_src_ctx,
+  append_barrier(cmd_bundle.list, hEvent2, 1, &hEvent1);
+  append_memory_copy(dflt_context, cmd_bundle.list, device_memory_src_ctx,
                      device_memory_dflt_ctx, size, hEvent1, 1, &hEvent2);
-  append_barrier(cl.command_list_, hEvent2, 1, &hEvent1);
-  append_memory_copy(src_context, cl.command_list_, host_memory_dflt_ctx,
+  append_barrier(cmd_bundle.list, hEvent2, 1, &hEvent1);
+  append_memory_copy(src_context, cmd_bundle.list, host_memory_dflt_ctx,
                      device_memory_src_ctx, size, hEvent1, 0, &hEvent2);
-  append_barrier(cl.command_list_, nullptr, 1, &hEvent1);
-  close_command_list(cl.command_list_);
-  execute_command_lists(cq.command_queue_, 1, &cl.command_list_, nullptr);
-  synchronize(cq.command_queue_, UINT64_MAX);
+  append_barrier(cmd_bundle.list, nullptr, 1, &hEvent1);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  } else {
+    close_command_list(cmd_bundle.list);
+    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
 
   lzt::validate_data_pattern(host_memory_dflt_ctx, size, 1);
   ep.destroy_event(hEvent1);
@@ -542,6 +681,21 @@ TEST_F(
   free_memory(host_memory_dflt_ctx);
   free_memory(src_context, device_memory_src_ctx);
   free_memory(device_memory_dflt_ctx);
+  lzt::destroy_command_bundle(cmd_bundle);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
+    GivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsThenSuccessIsReturnedAndCopyIsCorrect) {
+  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
+      false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
+    GivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
+  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
+      true);
 }
 
 class zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests
@@ -706,46 +860,90 @@ INSTANTIATE_TEST_SUITE_P(
                        memory_types,                // Source Memory Type
                        memory_types,                // Destination Memory Type
                        ::testing::Bool()));
-class zeCommandListAppendMemoryCopyTests : public ::testing::Test {};
+class zeCommandListAppendMemoryCopyTests : public ::testing::Test {
+protected:
+  void RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyTest(
+      bool is_immediate);
+  void
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
+      bool is_immediate);
+  void
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
+      bool is_immediate);
+  void
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
+      bool is_immediate);
+};
 
-TEST_F(
-    zeCommandListAppendMemoryCopyTests,
-    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturned) {
-  lzt::zeCommandList cl;
+void zeCommandListAppendMemoryCopyTests::
+    RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyTest(
+        bool is_immediate) {
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
   void *memory = allocate_device_memory(size_in_bytes(host_memory));
 
-  append_memory_copy(cl.command_list_, memory, host_memory.data(),
+  append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
                      size_in_bytes(host_memory), nullptr);
-
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  }
+  lzt::destroy_command_bundle(cmd_bundle);
   free_memory(memory);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
-    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventThenSuccessIsReturned) {
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturned) {
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyTest(false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyTest(true);
+}
+
+void zeCommandListAppendMemoryCopyTests::
+    RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
+        bool is_immediate) {
   lzt::zeEventPool ep;
-  lzt::zeCommandList cl;
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
   void *memory = allocate_device_memory(size_in_bytes(host_memory));
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
-  append_memory_copy(cl.command_list_, memory, host_memory.data(),
+  append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
                      size_in_bytes(host_memory), hEvent);
-
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  }
   ep.destroy_event(hEvent);
-
+  lzt::destroy_command_bundle(cmd_bundle);
   free_memory(memory);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
-    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned) {
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventThenSuccessIsReturned) {
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
+      false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
+      true);
+}
+
+void zeCommandListAppendMemoryCopyTests::
+    RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
+        bool is_immediate) {
   lzt::zeEventPool ep;
-  lzt::zeCommandList cl;
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
   void *memory = allocate_device_memory(size_in_bytes(host_memory));
@@ -753,19 +951,37 @@ TEST_F(
 
   ep.create_event(hEvent);
   auto hEvent_before = hEvent;
-  append_memory_copy(cl.command_list_, memory, host_memory.data(),
+  lzt::signal_event_from_host(hEvent);
+  append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
                      size_in_bytes(host_memory), nullptr, 1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+  }
   ep.destroy_event(hEvent);
-
+  lzt::destroy_command_bundle(cmd_bundle);
   free_memory(memory);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
-    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned) {
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned) {
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
+      false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
+      true);
+}
+
+void zeCommandListAppendMemoryCopyTests::
+    RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
+        bool is_immediate) {
   lzt::zeEventPool ep;
-  lzt::zeCommandList cl;
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
   void *memory = allocate_device_memory(size_in_bytes(host_memory));
@@ -775,47 +991,69 @@ TEST_F(
 
   ep.create_event(hEvent);
   auto hEvent_before = hEvent;
-  append_memory_copy_region(cl.command_list_, memory, &dstRegion, 0, 0,
+  lzt::signal_event_from_host(hEvent);
+  append_memory_copy_region(cmd_bundle.list, memory, &dstRegion, 0, 0,
                             host_memory.data(), &srcRegion, 0, 0, nullptr, 1,
                             &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
-  ep.destroy_event(hEvent);
-
-  free_memory(memory);
-}
-
-void RunGivenMemoryPrefetchWhenWritingFromDeviceTest(bool is_immediate) {
-  const size_t size = 16;
-  const uint8_t value = 0x55;
-  void *memory = allocate_shared_memory(size);
-  memset(memory, 0xaa, size);
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendMemoryPrefetch(cmd_bundle.list, memory, size));
-  lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
   if (is_immediate) {
     lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
   }
-
-  for (size_t i = 0; i < size; i++) {
-    ASSERT_EQ(value, ((uint8_t *)memory)[i]);
-  }
-
-  free_memory(memory);
+  ep.destroy_event(hEvent);
   lzt::destroy_command_bundle(cmd_bundle);
+  free_memory(memory);
 }
 
-TEST(zeCommandListAppendMemoryPrefetchTests,
-     GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHost) {
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned) {
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
+      false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
+      true);
+}
+
+class zeCommandListAppendMemoryPrefetchTests : public ::testing::Test {
+protected:
+  void RunGivenMemoryPrefetchWhenWritingFromDeviceTest(bool is_immediate) {
+    const size_t size = 16;
+    const uint8_t value = 0x55;
+    void *memory = allocate_shared_memory(size);
+    memset(memory, 0xaa, size);
+    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListAppendMemoryPrefetch(cmd_bundle.list, memory, size));
+    lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    }
+
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(value, ((uint8_t *)memory)[i]);
+    }
+
+    free_memory(memory);
+    lzt::destroy_command_bundle(cmd_bundle);
+  }
+};
+
+TEST_F(zeCommandListAppendMemoryPrefetchTests,
+       GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHost) {
   RunGivenMemoryPrefetchWhenWritingFromDeviceTest(false);
 }
 
-TEST(
+TEST_F(
     zeCommandListAppendMemoryPrefetchTests,
     GivenMemoryPrefetchWhenWritingFromDeviceOnImmediateCmdListThenDataisCorrectFromHost) {
   RunGivenMemoryPrefetchWhenWritingFromDeviceTest(true);

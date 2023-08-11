@@ -23,12 +23,12 @@ class zeDriverMemoryMigrationPageFaultTestsMultiDevice
           std::tuple<uint32_t, uint32_t, bool, bool>> {
 public:
   void run_functions(const ze_device_handle_t device, ze_module_handle_t module,
-                     void *pattern_memory, size_t pattern_memory_count,
+                     void *pattern_memory, uint64_t pattern_memory_count,
                      uint16_t sub_pattern,
                      uint64_t *host_expected_output_buffer,
                      uint64_t *gpu_expected_output_buffer,
                      uint64_t *host_found_output_buffer,
-                     uint64_t *gpu_found_output_buffer, size_t output_count,
+                     uint64_t *gpu_found_output_buffer, uint32_t output_count,
                      ze_context_handle_t context, bool is_immediate) {
     ze_kernel_flags_t flag = 0;
     /* Prepare the fill function */
@@ -52,10 +52,7 @@ public:
     lzt::set_argument_value(fill_function, 0, sizeof(pattern_memory),
                             &pattern_memory);
 
-    lzt::set_argument_value(fill_function, 1, sizeof(pattern_memory_count),
-                            &pattern_memory_count);
-
-    lzt::set_argument_value(fill_function, 2, sizeof(sub_pattern),
+    lzt::set_argument_value(fill_function, 1, sizeof(sub_pattern),
                             &sub_pattern);
 
     /* Prepare the test function */
@@ -66,20 +63,17 @@ public:
     lzt::set_argument_value(test_function, 0, sizeof(pattern_memory),
                             &pattern_memory);
 
-    lzt::set_argument_value(test_function, 1, sizeof(pattern_memory_count),
-                            &pattern_memory_count);
-
-    lzt::set_argument_value(test_function, 2, sizeof(sub_pattern),
+    lzt::set_argument_value(test_function, 1, sizeof(sub_pattern),
                             &sub_pattern);
 
-    lzt::set_argument_value(test_function, 3,
+    lzt::set_argument_value(test_function, 2,
                             sizeof(gpu_expected_output_buffer),
                             &gpu_expected_output_buffer);
 
-    lzt::set_argument_value(test_function, 4, sizeof(gpu_found_output_buffer),
+    lzt::set_argument_value(test_function, 3, sizeof(gpu_found_output_buffer),
                             &gpu_found_output_buffer);
 
-    lzt::set_argument_value(test_function, 5, sizeof(output_count),
+    lzt::set_argument_value(test_function, 4, sizeof(output_count),
                             &output_count);
 
     auto cmd_bundle = lzt::create_command_bundle(
@@ -189,7 +183,7 @@ public:
       LOG_DEBUG << " Total size on device " << i << " is ::" << totalSize;
 
       size_t pattern_memory_size = totalSize / memory_size_factor;
-      size_t pattern_memory_count =
+      uint64_t pattern_memory_count =
           pattern_memory_size >> 3; // array of uint64_t
 
       // create pattern buffer on which device  will perform writes using the
@@ -441,7 +435,7 @@ public:
       LOG_DEBUG << " Total size on device " << i << " is ::" << totalSize;
 
       size_t pattern_memory_size = totalSize / memory_size_factor;
-      size_t pattern_memory_count =
+      uint64_t pattern_memory_count =
           pattern_memory_size >> 3; // array of uint64_t
 
       // create pattern buffer on which device  will perform writes using the

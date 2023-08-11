@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -74,11 +74,6 @@ protected:
     img_dev0 = lzt::create_ze_image(dev0, img_desc);
     img_dev1 = lzt::create_ze_image(dev1, img_desc);
 
-    command_list_dev0 = lzt::create_command_list(dev0);
-    command_list_dev1 = lzt::create_command_list(dev1);
-    command_q_dev0 = lzt::create_command_queue(dev0);
-    command_q_dev1 = lzt::create_command_queue(dev1);
-
     ze_event_pool_desc_t ep_desc = {};
     ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
     ep_desc.flags = 0;
@@ -91,10 +86,6 @@ protected:
       return;
     lzt::destroy_ze_image(img_dev0);
     lzt::destroy_ze_image(img_dev1);
-    lzt::destroy_command_list(command_list_dev0);
-    lzt::destroy_command_list(command_list_dev1);
-    lzt::destroy_command_queue(command_q_dev0);
-    lzt::destroy_command_queue(command_q_dev1);
     lzt::destroy_event_pool(ep);
   }
 
@@ -104,19 +95,26 @@ protected:
   uint32_t img_height;
   ze_device_handle_t dev0, dev1;
   ze_image_handle_t img_dev0, img_dev1;
-  ze_command_list_handle_t command_list_dev0;
-  ze_command_list_handle_t command_list_dev1;
-  ze_command_queue_handle_t command_q_dev0;
-  ze_command_queue_handle_t command_q_dev1;
   ze_event_pool_handle_t ep;
   bool skip = false;
+
+  void RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(
+      bool is_immediate);
+  void RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(
+      bool is_immediate);
 };
 
-TEST_F(
-    P2PImageCopy,
-    GivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceThenResultIsCorrect) {
+void P2PImageCopy::
+    RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(
+        bool is_immediate) {
   if (skip)
     return;
+  auto cmd_bundle_dev0 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle_dev1 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -129,36 +127,66 @@ TEST_F(
   auto event2 = lzt::create_event(ep, event_desc);
 
   // Load image to dev0
-  lzt::append_image_copy_from_mem(command_list_dev0, img_dev0,
+  lzt::append_image_copy_from_mem(cmd_bundle_dev0.list, img_dev0,
                                   input_png.raw_data(), event1);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event1);
+  lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event1);
 
   // copy to dev 1
-  lzt::append_image_copy(command_list_dev0, img_dev1, img_dev0, event2);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event2);
-  lzt::close_command_list(command_list_dev0);
-  lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT64_MAX);
+  lzt::append_image_copy(cmd_bundle_dev0.list, img_dev1, img_dev0, event2);
+  lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event2);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev0.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev0.list);
+    lzt::execute_command_lists(cmd_bundle_dev0.queue, 1, &cmd_bundle_dev0.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev0.queue, UINT64_MAX);
+  }
 
   // Copyback to host
-  lzt::append_image_copy_to_mem(command_list_dev1, output_png.raw_data(),
+  lzt::append_image_copy_to_mem(cmd_bundle_dev1.list, output_png.raw_data(),
                                 img_dev1, nullptr);
-  lzt::close_command_list(command_list_dev1);
-  lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev1.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev1.list);
+    lzt::execute_command_lists(cmd_bundle_dev1.queue, 1, &cmd_bundle_dev1.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev1.queue, UINT64_MAX);
+  }
 
   // compare results
   EXPECT_EQ(input_png, output_png);
 
   lzt::destroy_event(event1);
   lzt::destroy_event(event2);
+  lzt::destroy_command_bundle(cmd_bundle_dev1);
+  lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
 TEST_F(
     P2PImageCopy,
-    GivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceThenResultIsCorrect) {
+    GivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceThenResultIsCorrect) {
+  RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(false);
+}
+
+TEST_F(
+    P2PImageCopy,
+    GivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceUsingImmediateCmdListThenResultIsCorrect) {
+  RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(true);
+}
+
+void P2PImageCopy::
+    RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(
+        bool is_immediate) {
   if (skip)
     return;
+  auto cmd_bundle_dev0 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle_dev1 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -172,30 +200,40 @@ TEST_F(
   auto event3 = lzt::create_event(ep, event_desc);
 
   // Load image to dev0
-  lzt::append_image_copy_from_mem(command_list_dev0, img_dev0,
+  lzt::append_image_copy_from_mem(cmd_bundle_dev0.list, img_dev0,
                                   input_png.raw_data(), event1);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event1);
+  lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event1);
 
   // copy to dev 1
   ze_image_region_t region = {0, 0, 0, img_width, img_height / 2, 1};
-  lzt::append_image_copy_region(command_list_dev0, img_dev1, img_dev0, &region,
-                                &region, event2);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event2);
+  lzt::append_image_copy_region(cmd_bundle_dev0.list, img_dev1, img_dev0,
+                                &region, &region, event2);
+  lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event2);
   region = {0, img_height / 2, 0, img_width, img_height / 2, 1};
-  lzt::append_image_copy_region(command_list_dev0, img_dev1, img_dev0, &region,
-                                &region, event3);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event3);
+  lzt::append_image_copy_region(cmd_bundle_dev0.list, img_dev1, img_dev0,
+                                &region, &region, event3);
+  lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event3);
 
-  lzt::close_command_list(command_list_dev0);
-  lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev0.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev0.list);
+    lzt::execute_command_lists(cmd_bundle_dev0.queue, 1, &cmd_bundle_dev0.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev0.queue, UINT64_MAX);
+  }
 
   // Copyback to host
-  lzt::append_image_copy_to_mem(command_list_dev1, output_png.raw_data(),
+  lzt::append_image_copy_to_mem(cmd_bundle_dev1.list, output_png.raw_data(),
                                 img_dev1, nullptr);
-  lzt::close_command_list(command_list_dev1);
-  lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev1.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev1.list);
+    lzt::execute_command_lists(cmd_bundle_dev1.queue, 1, &cmd_bundle_dev1.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev1.queue, UINT64_MAX);
+  }
 
   // compare results
   EXPECT_EQ(input_png, output_png);
@@ -203,17 +241,39 @@ TEST_F(
   lzt::destroy_event(event1);
   lzt::destroy_event(event2);
   lzt::destroy_event(event3);
+  lzt::destroy_command_bundle(cmd_bundle_dev1);
+  lzt::destroy_command_bundle(cmd_bundle_dev0);
+}
+
+TEST_F(
+    P2PImageCopy,
+    GivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceThenResultIsCorrect) {
+  RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(false);
+}
+
+TEST_F(
+    P2PImageCopy,
+    GivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceUsingImmediateCmdListThenResultIsCorrect) {
+  RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(true);
 }
 
 class P2PImageCopyMemory
     : public P2PImageCopy,
-      public ::testing::WithParamInterface<ze_memory_type_t> {};
+      public ::testing::WithParamInterface<std::tuple<ze_memory_type_t, bool>> {
+};
 
 TEST_P(
     P2PImageCopyMemory,
     GivenTwoDevicesAndImageOnDeviceWhenCopiedToMemoryOnOtherDeviceThenResultIsCorrect) {
   if (skip)
     return;
+  bool is_immediate = std::get<1>(GetParam());
+  auto cmd_bundle_dev0 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle_dev1 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -226,7 +286,7 @@ TEST_P(
 
   void *target_mem;
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
-  if (GetParam() == ZE_MEMORY_TYPE_DEVICE) {
+  if (std::get<0>(GetParam()) == ZE_MEMORY_TYPE_DEVICE) {
     ze_device_mem_alloc_flags_t d_flags = 0;
     ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
@@ -239,24 +299,34 @@ TEST_P(
   }
 
   // Load image to dev0
-  lzt::append_image_copy_from_mem(command_list_dev0, img_dev0,
+  lzt::append_image_copy_from_mem(cmd_bundle_dev0.list, img_dev0,
                                   input_png.raw_data(), event1);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event1);
+  lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event1);
 
   // on dev0, copy dev0 image to dev1 memory
-  lzt::append_image_copy_to_mem(command_list_dev0, target_mem, img_dev0,
+  lzt::append_image_copy_to_mem(cmd_bundle_dev0.list, target_mem, img_dev0,
                                 event2);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event2);
-  lzt::close_command_list(command_list_dev0);
-  lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT64_MAX);
+  lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event2);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev0.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev0.list);
+    lzt::execute_command_lists(cmd_bundle_dev0.queue, 1, &cmd_bundle_dev0.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev0.queue, UINT64_MAX);
+  }
 
   // Copyback to host
-  lzt::append_memory_copy(command_list_dev1, output_png.raw_data(), target_mem,
-                          mem_size);
-  lzt::close_command_list(command_list_dev1);
-  lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle_dev1.list, output_png.raw_data(),
+                          target_mem, mem_size);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev1.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev1.list);
+    lzt::execute_command_lists(cmd_bundle_dev1.queue, 1, &cmd_bundle_dev1.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev1.queue, UINT64_MAX);
+  }
 
   // compare results
   EXPECT_EQ(input_png, output_png);
@@ -264,6 +334,8 @@ TEST_P(
   lzt::destroy_event(event1);
   lzt::destroy_event(event2);
   lzt::free_memory(target_mem);
+  lzt::destroy_command_bundle(cmd_bundle_dev1);
+  lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
 TEST_P(
@@ -271,6 +343,13 @@ TEST_P(
     GivenTwoDevicesAndImageOnDeviceWhenCopiedFromMemoryOnOtherDeviceThenResultIsCorrect) {
   if (skip)
     return;
+  bool is_immediate = std::get<1>(GetParam());
+  auto cmd_bundle_dev0 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle_dev1 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -281,7 +360,7 @@ TEST_P(
 
   void *target_mem;
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
-  if (GetParam() == ZE_MEMORY_TYPE_DEVICE) {
+  if (std::get<0>(GetParam()) == ZE_MEMORY_TYPE_DEVICE) {
     ze_device_mem_alloc_flags_t d_flags = 0;
     ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
@@ -294,29 +373,41 @@ TEST_P(
   }
 
   // on dev1, load image to dev1 memory
-  lzt::append_memory_copy(command_list_dev1, target_mem, input_png.raw_data(),
-                          mem_size);
-  lzt::close_command_list(command_list_dev1);
-  lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle_dev1.list, target_mem,
+                          input_png.raw_data(), mem_size);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev1.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev1.list);
+    lzt::execute_command_lists(cmd_bundle_dev1.queue, 1, &cmd_bundle_dev1.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev1.queue, UINT64_MAX);
+  }
 
   // on dev0, copy from dev1 memory to dev0 image
-  lzt::append_image_copy_from_mem(command_list_dev0, img_dev0, target_mem,
+  lzt::append_image_copy_from_mem(cmd_bundle_dev0.list, img_dev0, target_mem,
                                   event);
-  lzt::append_wait_on_events(command_list_dev0, 1, &event);
+  lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event);
 
   // Copyback to host
-  lzt::append_image_copy_to_mem(command_list_dev0, output_png.raw_data(),
+  lzt::append_image_copy_to_mem(cmd_bundle_dev0.list, output_png.raw_data(),
                                 img_dev0, nullptr);
-  lzt::close_command_list(command_list_dev0);
-  lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev0.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev0.list);
+    lzt::execute_command_lists(cmd_bundle_dev0.queue, 1, &cmd_bundle_dev0.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev0.queue, UINT64_MAX);
+  }
 
   // compare results
   EXPECT_EQ(input_png, output_png);
 
   lzt::destroy_event(event);
   lzt::free_memory(target_mem);
+  lzt::destroy_command_bundle(cmd_bundle_dev1);
+  lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
 TEST_P(
@@ -324,6 +415,13 @@ TEST_P(
     GivenTwoDevicesAndImageOnRemoteDeviceWhenCopiedToMemoryOnLocalDeviceThenResultIsCorrect) {
   if (skip)
     return;
+  bool is_immediate = std::get<1>(GetParam());
+  auto cmd_bundle_dev0 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle_dev1 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -334,7 +432,7 @@ TEST_P(
 
   void *target_mem;
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
-  if (GetParam() == ZE_MEMORY_TYPE_DEVICE) {
+  if (std::get<0>(GetParam()) == ZE_MEMORY_TYPE_DEVICE) {
     ze_device_mem_alloc_flags_t d_flags = 0;
     ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
@@ -347,28 +445,41 @@ TEST_P(
   }
 
   // Load image to dev0
-  lzt::append_image_copy_from_mem(command_list_dev0, img_dev0,
+  lzt::append_image_copy_from_mem(cmd_bundle_dev0.list, img_dev0,
                                   input_png.raw_data(), nullptr);
-  lzt::close_command_list(command_list_dev0);
-  lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev0.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev0.list);
+    lzt::execute_command_lists(cmd_bundle_dev0.queue, 1, &cmd_bundle_dev0.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev0.queue, UINT64_MAX);
+  }
 
   // on dev1, copy dev0 image to dev1 memory
-  lzt::append_image_copy_to_mem(command_list_dev1, target_mem, img_dev0, event);
-  lzt::append_wait_on_events(command_list_dev1, 1, &event);
+  lzt::append_image_copy_to_mem(cmd_bundle_dev1.list, target_mem, img_dev0,
+                                event);
+  lzt::append_wait_on_events(cmd_bundle_dev1.list, 1, &event);
 
   // Copyback to host
-  lzt::append_memory_copy(command_list_dev1, output_png.raw_data(), target_mem,
-                          mem_size);
-  lzt::close_command_list(command_list_dev1);
-  lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle_dev1.list, output_png.raw_data(),
+                          target_mem, mem_size);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev1.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev1.list);
+    lzt::execute_command_lists(cmd_bundle_dev1.queue, 1, &cmd_bundle_dev1.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev1.queue, UINT64_MAX);
+  }
 
   // compare results
   EXPECT_EQ(input_png, output_png);
 
   lzt::destroy_event(event);
   lzt::free_memory(target_mem);
+  lzt::destroy_command_bundle(cmd_bundle_dev1);
+  lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
 TEST_P(
@@ -376,6 +487,13 @@ TEST_P(
     GivenTwoDevicesAndImageOnRemoteDeviceWhenCopiedFromMemoryOnLocalDeviceThenResultIsCorrect) {
   if (skip)
     return;
+  bool is_immediate = std::get<1>(GetParam());
+  auto cmd_bundle_dev0 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle_dev1 = lzt::create_command_bundle(
+      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -388,7 +506,7 @@ TEST_P(
 
   void *target_mem;
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
-  if (GetParam() == ZE_MEMORY_TYPE_DEVICE) {
+  if (std::get<0>(GetParam()) == ZE_MEMORY_TYPE_DEVICE) {
     ze_device_mem_alloc_flags_t d_flags = 0;
     ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
@@ -401,24 +519,34 @@ TEST_P(
   }
 
   // on dev1, load image to dev1 memory
-  lzt::append_memory_copy(command_list_dev1, target_mem, input_png.raw_data(),
-                          mem_size, event1);
-  lzt::append_wait_on_events(command_list_dev1, 1, &event1);
+  lzt::append_memory_copy(cmd_bundle_dev1.list, target_mem,
+                          input_png.raw_data(), mem_size, event1);
+  lzt::append_wait_on_events(cmd_bundle_dev1.list, 1, &event1);
 
   // on dev1, copy from dev1 memory to dev0 image
-  lzt::append_image_copy_from_mem(command_list_dev1, img_dev0, target_mem,
+  lzt::append_image_copy_from_mem(cmd_bundle_dev1.list, img_dev0, target_mem,
                                   event2);
-  lzt::append_wait_on_events(command_list_dev1, 1, &event2);
-  lzt::close_command_list(command_list_dev1);
-  lzt::execute_command_lists(command_q_dev1, 1, &command_list_dev1, nullptr);
-  lzt::synchronize(command_q_dev1, UINT64_MAX);
+  lzt::append_wait_on_events(cmd_bundle_dev1.list, 1, &event2);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev1.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev1.list);
+    lzt::execute_command_lists(cmd_bundle_dev1.queue, 1, &cmd_bundle_dev1.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev1.queue, UINT64_MAX);
+  }
 
   // Copyback to host
-  lzt::append_image_copy_to_mem(command_list_dev0, output_png.raw_data(),
+  lzt::append_image_copy_to_mem(cmd_bundle_dev0.list, output_png.raw_data(),
                                 img_dev0, nullptr);
-  lzt::close_command_list(command_list_dev0);
-  lzt::execute_command_lists(command_q_dev0, 1, &command_list_dev0, nullptr);
-  lzt::synchronize(command_q_dev0, UINT64_MAX);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_dev0.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_dev0.list);
+    lzt::execute_command_lists(cmd_bundle_dev0.queue, 1, &cmd_bundle_dev0.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_dev0.queue, UINT64_MAX);
+  }
 
   // compare results
   EXPECT_EQ(input_png, output_png);
@@ -426,10 +554,14 @@ TEST_P(
   lzt::destroy_event(event1);
   lzt::destroy_event(event2);
   lzt::free_memory(target_mem);
+  lzt::destroy_command_bundle(cmd_bundle_dev1);
+  lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
-INSTANTIATE_TEST_CASE_P(P2PImageMemory, P2PImageCopyMemory,
-                        testing::Values(ZE_MEMORY_TYPE_DEVICE,
-                                        ZE_MEMORY_TYPE_SHARED));
+INSTANTIATE_TEST_SUITE_P(
+    P2PImageMemory, P2PImageCopyMemory,
+    ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_DEVICE,
+                                         ZE_MEMORY_TYPE_SHARED),
+                       ::testing::Bool()));
 
 } // namespace

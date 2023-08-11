@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2020 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -22,7 +22,7 @@ enum memory_test_type { MTT_SHARED, MTT_HOST };
 
 class zeMemAccessTests : public ::testing::Test,
                          public ::testing::WithParamInterface<
-                             std::tuple<enum memory_test_type, size_t>> {
+                             std::tuple<enum memory_test_type, size_t, bool>> {
 
 protected:
   zeMemAccessTests() {
@@ -49,8 +49,7 @@ TEST_P(zeMemAccessTests,
 
 class zeMemAccessCommandListTests : public zeMemAccessTests {
 protected:
-  lzt::zeCommandList cmdlist_;
-  lzt::zeCommandQueue cmdqueue_;
+  lzt::zeCommandBundle cmd_bundle_;
 };
 
 TEST_P(
@@ -58,38 +57,54 @@ TEST_P(
     GivenMemoryAllocationWhenCopyingAndReadingBackOnHostThenCorrectDataIsRead) {
   lzt::write_data_pattern(memory_, size_, 1);
   const size_t alignment = std::get<1>(GetParam());
+  bool is_immediate = std::get<2>(GetParam());
+  cmd_bundle_ = lzt::create_command_bundle(is_immediate);
   void *other_memory = (mtt_ == MTT_HOST)
                            ? lzt::allocate_host_memory(size_, alignment)
                            : lzt::allocate_shared_memory(size_, alignment);
 
-  lzt::append_memory_copy(cmdlist_.command_list_, other_memory, memory_, size_,
+  lzt::append_memory_copy(cmd_bundle_.list, other_memory, memory_, size_,
                           nullptr);
-  lzt::append_barrier(cmdlist_.command_list_, nullptr, 0, nullptr);
-  lzt::close_command_list(cmdlist_.command_list_);
-  lzt::execute_command_lists(cmdqueue_.command_queue_, 1,
-                             &cmdlist_.command_list_, nullptr);
-  lzt::synchronize(cmdqueue_.command_queue_, UINT64_MAX);
+  lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_.list);
+    lzt::execute_command_lists(cmd_bundle_.queue, 1, &cmd_bundle_.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_.queue, UINT64_MAX);
+  }
   lzt::validate_data_pattern(other_memory, size_, 1);
   lzt::free_memory(other_memory);
+  lzt::destroy_command_bundle(cmd_bundle_);
 }
 
 TEST_P(zeMemAccessCommandListTests,
        GivenAllocationSettingAndReadingBackOnHostThenCorrectDataIsRead) {
+  bool is_immediate = std::get<2>(GetParam());
+  cmd_bundle_ = lzt::create_command_bundle(is_immediate);
   const uint8_t value = 0x55;
   memset(memory_, 0,
          size_); // Write a different pattern from what we are going to write.
-  lzt::append_memory_set(cmdlist_.command_list_, memory_, &value, size_);
-  lzt::append_barrier(cmdlist_.command_list_, nullptr, 0, nullptr);
-  lzt::close_command_list(cmdlist_.command_list_);
-  lzt::execute_command_lists(cmdqueue_.command_queue_, 1,
-                             &cmdlist_.command_list_, nullptr);
-  lzt::synchronize(cmdqueue_.command_queue_, UINT64_MAX);
-  for (unsigned int ui = 0; ui < size_; ui++)
+  lzt::append_memory_set(cmd_bundle_.list, memory_, &value, size_);
+  lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
+  if (is_immediate) {
+    lzt::synchronize_command_list_host(cmd_bundle_.list, UINT64_MAX);
+  } else {
+    lzt::close_command_list(cmd_bundle_.list);
+    lzt::execute_command_lists(cmd_bundle_.queue, 1, &cmd_bundle_.list,
+                               nullptr);
+    lzt::synchronize(cmd_bundle_.queue, UINT64_MAX);
+  }
+  for (unsigned int ui = 0; ui < size_; ui++) {
     EXPECT_EQ(value, static_cast<uint8_t *>(memory_)[ui]);
+  }
+  lzt::destroy_command_bundle(cmd_bundle_);
 }
 
 TEST_P(zeMemAccessTests,
        GivenAllocationWhenWritingAndReadingBackOnDeviceThenCorrectDataIsRead) {
+  bool is_immediate = std::get<2>(GetParam());
   lzt::write_data_pattern(memory_, size_, 1);
   std::string module_name = "unified_mem_test.spv";
   ze_module_handle_t module = lzt::create_module(
@@ -107,19 +122,18 @@ TEST_P(zeMemAccessTests,
   arg.arg_value = &size;
   args.push_back(arg);
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name, 1, args);
+                                   module, func_name, 1, args, is_immediate);
   lzt::validate_data_pattern(memory_, size_, -1);
   lzt::destroy_module(module);
 }
 
-INSTANTIATE_TEST_CASE_P(zeMemAccessTests, zeMemAccessTests,
-                        ::testing::Combine(testing::Values(MTT_HOST,
-                                                           MTT_SHARED),
-                                           lzt::memory_allocation_alignments));
-INSTANTIATE_TEST_CASE_P(zeMemAccessCommandListTests,
-                        zeMemAccessCommandListTests,
-                        ::testing::Combine(testing::Values(MTT_HOST,
-                                                           MTT_SHARED),
-                                           lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(
+    zeMemAccessTests, zeMemAccessTests,
+    ::testing::Combine(::testing::Values(MTT_HOST, MTT_SHARED),
+                       lzt::memory_allocation_alignments, ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(
+    zeMemAccessCommandListTests, zeMemAccessCommandListTests,
+    ::testing::Combine(::testing::Values(MTT_HOST, MTT_SHARED),
+                       lzt::memory_allocation_alignments, ::testing::Bool()));
 
 } // namespace

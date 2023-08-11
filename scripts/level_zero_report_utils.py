@@ -72,7 +72,9 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListCopyEventTest_GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListCopyEventTest_GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsThenCopiesCompleteSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenExportingMemoryAsDMABufOnImmediateCmdListThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenImportingMemoryThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceCommandQueueGroupsTest_GivenValidDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceCommandQueueGroupsTest_GivenValidSubDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceStatusTest_GivenValidDeviceHandlesWhenRequestingStatusThenSuccessReturned', test_name, re.IGNORECASE)) or \
@@ -91,9 +93,18 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopiesWithDependenciesWhenExecutingCommandListThenCommandsCompletesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopiesWithDependenciesWhenExecutingImmediateCommandListThenCommandsCompletesSuccessfully', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryCopyWithDataVerificationTests_GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryCopyWithDataVerificationTests_GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionOnImmediateCmdListThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
@@ -151,7 +162,9 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenGpuOnlyFlagThenVpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturnedAndAtLeastOneDriverHandleIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('GivenVpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidDeviceWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidDeviceWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidDeviceWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidDeviceWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidDeviceWhenExportingMemoryWithD3DTextureThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidDeviceWhenExportingMemoryWithD3DTextureKmtThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidDeviceWhenExportingMemoryWithD3D12HeapThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \

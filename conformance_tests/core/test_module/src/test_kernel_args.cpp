@@ -19,9 +19,8 @@ namespace lzt = level_zero_tests;
 namespace {
 
 class KernelArgumentTests : public ::testing::Test {
-
-public:
-  KernelArgumentTests() {
+protected:
+  void SetUp() override {
     device_ = lzt::zeDevice::get_instance()->get_device();
     module_ = lzt::create_module(device_, "multi_argument_kernel_test.spv");
     if (lzt::image_support()) {
@@ -30,7 +29,7 @@ public:
     }
   }
 
-  ~KernelArgumentTests() {
+  void TearDown() override {
     lzt::destroy_module(module_);
     if (lzt::image_support()) {
       lzt::destroy_module(image_module_);
@@ -48,6 +47,13 @@ public:
 
   const int img_height = 20;
   const int img_width = 20;
+
+  void RunGivenSeveralBuffersWhenPassingToKernelTest(bool is_immediate);
+  void RunGivenSeveral2DImagesWhenPassingToKernelTest(bool is_immediate);
+  void RunGivenSeveralSamplersWhenPassingToKernelTest(bool is_immediate);
+  void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
+      bool is_immediate);
+  void RunGivenManyLocalArgsWhenPassingToKernelTest(bool is_immediate);
 };
 
 static ze_image_handle_t create_2d_uint_test_image(int width, int height) {
@@ -116,8 +122,8 @@ uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image, int x,
   return temp_png.get_pixel(x, y);
 }
 
-TEST_F(KernelArgumentTests,
-       GivenSeveralBuffersWhenPassingToKernelThenCorrectResultIsReturned) {
+void KernelArgumentTests::RunGivenSeveralBuffersWhenPassingToKernelTest(
+    bool is_immediate) {
   std::string kernel_name = "many_buffers";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -132,7 +138,8 @@ TEST_F(KernelArgumentTests,
     args.push_back(arg);
   }
   // Kernel should set buffers to values 1,2,3,4,5.
-  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args);
+  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args,
+                                   is_immediate);
 
   for (int i = 0; i < num_bufs; i++) {
     int data = *static_cast<int *>(buffers[i]);
@@ -141,8 +148,19 @@ TEST_F(KernelArgumentTests,
   }
 }
 
-void RunGivenSeveral2DImagesWhenPassingToKernelTest(KernelArgumentTests &test,
-                                                    bool is_immediate) {
+TEST_F(KernelArgumentTests,
+       GivenSeveralBuffersWhenPassingToKernelThenCorrectResultIsReturned) {
+  RunGivenSeveralBuffersWhenPassingToKernelTest(false);
+}
+
+TEST_F(
+    KernelArgumentTests,
+    GivenSeveralBuffersWhenPassingToKernelOnImmediateCmdListThenCorrectResultIsReturned) {
+  RunGivenSeveralBuffersWhenPassingToKernelTest(true);
+}
+
+void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest(
+    bool is_immediate) {
   std::string kernel_name = "many_2d_images";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -150,9 +168,9 @@ void RunGivenSeveral2DImagesWhenPassingToKernelTest(KernelArgumentTests &test,
   ze_image_handle_t images[num_images];
 
   for (int i = 0; i < num_images; i++) {
-    images[i] = create_2d_uint_test_image(test.img_width, test.img_height);
+    images[i] = create_2d_uint_test_image(img_width, img_height);
     // set pixel to test value;
-    test.set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
+    set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
     arg.arg_size = sizeof(images[i]);
     arg.arg_value = &images[i];
     args.push_back(arg);
@@ -160,14 +178,13 @@ void RunGivenSeveral2DImagesWhenPassingToKernelTest(KernelArgumentTests &test,
 
   // For each image, pixel value at coord ([imagenum],[imagenum])
   // will be written to coord ([imagenum+10],[imagenum+10])
-  lzt::create_and_execute_function(test.device_, test.image_module_,
-                                   kernel_name, 1, args);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1, args,
+                                   is_immediate);
 
   for (int i = 0; i < num_images; i++) {
-    uint32_t pixel =
-        test.get_image_pixel(images[i], i + 1, i + 1, is_immediate);
+    uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1, is_immediate);
     EXPECT_EQ(pixel, i + 1);
-    pixel = test.get_image_pixel(images[i], i + 11, i + 11, is_immediate);
+    pixel = get_image_pixel(images[i], i + 11, i + 11, is_immediate);
     EXPECT_EQ(pixel, i + 1);
     lzt::destroy_ze_image(images[i]);
   }
@@ -179,7 +196,7 @@ TEST_F(KernelArgumentTests,
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  RunGivenSeveral2DImagesWhenPassingToKernelTest(*this, false);
+  RunGivenSeveral2DImagesWhenPassingToKernelTest(false);
 }
 
 TEST_F(
@@ -189,7 +206,7 @@ TEST_F(
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  RunGivenSeveral2DImagesWhenPassingToKernelTest(*this, true);
+  RunGivenSeveral2DImagesWhenPassingToKernelTest(true);
 }
 
 bool sampler_support() {
@@ -205,8 +222,8 @@ bool sampler_support() {
   }
 }
 
-TEST_F(KernelArgumentTests,
-       GivenSeveralSamplersWhenPassingToKernelThenSuccessIsReturned) {
+void KernelArgumentTests::RunGivenSeveralSamplersWhenPassingToKernelTest(
+    bool is_immediate) {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
@@ -226,16 +243,28 @@ TEST_F(KernelArgumentTests,
   }
 
   // sampler kernel is a noop, nothing to check
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1,
-                                   args);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1, args,
+                                   is_immediate);
 
   for (int i = 0; i < num_samplers; i++) {
     lzt::destroy_sampler(samplers[i]);
   }
 }
 
-void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
-    KernelArgumentTests &test, bool is_immediate) {
+TEST_F(KernelArgumentTests,
+       GivenSeveralSamplersWhenPassingToKernelThenSuccessIsReturned) {
+  RunGivenSeveralSamplersWhenPassingToKernelTest(false);
+}
+
+TEST_F(
+    KernelArgumentTests,
+    GivenSeveralSamplersWhenPassingToKernelOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenSeveralSamplersWhenPassingToKernelTest(true);
+}
+
+void KernelArgumentTests::
+    RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
+        bool is_immediate) {
   /*
   Kernel used for this test expects the following args:
   global int *buf1, global int *buf2, local int *local_buf, global int *buf3,
@@ -264,7 +293,7 @@ void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
   arg.arg_value = &buffers[1];
   args.push_back(arg);
 
-  // add local buff that will be used for copying
+  // Add local buff that will be used for copying
   arg.arg_size = sizeof(int);
   arg.arg_value = nullptr;
   args.push_back(arg);
@@ -282,9 +311,9 @@ void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
   ze_image_handle_t images[num_images];
 
   for (int i = 0; i < num_images; i++) {
-    images[i] = create_2d_uint_test_image(test.img_width, test.img_height);
+    images[i] = create_2d_uint_test_image(img_width, img_height);
     // set pixel to test value;
-    test.set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
+    set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
     arg.arg_size = sizeof(images[i]);
     arg.arg_value = &images[i];
     args.push_back(arg);
@@ -306,8 +335,8 @@ void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
   // buffers[1] copied to buffers[3] using local mem as staging area
   // For each image, pixel value at coord ([imagenum],[imagenum])
   //   will be written to coord ([imagenum+10],[imagenum+10]) using sampler
-  lzt::create_and_execute_function(test.device_, test.image_module_,
-                                   kernel_name, 1, args);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1, args,
+                                   is_immediate);
 
   EXPECT_EQ(*static_cast<int *>(buffers[0]), *static_cast<int *>(buffers[2]));
   EXPECT_EQ(*static_cast<int *>(buffers[1]), *static_cast<int *>(buffers[3]));
@@ -318,10 +347,9 @@ void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
     lzt::destroy_sampler(samplers[i]);
   }
   for (int i = 0; i < num_images; i++) {
-    uint32_t pixel =
-        test.get_image_pixel(images[i], i + 1, i + 1, is_immediate);
+    uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1, is_immediate);
     EXPECT_EQ(pixel, i + 1);
-    pixel = test.get_image_pixel(images[i], i + 11, i + 11, is_immediate);
+    pixel = get_image_pixel(images[i], i + 11, i + 11, is_immediate);
     EXPECT_EQ(pixel, i + 1);
     lzt::destroy_ze_image(images[i]);
   }
@@ -338,7 +366,7 @@ TEST_F(
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
   }
-  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(*this, false);
+  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(false);
 }
 
 TEST_F(
@@ -352,11 +380,11 @@ TEST_F(
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
   }
-  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(*this, true);
+  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(true);
 }
 
-TEST_F(KernelArgumentTests,
-       GivenManyLocalArgsWhenPassingToKernelCorrectResultIsReturned) {
+void KernelArgumentTests::RunGivenManyLocalArgsWhenPassingToKernelTest(
+    bool is_immediate) {
   std::string kernel_name = "many_locals";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -375,7 +403,8 @@ TEST_F(KernelArgumentTests,
   args.push_back(arg);
 
   // Kernel should set global buffer to value 0x55
-  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args);
+  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args,
+                                   is_immediate);
 
   // Kernel should set all bytes to 0x55
   uint8_t *data = static_cast<uint8_t *>(buff);
@@ -383,6 +412,17 @@ TEST_F(KernelArgumentTests,
     ASSERT_EQ(data[i], 0x55);
   }
   lzt::free_memory(buff);
+}
+
+TEST_F(KernelArgumentTests,
+       GivenManyLocalArgsWhenPassingToKernelCorrectResultIsReturned) {
+  RunGivenManyLocalArgsWhenPassingToKernelTest(false);
+}
+
+TEST_F(
+    KernelArgumentTests,
+    GivenManyLocalArgsWhenPassingToKernelOnImmediateCmdListCorrectResultIsReturned) {
+  RunGivenManyLocalArgsWhenPassingToKernelTest(true);
 }
 
 } // namespace

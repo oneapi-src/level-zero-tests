@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -14,14 +14,6 @@
 #include "gtest/gtest.h"
 
 namespace level_zero_tests {
-
-class zeCommandList {
-public:
-  zeCommandList();
-  ~zeCommandList();
-
-  ze_command_list_handle_t command_list_ = nullptr;
-};
 
 struct zeCommandBundle {
   ze_command_queue_handle_t queue = nullptr;
