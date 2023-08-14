@@ -79,6 +79,44 @@ TEST(
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE, zeModuleDestroy(nullptr));
 }
 
+TEST(
+    ModuleCreateNegativeTests,
+    GivenNonSPIRVModuleFormatWhenUsingModuleCreateExtendedDescriptorThenInvalidArgumentIsReturned) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  ze_module_handle_t module;
+  const std::string filename = "ze_matrix_multiplication_errors.spv";
+  const std::vector<uint8_t> binary_file =
+      level_zero_tests::load_binary_file(filename);
+
+  ze_module_desc_t module_description = {};
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+
+  const std::vector<uint8_t> binary_file_2 =
+      level_zero_tests::load_binary_file(filename);
+  const size_t module_sizes[2] = {binary_file.size(), binary_file_2.size()};
+
+  const uint8_t *binary_files[2] = {binary_file.data(), binary_file_2.data()};
+  ze_module_program_exp_desc_t module_program_exp_desc;
+  module_program_exp_desc.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
+  module_program_exp_desc.pNext = nullptr;
+  module_program_exp_desc.count = 2;
+  module_program_exp_desc.inputSizes = module_sizes;
+  module_program_exp_desc.pInputModules = binary_files;
+  module_program_exp_desc.pBuildFlags = nullptr;
+  module_program_exp_desc.pConstants = nullptr;
+
+  module_description.pNext = &module_program_exp_desc;
+  module_description.format = ZE_MODULE_FORMAT_NATIVE;
+  module_description.inputSize =
+      static_cast<uint32_t>(binary_file.size());        // ignored
+  module_description.pInputModule = binary_file.data(); // ignored
+  module_description.pBuildFlags = nullptr;
+
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
+            zeModuleCreate(lzt::get_default_context(), device,
+                           &module_description, &module, nullptr));
+}
+
 class ModuleNegativeLocalMemoryTests : public ::testing::Test {
 
 public:
