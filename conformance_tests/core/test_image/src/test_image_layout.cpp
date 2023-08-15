@@ -21,7 +21,11 @@ enum TestType { IMAGE_OBJECT_ONLY, ONE_KERNEL_ONLY, TWO_KERNEL_CONVERT };
 
 class ImageLayoutTests : public ::testing::Test {
 public:
-  ImageLayoutTests() {
+  void SetUp() override {
+    if (!(lzt::image_support())) {
+      LOG_INFO << "device does not support images, cannot run test";
+      GTEST_SKIP();
+    }
     module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
                                 "image_layout_tests.spv");
   }
@@ -198,7 +202,11 @@ public:
     lzt::destroy_command_bundle(cmd_bundle);
   }
 
-  ~ImageLayoutTests() { lzt::destroy_module(module); }
+  void TearDown() override {
+    if (lzt::image_support()) {
+      lzt::destroy_module(module);
+    }
+  }
 
   ze_image_handle_t create_image_desc_layout(ze_image_format_layout_t layout,
                                              ze_image_type_t type,
@@ -390,20 +398,12 @@ void RunGivenImageLayoutWhenConvertingImageToMemoryTest(ImageLayoutTests &test,
 
 TEST_F(ImageLayoutTests,
        GivenImageLayoutWhenConvertingImageToMemoryThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenImageLayoutWhenConvertingImageToMemoryTest(*this, false);
 }
 
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenConvertingImageToMemoryOnImmediateCmdListThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenImageLayoutWhenConvertingImageToMemoryTest(*this, true);
 }
 
@@ -433,10 +433,6 @@ void RunGivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemo
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryTest(
       *this, false);
 }
@@ -444,10 +440,6 @@ TEST_F(
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryOnImmediateCmdListThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryTest(
       *this, false);
 }
@@ -486,10 +478,6 @@ void RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMem
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryTest(
       *this, false);
 }
@@ -497,10 +485,6 @@ TEST_F(
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryOnImmediateCmdListThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryTest(
       *this, true);
 }
@@ -525,10 +509,6 @@ void RunGivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMe
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryTest(
       *this, false);
 }
@@ -536,10 +516,6 @@ TEST_F(
 TEST_F(
     ImageLayoutTests,
     GivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryOnImmediateCmdListThenBufferResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryTest(
       *this, true);
 }
@@ -598,20 +574,12 @@ void RunGivenIntImageLayoutWhenKernelConvertingImageTest(ImageLayoutTests &test,
 TEST_F(
     ImageLayoutTests,
     GivenIntImageLayoutWhenKernelConvertingImageThenReverseKernelConvertedResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenIntImageLayoutWhenKernelConvertingImageTest(*this, false);
 }
 
 TEST_F(
     ImageLayoutTests,
     GivenIntImageLayoutWhenKernelConvertingImageOnImmediateCmdListThenReverseKernelConvertedResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenIntImageLayoutWhenKernelConvertingImageTest(*this, true);
 }
 
@@ -655,20 +623,12 @@ void RunGivenNormImageLayoutWhenKernelConvertingImageTest(
 TEST_F(
     ImageLayoutTests,
     GivenNormImageLayoutWhenKernelConvertingImageThenReverseKernelConvertedResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenNormImageLayoutWhenKernelConvertingImageTest(*this, false);
 }
 
 TEST_F(
     ImageLayoutTests,
     GivenNormImageLayoutWhenKernelConvertingImageOnImmediateCmdListThenReverseKernelConvertedResultIsCorrect) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
   RunGivenNormImageLayoutWhenKernelConvertingImageTest(*this, true);
 }
 
