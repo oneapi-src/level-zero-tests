@@ -238,7 +238,7 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
     elif test_binary == "test_sysman_ecc":
         test_feature = "SysMan ECC"
     if test_feature == "None":
-        print("ERROR: test case " + test_name + " has no assigned feature\n")
+        print("ERROR: test case " + test_name + " has no assigned feature\n", file=sys.stderr)
     return test_feature
 
 def assign_test_feature(test_binary: str, test_name: str):
@@ -359,7 +359,7 @@ def assign_test_feature(test_binary: str, test_name: str):
         if test_binary == "test_fabric":
             test_feature = "Fabric"
         if test_feature == "None":
-            print("ERROR: test case " + test_name + " has no assigned feature\n")
+            print("ERROR: test case " + test_name + " has no assigned feature\n",  file=sys.stderr)
             exit(-1)
 
         return test_feature, test_section
