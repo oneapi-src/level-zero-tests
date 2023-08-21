@@ -145,9 +145,14 @@ public:
   void ze_peak_kernel_latency(L0Context &context);
   void ze_peak_hp_compute(L0Context &context);
   void ze_peak_sp_compute(L0Context &context);
+  void ze_peak_transfer_bw(L0Context &context);
+#ifndef EXCLUDE_MAIN
   void ze_peak_dp_compute(L0Context &context);
   void ze_peak_int_compute(L0Context &context);
-  void ze_peak_transfer_bw(L0Context &context);
+#else
+  std::vector<long double> ze_peak_dp_compute(L0Context &context);
+  std::vector<long double> ze_peak_int_compute(L0Context &context);
+#endif
 
 private:
   long double _transfer_bw_gpu_copy(L0Context &context,

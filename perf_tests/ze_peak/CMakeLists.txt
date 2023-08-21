@@ -27,4 +27,6 @@ add_lzt_test(
     ze_sp_compute
     ze_int_compute
     ze_dp_compute
+  EXTENDED
+    true
 )

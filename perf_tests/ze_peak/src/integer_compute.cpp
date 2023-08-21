@@ -8,7 +8,12 @@
 
 #include "../include/ze_peak.h"
 
+#ifndef EXCLUDE_MAIN
 void ZePeak::ze_peak_int_compute(L0Context &context) {
+#else
+std::vector<long double> ZePeak::ze_peak_int_compute(L0Context &context) {
+  std::vector<long double> gflops_list;
+#endif
   long double gflops, timed;
   ze_result_t result = ZE_RESULT_SUCCESS;
   TimingMeasurement type = is_bandwidth_with_event_timer();
@@ -222,6 +227,9 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
     gflops = calculate_gbps(timed, number_of_work_items * flops_per_work_item);
     std::cout << gflops << " GFLOPS\n";
   }
+#ifdef EXCLUDE_MAIN
+  gflops_list.push_back(gflops);
+#endif
 
   timed = 0;
   ///////////////////////////////////////////////////////////////////////////
@@ -242,6 +250,9 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
     gflops = calculate_gbps(timed, number_of_work_items * flops_per_work_item);
     std::cout << gflops << " GFLOPS\n";
   }
+#ifdef EXCLUDE_MAIN
+  gflops_list.push_back(gflops);
+#endif
 
   timed = 0;
   ///////////////////////////////////////////////////////////////////////////
@@ -262,6 +273,9 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
     gflops = calculate_gbps(timed, number_of_work_items * flops_per_work_item);
     std::cout << gflops << " GFLOPS\n";
   }
+#ifdef EXCLUDE_MAIN
+  gflops_list.push_back(gflops);
+#endif
 
   timed = 0;
   ///////////////////////////////////////////////////////////////////////////
@@ -282,6 +296,9 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
     gflops = calculate_gbps(timed, number_of_work_items * flops_per_work_item);
     std::cout << gflops << " GFLOPS\n";
   }
+#ifdef EXCLUDE_MAIN
+  gflops_list.push_back(gflops);
+#endif
 
   timed = 0;
   ///////////////////////////////////////////////////////////////////////////
@@ -302,6 +319,9 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
     gflops = calculate_gbps(timed, number_of_work_items * flops_per_work_item);
     std::cout << gflops << " GFLOPS\n";
   }
+#ifdef EXCLUDE_MAIN
+  gflops_list.push_back(gflops);
+#endif
 
   if (context.sub_device_count) {
     for (auto kernel : compute_v1) {
@@ -444,4 +464,7 @@ void ZePeak::ze_peak_int_compute(L0Context &context) {
     std::cout << "Module destroyed\n";
 
   print_test_complete();
+#ifdef EXCLUDE_MAIN
+  return gflops_list;
+#endif
 }

@@ -1684,6 +1684,7 @@ void ZePeak::print_test_complete() {
 // Main function which calls the argument parsing and calls each
 // test requested.
 //---------------------------------------------------------------------
+#ifndef EXCLUDE_MAIN
 int main(int argc, char **argv) {
   ZePeak peak_benchmark;
   L0Context context;
@@ -1729,6 +1730,7 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+#endif
 
 #if defined(unix) || defined(__unix__) || defined(__unix)
 
