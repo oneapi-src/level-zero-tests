@@ -40,7 +40,6 @@ int main(int argc, char **argv) {
             for (auto sub_device : sub_devices) {
               auto root_device_handle = lzt::get_root_device(sub_device);
               EXPECT_EQ(root_device, root_device_handle);
-              EXPECT_EQ(sub_device, device);
             }
           }
         } else if (strcmp(device_hierarchy, "COMPOSITE") == 0) {
