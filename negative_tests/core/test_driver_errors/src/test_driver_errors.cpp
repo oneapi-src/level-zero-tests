@@ -31,7 +31,6 @@ TEST(DriverGetNegativeTests,
 TEST(
     DriverGetNegativeTests,
     GivenInvalidCountPointerUsedWhileCallingzeDriverGetThenInvalidNullPointerIsReturned) {
-  lzt::ze_init();
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
             zeDriverGet(nullptr, nullptr));
 }
