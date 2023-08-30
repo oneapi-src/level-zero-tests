@@ -20,13 +20,18 @@ namespace {
 
 class zeCommandListAppendImageCopyWithSwizzleTests : public ::testing::Test {
 protected:
-  zeCommandListAppendImageCopyWithSwizzleTests() {
+  void SetUp() override {
+    if (!(lzt::image_support())) {
+      LOG_INFO << "device does not support images, cannot run test";
+      GTEST_SKIP();
+    }
     module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
                                 "image_swizzle_tests.spv");
   }
 
-  ~zeCommandListAppendImageCopyWithSwizzleTests() {
-    lzt::destroy_module(module);
+  void TearDown() override {
+    if (lzt::image_support())
+      lzt::destroy_module(module);
   }
 
   ze_image_handle_t create_image_desc_format(ze_image_format_type_t format_type,
