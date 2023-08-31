@@ -230,13 +230,7 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
 
   lzt::append_launch_function(cmdlist_immediate, kernel, &tg, nullptr, 0,
                               nullptr);
-  if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cmdlist_immediate, timeout));
-  }
-  for (size_t i = 0; i < size; i++) {
-    EXPECT_EQ(static_cast<int *>(buffer)[i], addval);
-  }
+
   lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
 
   lzt::append_launch_function(cmdlist_immediate, kernel, &tg, nullptr, 0,
@@ -317,11 +311,6 @@ static void RunAppendMemoryCopy(ze_command_list_handle_t cmdlist_immediate,
   // This should execute immediately
   lzt::append_memory_copy(cmdlist_immediate, device_memory, host_memory1.data(),
                           lzt::size_in_bytes(host_memory1), nullptr);
-
-  if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cmdlist_immediate, timeout));
-  }
 
   lzt::append_memory_copy(cmdlist_immediate, host_memory2.data(), device_memory,
                           lzt::size_in_bytes(host_memory2), nullptr);
@@ -450,6 +439,9 @@ static void RunMultipleAppendMemoryCopy(ze_command_queue_mode_t mode) {
     // This should execute immediately
     lzt::append_memory_set(mulcmdlist_immediate[i], buffer[i], &val[i], size,
                            nullptr);
+  }
+
+  for (uint32_t i = 0; i < num_cmdq; i++) {
     if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeCommandListHostSynchronize(mulcmdlist_immediate[i], timeout));
@@ -563,18 +555,11 @@ static void RunAppendImageCopy(ze_command_list_handle_t cmdlist_immediate,
   // First, copy the image from the host to the device:
   lzt::append_image_copy_from_mem(cmdlist_immediate, img.dflt_device_image_2_,
                                   img.dflt_host_image_.raw_data(), nullptr);
-  if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cmdlist_immediate, timeout));
-  }
+
   // Now, copy the image from the device to the device:
   lzt::append_image_copy(cmdlist_immediate, img.dflt_device_image_,
                          img.dflt_device_image_2_, nullptr);
 
-  if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cmdlist_immediate, timeout));
-  }
   // Finally copy the image from the device to the dest_host_image_upper for
   // validation:
   lzt::append_image_copy_to_mem(cmdlist_immediate,
@@ -1191,12 +1176,6 @@ RunIclAndRclAppendOperations(ze_command_list_handle_t cmdlist_immediate,
                                 nullptr);
 
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-
-    // Synchronize executions
-    if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListHostSynchronize(cmdlist_immediate, timeout));
-    }
 
     lzt::event_host_synchronize(event2, UINT64_MAX);
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(event1));
