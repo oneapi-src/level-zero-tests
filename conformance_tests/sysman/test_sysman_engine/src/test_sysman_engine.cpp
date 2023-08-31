@@ -183,13 +183,12 @@ TEST_F(
   }
 }
 
-static void workload_for_device() {
+static void workload_for_device(ze_device_handle_t device) {
   int m, k, n;
   m = k = n = 5000;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
-  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
   void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
   void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
@@ -254,7 +253,7 @@ TEST_F(
                                   static_cast<double>(s1.timestamp));
         // submit workload and measure  utilization
         s1 = lzt::get_engine_activity(engine_handle);
-        std::thread thread(workload_for_device);
+        std::thread thread(workload_for_device, device);
         thread.join();
         s2 = lzt::get_engine_activity(engine_handle);
         double post_utilization = (static_cast<double>(s2.activeTime) -
