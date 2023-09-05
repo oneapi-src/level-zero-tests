@@ -40,13 +40,8 @@ protected:
           context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
           ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
       lzt::append_memory_set(bundle.list, buffer, &val, buff_size);
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-      } else {
-        lzt::close_command_list(bundle.list);
-        lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-        lzt::synchronize(bundle.queue, UINT64_MAX);
-      }
+      lzt::close_command_list(bundle.list);
+      lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
       ASSERT_EQ(memcmp(ref_buffer, buffer, buff_size), 0);
       lzt::destroy_command_bundle(bundle);

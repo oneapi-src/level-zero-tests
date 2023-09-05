@@ -57,13 +57,8 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool,
   auto device = lzt::get_default_device(driver);
   auto cmdbundle = lzt::create_command_bundle(context, device, isImmediate);
   lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
-  if (isImmediate) {
-    lzt::synchronize_command_list_host(cmdbundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmdbundle.list);
-    lzt::execute_command_lists(cmdbundle.queue, 1, &cmdbundle.list, nullptr);
-    lzt::synchronize(cmdbundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmdbundle.list);
+  lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
 
   // cleanup
   lzt::destroy_command_bundle(cmdbundle);
@@ -78,13 +73,8 @@ static void child_device2_reads(ze_event_pool_handle_t hEventPool,
   auto cmdbundle = lzt::create_command_bundle(context, devices[1], isImmediate);
   lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
   printf("execute second device\n");
-  if (isImmediate) {
-    lzt::synchronize_command_list_host(cmdbundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmdbundle.list);
-    lzt::execute_command_lists(cmdbundle.queue, 1, &cmdbundle.list, nullptr);
-    lzt::synchronize(cmdbundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmdbundle.list);
+  lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
 
   // cleanup
   lzt::reset_command_list(cmdbundle.list);
@@ -102,25 +92,15 @@ static void child_multi_device_reads(ze_event_pool_handle_t hEventPool,
       lzt::create_command_bundle(context, devices[0], isImmediate);
   lzt::append_wait_on_events(cmdbundle1.list, 1, &hEvent);
   printf("execute device[0]\n");
-  if (isImmediate) {
-    lzt::synchronize_command_list_host(cmdbundle1.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmdbundle1.list);
-    lzt::execute_command_lists(cmdbundle1.queue, 1, &cmdbundle1.list, nullptr);
-    lzt::synchronize(cmdbundle1.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmdbundle1.list);
+  lzt::execute_and_sync_command_bundle(cmdbundle1, UINT64_MAX);
 
   auto cmdbundle2 =
       lzt::create_command_bundle(context, devices[1], isImmediate);
   lzt::append_wait_on_events(cmdbundle2.list, 1, &hEvent);
   printf("execute device[1]\n");
-  if (isImmediate) {
-    lzt::synchronize_command_list_host(cmdbundle2.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmdbundle2.list);
-    lzt::execute_command_lists(cmdbundle2.queue, 1, &cmdbundle2.list, nullptr);
-    lzt::synchronize(cmdbundle2.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmdbundle2.list);
+  lzt::execute_and_sync_command_bundle(cmdbundle2, UINT64_MAX);
   // cleanup
   lzt::reset_command_list(cmdbundle1.list);
   lzt::reset_command_list(cmdbundle2.list);

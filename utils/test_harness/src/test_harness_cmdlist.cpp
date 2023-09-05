@@ -804,6 +804,26 @@ void destroy_command_list(ze_command_list_handle_t cl) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cl));
 }
 
+void execute_and_sync_command_bundle(zeCommandBundle bundle, uint64_t timeout) {
+  if (bundle.queue != nullptr) {
+    auto command_queue_initial = bundle.queue;
+    auto command_list_initial = bundle.list;
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
+                                     bundle.queue, 1, &bundle.list, nullptr));
+    EXPECT_EQ(bundle.queue, command_queue_initial);
+    EXPECT_EQ(bundle.list, command_list_initial);
+
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandQueueSynchronize(bundle.queue, timeout));
+    EXPECT_EQ(bundle.queue, command_queue_initial);
+  } else {
+    auto command_list_initial = bundle.list;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListHostSynchronize(bundle.list, timeout));
+    EXPECT_EQ(bundle.list, command_list_initial);
+  }
+}
+
 void destroy_command_bundle(zeCommandBundle bundle) {
   if (bundle.queue != nullptr) {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(bundle.queue));

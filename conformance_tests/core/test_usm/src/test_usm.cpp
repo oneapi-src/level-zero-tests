@@ -117,14 +117,8 @@ public:
                             gpu_found_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
 
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     lzt::destroy_command_bundle(cmd_bundle);
     lzt::destroy_function(fill_function);
@@ -645,8 +639,8 @@ TEST_P(
 
   lzt::append_memory_fill(cmd_bundle.list, static_cast<uint8_t *>(device_mem),
                           &pattern, pattern_size, size_of_chunk, nullptr);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
   memset(host_mem, 0x0, size_of_chunk);
@@ -707,14 +701,8 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices,
     auto cmd_bundle = lzt::create_command_bundle(devices[i], is_immediate);
     lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size,
                             memory_size, nullptr);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
     lzt::destroy_command_bundle(cmd_bundle);
 
     for (int j = 0; j < memory_size; j++) {

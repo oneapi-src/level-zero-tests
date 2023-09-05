@@ -74,12 +74,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   lzt::append_image_copy_to_mem(bundle.list, outbuff, img_out, nullptr);
   lzt::close_command_list(bundle.list);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::destroy_function(kernel);
 }
 

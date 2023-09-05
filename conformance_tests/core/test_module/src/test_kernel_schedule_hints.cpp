@@ -72,14 +72,8 @@ void RunGivenKernelScheduleHintWhenRunningKernelTest(bool is_immediate) {
     group_count.groupCountZ = 1;
     lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
                                 0, nullptr);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     lzt::destroy_command_bundle(cmd_bundle);
 

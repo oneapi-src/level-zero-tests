@@ -915,13 +915,8 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
                               nullptr);
   lzt::append_barrier(cmd_bundle.list);
   lzt::append_memory_copy(cmd_bundle.list, buffer_a, buffer_b, size);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   auto timestamps_1 = lzt::get_global_timestamps(device);
 

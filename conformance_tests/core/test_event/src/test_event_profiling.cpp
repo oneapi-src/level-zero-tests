@@ -148,13 +148,8 @@ TEST_P(
     EventProfilingTests,
     GivenProfilingEventWhenCommandCompletesThenTimestampsAreRelationallyCorrect) {
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
 
   if (use_mapped_timestamp) {
@@ -173,13 +168,8 @@ TEST_P(
 TEST_P(EventProfilingTests,
        GivenSetProfilingEventWhenResettingEventThenEventStatusNotReady) {
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
   if (use_mapped_timestamp) {
     verify_mapped_timestamp_values();
@@ -212,13 +202,8 @@ TEST_P(EventProfilingTests,
   lzt::append_memory_set(cmd_bundle.list, other_buffer, &value1, mem_size,
                          regular_event);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &regular_event);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
   lzt::event_host_synchronize(regular_event, UINT64_MAX);
 
@@ -302,8 +287,8 @@ TEST_P(EventProfilingCacheCoherencyTests,
   lzt::append_wait_on_events(cmd_bundle.list, 1, &event4);
   lzt::append_memory_copy(cmd_bundle.list, buffer5, buffer4, size, event5);
 
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -389,13 +374,8 @@ void RunGivenKernelEventWhenUsingEventToSyncTest(bool is_immediate) {
   lzt::append_barrier(cmd_bundle.list);
   lzt::append_memory_copy(cmd_bundle.list, src_buffer, xfr_buffer, buff_size);
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
 
   for (int i = 0; i < size; i++) {
@@ -471,8 +451,8 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   lzt::set_argument_value(kernel0, 2, sizeof(addval), &addval);
   lzt::append_launch_function(cmd_bundle0.list, kernel0, &args, event, 0,
                               nullptr);
+  lzt::close_command_list(cmd_bundle0.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle0.list);
     lzt::execute_command_lists(cmd_bundle0.queue, 1, &cmd_bundle0.list,
                                nullptr);
   }
@@ -522,8 +502,8 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
                                    cmd_bundle1.list, 1, &event, time_result1,
                                    nullptr, nullptr, 1, &event));
 
+  lzt::close_command_list(cmd_bundle1.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle1.list);
     lzt::execute_command_lists(cmd_bundle1.queue, 1, &cmd_bundle1.list,
                                nullptr);
   }
@@ -702,13 +682,8 @@ void RunGivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsTest(
   lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
   lzt::append_launch_function(cmd_bundle.list, kernel, &args, event, 0,
                               nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   auto timestamp_results = lzt::get_event_timestamps_exp(event, device);
 
@@ -862,8 +837,8 @@ TEST_P(
     lzt::append_launch_function(cmdlist, kernel, &args, event, 0, nullptr);
 
     // Execute
+    lzt::close_command_list(cmdlist);
     if (!use_immediate_cmd_lists) {
-      lzt::close_command_list(cmdlist);
       lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
       lzt::synchronize(cmdqueue, UINT64_MAX);
     }
@@ -914,8 +889,8 @@ TEST_P(
     lzt::event_host_reset(event);
     lzt::reset_command_list(cmdlist);
     lzt::append_launch_function(cmdlist, kernel, &args, event, 0, nullptr);
+    lzt::close_command_list(cmdlist);
     if (!use_immediate_cmd_lists) {
-      lzt::close_command_list(cmdlist);
       lzt::execute_command_lists(cmdqueue, 1, &cmdlist, nullptr);
       lzt::synchronize(cmdqueue, UINT64_MAX);
     }

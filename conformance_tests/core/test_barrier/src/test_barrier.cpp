@@ -323,12 +323,7 @@ void RunEventSignaledWhenAppendingBarrierThenHostDetectsEvent(
   lzt::append_barrier(bundle.list, event_barrier_to_host, 0, nullptr);
   lzt::append_memory_copy(bundle.list, host_mem, dev_mem, xfer_size, nullptr);
   lzt::close_command_list(bundle.list);
-  if (isImmediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeEventHostSynchronize(event_barrier_to_host, UINT32_MAX - 1));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_barrier_to_host));
@@ -440,12 +435,7 @@ void RunEventSignaledWhenAppendingMemoryRangesBarrierThenHostDetectsEvent(
                                     event_barrier_to_host, 0, nullptr);
   lzt::append_memory_copy(bundle.list, host_mem, dev_mem, xfer_size, nullptr);
   lzt::close_command_list(bundle.list);
-  if (isImmediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeEventHostSynchronize(event_barrier_to_host, UINT32_MAX - 1));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_barrier_to_host));
@@ -651,12 +641,7 @@ TEST_P(
                               p_wait_event_func2);
 
   lzt::close_command_list(bundle.list);
-  if (isImmediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   val = (2 * val_1) + addval_2;
   for (size_t i = 0; i < num_int; i++) {
     EXPECT_EQ(p_host[i], val);

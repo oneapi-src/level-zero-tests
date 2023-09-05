@@ -50,8 +50,8 @@ void RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   lzt::append_memory_copy(cmd_bundle.list, dst_buffer, src_buffer, test.size,
                           test.hEvent);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -101,8 +101,8 @@ void RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   lzt::append_memory_set(cmd_bundle.list, dst_buffer, &one, test.size,
                          test.hEvent);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -157,8 +157,8 @@ void RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandLis
                                  src_buffer, &sr, width, 0, test.hEvent);
   lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -217,8 +217,8 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
                           test.hEvent, 0, nullptr);
   lzt::append_memory_copy(cmd_bundle.list, dst_buffer, temp_buffer, test.size,
                           nullptr, 1, &hEvent1);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -283,8 +283,8 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
   // Execute and verify GPU reads event
   lzt::append_memory_copy(cmd_bundle.list, dst_buffer, src_buffer, test.size,
                           nullptr, 1, &test.hEvent);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -348,8 +348,8 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
                           test.size, test.hEvent, 0, nullptr);
   lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &one, sizeof(one),
                           test.size, nullptr, 1, &hEvent1);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -412,8 +412,8 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
   // Execute and verify GPU reads event
   lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &one, sizeof(one),
                           test.size, nullptr, 1, &test.hEvent);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -485,8 +485,8 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
   lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
                                  temp_buffer, &sr, width, 0, nullptr, 1,
                                  &hEvent1);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -556,8 +556,8 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
   lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
                                  src_buffer, &sr, width, 0, nullptr, 1,
                                  &test.hEvent);
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -658,8 +658,8 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
                                 output_xeimage, hEvent4);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent4);
   // execute commands
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -740,8 +740,8 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
                                 output_xeimage, hEvent4, 1, &hEvent3);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent4);
   // execute commands
+  lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
@@ -844,12 +844,12 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
     lzt::append_memory_copy(cmd_bundle_1.list, dst_buffer, temp_buffer, size,
                             nullptr, 1, &event);
 
+    lzt::close_command_list(cmd_bundle_0.list);
+    lzt::close_command_list(cmd_bundle_1.list);
     if (is_immediate) {
       lzt::synchronize_command_list_host(cmd_bundle_0.list, UINT64_MAX);
       lzt::synchronize_command_list_host(cmd_bundle_1.list, UINT64_MAX);
     } else {
-      lzt::close_command_list(cmd_bundle_0.list);
-      lzt::close_command_list(cmd_bundle_1.list);
 
       lzt::execute_command_lists(cmd_bundle_1.queue, 1, &cmd_bundle_1.list,
                                  nullptr);

@@ -68,13 +68,8 @@ static void parent_device_signals(ze_event_handle_t hEvent,
   auto device = lzt::get_default_device(driver);
   auto cmdbundle = lzt::create_command_bundle(context, device, isImmediate);
   lzt::append_signal_event(cmdbundle.list, hEvent);
-  if (isImmediate) {
-    lzt::synchronize_command_list_host(cmdbundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmdbundle.list);
-    lzt::execute_command_lists(cmdbundle.queue, 1, &cmdbundle.list, nullptr);
-    lzt::synchronize(cmdbundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmdbundle.list);
+  lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
 
   // cleanup
   lzt::destroy_command_bundle(cmdbundle);

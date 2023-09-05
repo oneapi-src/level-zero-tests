@@ -89,14 +89,8 @@ public:
     lzt::append_image_copy_to_mem(cmd_bundle.list, png_img_dest.raw_data(),
                                   ze_img_dest, nullptr);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(png_img_src, png_img_dest);
     delete img_ptr;
@@ -128,14 +122,8 @@ public:
     lzt::append_image_copy_to_mem_ext(cmd_bundle.list, padded_buffer_dst,
                                       ze_img_dest, image_width * 2, 0, nullptr);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(true,
               std::equal(padded_buffer_src,
@@ -211,14 +199,8 @@ public:
                                   h_dest_image, nullptr);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     // Execute all of the commands involving copying of images
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(0, lzt::compare_data_pattern(new_host_image, region,
                                            foreground_image, background_image));
@@ -249,14 +231,8 @@ public:
                             image_size);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
 
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(png_img_src, png_img_dest);
     lzt::destroy_command_bundle(cmd_bundle);
@@ -302,14 +278,8 @@ public:
                             dest_buff_top, image_size / 2);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
 
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     for (int i = 0; i < (image_size / 4); i++) {
       ASSERT_EQ(png_img_src.raw_data()[i], png_img_dest.raw_data()[i])
@@ -351,14 +321,8 @@ public:
                                   nullptr);
 
     // Execute
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     // Verify output image matches initial host image.
     // Output image contains input image data shifted by in_region's origin

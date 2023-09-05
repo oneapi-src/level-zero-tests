@@ -88,14 +88,9 @@ void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
     lzt::append_memory_fill(bundle.list, memory, &pattern, pattern_size, size,
                             nullptr);
 
-    if (is_immediate) {
-      synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      close_command_list(bundle.list);
-      execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      synchronize(bundle.queue, UINT64_MAX);
-      reset_command_list(bundle.list);
-    }
+    close_command_list(bundle.list);
+    execute_and_sync_command_bundle(bundle, UINT64_MAX);
+    reset_command_list(bundle.list);
     free_memory(memory);
     lzt::destroy_command_bundle(bundle);
   }
@@ -204,13 +199,8 @@ void zeCommandListAppendMemoryFillVerificationTests::
   append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                      nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern)
@@ -243,13 +233,8 @@ void zeCommandListAppendMemoryFillVerificationTests::
   append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                      nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern)
@@ -283,23 +268,13 @@ void zeCommandListAppendMemoryFillVerificationTests::
   append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                      nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(cmd_bundle.list));
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(cmd_bundle.list));
   append_memory_copy(cmd_bundle.list, local_mem, memory, size, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(local_mem)[i], pattern)
@@ -372,14 +347,8 @@ TEST_P(
                               size, nullptr);
       lzt::append_barrier(cmd_bundle.list);
       lzt::append_memory_copy(cmd_bundle.list, host_memory, memory, size);
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-      } else {
-        lzt::close_command_list(cmd_bundle.list);
-        lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                   nullptr);
-        lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-      }
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
       for (int i = 0; i < size; i++) {
         ASSERT_EQ(static_cast<uint8_t *>(host_memory)[i], pattern)
@@ -426,13 +395,8 @@ TEST_P(zeCommandListAppendMemoryFillPatternVerificationTests,
   append_memory_fill(cmd_bundle.list, target_memory, pattern.get(),
                      pattern_size, total_size, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < total_size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(target_memory)[i], i % pattern_size)
@@ -475,13 +439,8 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
   append_memory_copy(cmd_bundle.list, host_memory2.data(), device_memory,
                      size_in_bytes(host_memory2), nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
   free_memory(device_memory);
@@ -530,13 +489,8 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
   append_memory_copy(cmd_bundle.list, host_memory2.data(),
                      static_cast<void *>(char_dst_ptr), size, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
 
@@ -603,13 +557,8 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
   append_memory_copy(src_context, cmd_bundle.list, host_memory_dflt_ctx,
                      shared_memory_src_ctx, size, nullptr, 0, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory_dflt_ctx, size, 1);
   free_memory(src_context, host_memory_src_ctx);
@@ -666,13 +615,8 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
   append_memory_copy(src_context, cmd_bundle.list, host_memory_dflt_ctx,
                      device_memory_src_ctx, size, hEvent1, 0, &hEvent2);
   append_barrier(cmd_bundle.list, nullptr, 1, &hEvent1);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    close_command_list(cmd_bundle.list);
-    execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  close_command_list(cmd_bundle.list);
+  execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory_dflt_ctx, size, 1);
   ep.destroy_event(hEvent1);
@@ -804,14 +748,9 @@ protected:
       append_barrier(cmd_bundle.list);
       append_memory_copy(cmd_bundle.list, verification_memory,
                          destination_memory, memory_size);
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-      } else {
-        close_command_list(cmd_bundle.list);
-        execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-        synchronize(cmd_bundle.queue, UINT64_MAX);
-        reset_command_list(cmd_bundle.list);
-      }
+      close_command_list(cmd_bundle.list);
+      execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+      reset_command_list(cmd_bundle.list);
 
       for (int z = 0; z < depth; z++) {
         for (int y = 0; y < height; y++) {
@@ -1030,14 +969,8 @@ protected:
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandListAppendMemoryPrefetch(cmd_bundle.list, memory, size));
     lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     for (size_t i = 0; i < size; i++) {
       ASSERT_EQ(value, ((uint8_t *)memory)[i]);
@@ -1080,13 +1013,8 @@ TEST_P(zeCommandListAppendMemAdviseTests,
                                          memory, size, mem_advice));
 
   lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (size_t i = 0; i < size; i++) {
     ASSERT_EQ(value, ((uint8_t *)memory)[i]);
@@ -1156,14 +1084,8 @@ public:
     lzt::append_memory_copy(cmd_bundle.list, expected_data,
                             static_cast<void *>(src_memory),
                             size * sizeof(int));
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(0, memcmp(expected_data, verify_data, size * sizeof(int)));
 

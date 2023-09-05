@@ -215,13 +215,8 @@ void zeDeviceGetExternalMemoryProperties::
   uint8_t pattern = 0xAB;
   lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   // set up request to export the external memory handle
   ze_external_memory_export_fd_t export_fd = {};
@@ -299,13 +294,8 @@ void zeDeviceGetExternalMemoryProperties::
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
   lzt::append_memory_copy(cmd_bundle.list, verification_memory, imported_memory,
                           size);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   LOG_DEBUG << "Importer sending done msg " << std::endl;
   // import helper can now call free on its handle to memory
@@ -382,13 +372,8 @@ void zeDeviceGetExternalMemoryProperties::
   uint8_t pattern = 0xAB;
   lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   ze_external_memory_export_win32_handle_t export_handle = {};
   export_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_WIN32;
@@ -449,13 +434,8 @@ void zeDeviceGetExternalMemoryProperties::
   uint8_t pattern = 0xAB;
   lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   ze_external_memory_export_win32_handle_t export_handle = {};
   export_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_WIN32;

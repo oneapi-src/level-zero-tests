@@ -41,13 +41,8 @@ static void child_device_access_test(int size, ze_ipc_memory_flags_t flags,
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
   lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   LOG_DEBUG << "[Child] Validating buffer received correctly";
   lzt::validate_data_pattern(buffer, size, 1);
@@ -94,14 +89,8 @@ static void child_subdevice_access_test(int size, ze_ipc_memory_flags_t flags,
         lzt::create_command_bundle(context, sub_devices[i], is_immediate);
 
     lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     LOG_DEBUG << "[Child] Validating buffer received correctly";
     lzt::validate_data_pattern(buffer, size, 1);

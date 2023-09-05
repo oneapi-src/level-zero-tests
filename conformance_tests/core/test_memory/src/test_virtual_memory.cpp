@@ -191,13 +191,8 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
                           test.allocationSize, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(bundle.list);
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
   for (int i = 0; i < test.allocationSize; i++) {
     ASSERT_EQ(data[i], pattern);
@@ -279,13 +274,8 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
                           totalAllocationSize, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(bundle.list);
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
   for (int i = 0; i < totalAllocationSize; i++) {
     ASSERT_EQ(data[i], pattern);
@@ -420,18 +410,8 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
                           totalAllocationSize, nullptr);
 
-  if (is_immediate) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(bundle.list, UINT64_MAX));
-  } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(bundle.list));
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
-                                     bundle.queue, 1, &bundle.list, nullptr));
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(bundle.queue, UINT64_MAX));
-  }
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(memory, totalAllocationSize, -1);
 
@@ -564,13 +544,8 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
     offset += allocationSize;
   }
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(bundle.list);
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
   for (int i = 0; i < allocationSize * devices.size(); i++) {
     ASSERT_EQ(data[i], pattern);

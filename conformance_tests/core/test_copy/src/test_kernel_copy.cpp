@@ -85,14 +85,8 @@ TEST_P(KernelCopyTests,
       lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
                                   nullptr, 0, nullptr);
 
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-      } else {
-        lzt::close_command_list(cmd_bundle.list);
-        lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                   nullptr);
-        lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-      }
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
       ASSERT_EQ(0, memcmp(input_data, output_data + offset,
                           (size - offset) * sizeof(int)));
@@ -184,14 +178,8 @@ TEST_P(KernelCopyTests,
       lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
                                   nullptr, 0, nullptr);
 
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-      } else {
-        lzt::close_command_list(cmd_bundle.list);
-        lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                   nullptr);
-        lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-      }
+      lzt::close_command_list(cmd_bundle.list);
+      lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
       for (int i = 0; i < size; i++) {
         ASSERT_EQ(0, memcmp(input_data[i].data, output_data[i].data + offset,
@@ -550,14 +538,8 @@ protected:
       lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     }
 
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cmd_bundle.list);
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
-      lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     // copy dst_data to output_data for non-device memory
     if (dst_mem_type != ZE_MEMORY_TYPE_DEVICE) {

@@ -259,6 +259,7 @@ void close_command_list(ze_command_list_handle_t cl);
 void reset_command_list(ze_command_list_handle_t cl);
 void destroy_command_list(ze_command_list_handle_t cl);
 
+void execute_and_sync_command_bundle(zeCommandBundle bundle, uint64_t timeout);
 void destroy_command_bundle(zeCommandBundle bundle);
 
 }; // namespace level_zero_tests

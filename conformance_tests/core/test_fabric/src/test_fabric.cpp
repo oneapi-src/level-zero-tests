@@ -610,40 +610,22 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
   lzt::append_memory_fill(cmd_bundle_a.list, memory_a, &pattern_a, pattern_size,
                           size, nullptr);
   lzt::append_barrier(cmd_bundle_a.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle_a.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle_a.list);
-    lzt::execute_command_lists(cmd_bundle_a.queue, 1, &cmd_bundle_a.list,
-                               nullptr);
-    lzt::synchronize(cmd_bundle_a.queue, UINT64_MAX);
-    lzt::reset_command_list(cmd_bundle_a.list);
-  }
+  lzt::close_command_list(cmd_bundle_a.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_a, UINT64_MAX);
+  lzt::reset_command_list(cmd_bundle_a.list);
 
   lzt::append_memory_fill(cmd_bundle_b.list, memory_b, &pattern_b, pattern_size,
                           size, nullptr);
   lzt::append_barrier(cmd_bundle_b.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle_b.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle_b.list);
-    lzt::execute_command_lists(cmd_bundle_b.queue, 1, &cmd_bundle_b.list,
-                               nullptr);
-    lzt::synchronize(cmd_bundle_b.queue, UINT64_MAX);
-    lzt::reset_command_list(cmd_bundle_b.list);
-  }
+  lzt::close_command_list(cmd_bundle_b.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_b, UINT64_MAX);
+  lzt::reset_command_list(cmd_bundle_b.list);
 
   // Do memory copy between devices
   lzt::append_memory_copy(cmd_bundle_a.list, memory_b, memory_a, size);
   lzt::append_barrier(cmd_bundle_a.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle_a.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle_a.list);
-    lzt::execute_command_lists(cmd_bundle_a.queue, 1, &cmd_bundle_a.list,
-                               nullptr);
-    lzt::synchronize(cmd_bundle_a.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle_a.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_a, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(memory_b)[i], pattern_a)

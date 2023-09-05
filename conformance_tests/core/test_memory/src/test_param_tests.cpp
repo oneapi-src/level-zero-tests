@@ -66,14 +66,8 @@ TEST_P(
   lzt::append_memory_copy(cmd_bundle_.list, other_memory, memory_, size_,
                           nullptr);
   lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle_.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle_.list);
-    lzt::execute_command_lists(cmd_bundle_.queue, 1, &cmd_bundle_.list,
-                               nullptr);
-    lzt::synchronize(cmd_bundle_.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle_.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_, UINT64_MAX);
   lzt::validate_data_pattern(other_memory, size_, 1);
   lzt::free_memory(other_memory);
   lzt::destroy_command_bundle(cmd_bundle_);
@@ -88,14 +82,8 @@ TEST_P(zeMemAccessCommandListTests,
          size_); // Write a different pattern from what we are going to write.
   lzt::append_memory_set(cmd_bundle_.list, memory_, &value, size_);
   lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle_.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle_.list);
-    lzt::execute_command_lists(cmd_bundle_.queue, 1, &cmd_bundle_.list,
-                               nullptr);
-    lzt::synchronize(cmd_bundle_.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle_.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_, UINT64_MAX);
   for (unsigned int ui = 0; ui < size_; ui++) {
     EXPECT_EQ(value, static_cast<uint8_t *>(memory_)[ui]);
   }

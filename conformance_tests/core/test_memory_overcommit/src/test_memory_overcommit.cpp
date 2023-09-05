@@ -163,19 +163,8 @@ protected:
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
 
-    if (is_immediate) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListHostSynchronize(cmd_bundle.list, UINT64_MAX));
-    } else {
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmd_bundle.list));
-
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandQueueExecuteCommandLists(cmd_bundle.queue, 1,
-                                                  &cmd_bundle.list, nullptr));
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandQueueSynchronize(cmd_bundle.queue, UINT64_MAX));
-    }
-
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
     lzt::destroy_command_bundle(cmd_bundle);
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(fill_function));
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(test_function));

@@ -225,13 +225,8 @@ public:
 
     lzt::append_memory_fill(bundle.list, memory, &pattern2, 1, size, nullptr);
 
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(bundle.list);
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(bundle.list);
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
     for (size_t i = 0; i < size; i++) {
       ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern2);
@@ -737,8 +732,8 @@ TEST_P(
         lzt::append_barrier(bundle.list);
       }
 
+      lzt::close_command_list(bundle.list);
       if (!is_immediate) {
-        lzt::close_command_list(bundle.list);
         lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
       }
 
@@ -946,14 +941,8 @@ void zeHostSystemMemoryDeviceTests::
   lzt::append_memory_copy(cmd_bundle_.list, other_system_memory, memory_, size_,
                           nullptr);
   lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle_.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle_.list);
-    lzt::execute_command_lists(cmd_bundle_.queue, 1, &cmd_bundle_.list,
-                               nullptr);
-    lzt::synchronize(cmd_bundle_.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle_.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_, UINT64_MAX);
   lzt::validate_data_pattern(other_system_memory, size_, 1);
   lzt::destroy_command_bundle(cmd_bundle_);
   delete[] other_system_memory;
@@ -983,14 +972,8 @@ void zeHostSystemMemoryDeviceTests::
   lzt::write_data_pattern(memory_, size_, 1);
   lzt::append_memory_set(cmd_bundle_.list, memory_, &value, size_);
   lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle_.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle_.list);
-    lzt::execute_command_lists(cmd_bundle_.queue, 1, &cmd_bundle_.list,
-                               nullptr);
-    lzt::synchronize(cmd_bundle_.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle_.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_, UINT64_MAX);
   for (unsigned int ui = 0; ui < size_; ui++) {
     EXPECT_EQ(value, static_cast<uint8_t *>(memory_)[ui]);
   }

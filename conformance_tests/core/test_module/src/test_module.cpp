@@ -125,13 +125,8 @@ void zeModuleCreateTests::
     void *memory = lzt::allocate_shared_memory(sizeof(expected_value));
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_value));
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(bundle.list);
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::close_command_list(bundle.list);
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_value, *typed_global_pointer);
     lzt::free_memory(memory);
@@ -206,13 +201,8 @@ void zeModuleCreateTests::
       EXPECT_NE(nullptr, global_pointer);
       void *memory = lzt::allocate_shared_memory(sizeof(i));
       lzt::append_memory_copy(bundle.list, memory, global_pointer, sizeof(i));
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-      } else {
-        lzt::close_command_list(bundle.list);
-        lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-        lzt::synchronize(bundle.queue, UINT64_MAX);
-      }
+      lzt::close_command_list(bundle.list);
+      lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
       typed_global_pointer = static_cast<int *>(memory);
       EXPECT_EQ(i, *typed_global_pointer);
       lzt::free_memory(memory);
@@ -258,12 +248,7 @@ void zeModuleCreateTests::
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_initial_value));
     lzt::close_command_list(bundle.list);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_initial_value, *typed_global_pointer);
     lzt::create_and_execute_function(device, mod, "test", 1, nullptr,
@@ -272,12 +257,7 @@ void zeModuleCreateTests::
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_updated_value));
     lzt::close_command_list(bundle.list);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_updated_value, *typed_global_pointer);
     lzt::free_memory(memory);
@@ -415,16 +395,7 @@ void zeModuleCreateTests::
             zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(bundle.list));
 
-  if (is_immediate) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(bundle.list, UINT64_MAX));
-  } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
-                                     bundle.queue, 1, &bundle.list, nullptr));
-
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(bundle.queue, UINT64_MAX));
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   lzt::destroy_function(function);
   lzt::destroy_command_bundle(bundle);
@@ -585,12 +556,7 @@ void zeModuleCreateTests::RunGivenModuleCompiledWithOptimizationsWhenExecuting(
                                 nullptr);
 
     lzt::close_command_list(bundle.list);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
     EXPECT_EQ(input[0], addval);
 
@@ -1253,12 +1219,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   lzt::append_launch_function(bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
   lzt::close_command_list(bundle.list);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   // validate
   size_t offset;
@@ -1271,12 +1232,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
         static_cast<void *>(static_cast<uint8_t *>(device_buffer) + offset),
         validation_buffer_size);
     lzt::close_command_list(bundle.list);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
     if (offset) {
       auto comparison =
@@ -1315,12 +1271,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
         static_cast<void *>(static_cast<uint8_t *>(device_buffer) + offset),
         size - offset);
     lzt::close_command_list(bundle.list);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
     ASSERT_EQ(0, memcmp(validation_buffer, reference_buffer, (size - offset)));
   }
@@ -1441,12 +1392,7 @@ TEST_P(
   lzt::append_barrier(bundle.list);
   lzt::append_memory_copy(bundle.list, buffer_a, buffer_b, size);
   lzt::close_command_list(bundle.list);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   // validation
   for (int x = 0; x < base_size; x++) {

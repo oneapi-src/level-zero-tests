@@ -140,8 +140,8 @@ void ThreadEventSync(bool is_immediate) {
     }
     for (uint32_t j = 0; j < num_events; j++) {
       lzt::signal_event_from_host(events[j]);
+      lzt::close_command_list(cmd_list[j]);
       if (!is_immediate) {
-        lzt::close_command_list(cmd_list[j]);
         lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
       }
       lzt::event_host_synchronize(events[j], UINT64_MAX);
@@ -152,12 +152,12 @@ void ThreadEventSync(bool is_immediate) {
         lzt::synchronize_command_list_host(cmd_list[j], UINT64_MAX);
       } else {
         lzt::synchronize(cmd_queue, UINT64_MAX);
-        lzt::reset_command_list(cmd_list[j]);
       }
+      lzt::reset_command_list(cmd_list[j]);
 
       lzt::append_wait_on_events(cmd_list[j], 1, &events[j]);
+      lzt::close_command_list(cmd_list[j]);
       if (!is_immediate) {
-        lzt::close_command_list(cmd_list[j]);
         lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
       }
       lzt::signal_event_from_host(events[j]);
@@ -167,16 +167,16 @@ void ThreadEventSync(bool is_immediate) {
         lzt::synchronize_command_list_host(cmd_list[j], UINT64_MAX);
       } else {
         lzt::synchronize(cmd_queue, UINT64_MAX);
-        lzt::reset_command_list(cmd_list[j]);
       }
+      lzt::reset_command_list(cmd_list[j]);
 
       lzt::destroy_event(events[j]);
       events[j] = lzt::create_event(event_pool, eventDesc[j]);
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[j]));
 
       lzt::append_signal_event(cmd_list[j], events[j]);
+      lzt::close_command_list(cmd_list[j]);
       if (!is_immediate) {
-        lzt::close_command_list(cmd_list[j]);
         lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
       }
       lzt::event_host_synchronize(events[j], UINT64_MAX);
@@ -187,12 +187,12 @@ void ThreadEventSync(bool is_immediate) {
         lzt::synchronize_command_list_host(cmd_list[j], UINT64_MAX);
       } else {
         lzt::synchronize(cmd_queue, UINT64_MAX);
-        lzt::reset_command_list(cmd_list[j]);
       }
+      lzt::reset_command_list(cmd_list[j]);
 
       lzt::append_wait_on_events(cmd_list[j], 1, &events[j]);
+      lzt::close_command_list(cmd_list[j]);
       if (!is_immediate) {
-        lzt::close_command_list(cmd_list[j]);
         lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
       }
       lzt::signal_event_from_host(events[j]);
@@ -202,8 +202,8 @@ void ThreadEventSync(bool is_immediate) {
         lzt::synchronize_command_list_host(cmd_list[j], UINT64_MAX);
       } else {
         lzt::synchronize(cmd_queue, UINT64_MAX);
-        lzt::reset_command_list(cmd_list[j]);
       }
+      lzt::reset_command_list(cmd_list[j]);
       lzt::event_host_reset(events[j]);
     }
   }
@@ -271,8 +271,8 @@ void ThreadMultipleEventsSync(bool is_immediate) {
 
     for (uint32_t j = 0; j < num_events / 2; j++) {
       lzt::append_wait_on_events(cmd_list[j], 1, &events[j]);
+      lzt::close_command_list(cmd_list[j]);
       if (!is_immediate) {
-        lzt::close_command_list(cmd_list[j]);
         lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
       }
       lzt::signal_event_from_host(events[j]);
@@ -281,8 +281,8 @@ void ThreadMultipleEventsSync(bool is_immediate) {
 
     for (uint32_t j = num_events / 2; j < num_events; j++) {
       lzt::append_signal_event(cmd_list[j], events[j]);
+      lzt::close_command_list(cmd_list[j]);
       if (!is_immediate) {
-        lzt::close_command_list(cmd_list[j]);
         lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
       }
       lzt::event_host_synchronize(events[j], UINT64_MAX);
@@ -307,8 +307,8 @@ void ThreadMultipleEventsSync(bool is_immediate) {
     for (uint32_t j = 0; j < num_events / 2; j++) {
       lzt::reset_command_list(cmd_list[j]);
       lzt::append_wait_on_events(cmd_list[j], 1, &events[j]);
+      lzt::close_command_list(cmd_list[j]);
       if (!is_immediate) {
-        lzt::close_command_list(cmd_list[j]);
         lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
       }
       lzt::signal_event_from_host(events[j]);
@@ -318,8 +318,8 @@ void ThreadMultipleEventsSync(bool is_immediate) {
     for (uint32_t j = num_events / 2; j < num_events; j++) {
       lzt::reset_command_list(cmd_list[j]);
       lzt::append_signal_event(cmd_list[j], events[j]);
+      lzt::close_command_list(cmd_list[j]);
       if (!is_immediate) {
-        lzt::close_command_list(cmd_list[j]);
         lzt::execute_command_lists(cmd_queue, 1, &cmd_list[j], nullptr);
       }
       lzt::event_host_synchronize(events[j], UINT64_MAX);

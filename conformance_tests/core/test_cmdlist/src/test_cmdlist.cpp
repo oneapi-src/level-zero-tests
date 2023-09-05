@@ -218,12 +218,7 @@ protected:
     lzt::append_memory_fill(bundle.list, test_mem, &pattern, sizeof(uint8_t),
                             size, nullptr);
     lzt::close_command_list(bundle.list);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
     if (execute_all_commands || is_immediate) {
       lzt::validate_data_pattern(host_mem, size, 1);
@@ -361,16 +356,16 @@ TEST(zeCommandListReuseTests, GivenCommandListWhenItIsExecutedItCanBeRunAgain) {
   lzt::free_memory(host_buffer);
 }
 
-class zeCommandListCloseAndResetTests
+class zeCommandListCloseThenAppendTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<
-          std::tuple<ze_command_list_flag_t, bool>> {};
+      public ::testing::WithParamInterface<ze_command_list_flag_t> {};
 
 void RunGivenResetCommandListWhenCloseImmediatelyNoInstructionsExecute(
-    ze_command_list_flag_t flags, bool is_immediate) {
+    ze_command_list_flag_t flags) {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
-  auto bundle = lzt::create_command_bundle(device, flags, is_immediate);
+  auto cmd_queue = lzt::create_command_queue(device);
+  auto cmd_list = lzt::create_command_list(device, flags);
 
   const size_t size = 16;
   auto buffer = lzt::allocate_shared_memory(size);
@@ -383,17 +378,13 @@ void RunGivenResetCommandListWhenCloseImmediatelyNoInstructionsExecute(
     EXPECT_EQ(static_cast<uint8_t *>(buffer)[j], 0x0);
   }
   // Command list setup with only memory set and barrier
-  lzt::append_memory_set(bundle.list, buffer, &set_succeed_1, size);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::append_memory_set(cmd_list, buffer, &set_succeed_1, size);
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
   // Attempt to append command list after close should fail
-  lzt::append_memory_set(bundle.list, buffer, &set_fail_2, size);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::append_memory_set(cmd_list, buffer, &set_fail_2, size);
+  lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
+  lzt::synchronize(cmd_queue, UINT64_MAX);
   for (size_t j = 0; j < size; j++) {
     EXPECT_EQ(static_cast<uint8_t *>(buffer)[j], set_succeed_1);
   }
@@ -403,30 +394,38 @@ void RunGivenResetCommandListWhenCloseImmediatelyNoInstructionsExecute(
     EXPECT_EQ(static_cast<uint8_t *>(buffer)[j], 0x0);
   }
   // Reset command list and immediately close
-  lzt::reset_command_list(bundle.list);
-  lzt::close_command_list(bundle.list);
+  lzt::reset_command_list(cmd_list);
+  lzt::close_command_list(cmd_list);
   // Attempt to append command list after close should fail
-  lzt::append_memory_set(bundle.list, buffer, &set_fail_3, size);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::append_memory_set(cmd_list, buffer, &set_fail_3, size);
+  lzt::execute_command_lists(cmd_queue, 1, &cmd_list, nullptr);
+  lzt::synchronize(cmd_queue, UINT64_MAX);
   // No commands should be executed by command queue
   for (size_t j = 0; j < size; j++) {
     EXPECT_EQ(static_cast<uint8_t *>(buffer)[j], 0x0);
   }
-  lzt::destroy_command_bundle(bundle);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_command_queue(cmd_queue);
   lzt::free_memory(buffer);
 }
 
 TEST_P(
-    zeCommandListCloseAndResetTests,
-    DISABLED_GivenResetCommandListWhenCloseImmediatelyNoCommandListInstructionsExecute) {
-  RunGivenResetCommandListWhenCloseImmediatelyNoInstructionsExecute(
-      std::get<0>(GetParam()), std::get<1>(GetParam()));
+    zeCommandListCloseThenAppendTests,
+    GivenResetCommandListWhenCloseImmediatelyNoCommandListInstructionsExecute) {
+  RunGivenResetCommandListWhenCloseImmediatelyNoInstructionsExecute(GetParam());
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    TestCasesforCommandListCloseAndCommandListAppend,
+    zeCommandListCloseThenAppendTests,
+    ::testing::Values(0, ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                      ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                      ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY));
+
+class zeCommandListCloseAndResetTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_command_list_flag_t, bool>> {};
 
 void RunWhenResetThenVerifyOnlySubsequentInstructionsExecuted(
     ze_command_list_flag_t flags, bool is_immediate) {
@@ -456,12 +455,7 @@ void RunWhenResetThenVerifyOnlySubsequentInstructionsExecuted(
     }
     lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
     lzt::close_command_list(bundle.list);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     for (size_t i = 0; i < test_instr; i++) {
       for (size_t j = 0; j < size; j++) {
         EXPECT_EQ(static_cast<uint8_t *>(buffer[i])[j],
@@ -481,12 +475,7 @@ void RunWhenResetThenVerifyOnlySubsequentInstructionsExecuted(
     memset(buf, 0x0, size);
   }
   lzt::close_command_list(bundle.list);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   for (size_t i = 0; i < num_instr; i++) {
     for (size_t j = 0; j < size; j++) {
       EXPECT_EQ(static_cast<uint8_t *>(buffer[i])[j], 0x0);
@@ -537,13 +526,8 @@ TEST_P(zeCommandListFlagTests,
   lzt::append_memory_copy(cmd_bundle.list, host_memory, device_memory, size,
                           nullptr);
   lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(host_memory)[i], pattern);
@@ -652,12 +636,7 @@ void RunAppendingWriteGlobalTimestampThenSuccessIsReturned(bool is_immediate) {
 
   lzt::close_command_list(bundle.list);
   lzt::signal_event_from_host(event);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-  } else {
-    lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-    lzt::synchronize(bundle.queue, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   ep.destroy_event(event);
   lzt::destroy_command_bundle(bundle);

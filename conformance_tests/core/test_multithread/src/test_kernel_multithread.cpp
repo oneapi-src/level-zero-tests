@@ -176,14 +176,9 @@ void run_functions(lzt::zeCommandBundle &cmd_bundle, bool is_immediate,
                           gpu_found_output_buffer,
                           output_count * sizeof(uint64_t), nullptr);
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    lzt::reset_command_list(cmd_bundle.list);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::reset_command_list(cmd_bundle.list);
 }
 
 void thread_module_create_destroy() {
@@ -198,7 +193,7 @@ void thread_module_create_destroy() {
 
 class zeKernelSubmissionMultithreadTest : public ::testing::Test {};
 
-TEST(
+TEST_F(
     zeKernelSubmissionMultithreadTest,
     GivenMultipleThreadsWhenPerformingModuleCreateDestroyThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -213,8 +208,9 @@ TEST(
   }
 }
 
-TEST(zeKernelSubmissionMultithreadTest,
-     GivenMultipleThreadsWhenPerformingKernelSubmissionsThenSuccessIsReturned) {
+TEST_F(
+    zeKernelSubmissionMultithreadTest,
+    GivenMultipleThreadsWhenPerformingKernelSubmissionsThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
@@ -235,7 +231,7 @@ TEST(zeKernelSubmissionMultithreadTest,
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
 }
 
-TEST(
+TEST_F(
     zeKernelSubmissionMultithreadTest,
     GivenMultipleThreadsWhenPerformingKernelSubmissionsOnImmediateCmdListThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;

@@ -172,14 +172,9 @@ void run_server(int size, uint32_t device_x, uint32_t device_y,
     void *memory = lzt::allocate_device_memory(size, 1, 0, device, context);
     lzt::append_memory_fill(cb.list, memory, &server_pattern,
                             sizeof(server_pattern), size, nullptr);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cb.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cb.list);
-      lzt::execute_command_lists(cb.queue, 1, &cb.list, nullptr);
-      lzt::synchronize(cb.queue, UINT64_MAX);
-      lzt::reset_command_list(cb.list);
-    }
+    lzt::close_command_list(cb.list);
+    lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+    lzt::reset_command_list(cb.list);
 
     struct sigaction sigint_action {};
     sigint_action.sa_handler = sigint_handler;
@@ -202,14 +197,9 @@ void run_server(int size, uint32_t device_x, uint32_t device_y,
 
       lzt::append_memory_copy(cb.list, ((char *)memory) + concurrency_offset,
                               buffer, size - concurrency_offset);
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(cb.list, UINT64_MAX);
-      } else {
-        lzt::close_command_list(cb.list);
-        lzt::execute_command_lists(cb.queue, 1, &cb.list, nullptr);
-        lzt::synchronize(cb.queue, UINT64_MAX);
-        lzt::reset_command_list(cb.list);
-      }
+      lzt::close_command_list(cb.list);
+      lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+      lzt::reset_command_list(cb.list);
       lzt::free_memory(context, buffer);
     }
 
@@ -224,14 +214,9 @@ void run_server(int size, uint32_t device_x, uint32_t device_y,
     memset(buffer, 0, size);
 
     lzt::append_memory_copy(cb.list, buffer, memory, size);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cb.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cb.list);
-      lzt::execute_command_lists(cb.queue, 1, &cb.list, nullptr);
-      lzt::synchronize(cb.queue, UINT64_MAX);
-      lzt::reset_command_list(cb.list);
-    }
+    lzt::close_command_list(cb.list);
+    lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+    lzt::reset_command_list(cb.list);
 
     LOG_INFO << "[Server] Validating buffer received correctly";
     char *expected_buffer = new char[size];
@@ -315,14 +300,9 @@ void run_client(int size, uint32_t device_x, uint32_t device_y,
     }
 
     lzt::append_memory_copy(cb.list, memory, buffer, size - concurrency_offset);
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cb.list, UINT64_MAX);
-    } else {
-      lzt::close_command_list(cb.list);
-      lzt::execute_command_lists(cb.queue, 1, &cb.list, nullptr);
-      lzt::synchronize(cb.queue, UINT64_MAX);
-      lzt::reset_command_list(cb.list);
-    }
+    lzt::close_command_list(cb.list);
+    lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+    lzt::reset_command_list(cb.list);
 
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
 
@@ -335,14 +315,9 @@ void run_client(int size, uint32_t device_x, uint32_t device_y,
       memset(bi_host_buffer, 0, size);
 
       lzt::append_memory_copy(cb.list, bi_host_buffer, bi_buffer, size);
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(cb.list, UINT64_MAX);
-      } else {
-        lzt::close_command_list(cb.list);
-        lzt::execute_command_lists(cb.queue, 1, &cb.list, nullptr);
-        lzt::synchronize(cb.queue, UINT64_MAX);
-        lzt::reset_command_list(cb.list);
-      }
+      lzt::close_command_list(cb.list);
+      lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+      lzt::reset_command_list(cb.list);
 
       LOG_DEBUG << "[Client] Validating buffer received correctly";
       char *expected_buffer = new char[size];

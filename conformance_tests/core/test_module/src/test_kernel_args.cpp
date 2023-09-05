@@ -91,14 +91,9 @@ void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, int x, int y,
   temp_png.set_pixel(x, y, val);
   lzt::append_image_copy_from_mem(cmd_bundle.list, image, temp_png.raw_data(),
                                   nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    lzt::reset_command_list(cmd_bundle.list);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::reset_command_list(cmd_bundle.list);
   lzt::destroy_command_bundle(cmd_bundle);
   return;
 }
@@ -110,14 +105,9 @@ uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image, int x,
   lzt::ImagePNG32Bit temp_png(img_height, img_width);
   lzt::append_image_copy_to_mem(cmd_bundle.list, temp_png.raw_data(), image,
                                 nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-    lzt::reset_command_list(cmd_bundle.list);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::reset_command_list(cmd_bundle.list);
   lzt::destroy_command_bundle(cmd_bundle);
   return temp_png.get_pixel(x, y);
 }

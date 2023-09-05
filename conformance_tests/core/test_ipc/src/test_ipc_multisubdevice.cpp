@@ -95,13 +95,8 @@ void multi_sub_device_sender(size_t size, bool reserved, bool is_immediate) {
   lzt::write_data_pattern(buffer, size, 1);
   lzt::append_memory_copy(cmd_bundle.list, memory, buffer, size);
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   ze_ipc_mem_handle_t ipc_handle{};
   std::fill_n(ipc_handle.data, ZE_MAX_IPC_HANDLE_SIZE, 0);
@@ -210,13 +205,8 @@ void multi_sub_device_receiver(size_t size, bool is_immediate) {
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
   lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(buffer, size, 1);
 
