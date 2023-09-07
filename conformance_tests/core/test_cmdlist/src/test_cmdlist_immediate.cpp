@@ -26,15 +26,15 @@ protected:
 
     cmdlist_immediate_sync_mode = lzt::create_immediate_command_list(
         lzt::zeDevice::get_instance()->get_device(),
-        ZE_COMMAND_LIST_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
+        ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
     cmdlist_immediate_async_mode = lzt::create_immediate_command_list(
         lzt::zeDevice::get_instance()->get_device(),
-        ZE_COMMAND_LIST_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
     cmdlist_immediate_default_mode = lzt::create_immediate_command_list(
         lzt::zeDevice::get_instance()->get_device(),
-        ZE_COMMAND_LIST_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_DEFAULT,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   }
   void TearDown() override {
@@ -207,7 +207,7 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
                                   ze_command_queue_mode_t mode) {
   const size_t size = 16;
   const int addval = 10;
-  const int addval2 = 15;
+  int addval2 = 15;
   const uint64_t timeout = UINT64_MAX - 1;
 
   void *buffer = lzt::allocate_shared_memory(size * sizeof(int));
@@ -231,17 +231,22 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
   lzt::append_launch_function(cmdlist_immediate, kernel, &tg, nullptr, 0,
                               nullptr);
 
-  lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
+  int totalVal = 0;
+  for (int i = 0; i < 100; i++) {
+    addval2 = addval2 + i;
+    totalVal += addval2;
+    lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
 
-  lzt::append_launch_function(cmdlist_immediate, kernel, &tg, nullptr, 0,
-                              nullptr);
+    lzt::append_launch_function(cmdlist_immediate, kernel, &tg, nullptr, 0,
+                                nullptr);
+  }
 
   if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandListHostSynchronize(cmdlist_immediate, timeout));
   }
   for (size_t i = 0; i < size; i++) {
-    EXPECT_EQ(static_cast<int *>(buffer)[i], (addval + addval2));
+    EXPECT_EQ(static_cast<int *>(buffer)[i], (addval + totalVal));
   }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
