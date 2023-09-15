@@ -112,7 +112,7 @@ TEST(
   module_description.pInputModule = binary_file.data(); // ignored
   module_description.pBuildFlags = nullptr;
 
-  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ENUMERATION,
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
             zeModuleCreate(lzt::get_default_context(), device,
                            &module_description, &module, nullptr));
 }
