@@ -916,4 +916,115 @@ get_metric_groups_with_different_domains(const ze_device_handle_t device,
   return unique_domain_metric_group_list;
 }
 
+void metric_calculate_metric_values_from_raw_data(
+    zet_metric_group_handle_t hMetricGroup, std::vector<uint8_t> &rawData,
+    std::vector<zet_typed_value_t> &totalMetricValues,
+    std::vector<uint32_t> &metricValueSets) {
+
+  uint32_t setCount = 0;
+  uint32_t totalMetricValueCount = 0;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupCalculateMultipleMetricValuesExp(
+                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+                rawData.size(), rawData.data(), &setCount,
+                &totalMetricValueCount, nullptr, nullptr));
+
+  // Get metric counts and metric values
+  metricValueSets.resize(setCount);
+  totalMetricValues.resize(totalMetricValueCount);
+
+  ze_result_t result = zetMetricGroupCalculateMultipleMetricValuesExp(
+      hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+      rawData.size(), rawData.data(), &setCount, &totalMetricValueCount,
+      metricValueSets.data(), totalMetricValues.data());
+
+  LOG_INFO << "metric_calculate_metric_values_from_raw_data: "
+              "rawDataSize "
+           << rawData.size() << " setCount " << setCount
+           << " totalMetricValueCount " << totalMetricValueCount << " result "
+           << result;
+
+  EXPECT_TRUE(result == ZE_RESULT_SUCCESS);
+  EXPECT_GT(totalMetricValueCount, 0);
+}
+
+void metric_get_metric_handles_from_metric_group(
+    zet_metric_group_handle_t hMetricGroup,
+    std::vector<zet_metric_handle_t> &hMetrics) {
+
+  uint32_t metricCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(hMetricGroup, &metricCount, nullptr));
+  EXPECT_GT(metricCount, 0);
+
+  hMetrics.resize(metricCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGet(hMetricGroup, &metricCount, hMetrics.data()));
+
+  LOG_INFO << "number of metrics in metric group: metricCount " << metricCount;
+}
+
+void metric_get_metric_properties_for_metric_group(
+    std::vector<zet_metric_handle_t> &metricHandles,
+    std::vector<zet_metric_properties_t> &metricProperties) {
+
+  for (uint32_t metric = 0; metric < metricHandles.size(); metric++) {
+    metricProperties[metric] = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricGetProperties(metricHandles[metric],
+                                     &metricProperties[metric]));
+  }
+}
+
+void metric_validate_streamer_marker_data(
+    std::vector<zet_metric_properties_t> &metricProperties,
+    std::vector<zet_typed_value_t> &totalMetricValues,
+    std::vector<uint32_t> &metricValueSets,
+    std::vector<uint32_t> &streamerMarkerValues) {
+
+  uint32_t numbefOfStreamerMarkerMatches = 0;
+  uint32_t startIndex = 0;
+  for (uint32_t dataIndex = 0; dataIndex < metricValueSets.size();
+       dataIndex++) {
+
+    const uint32_t metricCountForDataIndex = metricValueSets[dataIndex];
+    const uint32_t reportCount =
+        metricCountForDataIndex / metricProperties.size();
+    uint32_t streamerMarkerValuesIndex = 0;
+
+    LOG_INFO << "for dataIndex " << dataIndex << " metricCountForDataIndex "
+             << metricCountForDataIndex << " reportCount " << reportCount;
+
+    for (uint32_t report = 0; report < reportCount; report++) {
+
+      for (uint32_t metric = 0; metric < metricProperties.size(); metric++) {
+
+        const size_t metricIndex = report * metricProperties.size() + metric;
+        zet_metric_properties_t metricProperty = metricProperties[metric];
+        zet_typed_value_t metricTypedValue =
+            totalMetricValues[startIndex + metricIndex];
+
+        if ((strcmp("StreamMarker", metricProperty.name) == 0) &&
+            (metricTypedValue.value.ui64 != 0)) {
+          LOG_INFO << "Valid Streamer Marker found with value: "
+                   << metricTypedValue.value.ui64;
+          EXPECT_EQ(metricTypedValue.value.ui64,
+                    streamerMarkerValues[streamerMarkerValuesIndex]);
+          streamerMarkerValuesIndex++;
+        }
+      }
+    }
+
+    EXPECT_EQ(streamerMarkerValuesIndex, streamerMarkerValues.size());
+    if (streamerMarkerValuesIndex == streamerMarkerValues.size()) {
+      numbefOfStreamerMarkerMatches++;
+    }
+
+    startIndex += metricCountForDataIndex;
+  }
+
+  EXPECT_EQ(numbefOfStreamerMarkerMatches, metricValueSets.size());
+}
+
 } // namespace level_zero_tests

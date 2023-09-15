@@ -1490,6 +1490,8 @@ TEST_F(
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
+      std::vector<uint32_t> streamerMarkerValues = {10, 20};
+
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
       ze_event_handle_t eventHandle;
@@ -1503,19 +1505,21 @@ TEST_F(
               notifyEveryNReports, samplingPeriod);
       ASSERT_NE(nullptr, metricStreamerHandle);
 
+      lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
+                                              streamerMarkerValues[0]);
+      lzt::append_barrier(commandList);
+
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
       ze_kernel_handle_t function = get_matrix_multiplication_kernel(
           device, &tg, &a_buffer, &b_buffer, &c_buffer);
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
-
-      uint32_t streamerMarker = 0;
-      lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
-                                              ++streamerMarker);
       lzt::append_barrier(commandList);
+
       lzt::commandlist_append_streamer_marker(commandList, metricStreamerHandle,
-                                              ++streamerMarker);
+                                              streamerMarkerValues[1]);
+      lzt::append_barrier(commandList);
 
       lzt::close_command_list(commandList);
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
@@ -1544,8 +1548,24 @@ TEST_F(
       uint32_t rawDataSize = 0;
       lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
                                      &rawData);
-      lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
-                            rawData.data());
+
+      rawData.resize(rawDataSize);
+      std::vector<zet_typed_value_t> metricValues;
+      std::vector<uint32_t> metricValueSets;
+      lzt::metric_calculate_metric_values_from_raw_data(
+          groupInfo.metricGroupHandle, rawData, metricValues, metricValueSets);
+
+      std::vector<zet_metric_handle_t> metricHandles;
+      lzt::metric_get_metric_handles_from_metric_group(
+          groupInfo.metricGroupHandle, metricHandles);
+      std::vector<zet_metric_properties_t> metricProperties(
+          metricHandles.size());
+      lzt::metric_get_metric_properties_for_metric_group(metricHandles,
+                                                         metricProperties);
+
+      lzt::metric_validate_streamer_marker_data(metricProperties, metricValues,
+                                                metricValueSets,
+                                                streamerMarkerValues);
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
