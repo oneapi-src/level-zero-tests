@@ -513,6 +513,7 @@ TEST_F(
   EXPECT_EQ(static_cast<size_t>(stream.tellg()), size);
   std::remove(filename_native.c_str());
   lzt::destroy_module(module);
+  stream.close();
 }
 
 void zeModuleCreateTests::RunGivenModuleCompiledWithOptimizationsWhenExecuting(

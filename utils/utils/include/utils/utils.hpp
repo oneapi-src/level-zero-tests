@@ -10,6 +10,8 @@
 #define level_zero_tests_UTILS_HPP
 
 #include <vector>
+#include <memory>
+#include <map>
 
 #include <level_zero/zet_api.h>
 #include <level_zero/zes_api.h>
@@ -56,6 +58,9 @@ uint32_t nextPowerOfTwo(uint32_t value);
 template <typename T> int size_in_bytes(const std::vector<T> &v) {
   return static_cast<int>(sizeof(T) * v.size());
 }
+
+extern std::unique_ptr<std::map<std::string, std::vector<uint8_t>>>
+    binary_file_map;
 
 } // namespace level_zero_tests
 

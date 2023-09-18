@@ -37,6 +37,8 @@ std::vector<uint8_t> ZeApp::load_binary_file(const std::string &file_path) {
   if (verbose)
     std::cout << "Binary file loaded" << std::endl;
 
+  stream.close();
+
   return binary_file;
 }
 

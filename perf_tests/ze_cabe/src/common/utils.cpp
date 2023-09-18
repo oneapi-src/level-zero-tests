@@ -20,6 +20,7 @@ std::string load_text_file(size_t &length, const std::string &file_path) {
   std::istreambuf_iterator<char> eos;
   std::string string(std::istreambuf_iterator<char>(stream), eos);
   length = string.length();
+  stream.close();
   return string;
 }
 
@@ -39,6 +40,7 @@ std::vector<uint8_t> load_binary_file(size_t &length,
   length = ceil(length / 4.0) * 4;
   binary_file.resize(length);
   stream.read(reinterpret_cast<char *>(binary_file.data()), length);
+  stream.close();
   return binary_file;
 }
 

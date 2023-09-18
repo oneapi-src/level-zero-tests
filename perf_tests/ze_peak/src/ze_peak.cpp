@@ -42,6 +42,7 @@ std::vector<uint8_t> L0Context::load_binary_file(const std::string &file_path) {
   if (verbose)
     std::cout << "Binary file loaded"
               << "\n";
+  stream.close();
 
   return binary_file;
 }

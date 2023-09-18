@@ -264,14 +264,17 @@ protected:
         LOG_INFO << "WARNING: Unable to allocate host memory, skipping";
         return nullptr;
       }
-      return lzt::allocate_host_memory(size, 1, context);
+      ze_result_t result;
+      return lzt::allocate_host_memory_no_check(size, 1, context, &result);
     } else if (mem_type == ZE_MEMORY_TYPE_DEVICE) {
       auto memory_access_cap = mem_access_properties.deviceAllocCapabilities;
       if ((memory_access_cap & ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
         LOG_INFO << "WARNING: Unable to allocate device memory, skipping";
         return nullptr;
       }
-      return lzt::allocate_device_memory(size, 1, 0, device, context);
+      ze_result_t result;
+      return lzt::allocate_device_memory_no_check(size, 1, 0, nullptr, 0,
+                                                  device, context, &result);
     } else { // shared
       if (shr_type == SHARED_SYSTEM) {
         auto memory_access_cap =
@@ -291,7 +294,9 @@ protected:
                 << "WARNING: Unable to allocate shared local memory, skipping";
             return nullptr;
           }
-          return lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+          ze_result_t result;
+          return lzt::allocate_shared_memory_no_check(
+              size, 1, 0, nullptr, 0, nullptr, device, context, &result);
         } else { // shared cross
           auto cross_device = devices[driver_index][cross_device_index];
           auto memory_access_cap =
@@ -301,8 +306,9 @@ protected:
                 << "WARNING: Unable to allocate shared cross memory, skipping";
             return nullptr;
           }
-          return lzt::allocate_shared_memory(size, 1, 0, 0, cross_device,
-                                             context);
+          ze_result_t result;
+          return lzt::allocate_shared_memory_no_check(
+              size, 1, 0, nullptr, 0, nullptr, cross_device, context, &result);
         }
       }
     }
@@ -401,6 +407,7 @@ protected:
         free_memory(src_data, context, src_ptr_mem_type, src_ptr_shr_type);
       if (dst_data)
         free_memory(dst_data, context, dst_ptr_mem_type, dst_ptr_shr_type);
+      GTEST_SKIP() << "Not Enough memory to execute test\n";
       return;
     }
 
@@ -430,6 +437,7 @@ protected:
           free_memory(src_data, context, src_ptr_mem_type, src_ptr_shr_type);
         if (dst_data)
           free_memory(dst_data, context, dst_ptr_mem_type, dst_ptr_shr_type);
+        GTEST_SKIP() << "Not Enough memory to execute test\n";
         return;
       }
     }

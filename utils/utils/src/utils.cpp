@@ -412,7 +412,19 @@ void print_platform_overview(const std::string context) {
 
 void print_platform_overview() { print_platform_overview(""); }
 
+std::unique_ptr<std::map<std::string, std::vector<uint8_t>>> binary_file_map =
+    std::make_unique<std::map<std::string, std::vector<uint8_t>>>();
+
 std::vector<uint8_t> load_binary_file(const std::string &file_path) {
+  std::map<std::string, std::vector<uint8_t>> *binary_map =
+      binary_file_map.get();
+  std::map<std::string, std::vector<uint8_t>>::iterator it =
+      binary_map->find(file_path);
+  // Iterate through the map of modules and return if the module was already
+  // used in this test run.
+  if (it != binary_map->end()) {
+    return it->second;
+  }
   LOG_ENTER_FUNCTION
   LOG_DEBUG << "File path: " << file_path;
   std::ifstream stream(file_path, std::ios::in | std::ios::binary);
@@ -436,7 +448,11 @@ std::vector<uint8_t> load_binary_file(const std::string &file_path) {
   stream.read(reinterpret_cast<char *>(binary_file.data()), length);
   LOG_DEBUG << "Binary file loaded";
 
+  stream.close();
+
   LOG_EXIT_FUNCTION
+  binary_map->insert(
+      std::pair<std::string, std::vector<uint8_t>>(file_path, binary_file));
   return binary_file;
 }
 
@@ -448,6 +464,8 @@ void save_binary_file(const std::vector<uint8_t> &data,
   std::ofstream stream(file_path, std::ios::out | std::ios::binary);
   stream.write(reinterpret_cast<const char *>(data.data()),
                size_in_bytes(data));
+
+  stream.close();
 
   LOG_EXIT_FUNCTION
 }

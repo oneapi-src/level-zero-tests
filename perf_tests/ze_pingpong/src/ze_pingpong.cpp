@@ -219,6 +219,7 @@ std::vector<uint8_t> L0Context::load_binary_file(const std::string &file_path) {
 
   binary_file.resize(length);
   stream.read(reinterpret_cast<char *>(binary_file.data()), length);
+  stream.close();
 
   return binary_file;
 }
