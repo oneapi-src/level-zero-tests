@@ -254,6 +254,8 @@ def assign_test_feature(test_binary: str, test_name: str):
             test_feature = assign_tool_test_feature(test_binary, test_name)
             test_section = "Tools"
             return test_feature, test_section
+        if test_binary == "test_stress_atomics":
+            test_feature = "Atomics"
         if (re.search('stress', test_name, re.IGNORECASE)):
             test_section = "Stress"
             return test_feature, test_section
