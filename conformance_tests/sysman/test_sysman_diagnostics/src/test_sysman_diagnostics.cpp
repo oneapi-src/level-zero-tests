@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -29,10 +29,16 @@ void validate_tests(std::vector<zes_diag_test_t> tests) {
   }
 }
 
+#ifdef USE_ZESINIT
+class DiagnosticsZesTest : public lzt::ZesSysmanCtsClass {};
+#define DIAGNOSTICS_TEST DiagnosticsZesTest
+#else // USE_ZESINIT
 class DiagnosticsTest : public lzt::SysmanCtsClass {};
+#define DIAGNOSTICS_TEST DiagnosticsTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    DiagnosticsTest,
+    DIAGNOSTICS_TEST,
     GivenComponentCountZeroWhenRetrievingDiagnosticsHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -45,7 +51,7 @@ TEST_F(
 }
 
 TEST_F(
-    DiagnosticsTest,
+    DIAGNOSTICS_TEST,
     GivenComponentCountZeroWhenRetrievingDiagnosticsHandlesThenNotNullDiagnosticsHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -63,7 +69,7 @@ TEST_F(
 }
 
 TEST_F(
-    DiagnosticsTest,
+    DIAGNOSTICS_TEST,
     GivenInvalidComponentCountWhenRetrievingDiagnosticsHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -80,7 +86,7 @@ TEST_F(
 }
 
 TEST_F(
-    DiagnosticsTest,
+    DIAGNOSTICS_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarDiagHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -104,7 +110,7 @@ TEST_F(
 }
 
 TEST_F(
-    DiagnosticsTest,
+    DIAGNOSTICS_TEST,
     GivenValidDiagHandleWhenRetrievingDiagPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -127,7 +133,7 @@ TEST_F(
 }
 
 TEST_F(
-    DiagnosticsTest,
+    DIAGNOSTICS_TEST,
     GivenValidDiagHandleWhenRetrievingDiagPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -154,7 +160,7 @@ TEST_F(
 }
 
 TEST_F(
-    DiagnosticsTest,
+    DIAGNOSTICS_TEST,
     GivenValidDiagHandleWhenRetrievingDiagTestsThenExpectValidTestsToBeReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -177,7 +183,7 @@ TEST_F(
   }
 }
 
-TEST_F(DiagnosticsTest,
+TEST_F(DIAGNOSTICS_TEST,
        GivenValidDiagTestsWhenRunningAllDiagTestsThenExpectTestsToRunFine) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -198,7 +204,7 @@ TEST_F(DiagnosticsTest,
 }
 
 TEST_F(
-    DiagnosticsTest,
+    DIAGNOSTICS_TEST,
     GivenValidDiagTestsWhenRunningIndividualDiagTestsThenExpectTestsToRunFine) {
   for (auto device : devices) {
     uint32_t count = 0;

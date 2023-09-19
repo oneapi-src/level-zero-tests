@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2021 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,10 +18,16 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class FanModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define FANMODULE_TEST FanModuleZesTest
+#else // USE_ZESINIT
 class FanModuleTest : public lzt::SysmanCtsClass {};
+#define FANMODULE_TEST FanModuleTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -34,7 +40,7 @@ TEST_F(
 }
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFanHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -52,7 +58,7 @@ TEST_F(
 }
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -69,7 +75,7 @@ TEST_F(
 }
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFanHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -93,7 +99,7 @@ TEST_F(
 }
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenValidFanHandleWhenRetrievingFanPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -131,7 +137,7 @@ TEST_F(
 }
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenValidFanHandleWhenRetrievingFanPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -158,7 +164,7 @@ TEST_F(
   }
 }
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenValidFanHandleWhenRetrievingFanConfigurationThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -189,7 +195,7 @@ TEST_F(
 }
 } // namespace
 
-TEST_F(FanModuleTest,
+TEST_F(FANMODULE_TEST,
        GivenValidFanHandleWhenRetrievingFanStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -216,7 +222,7 @@ TEST_F(FanModuleTest,
 }
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenValidFanHandleWhenSettingFanToDefaultModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -236,7 +242,7 @@ TEST_F(
 }
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenValidFanHandleWhenSettingFanToFixedSpeedModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -261,7 +267,7 @@ TEST_F(
 }
 
 TEST_F(
-    FanModuleTest,
+    FANMODULE_TEST,
     GivenValidFanHandleWhenSettingFanToSpeedTableModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2020 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -17,9 +17,17 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
+
+#ifdef USE_ZESINIT
+class StandbyModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define STANDBY_TEST StandbyModuleZesTest
+#else // USE_ZESINIT
 class StandbyModuleTest : public lzt::SysmanCtsClass {};
+#define STANDBY_TEST StandbyModuleTest
+#endif // USE_ZESINIT
+
 TEST_F(
-    StandbyModuleTest,
+    STANDBY_TEST,
     GivenValidDeviceWhenRetrievingStandbyHandlesThenNonZeroCountAndValidStandbyHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -30,7 +38,7 @@ TEST_F(
   }
 }
 TEST_F(
-    StandbyModuleTest,
+    STANDBY_TEST,
     GivenValidDeviceWhenRetrievingStandbyHandlesThenSimilarHandlesAreReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -41,7 +49,7 @@ TEST_F(
   }
 }
 TEST_F(
-    StandbyModuleTest,
+    STANDBY_TEST,
     GivenValidDeviceWhenRetrievingStandbyHandlesThenActualHandleCountIsUpdated) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -52,7 +60,7 @@ TEST_F(
   }
 }
 TEST_F(
-    StandbyModuleTest,
+    STANDBY_TEST,
     GivenValidDeviceWhenRequestingModeThenExpectzesSysmanStandbyGetModeToReturnValidStandbyMode) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -75,7 +83,7 @@ TEST_F(
   }
 }
 TEST_F(
-    StandbyModuleTest,
+    STANDBY_TEST,
     GivenValidDeviceWhenSettingModeThenExpectzesSysmanStandbySetModeFollowedByzesSysmanStandbyGetModeToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -97,7 +105,7 @@ TEST_F(
 }
 
 TEST_F(
-    StandbyModuleTest,
+    STANDBY_TEST,
     GivenValidStandbyHandleWhenRetrievingStandbyPropertiesThenValidStandbyPropertiesIsReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -114,7 +122,7 @@ TEST_F(
   }
 }
 TEST_F(
-    StandbyModuleTest,
+    STANDBY_TEST,
     GivenValidStandbyHandleWhenRetrievingStandbyPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;

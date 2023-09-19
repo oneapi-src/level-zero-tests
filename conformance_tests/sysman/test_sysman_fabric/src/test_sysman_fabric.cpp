@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,7 +18,13 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class FabricPortsOperationsZesTest : public lzt::ZesSysmanCtsClass {};
+#define FABRICPORT_TEST FabricPortsOperationsZesTest
+#else // USE_ZESINIT
 class FabricPortsOperationsTest : public lzt::SysmanCtsClass {};
+#define FABRICPORT_TEST FabricPortsOperationsTest
+#endif // USE_ZESINIT
 
 void validate_fabric_port_speed(zes_fabric_port_speed_t speed) {
 
@@ -33,7 +39,7 @@ void validate_fabric_port_speed(zes_fabric_port_speed_t speed) {
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -46,7 +52,7 @@ TEST_F(
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFabricPortHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -64,7 +70,7 @@ TEST_F(
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -81,7 +87,7 @@ TEST_F(
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFabricPortHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -107,7 +113,7 @@ TEST_F(
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenRetrievingFabricPortPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -140,7 +146,7 @@ TEST_F(
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenRetrievingFabricPortPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -185,7 +191,7 @@ TEST_F(
   }
 }
 
-TEST_F(FabricPortsOperationsTest,
+TEST_F(FABRICPORT_TEST,
        GivenValidFabricPortHandleWhenSettingPortConfigThenGetSamePortConfig) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -212,7 +218,7 @@ TEST_F(FabricPortsOperationsTest,
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenGettingPortStateThenValidStatesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -263,7 +269,7 @@ TEST_F(
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenGettingPortThroughputThenValidThroughputAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -283,7 +289,7 @@ TEST_F(
   }
 }
 
-TEST_F(FabricPortsOperationsTest,
+TEST_F(FABRICPORT_TEST,
        GivenValidFabricPortHandleWhenGettingPortLinkThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -309,7 +315,7 @@ TEST_F(FabricPortsOperationsTest,
 }
 
 TEST_F(
-    FabricPortsOperationsTest,
+    FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenGettingPortLinkTwiceThenSameValueIsReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;

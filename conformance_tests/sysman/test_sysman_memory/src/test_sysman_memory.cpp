@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -23,10 +23,16 @@ std::mutex mem_mutex;
 std::condition_variable condition_variable;
 uint32_t ready = 0;
 
+#ifdef USE_ZESINIT
+class MemoryModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define MEMORY_TEST MemoryModuleZesTest
+#else // USE_ZESINIT
 class MemoryModuleTest : public lzt::SysmanCtsClass {};
+#define MEMORY_TEST MemoryModuleTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -39,7 +45,7 @@ TEST_F(
 }
 
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullMemoryHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -57,7 +63,7 @@ TEST_F(
 }
 
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -74,7 +80,7 @@ TEST_F(
 }
 
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarMemHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -98,7 +104,7 @@ TEST_F(
 }
 
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenValidMemHandleWhenRetrievingMemPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -129,7 +135,7 @@ TEST_F(
 }
 
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenValidMemHandleWhenRetrievingMemPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -157,7 +163,7 @@ TEST_F(
 }
 
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenValidMemHandleWhenRetrievingMemBandWidthThenValidBandWidthCountersAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -178,7 +184,7 @@ TEST_F(
   }
 }
 
-TEST_F(MemoryModuleTest,
+TEST_F(MEMORY_TEST,
        GivenValidMemHandleWhenRetrievingMemStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -222,8 +228,30 @@ uint64_t get_free_memory_state(ze_device_handle_t device) {
   return total_free_memory;
 }
 
+#ifdef USE_ZESINIT
+bool is_uuids_equal(uint8_t *uuid1, uint8_t *uuid2) {
+  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
+    if (uuid1[i] != uuid2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
+  auto driver = lzt::zeDevice::get_instance()->get_driver();
+  auto core_devices = lzt::get_ze_devices(driver);
+  for (auto device : core_devices) {
+    auto device_properties = lzt::get_device_properties(device);
+    if (is_uuids_equal(uuid, device_properties.uuid.id)) {
+      return device;
+    }
+  }
+  return nullptr;
+}
+#endif // USE_ZESINIT
+
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenValidMemHandleWhenAllocatingMemoryUptoMaxCapacityThenOutOfDeviceMemoryErrorIsReturned) {
 
   ze_command_list_handle_t command_list;
@@ -236,11 +264,23 @@ TEST_F(
     uint32_t count = 0;
     uint64_t total_free = 0;
     std::vector<void *> vec_ptr;
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(core_device, &deviceProperties);
+    std::cout << "test device name " << deviceProperties.name << " uuid "
+              << lzt::to_string(deviceProperties.uuid);
+#else  // USE_ZESINIT
     ze_device_properties_t deviceProperties = {
         ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
     std::cout << "test device name " << deviceProperties.name << " uuid "
               << lzt::to_string(deviceProperties.uuid);
+#endif // USE_ZESINIT
     if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
       std::cout << "test subdevice id " << deviceProperties.subdeviceId;
     } else {
@@ -338,7 +378,7 @@ void getRasState(ze_device_handle_t device) {
 }
 
 TEST_F(
-    MemoryModuleTest,
+    MEMORY_TEST,
     GivenValidMemoryAndRasHandlesWhenGettingMemoryGetStateAndRasGetStateFromDifferentThreadsThenExpectBothToReturnSucess) {
   for (auto device : devices) {
     std::thread rasThread(getRasState, device);

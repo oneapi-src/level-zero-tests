@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -17,10 +17,16 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class PerformanceModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define PERFORMANCE_TEST PerformanceModuleZesTest
+#else // USE_ZESINIT
 class PerformanceModuleTest : public lzt::SysmanCtsClass {};
+#define PERFORMANCE_TEST PerformanceModuleTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenComponentCountZeroWhenRetrievingPerformanceHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -33,7 +39,7 @@ TEST_F(
 }
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanPerformanceThenNotNullPerformanceHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -51,7 +57,7 @@ TEST_F(
 }
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenInvalidComponentCountWhenRetrievingPerformanceHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -68,7 +74,7 @@ TEST_F(
 }
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarPerformanceHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -94,7 +100,7 @@ TEST_F(
 }
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenRetrievingPerformancePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -122,7 +128,7 @@ TEST_F(
 }
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenRetrievingPerformancePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -148,7 +154,7 @@ TEST_F(
 }
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenSettingPerformanceConfigurationThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -179,7 +185,7 @@ static double set_performance_factor(zes_perf_handle_t pHandle,
 }
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenSettingMultiplePerformanceConfigurationsForMediaThenValidPerformanceFactorIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -224,7 +230,7 @@ TEST_F(
 }
 
 TEST_F(
-    PerformanceModuleTest,
+    PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenGettingPerformanceConfigurationThenValidPerformanceFactorIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -243,12 +249,22 @@ TEST_F(
   }
 }
 
+#ifdef USE_ZESINIT
+class PerformanceModuleParamComputePerformanceFactorZesTest
+    : public lzt::ZesSysmanCtsClass,
+      public ::testing::WithParamInterface<int> {};
+#define PERFORMANCE_COMPUTE_TEST                                               \
+  PerformanceModuleParamComputePerformanceFactorZesTest
+#else // USE_ZESINIT
 class PerformanceModuleParamComputePerformanceFactorTest
     : public lzt::SysmanCtsClass,
       public ::testing::WithParamInterface<int> {};
+#define PERFORMANCE_COMPUTE_TEST                                               \
+  PerformanceModuleParamComputePerformanceFactorTest
+#endif // USE_ZESINIT
 
 TEST_P(
-    PerformanceModuleParamComputePerformanceFactorTest,
+    PERFORMANCE_COMPUTE_TEST,
     GivenValidPerformanceHandleWhenSettingMultiplePerformanceFactorForComputeThenValidPerformanceFactorIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -274,7 +290,7 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_CASE_P(TestCasesforComputePerformanceFactorVerification,
-                        PerformanceModuleParamComputePerformanceFactorTest,
+                        PERFORMANCE_COMPUTE_TEST,
                         testing::Values(0, 25, 49, 50, 51, 75, 99, 100));
 
 } // namespace

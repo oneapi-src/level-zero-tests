@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -55,9 +55,16 @@ void validate_ras_properties(zes_ras_properties_t rasProperties,
     EXPECT_LT(rasProperties.subdeviceId, deviceProperties.numSubdevices);
   }
 }
-class RASOperationsTest : public lzt::SysmanCtsClass {};
 
-TEST_F(RASOperationsTest,
+#ifdef USE_ZESINIT
+class RASOperationsZesTest : public lzt::ZesSysmanCtsClass {};
+#define RAS_TEST RASOperationsZesTest
+#else // USE_ZESINIT
+class RASOperationsTest : public lzt::SysmanCtsClass {};
+#define RAS_TEST RASOperationsTest
+#endif // USE_ZESINIT
+
+TEST_F(RAS_TEST,
        GivenValidRASHandleWhenRetrievingConfigThenUpdatedConfigIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -76,7 +83,7 @@ TEST_F(RASOperationsTest,
 }
 
 TEST_F(
-    RASOperationsTest,
+    RAS_TEST,
     GivenValidRASHandleAndSettingNewConfigWhenRetrievingConfigThenUpdatedConfigIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -144,7 +151,7 @@ TEST_F(
   }
 }
 
-TEST_F(RASOperationsTest,
+TEST_F(RAS_TEST,
        GivenValidRASHandleWhenRetrievingStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -164,7 +171,7 @@ TEST_F(RASOperationsTest,
 }
 
 TEST_F(
-    RASOperationsTest,
+    RAS_TEST,
     GivenValidRASHandleWhenRetrievingStateAfterClearThenUpdatedStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -191,7 +198,7 @@ TEST_F(
 }
 
 TEST_F(
-    RASOperationsTest,
+    RAS_TEST,
     GivenValidRASHandleWhenRetrievingRASPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -218,7 +225,7 @@ TEST_F(
 }
 
 TEST_F(
-    RASOperationsTest,
+    RAS_TEST,
     GivenComponentCountZeroWhenRetrievingRASHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;

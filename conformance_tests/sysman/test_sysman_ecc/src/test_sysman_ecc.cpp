@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,10 +18,16 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class EccModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define ECC_TEST EccModuleZesTest
+#else // USE_ZESINIT
 class EccModuleTest : public lzt::SysmanCtsClass {};
+#define ECC_TEST EccModuleTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    EccModuleTest,
+    ECC_TEST,
     GivenValidDeviceHandleIfEccIsConfigurableThenExpectEccShouldBeAvailable) {
   for (const auto &device : devices) {
     auto configurable = lzt::get_ecc_configurable(device);
@@ -34,7 +40,7 @@ TEST_F(
   }
 }
 
-TEST_F(EccModuleTest,
+TEST_F(ECC_TEST,
        GivenValidDeviceHandleIfEccIsAvailableThenExpectValidEccProperties) {
   for (const auto &device : devices) {
     auto available = lzt::get_ecc_available(device);
@@ -52,7 +58,7 @@ TEST_F(EccModuleTest,
   }
 }
 
-TEST_F(EccModuleTest,
+TEST_F(ECC_TEST,
        GivenValidDeviceHandleIfEccIsAvailableThenExpectSameEccPropertiesTwice) {
   for (const auto &device : devices) {
     auto available = lzt::get_ecc_available(device);
@@ -69,7 +75,7 @@ TEST_F(EccModuleTest,
 }
 
 TEST_F(
-    EccModuleTest,
+    ECC_TEST,
     GivenValidDeviceHandleIfEccIsConfigurableSetTheEccStateSameAsCurrentStateThenExpectNoPendingActionIsRequired) {
   for (const auto &device : devices) {
     auto configurable = lzt::get_ecc_configurable(device);
@@ -88,7 +94,7 @@ TEST_F(
 }
 
 TEST_F(
-    EccModuleTest,
+    ECC_TEST,
     GivenValidDeviceHandleIfEccIsConfigurableSetTheEccStateDifferentFromCurrentStateThenExpectPendingActionIsRequired) {
   for (const auto &device : devices) {
     auto configurable = lzt::get_ecc_configurable(device);
@@ -112,7 +118,7 @@ TEST_F(
 }
 
 TEST_F(
-    EccModuleTest,
+    ECC_TEST,
     GivenValidDeviceHandleIfEccIsNotAvailableThenGetStateIsInvokedThenExpectEccIsNotAvailable) {
   for (const auto &device : devices) {
     auto available = lzt::get_ecc_available(device);
@@ -126,7 +132,7 @@ TEST_F(
 }
 
 TEST_F(
-    EccModuleTest,
+    ECC_TEST,
     GivenValidDeviceHandleIfEccIsAvailableButNotConfigurableThenGetStateIsInvokedThenExpectEccUnSupportedFeature) {
   for (const auto &device : devices) {
     auto available = lzt::get_ecc_available(device);
@@ -143,7 +149,7 @@ TEST_F(
 }
 
 TEST_F(
-    EccModuleTest,
+    ECC_TEST,
     GivenValidDeviceHandleIfEccIsNotAvailableThenSetStateIsInvokedThenExpectEccIsNotAvailable) {
   for (const auto &device : devices) {
     auto available = lzt::get_ecc_available(device);
@@ -160,7 +166,7 @@ TEST_F(
 }
 
 TEST_F(
-    EccModuleTest,
+    ECC_TEST,
     GivenValidDeviceHandleIfEccIsAvailableButNotConfigurableThenSetStateIsInvokedThenExpectEccUnSupportedFeature) {
   for (const auto &device : devices) {
     auto available = lzt::get_ecc_available(device);

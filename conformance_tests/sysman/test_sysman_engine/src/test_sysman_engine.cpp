@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,10 +18,16 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class EngineModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define ENGINE_TEST EngineModuleZesTest
+#else // USE_ZESINIT
 class EngineModuleTest : public lzt::SysmanCtsClass {};
+#define ENGINE_TEST EngineModuleTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanEngineHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -34,7 +40,7 @@ TEST_F(
 }
 
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanEngineHandlesThenNotNullEngineHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -52,7 +58,7 @@ TEST_F(
 }
 
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanEngineHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -69,7 +75,7 @@ TEST_F(
 }
 
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarEngineHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -93,7 +99,7 @@ TEST_F(
 }
 
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenValidEngineHandleWhenRetrievingEnginePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -117,7 +123,7 @@ TEST_F(
 }
 
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenValidEngineHandleWhenRetrievingEnginePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -141,7 +147,7 @@ TEST_F(
 }
 
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenValidEngineHandleWhenRetrievingEngineActivityStatsThenValidStatsIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -160,7 +166,7 @@ TEST_F(
   }
 }
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenValidEngineHandleWhenRetrievingEngineActivityStatsThenTimestampWillbeIncrementedInNextCalltoEngineActivity) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -230,8 +236,30 @@ static void workload_for_device(ze_device_handle_t device) {
   lzt::destroy_module(module);
 }
 
+#ifdef USE_ZESINIT
+bool is_uuids_equal(uint8_t *uuid1, uint8_t *uuid2) {
+  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
+    if (uuid1[i] != uuid2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
+  auto driver = lzt::zeDevice::get_instance()->get_driver();
+  auto core_devices = lzt::get_ze_devices(driver);
+  for (auto device : core_devices) {
+    auto device_properties = lzt::get_device_properties(device);
+    if (is_uuids_equal(uuid, device_properties.uuid.id)) {
+      return device;
+    }
+  }
+  return nullptr;
+}
+#endif // USE_ZESINIT
+
 TEST_F(
-    EngineModuleTest,
+    ENGINE_TEST,
     GivenValidEngineHandleWhenGpuWorkloadIsSubmittedThenEngineActivityMeasuredIsHigher) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -252,10 +280,22 @@ TEST_F(
                                  (static_cast<double>(s2.timestamp) -
                                   static_cast<double>(s1.timestamp));
         // submit workload and measure  utilization
+#ifdef USE_ZESINIT
+        auto sysman_device_properties =
+            lzt::get_sysman_device_properties(device);
+        ze_device_handle_t core_device =
+            get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        EXPECT_NE(core_device, nullptr);
+        s1 = lzt::get_engine_activity(engine_handle);
+        std::thread thread(workload_for_device, core_device);
+        thread.join();
+        s2 = lzt::get_engine_activity(engine_handle);
+#else  // USE_ZESINIT
         s1 = lzt::get_engine_activity(engine_handle);
         std::thread thread(workload_for_device, device);
         thread.join();
         s2 = lzt::get_engine_activity(engine_handle);
+#endif // USE_ZESINIT
         double post_utilization = (static_cast<double>(s2.activeTime) -
                                    static_cast<double>(s1.activeTime)) /
                                   (static_cast<double>(s2.timestamp) -

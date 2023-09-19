@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -17,9 +17,16 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
+#ifdef USE_ZESINIT
+class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define POWER_TEST PowerModuleZesTest
+#else // USE_ZESINIT
 class PowerModuleTest : public lzt::SysmanCtsClass {};
+#define POWER_TEST PowerModuleTest
+#endif // USE_ZESINIT
+
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidDeviceWhenRetrievingPowerHandlesThenNonZeroCountAndValidPowerHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -35,7 +42,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidDeviceWhenRetrievingPowerHandlesThenSimilarHandlesAreReturnedTwice) {
   for (auto device : devices) {
     uint32_t icount = 0;
@@ -51,7 +58,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidDeviceWhenRetrievingPowerHandlesThenActualHandleCountIsUpdatedAndIfRequestedHandlesAreLessThanActualHandleCountThenDesiredNumberOfHandlesAreReturned) {
   for (auto device : devices) {
 
@@ -72,7 +79,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenSamePowerHandleWhenRequestingPowerPropertiesThenCheckMaxAndMinLimitInRange) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -105,7 +112,7 @@ TEST_F(
 }
 
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenSamePowerHandleWhenRequestingPowerPropertiesThenExpectSamePropertiesTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -136,7 +143,7 @@ TEST_F(
 }
 
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectzesSysmanPowerGetLimitsToReturnValidPowerLimits) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -169,7 +176,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectzesSysmanPowerGetLimitsToReturnSameValuesTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -203,7 +210,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenSettingPowerValuesThenExpectzesSysmanPowerSetLimitsFollowedByzesSysmanPowerGetLimitsToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -273,7 +280,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleThenExpectzesSysmanPowerGetEnergyCounterToReturnSuccess) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -299,7 +306,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenGettingEnergyThresholdThenSuccessIsReturnedAndParameterValuesAreValid) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -321,7 +328,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenGettingEnergyThresholdTwiceThenSameValueReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -342,7 +349,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenSettingEnergyValuesThenExpectzesSysmanPowerSetEnergyThresholdFollowedByzesSysmanPowerGetEnergyThresholdToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -370,7 +377,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectzesPowerGetLimitsExtToReturnSameValuesTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -445,7 +452,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenSettingPowerValuesForSustainedPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -514,7 +521,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenSettingPowerValuesForPeakPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -580,7 +587,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenSettingPowerValuesForBurstPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -646,7 +653,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenSettingPowerValuesForInstantaneousPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -716,7 +723,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidCardPowerHandleWhenRequestingPowerPropertiesThenExpectOnSubDeviceToReturnFalse) {
   for (auto device : devices) {
     auto p_power_handle = lzt::get_card_power_handle(device);
@@ -729,7 +736,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidCardPowerHandleWhenRequestingPowerLimitsThenExpectzesPowerGetLimitsExtToReturnSameValuesTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -791,7 +798,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandleWhenRequestingEnergyCounterThenExpectEnergyConsumedByCardToBeGreaterThanOrEqualsToEnergyConsumedBySubdevices) {
   for (auto device : devices) {
     auto p_power_handle = lzt::get_card_power_handle(device);
@@ -821,7 +828,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandlesAfterGettingMaxPowerLimitsWhenSettingValuesForSustainedPowerThenExpectzesPowerGetLimitsExtToReturnPowerLimitsLessThanMaxPowerLimits) {
   for (auto device : devices) {
     auto power_card_handle = lzt::get_card_power_handle(device);
@@ -875,7 +882,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerHandlesAfterGettingMaxPowerLimitWhenSettingValuesForPeakPowerThenExpectzesPowerGetLimitsExtToReturnPowerLimitsLessThanMaxPowerLimits) {
   for (auto device : devices) {
     auto power_card_handle = lzt::get_card_power_handle(device);
@@ -928,7 +935,7 @@ TEST_F(
 }
 
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenPowerHandleWhenRequestingExtensionPowerPropertiesThenValidPowerDomainIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -954,7 +961,7 @@ TEST_F(
 }
 
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenPowerHandleWhenRequestingExtensionPowerPropertiesThenValidDefaultLimitsAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -994,7 +1001,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PowerModuleTest,
+    POWER_TEST,
     GivenValidPowerAndPerformanceHandlesWhenIncreasingPerformanceFactorThenExpectTotalEnergyConsumedToBeIncreased) {
   for (auto device : devices) {
     uint32_t perf_count = 0;

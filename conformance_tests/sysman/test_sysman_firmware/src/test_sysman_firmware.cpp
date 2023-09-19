@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -24,10 +24,16 @@ namespace {
 
 uint32_t get_prop_length(char *prop) { return std::strlen(prop); }
 
+#ifdef USE_ZESINIT
+class FirmwareZesTest : public lzt::ZesSysmanCtsClass {};
+#define FIRMWARE_TEST FirmwareZesTest
+#else // USE_ZESINIT
 class FirmwareTest : public lzt::SysmanCtsClass {};
+#define FIRMWARE_TEST FirmwareTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    FirmwareTest,
+    FIRMWARE_TEST,
     GivenComponentCountZeroWhenRetrievingFirmwareHandlesThenCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -39,7 +45,7 @@ TEST_F(
   }
 }
 TEST_F(
-    FirmwareTest,
+    FIRMWARE_TEST,
     GivenComponentCountZeroWhenRetrievingFirmwareHandlesThenNotNullFirmwareHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -57,7 +63,7 @@ TEST_F(
 }
 
 TEST_F(
-    FirmwareTest,
+    FIRMWARE_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanFirmwareHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -73,7 +79,7 @@ TEST_F(
   }
 }
 TEST_F(
-    FirmwareTest,
+    FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenRetrievingFirmwarePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -98,7 +104,7 @@ TEST_F(
 }
 
 TEST_F(
-    FirmwareTest,
+    FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenRetrievingFirmwarePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -128,7 +134,7 @@ TEST_F(
 }
 
 TEST_F(
-    FirmwareTest,
+    FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectFirmwareFlashingSuccess) {
   auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
   if (nullptr == fwDirEnv) {

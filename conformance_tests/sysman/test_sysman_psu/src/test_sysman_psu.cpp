@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,10 +18,16 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class PsuModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define PSU_TEST PsuModuleZesTest
+#else // USE_ZESINIT
 class PsuModuleTest : public lzt::SysmanCtsClass {};
+#define PSU_TEST PsuModuleTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    PsuModuleTest,
+    PSU_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     lzt::get_psu_handles_count(device);
@@ -29,7 +35,7 @@ TEST_F(
 }
 
 TEST_F(
-    PsuModuleTest,
+    PSU_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullPsuHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -47,7 +53,7 @@ TEST_F(
 }
 
 TEST_F(
-    PsuModuleTest,
+    PSU_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -64,7 +70,7 @@ TEST_F(
 }
 
 TEST_F(
-    PsuModuleTest,
+    PSU_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarMemHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -88,7 +94,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PsuModuleTest,
+    PSU_TEST,
     GivenValidPsuHandleWhenRetrievingPsuPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -111,7 +117,7 @@ TEST_F(
 }
 
 TEST_F(
-    PsuModuleTest,
+    PSU_TEST,
     GivenValidPsuHandleWhenRetrievingPsuPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -133,7 +139,7 @@ TEST_F(
     }
   }
 }
-TEST_F(PsuModuleTest,
+TEST_F(PSU_TEST,
        GivenValidPsuHandleWhenRetrievingPsuStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;

@@ -191,46 +191,78 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "API Tracing"
     elif test_binary == "test_sysman_frequency":
         test_feature = "SysMan Frequency"
+    elif test_binary == "test_sysman_frequency_zesinit":
+        test_feature = "SysMan Frequency"    
     elif test_binary == "test_sysman_init":
         test_feature = "SysMan Device Properties"
     elif test_binary == "test_sysman_pci":
         test_feature = "SysMan PCIe"
+    elif test_binary == "test_sysman_pci_zesinit":
+        test_feature = "SysMan PCIe"    
     elif (re.search('power', test_name, re.IGNORECASE)):
         test_feature = "SysMan Power"
     elif (re.search('standby', test_name, re.IGNORECASE)):
         test_feature = "SysMan Standby"
     elif test_binary == "test_sysman_led":
         test_feature = "SysMan LEDs"
+    elif test_binary == "test_sysman_led_zesinit":
+        test_feature = "SysMan LEDs"    
     elif test_binary == "test_sysman_memory":
         test_feature = "SysMan Memory"
+    elif test_binary == "test_sysman_memory_zesinit":
+        test_feature = "SysMan Memory"    
     elif test_binary == "test_sysman_engine":
         test_feature = "SysMan Engines"
+    elif test_binary == "test_sysman_engine_zesinit":
+        test_feature = "SysMan Engines"    
     elif test_binary == "test_sysman_temperature":
         test_feature = "SysMan Temperature"
     elif test_binary == "test_sysman_temperature_zesinit":
         test_feature = "SysMan Temperature"
     elif test_binary == "test_sysman_psu":
         test_feature = "SysMan Power Supplies"
+    elif test_binary == "test_sysman_psu_zesinit":
+        test_feature = "SysMan Power Supplies"    
     elif test_binary == "test_sysman_fan":
         test_feature = "SysMan Fans"
+    elif test_binary == "test_sysman_fan_zesinit":
+        test_feature = "SysMan Fans"    
     elif test_binary == "test_sysman_ras":
         test_feature = "SysMan Reliability & Stability"
+    elif test_binary == "test_sysman_ras_zesinit":
+        test_feature = "SysMan Reliability & Stability"    
     elif test_binary == "test_sysman_fabric":
         test_feature = "SysMan Fabric"
+    elif test_binary == "test_sysman_fabric_zesinit":
+        test_feature = "SysMan Fabric"    
     elif test_binary == "test_sysman_diagnostics":
         test_feature = "SysMan Diagnostics"
+    elif test_binary == "test_sysman_diagnostics_zesinit":
+        test_feature = "SysMan Diagnostics"    
     elif test_binary == "test_sysman_device" and test_name.find("Reset") != -1:
         test_feature = "SysMan Device Reset"
+    elif test_binary == "test_sysman_device_zesinit" and test_name.find("Reset") != -1:
+        test_feature = "SysMan Device Reset"    
     elif test_binary == "test_sysman_device":
         test_feature = "SysMan Device Properties"
+    elif test_binary == "test_sysman_device_zesinit":
+        test_feature = "SysMan Device Properties"    
     elif test_binary == "test_sysman_events":
         test_feature = "SysMan Events"
+    elif test_binary == "test_sysman_events_zesinit":
+        test_feature = "SysMan Events"    
     elif test_binary == "test_sysman_overclocking":
         test_feature = "SysMan Frequency"
+    elif test_binary == "test_sysman_overclocking_zesinit":
+        test_feature = "SysMan Frequency"    
     elif test_binary == "test_sysman_scheduler":
         test_feature = "SysMan Scheduler"
+    elif test_binary == "test_sysman_scheduler_zesinit":
+        test_feature = "SysMan Scheduler"    
     elif test_binary == "test_sysman_firmware":
         test_feature = "SysMan Firmware"
+    elif test_binary == "test_sysman_firmware_zesinit":
+        test_feature = "SysMan Firmware"    
     elif (re.search('performance', test_name, re.IGNORECASE)):
         test_feature = "SysMan Perf Profiles"
     elif test_binary == "test_metric":
@@ -239,6 +271,8 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "Program Debug"
     elif test_binary == "test_sysman_ecc":
         test_feature = "SysMan ECC"
+    elif test_binary == "test_sysman_ecc_zesinit":
+        test_feature = "SysMan ECC"    
     if test_feature == "None":
         print("ERROR: test case " + test_name + " has no assigned feature\n", file=sys.stderr)
     return test_feature

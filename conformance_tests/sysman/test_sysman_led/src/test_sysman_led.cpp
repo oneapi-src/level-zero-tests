@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -19,10 +19,16 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class LedModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define LED_TEST LedModuleZesTest
+#else // USE_ZESINIT
 class LedModuleTest : public lzt::SysmanCtsClass {};
+#define LED_TEST LedModuleTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    LedModuleTest,
+    LED_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     lzt::get_led_handle_count(device);
@@ -30,7 +36,7 @@ TEST_F(
 }
 
 TEST_F(
-    LedModuleTest,
+    LED_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullLedHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -48,7 +54,7 @@ TEST_F(
 }
 
 TEST_F(
-    LedModuleTest,
+    LED_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -65,7 +71,7 @@ TEST_F(
 }
 
 TEST_F(
-    LedModuleTest,
+    LED_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarLedHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -89,7 +95,7 @@ TEST_F(
 }
 
 TEST_F(
-    LedModuleTest,
+    LED_TEST,
     GivenValidLedHandleWhenRetrievingLedPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -111,7 +117,7 @@ TEST_F(
 }
 
 TEST_F(
-    LedModuleTest,
+    LED_TEST,
     GivenValidLedHandleWhenRetrievingLedPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -133,7 +139,7 @@ TEST_F(
     }
   }
 }
-TEST_F(LedModuleTest,
+TEST_F(LED_TEST,
        GivenValidLedHandleWhenRetrievingLedStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -161,8 +167,7 @@ TEST_F(LedModuleTest,
     }
   }
 }
-TEST_F(LedModuleTest,
-       GivenValidLedHandleWhenSettingLedColorTheSuccessIsReturned) {
+TEST_F(LED_TEST, GivenValidLedHandleWhenSettingLedColorTheSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto led_handles = lzt::get_led_handles(device, count);
@@ -194,7 +199,7 @@ TEST_F(LedModuleTest,
     }
   }
 }
-TEST_F(LedModuleTest,
+TEST_F(LED_TEST,
        GivenValidLedHandleWhenSettingLedStateToOffThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;

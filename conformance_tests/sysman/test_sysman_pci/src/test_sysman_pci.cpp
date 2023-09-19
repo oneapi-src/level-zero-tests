@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2020 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,8 +18,16 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
+
+#ifdef USE_ZESINIT
+class PciModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define PCI_TEST PciModuleZesTest
+#else // USE_ZESINIT
 class PciModuleTest : public lzt::SysmanCtsClass {};
-TEST_F(PciModuleTest, GivenSysmanHandleWhenRetrievingStateThenStateIsReturned) {
+#define PCI_TEST PciModuleTest
+#endif // USE_ZESINIT
+
+TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingStateThenStateIsReturned) {
   for (auto device : devices) {
     zes_pci_properties_t pciProps = {};
     pciProps = lzt::get_pci_properties(device);
@@ -41,7 +49,7 @@ TEST_F(PciModuleTest, GivenSysmanHandleWhenRetrievingStateThenStateIsReturned) {
     }
   }
 }
-TEST_F(PciModuleTest,
+TEST_F(PCI_TEST,
        GivenSysmanHandleWhenRetrievingPCIPropertiesThenpropertiesIsReturned) {
   for (auto device : devices) {
     zes_pci_properties_t pciProps = {};
@@ -63,7 +71,7 @@ TEST_F(PciModuleTest,
   }
 }
 TEST_F(
-    PciModuleTest,
+    PCI_TEST,
     GivenSysmanHandleWhenRetrievingPCIStatsPropertiesThenStatspropertiesIsReturned) {
   for (auto device : devices) {
     zes_pci_properties_t pciProps = {};
@@ -83,14 +91,14 @@ TEST_F(
     }
   }
 }
-TEST_F(PciModuleTest,
+TEST_F(PCI_TEST,
        GivenSysmanHandleWhenRetrievingPCIBarsThenNonZeroCountValueIsReturned) {
   for (auto device : devices) {
     auto p_count = lzt::get_pci_bar_count(device);
   }
 }
 TEST_F(
-    PciModuleTest,
+    PCI_TEST,
     GivenSysmanHandleWhenRetrievingPCIBarsThenValidBarPropertiesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -106,7 +114,7 @@ TEST_F(
   }
 }
 TEST_F(
-    PciModuleTest,
+    PCI_TEST,
     GivenSysmanHandleWhenRetrievingPCIBarsExtensionThenValidBarPropertiesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -127,8 +135,7 @@ TEST_F(
     }
   }
 }
-TEST_F(PciModuleTest,
-       GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
+TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
   for (auto device : devices) {
     auto pciProps = lzt::get_pci_properties(device);
     auto pci_stats_initial = lzt::get_pci_stats(device);

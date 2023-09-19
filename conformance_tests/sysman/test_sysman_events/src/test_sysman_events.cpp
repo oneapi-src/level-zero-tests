@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -20,6 +20,21 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+#ifdef USE_ZESINIT
+class EventsZesTest : public lzt::ZesSysmanCtsClass {
+public:
+  ze_driver_handle_t hDriver;
+  uint32_t timeout;
+  uint64_t timeoutEx;
+  EventsZesTest() {
+    hDriver = lzt::get_default_zes_driver();
+    timeout = 10000;
+    timeoutEx = 10000;
+  }
+  ~EventsZesTest() {}
+};
+#define EVENTS_TEST EventsZesTest
+#else // USE_ZESINIT
 class EventsTest : public lzt::SysmanCtsClass {
 public:
   ze_driver_handle_t hDriver;
@@ -32,6 +47,8 @@ public:
   }
   ~EventsTest() {}
 };
+#define EVENTS_TEST EventsTest
+#endif // USE_ZESINIT
 
 void register_unknown_event(zes_device_handle_t device,
                             zes_event_type_flags_t events) {
@@ -40,7 +57,7 @@ void register_unknown_event(zes_device_handle_t device,
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningTemperatureEventsForCriticalOrThresholdTempThenEventsAreTriggered) {
   for (auto device : devices) {
     uint32_t num_temp_sensors = 0;
@@ -98,7 +115,7 @@ TEST_F(
   }
 }
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForDeviceResetRequiredByDriverThenEventsAreTriggeredForDeviceResetRequired) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED);
@@ -121,7 +138,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForDeviceResetRequiredByDriverThenEventsAreTriggeredForDeviceResetRequired) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED);
@@ -145,7 +162,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForDeviceDetachThenEventsAreTriggeredForDeviceDetach) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_DETACH);
@@ -168,7 +185,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForDeviceDetachThenEventsAreTriggeredForDeviceDetach) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_DETACH);
@@ -192,7 +209,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForDeviceAttachThenEventsAreTriggeredForDeviceAttach) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH);
@@ -228,7 +245,7 @@ static void eventListenThread(ze_driver_handle_t hDriver,
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleAndBlockedForDeviceDetachEventWhenEventRegisterIsCalledWithNoEventsThenEventListenIsUnBlocked) {
   uint32_t numEventsGenerated = std::numeric_limits<uint32_t>::max();
   for (auto device : devices) {
@@ -261,7 +278,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForDeviceAttachThenEventsAreTriggeredForDeviceAttach) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH);
@@ -285,7 +302,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForDeviceEnteringDeepSleepStateThenEventsAreTriggeredForDeviceSleep) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER);
@@ -308,7 +325,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForDeviceEnteringDeepSleepStateThenEventsAreTriggeredForDeviceSleep) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER);
@@ -332,7 +349,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForDeviceExitingDeepSleepStateThenEventsAreTriggeredForDeviceSleepExit) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT);
@@ -355,7 +372,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForDeviceExitingDeepSleepStateThenEventsAreTriggeredForDeviceSleepExit) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT);
@@ -379,7 +396,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForFrequencyThrottlingThenEventsAreTriggeredForFrequencyThrottling) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED);
@@ -402,7 +419,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForFrequencyThrottlingThenEventsAreTriggeredForFrequencyThrottling) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED);
@@ -426,7 +443,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForCrossingEnergyThresholdThenEventsAreTriggeredForAccordingly) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -463,7 +480,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForCrossingEnergyThresholdThenEventsAreTriggeredForAccordingly) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -501,7 +518,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForHealthofDeviceMemoryChangeThenCorrespondingEventsReceived) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_MEM_HEALTH);
@@ -524,7 +541,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForHealthofDeviceMemoryChangeThenCorrespondingEventsReceived) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_MEM_HEALTH);
@@ -548,7 +565,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForHealthofFabricPortChangeThenCorrespondingEventsReceived) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH);
@@ -571,7 +588,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForHealthofFabricPortChangeThenCorrespondingEventsReceived) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH);
@@ -595,7 +612,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForPciLinkHealthChangesThenCorrespondingEventsReceived) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH);
@@ -618,7 +635,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForPciLinkHealthChangesThenCorrespondingEventsReceived) {
   for (auto device : devices) {
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH);
@@ -642,7 +659,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForCrossingTotalRASErrorsThresholdThenEventsAreTriggeredForAccordingly) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -698,7 +715,7 @@ TEST_F(
 }
 
 TEST_F(
-    EventsTest,
+    EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForCrossingTotalRASErrorsThresholdThenEventsAreTriggeredForAccordingly) {
   for (auto device : devices) {
     uint32_t count = 0;

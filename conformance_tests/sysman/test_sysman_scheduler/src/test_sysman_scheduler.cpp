@@ -18,9 +18,16 @@ namespace lzt = level_zero_tests;
 #include <algorithm>
 namespace {
 
+#ifdef USE_ZESINIT
+class SchedulerZesTest : public lzt::ZesSysmanCtsClass {};
+#define SCHEDULER_TEST SchedulerZesTest
+#else // USE_ZESINIT
 class SchedulerTest : public lzt::SysmanCtsClass {};
+#define SCHEDULER_TEST SchedulerTest
+#endif // USE_ZESINIT
+
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenComponentCountZeroWhenRetrievingSchedulerHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -33,7 +40,7 @@ TEST_F(
 }
 
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenComponentCountZeroWhenRetrievingSchedulerHandlesThenNotNullSchedulerHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -50,7 +57,7 @@ TEST_F(
 }
 
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenComponentCountWhenRetrievingSchedulerHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -67,7 +74,7 @@ TEST_F(
 }
 
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarSchedulerHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -89,7 +96,7 @@ TEST_F(
   }
 }
 
-TEST_F(SchedulerTest,
+TEST_F(SCHEDULER_TEST,
        GivenValidSchedulerHandleWhenRetrievinCurrentModeThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -108,7 +115,7 @@ TEST_F(SchedulerTest,
   }
 }
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingCurrentModeTwiceThenSameModeIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -128,7 +135,7 @@ TEST_F(
 }
 
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeOutPropertiesThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -150,7 +157,7 @@ TEST_F(
   }
 }
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeOutPropertiesTwiceThenSamePropertiesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -175,7 +182,7 @@ TEST_F(
   }
 }
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeSlicePropertiesThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -198,7 +205,7 @@ TEST_F(
   }
 }
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeSlicePropertiesTwiceThenSamePropertiesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -225,7 +232,7 @@ TEST_F(
   }
 }
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenSettingSchedulerTimeOutModeThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -255,7 +262,7 @@ TEST_F(
 }
 
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenSettingSchedulerTimeSliceModeThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -287,7 +294,7 @@ TEST_F(
   }
 }
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenSettingSchedulerExclusiveModeThenSuccesseReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -322,7 +329,7 @@ TEST_F(
 }
 
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenSchedulerHandleWhenSettingSchedulerComputeUnitDebugModeThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -374,7 +381,7 @@ TEST_F(
   }
 }
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
@@ -401,7 +408,7 @@ TEST_F(
 }
 
 TEST_F(
-    SchedulerTest,
+    SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t p_count = 0;

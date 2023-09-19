@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2020 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,9 +18,17 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
+
+#ifdef USE_ZESINIT
+class FrequencyModuleZesTest : public lzt::ZesSysmanCtsClass {};
+#define FREQUENCY_TEST FrequencyModuleZesTest
+#else // USE_ZESINIT
 class FrequencyModuleTest : public lzt::SysmanCtsClass {};
+#define FREQUENCY_TEST FrequencyModuleTest
+#endif // USE_ZESINIT
+
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     lzt::get_freq_handle_count(device);
@@ -28,7 +36,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFrequencyHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -45,7 +53,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -62,7 +70,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFrequencyHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -84,7 +92,7 @@ TEST_F(
   }
 }
 
-TEST_F(FrequencyModuleTest,
+TEST_F(FREQUENCY_TEST,
        GivenValidDeviceWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -103,7 +111,7 @@ TEST_F(FrequencyModuleTest,
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFreqRangeWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -140,7 +148,7 @@ TEST_F(
   }
 }
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRetrievingAvailableClocksThenSuccessAndSameValuesAreReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -162,7 +170,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRetrievingAvailableClocksThenPositiveAndValidValuesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -190,7 +198,7 @@ TEST_F(
     }
   }
 }
-TEST_F(FrequencyModuleTest,
+TEST_F(FREQUENCY_TEST,
        GivenClocksCountWhenRetrievingAvailableClocksThenActualCountIsUpdated) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -212,7 +220,7 @@ TEST_F(FrequencyModuleTest,
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRequestingDeviceGPUTypeThenExpectCanControlPropertyToBeTrue) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -241,7 +249,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectPositiveFrequencyRange) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -266,7 +274,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenSameFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectSamePropertiesOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -300,7 +308,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnSuccessOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -320,7 +328,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenSameFrequencyHandleWhenRequestingFrequencyRangeThenExpectSameRangeOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -345,7 +353,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnValidFrequencyRanges) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -362,7 +370,7 @@ TEST_F(
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectUpdatedFrequencyInGetFrequencyCall) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -400,13 +408,13 @@ TEST_F(
     }
   }
 }
-void load_for_gpu() {
+void load_for_gpu(ze_device_handle_t target_device) {
   int m, k, n;
   m = k = n = 5000;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
-  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  const ze_device_handle_t device = target_device;
   void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
   void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
   void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
@@ -455,7 +463,29 @@ void get_throttle_time_init(zes_freq_handle_t pfreq_handle,
   EXPECT_GT(throttletime.timestamp, 0);
 }
 
-TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
+#ifdef USE_ZESINIT
+bool is_uuids_equal(uint8_t *uuid1, uint8_t *uuid2) {
+  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
+    if (uuid1[i] != uuid2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
+  auto driver = lzt::zeDevice::get_instance()->get_driver();
+  auto core_devices = lzt::get_ze_devices(driver);
+  for (auto device : core_devices) {
+    auto device_properties = lzt::get_device_properties(device);
+    if (is_uuids_equal(uuid, device_properties.uuid.id)) {
+      return device;
+    }
+  }
+  return nullptr;
+}
+#endif // USE_ZESINIT
+
+TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pfreq_handles = lzt::get_freq_handles(device, count);
@@ -484,7 +514,16 @@ TEST_F(FrequencyModuleTest, GivenValidFrequencyHandleThenCheckForThrottling) {
                                 nullptr, nullptr);
           auto before_throttletime = lzt::get_throttle_time(pfreq_handle);
           zes_freq_throttle_time_t throttletime;
-          std::thread first(load_for_gpu);
+#ifdef USE_ZESINIT
+          auto sysman_device_properties =
+              lzt::get_sysman_device_properties(device);
+          ze_device_handle_t core_device =
+              get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+          EXPECT_NE(core_device, nullptr);
+          std::thread first(load_for_gpu, core_device);
+#else  // USE_ZESINIT
+          std::thread first(load_for_gpu, device);
+#endif // USE_ZESINIT
           std::thread second(get_throttle_time_init, pfreq_handle,
                              std::ref(throttletime));
           first.join();
@@ -529,13 +568,13 @@ void checkFreqInLoop(zes_freq_handle_t pfreq_handle) {
 }
 
 // Function(thread 2) to run workload on GPU
-void loadForGpuMaxFreqTest() {
+void loadForGpuMaxFreqTest(ze_device_handle_t target_device) {
   int m, k, n;
   m = k = n = 10000;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
-  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  const ze_device_handle_t device = target_device;
   void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
   void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
   void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
@@ -578,7 +617,7 @@ void loadForGpuMaxFreqTest() {
 }
 
 TEST_F(
-    FrequencyModuleTest,
+    FREQUENCY_TEST,
     GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectActualFrequencyStaysInRangeDuringGpuLoad) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -610,10 +649,18 @@ TEST_F(
 
         lzt::set_freq_range(pfreq_handle, limits);
         lzt::idle_check(pfreq_handle);
-
         // Thread to start workload on GPU
-        std::thread first(loadForGpuMaxFreqTest);
-        // Thread to monitor actual frequency
+#ifdef USE_ZESINIT
+        auto sysman_device_properties =
+            lzt::get_sysman_device_properties(device);
+        ze_device_handle_t core_device =
+            get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        EXPECT_NE(core_device, nullptr);
+        std::thread first(loadForGpuMaxFreqTest, core_device);
+#else  // USE_ZESINIT
+        std::thread first(loadForGpuMaxFreqTest, device);
+#endif // USE_ZESINIT
+       // Thread to monitor actual frequency
         std::thread second(checkFreqInLoop, pfreq_handle);
 
         // wait for threads to finish

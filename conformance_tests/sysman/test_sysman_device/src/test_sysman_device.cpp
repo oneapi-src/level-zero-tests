@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -31,10 +31,16 @@ uint32_t get_prop_length(char prop[ZES_STRING_PROPERTY_SIZE]) {
   return length;
 }
 
+#ifdef USE_ZESINIT
+class SysmanDeviceZesTest : public lzt::ZesSysmanCtsClass {};
+#define SYSMAN_DEVICE_TEST SysmanDeviceZesTest
+#else // USE_ZESINIT
 class SysmanDeviceTest : public lzt::SysmanCtsClass {};
+#define SYSMAN_DEVICE_TEST SysmanDeviceTest
+#endif // USE_ZESINIT
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto properties = lzt::get_sysman_device_properties(device);
@@ -65,7 +71,7 @@ TEST_F(
 }
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     auto properties_initial = lzt::get_sysman_device_properties(device);
@@ -118,7 +124,7 @@ TEST_F(
 }
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenProcessesCountZeroWhenRetrievingProcessesStateThenSuccessIsReturned) {
   for (auto device : devices) {
     lzt::get_processes_count(device);
@@ -126,7 +132,7 @@ TEST_F(
 }
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenProcessesCountZeroWhenRetrievingProcessesStateThenValidProcessesStateAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -144,7 +150,7 @@ TEST_F(
 }
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenValidDeviceHandleWhenRetrievingProcessesStateThenProcessIdOfCallingProcessIsPresent) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -164,7 +170,7 @@ TEST_F(
 }
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
@@ -176,7 +182,7 @@ TEST_F(
 }
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSysmanDeviceStateThenValidStateIsReturned) {
   for (auto device : devices) {
     auto state = lzt::get_device_state(device);
@@ -189,7 +195,7 @@ TEST_F(
 }
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetIsSucceded) {
   for (auto device : devices) {
     lzt::sysman_device_reset(device);
@@ -197,7 +203,7 @@ TEST_F(
 }
 
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceded) {
   int number_iterations = 2;
   for (int i = 0; i < number_iterations; i++) {
@@ -213,7 +219,8 @@ submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
   int m, k, n;
   m = k = n = dim;
   std::vector<float> c(m * n, 0);
-  const ze_device_handle_t device = targetDevice;
+  ze_device_handle_t device = targetDevice;
+
   void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
   void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
   void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
@@ -283,8 +290,30 @@ static void compare_results(std::vector<float> c, std::vector<float> c_cpu) {
   return;
 }
 
+#ifdef USE_ZESINIT
+bool is_uuids_equal(uint8_t *uuid1, uint8_t *uuid2) {
+  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
+    if (uuid1[i] != uuid2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
+  auto driver = lzt::zeDevice::get_instance()->get_driver();
+  auto core_devices = lzt::get_ze_devices(driver);
+  for (auto device : core_devices) {
+    auto device_properties = lzt::get_device_properties(device);
+    if (is_uuids_equal(uuid, device_properties.uuid.id)) {
+      return device;
+    }
+  }
+  return nullptr;
+}
+#endif // USE_ZESINIT
+
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenWorkingDeviceHandleWhenResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterReset) {
   uint32_t n = 512;
   std::vector<float> a(n * n, 1);
@@ -295,7 +324,16 @@ TEST_F(
 
   for (auto device : devices) {
     // Perform workload execution before reset
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
     c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
     compare_results(c, c_cpu);
     c.clear();
     LOG_INFO << "Initiating device reset...\n";
@@ -304,13 +342,18 @@ TEST_F(
     LOG_INFO << "End of device reset...\n";
 
     // Perform workload execution after reset
+#ifdef USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
     c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
     compare_results(c, c_cpu);
     c.clear();
   }
 }
 TEST_F(
-    SysmanDeviceTest,
+    SYSMAN_DEVICE_TEST,
     GivenWorkingDeviceHandleWhenResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetInMultipleIterations) {
   uint32_t n = 512;
   std::vector<float> a(n * n, 1);
@@ -327,7 +370,16 @@ TEST_F(
   for (auto device : devices) {
     for (int i = 0; i < number_iterations; i++) {
       // Perform workload execution before reset
+#ifdef USE_ZESINIT
+      auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+      ze_device_handle_t core_device =
+          get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+      EXPECT_NE(core_device, nullptr);
+      c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
       c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
       compare_results(c, c_cpu);
       c.clear();
       LOG_INFO << "Initiating device reset...\n";
@@ -336,7 +388,12 @@ TEST_F(
       LOG_INFO << "End of device reset...\n";
 
       // Perform workload execution after reset
+#ifdef USE_ZESINIT
+      c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
       c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
       compare_results(c, c_cpu);
       c.clear();
     }

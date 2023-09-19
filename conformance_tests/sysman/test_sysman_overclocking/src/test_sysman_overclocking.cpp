@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -17,9 +17,16 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
+#ifdef USE_ZESINIT
+class OverclockingZesTest : public lzt::ZesSysmanCtsClass {};
+#define OVERCLOCK_TEST OverclockingZesTest
+#else // USE_ZESINIT
 class OverclockingTest : public lzt::SysmanCtsClass {};
+#define OVERCLOCK_TEST OverclockingTest
+#endif // USE_ZESINIT
+
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingOverclockingCapabilitiesThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -40,7 +47,7 @@ TEST_F(
   }
 }
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenCallingApiTwiceThenSimilarOverclockingCapabilitiesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -84,7 +91,7 @@ TEST_F(
   }
 }
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingOverclockingFrequencyTargetThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -109,7 +116,7 @@ TEST_F(
   }
 }
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingOverclockingFrequencyTargetExpectzesFrequencyOcSetFrequencyTargetFollowedByzesFrequencyOcGetFrequencyTargetToMatch) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -138,7 +145,7 @@ TEST_F(
   }
 }
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingOverclockingVoltageTargetThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -170,7 +177,7 @@ TEST_F(
 }
 
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingOverclockingVoltageTargetThenExpectzesFrequencyOcSetVoltageTargetFollowedByzesFrequencyOcGetVoltageTargetToMatch) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -205,7 +212,7 @@ TEST_F(
 }
 
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingOverclockingModeThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -228,7 +235,7 @@ TEST_F(
 }
 
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingOverclockingModeThenExpectzesFrequencyOcSetModeFollowedByzesFrequencyOcGetModeToMatch) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -260,7 +267,7 @@ TEST_F(
   }
 }
 
-TEST_F(OverclockingTest,
+TEST_F(OVERCLOCK_TEST,
        GivenValidFrequencyHandlesWhenGettingCurrentLimitThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -282,7 +289,7 @@ TEST_F(OverclockingTest,
   }
 }
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingCurrentLimitThenExpectzesSysmanFrequencyOcSetIccMaxFollowedByzesSysmanFrequencyOcGetIccMaxToReturnSuccess) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -307,7 +314,7 @@ TEST_F(
   }
 }
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingTemperaturetLimitThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
@@ -329,7 +336,7 @@ TEST_F(
   }
 }
 TEST_F(
-    OverclockingTest,
+    OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingCurrentLimitThenExpectzesSysmanFrequencyOcSetTjMaxFollowedByzesSysmanFrequencyOcGetTjMaxToMatch) {
   for (auto device : devices) {
     uint32_t p_count = 0;
