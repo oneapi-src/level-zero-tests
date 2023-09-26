@@ -89,6 +89,20 @@ long double ZePeak::_transfer_bw_host_copy(L0Context &context,
                                  &temp_cmd_list);
   }
 
+  /*
+    Apply memory advise with preferred location set to system memory
+    to ensure best placement for kmd-migrated shared allocations (only).
+  */
+  if (shared_is_dest) {
+    zeCommandListAppendMemAdvise(
+      temp_cmd_list, context.device, destination_buffer, buffer_size,
+      ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  } else {
+    zeCommandListAppendMemAdvise(
+      temp_cmd_list, context.device, source_buffer, buffer_size,
+      ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  }
+
   for (uint32_t i = 0; i < warmup_iterations; i++) {
     /*
 
