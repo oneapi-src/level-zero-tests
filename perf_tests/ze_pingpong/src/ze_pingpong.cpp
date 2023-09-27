@@ -363,6 +363,12 @@ void ZePingPong::setup_commandlist(L0Context &context, enum TestType test) {
 
   } else {
 
+    if (test == SHARED_MEM_MAP) {
+        zeCommandListAppendMemAdvise(
+            context.command_list, context.device, context.shared_output,
+            sizeof(int), ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+    }
+
     result = zeCommandListAppendLaunchKernel(
         context.command_list, context.function,
         &context.thread_group_dimensions, nullptr, 0, nullptr);
