@@ -17,6 +17,8 @@
 
 namespace lzt = level_zero_tests;
 
+#include <algorithm>
+#include <cstdlib>
 #include <level_zero/ze_api.h>
 
 using namespace level_zero_tests;
@@ -1166,5 +1168,147 @@ INSTANTIATE_TEST_SUITE_P(ParamAppendMemCopy,
                          zeCommandListAppendMemoryCopyParameterizedTests,
                          ::testing::Combine(memory_types, memory_types,
                                             ::testing::Bool()));
+
+void *malloc_aligned(size_t alignment, size_t size) {
+#ifdef __linux__
+  return aligned_alloc(alignment, size);
+#else // Windows
+  return _aligned_malloc(size, alignment);
+#endif
+}
+
+void free_aligned(void *ptr) {
+#ifdef __linux__
+  free(ptr);
+#else // Windows
+  _aligned_free(ptr);
+#endif
+}
+
+class zeSharedSystemMemoryCopyTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_memory_type_t, size_t, size_t>> {
+protected:
+  void SetUp() override {
+    const auto memory_access_properties = lzt::get_memory_access_properties(
+        lzt::get_default_device(lzt::get_default_driver()));
+    if ((memory_access_properties.sharedSystemAllocCapabilities &
+         ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
+      GTEST_SKIP() << "Device does not support accessing shared system memory";
+    }
+  }
+
+  void TearDown() override {}
+
+  void run(const bool use_sys_dst, const bool is_immediate,
+           const bool close_and_reset_immediate) {
+    const ze_memory_type_t memory_type = std::get<0>(GetParam());
+    const size_t buf_sz = std::get<1>(GetParam());
+    const size_t alignment = std::get<2>(GetParam());
+
+    void *buf = nullptr;
+    switch (memory_type) {
+    case ZE_MEMORY_TYPE_HOST: {
+      buf = lzt::allocate_host_memory(buf_sz, 1);
+      break;
+    }
+    case ZE_MEMORY_TYPE_DEVICE: {
+      buf = lzt::allocate_device_memory(buf_sz, 1);
+      break;
+    }
+    case ZE_MEMORY_TYPE_SHARED: {
+      buf = lzt::allocate_shared_memory(buf_sz, 1);
+      break;
+    }
+    default: {
+      FAIL() << "Unhandled memory type " << memory_type;
+      break;
+    }
+    }
+    EXPECT_NE(nullptr, buf);
+
+    // Buffer size must be a multiple of the alignment
+    const size_t buf_aligned_sz = (buf_sz % alignment == 0)
+                                      ? buf_sz
+                                      : (buf_sz / alignment + 1) * alignment;
+    void *buf_sys = malloc_aligned(alignment, buf_aligned_sz);
+    EXPECT_NE(nullptr, buf_sys);
+    std::fill_n(static_cast<uint8_t *>(buf_sys), buf_aligned_sz, 0);
+
+    void *buf_src = buf_sys;
+    void *buf_dst = buf;
+    if (use_sys_dst) {
+      std::swap(buf_src, buf_dst);
+    }
+
+    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+
+    // In theory this doesn't affect immediate cmdlists, but it does in reality
+    const bool close_and_reset =
+        !is_immediate || (is_immediate && close_and_reset_immediate);
+
+    for (int i = 0; i < this->n_iters; i++) {
+      lzt::append_memory_copy(cmd_bundle.list, buf_dst, buf_src, buf_sz);
+      if (close_and_reset) {
+        lzt::close_command_list(cmd_bundle.list);
+      }
+      lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+      if (close_and_reset) {
+        lzt::reset_command_list(cmd_bundle.list);
+      }
+    }
+
+    lzt::destroy_command_bundle(cmd_bundle);
+    lzt::free_memory(buf);
+    free_aligned(buf_sys);
+  }
+
+  const int n_iters = 1000;
+};
+
+TEST_P(
+    zeSharedSystemMemoryCopyTests,
+    GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryThenSuccessIsReturned) {
+  this->run(true, false, false);
+}
+
+TEST_P(
+    zeSharedSystemMemoryCopyTests,
+    GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryThenSuccessIsReturned) {
+  this->run(false, false, false);
+}
+
+TEST_P(
+    zeSharedSystemMemoryCopyTests,
+    GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryOnImmediateCmdListWithCloseAndResetThenSuccessIsReturned) {
+  this->run(true, true, true);
+}
+
+TEST_P(
+    zeSharedSystemMemoryCopyTests,
+    GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryOnImmediateCmdListWithCloseAndResetThenSuccessIsReturned) {
+  this->run(false, true, true);
+}
+
+TEST_P(
+    zeSharedSystemMemoryCopyTests,
+    GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryOnImmediateCmdListWithoutCloseAndResetThenSuccessIsReturned) {
+  this->run(true, true, false);
+}
+
+TEST_P(
+    zeSharedSystemMemoryCopyTests,
+    GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryOnImmediateCmdListWithoutCloseAndResetThenSuccessIsReturned) {
+  this->run(false, true, false);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ParamSharedSystemMemCopy, zeSharedSystemMemoryCopyTests,
+    ::testing::Combine(
+        ::testing::Values(ZE_MEMORY_TYPE_HOST, ZE_MEMORY_TYPE_DEVICE,
+                          ZE_MEMORY_TYPE_SHARED),
+        ::testing::Values(1, 8, 1024, 4096, 65536, 1u << 21),
+        ::testing::Values(1, 2, 4, 8, 16, 32, 64, 4096, 65536, 1u << 21)));
 
 } // namespace

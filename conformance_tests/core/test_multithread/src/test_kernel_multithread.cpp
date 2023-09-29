@@ -48,8 +48,22 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle,
       (uint64_t *)lzt::allocate_device_memory(output_size, 8);
   auto gpu_found_output_buffer =
       (uint64_t *)lzt::allocate_device_memory(output_size, 8);
-  auto host_expected_output_buffer = new uint64_t[output_count]();
-  auto host_found_output_buffer = new uint64_t[output_count]();
+
+  uint64_t *host_expected_output_buffer = nullptr;
+  uint64_t *host_found_output_buffer = nullptr;
+
+  auto mem_access_properties = lzt::get_memory_access_properties(
+      lzt::get_default_device(lzt::get_default_driver()));
+  if ((mem_access_properties.sharedSystemAllocCapabilities &
+       ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
+    host_expected_output_buffer =
+        static_cast<uint64_t *>(lzt::allocate_host_memory(output_size));
+    host_found_output_buffer =
+        static_cast<uint64_t *>(lzt::allocate_host_memory(output_size));
+  } else {
+    host_expected_output_buffer = new uint64_t[output_count]();
+    host_found_output_buffer = new uint64_t[output_count]();
+  }
 
   for (int i = 0; i < num_iterations; i++) {
     std::fill(host_expected_output_buffer,
@@ -88,8 +102,14 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle,
     }
   }
 
-  delete[] host_expected_output_buffer;
-  delete[] host_found_output_buffer;
+  if ((mem_access_properties.sharedSystemAllocCapabilities &
+       ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
+    lzt::free_memory(host_expected_output_buffer);
+    lzt::free_memory(host_found_output_buffer);
+  } else {
+    delete[] host_expected_output_buffer;
+    delete[] host_found_output_buffer;
+  }
   lzt::free_memory(gpu_pattern_buffer);
   lzt::free_memory(gpu_expected_output_buffer);
   lzt::free_memory(gpu_found_output_buffer);
