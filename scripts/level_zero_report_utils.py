@@ -291,6 +291,10 @@ def assign_test_feature(test_binary: str, test_name: str):
             return test_feature, test_section
         if test_binary == "test_stress_atomics":
             test_feature = "Atomics"
+        if test_binary == "test_stress_memory_allocation":
+            test_feature = "Device Memory"
+        if test_binary == "test_stress_commands_overloading":
+            test_feature = "Events"
         if (re.search('stress', test_name, re.IGNORECASE)):
             test_section = "Stress"
             return test_feature, test_section
