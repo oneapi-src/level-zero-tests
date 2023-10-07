@@ -195,7 +195,8 @@ protected:
                             bool use_sub_devices);
   void run_attach_detach_to_multiple_applications_on_different_devs_test(
       std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
-  void run_use_same_device_test(const zet_device_handle_t &device);
+  void run_use_same_device_test(const zet_device_handle_t &device,
+                                bool use_sub_devices);
   void
   run_new_debugger_attach_test(const std::vector<ze_device_handle_t> &devices,
                                bool verify_events);
@@ -217,6 +218,8 @@ protected:
   void SetUp() override { zetDebugAttachDetachTest::SetUp(); }
   void TearDown() override { zetDebugAttachDetachTest::TearDown(); }
   void run_multidevice_single_application_test(
+      std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
+  void run_multidevice_single_application_separate_debuggers_test(
       std::vector<ze_device_handle_t> &devices, bool use_sub_devices);
 };
 

@@ -22,6 +22,7 @@ int main(int argc, char **argv) {
                              level_zero_tests::to_string(result));
   }
   LOG_TRACE << "Driver initialized";
+  level_zero_tests::print_platform_overview();
 
   return RUN_ALL_TESTS();
 }
