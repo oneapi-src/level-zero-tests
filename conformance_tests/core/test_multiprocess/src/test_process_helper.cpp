@@ -18,14 +18,19 @@ int main(int argc, char **argv) {
   }
 
   LOG_INFO << "child";
-
   int proc_number = std::stoi(argv[1]);
   bool is_immediate = std::stoi(argv[2]) == 0 ? false : true;
+  bool is_stress_test = std::stoi(argv[3]) == 0 ? false : true;
 
   auto driver = lzt::get_default_driver();
+  auto device_0 = lzt::get_devices(driver)[0];
   auto devices = lzt::get_devices(driver);
+  if (is_stress_test) {
+    devices = lzt::get_ze_sub_devices(device_0);
+  }
   int deviceIndex = proc_number % devices.size();
   auto device = devices[deviceIndex];
+  auto device_properties = lzt::get_device_properties(device);
   auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
 
   auto module =
@@ -64,17 +69,39 @@ int main(int argc, char **argv) {
   lzt::set_argument_value(kernel, 0, sizeof(input_a), &input_a);
   lzt::set_argument_value(kernel, 1, sizeof(input_b), &input_b);
 
-  lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr, 0,
-                              nullptr);
+  if (is_stress_test) {
+    for (int i = 0; i < 10; i++) {
+      lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
+                                  nullptr, 0, nullptr);
+    }
+  } else {
+    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
+                                0, nullptr);
+  }
 
   lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  if (is_stress_test) {
+    for (int i = 0; i < 1000; i++) {
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+    }
+  } else {
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  }
+
+  if (is_stress_test) {
+    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+  }
+
   lzt::destroy_command_bundle(cmd_bundle);
+
+  if (is_stress_test) {
+    exit(0);
+  }
 
   // verify kernel execution
   for (int i = 0; i < memory_size; i++) {
     if (input_a[i] != 2) {
-
       exit(1);
     }
   }

@@ -172,6 +172,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenValidDeviceWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
                     (re.search('GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenMultipleProcessesUsingMultipleSubDevicesThenKernelIsStressedAndExecuteSuccessfull', test_name, re.IGNORECASE)) or \
                     re.search('fabric', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
             else:

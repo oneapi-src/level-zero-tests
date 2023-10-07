@@ -21,10 +21,11 @@ namespace fs = boost::filesystem;
 
 namespace {
 
-constexpr size_t num_processes = 4;
+constexpr size_t num_processes = 8;
 
 void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
-    int is_immediate) {
+    int is_immediate, int is_stress_test) {
+
   std::array<int, num_processes> process_results;
   std::vector<bp::child> processes;
   fs::path helper_path(fs::current_path() / "process");
@@ -37,7 +38,9 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
     child_env["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = "1";
     fs::path helper = bp::search_path("test_process_helper", paths);
     bp::child execute_kernel_process(
-        helper, bp::args({std::to_string(i), std::to_string(is_immediate)}),
+        helper,
+        bp::args({std::to_string(i), std::to_string(is_immediate),
+                  std::to_string(is_stress_test)}),
         child_env);
     processes.push_back(std::move(execute_kernel_process));
   }
@@ -52,12 +55,19 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
 
 TEST(MultiProcessTests,
      GivenMultipleProcessesUsingMultipleDevicesKernelsExecuteCorrectly) {
-  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(0);
+  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(0, 0);
 }
 
 TEST(
     MultiProcessTests,
     GivenMultipleProcessesUsingMultipleDevicesKernelsExecuteOnImmediateCmdListCorrectly) {
-  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(1);
+  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(1, 0);
 }
+
+TEST(
+    MultiProcessTests,
+    GivenMultipleProcessesUsingMultipleSubDevicesThenKernelIsStressedAndExecuteSuccessfully) {
+  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(0, 1);
+}
+
 } // namespace
