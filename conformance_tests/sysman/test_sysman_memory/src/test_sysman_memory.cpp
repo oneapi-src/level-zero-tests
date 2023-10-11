@@ -254,12 +254,6 @@ TEST_F(
     MEMORY_TEST,
     GivenValidMemHandleWhenAllocatingMemoryUptoMaxCapacityThenOutOfDeviceMemoryErrorIsReturned) {
 
-  ze_command_list_handle_t command_list;
-  ze_command_queue_handle_t cq;
-
-  command_list = lzt::create_command_list();
-  cq = lzt::create_command_queue();
-
   for (ze_device_handle_t device : devices) {
     uint32_t count = 0;
     uint64_t total_free = 0;
@@ -300,6 +294,10 @@ TEST_F(
     auto local_mem = lzt::allocate_host_memory(alloc_size);
     EXPECT_NE(nullptr, local_mem);
     std::memset(local_mem, pattern, alloc_size);
+    result = zeContextMakeMemoryResident(lzt::get_default_context(), device,
+                                         local_mem, alloc_size);
+    EXPECT_EQ(result, ZE_RESULT_SUCCESS);
+
     uint64_t cur_mem_alloc_size = 0;
     do {
       ze_buf = nullptr;
@@ -316,13 +314,9 @@ TEST_F(
         std::cout << "Memory Allocation Failed..." << std::endl;
         break;
       }
-      lzt::append_memory_copy(command_list, ze_buf, local_mem,
-                              cur_mem_alloc_size, nullptr);
-      lzt::append_barrier(command_list, nullptr, 0, nullptr);
-      lzt::close_command_list(command_list);
-      result = zeCommandQueueExecuteCommandLists(cq, 1, &command_list, nullptr);
-      lzt::synchronize(cq, UINT64_MAX);
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(command_list));
+
+      result = zeContextMakeMemoryResident(lzt::get_default_context(), device,
+                                           ze_buf, cur_mem_alloc_size);
       free_memory = get_free_memory_state(device);
     } while ((result != ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY) &&
              (free_memory > 0));
@@ -336,8 +330,6 @@ TEST_F(
     vec_ptr.clear();
     lzt::free_memory(local_mem);
   }
-  lzt::destroy_command_queue(cq);
-  lzt::destroy_command_list(command_list);
 }
 
 void getMemoryState(ze_device_handle_t device) {
