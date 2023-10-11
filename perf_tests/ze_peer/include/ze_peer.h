@@ -105,7 +105,11 @@ static const char *usage_str =
     "all other devices, "
     "\n                              using all available engines with compute "
     "capability."
-    "\n                              Extra options: -x"
+    "\n                              Extra options: -x, --divide_buffers"
+    "\n"
+    "\n  --divide_buffers            for parallel multiple targets test, divide "
+    "buffers across available"
+    "\n                              engines specified with option -u."
     "\n  -x                          for unidirectional parallel tests, select "
     "where to place the queue"
     "\n      src                     use queue in source"
@@ -146,17 +150,19 @@ public:
   void perform_parallel_copy_to_multiple_targets(
       peer_test_t test_type, peer_transfer_t transfer_type,
       std::vector<uint32_t> &remote_device_ids,
-      std::vector<uint32_t> &local_device_ids, size_t buffer_size);
+      std::vector<uint32_t> &local_device_ids, size_t buffer_size,
+      bool divide_buffers);
 
   void perform_bidirectional_parallel_copy_to_multiple_targets(
       peer_test_t test_type, peer_transfer_t transfer_type,
       std::vector<uint32_t> &remote_device_ids,
-      std::vector<uint32_t> &local_device_ids, size_t buffer_size);
+      std::vector<uint32_t> &local_device_ids, size_t buffer_size,
+      bool divide_buffers);
 
   void bandwidth_latency_parallel_to_multiple_targets(
       peer_test_t test_type, peer_transfer_t transfer_type,
       int number_buffer_elements, std::vector<uint32_t> &remote_device_ids,
-      std::vector<uint32_t> &local_device_ids);
+      std::vector<uint32_t> &local_device_ids, bool divide_buffers);
 
   void bandwidth_latency(peer_test_t test_type, peer_transfer_t transfer_type,
                          int number_buffer_elements, uint32_t remote_device_id,
@@ -255,6 +261,7 @@ public:
   static bool validate_results;
   static bool parallel_copy_to_single_target;
   static bool parallel_copy_to_multiple_targets;
+  static bool parallel_divide_buffers;
 
   static uint32_t number_iterations;
   uint32_t warm_up_iterations = number_iterations / 5;

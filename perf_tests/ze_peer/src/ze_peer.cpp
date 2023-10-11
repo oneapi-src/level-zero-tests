@@ -16,6 +16,7 @@ bool ZePeer::bidirectional = false;
 bool ZePeer::validate_results = false;
 bool ZePeer::parallel_copy_to_single_target = false;
 bool ZePeer::parallel_copy_to_multiple_targets = false;
+bool ZePeer::parallel_divide_buffers = false;
 uint32_t ZePeer::number_iterations = 50;
 const size_t max_number_of_elements = 268435456; /* 256 MB */
 
@@ -168,9 +169,16 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
       }
     } else {
       if (ZePeer::parallel_copy_to_multiple_targets) {
+        if (ZePeer::parallel_divide_buffers && queues.size() != 1 && queues.size() % 2) {
+          std::cerr
+              << "[ERROR] Number of engines passed with option -u needs to be "
+              << "divisible by 2 for parallel_multiple_targets test when using"
+              << "-l option\n";
+          return;
+        }
         peer.bandwidth_latency_parallel_to_multiple_targets(
             test_type, transfer_type, number_of_elements, remote_device_ids,
-            local_device_ids);
+            local_device_ids, ZePeer::parallel_divide_buffers);
       } else if (ZePeer::parallel_copy_to_single_target) {
         if (remote_device_ids.size() > 1) {
           std::cerr << "[ERROR] Number of dst devices needs to be one "
@@ -277,6 +285,8 @@ int main(int argc, char **argv) {
       ZePeer::parallel_copy_to_single_target = true;
     } else if (strcmp(argv[i], "--parallel_multiple_targets") == 0) {
       ZePeer::parallel_copy_to_multiple_targets = true;
+    } else if (strcmp(argv[i], "--divide_buffers") == 0) {
+      ZePeer::parallel_divide_buffers = true;
     } else if (strcmp(argv[i], "--ipc") == 0) {
       run_ipc = true;
     } else if ((strcmp(argv[i], "-x") == 0)) {
