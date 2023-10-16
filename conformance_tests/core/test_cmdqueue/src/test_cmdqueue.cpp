@@ -16,6 +16,7 @@
 #include "image/image.hpp"
 namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
+#include <chrono>
 
 namespace {
 
@@ -72,7 +73,7 @@ TEST_P(zeCommandQueueCreateTests,
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAllInputPermuations, zeCommandQueueCreateTests,
     ::testing::Combine(
         ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
@@ -249,9 +250,9 @@ CustomExecuteParams synchronize_test_input[] = {{1, 0},
                                                 {50, UINT32_MAX >> 1},
                                                 {100, UINT64_MAX}};
 
-INSTANTIATE_TEST_CASE_P(TestIncreasingNumberCommandListsWithSynchronize,
-                        zeCommandQueueExecuteCommandListTestsSynchronize,
-                        testing::ValuesIn(synchronize_test_input));
+INSTANTIATE_TEST_SUITE_P(TestIncreasingNumberCommandListsWithSynchronize,
+                         zeCommandQueueExecuteCommandListTestsSynchronize,
+                         testing::ValuesIn(synchronize_test_input));
 
 class zeCommandQueueExecuteCommandListTestsFence
     : public zeCommandQueueExecuteCommandListTests {};
@@ -281,9 +282,9 @@ CustomExecuteParams fence_test_input[] = {
     {9, UINT64_MAX},  {10, UINT64_MAX}, {20, UINT64_MAX}, {30, UINT64_MAX},
     {50, UINT64_MAX}, {100, UINT64_MAX}};
 
-INSTANTIATE_TEST_CASE_P(TestIncreasingNumberCommandListsWithCommandQueueFence,
-                        zeCommandQueueExecuteCommandListTestsFence,
-                        testing::ValuesIn(fence_test_input));
+INSTANTIATE_TEST_SUITE_P(TestIncreasingNumberCommandListsWithCommandQueueFence,
+                         zeCommandQueueExecuteCommandListTestsFence,
+                         testing::ValuesIn(fence_test_input));
 
 static void ExecuteCommandQueue(ze_command_queue_handle_t &cq,
                                 ze_command_list_handle_t &cl,
@@ -346,10 +347,10 @@ TEST_P(
   lzt::destroy_command_queue(cq);
 }
 
-INSTANTIATE_TEST_CASE_P(SynchronousAndAsynchronousCommandQueueTests,
-                        zeCommandQueueSynchronousTests,
-                        testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                        ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS));
+INSTANTIATE_TEST_SUITE_P(SynchronousAndAsynchronousCommandQueueTests,
+                         zeCommandQueueSynchronousTests,
+                         testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+                                         ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS));
 
 class CommandQueueFlagTest : public ::testing::Test {
 protected:
@@ -740,9 +741,9 @@ TEST_P(CommandQueueCopyOnlyTestQueueMode,
   lzt::destroy_ze_image(ze_img_dest);
 }
 
-INSTANTIATE_TEST_CASE_P(TestCopyOnlyQueueSyncAndAsync,
-                        CommandQueueCopyOnlyTestQueueMode,
-                        testing::Values(true, false));
+INSTANTIATE_TEST_SUITE_P(TestCopyOnlyQueueSyncAndAsync,
+                         CommandQueueCopyOnlyTestQueueMode,
+                         testing::Values(true, false));
 
 class CommandQueueCopyOnlyTestForGlobalTimeStamp
     : public CommandQueueCopyOnlyTest,
@@ -822,9 +823,9 @@ TEST_P(
   lzt::free_memory(context, ts_readback_end);
 }
 
-INSTANTIATE_TEST_CASE_P(TestCopyOnlyQueueGlobalTimeStampDeviceAndHostMemory,
-                        CommandQueueCopyOnlyTestForGlobalTimeStamp,
-                        testing::Values("HostMemory", "DeviceMemory"));
+INSTANTIATE_TEST_SUITE_P(TestCopyOnlyQueueGlobalTimeStampDeviceAndHostMemory,
+                         CommandQueueCopyOnlyTestForGlobalTimeStamp,
+                         testing::Values("HostMemory", "DeviceMemory"));
 
 TEST(ConcurrentCommandQueueExecutionTests,
      GivenMultipleCommandQueuesWhenExecutedOnSameDeviceResultsAreCorrect) {
@@ -904,5 +905,125 @@ TEST(ConcurrentCommandQueueExecutionTests,
   }
   lzt::destroy_context(context);
 }
+
+class zeCommandQueueSynchronizeTimeoutTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_event_pool_flags_t, ze_command_queue_flag_t,
+                     ze_command_list_flags_t, bool, bool>> {
+protected:
+  void SetUp() override {
+    const auto ep_flags =
+        std::get<0>(GetParam()) | ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+    const auto cq_flags = std::get<1>(GetParam());
+    const auto cl_flags = std::get<2>(GetParam());
+
+    auto context = lzt::get_default_context();
+    auto device = lzt::get_default_device(lzt::get_default_driver());
+
+    ze_event_pool_desc_t ep_desc{};
+    ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    ep_desc.pNext = nullptr;
+    ep_desc.flags = ep_flags;
+    ep_desc.count = 1;
+    ep = lzt::create_event_pool(context, ep_desc);
+
+    ze_event_desc_t ev_desc{};
+    ev_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    ev_desc.pNext = nullptr;
+    ev_desc.index = 0;
+    ev_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    ev = lzt::create_event(ep, ev_desc);
+
+    cq = lzt::create_command_queue(context, device, cq_flags,
+                                   ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+                                   ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
+
+    cl = lzt::create_command_list(context, device, cl_flags, 0);
+  }
+
+  void TearDown() override {
+    lzt::destroy_event(ev);
+    lzt::destroy_event_pool(ep);
+    lzt::destroy_command_list(cl);
+    lzt::destroy_command_queue(cq);
+  }
+
+  const uint64_t timeout = 5000000;
+  ze_event_pool_handle_t ep = nullptr;
+  ze_event_handle_t ev = nullptr;
+  ze_command_queue_handle_t cq = nullptr;
+  ze_command_list_handle_t cl = nullptr;
+  ze_fence_handle_t fence = nullptr;
+};
+
+TEST_P(zeCommandQueueSynchronizeTimeoutTests,
+       GivenTimeoutWhenWaitingForCommandQueueThenWaitForSpecifiedTime) {
+  const bool use_fence = std::get<3>(GetParam());
+  const bool use_barrier = std::get<4>(GetParam());
+
+  if (use_fence) {
+    fence = lzt::create_fence(cq);
+  }
+
+  if (use_barrier) {
+    lzt::append_barrier(cl, nullptr, 1, &ev);
+  } else {
+    lzt::append_wait_on_events(cl, 1, &ev);
+  }
+  lzt::close_command_list(cl);
+  lzt::execute_command_lists(cq, 1, &cl, fence);
+
+  if (use_fence) {
+    const auto t0 = std::chrono::steady_clock::now();
+    EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceHostSynchronize(fence, timeout));
+    const auto t1 = std::chrono::steady_clock::now();
+
+    const uint64_t wall_time =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+    const float ratio_fence = static_cast<float>(wall_time) / timeout;
+    // Tolerance: 2%
+    EXPECT_GE(ratio_fence, 0.98f);
+    EXPECT_LE(ratio_fence, 1.02f);
+  }
+
+  const auto t0 = std::chrono::steady_clock::now();
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeCommandQueueSynchronize(cq, timeout));
+  const auto t1 = std::chrono::steady_clock::now();
+
+  const uint64_t wall_time =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+  const float ratio_cq = static_cast<float>(wall_time) / timeout;
+  // Tolerance: 2%
+  EXPECT_GE(ratio_cq, 0.98f);
+  EXPECT_LE(ratio_cq, 1.02f);
+
+  lzt::signal_event_from_host(ev);
+  lzt::synchronize(cq, UINT64_MAX);
+  lzt::event_host_synchronize(ev, UINT64_MAX);
+
+  if (use_fence) {
+    lzt::sync_fence(fence, UINT64_MAX);
+    lzt::destroy_fence(fence);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    SyncTimeoutParams, zeCommandQueueSynchronizeTimeoutTests,
+    ::testing::Combine(
+        ::testing::Values(0, ZE_EVENT_POOL_FLAG_IPC,
+                          ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
+                          ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP,
+                          ZE_EVENT_POOL_FLAG_IPC |
+                              ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
+                          ZE_EVENT_POOL_FLAG_IPC |
+                              ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP),
+        ::testing::Values(0, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(0, ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY,
+                          ZE_COMMAND_LIST_FLAG_IN_ORDER),
+        ::testing::Bool(), ::testing::Bool()));
 
 } // namespace

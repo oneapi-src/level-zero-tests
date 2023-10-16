@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -15,6 +15,7 @@
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
+#include <chrono>
 
 namespace {
 
@@ -1227,11 +1228,96 @@ TEST_F(
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ep);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestCasesforCommandListImmediateCases, zeImmediateCommandListExecutionTests,
     testing::Combine(testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
                                      ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
                                      ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
                      testing::Values(true, false)));
+
+class zeImmediateCommandListHostSynchronizeTimeoutTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_event_pool_flags_t, ze_command_queue_flags_t, bool>> {
+protected:
+  void SetUp() override {
+    const auto ep_flags =
+        std::get<0>(GetParam()) | ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+    const auto cq_flags = std::get<1>(GetParam());
+
+    auto context = lzt::get_default_context();
+    auto device = lzt::get_default_device(lzt::get_default_driver());
+
+    ze_event_pool_desc_t ep_desc{};
+    ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    ep_desc.pNext = nullptr;
+    ep_desc.flags = ep_flags;
+    ep_desc.count = 1;
+    ep = lzt::create_event_pool(context, ep_desc);
+
+    ze_event_desc_t ev_desc{};
+    ev_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    ev_desc.pNext = nullptr;
+    ev_desc.index = 0;
+    ev_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    ev = lzt::create_event(ep, ev_desc);
+
+    cl = lzt::create_immediate_command_list(
+        context, device, cq_flags, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
+  }
+
+  void TearDown() override {
+    lzt::destroy_event(ev);
+    lzt::destroy_event_pool(ep);
+    lzt::destroy_command_list(cl);
+  }
+
+  const uint64_t timeout = 5000000;
+  ze_event_pool_handle_t ep = nullptr;
+  ze_event_handle_t ev = nullptr;
+  ze_command_list_handle_t cl = nullptr;
+};
+
+TEST_P(zeImmediateCommandListHostSynchronizeTimeoutTests,
+       GivenTimeoutWhenWaitingForImmediateCommandListThenWaitForSpecifiedTime) {
+  const bool use_barrier = std::get<2>(GetParam());
+
+  if (use_barrier) {
+    lzt::append_barrier(cl, nullptr, 1, &ev);
+  } else {
+    lzt::append_wait_on_events(cl, 1, &ev);
+  }
+
+  const auto t0 = std::chrono::steady_clock::now();
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeCommandListHostSynchronize(cl, timeout));
+  const auto t1 = std::chrono::steady_clock::now();
+
+  const uint64_t wall_time =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+  const float ratio = static_cast<float>(wall_time) / timeout;
+  // Tolerance: 2%
+  EXPECT_GE(ratio, 0.98f);
+  EXPECT_LE(ratio, 1.02f);
+
+  lzt::signal_event_from_host(ev);
+  lzt::synchronize_command_list_host(cl, UINT64_MAX);
+  lzt::event_host_synchronize(ev, UINT64_MAX);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    SyncTimeoutParams, zeImmediateCommandListHostSynchronizeTimeoutTests,
+    ::testing::Combine(
+        ::testing::Values(0, ZE_EVENT_POOL_FLAG_IPC,
+                          ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
+                          ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP,
+                          ZE_EVENT_POOL_FLAG_IPC |
+                              ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
+                          ZE_EVENT_POOL_FLAG_IPC |
+                              ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP),
+        ::testing::Values(0, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
+                          ZE_COMMAND_QUEUE_FLAG_IN_ORDER),
+        ::testing::Bool()));
 
 } // namespace

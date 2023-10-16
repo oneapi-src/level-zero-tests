@@ -105,6 +105,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyWithDataVerificationTests_GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyWithDataVerificationTests_GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_SyncTimeoutParams_zeCommandQueueSynchronizeTimeoutTests_GivenTimeoutWhenWaitingForCommandQueueThenWaitForSpecifiedTime', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionOnImmediateCmdListThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \
@@ -146,6 +147,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleGetPropertiesReturnsValidNonZeroProperties', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverAllocSharedMemTestVarySizeAndAlignment_zeDriverAllocSharedMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeEventSignalScopeParameterizedTest_zeEventSignalScopeTests_GivenDifferentEventSignalScopeFlagsThenAppendSignalEventIsSuccessful', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_SyncTimeoutParams_zeEventHostSynchronizeTimeoutTests_GivenTimeoutWhenWaitingForEventThenWaitForSpecifiedTime', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetModulePropertiesTests_GivenValidDeviceWhenRetrievingFloatAtomicPropertiesThenValidPropertiesReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDevicePciGetPropertiesTests_GivenValidDeviceWhenRetrievingPciSpeedPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceP2PBandwidthExpProperties_GivenValidDevicesWhenRetrievingP2PBandwidthPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \

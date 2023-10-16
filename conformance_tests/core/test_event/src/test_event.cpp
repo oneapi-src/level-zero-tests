@@ -14,6 +14,7 @@
 
 #include <level_zero/ze_api.h>
 #include <thread>
+#include <chrono>
 
 namespace {
 
@@ -711,6 +712,64 @@ TEST_F(
     GivenEventsSignaledWhenResetOnImmediateCmdListThenQueryStatusReturnsNotReady) {
   RunGivenEventsSignaledWhenResetTest(*this, true);
 }
+
+class zeEventHostSynchronizeTimeoutTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<ze_event_pool_flags_t> {
+protected:
+  void SetUp() override {
+    const auto ep_flags = GetParam() | ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+
+    ze_event_pool_desc_t ep_desc{};
+    ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    ep_desc.pNext = nullptr;
+    ep_desc.flags = ep_flags;
+    ep_desc.count = 1;
+    ep = lzt::create_event_pool(lzt::get_default_context(), ep_desc);
+
+    ze_event_desc_t ev_desc{};
+    ev_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    ev_desc.pNext = nullptr;
+    ev_desc.index = 0;
+    ev_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    ev = lzt::create_event(ep, ev_desc);
+  }
+
+  void TearDown() override {
+    lzt::destroy_event(ev);
+    lzt::destroy_event_pool(ep);
+  }
+
+  const uint64_t timeout = 5000000;
+  ze_event_pool_handle_t ep = nullptr;
+  ze_event_handle_t ev = nullptr;
+};
+
+TEST_P(zeEventHostSynchronizeTimeoutTests,
+       GivenTimeoutWhenWaitingForEventThenWaitForSpecifiedTime) {
+  const auto t0 = std::chrono::steady_clock::now();
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(ev, timeout));
+  const auto t1 = std::chrono::steady_clock::now();
+
+  const uint64_t wall_time =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+  const float ratio = static_cast<float>(wall_time) / timeout;
+  // Tolerance: 2%
+  EXPECT_GE(ratio, 0.98f);
+  EXPECT_LE(ratio, 1.02f);
+
+  lzt::signal_event_from_host(ev);
+  lzt::event_host_synchronize(ev, UINT64_MAX);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    SyncTimeoutParams, zeEventHostSynchronizeTimeoutTests,
+    ::testing::Values(
+        0, ZE_EVENT_POOL_FLAG_IPC, ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
+        ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP,
+        ZE_EVENT_POOL_FLAG_IPC | ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
+        ZE_EVENT_POOL_FLAG_IPC | ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP));
 
 static void
 multi_device_event_signal_read(std::vector<ze_device_handle_t> devices,
