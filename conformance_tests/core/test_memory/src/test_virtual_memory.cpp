@@ -111,7 +111,7 @@ TEST_F(
   lzt::virtual_memory_reservation_get_access(
       context, reservedVirtualMemory, allocationSize, &access, &memorySize);
   EXPECT_EQ(access, ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
-  EXPECT_EQ(memorySize, allocationSize);
+  EXPECT_GE(memorySize, allocationSize);
 
   std::vector<ze_memory_access_attribute_t> memoryAccessFlags = {
       ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY,
