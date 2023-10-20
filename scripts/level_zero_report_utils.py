@@ -159,6 +159,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_name.find("zeMemFreeExtMultipleTests")!= -1) or \
                     (test_name.find("PutIpcMemoryAccessTest")!= -1) or \
                     (test_name.find("zePutIpcMemHandleTests")!= -1) or \
+                    (test_name.find("AtomicAccessTests")!= -1) or \
                     (test_name.find("PutIpcMemoryAccessSubDeviceTest")!= -1) or \
                     (re.search('L0_CTS_IpcMemoryAccessTest_GivenL0Physical', test_name, re.IGNORECASE)) or \
                     (re.search('GivenVpuOnlyFlagThenGpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturnedAndAtLeastOneDriverHandleIsReturned', test_name, re.IGNORECASE)) or \
@@ -174,6 +175,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenValidDeviceWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
                     (re.search('GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('SetAndGetAccessTypeForSharedAllocation', test_name, re.IGNORECASE)) or \
                     (re.search('GivenMultipleProcessesUsingMultipleSubDevicesThenKernelIsStressedAndExecuteSuccessfull', test_name, re.IGNORECASE)) or \
                     re.search('fabric', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
