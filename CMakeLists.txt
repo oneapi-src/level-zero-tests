@@ -129,6 +129,8 @@ function(is_test_group_member group1 group2 result_var)
     endif()
 endfunction()
 
+set(sys_destination "${CMAKE_INSTALL_PREFIX}")
+
 function(add_lzt_test_executable)
     set(options "")
     set(oneValueArgs NAME PREFIX GROUP EXTENDED)
@@ -217,6 +219,7 @@ function(add_lzt_test_executable)
     )
 
     set(destination "${CMAKE_INSTALL_PREFIX}/${ADD_LZT_TEST_EXECUTABLE_PREFIX}")
+    set(sys_destination "${CMAKE_INSTALL_PREFIX}/${ADD_LZT_TEST_EXECUTABLE_PREFIX}")
 
     foreach(kernel ${ADD_LZT_TEST_EXECUTABLE_KERNELS})
         install(
@@ -253,6 +256,41 @@ function(add_lzt_test_executable)
         )
     endif()
 endfunction()
+
+if(MSVC)
+  if(DEFINED PNG_LIBRARY_RELEASE)
+    get_filename_component(PNG_RUNTIME_LIBRARY_PATH "${PNG_LIBRARY_RELEASE}" DIRECTORY)
+  elseif (DEFINED PNG_LIBRARY_DEBUG)
+    get_filename_component(PNG_RUNTIME_LIBRARY_PATH "${PNG_LIBRARY_DEBUG}" DIRECTORY)
+  endif()
+  if (PNG_RUNTIME_LIBRARY_PATH STREQUAL "")
+    get_filename_component(PNG_RUNTIME_LIBRARY_PATH "${PNG_LIBRARY}" DIRECTORY)
+  endif()
+  set(PNG_RUNTIME_LIBRARY_PATH "${PNG_RUNTIME_LIBRARY_PATH}/../bin")
+  message(STATUS "PNG_RUNTIME_LIBRARY_PATH=${PNG_RUNTIME_LIBRARY_PATH}")
+  file(GLOB PNG_DLLS
+    "${PNG_RUNTIME_LIBRARY_PATH}/*.dll"
+  )
+  INSTALL(FILES ${PNG_DLLS} DESTINATION ${sys_destination})
+
+  if(DEFINED ZLIB_LIBRARY_RELEASE)
+    get_filename_component(ZLIB_RUNTIME_LIBRARY_PATH "${ZLIB_LIBRARY_RELEASE}" DIRECTORY)
+  elseif (DEFINED ZLIB_LIBRARY_DEBUG)
+    get_filename_component(ZLIB_RUNTIME_LIBRARY_PATH "${ZLIB_LIBRARY_DEBUG}" DIRECTORY)
+  endif()
+  if (ZLIB_RUNTIME_LIBRARY_PATH STREQUAL "")
+    get_filename_component(ZLIB_RUNTIME_LIBRARY_PATH "${ZLIB_LIBRARY}" DIRECTORY)
+  endif()
+  set(ZLIB_RUNTIME_LIBRARY_PATH "${ZLIB_RUNTIME_LIBRARY_PATH}/../bin")
+  message(STATUS "ZLIB_RUNTIME_LIBRARY_PATH=${ZLIB_RUNTIME_LIBRARY_PATH}")
+  file(GLOB ZLIB_DLLS
+    "${ZLIB_RUNTIME_LIBRARY_PATH}/*.dll"
+  )
+  INSTALL(FILES ${ZLIB_DLLS} DESTINATION ${sys_destination})
+endif()
+
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ${sys_destination})
+include(InstallRequiredSystemLibraries)
 
 if(NOT DEFINED MANIFEST_BUILD_PATH)
   set(MANIFEST_BUILD_PATH "${PROJECT_BINARY_DIR}/manifest.txt")
@@ -336,7 +374,3 @@ else()
   add_subdirectory(layer_tests)
   add_subdirectory(stress_tests)
 endif()
-
-
-set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_BINARY_DIR}/out")
-include(InstallRequiredSystemLibraries)
