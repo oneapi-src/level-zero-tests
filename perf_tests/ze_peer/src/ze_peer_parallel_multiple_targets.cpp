@@ -18,9 +18,9 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
   size_t num_engines = queues.size();
   size_t chunk = buffer_size / num_engines;
 
+  size_t queue_index_iter = 0;
   for (size_t local_device_id_iter = 0;
        local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
-    size_t queue_index_iter = 0;
     for (size_t remote_device_id_iter = 0;
          remote_device_id_iter < remote_device_ids.size();
          remote_device_id_iter++) {
@@ -105,9 +105,9 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
 
   // Close all lists. If the number of queues is less than the number of
   // destinations, copies are batched.
+  queue_index_iter = 0;
   for (size_t local_device_id_iter = 0;
        local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
-    size_t queue_index_iter = 0;
     for (size_t remote_device_id_iter = 0;
          remote_device_id_iter < remote_device_ids.size();
          remote_device_id_iter++) {
@@ -140,10 +140,10 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
 
   /* Warm up */
   for (int i = 0; i < warm_up_iterations; i++) {
+    queue_index_iter = 0;
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
-      size_t queue_index_iter = 0;
       for (size_t remote_device_id_iter = 0;
            remote_device_id_iter < remote_device_ids.size();
            remote_device_id_iter++) {
@@ -218,10 +218,10 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
   do {
     long double time_usec = 0;
     for (int i = 0; i < number_iterations; i++) {
+      queue_index_iter = 0;
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
            local_device_id_iter++) {
-        size_t queue_index_iter = 0;
         for (size_t remote_device_id_iter = 0;
              remote_device_id_iter < remote_device_ids.size();
              remote_device_id_iter++) {
@@ -281,10 +281,10 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
       timer.start();
       SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
 
+      queue_index_iter = 0;
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
            local_device_id_iter++) {
-        size_t queue_index_iter = 0;
         for (size_t remote_device_id_iter = 0;
              remote_device_id_iter < remote_device_ids.size();
              remote_device_id_iter++) {
@@ -327,10 +327,10 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
       SUCCESS_OR_TERMINATE(zeEventHostReset(event));
     }
 
+    queue_index_iter = 0;
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
-      size_t queue_index_iter = 0;
       for (size_t remote_device_id_iter = 0;
            remote_device_id_iter < remote_device_ids.size();
            remote_device_id_iter++) {
@@ -383,9 +383,9 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
   size_t num_engines = queues.size();
   size_t chunk = buffer_size / num_engines;
 
+  size_t queue_index_iter = 0;
   for (size_t local_device_id_iter = 0;
        local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
-    size_t queue_index_iter = 0;
     for (size_t remote_device_id_iter = 0;
          remote_device_id_iter < remote_device_ids.size();
          remote_device_id_iter++) {
@@ -437,9 +437,9 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
 
   // Close all lists. If the number of queues is less than the number of
   // destinations, copies are batched.
+  queue_index_iter = 0;
   for (size_t local_device_id_iter = 0;
        local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
-    size_t queue_index_iter = 0;
     for (size_t remote_device_id_iter = 0;
          remote_device_id_iter < remote_device_ids.size();
          remote_device_id_iter++) {
@@ -473,11 +473,11 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
   }
 
   /* Warm up */
+  queue_index_iter = 0;
   for (int i = 0; i < warm_up_iterations; i++) {
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
-      size_t queue_index_iter = 0;
       for (size_t remote_device_id_iter = 0;
            remote_device_id_iter < remote_device_ids.size();
            remote_device_id_iter++) {
@@ -549,10 +549,10 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
   do {
     long double time_usec = 0;
     for (int i = 0; i < number_iterations; i++) {
+      queue_index_iter = 0;
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
            local_device_id_iter++) {
-        size_t queue_index_iter = 0;
         for (size_t remote_device_id_iter = 0;
              remote_device_id_iter < remote_device_ids.size();
              remote_device_id_iter++) {
@@ -613,10 +613,10 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
       timer.start();
       SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
 
+      queue_index_iter = 0;
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
            local_device_id_iter++) {
-        size_t queue_index_iter = 0;
         for (size_t remote_device_id_iter = 0;
              remote_device_id_iter < remote_device_ids.size();
              remote_device_id_iter++) {
@@ -661,10 +661,10 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
       SUCCESS_OR_TERMINATE(zeEventHostReset(event));
     }
 
+    queue_index_iter = 0;
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
-      size_t queue_index_iter = 0;
       for (size_t remote_device_id_iter = 0;
            remote_device_id_iter < remote_device_ids.size();
            remote_device_id_iter++) {
