@@ -742,33 +742,36 @@ void ZePeer::bandwidth_latency_parallel_to_multiple_targets(
                                               local_device_ids, buffer_size, divide_buffers);
   }
 
-  for (size_t local_device_id_iter = 0;
-       local_device_id_iter < local_device_ids.size(); local_device_id_iter++) {
-    for (size_t remote_device_id_iter = 0;
-         remote_device_id_iter < remote_device_ids.size();
-         remote_device_id_iter++) {
+  if (validate_results) {
+    for (size_t local_device_id_iter = 0;
+         local_device_id_iter < local_device_ids.size();
+         local_device_id_iter++) {
+      for (size_t remote_device_id_iter = 0;
+           remote_device_id_iter < remote_device_ids.size();
+           remote_device_id_iter++) {
 
-      auto local_device_id = local_device_ids[local_device_id_iter];
-      auto remote_device_id = remote_device_ids[remote_device_id_iter];
+        auto local_device_id = local_device_ids[local_device_id_iter];
+        auto remote_device_id = remote_device_ids[remote_device_id_iter];
 
-      if (local_device_id == remote_device_id) {
-        continue;
-      }
+        if (local_device_id == remote_device_id) {
+          continue;
+        }
 
-      void *dst_buffer = ze_dst_buffers[remote_device_id];
-      if (transfer_type == PEER_READ) {
-        dst_buffer = ze_dst_buffers[local_device_id];
-      }
+        void *dst_buffer = ze_dst_buffers[remote_device_id];
+        if (transfer_type == PEER_READ) {
+          dst_buffer = ze_dst_buffers[local_device_id];
+        }
 
-      ze_command_queue_handle_t command_queue =
-          ze_peer_devices[local_device_id].engines[0].first;
-      ze_command_list_handle_t command_list =
-          ze_peer_devices[local_device_id].engines[0].second;
+        ze_command_queue_handle_t command_queue =
+            ze_peer_devices[local_device_id].engines[0].first;
+        ze_command_list_handle_t command_list =
+            ze_peer_devices[local_device_id].engines[0].second;
 
-      validate_buffer(command_list, command_queue, ze_host_validate_buffer,
-                      dst_buffer, ze_host_buffer, buffer_size);
-      for (size_t k = 0; k < buffer_size; k++) {
-        ze_host_validate_buffer[k] = 0;
+        validate_buffer(command_list, command_queue, ze_host_validate_buffer,
+                        dst_buffer, ze_host_buffer, buffer_size);
+        for (size_t k = 0; k < buffer_size; k++) {
+          ze_host_validate_buffer[k] = 0;
+        }
       }
     }
   }
