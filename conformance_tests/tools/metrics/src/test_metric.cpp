@@ -1134,6 +1134,90 @@ TEST_F(
   }
 }
 
+using zetMetricStreamerTestNReports = zetMetricStreamerTest;
+
+TEST_F(
+    zetMetricStreamerTestNReports,
+    GivenValidMetricGroupWithTimerBasedStreamerThenEventHostSynchronizeWithNotifyOnNreportsEventSignalsDataPresent) {
+
+  notifyEveryNReports = 50;
+
+  for (auto device : devices) {
+
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(device, &deviceProperties);
+
+    LOG_INFO << "test device name " << deviceProperties.name << " uuid "
+             << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    ze_command_queue_handle_t commandQueue = lzt::create_command_queue(device);
+    zet_command_list_handle_t commandList = lzt::create_command_list(device);
+
+    auto metricGroupInfo = lzt::get_metric_group_info(
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+
+    for (auto groupInfo : metricGroupInfo) {
+
+      LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
+
+      ze_event_handle_t eventHandle;
+      lzt::zeEventPool eventPool;
+      eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
+                             ZE_EVENT_SCOPE_FLAG_HOST);
+
+      zet_metric_streamer_handle_t metricStreamerHandle =
+          lzt::metric_streamer_open_for_device(
+              device, groupInfo.metricGroupHandle, eventHandle,
+              notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
+
+      void *a_buffer, *b_buffer, *c_buffer;
+      ze_group_count_t tg;
+
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer);
+      zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
+                                      nullptr);
+
+      lzt::close_command_list(commandList);
+      lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+
+      lzt::event_host_synchronize(eventHandle, UINT64_MAX);
+      std::vector<uint8_t> rawData;
+      uint32_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
+                                     &rawData);
+
+      LOG_INFO << "raw data size " << rawDataSize;
+      EXPECT_GT(rawDataSize, 0);
+
+      lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
+
+      lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
+                            rawData.data());
+
+      lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
+      lzt::destroy_function(function);
+      lzt::free_memory(a_buffer);
+      lzt::free_memory(b_buffer);
+      lzt::free_memory(c_buffer);
+      eventPool.destroy_event(eventHandle);
+      lzt::reset_command_list(commandList);
+    }
+    lzt::destroy_command_queue(commandQueue);
+    lzt::destroy_command_list(commandList);
+  }
+}
+
 TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
@@ -1179,7 +1263,7 @@ TEST_F(
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
       ze_kernel_handle_t function = get_matrix_multiplication_kernel(
-          device, &tg, &a_buffer, &b_buffer, &c_buffer);
+          device, &tg, &a_buffer, &b_buffer, &c_buffer, 8192);
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
 
@@ -1210,6 +1294,7 @@ TEST_F(
       uint32_t rawDataSize = 0;
       lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
                                      &rawData);
+      LOG_INFO << "rawDataSize " << rawDataSize;
       lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                             rawData.data());
 
