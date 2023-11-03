@@ -216,7 +216,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
   }
 
   do {
-    long double time_usec = 0;
+    timer.start();
     for (int i = 0; i < number_iterations; i++) {
       queue_index_iter = 0;
       for (size_t local_device_id_iter = 0;
@@ -278,7 +278,6 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
         }
       }
 
-      timer.start();
       SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
 
       queue_index_iter = 0;
@@ -316,7 +315,6 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
                 std::numeric_limits<uint64_t>::max()));
           }
           timer.end();
-          time_usec += timer.period_minus_overhead();
 
           timers[local_device_id][remote_device_id].end();
           times[local_device_id][remote_device_id] +=
@@ -357,7 +355,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
                       times[local_device_id][remote_device_id]);
       }
     }
-    print_results(true, test_type, total_buffer_size, time_usec);
+    print_results(true, test_type, total_buffer_size, timer);
   } while (run_continuously);
 
   for (auto local_device_id : local_device_ids) {
@@ -547,7 +545,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
   }
 
   do {
-    long double time_usec = 0;
+    timer.start();
     for (int i = 0; i < number_iterations; i++) {
       queue_index_iter = 0;
       for (size_t local_device_id_iter = 0;
@@ -610,7 +608,6 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
         }
       }
 
-      timer.start();
       SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
 
       queue_index_iter = 0;
@@ -651,7 +648,6 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
           }
 
           timer.end();
-          time_usec += timer.period_minus_overhead();
 
           timers[local_device_id][remote_device_id].end();
           times[local_device_id][remote_device_id] +=
@@ -690,7 +686,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
                       times[local_device_id][remote_device_id]);
       }
     }
-    print_results(false, test_type, total_buffer_size, time_usec);
+    print_results(false, test_type, total_buffer_size, timer);
   } while (run_continuously);
 
   for (auto local_device_id : local_device_ids) {
