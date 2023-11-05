@@ -1,4 +1,4 @@
-# Copyright (C) 2019 Intel Corporation
+# Copyright (C) 2019-2023 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 if(UNIX)
@@ -17,6 +17,7 @@ add_lzt_test(
     src/ze_peer_unidirectional.cpp
     src/ze_peer_bidirectional.cpp
     src/ze_peer_parallel_multiple_targets.cpp
+    src/ze_peer_parallel_pair_targets.cpp
     src/ze_peer_parallel_single_target.cpp
     src/ze_peer_common.cpp
   LINK_LIBRARIES ${OS_SPECIFIC_LIBS}

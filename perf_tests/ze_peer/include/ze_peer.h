@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2021 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <vector>
 #include <algorithm>
+#include <unordered_map>
 #include <utility>
 #include "common.hpp"
 #include "ze_app.hpp"
@@ -96,7 +97,7 @@ static const char *usage_str =
     "capability."
     "\n                              Extra options: -x"
     "\n"
-    "\n  --parallel_multiple_targets  Perform parallel copies from the source "
+    "\n  --parallel_multiple_targets Perform parallel copies from the source "
     "passed with option -s "
     "\n                              to the targets specified with option -d, "
     "each one using a "
@@ -107,7 +108,19 @@ static const char *usage_str =
     "capability."
     "\n                              Extra options: -x, --divide_buffers"
     "\n"
-    "\n  --divide_buffers            for parallel multiple targets test, divide "
+    "\n  --parallel_pair_targets     (Experimental) Perform parallel copies from "
+    "pairs of source "
+    "\n                              and targets each one using a separate engine "
+    "specified with "
+    "\n                              option -u. Accepts a comma-separated list of "
+    "pair devices, "
+    "\n                              with source and destination pairs defined "
+    "with a colon."
+    "\n                              Example pair list: src1:dst1,src2:dst2 "
+    "\n                              Extra options: -x, --divide_buffers"
+    "\n"
+    "\n  --divide_buffers            for parallel multiple targets test, "
+    "divide "
     "buffers across available"
     "\n                              engines specified with option -u."
     "\n  -x                          for unidirectional parallel tests, select "
@@ -129,6 +142,7 @@ public:
   ZePeer(uint32_t *num_devices);
   ZePeer(std::vector<uint32_t> &remote_device_ids,
          std::vector<uint32_t> &local_device_ids,
+         std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
          std::vector<uint32_t> &queues);
   ~ZePeer();
 
@@ -157,6 +171,22 @@ public:
       peer_test_t test_type, peer_transfer_t transfer_type,
       std::vector<uint32_t> &remote_device_ids,
       std::vector<uint32_t> &local_device_ids, size_t buffer_size,
+      bool divide_buffers);
+
+  void perform_parallel_copy_to_pair_targets(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
+      size_t buffer_size, bool divide_buffers);
+
+  void perform_bidirectional_parallel_copy_to_pair_targets(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
+      size_t buffer_size, bool divide_buffers);
+
+  void bandwidth_latency_parallel_to_pair_targets(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      int number_buffer_elements,
+      std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
       bool divide_buffers);
 
   void bandwidth_latency_parallel_to_multiple_targets(
@@ -261,6 +291,7 @@ public:
   static bool validate_results;
   static bool parallel_copy_to_single_target;
   static bool parallel_copy_to_multiple_targets;
+  static bool parallel_copy_to_pair_targets;
   static bool parallel_divide_buffers;
 
   static uint32_t number_iterations;

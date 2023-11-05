@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2021 Intel Corporation
+ * Copyright (C) 2019-2023 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -16,45 +16,57 @@ bool ZePeer::bidirectional = false;
 bool ZePeer::validate_results = false;
 bool ZePeer::parallel_copy_to_single_target = false;
 bool ZePeer::parallel_copy_to_multiple_targets = false;
+bool ZePeer::parallel_copy_to_pair_targets = false;
 bool ZePeer::parallel_divide_buffers = false;
 uint32_t ZePeer::number_iterations = 50;
 const size_t max_number_of_elements = 268435456; /* 256 MB */
 
 void stress_handler(int signal) { exit(1); }
 
-void print_results_header(std::vector<uint32_t> remote_device_ids,
-                          std::vector<uint32_t> local_device_ids,
-                          peer_test_t test_type,
-                          peer_transfer_t transfer_type) {
+void print_results_header(
+    std::vector<uint32_t> remote_device_ids,
+    std::vector<uint32_t> local_device_ids,
+    std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
+    peer_test_t test_type, peer_transfer_t transfer_type) {
+
   std::string test_type_string = "Bandwidth";
   if (test_type == PEER_LATENCY) {
     test_type_string = "Latency";
   }
 
   std::string transfer_type_string = "Read";
-  std::string test_arrow = "<---";
+  std::string test_arrow = "<-";
   if (transfer_type == PEER_WRITE) {
     transfer_type_string = "Write";
-    test_arrow = "--->";
+    test_arrow = "->";
   }
   if (ZePeer::bidirectional) {
-    test_arrow = "<--->";
+    test_arrow = "<->";
   }
 
   std::stringstream output_stream;
   output_stream << test_type_string << " " << transfer_type_string << " : ";
 
-  output_stream << "Device( ";
-  for (auto local_device_id : local_device_ids) {
-    output_stream << local_device_id << " ";
-  }
-  output_stream << ")" << test_arrow;
+  if (ZePeer::parallel_copy_to_pair_targets) {
+    for (auto pair_device_id : pair_device_ids) {
+      output_stream << " (" << pair_device_id.first << ")";
+      output_stream << test_arrow;
+      output_stream << "(" << pair_device_id.second << ")";
+    }
+    output_stream << "\n";
+  } else {
+    output_stream << "Device( ";
+    for (auto local_device_id : local_device_ids) {
+      output_stream << local_device_id << " ";
+    }
+    output_stream << ")" << test_arrow;
 
-  output_stream << "Device( ";
-  for (auto remote_device_id : remote_device_ids) {
-    output_stream << remote_device_id << " ";
+    output_stream << "Device( ";
+    for (auto remote_device_id : remote_device_ids) {
+      output_stream << remote_device_id << " ";
+    }
+    output_stream << ")\n";
   }
-  output_stream << ")\n";
 
   std::cout << output_stream.str();
 }
@@ -77,9 +89,10 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
 
   std::vector<uint32_t> remote_device_ids{remote_device_id};
   std::vector<uint32_t> local_device_ids{local_device_id};
+  std::vector<std::pair<uint32_t, uint32_t>> pair_device_ids{};
   std::vector<uint32_t> queues{queue};
-  print_results_header(remote_device_ids, local_device_ids, test_type,
-                       transfer_type);
+  print_results_header(remote_device_ids, local_device_ids, pair_device_ids,
+                       test_type, transfer_type);
 
   for (int number_of_elements = 8; number_of_elements <= max_number_of_elements;
        number_of_elements *= 2) {
@@ -90,7 +103,8 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
     if (pid == 0) {
       pid_t test_pid = fork();
       if (test_pid == 0) {
-        ZePeer peer(local_device_ids, remote_device_ids, queues);
+        ZePeer peer(local_device_ids, remote_device_ids, pair_device_ids,
+                    queues);
         if (ZePeer::validate_results) {
           peer.warm_up_iterations = 0;
           peer.number_iterations = 1;
@@ -100,7 +114,8 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
             test_type, transfer_type, false /* is_server */, sv[1],
             number_of_elements, local_device_id, remote_device_id);
       } else {
-        ZePeer peer(local_device_ids, remote_device_ids, queues);
+        ZePeer peer(local_device_ids, remote_device_ids, pair_device_ids,
+                    queues);
         if (ZePeer::validate_results) {
           peer.warm_up_iterations = 0;
           peer.number_iterations = 1;
@@ -131,17 +146,18 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
 
 void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
               std::vector<uint32_t> &local_device_ids,
+              std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
               std::vector<uint32_t> &queues, peer_test_t test_type,
               peer_transfer_t transfer_type) {
-  print_results_header(remote_device_ids, local_device_ids, test_type,
-                       transfer_type);
+  print_results_header(remote_device_ids, local_device_ids, pair_device_ids,
+                       test_type, transfer_type);
 
   for (int number_of_elements = 8; number_of_elements <= max_number_of_elements;
        number_of_elements *= 2) {
     if (size_to_run != -1) {
       number_of_elements = size_to_run;
     }
-    ZePeer peer(remote_device_ids, local_device_ids, queues);
+    ZePeer peer(remote_device_ids, local_device_ids, pair_device_ids, queues);
     if (ZePeer::validate_results) {
       peer.warm_up_iterations = 0;
       peer.number_iterations = 1;
@@ -156,6 +172,7 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
     }
 
     if (ZePeer::parallel_copy_to_multiple_targets == false &&
+        ZePeer::parallel_copy_to_pair_targets == false &&
         ZePeer::parallel_copy_to_single_target == false) {
       if (ZePeer::bidirectional) {
         peer.bidirectional_bandwidth_latency(
@@ -169,7 +186,8 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
       }
     } else {
       if (ZePeer::parallel_copy_to_multiple_targets) {
-        if (ZePeer::parallel_divide_buffers && queues.size() != 1 && queues.size() % 2) {
+        if (ZePeer::parallel_divide_buffers && queues.size() != 1 &&
+            queues.size() % 2) {
           std::cerr
               << "[ERROR] Number of engines passed with option -u needs to be "
               << "divisible by 2 for parallel_multiple_targets test when using"
@@ -179,6 +197,18 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
         peer.bandwidth_latency_parallel_to_multiple_targets(
             test_type, transfer_type, number_of_elements, remote_device_ids,
             local_device_ids, ZePeer::parallel_divide_buffers);
+      } else if (ZePeer::parallel_copy_to_pair_targets) {
+        if (ZePeer::parallel_divide_buffers && queues.size() != 1 &&
+            queues.size() % 2) {
+          std::cerr
+              << "[ERROR] Number of engines passed with option -u needs to be "
+              << "divisible by 2 for parallel_pair_targets test when using"
+              << "-l option\n";
+          return;
+        }
+        peer.bandwidth_latency_parallel_to_pair_targets(
+            test_type, transfer_type, number_of_elements, pair_device_ids,
+            ZePeer::parallel_divide_buffers);
       } else if (ZePeer::parallel_copy_to_single_target) {
         if (remote_device_ids.size() > 1) {
           std::cerr << "[ERROR] Number of dst devices needs to be one "
@@ -212,6 +242,7 @@ int main(int argc, char **argv) {
   bool run_ipc = false;
   std::vector<uint32_t> remote_device_ids{};
   std::vector<uint32_t> local_device_ids{};
+  std::vector<std::pair<uint32_t, uint32_t>> pair_device_ids{};
   std::vector<uint32_t> queues{};
   int size_to_run = -1;
   peer_transfer_t transfer_type_to_run = PEER_TRANSFER_MAX;
@@ -227,6 +258,41 @@ int main(int argc, char **argv) {
       exit(-1);
     }
   };
+
+  auto parse_and_insert_pairs =
+      [&](std::string &s,
+          std::vector<std::pair<uint32_t, uint32_t>> &vector_of_indexes) {
+        size_t pos = 0;
+        size_t start = 0;
+        const std::string colon = ":";
+        std::string device_id_string = "";
+        uint32_t local_device_id;
+        uint32_t remote_device_id;
+
+        if ((pos = s.find(colon, start)) != std::string::npos) {
+          device_id_string = s.substr(start, pos);
+          if (isdigit(device_id_string[0])) {
+            local_device_id = atoi(device_id_string.c_str());
+          } else {
+            std::cerr << usage_str;
+            exit(-1);
+          }
+
+          start = pos + 1;
+          device_id_string = s.substr(start, s.length());
+          if (isdigit(device_id_string[0])) {
+            remote_device_id = atoi(device_id_string.c_str());
+            vector_of_indexes.push_back(
+                std::make_pair(local_device_id, remote_device_id));
+          } else {
+            std::cerr << usage_str;
+            exit(-1);
+          }
+        } else {
+          std::cerr << usage_str;
+          exit(-1);
+        }
+      };
 
   for (int i = 1; i < argc; i++) {
     if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
@@ -285,6 +351,24 @@ int main(int argc, char **argv) {
       ZePeer::parallel_copy_to_single_target = true;
     } else if (strcmp(argv[i], "--parallel_multiple_targets") == 0) {
       ZePeer::parallel_copy_to_multiple_targets = true;
+    } else if (strcmp(argv[i], "--parallel_pair_targets") == 0) {
+      ZePeer::parallel_copy_to_pair_targets = true;
+      std::string pair_device_ids_string = argv[i + 1];
+      const std::string comma = ",";
+
+      size_t pos = 0;
+      size_t start = 0;
+      std::string pair_device_id_string = "";
+      while ((pos = pair_device_ids_string.find(comma, start)) !=
+             std::string::npos) {
+        pair_device_id_string = pair_device_ids_string.substr(start, pos);
+        start = pos + 1;
+        parse_and_insert_pairs(pair_device_id_string, pair_device_ids);
+      }
+      pair_device_id_string =
+          pair_device_ids_string.substr(start, pair_device_ids_string.length());
+      parse_and_insert_pairs(pair_device_id_string, pair_device_ids);
+      i++;
     } else if (strcmp(argv[i], "--divide_buffers") == 0) {
       ZePeer::parallel_divide_buffers = true;
     } else if (strcmp(argv[i], "--ipc") == 0) {
@@ -395,6 +479,7 @@ int main(int argc, char **argv) {
                "===================\n";
 
   if (ZePeer::parallel_copy_to_multiple_targets ||
+      ZePeer::parallel_copy_to_pair_targets ||
       ZePeer::parallel_copy_to_single_target) {
 
     // set default source devices
@@ -406,11 +491,18 @@ int main(int argc, char **argv) {
     if (remote_device_ids.empty()) {
       if (ZePeer::parallel_copy_to_single_target) {
         remote_device_ids.push_back(0u);
-      } else {
+      } else if (ZePeer::parallel_copy_to_multiple_targets) {
         for (uint32_t remote_device_id = 0; remote_device_id < num_devices;
              remote_device_id++) {
           remote_device_ids.push_back(remote_device_id);
         }
+      }
+    }
+
+    if (ZePeer::parallel_copy_to_pair_targets && pair_device_ids.empty()) {
+      for (uint32_t remote_device_id = 0; remote_device_id < num_devices;
+           remote_device_id++) {
+        pair_device_ids.push_back(std::make_pair(0u, remote_device_id));
       }
     }
 
@@ -430,8 +522,8 @@ int main(int argc, char **argv) {
         }
         std::cout << "-----------------------------------------------------"
                      "---------------------------\n";
-        run_test(size_to_run, remote_device_ids, local_device_ids, queues,
-                 static_cast<peer_test_t>(test_type),
+        run_test(size_to_run, remote_device_ids, local_device_ids,
+                 pair_device_ids, queues, static_cast<peer_test_t>(test_type),
                  static_cast<peer_transfer_t>(transfer_type));
         std::cout << "-----------------------------------------------------"
                      "---------------------------\n";
@@ -495,7 +587,8 @@ int main(int argc, char **argv) {
                   queues[current_queue_index %
                          static_cast<uint32_t>(queues.size())]};
               run_test(size_to_run, tmp_remote_device_ids, tmp_local_device_ids,
-                       tmp_queues, static_cast<peer_test_t>(test_type),
+                       pair_device_ids, tmp_queues,
+                       static_cast<peer_test_t>(test_type),
                        static_cast<peer_transfer_t>(transfer_type));
             }
             std::cout << "-----------------------------------------------------"
@@ -527,6 +620,7 @@ ZePeer::ZePeer(uint32_t *num_devices) {
 
 ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
                std::vector<uint32_t> &local_device_ids,
+               std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
                std::vector<uint32_t> &queues) {
 
   benchmark = new ZeApp();
@@ -538,10 +632,10 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
     std::terminate();
   }
 
-  for (auto dst_device_id : remote_device_ids) {
-    for (auto src_device_id : local_device_ids) {
+  if (ZePeer::parallel_copy_to_pair_targets) {
+    for (auto pair_device_id : pair_device_ids) {
       if (benchmark->_devices.size() <
-          std::max(dst_device_id + 1, src_device_id + 1)) {
+          std::max(pair_device_id.second + 1, pair_device_id.first + 1)) {
         std::cout << "ERROR: Number for source or destination device not "
                   << "available: Only " << benchmark->_devices.size()
                   << " devices "
@@ -549,10 +643,31 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
         std::terminate();
       }
 
-      if (!benchmark->canAccessPeer(dst_device_id, src_device_id)) {
-        std::cerr << "Devices " << src_device_id << " and " << dst_device_id
-                  << " do not have P2P capabilities " << std::endl;
+      if (!benchmark->canAccessPeer(pair_device_id.second,
+                                    pair_device_id.first)) {
+        std::cerr << "Devices " << pair_device_id.first << " and "
+                  << pair_device_id.second << " do not have P2P capabilities "
+                  << std::endl;
         std::terminate();
+      }
+    }
+  } else {
+    for (auto dst_device_id : remote_device_ids) {
+      for (auto src_device_id : local_device_ids) {
+        if (benchmark->_devices.size() <
+            std::max(dst_device_id + 1, src_device_id + 1)) {
+          std::cout << "ERROR: Number for source or destination device not "
+                    << "available: Only " << benchmark->_devices.size()
+                    << " devices "
+                    << "detected" << std::endl;
+          std::terminate();
+        }
+
+        if (!benchmark->canAccessPeer(dst_device_id, src_device_id)) {
+          std::cerr << "Devices " << src_device_id << " and " << dst_device_id
+                    << " do not have P2P capabilities " << std::endl;
+          std::terminate();
+        }
       }
     }
   }
