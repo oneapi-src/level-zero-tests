@@ -28,6 +28,8 @@ static const char *usage_str =
     "\n  -se                      select ending transfer size (bytes)"
     "\n                            [default: 2^30]"
     "\n  -q                       query for number of engines available"
+    "\n  -d                       comma separated list of devices for "
+    "\n                            parallel h2d/d2h tests (default: 0)"
     "\n  -g, group                select engine group (default: 0)."
     "\n                            when using bidir tests, a comma-separated "
     "list "
@@ -62,6 +64,16 @@ static uint32_t sanitize_ulong(char *in) {
 // with the correct environment.
 //---------------------------------------------------------------------
 int ZeBandwidth::parse_arguments(int argc, char **argv) {
+  auto parse_and_insert = [&](std::string &s,
+                              std::vector<uint32_t> &vector_of_indexes) {
+    if (isdigit(s[0])) {
+      vector_of_indexes.push_back(atoi(s.c_str()));
+    } else {
+      std::cerr << usage_str;
+      exit(-1);
+    }
+  };
+
   for (int i = 1; i < argc; i++) {
     if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
       std::cout << usage_str;
@@ -138,6 +150,23 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
         command_queue_index = atoi(argv[i + 1]);
         command_queue_index1 = command_queue_index;
       }
+      i++;
+    } else if (strcmp(argv[i], "-d") == 0) {
+      std::string list_device_ids_string = argv[i + 1];
+      const std::string comma = ",";
+
+      size_t pos = 0;
+      size_t start = 0;
+      std::string device_id_string = "";
+      while ((pos = list_device_ids_string.find(comma, start)) !=
+             std::string::npos) {
+        device_id_string = list_device_ids_string.substr(start, pos);
+        start = pos + 1;
+        parse_and_insert(device_id_string, device_ids);
+      }
+      device_id_string =
+          list_device_ids_string.substr(start, list_device_ids_string.length());
+      parse_and_insert(device_id_string, device_ids);
       i++;
     } else if ((strcmp(argv[i], "-t") == 0)) {
       run_host2dev = true;
