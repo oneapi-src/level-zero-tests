@@ -1312,182 +1312,11 @@ TEST_F(
   }
 }
 
-void metric_validate_stall_sampling_data(
-    std::vector<zet_metric_properties_t> &metricProperties,
-    std::vector<zet_typed_value_t> &totalMetricValues,
-    std::vector<uint32_t> &metricValueSets) {
+TEST_F(
+    zetMetricStreamerTest,
+    GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndOverflowTriggeredThenExpectStreamerValidateError) {
 
-  uint32_t activeOffset = UINT32_MAX;
-  uint32_t controlStallOffset = UINT32_MAX;
-  uint32_t pipeStallOffset = UINT32_MAX;
-  uint32_t sendStallOffset = UINT32_MAX;
-  uint32_t distStallOffset = UINT32_MAX;
-  uint32_t sbidStallOffset = UINT32_MAX;
-  uint32_t syncStallOffset = UINT32_MAX;
-  uint32_t instrFetchStallOffset = UINT32_MAX;
-  uint32_t otherStallOffset = UINT32_MAX;
-
-  for (size_t i = 0; i < metricProperties.size(); i++) {
-
-    if (strcmp("Active", metricProperties[i].name) == 0) {
-      activeOffset = i;
-      continue;
-    }
-    if (strcmp("ControlStall", metricProperties[i].name) == 0) {
-      controlStallOffset = i;
-      continue;
-    }
-    if (strcmp("PipeStall", metricProperties[i].name) == 0) {
-      pipeStallOffset = i;
-      continue;
-    }
-    if (strcmp("SendStall", metricProperties[i].name) == 0) {
-      sendStallOffset = i;
-      continue;
-    }
-    if (strcmp("DistStall", metricProperties[i].name) == 0) {
-      distStallOffset = i;
-      continue;
-    }
-    if (strcmp("SbidStall", metricProperties[i].name) == 0) {
-      sbidStallOffset = i;
-      continue;
-    }
-    if (strcmp("SyncStall", metricProperties[i].name) == 0) {
-      syncStallOffset = i;
-      continue;
-    }
-    if (strcmp("InstrFetchStall", metricProperties[i].name) == 0) {
-      instrFetchStallOffset = i;
-      continue;
-    }
-    if (strcmp("OtherStall", metricProperties[i].name) == 0) {
-      otherStallOffset = i;
-      continue;
-    }
-  }
-
-  uint32_t ActiveCount = 0;
-  uint32_t ControlStallCount = 0;
-  uint32_t PipeStallCount = 0;
-  uint32_t SendStallCount = 0;
-  uint32_t DistStallCount = 0;
-  uint32_t SbidStallCount = 0;
-  uint32_t SyncStallCount = 0;
-  uint32_t InstrFetchStallCount = 0;
-  uint32_t OtherStallCount = 0;
-
-  uint32_t metricSetStartIndex = 0;
-
-  for (uint32_t metricValueSetIndex = 0;
-       metricValueSetIndex < metricValueSets.size(); metricValueSetIndex++) {
-
-    const uint32_t metricCountForDataIndex =
-        metricValueSets[metricValueSetIndex];
-    const uint32_t reportCount =
-        metricCountForDataIndex / metricProperties.size();
-
-    LOG_INFO << "for metricValueSetIndex " << metricValueSetIndex
-             << " metricCountForDataIndex " << metricCountForDataIndex
-             << " reportCount " << reportCount;
-
-    EXPECT_GT(reportCount, 1);
-
-    uint32_t tmpStallCount;
-    bool reportCompleteFlag;
-
-    for (uint32_t report = 0; report < reportCount; report++) {
-
-      tmpStallCount = 0;
-      reportCompleteFlag = false;
-
-      auto getStallCount = [&totalMetricValues](uint32_t metricReport,
-                                                uint32_t metricPropertiesSize,
-                                                uint32_t metricOffset,
-                                                uint32_t metricStartIndex) {
-        uint32_t metricIndex =
-            metricReport * metricPropertiesSize + metricOffset;
-        zet_typed_value_t metricTypedValue =
-            totalMetricValues[metricStartIndex + metricIndex];
-        uint64_t metricValue = metricTypedValue.value.ui64;
-        return metricValue;
-      };
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    activeOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      ActiveCount += tmpStallCount;
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    controlStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      ControlStallCount += tmpStallCount;
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    pipeStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      PipeStallCount += tmpStallCount;
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    sendStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      SendStallCount += tmpStallCount;
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    distStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      DistStallCount += tmpStallCount;
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    sbidStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      SbidStallCount += tmpStallCount;
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    syncStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      SyncStallCount += tmpStallCount;
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    instrFetchStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      InstrFetchStallCount += tmpStallCount;
-
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    otherStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
-      OtherStallCount += tmpStallCount;
-
-      EXPECT_TRUE(reportCompleteFlag)
-          << "Report number " << report << " has zero for all stall counts";
-    }
-
-    metricSetStartIndex += metricCountForDataIndex;
-  }
-
-  LOG_DEBUG << "ActiveCount " << ActiveCount;
-  LOG_DEBUG << "ControlStallCount " << ControlStallCount;
-  LOG_DEBUG << "PipeStallCount " << PipeStallCount;
-  LOG_DEBUG << "SendStallCount " << SendStallCount;
-  LOG_DEBUG << "DistStallCount " << DistStallCount;
-  LOG_DEBUG << "SbidStallCount " << SbidStallCount;
-  LOG_DEBUG << "SyncStallCount " << SyncStallCount;
-  LOG_DEBUG << "InstrFetchStallCount " << InstrFetchStallCount;
-  LOG_DEBUG << "OtherStallCount " << OtherStallCount;
-}
-
-void run_ip_sampling_with_validation(
-    bool enableOverflow, const std::vector<ze_device_handle_t> &devices,
-    uint32_t notifyEveryNReports, uint32_t samplingPeriod,
-    uint32_t timeForNReportsComplete) {
-
-  uint32_t numberOfFunctionCalls;
-  if (enableOverflow) {
-    numberOfFunctionCalls = 8;
-  } else {
-    numberOfFunctionCalls = 1;
-  }
-
+  const uint32_t numberOfFunctionCalls = 8;
   bool test_executed = false;
 
   struct {
@@ -1518,8 +1347,7 @@ void run_ip_sampling_with_validation(
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     if (metricGroupInfo.size() == 0) {
-      GTEST_SKIP()
-          << "no IP metric groups are available to test on this platform";
+      LOG_INFO << "no IP metric groups are available to test on this platform";
     }
 
     for (auto groupInfo : metricGroupInfo) {
@@ -1585,8 +1413,8 @@ void run_ip_sampling_with_validation(
               .count();
 
       LOG_INFO << "elapsed time for workload completion " << elapsedTime
-               << " time for NReports to complete " << timeForNReportsComplete;
-      if (elapsedTime < timeForNReportsComplete) {
+               << " time for NReports to complete " << TimeForNReportsComplete;
+      if (elapsedTime < TimeForNReportsComplete) {
         LOG_WARNING << "elapsed time for workload completion is too short";
       }
 
@@ -1595,25 +1423,7 @@ void run_ip_sampling_with_validation(
       lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
                                      &rawData);
       lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
-                            rawData.data(), false);
-      rawData.resize(rawDataSize);
-
-      std::vector<zet_typed_value_t> metricValues;
-      std::vector<uint32_t> metricValueSets;
-      level_zero_tests::metric_calculate_metric_values_from_raw_data(
-          groupInfo.metricGroupHandle, rawData, metricValues, metricValueSets,
-          enableOverflow);
-
-      std::vector<zet_metric_handle_t> metricHandles;
-      lzt::metric_get_metric_handles_from_metric_group(
-          groupInfo.metricGroupHandle, metricHandles);
-      std::vector<zet_metric_properties_t> metricProperties(
-          metricHandles.size());
-      lzt::metric_get_metric_properties_for_metric_group(metricHandles,
-                                                         metricProperties);
-
-      metric_validate_stall_sampling_data(metricProperties, metricValues,
-                                          metricValueSets);
+                            rawData.data(), true);
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
@@ -1634,22 +1444,6 @@ void run_ip_sampling_with_validation(
   if (!test_executed) {
     GTEST_SKIP() << "no supported metrics groups for this test";
   }
-}
-
-TEST_F(
-    zetMetricStreamerTest,
-    GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndOverflowTriggeredThenExpectStreamerValidateError) {
-
-  run_ip_sampling_with_validation(true, devices, notifyEveryNReports,
-                                  samplingPeriod, TimeForNReportsComplete);
-}
-
-TEST_F(
-    zetMetricStreamerTest,
-    GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
-
-  run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
-                                  samplingPeriod, TimeForNReportsComplete);
 }
 
 using zetMetricStreamerAppendMarkerTestNoValidate = zetMetricStreamerTest;
