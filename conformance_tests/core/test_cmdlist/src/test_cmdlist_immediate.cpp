@@ -38,6 +38,7 @@ protected:
         ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_DEFAULT,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   }
+
   void TearDown() override {
     lzt::destroy_command_list(cmdlist_immediate_sync_mode);
     lzt::destroy_command_list(cmdlist_immediate_async_mode);
@@ -46,6 +47,47 @@ protected:
   ze_command_list_handle_t cmdlist_immediate_sync_mode = nullptr;
   ze_command_list_handle_t cmdlist_immediate_async_mode = nullptr;
   ze_command_list_handle_t cmdlist_immediate_default_mode = nullptr;
+};
+
+class zeImmediateCommandListEventCounterTests
+    : public lzt::zeEventPoolTests {
+protected:
+  void SetUp() override {
+    ze_event_pool_desc_t eventPoolDesc = {};
+    eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+    eventPoolDesc.count = 10;
+
+    ze_event_pool_counter_based_exp_desc_t counterBasedExtension = {ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
+    eventPoolDesc.pNext = &counterBasedExtension;
+    ep.InitEventPool(eventPoolDesc);
+    ep.create_event(event0, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+    cmdlist.push_back(lzt::create_immediate_command_list(
+        lzt::zeDevice::get_instance()->get_device(),
+        ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0));
+    cmdlist.push_back(lzt::create_immediate_command_list(
+        lzt::zeDevice::get_instance()->get_device(),
+        ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0));
+    cmdlist.push_back(lzt::create_immediate_command_list(
+        lzt::zeDevice::get_instance()->get_device(),
+        ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0));
+    cmdlist.push_back(lzt::create_immediate_command_list(
+        lzt::zeDevice::get_instance()->get_device(),
+        ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0));
+  }
+
+  void TearDown() override {
+    ep.destroy_event(event0);
+    for (auto cl : cmdlist) {
+        lzt::destroy_command_list(cl);
+    }
+  }
+  std::vector<ze_command_list_handle_t>cmdlist;
+  ze_event_handle_t event0 = nullptr;
 };
 
 class zeImmediateCommandListExecutionTests
@@ -263,6 +305,86 @@ TEST_F(
                         ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS);
   RunAppendLaunchKernel(cmdlist_immediate_async_mode,
                         ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS);
+}
+
+static void RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
+                                  ze_event_handle_t event, int num_cmdlist) {
+  const size_t size = 16;
+  const int addval = 10;
+  const int num_iterations = 100;
+  int addval2 = 0;
+  const uint64_t timeout = UINT64_MAX - 1;
+
+  void *buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
+
+  ze_module_handle_t module = lzt::create_module(
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
+      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_kernel_handle_t kernel =
+      lzt::create_function(module, "cmdlist_add_constant");
+  lzt::set_group_size(kernel, 1, 1, 1);
+
+  int totalVal[10];
+  
+  memset(buffer, 0x0, num_cmdlist * size * sizeof(int));
+
+  for (int n = 0; n < num_cmdlist; n++) {
+    int *p_dev = static_cast<int *>(buffer);
+    p_dev+=(n * size);
+    lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
+    lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
+    ze_group_count_t tg;
+    tg.groupCountX = static_cast<uint32_t>(size);
+    tg.groupCountY = 1;
+    tg.groupCountZ = 1;
+
+    lzt::append_launch_function(cmdlist[n], kernel, &tg, nullptr, 0,
+                              nullptr);
+
+    totalVal[n] = 0;
+
+    for (int i = 0; i < (num_iterations - 1); i++) {
+      addval2 = rand() & 0xFFFF;
+      totalVal[n] += addval2;
+      lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
+
+      lzt::append_launch_function(cmdlist[n], kernel, &tg, nullptr, 0,
+                                nullptr);
+    }
+    addval2 = rand() & 0xFFFF;;
+    totalVal[n] += addval2;
+    lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
+    if (n == 0) {
+        lzt::append_launch_function(cmdlist[n], kernel, &tg, event, 0,
+                                nullptr);
+    } else {
+        lzt::append_launch_function(cmdlist[n], kernel, &tg, event, 0,
+                                &event);
+    }
+  }
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event, timeout));
+
+  for (int n = 0; n < num_cmdlist; n++) {
+    for (size_t i = 0; i < size; i++) {
+      EXPECT_EQ(static_cast<int *>(buffer)[(n * size) + i], (addval + totalVal[n]));
+    }
+  }
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
+  lzt::free_memory(buffer);
+}
+
+TEST_F(
+    zeImmediateCommandListEventCounterTests,
+    GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
+
+  bool event_pool_ext_found = lzt:: check_if_extension_supported(lzt::get_default_driver(),
+                                  "ZE_experimental_event_pool_counter_based");
+  EXPECT_TRUE(event_pool_ext_found);
+  for (int i = 1; i <= cmdlist.size(); i++) {
+    LOG_INFO << "Running " << i << " command list(s)"; 
+    RunAppendLaunchKernelEvent(cmdlist, event0, i);
+  }
 }
 
 TEST_P(zeImmediateCommandListExecutionTests,
