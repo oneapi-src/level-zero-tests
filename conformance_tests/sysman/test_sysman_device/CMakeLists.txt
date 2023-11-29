@@ -20,3 +20,14 @@ add_lzt_test(
     LINK_LIBRARIES level_zero_tests::logging level_zero_tests::utils
     DEFINES USE_ZESINIT)    
 
+add_lzt_test_executable(
+  NAME test_sysman_device_helper_zesinit
+  GROUP "/conformance_tests/tools/sysman"
+  PREFIX "sysman_device"  # install to prefix so it's not confused for a test
+  SOURCES
+      src/test_sysman_device_helper.cpp
+  LINK_LIBRARIES
+      level_zero_tests::logging
+      level_zero_tests::utils
+  DEFINES USE_ZESINIT
+)

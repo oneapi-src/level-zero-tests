@@ -12,6 +12,12 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 
+#include <boost/process.hpp>
+#include <boost/filesystem.hpp>
+
+namespace bp = boost::process;
+namespace fs = boost::filesystem;
+
 namespace lzt = level_zero_tests;
 
 #include <level_zero/zes_api.h>
@@ -37,6 +43,46 @@ class SysmanDeviceZesTest : public lzt::ZesSysmanCtsClass {};
 #else // USE_ZESINIT
 class SysmanDeviceTest : public lzt::SysmanCtsClass {};
 #define SYSMAN_DEVICE_TEST SysmanDeviceTest
+#endif // USE_ZESINIT
+
+#ifdef USE_ZESINIT
+static void run_child_process(const std::string &device_hierarchy) {
+  auto env = boost::this_process::environment();
+  bp::environment child_env = env;
+  child_env["ZE_FLAT_DEVICE_HIERARCHY"] = device_hierarchy;
+
+  fs::path helper_path(fs::current_path() / "sysman_device");
+  std::vector<fs::path> paths;
+  paths.push_back(helper_path);
+  bp::ipstream child_output;
+  fs::path helper = bp::search_path("test_sysman_device_helper_zesinit", paths);
+
+  bp::child validate_deviceUUID_process(helper, child_env,
+                                        bp::std_out > child_output);
+  validate_deviceUUID_process.wait();
+  std::cout << std::endl;
+  std::string result_string;
+  while (std::getline(child_output, result_string)) {
+    std::cout << result_string << "\n"; // Display logs from Child Process
+    if (result_string.find("Failure") != std::string::npos) {
+      ADD_FAILURE() << "Test Case failed";
+      return;
+    }
+  }
+  ASSERT_EQ(validate_deviceUUID_process.exit_code(), 0);
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenDeviceHierarchyModeCombinedWhenSysmanDeviceUUIDsAreRetrievedThenSysmanAndCoreDeviceUUIDsAreMatched) {
+  run_child_process("COMBINED");
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenDeviceHierarchyModeCompositeWhenSysmanDeviceUUIDsAreRetrievedThenSysmanAndCoreDeviceUUIDsAreMatched) {
+  run_child_process("COMPOSITE");
+}
 #endif // USE_ZESINIT
 
 TEST_F(
