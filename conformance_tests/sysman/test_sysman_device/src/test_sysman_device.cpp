@@ -45,6 +45,35 @@ class SysmanDeviceTest : public lzt::SysmanCtsClass {};
 #define SYSMAN_DEVICE_TEST SysmanDeviceTest
 #endif // USE_ZESINIT
 
+void run_device_hierarchy_child_process() {
+  fs::path helper_path(fs::current_path() / "sysman_device");
+  std::vector<fs::path> paths;
+  paths.push_back(helper_path);
+  bp::ipstream child_output;
+#ifdef USE_ZESINIT
+  fs::path helper =
+      bp::search_path("test_sysman_device_hierarchy_helper_zesinit", paths);
+#else
+  fs::path helper =
+      bp::search_path("test_sysman_device_hierarchy_helper", paths);
+#endif
+
+  bp::child enumerate_devices_process(helper, bp::std_out > child_output);
+  enumerate_devices_process.wait();
+
+  LOG_INFO << "Child Process Logs";
+  std::string result_string;
+  while (std::getline(child_output, result_string)) {
+    std::cout << result_string << "\n"; // Logs from Child Process
+    if (result_string.find("Failure") != std::string::npos) {
+      ADD_FAILURE() << "Test Case failed";
+      return;
+    }
+  }
+
+  ASSERT_EQ(enumerate_devices_process.exit_code(), 0);
+}
+
 #ifdef USE_ZESINIT
 static void run_child_process(const std::string &device_hierarchy) {
   auto env = boost::this_process::environment();
@@ -84,6 +113,12 @@ TEST_F(
   run_child_process("COMPOSITE");
 }
 #endif // USE_ZESINIT
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenDeviceHierarchyModesFlatAndCombinedWhenRetrievingSysmanDevicesThenValidDevicesAreReturned) {
+  run_device_hierarchy_child_process();
+}
 
 TEST_F(
     SYSMAN_DEVICE_TEST,

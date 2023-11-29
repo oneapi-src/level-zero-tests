@@ -254,6 +254,10 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
     elif test_binary == "test_sysman_device_zesinit":
         test_feature = "SysMan Device Properties"
     elif test_binary == "test_sysman_device_helper_zesinit":
+        test_feature = "SysMan Device Properties"
+    elif test_binary == "test_sysman_device_hierarchy_helper":
+        test_feature = "SysMan Device Properties"
+    elif test_binary == "test_sysman_device_hierarchy_helper_zesinit":
         test_feature = "SysMan Device Properties"    
     elif test_binary == "test_sysman_events":
         test_feature = "SysMan Events"
