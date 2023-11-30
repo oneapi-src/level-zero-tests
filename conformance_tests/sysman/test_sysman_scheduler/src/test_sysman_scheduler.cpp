@@ -244,12 +244,13 @@ TEST_F(
 
     for (auto p_sched_handle : p_sched_handles) {
       EXPECT_NE(nullptr, p_sched_handle);
-      auto timeout_default_properties =
-          lzt::get_timeout_properties(p_sched_handle, true);
+      auto timeout_pretest_properties =
+          lzt::get_timeout_properties(p_sched_handle, false);
+
       zes_sched_timeout_properties_t timeout_set_properties = {
           ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES, nullptr};
-      timeout_set_properties.watchdogTimeout =
-          timeout_default_properties.watchdogTimeout;
+      uint64_t watchdogTimeoutTestValue = 50000;
+      timeout_set_properties.watchdogTimeout = watchdogTimeoutTestValue;
       lzt::set_timeout_mode(p_sched_handle, timeout_set_properties);
       auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
       ASSERT_EQ(cur_mode, ZES_SCHED_MODE_TIMEOUT);
@@ -257,6 +258,8 @@ TEST_F(
           lzt::get_timeout_properties(p_sched_handle, false);
       EXPECT_EQ(timeout_get_properties.watchdogTimeout,
                 timeout_set_properties.watchdogTimeout);
+
+      lzt::set_timeout_mode(p_sched_handle, timeout_pretest_properties);
     }
   }
 }
@@ -306,24 +309,20 @@ TEST_F(
 
     for (auto p_sched_handle : p_sched_handles) {
       EXPECT_NE(nullptr, p_sched_handle);
-      auto timeout_default_properties =
-          lzt::get_timeout_properties(p_sched_handle, true);
-      zes_sched_timeout_properties_t timeout_set_properties = {
-          ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES, nullptr};
-      timeout_set_properties.watchdogTimeout =
-          timeout_default_properties.watchdogTimeout;
-      auto timeslice_default_properties =
-          lzt::get_timeslice_properties(p_sched_handle, true);
-      zes_sched_timeslice_properties_t timeslice_set_properties = {
-          ZES_STRUCTURE_TYPE_SCHED_TIMESLICE_PROPERTIES, nullptr};
-      timeslice_set_properties.interval = timeslice_default_properties.interval;
-      timeslice_set_properties.yieldTimeout =
-          timeslice_default_properties.yieldTimeout;
-      lzt::set_exclusive_mode(p_sched_handle);
       auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
-      ASSERT_EQ(cur_mode, ZES_SCHED_MODE_EXCLUSIVE);
-      lzt::set_timeout_mode(p_sched_handle, timeout_set_properties);
-      lzt::set_timeslice_mode(p_sched_handle, timeslice_set_properties);
+      if (cur_mode != ZES_SCHED_MODE_EXCLUSIVE) {
+        auto timeout_pretest_properties =
+            lzt::get_timeout_properties(p_sched_handle, false);
+        auto timeslice_pretest_properties =
+            lzt::get_timeslice_properties(p_sched_handle, false);
+
+        lzt::set_exclusive_mode(p_sched_handle);
+        auto mode = lzt::get_scheduler_current_mode(p_sched_handle);
+        ASSERT_EQ(mode, ZES_SCHED_MODE_EXCLUSIVE);
+
+        lzt::set_timeout_mode(p_sched_handle, timeout_pretest_properties);
+        lzt::set_timeslice_mode(p_sched_handle, timeslice_pretest_properties);
+      }
     }
   }
 }
