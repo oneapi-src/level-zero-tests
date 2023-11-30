@@ -177,6 +177,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('SetAndGetAccessTypeForSharedAllocation', test_name, re.IGNORECASE)) or \
                     (re.search('GivenMultipleProcessesUsingMultipleSubDevicesThenKernelIsStressedAndExecuteSuccessfull', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution', test_name, re.IGNORECASE)) or \
                     re.search('fabric', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
             else:
