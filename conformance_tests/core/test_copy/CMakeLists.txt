@@ -9,6 +9,7 @@ add_lzt_test(
     src/test_copy_events.cpp
     src/test_kernel_copy.cpp
     src/test_copy_image.cpp
+    src/test_multicontext_copy.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
