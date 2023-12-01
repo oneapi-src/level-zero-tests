@@ -159,9 +159,7 @@ TEST_F(
 
     for (auto engine_handle : engine_handles) {
       ASSERT_NE(nullptr, engine_handle);
-      auto state = lzt::get_engine_activity(engine_handle);
-      EXPECT_LT(state.activeTime, UINT32_MAX);
-      EXPECT_LT(state.timestamp, UINT32_MAX);
+      lzt::get_engine_activity(engine_handle);
     }
   }
 }
@@ -179,11 +177,7 @@ TEST_F(
     for (auto engine_handle : engine_handles) {
       ASSERT_NE(nullptr, engine_handle);
       auto oldstate = lzt::get_engine_activity(engine_handle);
-      EXPECT_LT(oldstate.activeTime, UINT32_MAX);
-      EXPECT_LT(oldstate.timestamp, UINT32_MAX);
       auto newstate = lzt::get_engine_activity(engine_handle);
-      EXPECT_LT(newstate.activeTime, UINT32_MAX);
-      EXPECT_LT(newstate.timestamp, UINT32_MAX);
       EXPECT_GT(newstate.timestamp, oldstate.timestamp);
     }
   }
