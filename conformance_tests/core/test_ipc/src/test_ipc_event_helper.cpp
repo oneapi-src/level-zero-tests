@@ -38,10 +38,11 @@ ze_event_pool_desc_t defaultEventPoolDesc = {
 
 static void child_host_reads(ze_event_pool_handle_t hEventPool) {
   ze_event_handle_t hEvent;
-  zeEventCreate(hEventPool, &defaultEventDesc, &hEvent);
-  zeEventHostSynchronize(hEvent, UINT64_MAX);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
   // cleanup
-  zeEventDestroy(hEvent);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
 }
 
 static void child_device_reads(ze_event_pool_handle_t hEventPool,
@@ -49,9 +50,11 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool,
                                bool isImmediate) {
   ze_event_handle_t hEvent;
   if (device_events) {
-    zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent);
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent));
   } else {
-    zeEventCreate(hEventPool, &defaultEventDesc, &hEvent);
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   }
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
@@ -62,13 +65,14 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool,
 
   // cleanup
   lzt::destroy_command_bundle(cmdbundle);
-  zeEventDestroy(hEvent);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
 }
 
 static void child_device2_reads(ze_event_pool_handle_t hEventPool,
                                 ze_context_handle_t context, bool isImmediate) {
   ze_event_handle_t hEvent;
-  zeEventCreate(hEventPool, &defaultEventDesc, &hEvent);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   auto devices = lzt::get_ze_devices();
   auto cmdbundle = lzt::create_command_bundle(context, devices[1], isImmediate);
   lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
@@ -79,14 +83,15 @@ static void child_device2_reads(ze_event_pool_handle_t hEventPool,
   // cleanup
   lzt::reset_command_list(cmdbundle.list);
   lzt::destroy_command_bundle(cmdbundle);
-  zeEventDestroy(hEvent);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
 }
 
 static void child_multi_device_reads(ze_event_pool_handle_t hEventPool,
                                      ze_context_handle_t context,
                                      bool isImmediate) {
   ze_event_handle_t hEvent;
-  zeEventCreate(hEventPool, &defaultEventDesc, &hEvent);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   auto devices = lzt::get_ze_devices();
   auto cmdbundle1 =
       lzt::create_command_bundle(context, devices[0], isImmediate);
@@ -106,7 +111,7 @@ static void child_multi_device_reads(ze_event_pool_handle_t hEventPool,
   lzt::reset_command_list(cmdbundle2.list);
   lzt::destroy_command_bundle(cmdbundle1);
   lzt::destroy_command_bundle(cmdbundle2);
-  zeEventDestroy(hEvent);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
 }
 
 int main() {

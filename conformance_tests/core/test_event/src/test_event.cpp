@@ -771,6 +771,122 @@ INSTANTIATE_TEST_SUITE_P(
         ZE_EVENT_POOL_FLAG_IPC | ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
         ZE_EVENT_POOL_FLAG_IPC | ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP));
 
+class zeEventCommandQueueAndCommandListIndependenceTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_event_scope_flags_t, bool>> {
+protected:
+  void SetUp() override {
+    context = lzt::create_context(lzt::get_default_driver());
+    device = lzt::get_default_device(lzt::get_default_driver());
+
+    ze_event_pool_desc_t ep_desc{};
+    ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+    ep_desc.pNext = nullptr;
+    ep_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+    ep_desc.count = n_events;
+    ep = lzt::create_event_pool(context, ep_desc);
+
+    ze_event_desc_t ev_desc{};
+    ev_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+    ev_desc.pNext = nullptr;
+    ev_desc.signal = std::get<0>(GetParam());
+    ev_desc.wait = std::get<0>(GetParam());
+    for (int i = 0; i < n_events; i++) {
+      ev_desc.index = i;
+      ev[i] = lzt::create_event(ep, ev_desc);
+    }
+  }
+
+  void TearDown() override {
+    for (int i = 0; i < n_events; i++) {
+      lzt::destroy_event(ev[i]);
+    }
+    lzt::destroy_event_pool(ep);
+    lzt::destroy_context(context);
+  }
+
+  ze_context_handle_t context = nullptr;
+  ze_device_handle_t device = nullptr;
+  ze_event_pool_handle_t ep = nullptr;
+  static constexpr int n_events = 5;
+  ze_event_handle_t ev[n_events];
+};
+
+TEST_P(
+    zeEventCommandQueueAndCommandListIndependenceTests,
+    GivenCommandQueueAndCommandListDestroyedThenSynchronizationOnAllEventsAreSuccessful) {
+  const auto is_immediate = std::get<1>(GetParam());
+
+  constexpr uint32_t sz = 1u << 22;
+  int *buf_hst = static_cast<int *>(
+      lzt::allocate_host_memory(sz * sizeof(int), sizeof(int), context));
+  int *buf_dev = static_cast<int *>(lzt::allocate_device_memory(
+      sz * sizeof(int), sizeof(int), ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED,
+      device, context));
+  std::fill_n(buf_hst, sz, 0);
+
+  auto module = lzt::create_module(context, device, "profile_add.spv",
+                                   ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  auto kernel = lzt::create_function(module, "profile_add_constant");
+  lzt::set_group_size(kernel, 1, 1, 1);
+  const ze_group_count_t args = {sz, 1, 1};
+  const int seven = 7;
+  lzt::set_argument_value(kernel, 0, sizeof(buf_dev), &buf_dev);
+  lzt::set_argument_value(kernel, 1, sizeof(buf_dev), &buf_dev);
+  lzt::set_argument_value(kernel, 2, sizeof(seven), &seven);
+
+  for (int i = 0; i < 5; i++) {
+    auto cmd_bundle = lzt::create_command_bundle(
+        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+
+    lzt::append_memory_copy(cmd_bundle.list, buf_dev, buf_hst, sz * sizeof(int),
+                            ev[1], 1, &ev[0]);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &args, ev[2], 1,
+                                &ev[1]);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &args, ev[3], 0,
+                                nullptr);
+    lzt::append_memory_copy(cmd_bundle.list, buf_hst, buf_dev, sz * sizeof(int),
+                            ev[4], 1, &ev[3]);
+    lzt::close_command_list(cmd_bundle.list);
+
+    if (!is_immediate) {
+      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
+                                 nullptr);
+    }
+    lzt::signal_event_from_host(ev[0]);
+    lzt::event_host_synchronize(ev[4], UINT64_MAX);
+
+    lzt::reset_command_list(cmd_bundle.list);
+    lzt::destroy_command_bundle(cmd_bundle);
+
+    for (int j = 0; j < n_events; j++) {
+      lzt::query_event(ev[j], ZE_RESULT_SUCCESS);
+      lzt::event_host_synchronize(ev[j], UINT64_MAX);
+      lzt::event_host_reset(ev[j]);
+    }
+
+    for (uint32_t j = 0; j < sz; j++) {
+      EXPECT_EQ(seven * 2 * (i + 1), buf_hst[j]);
+    }
+  }
+
+  lzt::destroy_function(kernel);
+  lzt::destroy_module(module);
+  lzt::free_memory(context, buf_dev);
+  lzt::free_memory(context, buf_hst);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    EventIndependenceParameterization,
+    zeEventCommandQueueAndCommandListIndependenceTests,
+    ::testing::Combine(::testing::Values(0, ZE_EVENT_SCOPE_FLAG_SUBDEVICE,
+                                         ZE_EVENT_SCOPE_FLAG_DEVICE,
+                                         ZE_EVENT_SCOPE_FLAG_HOST),
+                       ::testing::Bool()));
+
 static void
 multi_device_event_signal_read(std::vector<ze_device_handle_t> devices,
                                bool is_immediate) {

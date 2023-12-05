@@ -147,6 +147,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleGetPropertiesReturnsValidNonZeroProperties', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverAllocSharedMemTestVarySizeAndAlignment_zeDriverAllocSharedMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeEventSignalScopeParameterizedTest_zeEventSignalScopeTests_GivenDifferentEventSignalScopeFlagsThenAppendSignalEventIsSuccessful', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_EventIndependenceParameterization_zeEventCommandQueueAndCommandListIndependenceTests_GivenCommandQueueAndCommandListDestroyedThenSynchronizationOnAllEventsAreSuccessful', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_SyncTimeoutParams_zeEventHostSynchronizeTimeoutTests_GivenTimeoutWhenWaitingForEventThenWaitForSpecifiedTime', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetModulePropertiesTests_GivenValidDeviceWhenRetrievingFloatAtomicPropertiesThenValidPropertiesReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDevicePciGetPropertiesTests_GivenValidDeviceWhenRetrievingPciSpeedPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \
