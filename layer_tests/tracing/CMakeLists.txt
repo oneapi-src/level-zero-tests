@@ -25,6 +25,21 @@ add_lzt_test(
     level_zero_tests::net
 )
 
+add_lzt_test(
+  NAME test_api_ltracing_dynamic
+  GROUP "/layer_tests/ltracing"
+  SOURCES
+    src/test_api_ltracing_compat.cpp
+    src/test_api_ltracing.cpp
+    src/test_api_ltracing_threading.cpp
+    src/main.cpp
+  LINK_LIBRARIES
+    ${ipc_libraries}
+    ${ipc_event_libraries}
+    level_zero_tests::net
+  DEFINES USE_RUNTIME_TRACING
+)
+
 add_lzt_test_executable(
   NAME test_ltracing_ipc_event_helper
   GROUP "/layer_tests/ltracing"
@@ -38,6 +53,19 @@ add_lzt_test_executable(
 )
 
 add_lzt_test_executable(
+  NAME test_ltracing_ipc_event_helper_dynamic
+  GROUP "/layer_tests/ltracing"
+  PREFIX "tracing"  # install to prefix so it's not confused for a test
+  SOURCES
+    src/test_ltracing_ipc_event_helper.cpp
+  LINK_LIBRARIES
+    ${ipc_libraries}
+    ${ipc_event_libraries}
+    level_zero_tests::net
+  DEFINES USE_RUNTIME_TRACING
+)
+
+add_lzt_test_executable(
   NAME test_ltracing_compat_ipc_event_helper
   GROUP "/layer_tests/ltracing"
   PREFIX "tracing"  # install to prefix so it's not confused for a test
@@ -47,4 +75,17 @@ add_lzt_test_executable(
     ${ipc_libraries}
     ${ipc_event_libraries}
     level_zero_tests::net
+)
+
+add_lzt_test_executable(
+  NAME test_ltracing_compat_ipc_event_helper_dynamic
+  GROUP "/layer_tests/ltracing"
+  PREFIX "tracing"  # install to prefix so it's not confused for a test
+  SOURCES
+    src/test_ltracing_compat_ipc_event_helper.cpp
+  LINK_LIBRARIES
+    ${ipc_libraries}
+    ${ipc_event_libraries}
+    level_zero_tests::net
+  DEFINES USE_RUNTIME_TRACING
 )

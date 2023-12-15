@@ -14,6 +14,7 @@
 #include <boost/process.hpp>
 #include <level_zero/ze_api.h>
 #include <level_zero/layers/zel_tracing_api.h>
+#include <level_zero/loader/ze_loader.h>
 #include <level_zero/layers/zel_tracing_register_cb.h>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -33,6 +34,9 @@ int main(int argc, char **argv) {
     LOG_DEBUG << "Child exit due to zeInit failure";
     exit(EXIT_FAILURE);
   }
+  #ifdef USE_RUNTIME_TRACING
+  zelEnableTracingLayer();
+  #endif
 
   ze_ipc_event_pool_handle_t hIpcEventPool{};
   int ipc_descriptor =
@@ -89,6 +93,9 @@ int main(int argc, char **argv) {
 
   lzt::disable_ltracer(tracer_handle);
   lzt::destroy_ltracer_handle(tracer_handle);
+  #ifdef USE_RUNTIME_TRACING
+  zelDisableTracingLayer();
+  #endif
 
   exit(EXIT_SUCCESS);
 }

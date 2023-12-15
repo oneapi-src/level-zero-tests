@@ -23,8 +23,16 @@ namespace bipc = boost::interprocess;
 
 namespace {
 
+#ifdef USE_RUNTIME_TRACING
+class LDynamicTracingCreateTests : public ::testing::Test {};
+#define LTRACING_CREATE_TEST_NAME LDynamicTracingCreateTests
+#else // USE Tracing ENV
+class LTracingCreateTests : public ::testing::Test {};
+#define LTRACING_CREATE_TEST_NAME LTracingCreateTests
+#endif
+
 TEST(
-    LTracingCreateTests,
+    LTRACING_CREATE_TEST_NAME,
     GivenValidDeviceAndTracerDescriptionWhenCreatingTracerThenTracerIsNotNull) {
   uint32_t user_data;
 
@@ -41,7 +49,14 @@ class LTracingCreateMultipleTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<uint32_t> {};
 
-TEST_P(LTracingCreateMultipleTests,
+#ifdef USE_RUNTIME_TRACING
+class LDynamicTracingCreateMultipleTests : public LTracingCreateMultipleTests {};
+#define LTRACING_CREATE_MULTIPLE_TEST_NAME LDynamicTracingCreateMultipleTests
+#else // USE Tracing ENV
+#define LTRACING_CREATE_MULTIPLE_TEST_NAME LTracingCreateMultipleTests
+#endif
+
+TEST_P(LTRACING_CREATE_MULTIPLE_TEST_NAME,
        GivenExistingTracersWhenCreatingNewTracerThenSuccesIsReturned) {
 
   std::vector<zel_tracer_handle_t> tracers(GetParam());
@@ -64,10 +79,18 @@ TEST_P(LTracingCreateMultipleTests,
   delete[] user_data;
 }
 
-INSTANTIATE_TEST_CASE_P(CreateMultipleTracerTest, LTracingCreateMultipleTests,
+INSTANTIATE_TEST_CASE_P(CreateMultipleTracerTest, LTRACING_CREATE_MULTIPLE_TEST_NAME,
                         ::testing::Values(1, 10, 100, 1000));
 
-TEST(LTracingDestroyTests,
+#ifdef USE_RUNTIME_TRACING
+class LDynamicTracingDestroyTests : public ::testing::Test {};
+#define LTRACING_DESTROY_TEST_NAME LDynamicTracingDestroyTests
+#else // USE Tracing ENV
+class LTracingDestroyTests : public ::testing::Test {};
+#define LTRACING_DESTROY_TEST_NAME LTracingDestroyTests
+#endif
+
+TEST(LTRACING_DESTROY_TEST_NAME,
      GivenSingleDisabledTracerWhenDestroyingTracerThenSuccessIsReturned) {
   uint32_t user_data;
 
@@ -139,9 +162,15 @@ protected:
     std::memcpy(region.get_address(), &test_data,
                 sizeof(lzt::shared_ipc_event_data_t));
 
+    #ifdef USE_RUNTIME_TRACING
+    // launch child
+    boost::process::child c("./tracing/test_ltracing_ipc_event_helper_dynamic",
+                            test_type_name.c_str());
+    #else
     // launch child
     boost::process::child c("./tracing/test_ltracing_ipc_event_helper",
                             test_type_name.c_str());
+    #endif
     lzt::send_ipc_handle(hIpcEventPool);
 
     c.wait(); // wait for the process to exit
@@ -374,8 +403,15 @@ static void ready_ltracer(zel_tracer_handle_t tracer, ze_callbacks_t prologues,
   lzt::enable_ltracer(tracer);
 }
 
+#ifdef USE_RUNTIME_TRACING
+class LDynamicTracingPrologueEpilogueTests : public LTracingPrologueEpilogueTests {};
+#define LTRACING_TEST_NAME LDynamicTracingPrologueEpilogueTests
+#else // USE Tracing ENV
+#define LTRACING_TEST_NAME LTracingPrologueEpilogueTests
+#endif
+
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetCallbacksWhenCallingzeDeviceGetThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetCb = lzt::lepilogue_callback;
@@ -387,7 +423,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithZeDeviceGetSubDevicesCallbacksWhenCallingzeDeviceGetSubDevicesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetSubDevicesCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetSubDevicesCb = lzt::lepilogue_callback;
@@ -399,7 +435,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetPropertiesCallbacksWhenCallingzeDeviceGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetPropertiesCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetPropertiesCb = lzt::lepilogue_callback;
@@ -411,7 +447,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetComputePropertiesCallbacksWhenCallingzeDeviceGetComputePropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetComputePropertiesCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetComputePropertiesCb = lzt::lepilogue_callback;
@@ -425,7 +461,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetMemoryPropertiesCallbacksWhenCallingzeDeviceGetMemoryPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetMemoryPropertiesCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetMemoryPropertiesCb = lzt::lepilogue_callback;
@@ -438,7 +474,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetMemoryAccessPropertiesCallbacksWhenCallingzeDeviceGetMemoryAccessPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetMemoryAccessPropertiesCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetMemoryAccessPropertiesCb = lzt::lepilogue_callback;
@@ -452,7 +488,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetCachePropertiesCallbacksWhenCallingzeDeviceGetCachePropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetCachePropertiesCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetCachePropertiesCb = lzt::lepilogue_callback;
@@ -466,7 +502,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetImagePropertiesCallbacksWhenCallingzeDeviceGetImagePropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetImagePropertiesCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetImagePropertiesCb = lzt::lepilogue_callback;
@@ -481,7 +517,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetP2PPropertiesCallbacksWhenCallingzeDeviceGetP2PPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetP2PPropertiesCb = lzt::lprologue_callback;
   epilogues.Device.pfnGetP2PPropertiesCb = lzt::lepilogue_callback;
@@ -495,7 +531,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceCanAccessPeerCallbacksWhenCallingzeDeviceCanAccessPeerThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnCanAccessPeerCb = lzt::lprologue_callback;
   epilogues.Device.pfnCanAccessPeerCb = lzt::lepilogue_callback;
@@ -508,7 +544,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceSystemBarrierCallbacksWhenCallingzeDeviceSystemBarrierThenUserDataIsSetAndResultUnchanged) {
   prologues.Context.pfnSystemBarrierCb = lzt::lprologue_callback;
   epilogues.Context.pfnSystemBarrierCb = lzt::lepilogue_callback;
@@ -520,7 +556,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceMakeMemoryResidentCallbacksWhenCallingzeDeviceMakeMemoryResidentThenUserDataIsSetAndResultUnchanged) {
   prologues.Context.pfnMakeMemoryResidentCb = lzt::lprologue_callback;
   epilogues.Context.pfnMakeMemoryResidentCb = lzt::lepilogue_callback;
@@ -534,7 +570,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceEvictMemoryCallbacksWhenCallingzeDeviceEvictMemoryThenUserDataIsSetAndResultUnchanged) {
   prologues.Context.pfnEvictMemoryCb = lzt::lprologue_callback;
   epilogues.Context.pfnEvictMemoryCb = lzt::lepilogue_callback;
@@ -548,7 +584,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceMakeImageResidentCallbacksWhenCallingzeDeviceMakeImageResidentThenUserDataIsSetAndResultUnchangedAndResultUnchanged) {
   prologues.Context.pfnMakeImageResidentCb = lzt::lprologue_callback;
   epilogues.Context.pfnMakeImageResidentCb = lzt::lepilogue_callback;
@@ -568,7 +604,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceEvictImageCallbacksWhenCallingzeDeviceEvictImageThenUserDataIsSetAndResultUnchanged) {
   prologues.Context.pfnEvictImageCb = lzt::lprologue_callback;
   epilogues.Context.pfnEvictImageCb = lzt::lepilogue_callback;
@@ -587,7 +623,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetCallbacksWhenCallingzeDriverGetThenUserDataIsSetAndResultUnchanged) {
   prologues.Driver.pfnGetCb = lzt::lprologue_callback;
   epilogues.Driver.pfnGetCb = lzt::lepilogue_callback;
@@ -599,7 +635,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetPropertiesCallbacksWhenCallingzeDriverGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Driver.pfnGetPropertiesCb = lzt::lprologue_callback;
   epilogues.Driver.pfnGetPropertiesCb = lzt::lepilogue_callback;
@@ -612,7 +648,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetApiVersionCallbacksWhenCallingzeDriverGetApiVersionThenUserDataIsSetAndResultUnchanged) {
   prologues.Driver.pfnGetApiVersionCb = lzt::lprologue_callback;
   epilogues.Driver.pfnGetApiVersionCb = lzt::lepilogue_callback;
@@ -624,7 +660,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetIPCPropertiesCallbacksWhenCallingzeDriverGetIPCPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Driver.pfnGetIpcPropertiesCb = lzt::lprologue_callback;
   epilogues.Driver.pfnGetIpcPropertiesCb = lzt::lepilogue_callback;
@@ -637,7 +673,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocSharedMemCallbacksWhenCallingzeDriverAllocSharedMemThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnAllocSharedCb = lzt::lprologue_callback;
   epilogues.Mem.pfnAllocSharedCb = lzt::lepilogue_callback;
@@ -667,7 +703,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocDeviceMemCallbacksWhenCallingzeDriverAllocDeviceMemThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnAllocDeviceCb = lzt::lprologue_callback;
   epilogues.Mem.pfnAllocDeviceCb = lzt::lepilogue_callback;
@@ -692,7 +728,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocHostMemCallbacksWhenCallingzeDriverAllocHostMemThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnAllocHostCb = lzt::lprologue_callback;
   epilogues.Mem.pfnAllocHostCb = lzt::lepilogue_callback;
@@ -715,7 +751,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverFreeMemCallbacksWhenCallingzeDriverFreeMemThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnFreeCb = lzt::lprologue_callback;
   epilogues.Mem.pfnFreeCb = lzt::lepilogue_callback;
@@ -737,7 +773,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemAllocPropertiesCallbacksWhenCallingzeDriverGetMemAllocPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnGetAllocPropertiesCb = lzt::lprologue_callback;
   epilogues.Mem.pfnGetAllocPropertiesCb = lzt::lepilogue_callback;
@@ -758,7 +794,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemAddressRangeCallbacksWhenCallingzeDriverGetMemAddressRangeThenUserDataIsSetAndResultUnchanged) {
 
   prologues.Mem.pfnGetAddressRangeCb = lzt::lprologue_callback;
@@ -775,7 +811,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemIpcHandleCallbacksWhenCallingzeDriverGetMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnGetIpcHandleCb = lzt::lprologue_callback;
   epilogues.Mem.pfnGetIpcHandleCb = lzt::lepilogue_callback;
@@ -789,7 +825,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverOpenMemIpcHandleCallbacksWhenCallingzeDriverOpenMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnOpenIpcHandleCb = lzt::lprologue_callback;
   epilogues.Mem.pfnOpenIpcHandleCb = lzt::lepilogue_callback;
@@ -808,7 +844,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueCreateCallbacksWhenCallingzeCommandQueueCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandQueue.pfnCreateCb = lzt::lprologue_callback;
   epilogues.CommandQueue.pfnCreateCb = lzt::lepilogue_callback;
@@ -825,7 +861,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueDestroyCallbacksWhenCallingzeCommandQueueDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandQueue.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.CommandQueue.pfnDestroyCb = lzt::lepilogue_callback;
@@ -843,7 +879,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueExecuteCommandListsCallbacksWhenCallingzeCommandQueueExecuteCommandListsThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandQueue.pfnExecuteCommandListsCb = lzt::lprologue_callback;
   epilogues.CommandQueue.pfnExecuteCommandListsCb = lzt::lepilogue_callback;
@@ -863,7 +899,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueSynchronizeCallbacksWhenCallingzeCommandQueueSynchronizeThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandQueue.pfnSynchronizeCb = lzt::lprologue_callback;
   epilogues.CommandQueue.pfnSynchronizeCb = lzt::lepilogue_callback;
@@ -877,7 +913,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCreateCallbacksWhenCallingzeCommandListCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnCreateCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnCreateCb = lzt::lepilogue_callback;
@@ -894,7 +930,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListResetCallbacksWhenCallingzeCommandListResetThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnResetCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnResetCb = lzt::lepilogue_callback;
@@ -908,7 +944,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCloseCallbacksWhenCallingzeCommandListCloseThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnCloseCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnCloseCb = lzt::lepilogue_callback;
@@ -922,7 +958,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListDestroyCallbacksWhenCallingzeCommandListDestroyThenUserDataIsSetAndResultUnchanged) {
 
   prologues.CommandList.pfnDestroyCb = lzt::lprologue_callback;
@@ -939,7 +975,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCreateImmediateCallbacksWhenCallingzeCommandListCreateImmediateThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnCreateImmediateCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnCreateImmediateCb = lzt::lepilogue_callback;
@@ -956,7 +992,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendBarrierCallbacksWhenCallingzeCommandListAppendBarrierThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendBarrierCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendBarrierCb = lzt::lepilogue_callback;
@@ -972,7 +1008,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryRangesBarrierCallbacksWhenCallingzeCommandListAppendMemoryRangesBarrierThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryRangesBarrierCb =
       lzt::lprologue_callback;
@@ -1002,7 +1038,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyCallbacksWhenCallingzeCommandListAppendMemoryCopyThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryCopyCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendMemoryCopyCb = lzt::lepilogue_callback;
@@ -1025,7 +1061,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryFillCallbacksWhenCallingzeCommandListAppendMemoryFillThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryFillCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendMemoryFillCb = lzt::lepilogue_callback;
@@ -1047,7 +1083,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyFromContextCallbacksWhenCallingzeCommandListAppendMemoryCopyFromContextThenUserDataIsSetAndResultUnchanged) {
 
   prologues.CommandList.pfnAppendMemoryCopyFromContextCb =
@@ -1083,7 +1119,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendQueryKernelTimestampsCallbacksWhenCallingzeCommandListAppendQueryKernelTimestampsThenUserDataIsSetAndResultUnchanged) {
 
   prologues.CommandList.pfnAppendQueryKernelTimestampsCb =
@@ -1113,7 +1149,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyRegionCallbacksWhenCallingzeCommandListAppendMemoryCopyRegionThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryCopyRegionCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendMemoryCopyRegionCb = lzt::lepilogue_callback;
@@ -1141,7 +1177,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyCallbacksWhenCallingzeCommandListAppendImageCopyThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendImageCopyCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendImageCopyCb = lzt::lepilogue_callback;
@@ -1175,7 +1211,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyRegionCallbacksWhenCallingzeCommandListAppendImageCopyRegionThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendImageCopyRegionCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendImageCopyRegionCb = lzt::lepilogue_callback;
@@ -1207,7 +1243,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyFromMemoryCallbacksWhenCallingzeCommandListAppendImageCopyFromMemoryThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendImageCopyFromMemoryCb =
       lzt::lprologue_callback;
@@ -1232,7 +1268,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyToMemoryCallbacksWhenCallingzeCommandListAppendImageCopyToMemoryThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendImageCopyToMemoryCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendImageCopyToMemoryCb = lzt::lepilogue_callback;
@@ -1255,7 +1291,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryPrefetchCallbacksWhenCallingzeCommandListAppendMemoryPrefetchThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryPrefetchCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendMemoryPrefetchCb = lzt::lepilogue_callback;
@@ -1277,7 +1313,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemAdviseCallbacksWhenCallingzeCommandListAppendMemAdviseThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemAdviseCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendMemAdviseCb = lzt::lepilogue_callback;
@@ -1301,7 +1337,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendSignalEventCallbacksWhenCallingzeCommandListAppendSignalEventThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendSignalEventCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendSignalEventCb = lzt::lepilogue_callback;
@@ -1318,7 +1354,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendWaitOnEventsCallbacksWhenCallingzeCommandListAppendWaitOnEventsThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendWaitOnEventsCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendWaitOnEventsCb = lzt::lepilogue_callback;
@@ -1335,7 +1371,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendEventResetCallbacksWhenCallingzeCommandListAppendEventResetThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendEventResetCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendEventResetCb = lzt::lepilogue_callback;
@@ -1351,7 +1387,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchKernelCallbacksWhenCallingzeCommandListAppendLaunchKernelThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendLaunchKernelCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnAppendLaunchKernelCb = lzt::lepilogue_callback;
@@ -1372,7 +1408,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchMultipleKernelsIndirectCallbacksWhenCallingzeCommandListAppendLaunchMultipleKernelsIndirectThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendLaunchMultipleKernelsIndirectCb =
       lzt::lprologue_callback;
@@ -1400,7 +1436,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceCreateCallbacksWhenCallingzeFenceCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnCreateCb = lzt::lprologue_callback;
   epilogues.Fence.pfnCreateCb = lzt::lepilogue_callback;
@@ -1417,7 +1453,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceDestroyCallbacksWhenCallingzeFenceDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.Fence.pfnDestroyCb = lzt::lepilogue_callback;
@@ -1434,7 +1470,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceHostSynchronizeCallbacksWhenCallingzeFenceHostSynchronizeThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnHostSynchronizeCb = lzt::lprologue_callback;
   epilogues.Fence.pfnHostSynchronizeCb = lzt::lepilogue_callback;
@@ -1448,7 +1484,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceQueryStatusCallbacksWhenCallingzeFenceQueryStatusThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnQueryStatusCb = lzt::lprologue_callback;
   epilogues.Fence.pfnQueryStatusCb = lzt::lepilogue_callback;
@@ -1462,7 +1498,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceResetCallbacksWhenCallingzeFenceResetThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnResetCb = lzt::lprologue_callback;
   epilogues.Fence.pfnResetCb = lzt::lepilogue_callback;
@@ -1476,7 +1512,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolCreateCallbacksWhenCallingzeEventPoolCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.EventPool.pfnCreateCb = lzt::lprologue_callback;
   epilogues.EventPool.pfnCreateCb = lzt::lepilogue_callback;
@@ -1492,7 +1528,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolDestroyCallbacksWhenCallingzeEventPoolDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.EventPool.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.EventPool.pfnDestroyCb = lzt::lepilogue_callback;
@@ -1508,7 +1544,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventCreateCallbacksWhenCallingzeEventCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnCreateCb = lzt::lprologue_callback;
   epilogues.Event.pfnCreateCb = lzt::lepilogue_callback;
@@ -1523,7 +1559,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventDestroyCallbacksWhenCallingzeEventDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.Event.pfnDestroyCb = lzt::lepilogue_callback;
@@ -1539,7 +1575,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolGetIpcHandleCallbacksWhenCallingzeEventPoolGetIpcHandleThenUserDataIsSetAndResultUnchanged) {
   prologues.EventPool.pfnGetIpcHandleCb = lzt::lprologue_callback;
   epilogues.EventPool.pfnGetIpcHandleCb = lzt::lepilogue_callback;
@@ -1553,21 +1589,21 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolOpenIpcHandleCallbacksWhenCallingzeEventPoolOpenIpcHandleThenUserDataIsSetAndResultUnchanged) {
 
   run_ltracing_ipc_event_test("TEST_OPEN_IPC_EVENT");
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultUnchanged) {
 
   run_ltracing_ipc_event_test("TEST_CLOSE_IPC_EVENT");
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostSignalCallbacksWhenCallingzeEventHostSignalThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnHostSignalCb = lzt::lprologue_callback;
   epilogues.Event.pfnHostSignalCb = lzt::lepilogue_callback;
@@ -1581,7 +1617,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostSynchronizeCallbacksWhenCallingzeEventHostSynchronizeThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnHostSynchronizeCb = lzt::lprologue_callback;
   epilogues.Event.pfnHostSynchronizeCb = lzt::lepilogue_callback;
@@ -1595,7 +1631,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventQueryStatusCallbacksWhenCallingzeEventQueryStatusThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnQueryStatusCb = lzt::lprologue_callback;
   epilogues.Event.pfnQueryStatusCb = lzt::lepilogue_callback;
@@ -1609,7 +1645,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostResetCallbacksWhenCallingzeEventHostResetThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnHostResetCb = lzt::lprologue_callback;
   epilogues.Event.pfnHostResetCb = lzt::lepilogue_callback;
@@ -1623,7 +1659,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageCreateCallbacksWhenCallingzeImageCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Image.pfnCreateCb = lzt::lprologue_callback;
   epilogues.Image.pfnCreateCb = lzt::lepilogue_callback;
@@ -1636,7 +1672,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageGetPropertiesCallbacksWhenCallingzeImageGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Image.pfnGetPropertiesCb = lzt::lprologue_callback;
   epilogues.Image.pfnGetPropertiesCb = lzt::lepilogue_callback;
@@ -1650,7 +1686,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageDestroyCallbacksWhenCallingzeImageDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Image.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.Image.pfnDestroyCb = lzt::lepilogue_callback;
@@ -1670,7 +1706,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleCreateCallbacksWhenCallingzeModuleCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnCreateCb = lzt::lprologue_callback;
   epilogues.Module.pfnCreateCb = lzt::lepilogue_callback;
@@ -1686,7 +1722,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleDestroyCallbacksWhenCallingzeModuleDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.Module.pfnDestroyCb = lzt::lepilogue_callback;
@@ -1701,7 +1737,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetNativeBinaryCallbacksWhenCallingzeModuleGetNativeBinaryThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnGetNativeBinaryCb = lzt::lprologue_callback;
   epilogues.Module.pfnGetNativeBinaryCb = lzt::lepilogue_callback;
@@ -1720,7 +1756,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetGlobalPointerCallbacksWhenCallingzeModuleGetGlobalPointerThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnGetGlobalPointerCb = lzt::lprologue_callback;
   epilogues.Module.pfnGetGlobalPointerCb = lzt::lepilogue_callback;
@@ -1739,7 +1775,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetFunctionPointerCallbacksWhenCallingzeModuleGetFunctionPointerThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnGetFunctionPointerCb = lzt::lprologue_callback;
   epilogues.Module.pfnGetFunctionPointerCb = lzt::lepilogue_callback;
@@ -1758,7 +1794,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleBuildLogDestroyCallbacksWhenCallingzeModuleBuildLogDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.ModuleBuildLog.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.ModuleBuildLog.pfnDestroyCb = lzt::lepilogue_callback;
@@ -1776,7 +1812,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleBuildLogGetStringCallbacksWhenCallingzeModuleBuildLogGetStringThenUserDataIsSetAndResultUnchanged) {
   prologues.ModuleBuildLog.pfnGetStringCb = lzt::lprologue_callback;
   epilogues.ModuleBuildLog.pfnGetStringCb = lzt::lepilogue_callback;
@@ -1794,7 +1830,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelCreateCallbacksWhenCallingzeKernelCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnCreateCb = lzt::lprologue_callback;
   epilogues.Kernel.pfnCreateCb = lzt::lepilogue_callback;
@@ -1811,7 +1847,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelDestroyCallbacksWhenCallingzeKernelDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.Kernel.pfnDestroyCb = lzt::lepilogue_callback;
@@ -1827,7 +1863,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchKernelIndirectCallbacksWhenCallingzeCommandListAppendLaunchKernelIndirectThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendLaunchKernelIndirectCb =
       lzt::lprologue_callback;
@@ -1850,7 +1886,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSetGroupSizeCallbacksWhenCallingzeKernelSetGroupSizeThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnSetGroupSizeCb = lzt::lprologue_callback;
   epilogues.Kernel.pfnSetGroupSizeCb = lzt::lepilogue_callback;
@@ -1864,7 +1900,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSuggestGroupSizeCallbacksWhenCallingzeKernelSuggestGroupSizeThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnSuggestGroupSizeCb = lzt::lprologue_callback;
   epilogues.Kernel.pfnSuggestGroupSizeCb = lzt::lepilogue_callback;
@@ -1882,7 +1918,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSetArgumentValueCallbacksWhenCallingzeKernelSetArgumentValueThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnSetArgumentValueCb = lzt::lprologue_callback;
   epilogues.Kernel.pfnSetArgumentValueCb = lzt::lepilogue_callback;
@@ -1899,7 +1935,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelGetPropertiesCallbacksWhenCallingzeKernelGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnGetPropertiesCb = lzt::lprologue_callback;
   epilogues.Kernel.pfnGetPropertiesCb = lzt::lepilogue_callback;
@@ -1916,7 +1952,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeSamplerCreateCallbacksWhenCallingzeSamplerCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Sampler.pfnCreateCb = lzt::lprologue_callback;
   epilogues.Sampler.pfnCreateCb = lzt::lepilogue_callback;
@@ -1931,7 +1967,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingPrologueEpilogueTests,
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeSamplerDestroyCallbacksWhenCallingzeSamplerDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Sampler.pfnDestroyCb = lzt::lprologue_callback;
   epilogues.Sampler.pfnDestroyCb = lzt::lepilogue_callback;

@@ -87,8 +87,15 @@ protected:
   ze_callbacks_t epilogues = {};
 };
 
+#ifdef USE_RUNTIME_TRACING
+class LDynamicTracingThreadTests : public LTracingThreadTests {};
+#define LTRACING_THREAD_TEST_NAME LDynamicTracingThreadTests
+#else // USE Tracing ENV
+#define LTRACING_THREAD_TEST_NAME LTracingThreadTests
+#endif
+
 TEST_F(
-    LTracingThreadTests,
+    LTRACING_THREAD_TEST_NAME,
     GivenSingleTracingEnabledThreadWhenCallingDifferentAPIFunctionThenCallbacksCalledOnce) {
 
   std::thread child_thread(allocate_then_deallocate_device_memory);
@@ -103,7 +110,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingThreadTests,
+    LTRACING_THREAD_TEST_NAME,
     GivenSingleTracingEnabledThreadWhenCallingSameAPIFunctionThenCallbackCalledTwice) {
 
   std::thread child_thread(allocate_then_deallocate_device_memory);
@@ -133,7 +140,7 @@ void trace_memory_allocation_then_deallocate(ze_memory_type_t memory_type) {
 }
 
 TEST_F(
-    LTracingThreadTests,
+    LTRACING_THREAD_TEST_NAME,
     GivenTwoThreadsWhenTracingEnabledCallingDifferentAPIFunctionThenCallbackCalledOnce) {
 
   std::thread second_trace_thread(trace_memory_allocation_then_deallocate,
@@ -150,7 +157,7 @@ TEST_F(
 }
 
 TEST_F(
-    LTracingThreadTests,
+    LTRACING_THREAD_TEST_NAME,
     GivenTwoThreadsWhenTracingEnabledCallingSameAPIFunctionThenCallbacksCalledTwice) {
 
   std::thread second_child_thread(trace_memory_allocation_then_deallocate,
@@ -171,8 +178,15 @@ protected:
   void TearDown() override {}
 };
 
+#ifdef USE_RUNTIME_TRACING
+class LDynamicTracingThreadTestsDisabling : public LTracingThreadTestsDisabling {};
+#define LTRACING_THREAD_DISABLING_TEST_NAME LDynamicTracingThreadTestsDisabling
+#else // USE Tracing ENV
+#define LTRACING_THREAD_DISABLING_TEST_NAME LTracingThreadTestsDisabling
+#endif
+
 TEST_F(
-    LTracingThreadTestsDisabling,
+    LTRACING_THREAD_DISABLING_TEST_NAME,
     GivenInvokedPrologueWhenDisablingTracerInSeparateThreadThenEpilogueIsCalled) {
 
   std::thread child_thread(allocate_then_deallocate_device_memory);
