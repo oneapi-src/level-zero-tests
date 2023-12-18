@@ -11,7 +11,6 @@
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
-
 namespace lzt = level_zero_tests;
 
 #include <level_zero/zes_api.h>
@@ -163,9 +162,10 @@ TEST_F(
     }
   }
 }
+
 TEST_F(
     ENGINE_TEST,
-    GivenValidEngineHandleWhenRetrievingEngineActivityStatsThenTimestampWillbeIncrementedInNextCalltoEngineActivity) {
+    GivenValidEngineHandleWhenRetrievingEngineActivityOfPfAndVfsThenValidStatsIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto engine_handles = lzt::get_engine_handles(device, count);
@@ -176,9 +176,31 @@ TEST_F(
 
     for (auto engine_handle : engine_handles) {
       ASSERT_NE(nullptr, engine_handle);
-      auto oldstate = lzt::get_engine_activity(engine_handle);
-      auto newstate = lzt::get_engine_activity(engine_handle);
-      EXPECT_GT(newstate.timestamp, oldstate.timestamp);
+      uint32_t count = 0;
+      auto status = zesEngineGetActivityExt(engine_handle, &count, nullptr);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        GTEST_SKIP() << "zesEngineGetActivityExt Unsupported. May be not "
+                        "running in an environment with Virtual Functions"
+                     << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+      }
+      EXPECT_EQ(status, ZE_RESULT_SUCCESS);
+      EXPECT_NE(count, 0u);
+      std::vector<zes_engine_stats_t> engine_stats_list(count);
+      status = zesEngineGetActivityExt(engine_handle, &count,
+                                       engine_stats_list.data());
+      EXPECT_EQ(status, ZE_RESULT_SUCCESS);
+
+      zes_engine_properties_t engine_properties = {};
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zesEngineGetProperties(engine_handle, &engine_properties));
+      LOG_INFO << "| Engine Type = "
+               << static_cast<int32_t>(engine_properties.type);
+      for (uint32_t index = 0; index < engine_stats_list.size(); index++) {
+        const auto &engine_stats = engine_stats_list[index];
+        LOG_INFO << "[" << index << "]"
+                 << "| Active = " << engine_stats.activeTime
+                 << " | Ts = " << engine_stats.timestamp;
+      }
     }
   }
 }
@@ -269,10 +291,14 @@ TEST_F(
         // Get pre-workload utilization
         auto s1 = lzt::get_engine_activity(engine_handle);
         auto s2 = lzt::get_engine_activity(engine_handle);
-        double pre_utilization = (static_cast<double>(s2.activeTime) -
-                                  static_cast<double>(s1.activeTime)) /
-                                 (static_cast<double>(s2.timestamp) -
-                                  static_cast<double>(s1.timestamp));
+        double pre_utilization = 0.0;
+        if (s2.timestamp - s1.timestamp > 0) {
+          pre_utilization = (static_cast<double>(s2.activeTime) -
+                             static_cast<double>(s1.activeTime)) /
+                            (static_cast<double>(s2.timestamp) -
+                             static_cast<double>(s1.timestamp));
+        }
+
         // submit workload and measure  utilization
 #ifdef USE_ZESINIT
         auto sysman_device_properties =
@@ -290,12 +316,15 @@ TEST_F(
         thread.join();
         s2 = lzt::get_engine_activity(engine_handle);
 #endif // USE_ZESINIT
+        EXPECT_NE(s2.timestamp, s1.timestamp);
         double post_utilization = (static_cast<double>(s2.activeTime) -
                                    static_cast<double>(s1.activeTime)) /
                                   (static_cast<double>(s2.timestamp) -
-                                   static_cast<double>(s1.timestamp));
+                                   static_cast<double>(s1.timestamp));        
         // check if engine utilization increases with GPU workload
         EXPECT_LT(pre_utilization, post_utilization);
+        LOG_INFO << "pre_utilization: " << pre_utilization * 100 << "%"
+                 << " | post_utilization: " << post_utilization * 100 << "%";
       }
     }
   }
