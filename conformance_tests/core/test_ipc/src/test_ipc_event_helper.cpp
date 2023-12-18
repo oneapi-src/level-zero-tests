@@ -32,10 +32,6 @@ static const ze_event_desc_t defaultDeviceEventDesc = {
                                // after event signalled
 };
 
-ze_event_pool_desc_t defaultEventPoolDesc = {
-    ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
-    (ZE_EVENT_POOL_FLAG_HOST_VISIBLE | ZE_EVENT_POOL_FLAG_IPC), 10};
-
 static void child_host_reads(ze_event_pool_handle_t hEventPool) {
   ze_event_handle_t hEvent;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
@@ -114,6 +110,118 @@ static void child_multi_device_reads(ze_event_pool_handle_t hEventPool,
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
 }
 
+static void child_host_query_timestamp(const ze_event_pool_handle_t &hEventPool,
+                                       shared_data_t &shared_data,
+                                       bool mapped_timestamp) {
+
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
+
+  ze_event_handle_t hEvent;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
+
+  ze_kernel_timestamp_result_t tsResult;
+  if (mapped_timestamp) {
+    std::vector<ze_kernel_timestamp_result_t> kernel_timestamp_buffer{};
+    std::vector<ze_synchronized_timestamp_result_ext_t>
+        synchronized_timestamp_buffer{};
+    lzt::get_event_kernel_timestamps_from_mapped_timestamp_event(
+        hEvent, device, kernel_timestamp_buffer, synchronized_timestamp_buffer);
+
+    for (int i = 0; i < kernel_timestamp_buffer.size(); i++) {
+      if (!i) {
+        LOG_INFO << "IPC Child set timestamp value";
+        shared_data.start_time =
+            synchronized_timestamp_buffer[i].global.kernelStart;
+        shared_data.end_time =
+            synchronized_timestamp_buffer[i].global.kernelEnd;
+      }
+
+      EXPECT_GT(kernel_timestamp_buffer[i].global.kernelStart, 0);
+      EXPECT_GT(kernel_timestamp_buffer[i].global.kernelEnd, 0);
+      EXPECT_GT(kernel_timestamp_buffer[i].context.kernelStart, 0);
+      EXPECT_GT(kernel_timestamp_buffer[i].context.kernelEnd, 0);
+      EXPECT_GT(kernel_timestamp_buffer[i].context.kernelEnd,
+                kernel_timestamp_buffer[i].context.kernelStart);
+      EXPECT_GT(kernel_timestamp_buffer[i].global.kernelEnd,
+                kernel_timestamp_buffer[i].global.kernelStart);
+
+      EXPECT_GT(synchronized_timestamp_buffer[i].global.kernelStart, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[i].global.kernelEnd, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[i].context.kernelStart, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[i].context.kernelEnd, 0);
+      EXPECT_GT(synchronized_timestamp_buffer[i].context.kernelEnd,
+                synchronized_timestamp_buffer[i].context.kernelStart);
+      EXPECT_GT(synchronized_timestamp_buffer[i].global.kernelEnd,
+                synchronized_timestamp_buffer[i].global.kernelStart);
+    }
+  } else {
+    tsResult = lzt::get_event_kernel_timestamp(hEvent);
+
+    LOG_INFO << "IPC Child set timestamp value";
+    shared_data.start_time = tsResult.global.kernelStart;
+    shared_data.end_time = tsResult.global.kernelEnd;
+
+    EXPECT_GT(tsResult.global.kernelStart, 0);
+    EXPECT_GT(tsResult.global.kernelEnd, 0);
+    EXPECT_GT(tsResult.context.kernelStart, 0);
+    EXPECT_GT(tsResult.context.kernelEnd, 0);
+    EXPECT_GT(tsResult.context.kernelEnd, tsResult.context.kernelStart);
+    EXPECT_GT(tsResult.global.kernelEnd, tsResult.global.kernelStart);
+  }
+
+  // cleanup
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+}
+
+static void
+child_device_query_timestamp(const ze_event_pool_handle_t &hEventPool,
+                             bool device_events,
+                             const ze_context_handle_t &context,
+                             shared_data_t &shared_data, bool isImmediate) {
+
+  ze_event_handle_t hEvent;
+  if (device_events) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent));
+  } else {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  }
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_devices(driver)[0];
+  auto cmdbundle = lzt::create_command_bundle(context, device, isImmediate);
+
+  ze_kernel_timestamp_result_t *tsResult;
+  tsResult =
+      static_cast<ze_kernel_timestamp_result_t *>(lzt::allocate_host_memory(
+          sizeof(ze_kernel_timestamp_result_t), 1, context));
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendQueryKernelTimestamps(
+                                   cmdbundle.list, 1, &hEvent, tsResult,
+                                   nullptr, nullptr, 1, &hEvent));
+
+  lzt::close_command_list(cmdbundle.list);
+  lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
+
+  shared_data.start_time = tsResult->global.kernelStart;
+  shared_data.end_time = tsResult->global.kernelEnd;
+
+  EXPECT_GT(tsResult->global.kernelStart, 0);
+  EXPECT_GT(tsResult->global.kernelEnd, 0);
+  EXPECT_GT(tsResult->context.kernelStart, 0);
+  EXPECT_GT(tsResult->context.kernelEnd, 0);
+  EXPECT_GT(tsResult->context.kernelEnd, tsResult->context.kernelStart);
+  EXPECT_GT(tsResult->global.kernelEnd, tsResult->global.kernelStart);
+
+  // cleanup
+  lzt::free_memory(context, tsResult);
+  lzt::destroy_command_bundle(cmdbundle);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+}
+
 int main() {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -178,6 +286,16 @@ int main() {
     break;
   case CHILD_TEST_MULTI_DEVICE_READS:
     child_multi_device_reads(hEventPool, context, isImmediate);
+    break;
+  case CHILD_TEST_HOST_TIMESTAMP_READS:
+    child_host_query_timestamp(hEventPool, shared_data, false);
+    break;
+  case CHILD_TEST_DEVICE_TIMESTAMP_READS:
+    child_device_query_timestamp(hEventPool, device_events, context,
+                                 shared_data, isImmediate);
+    break;
+  case CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS:
+    child_host_query_timestamp(hEventPool, shared_data, true);
     break;
   default:
     LOG_DEBUG << "Unrecognized test case";

@@ -22,6 +22,8 @@ add_lzt_test(
     level_zero_tests::net
     ${ipc_libraries}
     ${ipc_rt_libraries}
+  KERNELS
+    ze_matrix_multiplication_ipc
 )
 
 add_lzt_test(
