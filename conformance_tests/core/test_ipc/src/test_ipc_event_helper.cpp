@@ -153,7 +153,6 @@ int main() {
         throw ex;
     }
   }
-  auto context = lzt::create_context(lzt::get_default_driver());
   shm.truncate(sizeof(shared_data_t));
   bipc::mapped_region region(shm, bipc::read_only);
   std::memcpy(&shared_data, region.get_address(), sizeof(shared_data_t));
@@ -164,7 +163,15 @@ int main() {
   memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));
 
-  const bool isImmediate = shared_data.is_immediate;
+  std::vector<ze_device_handle_t> devices;
+  if (shared_data.multi_device) {
+    devices = lzt::get_devices(lzt::get_default_driver());
+  } else {
+    ze_device_handle_t device =
+        lzt::get_default_device(lzt::get_default_driver());
+    devices.push_back(device);
+  }
+  auto context = lzt::create_context_ex(lzt::get_default_driver(), std::move(devices));
   ze_event_pool_handle_t hEventPool = 0;
   LOG_INFO << "IPC Child open event handle";
   lzt::open_ipc_event_handle(context, hIpcEventPool, &hEventPool);
@@ -179,6 +186,8 @@ int main() {
       shared_data.child_type == CHILD_TEST_DEVICE_READS) {
     device_events = true;
   }
+
+  const bool isImmediate = shared_data.is_immediate;
   LOG_INFO << "IPC Child open event handle success";
   switch (shared_data.child_type) {
 
