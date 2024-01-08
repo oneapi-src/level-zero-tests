@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022-2023 Intel Corporation
+ * Copyright (C) 2022-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -26,6 +26,8 @@ int main(int argc, char **argv) {
 #else  // USE_ZESINIT
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
+  static char device_hierachy_env[] = "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE";
+  putenv(device_hierachy_env);
 
   auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
   if (is_sysman_enabled == nullptr) {
