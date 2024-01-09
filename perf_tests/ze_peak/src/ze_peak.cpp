@@ -565,7 +565,7 @@ void L0Context::clean_xe() {
                              std::to_string(result));
   }
   if (verbose)
-    std::cout << "Context destroyed";
+    std::cout << "Context destroyed\n";
 }
 
 //---------------------------------------------------------------------
@@ -898,6 +898,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
             synchronize_command_queue(context);
             current_sub_device_id++;
           }
+          current_sub_device_id = 0;
         }
       } else {
         synchronize_command_queue(context);
@@ -915,6 +916,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
             synchronize_command_queue(context);
             current_sub_device_id++;
           }
+          current_sub_device_id = 0;
         }
       } else {
         synchronize_command_queue(context);
@@ -1069,6 +1071,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
             synchronize_command_queue(context);
             current_sub_device_id++;
           }
+          current_sub_device_id = 0;
         }
       } else {
         synchronize_command_queue(context);
@@ -1299,6 +1302,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
           synchronize_command_queue(context);
           current_sub_device_id++;
         }
+        current_sub_device_id = 0;
       }
     } else {
       synchronize_command_queue(context);
@@ -1480,6 +1484,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
           synchronize_command_queue(context);
           current_sub_device_id++;
         }
+        current_sub_device_id = 0;
       }
     } else {
       synchronize_command_queue(context);
