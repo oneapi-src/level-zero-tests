@@ -898,7 +898,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
             synchronize_command_queue(context);
             current_sub_device_id++;
           }
-          current_sub_device_id = 0;
+          current_sub_device_id = context.sub_device_count - 1;
         }
       } else {
         synchronize_command_queue(context);
@@ -916,7 +916,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
             synchronize_command_queue(context);
             current_sub_device_id++;
           }
-          current_sub_device_id = 0;
+          current_sub_device_id = context.sub_device_count - 1;
         }
       } else {
         synchronize_command_queue(context);
@@ -1071,7 +1071,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
             synchronize_command_queue(context);
             current_sub_device_id++;
           }
-          current_sub_device_id = 0;
+          current_sub_device_id = context.sub_device_count - 1;
         }
       } else {
         synchronize_command_queue(context);
@@ -1302,7 +1302,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
           synchronize_command_queue(context);
           current_sub_device_id++;
         }
-        current_sub_device_id = 0;
+        current_sub_device_id = context.sub_device_count - 1;
       }
     } else {
       synchronize_command_queue(context);
@@ -1484,7 +1484,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
           synchronize_command_queue(context);
           current_sub_device_id++;
         }
-        current_sub_device_id = 0;
+        current_sub_device_id = context.sub_device_count - 1;
       }
     } else {
       synchronize_command_queue(context);
@@ -1595,7 +1595,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
   if (reset_command_list) {
     if (context.sub_device_count) {
-      if (context.sub_device_count == current_sub_device_id) {
+      if (context.sub_device_count == current_sub_device_id + 1) {
         current_sub_device_id = 0;
         while (current_sub_device_id < context.sub_device_count) {
           context.reset_commandlist(context.cmd_list[current_sub_device_id]);
