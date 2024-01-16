@@ -811,6 +811,7 @@ protected:
     eventPoolDesc.count = 10;
 
     ze_event_pool_counter_based_exp_desc_t counterBasedExtension = {ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
+    counterBasedExtension.flags = ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_NON_IMMEDIATE;
     eventPoolDesc.pNext = &counterBasedExtension;
     ep.InitEventPool(eventPoolDesc);
     ep.create_event(event0, ZE_EVENT_SCOPE_FLAG_HOST, 0);
@@ -916,6 +917,7 @@ static void RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmd
     }
     lzt::close_command_list(cmdlist[n]);
     lzt::execute_command_lists(cmdqueue[n], 1, &cmdlist[n], nullptr);
+    lzt::synchronize(cmdqueue[n], UINT64_MAX);
   }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event, timeout));
