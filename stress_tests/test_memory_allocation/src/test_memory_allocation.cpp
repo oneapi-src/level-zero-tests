@@ -143,7 +143,8 @@ TEST_P(
   std::vector<ze_device_memory_properties_t> device_memory_properties =
       lzt::get_memory_properties(device);
 
-  const uint32_t used_vectors_in_test = 3;
+  const uint32_t used_vectors_in_test =
+      test_arguments.memory_type == ZE_MEMORY_TYPE_DEVICE ? 4 : 3;
   uint32_t number_of_dispatches = test_arguments.multiplier;
   uint64_t number_of_all_allocations =
       used_vectors_in_test * number_of_dispatches;
