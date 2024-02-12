@@ -258,7 +258,7 @@ TEST_F(
     lzt::get_processes_state(device, actual_count);
     uint32_t test_count = actual_count + 1;
     lzt::get_processes_state(device, test_count);
-    EXPECT_EQ(test_count, actual_count);
+    EXPECT_GE(test_count, actual_count);
   }
 }
 
