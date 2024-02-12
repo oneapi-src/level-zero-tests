@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023 Intel Corporation
+ * Copyright (C) 2023-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -20,6 +20,7 @@
 #include "test_ipc_put_handle.hpp"
 #include "net/test_ipc_comm.hpp"
 
+#include <thread>
 #include <level_zero/ze_api.h>
 
 namespace {
@@ -474,6 +475,59 @@ TEST_F(
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
+}
+
+TEST(
+    zePutIpcMemHandleMultiThreadedTests,
+    GivenMultipleThreadsWhenGettingAndPuttingIpcHandlesThenOperationsAreSuccessful) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+
+  auto ipc_flags = lzt::get_ipc_properties(lzt::get_default_driver()).flags;
+  if ((ipc_flags & ZE_IPC_PROPERTY_FLAG_MEMORY) == 0) {
+    GTEST_SKIP() << "Driver does not support memory IPC";
+  }
+
+  constexpr int n_threads = 8;
+  auto context = lzt::create_context();
+  void *buf_h = lzt::allocate_host_memory(1, 1, context);
+  void *buf_d = lzt::allocate_device_memory(1, 0, 0, context);
+
+  auto thread_func = [](ze_context_handle_t context, void *buf_h, void *buf_d,
+                        int thread_id) {
+    constexpr int n_iters = 2000;
+
+    for (int i = 0; i < n_iters; i++) {
+      const int n_handles = 450 - thread_id;
+      std::vector<ze_ipc_mem_handle_t> handles(n_handles);
+      for (auto &handle : handles) {
+        std::fill_n(handle.data, ZE_MAX_IPC_HANDLE_SIZE, 0);
+      }
+
+      for (int j = 0; j < n_handles; j++) {
+        if ((j + thread_id) % 2 == 0) {
+          lzt::get_ipc_handle(context, &handles[j], buf_h);
+        } else {
+          lzt::get_ipc_handle(context, &handles[j], buf_d);
+        }
+      }
+
+      for (auto &handle : handles) {
+        lzt::put_ipc_handle(context, handle);
+      }
+    }
+  };
+
+  std::vector<std::thread> threads;
+  for (int i = 0; i < n_threads; i++) {
+    threads.emplace_back(std::thread(thread_func, context, buf_h, buf_d, i));
+  }
+  for (auto &thread : threads) {
+    thread.join();
+  }
+
+  lzt::free_memory(context, buf_d);
+  lzt::free_memory(context, buf_h);
+  lzt::destroy_context(context);
 }
 
 } // namespace
