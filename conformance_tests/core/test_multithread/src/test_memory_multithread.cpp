@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -236,7 +236,7 @@ void perform_memory_manipulation() {
     lzt::append_memory_copy(cmd_list, host_mem, dev_mem, xfer_size, nullptr);
     lzt::close_command_list(cmd_list);
     lzt::execute_command_lists(cq, 1, &cmd_list, nullptr);
-    lzt::synchronize(cq, UINT32_MAX);
+    lzt::synchronize(cq, UINT64_MAX);
     lzt::event_host_synchronize(event_barrier_to_host, UINT32_MAX - 1);
     lzt::query_event(event_barrier_to_host);
 
