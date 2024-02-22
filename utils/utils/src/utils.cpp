@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -76,21 +76,19 @@ zes_driver_handle_t get_default_zes_driver() {
 }
 
 ze_context_handle_t get_default_context() {
-  ze_result_t result = ZE_RESULT_SUCCESS;
-
+  static std::once_flag contextInitializedFlag = {};
   static ze_context_handle_t context = nullptr;
 
-  if (context) {
-    return context;
-  }
+  std::call_once(contextInitializedFlag, [&]() {
+    ze_result_t result = ZE_RESULT_SUCCESS;
+    ze_context_desc_t context_desc = {};
+    context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+    result = zeContextCreate(get_default_driver(), &context_desc, &context);
 
-  ze_context_desc_t context_desc = {};
-  context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
-  result = zeContextCreate(get_default_driver(), &context_desc, &context);
-
-  if (ZE_RESULT_SUCCESS != result) {
-    throw std::runtime_error("zeContextCreate failed: " + to_string(result));
-  }
+    if (ZE_RESULT_SUCCESS != result) {
+      throw std::runtime_error("zeContextCreate failed: " + to_string(result));
+    }
+  });
 
   return context;
 }
