@@ -477,7 +477,8 @@ TEST_P(zeImageGetAllocPropertiesExtTests,
   default: { EXPECT_TRUE(false); } break;
   }
 
-  ze_device_image_properties_t device_img_properties;
+  ze_device_image_properties_t device_img_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetImageProperties(device, &device_img_properties));
 
@@ -595,7 +596,8 @@ TEST_P(
   default: { EXPECT_TRUE(false); } break;
   }
 
-  ze_device_image_properties_t device_img_properties;
+  ze_device_image_properties_t device_img_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetImageProperties(device, &device_img_properties));
 
