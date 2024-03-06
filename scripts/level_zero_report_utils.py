@@ -144,6 +144,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeDeviceGetMemoryPropertiesTests_GivenValidDeviceWhenRetrievingMemoryPropertiesThenValidExtPropertiesAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelCreateTests_GivenValidFunctionWhenGettingSourceAttributeThenReturnAttributeString', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelGetNameTests_GivenKernelGetNameCorrectNameIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeKernelMaxGroupSize_GivenKernelGetMaxGroupSize', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeModuleCreateTests_GivenModuleGetPropertiesReturnsValidNonZeroProperties', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDriverAllocSharedMemTestVarySizeAndAlignment_zeDriverAllocSharedMemAlignmentTests_GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeEventSignalScopeParameterizedTest_zeEventSignalScopeTests_GivenDifferentEventSignalScopeFlagsThenAppendSignalEventIsSuccessful', test_name, re.IGNORECASE)) or \
