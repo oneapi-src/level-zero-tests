@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022-2023 Intel Corporation
+ * Copyright (C) 2022-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -11,14 +11,11 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
-#include <unordered_map>
 
 #include <boost/filesystem.hpp>
 
 namespace fs = boost::filesystem;
 namespace bp = boost::process;
-
-namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 
@@ -428,10 +425,10 @@ TEST(zeFabricEdgeGetTests,
                   property.bandwidthUnit == ZE_BANDWIDTH_UNIT_BYTES_PER_CLOCK);
     }
 
-    EXPECT_TRUE(property.latency == ZE_LATENCY_UNIT_NANOSEC ||
-                property.latency == ZE_LATENCY_UNIT_CLOCK ||
-                property.latency == ZE_LATENCY_UNIT_HOP ||
-                property.latency == ZE_LATENCY_UNIT_UNKNOWN);
+    EXPECT_TRUE(property.latencyUnit == ZE_LATENCY_UNIT_NANOSEC ||
+                property.latencyUnit == ZE_LATENCY_UNIT_CLOCK ||
+                property.latencyUnit == ZE_LATENCY_UNIT_HOP ||
+                property.latencyUnit == ZE_LATENCY_UNIT_UNKNOWN);
     EXPECT_TRUE(property.duplexity ==
                     ZE_FABRIC_EDGE_EXP_DUPLEXITY_HALF_DUPLEX ||
                 property.duplexity == ZE_FABRIC_EDGE_EXP_DUPLEXITY_FULL_DUPLEX);
@@ -584,24 +581,53 @@ TEST(
 
 static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
                                       ze_fabric_vertex_handle_t &vertex_b,
-                                      uint32_t copy_size, bool is_immediate) {
+                                      uint32_t copy_size,
+                                      ze_memory_type_t usm_type,
+                                      bool is_immediate) {
 
   ze_device_handle_t device_a{}, device_b{};
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeFabricVertexGetDeviceExp(vertex_a, &device_a));
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeFabricVertexGetDeviceExp(vertex_b, &device_b));
   ASSERT_TRUE(lzt::can_access_peer(device_a, device_b));
-  LOG_DEBUG << "Copy memory from (vertex: " << vertex_a
-            << " device: " << device_a
-            << ")"
-               " to (vertex: "
-            << vertex_b << " device: " << device_b << ")" << std::endl;
+  ASSERT_TRUE(lzt::get_p2p_properties(device_a, device_b).flags &
+              ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS);
+  if (usm_type == ZE_MEMORY_TYPE_SHARED) {
+    const auto mem_access_caps_a = lzt::get_memory_access_properties(device_a);
+    const auto mem_access_caps_b = lzt::get_memory_access_properties(device_b);
+    if ((mem_access_caps_a.sharedCrossDeviceAllocCapabilities &
+         mem_access_caps_b.sharedCrossDeviceAllocCapabilities &
+         ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
+      GTEST_SKIP()
+          << "Cross-device access of shared USM buffers is unsupported";
+    }
+  }
+  LOG_INFO << "Copy memory from (vertex: " << vertex_a
+           << " device: " << device_a << ") to (vertex: " << vertex_b
+           << " device: " << device_b << ")" << std::endl;
 
   auto cmd_bundle_a = lzt::create_command_bundle(device_a, is_immediate);
   auto cmd_bundle_b = lzt::create_command_bundle(device_b, is_immediate);
 
   const size_t size = copy_size;
-  auto memory_a = lzt::allocate_shared_memory(size, device_a);
-  auto memory_b = lzt::allocate_shared_memory(size, device_b);
+  void *memory_a = nullptr;
+  void *memory_b = nullptr;
+  void *memory_c = nullptr;
+  if (usm_type == ZE_MEMORY_TYPE_DEVICE) {
+    memory_a = lzt::allocate_device_memory(size, 1, 0, device_a,
+                                           lzt::get_default_context());
+    memory_b = lzt::allocate_device_memory(size, 1, 0, device_b,
+                                           lzt::get_default_context());
+    memory_c = lzt::allocate_host_memory(size, 1, lzt::get_default_context());
+  } else if (usm_type == ZE_MEMORY_TYPE_SHARED) {
+    // Pass nullptr as device handle instead of device_a & device_b
+    memory_a = lzt::allocate_shared_memory(size, 1, 0, 0, nullptr,
+                                           lzt::get_default_context());
+    memory_b = lzt::allocate_shared_memory(size, 1, 0, 0, nullptr,
+                                           lzt::get_default_context());
+    memory_c = memory_b;
+  } else {
+    FAIL() << "Unknown memory type";
+  }
   uint8_t pattern_a = 0xAB;
   uint8_t pattern_b = 0xFF;
   const int pattern_size = 1;
@@ -609,39 +635,49 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
   // Fill with default pattern for both devices
   lzt::append_memory_fill(cmd_bundle_a.list, memory_a, &pattern_a, pattern_size,
                           size, nullptr);
-  lzt::append_barrier(cmd_bundle_a.list, nullptr, 0, nullptr);
   lzt::close_command_list(cmd_bundle_a.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_a, UINT64_MAX);
   lzt::reset_command_list(cmd_bundle_a.list);
 
   lzt::append_memory_fill(cmd_bundle_b.list, memory_b, &pattern_b, pattern_size,
                           size, nullptr);
-  lzt::append_barrier(cmd_bundle_b.list, nullptr, 0, nullptr);
   lzt::close_command_list(cmd_bundle_b.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_b, UINT64_MAX);
   lzt::reset_command_list(cmd_bundle_b.list);
 
   // Do memory copy between devices
   lzt::append_memory_copy(cmd_bundle_a.list, memory_b, memory_a, size);
-  lzt::append_barrier(cmd_bundle_a.list, nullptr, 0, nullptr);
   lzt::close_command_list(cmd_bundle_a.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_a, UINT64_MAX);
 
+  // If using device USM, copy to the host to verify
+  if (usm_type == ZE_MEMORY_TYPE_DEVICE) {
+    lzt::append_memory_copy(cmd_bundle_b.list, memory_c, memory_b, size);
+    lzt::close_command_list(cmd_bundle_b.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle_b, UINT64_MAX);
+  }
+
   for (uint32_t i = 0; i < size; i++) {
-    EXPECT_EQ(static_cast<uint8_t *>(memory_b)[i], pattern_a)
+    EXPECT_EQ(static_cast<uint8_t *>(memory_c)[i], pattern_a)
         << "Memory Fill did not match.";
+    if (::testing::Test::HasFailure()) {
+      break;
+    }
   }
 
   lzt::free_memory(memory_a);
-  lzt::destroy_command_bundle(cmd_bundle_a);
-
   lzt::free_memory(memory_b);
+  if (usm_type == ZE_MEMORY_TYPE_DEVICE) {
+    lzt::free_memory(memory_c);
+  }
+  lzt::destroy_command_bundle(cmd_bundle_a);
   lzt::destroy_command_bundle(cmd_bundle_b);
 }
 
 class zeFabricEdgeCopyTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<uint32_t, bool>> {};
+      public ::testing::WithParamInterface<
+          std::tuple<uint32_t, ze_memory_type_t, bool>> {};
 
 TEST_P(zeFabricEdgeCopyTests,
        GivenValidFabricEdgesThenCopyIsSuccessfulBetweenThem) {
@@ -654,14 +690,16 @@ TEST_P(zeFabricEdgeCopyTests,
 
   uint32_t copy_size = std::get<0>(GetParam());
   LOG_DEBUG << "Test Copy Size " << copy_size;
-  bool is_immediate = std::get<1>(GetParam());
+  ze_memory_type_t usm_type = std::get<1>(GetParam());
+  bool is_immediate = std::get<2>(GetParam());
 
   for (auto &edge : edges) {
     ze_fabric_vertex_handle_t vertex_a = nullptr, vertex_b = nullptr;
     ASSERT_EQ(ZE_RESULT_SUCCESS,
               zeFabricEdgeGetVerticesExp(edge, &vertex_a, &vertex_b));
 
-    fabric_vertex_copy_memory(vertex_a, vertex_b, copy_size, is_immediate);
+    fabric_vertex_copy_memory(vertex_a, vertex_b, copy_size, usm_type,
+                              is_immediate);
   }
 }
 
@@ -669,6 +707,8 @@ INSTANTIATE_TEST_SUITE_P(
     zeFabricEdgeCopyTestAlignedAllocations, zeFabricEdgeCopyTests,
     ::testing::Combine(::testing::Values(1024u * 1024u, 64u * 1024u, 8u * 1024u,
                                          1u * 1024u, 64u, 1u),
+                       ::testing::Values(ZE_MEMORY_TYPE_DEVICE,
+                                         ZE_MEMORY_TYPE_SHARED),
                        ::testing::Bool()));
 
 } // namespace
