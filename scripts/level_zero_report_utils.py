@@ -183,6 +183,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenOutOfOrderRegularCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEvent', test_name, re.IGNORECASE)) or \
                     (re.search('GivenOutOfOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEvent', test_name, re.IGNORECASE)) or \
                     (re.search('GivenInOrderMixedCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution', test_name, re.IGNORECASE)) or \
+                    (re.search('zeCheckMiscFunctionsTestsInstantiate_zeCheckMiscFunctionsTests_GivenFunctionInKernelWhenLaunchingKernelsThenFunctionWorksCorrectly', test_name, re.IGNORECASE)) or \
                     re.search('fabric', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
             else:

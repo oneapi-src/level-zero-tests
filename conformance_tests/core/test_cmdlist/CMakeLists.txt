@@ -1,4 +1,4 @@
-# Copyright (C) 2019 Intel Corporation
+# Copyright (C) 2019-2023 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 add_lzt_test(
@@ -8,6 +8,7 @@ add_lzt_test(
     src/test_cmdlist.cpp
     src/test_cmdlist_immediate.cpp
     src/test_cmdlist_mixed.cpp
+    src/test_cmdlist_and_functions.cpp
     src/main.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
