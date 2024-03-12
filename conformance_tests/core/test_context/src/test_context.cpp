@@ -43,8 +43,11 @@ protected:
       lzt::close_command_list(bundle.list);
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
-      ASSERT_EQ(memcmp(ref_buffer, buffer, buff_size), 0);
+      EXPECT_EQ(memcmp(ref_buffer, buffer, buff_size), 0);
       lzt::destroy_command_bundle(bundle);
+      if (::testing::Test::HasFailure()) {
+        break;
+      }
     }
 
     lzt::free_memory(context, buffer);

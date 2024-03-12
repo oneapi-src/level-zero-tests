@@ -160,6 +160,7 @@ public:
       LOG_DEBUG
           << "Only one device is active, so just return without performing "
              "peer2peer access";
+      level_zero_tests::free_driver_info(driver_info, driver_count);
       GTEST_SKIP();
     }
     // For each combination of memory, iterate through all the valid devices

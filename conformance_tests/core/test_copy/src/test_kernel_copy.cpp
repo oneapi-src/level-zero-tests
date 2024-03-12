@@ -560,8 +560,12 @@ protected:
     }
 
     for (int i = 0; i < size; i++) {
-      ASSERT_EQ(0, memcmp(input_data[i].data, output_data[i].data + offset,
+      EXPECT_EQ(0, memcmp(input_data[i].data, output_data[i].data + offset,
                           (size - offset) * sizeof(uint32_t)));
+      // break to cleanup
+      if (::testing::Test::HasFailure) {
+        break;
+      }
     }
 
     // cleanup

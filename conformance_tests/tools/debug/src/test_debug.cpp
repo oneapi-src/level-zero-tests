@@ -1257,6 +1257,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     std::vector<ze_device_thread_t> stopped_threads;
     if (!find_stopped_threads(debugSession, device, device_threads, true,
                               stopped_threads)) {
+      delete[] kernel_buffer;
       FAIL() << "[Debugger] Did not find stopped threads";
     }
 

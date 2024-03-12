@@ -37,6 +37,10 @@ void get_ze_root_uuids(std::vector<ze_device_handle_t> ze_devices,
       }
     } else if (strcmp(device_hierarchy, "COMPOSITE") == 0) {
       ze_root_device = ze_device;
+    } else {
+      LOG_WARNING << "Unhandled ZE_FLAT_DEVICE_HIERARCHY mode:"
+                  << device_hierarchy;
+      continue;
     }
     auto root_device_properties = lzt::get_device_properties(ze_root_device);
     auto root_uuid = root_device_properties.uuid;
