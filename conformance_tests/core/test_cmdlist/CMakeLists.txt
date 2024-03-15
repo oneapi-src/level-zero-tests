@@ -17,6 +17,7 @@ add_lzt_test(
     cmdlist_add
     cmdlist_scratch
     cmdlist_verify
+    cmdlist_and_functions
   MEDIA
     "png/test_input.png"
 )
