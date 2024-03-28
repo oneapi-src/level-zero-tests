@@ -395,6 +395,56 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
+    GivenValidDeviceWhenRetrievingProcessesStateAndDeviceMemoryIsAllocatedThenMemorySizeIsReturnedCorrectly) {
+
+  constexpr size_t sampleMemorySize = 512;
+
+  for (auto device : devices) {
+    uint32_t count = 0;
+    uint64_t preAllocDeviceMemorySize = 0;
+    uint64_t postAllocDeviceMemorySize = 0;
+    uint64_t postFreeDeviceMemorySize = 0;
+
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+#endif
+
+    auto processes = lzt::get_processes_state(device, count);
+    for (auto process : processes) {
+      preAllocDeviceMemorySize += process.memSize;
+    }
+    processes.clear();
+
+#ifdef USE_ZESINIT
+    void *ptr = lzt::allocate_device_memory(sampleMemorySize, 1, 0, core_device,
+                                            lzt::get_default_context());
+#else  // USE_ZESINIT
+    void *ptr = lzt::allocate_device_memory(sampleMemorySize);
+#endif // USE_ZESINIT
+
+    processes = lzt::get_processes_state(device, count);
+    for (auto process : processes) {
+      postAllocDeviceMemorySize += process.memSize;
+    }
+    processes.clear();
+    EXPECT_GT(postAllocDeviceMemorySize, preAllocDeviceMemorySize);
+    lzt::free_memory(ptr);
+
+    processes = lzt::get_processes_state(device, count);
+    for (auto process : processes) {
+      postFreeDeviceMemorySize += process.memSize;
+    }
+    processes.clear();
+    EXPECT_LT(postFreeDeviceMemorySize, postAllocDeviceMemorySize);
+    EXPECT_EQ(preAllocDeviceMemorySize, postFreeDeviceMemorySize);
+  }
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
     GivenWorkingDeviceHandleWhenResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterReset) {
   uint32_t n = 512;
   std::vector<float> a(n * n, 1);
