@@ -99,7 +99,7 @@ TEST(
 
 TEST(
     zeDeviceP2PBandwidthExpProperties,
-    GivenValidDevicesWhenRetrievingP2PBandwidthPropertiesThenValidPropertiesAreReturned) {
+    GivenMultipleDevicesWhenRetrievingP2PBandwidthPropertiesThenValidPropertiesAreReturned) {
   auto drivers = lzt::get_all_driver_handles();
   ASSERT_GT(drivers.size(), 0);
   std::vector<ze_device_handle_t> devices;

@@ -354,7 +354,7 @@ TEST(
 }
 
 TEST(zeDeviceCanAccessPeerTests,
-     GivenValidDevicesWhenRetrievingCanAccessPropertyThenCapabilityIsReturned) {
+     GivenTwoDevicesWhenRetrievingCanAccessPropertyThenCapabilityIsReturned) {
   auto drivers = lzt::get_all_driver_handles();
   ASSERT_GT(drivers.size(), 0)
       << "no drivers found for peer to peer device test";
