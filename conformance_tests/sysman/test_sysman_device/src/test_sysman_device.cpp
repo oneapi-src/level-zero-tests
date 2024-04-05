@@ -24,6 +24,13 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+struct workload_thread_parameters {
+  ze_device_handle_t device;
+  std::mutex device_mutex;
+  std::condition_variable condition;
+  bool get_process_state_flag;
+};
+
 uint32_t get_prop_length(char prop[ZES_STRING_PROPERTY_SIZE]) {
   uint32_t length = 0;
   for (int i = 0; i < ZES_STRING_PROPERTY_SIZE; i++) {
@@ -393,6 +400,71 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
 }
 #endif // USE_ZESINIT
 
+void compute_workload(workload_thread_parameters *t_params) {
+
+  int m, k, n;
+  m = k = n = 512;
+  uint32_t count = 0;
+  std::vector<float> a(m * k, 1);
+  std::vector<float> b(k * n, 1);
+  std::vector<float> c(m * n, 0);
+
+  ze_device_handle_t device = t_params->device;
+  void *a_buffer = lzt::allocate_device_memory(
+      m * k * sizeof(float), 1, 0, device, lzt::get_default_context());
+  void *b_buffer = lzt::allocate_device_memory(
+      k * n * sizeof(float), 1, 0, device, lzt::get_default_context());
+  void *c_buffer = lzt::allocate_device_memory(
+      m * n * sizeof(float), 1, 0, device, lzt::get_default_context());
+  ze_module_handle_t module =
+      lzt::create_module(device, "sysman_matrix_multiplication.spv",
+                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_kernel_handle_t function =
+      lzt::create_function(module, "sysman_matrix_multiplication");
+  lzt::set_group_size(function, 16, 16, 1);
+  lzt::set_argument_value(function, 0, sizeof(a_buffer), &a_buffer);
+  lzt::set_argument_value(function, 1, sizeof(b_buffer), &b_buffer);
+  lzt::set_argument_value(function, 2, sizeof(m), &m);
+  lzt::set_argument_value(function, 3, sizeof(k), &k);
+  lzt::set_argument_value(function, 4, sizeof(n), &n);
+  lzt::set_argument_value(function, 5, sizeof(c_buffer), &c_buffer);
+  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
+  lzt::append_memory_copy(cmd_list, a_buffer, a.data(), lzt::size_in_bytes(a),
+                          nullptr);
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::append_memory_copy(cmd_list, b_buffer, b.data(), lzt::size_in_bytes(b),
+                          nullptr);
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+
+  const int group_count_x = m / 16;
+  const int group_count_y = n / 16;
+  ze_group_count_t tg;
+  tg.groupCountX = group_count_x;
+  tg.groupCountY = group_count_y;
+  tg.groupCountZ = 1;
+
+  zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+
+  uint32_t number_iterations = 100;
+  while (number_iterations--) {
+    lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
+    lzt::synchronize(cmd_q, UINT64_MAX);
+    t_params->get_process_state_flag = true;
+    t_params->condition.notify_one();
+  }
+
+  lzt::destroy_command_queue(cmd_q);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_function(function);
+  lzt::free_memory(a_buffer);
+  lzt::free_memory(b_buffer);
+  lzt::free_memory(c_buffer);
+  lzt::destroy_module(module);
+}
+
 TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingProcessesStateAndDeviceMemoryIsAllocatedThenMemorySizeIsReturnedCorrectly) {
@@ -440,6 +512,46 @@ TEST_F(
     processes.clear();
     EXPECT_LT(postFreeDeviceMemorySize, postAllocDeviceMemorySize);
     EXPECT_EQ(preAllocDeviceMemorySize, postFreeDeviceMemorySize);
+  }
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenValidDeviceWhenRetrievingProcessesStateAndComputeWorkloadIsExecutedThenEngineTypeUsedByProcessIsCorrect) {
+
+  for (auto device : devices) {
+
+    workload_thread_parameters t_params;
+    t_params.get_process_state_flag = false;
+
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    t_params.device = core_device;
+    std::thread thread(compute_workload, &t_params);
+#else  // USE_ZESINIT
+    t_params.device = device;
+    std::thread thread(compute_workload, &t_params);
+#endif // USE_ZESINIT
+
+    uint32_t count = 0;
+    std::unique_lock<std::mutex> locker(t_params.device_mutex);
+    t_params.condition.wait(locker,
+                            [&] { return t_params.get_process_state_flag; });
+
+    uint32_t engine_type = 0;
+    while (engine_type != ZES_ENGINE_TYPE_FLAG_COMPUTE) {
+      auto processes = lzt::get_processes_state(device, count);
+      for (auto process : processes) {
+        engine_type = process.engines;
+      }
+      processes.clear();
+    }
+
+    thread.join();
+    EXPECT_EQ(engine_type, ZES_ENGINE_TYPE_FLAG_COMPUTE);
   }
 }
 
