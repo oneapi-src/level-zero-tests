@@ -7,6 +7,11 @@ set(ipc_libraries
   Boost::system
 )
 
+option(ENABLE_RUNTIME_TRACING "Enable runtime tracing" ON)
+if(ENABLE_RUNTIME_TRACING)
+  set(defines_runtime_tracing USE_RUNTIME_TRACING)
+endif()
+
 if(UNIX)
     list(APPEND ipc_event_libraries rt)
 endif()
@@ -37,7 +42,7 @@ add_lzt_test(
     ${ipc_libraries}
     ${ipc_event_libraries}
     level_zero_tests::net
-  DEFINES USE_RUNTIME_TRACING
+  DEFINES ${defines_runtime_tracing}
 )
 
 add_lzt_test_executable(
@@ -62,7 +67,7 @@ add_lzt_test_executable(
     ${ipc_libraries}
     ${ipc_event_libraries}
     level_zero_tests::net
-  DEFINES USE_RUNTIME_TRACING
+  DEFINES ${defines_runtime_tracing}
 )
 
 add_lzt_test_executable(
@@ -87,5 +92,5 @@ add_lzt_test_executable(
     ${ipc_libraries}
     ${ipc_event_libraries}
     level_zero_tests::net
-  DEFINES USE_RUNTIME_TRACING
+  DEFINES ${defines_runtime_tracing}
 )

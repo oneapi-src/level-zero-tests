@@ -32,6 +32,9 @@ cd boost
 ### Dependencies
 
 The HEAD of this repo is compatible with the latest Level Zero Loader release. Please report incompatibilities at https://github.com/oneapi-src/level-zero-tests/issues.
+
+To build against loader releases prior to [v1.15.7](https://github.com/oneapi-src/level-zero/releases/tag/v1.15.7), add the cmake flag `-DENABLE_RUNTIME_TRACING=OFF`.
+
 You can either build against the version you have installed on your system (automatic, Linux only), 
 or specify an install prefix with the `CMAKE_PREFIX_PATH` cmake flag during configuration.
 This `CMAKE_PREFIX_PATH` must point to the top-level install directory where level-zero was installed.
