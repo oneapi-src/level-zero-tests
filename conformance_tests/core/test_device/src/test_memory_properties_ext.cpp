@@ -117,8 +117,9 @@ TEST(
     GTEST_SKIP();
   }
 
+  ze_device_p2p_bandwidth_exp_properties_t P2PBandwidthProps = {};
+  P2PBandwidthProps.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_BANDWIDTH_EXP_PROPERTIES;
   ze_device_p2p_properties_t P2PProps = {};
-  ze_device_p2p_bandwidth_exp_properties_t P2PBandwidthProps;
   P2PProps.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
   P2PProps.pNext = &P2PBandwidthProps;
 
