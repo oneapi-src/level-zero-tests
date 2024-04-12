@@ -3,35 +3,37 @@
 ## Dependencies
 
 ### Linux Dependencies
-Requires the `level-zero`, `level-zero-devel`, `libpng-dev`, `libboost-all-dev` packages
+Requires the `level-zero`, `level-zero-devel`, `libpng-dev`, `libboost-all-dev`, `libva-dev` packages
 to be installed.
 
 ### SLES Dependencies
 On SLES distributions only:
 
-Requires the `level-zero`, `level-zero-devel`, `gcc-c++`, & `libpng-dev`
+Requires the `level-zero`, `level-zero-devel`, `libpng16-devel`, `libva-devel`
 packages to be installed.
 
-In addition to the above, the Boost C++ Library needs to be installed.
-It may be installed through the distro packages, however some versions
-have seen issues. Version 1.65 has been tested from source, with
-instructions below.
-
-Example below with Boost 1.65 (i.e. https://www.boost.org/users/history/version_1_65_0.html)
+In addition to the above, the Boost C++ Library needs to be installed. Example below with Boost 1.70 (i.e. https://www.boost.org/users/history/version_1_70_0.html)
 
 ```bash
-tar -xvf boost_1_65_0.tar.gz
-cd boost_1_65_0/
+git clone --recurse-submodules --branch boost-1.70.0 https://github.com/boostorg/boost.git
+cd boost
 ./bootstrap.sh
-./b2
-sudo ./b2 install
+./b2 install \
+  -j 4 \
+  address-model=64 \
+  --with-chrono \
+  --with-log \
+  --with-program_options \
+  --with-serialization \
+  --with-system \
+  --with-timer
 ```
 
 ### Dependencies
 
-The top of LevelZeroTests repo is compatible with the latest Level Zero Loader release. 
+The HEAD of this repo is compatible with the latest Level Zero Loader release. Please report incompatibilities at https://github.com/oneapi-src/level-zero-tests/issues.
 You can either build against the version you have installed on your system (automatic, Linux only), 
-or specify an installprefix with the `CMAKE_PREFIX_PATH` cmake flag during configuration.
+or specify an install prefix with the `CMAKE_PREFIX_PATH` cmake flag during configuration.
 This `CMAKE_PREFIX_PATH` must point to the top-level install directory where level-zero was installed.
 for example: `-DCMAKE_PREFIX_PATH=/home/username/level-zero/build/output/`.
 
@@ -42,10 +44,8 @@ on the system. To require that these benchmarks also be built, set the
 `REQUIRE_OPENCL_BENCHMARKS` cmake flag to `YES`.
 
 [Google Test](https://github.com/google/googletest) is used by all tests in this
-repo for handling test case generation and result analysis.
-
-Google Test is included as a submodule at `third_party/googletest`. You can
-provide a path to your own version with the `GTEST_ROOT` cmake flag.
+repo for handling test case generation and result analysis. Google Test is
+included as a submodule at `third_party/googletest`.
 
 ## Building
 
@@ -71,17 +71,17 @@ select a specific grouping of test executables for build using the `GROUP`
 cmake flag. The following group specifiers are available:
 
   - `/`: All tests.
-  - `/perf_tests`: All the performance tests.
-  - `/negative_tests`: All the negative tests.
-  - `/conformance_tests`: All the conformance tests.
+  - `/conformance_tests`: All of the conformance tests.
   - `/conformance_tests/core`: All of the conformance tests for the core API.
   - `/conformance_tests/tools`: All of the conformance tests for the tools API.
-  - `/conformance_tests/tools/tracing`: All of the tools API conformance tests
-    related to tracing.
-  - `/conformance_tests/tools/sysman`: ALl of the tools API conformance tests
-    relating to system management.
-  - `/conformance_tests/tools/pin`: ALl of the tools API conformance tests
-    relating to Instrumenting of L0 applications.
+  - `/conformance_tests/tools/debug`: All the conformance tests for debugger.
+  - `/conformance_tests/tools/metrics`: All the conformance tests for debugger.
+  - `/conformance_tests/tools/pin`: All of the tools API conformance tests relating to instrumentation of L0 applications.
+  - `/conformance_tests/tools/sysman`: All of the tools API conformance tests relating to system management.
+  - `/conformance_tests/tools/tracing`: All of the tools API conformance tests related to tracing.
+  - `/layer_tests/ltracing`: Tests for the tracing layer.
+  - `/negative_tests`: All the negative tests.
+  - `/perf_tests`: All the performance tests.
   - `/stress_tests`: All the stress tests.
 
 ```
