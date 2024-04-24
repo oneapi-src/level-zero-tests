@@ -262,6 +262,7 @@ bool is_uuids_equal(uint8_t *uuid1, uint8_t *uuid2) {
   return true;
 }
 ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
+  lzt::initialize_core();
   auto driver = lzt::zeDevice::get_instance()->get_driver();
   auto core_devices = lzt::get_ze_devices(driver);
   for (auto device : core_devices) {
@@ -320,7 +321,7 @@ TEST_F(
         double post_utilization = (static_cast<double>(s2.activeTime) -
                                    static_cast<double>(s1.activeTime)) /
                                   (static_cast<double>(s2.timestamp) -
-                                   static_cast<double>(s1.timestamp));        
+                                   static_cast<double>(s1.timestamp));
         // check if engine utilization increases with GPU workload
         EXPECT_LT(pre_utilization, post_utilization);
         LOG_INFO << "pre_utilization: " << pre_utilization * 100 << "%"

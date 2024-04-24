@@ -388,6 +388,7 @@ bool is_uuids_equal(uint8_t *uuid1, uint8_t *uuid2) {
   return true;
 }
 ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
+  lzt::initialize_core();
   auto driver = lzt::zeDevice::get_instance()->get_driver();
   auto core_devices = lzt::get_ze_devices(driver);
   for (auto device : core_devices) {

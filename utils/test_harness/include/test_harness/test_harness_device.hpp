@@ -30,6 +30,7 @@ private:
   ze_driver_handle_t driver_ = nullptr;
 };
 
+void initialize_core();
 ze_device_handle_t get_root_device(ze_device_handle_t device);
 uint32_t get_ze_device_count();
 uint32_t get_ze_device_count(ze_driver_handle_t driver);
