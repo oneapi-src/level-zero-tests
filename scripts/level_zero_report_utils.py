@@ -53,6 +53,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_feature == "Kernels" and test_name.find("Constants")!= -1) or \
                     (test_feature == "Images") or \
                     (test_feature == "Image Samplers") or \
+                    (test_feature == "Mutable Command List") or \
                     (test_name.find("KernelCopyTests") != -1) or \
                     (test_name.find("Thread") != -1) or \
                     (test_name.find("Affinity") != -1) or \
@@ -419,6 +420,8 @@ def assign_test_feature(test_binary: str, test_name: str):
             test_feature = "Kernels"
         if test_binary == "test_fabric":
             test_feature = "Fabric"
+        if test_binary == "test_mutable_cmdlist":
+            test_feature = "Mutable Command List"
         if test_feature == "None":
             print("ERROR: test case " + test_name + " has no assigned feature\n",  file=sys.stderr)
             exit(-1)
