@@ -80,7 +80,7 @@ TEST_F(
 }
 TEST_F(
     POWER_TEST,
-    GivenSamePowerHandleWhenRequestingPowerPropertiesThenCheckMaxAndMinLimitInRange) {
+    GivenSamePowerHandleWhenRequestingPowerPropertiesThenCheckPowerLimitsAreInRange) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto p_power_handles = lzt::get_power_handles(device, count);
@@ -92,20 +92,23 @@ TEST_F(
     for (auto p_power_handle : p_power_handles) {
       EXPECT_NE(nullptr, p_power_handle);
       auto pProperties = lzt::get_power_properties(p_power_handle);
-      if (pProperties.maxLimit == -1) {
-        LOG_INFO << "maxlimit unsupported: ";
-      }
       if (pProperties.maxLimit != -1) {
         EXPECT_GT(pProperties.maxLimit, 0);
-        EXPECT_LE(pProperties.maxLimit, INT32_MAX);
         EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
+      } else {
+        LOG_INFO << "maxLimit unsupported: ";
       }
-      if (pProperties.minLimit == -1) {
-        LOG_INFO << "minLimit unsupported: ";
-      }
+
       if (pProperties.minLimit != -1) {
         EXPECT_GE(pProperties.minLimit, 0);
-        EXPECT_LT(pProperties.minLimit, INT32_MAX);
+      } else {
+        LOG_INFO << "minlimit unsupported: ";
+      }
+
+      if (pProperties.defaultLimit != -1) {
+        EXPECT_GT(pProperties.defaultLimit, 0);
+      } else {
+        LOG_INFO << "defaultLimit unsupported: ";
       }
     }
   }
