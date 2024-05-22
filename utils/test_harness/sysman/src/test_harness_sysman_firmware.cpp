@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -44,5 +44,11 @@ get_firmware_properties(zes_firmware_handle_t firmwareHandle) {
 void flash_firmware(zes_firmware_handle_t firmwareHandle, void *fwImage,
                     uint32_t size) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesFirmwareFlash(firmwareHandle, fwImage, size));
+}
+
+void track_firmware_flash(zes_firmware_handle_t firmware_handle,
+                          uint32_t *progress_percent) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesFirmwareGetFlashProgress(firmware_handle, progress_percent));
 }
 } // namespace level_zero_tests

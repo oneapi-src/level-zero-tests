@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -15,6 +15,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <fstream>
+#include <thread>
 
 namespace lzt = level_zero_tests;
 
@@ -169,6 +170,91 @@ TEST_F(
                             static_cast<void *>(testFwImage.data()),
                             testFwImage.size());
       }
+    }
+  }
+}
+
+void flash_firmware(zes_firmware_handle_t firmware_handle, std::string fw_dir) {
+  std::vector<char> test_fw_image;
+  ASSERT_NE(nullptr, firmware_handle);
+  auto prop_fw = lzt::get_firmware_properties(firmware_handle);
+  if (prop_fw.canControl == true) {
+    std::string fw_name(reinterpret_cast<char *>(prop_fw.name));
+    std::string fw_to_load = fw_dir + "/" + fw_name + ".bin";
+    std::ifstream in_filestream(fw_to_load, std::ios::binary | std::ios::ate);
+    if (!in_filestream.is_open()) {
+      LOG_INFO << "Skipping test as firmware image not found";
+      GTEST_SKIP();
+    }
+    test_fw_image.resize(in_filestream.tellg());
+    in_filestream.seekg(0, in_filestream.beg);
+    in_filestream.read(test_fw_image.data(), test_fw_image.size());
+    lzt::flash_firmware(firmware_handle,
+                        static_cast<void *>(test_fw_image.data()),
+                        test_fw_image.size());
+  } else {
+    LOG_INFO
+        << "Skipping test as canControl is set to false in firmware properties";
+    GTEST_SKIP();
+  }
+}
+
+void track_firmware_flash(zes_firmware_handle_t firmware_handle) {
+  uint32_t progress_percent = 0;
+  uint32_t prev_progress = 0;
+  std::chrono::time_point<std::chrono::system_clock> start =
+      std::chrono::system_clock::now();
+  bool flash_complete = false;
+
+  while (!flash_complete) {
+
+    lzt::track_firmware_flash(firmware_handle, &progress_percent);
+    EXPECT_GE(progress_percent, 0);
+    EXPECT_LE(progress_percent, 100);
+
+    if (progress_percent == 100) {
+      flash_complete = true;
+    } else {
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::chrono::duration<double> elapsed_seconds =
+          std::chrono::system_clock::now() - start;
+      if (elapsed_seconds >= std::chrono::seconds{120}) {
+        if (progress_percent == prev_progress) {
+          FAIL() << "TimeOut of 2 minutes elapsed while waiting for progress "
+                    "to get update";
+        } else {
+          start = std::chrono::system_clock::now();
+          prev_progress = progress_percent;
+        }
+      }
+    }
+  }
+}
+
+TEST_F(
+    FIRMWARE_TEST,
+    GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectFlashProgressGetsUpdated) {
+  auto fw_dir_env = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (nullptr == fw_dir_env) {
+    LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY  not set";
+    GTEST_SKIP();
+  }
+
+  std::string fw_dir(fw_dir_env);
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto firmware_handles = lzt::get_firmware_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto firmware_handle : firmware_handles) {
+      std::thread firmware_flasher(flash_firmware, firmware_handle, fw_dir);
+      std::thread progress_tracker(track_firmware_flash, firmware_handle);
+
+      firmware_flasher.join();
+      progress_tracker.join();
     }
   }
 }
