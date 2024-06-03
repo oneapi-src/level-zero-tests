@@ -1878,6 +1878,7 @@ TEST_F(
   }
 
   init_command_list();
+  init_memory();
   if (!init_image()) {
     LOG_WARNING << "test not executed because "
                    "images are not supported";
