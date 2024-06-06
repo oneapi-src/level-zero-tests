@@ -46,4 +46,16 @@ jobs:
           -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -D CMAKE_BUILD_TYPE=Release \
           ..
-        make -j$(nproc)
+        make -j$(nproc) install
+    - name: Check ./scripts/level_zero_report_utils.py
+      env:
+        ZE_ENABLE_NULL_DRIVER: 1
+        LD_LIBRARY_PATH: ${{ github.workspace }}/level-zero/build/lib
+      run: | #bash
+        ./scripts/run_test_report.py \
+          --run_test_sections all \
+          --binary_dir ./build/out \
+          --export_test_plan plan.csv
+        echo "::group::Test Plan"
+        cat plan.csv
+        echo "::endgroup::"
