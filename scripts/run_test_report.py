@@ -194,22 +194,17 @@ def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
     return results, num_passed, num_failed, num_skipped
 
 def write_test_plan(test_plan: [], plan_name: str):
-    testplan_filename = plan_name + ".csv"
-
-    with open(testplan_filename, 'w', newline='') as file:
+    with open(plan_name, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(test_plan)
 
-    return 0
-
 def read_test_plan(plan_name: str):
-    testplan_filename = plan_name + ".csv"
     test_plan = []
 
     try:
-        file = open(testplan_filename, 'r', newline='')
+        file = open(plan_name, 'r', newline='')
     except OSError:
-        print("Could not open/read Test Plan: ", testplan_filename)
+        print("Could not open/read Test Plan: ", plan_name)
         sys.exit()
 
     with file:
@@ -373,8 +368,8 @@ if __name__ == '__main__':
     parser.add_argument('--exclude_regex', type = str, help = 'Regular Expression to exclude tests that match either in the name or filter: GivenBarrier*', default = None)
     parser.add_argument('--test_run_timeout', type = int, help = 'Adjust the timeout for test binary execution, this is for each call to the binary with the filter', default = 1200)
     parser.add_argument('--log_prefix', type = str, help = 'Change the prefix name for the results such that the output is <prefix>_results.csv & <prefix>_failure_log.txt', default = "level_zero_tests")
-    parser.add_argument('--export_test_plan', type = str, help = 'Name of the Generated Test Plan to export as <arg>.csv without execution. The name provided is combined with .csv appended.', default = None)
-    parser.add_argument('--import_test_plan', type = str, help = 'Name of the Imported Test Plan as <arg>.csv for execution. The name provided is combined with .csv appended.', default = None)
+    parser.add_argument('--export_test_plan', type = str, help = 'Name of the Generated Test Plan to export as CSV without execution.', default = None)
+    parser.add_argument('--import_test_plan', type = str, help = 'Name of the Imported Test Plan as CSV for execution.', default = None)
     args = parser.parse_args()
 
     run_test_sections = args.run_test_sections
