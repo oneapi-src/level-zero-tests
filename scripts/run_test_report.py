@@ -274,36 +274,38 @@ def run_test_report(test_plan: [], test_run_timeout: int, log_prefix: str):
     else:
         return 0
 
-def create_test_name(suite_name: str, test_binary: str, line: str):
+def create_test_name(suite_name: str, test_binary: str, case_name: str):
         test_section = "None"
         updated_suite_name = suite_name.split('/')  # e.g., 'GivenXWhenYThenZ'
         test_suite_name = updated_suite_name[0]
         if (len(updated_suite_name) > 1):
             test_suite_name += "_" + updated_suite_name[1]
-        parameterized_case_name = line.split()[0]  # e.g., 'GivenXWhenYThenZ/1  # GetParam() = (0)' or just 'GivenXWhenYThenZ' if not parameterized
-        case_name = parameterized_case_name.split('/')[0]  # e.g., 'GivenXWhenYThenZ'
         if (test_binary.find("_errors") != -1):
             test_name = "L0_NEG_" + test_suite_name + "_" + case_name
             test_section = "Negative"
         else:
             test_name = "L0_CTS_" + test_suite_name + "_" + case_name
 
-        return test_name, case_name, test_section
+        return test_name, test_section
 
 def generate_test_case(binary_and_path: str,
                     suite_name: str,
                     test_binary: str,
-                    line: str,
+                    case_name: str,
+                    parameterized: bool,
                     requested_sections: str,
                     requested_features: str,
                     requested_regex: str,
                     exclude_features: str,
                     exclude_regex: str
                     ):
-        test_name, case_name, test_section = create_test_name(suite_name, test_binary, line)
+        test_name, test_section = create_test_name(suite_name, test_binary, case_name)
         if test_name.find("DISABLED") != -1:
             return
-        test_filter = "--gtest_filter=*" + case_name + "*"
+        suffix = ""
+        if parameterized:
+            suffix = "/*"
+        test_filter = "--gtest_filter=" + case_name + suffix
         test_feature, test_section_by_feature = level_zero_report_utils.assign_test_feature(test_binary, test_name)
         if (test_section == "None"):
             test_section= test_section_by_feature
@@ -326,11 +328,19 @@ def generate_test_items_for_binary(binary_dir: str,
 
         # parameterized cases are reduced to a single case for all parameterizations
         current_suite = None
+        last_case = None
         for line in output:
             if line[0] != ' ':  # test suite
                 current_suite = line.split('.')[0]
+                last_case = None
             else:  # test case
-                generate_test_case(test_binary_path, current_suite, test_binary, line, requested_sections, requested_features, requested_regex, exclude_features, exclude_regex)
+                case_name_with_param = line.split()[0]  # e.g., 'GivenXWhenYThenZ/1  # GetParam() = (0)' or just 'GivenXWhenYThenZ' if not parameterized
+                param_split = case_name_with_param.split('/')  # e.g., ['GivenXWhenYThenZ', '1  # GetParam() = (0)']
+                case_name = param_split[0]  # e.g., 'GivenXWhenYThenZ'
+                if case_name == last_case:
+                    continue
+                last_case = case_name
+                generate_test_case(test_binary_path, current_suite, test_binary, case_name, len(param_split) > 1, requested_sections, requested_features, requested_regex, exclude_features, exclude_regex)
 
 def generate_test_cases_from_binaries(binary_dir: str,
                                     requested_sections: str,
