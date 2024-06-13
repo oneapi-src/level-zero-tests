@@ -59,3 +59,15 @@ jobs:
         echo "::group::Test Plan"
         cat plan.csv
         echo "::endgroup::"
+    - name: Check that basic feature tests haven't changed
+      env:
+        ZE_ENABLE_NULL_DRIVER: 1
+        LD_LIBRARY_PATH: ${{ github.workspace }}/level-zero/build/lib
+      run: | #bash
+        ./scripts/run_test_report.py \
+          --run_test_features basic \
+          --binary_dir ./build/out \
+          --export_test_plan basic_features.csv
+        git diff --no-index --exit-code \
+          <(sort basic_features_freeze.csv) \
+          <(sort basic_features.csv)
