@@ -282,9 +282,8 @@ TEST_F(
   }
 }
 
-TEST_F(
-    SYSMAN_DEVICE_TEST,
-    GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetSucceeds) {
+TEST_F(SYSMAN_DEVICE_TEST,
+       GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetSucceeds) {
   for (auto device : devices) {
     lzt::sysman_device_reset(device);
   }
