@@ -284,7 +284,7 @@ TEST_F(
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
-    GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetIsSucceded) {
+    GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetSucceeds) {
   for (auto device : devices) {
     lzt::sysman_device_reset(device);
   }
@@ -292,7 +292,7 @@ TEST_F(
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
-    GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceded) {
+    GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceeds) {
   int number_iterations = 2;
   for (int i = 0; i < number_iterations; i++) {
     for (auto device : devices) {
@@ -652,7 +652,7 @@ TEST_F(
   }
 }
 TEST_F(SYSMAN_DEVICE_TEST,
-       GivenValidDeviceWhenWarmResettingDeviceThenDeviceResetExtIsSucceded) {
+       GivenValidDeviceWhenWarmResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
     zes_reset_properties_t properties{};
     set_reset_properties(properties, false, ZES_RESET_TYPE_WARM);
@@ -660,7 +660,7 @@ TEST_F(SYSMAN_DEVICE_TEST,
   }
 }
 TEST_F(SYSMAN_DEVICE_TEST,
-       GivenValidDeviceWhenColdResettingDeviceThenDeviceResetExtIsSucceded) {
+       GivenValidDeviceWhenColdResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
     zes_reset_properties_t properties{};
     set_reset_properties(properties, false, ZES_RESET_TYPE_COLD);
@@ -668,7 +668,7 @@ TEST_F(SYSMAN_DEVICE_TEST,
   }
 }
 TEST_F(SYSMAN_DEVICE_TEST,
-       GivenValidDeviceWhenFlrResettingDeviceThenDeviceResetExtIsSucceded) {
+       GivenValidDeviceWhenFlrResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
     zes_reset_properties_t properties{};
     set_reset_properties(properties, false, ZES_RESET_TYPE_FLR);
