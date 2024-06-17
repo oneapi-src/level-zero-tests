@@ -57,8 +57,13 @@ zes_device_state_t get_device_state(zes_device_handle_t device) {
   return state;
 }
 
-void sysman_device_reset_ext(zes_device_handle_t device,
-                             zes_reset_properties_t &properties) {
+void sysman_device_reset_ext(zes_device_handle_t device, ze_bool_t force,
+                             zes_reset_type_t type) {
+  zes_reset_properties_t properties{};
+  properties.stype = ZES_STRUCTURE_TYPE_RESET_PROPERTIES;
+  properties.pNext = nullptr;
+  properties.force = force;
+  properties.resetType = type;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceResetExt(device, &properties));
 }
 

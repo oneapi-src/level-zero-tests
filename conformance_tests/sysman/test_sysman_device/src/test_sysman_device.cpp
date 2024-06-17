@@ -465,14 +465,6 @@ void compute_workload(workload_thread_parameters *t_params) {
   lzt::destroy_module(module);
 }
 
-void set_reset_properties(zes_reset_properties_t &properties, ze_bool_t force,
-                          zes_reset_type_t type) {
-  properties.stype = ZES_STRUCTURE_TYPE_RESET_PROPERTIES;
-  properties.pNext = nullptr;
-  properties.force = force;
-  properties.resetType = type;
-}
-
 TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingProcessesStateAndDeviceMemoryIsAllocatedThenMemorySizeIsReturnedCorrectly) {
@@ -650,28 +642,148 @@ TEST_F(
     }
   }
 }
+
 TEST_F(SYSMAN_DEVICE_TEST,
        GivenValidDeviceWhenWarmResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
-    zes_reset_properties_t properties{};
-    set_reset_properties(properties, false, ZES_RESET_TYPE_WARM);
-    lzt::sysman_device_reset_ext(device, properties);
+    lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_WARM);
   }
 }
+
 TEST_F(SYSMAN_DEVICE_TEST,
        GivenValidDeviceWhenColdResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
-    zes_reset_properties_t properties{};
-    set_reset_properties(properties, false, ZES_RESET_TYPE_COLD);
-    lzt::sysman_device_reset_ext(device, properties);
+    lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_COLD);
   }
 }
+
 TEST_F(SYSMAN_DEVICE_TEST,
        GivenValidDeviceWhenFlrResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
-    zes_reset_properties_t properties{};
-    set_reset_properties(properties, false, ZES_RESET_TYPE_FLR);
-    lzt::sysman_device_reset_ext(device, properties);
+    lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_FLR);
+  }
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenWorkingDeviceHandleWhenWarmResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetExt) {
+  uint32_t n = 512;
+  std::vector<float> a(n * n, 1);
+  std::vector<float> b(n * n, 1);
+  std::vector<float> c;
+  std::vector<float> c_cpu;
+  c_cpu = perform_matrix_multiplication_on_cpu(a, b, n);
+
+  for (auto device : devices) {
+    // Perform workload execution before reset
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
+    compare_results(c, c_cpu);
+    c.clear();
+    LOG_INFO << "Initiating device reset...\n";
+    // perform device reset
+    lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_WARM);
+    LOG_INFO << "End of device reset...\n";
+
+    // Perform workload execution after reset
+#ifdef USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
+    compare_results(c, c_cpu);
+    c.clear();
+  }
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenWorkingDeviceHandleWhenColdResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetExt) {
+  uint32_t n = 512;
+  std::vector<float> a(n * n, 1);
+  std::vector<float> b(n * n, 1);
+  std::vector<float> c;
+  std::vector<float> c_cpu;
+  c_cpu = perform_matrix_multiplication_on_cpu(a, b, n);
+
+  for (auto device : devices) {
+    // Perform workload execution before reset
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
+    compare_results(c, c_cpu);
+    c.clear();
+    LOG_INFO << "Initiating device reset...\n";
+    // perform device reset
+    lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_COLD);
+    LOG_INFO << "End of device reset...\n";
+
+    // Perform workload execution after reset
+#ifdef USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
+    compare_results(c, c_cpu);
+    c.clear();
+  }
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenWorkingDeviceHandleWhenFlrResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetExt) {
+  uint32_t n = 512;
+  std::vector<float> a(n * n, 1);
+  std::vector<float> b(n * n, 1);
+  std::vector<float> c;
+  std::vector<float> c_cpu;
+  c_cpu = perform_matrix_multiplication_on_cpu(a, b, n);
+
+  for (auto device : devices) {
+    // Perform workload execution before reset
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
+    compare_results(c, c_cpu);
+    c.clear();
+    LOG_INFO << "Initiating device reset...\n";
+    // perform device reset
+    lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_FLR);
+    LOG_INFO << "End of device reset...\n";
+
+    // Perform workload execution after reset
+#ifdef USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, core_device);
+#else  // USE_ZESINIT
+    c = submit_workload_for_gpu(a, b, n, device);
+#endif // USE_ZESINIT
+
+    compare_results(c, c_cpu);
+    c.clear();
   }
 }
 } // namespace

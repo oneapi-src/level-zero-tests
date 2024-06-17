@@ -26,8 +26,8 @@ zes_device_state_t get_device_state(zes_device_handle_t device);
 std::vector<zes_process_state_t> get_processes_state(zes_device_handle_t device,
                                                      uint32_t &count);
 
-void sysman_device_reset_ext(zes_device_handle_t device,
-                             zes_reset_properties_t &properties);
+void sysman_device_reset_ext(zes_device_handle_t device, ze_bool_t force,
+                             zes_reset_type_t type);
 
 } // namespace level_zero_tests
 
