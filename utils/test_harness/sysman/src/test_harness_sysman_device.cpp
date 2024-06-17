@@ -57,4 +57,9 @@ zes_device_state_t get_device_state(zes_device_handle_t device) {
   return state;
 }
 
+void sysman_device_reset_ext(zes_device_handle_t device,
+                             zes_reset_properties_t &properties) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceResetExt(device, &properties));
+}
+
 } // namespace level_zero_tests

@@ -466,6 +466,14 @@ void compute_workload(workload_thread_parameters *t_params) {
   lzt::destroy_module(module);
 }
 
+void set_reset_properties(zes_reset_properties_t &properties, ze_bool_t force,
+                          zes_reset_type_t type) {
+  properties.stype = ZES_STRUCTURE_TYPE_RESET_PROPERTIES;
+  properties.pNext = nullptr;
+  properties.force = force;
+  properties.resetType = type;
+}
+
 TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingProcessesStateAndDeviceMemoryIsAllocatedThenMemorySizeIsReturnedCorrectly) {
@@ -643,5 +651,28 @@ TEST_F(
     }
   }
 }
-
+TEST_F(SYSMAN_DEVICE_TEST,
+       GivenValidDeviceWhenWarmResettingDeviceThenDeviceResetExtIsSucceded) {
+  for (auto device : devices) {
+    zes_reset_properties_t properties{};
+    set_reset_properties(properties, false, ZES_RESET_TYPE_WARM);
+    lzt::sysman_device_reset_ext(device, properties);
+  }
+}
+TEST_F(SYSMAN_DEVICE_TEST,
+       GivenValidDeviceWhenColdResettingDeviceThenDeviceResetExtIsSucceded) {
+  for (auto device : devices) {
+    zes_reset_properties_t properties{};
+    set_reset_properties(properties, false, ZES_RESET_TYPE_COLD);
+    lzt::sysman_device_reset_ext(device, properties);
+  }
+}
+TEST_F(SYSMAN_DEVICE_TEST,
+       GivenValidDeviceWhenFlrResettingDeviceThenDeviceResetExtIsSucceded) {
+  for (auto device : devices) {
+    zes_reset_properties_t properties{};
+    set_reset_properties(properties, false, ZES_RESET_TYPE_FLR);
+    lzt::sysman_device_reset_ext(device, properties);
+  }
+}
 } // namespace
