@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -64,5 +64,19 @@ zes_ras_state_t get_ras_state(zes_ras_handle_t rasHandle, ze_bool_t clear) {
   zes_ras_state_t state = {ZES_STRUCTURE_TYPE_RAS_STATE, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesRasGetState(rasHandle, clear, &state));
   return state;
+}
+std::vector<zes_ras_state_exp_t>
+ras_get_state_exp(zes_ras_handle_t ras_handle) {
+  uint32_t count = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesRasGetStateExp(ras_handle, &count, NULL));
+  EXPECT_GT(count, 0);
+  std::vector<zes_ras_state_exp_t> states(count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesRasGetStateExp(ras_handle, &count, states.data()));
+  return states;
+}
+void ras_clear_state_exp(zes_ras_handle_t ras_handle,
+                         zes_ras_error_category_exp_t category) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesRasClearStateExp(ras_handle, category));
 }
 } // namespace level_zero_tests

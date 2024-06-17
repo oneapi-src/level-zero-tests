@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -39,6 +39,25 @@ void validate_ras_state(zes_ras_state_t detailedThresholds) {
   EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_CACHE_ERRORS], 0);
   EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_DISPLAY_ERRORS], 0);
   EXPECT_GE(detailedThresholds.category[ZES_RAS_ERROR_CAT_RESET], 0);
+}
+
+void validate_ras_state_exp(zes_ras_state_exp_t ras_state) {
+  std::vector<zes_ras_error_category_exp_t> error_category = {
+      ZES_RAS_ERROR_CATEGORY_EXP_RESET,
+      ZES_RAS_ERROR_CATEGORY_EXP_PROGRAMMING_ERRORS,
+      ZES_RAS_ERROR_CATEGORY_EXP_DRIVER_ERRORS,
+      ZES_RAS_ERROR_CATEGORY_EXP_COMPUTE_ERRORS,
+      ZES_RAS_ERROR_CATEGORY_EXP_NON_COMPUTE_ERRORS,
+      ZES_RAS_ERROR_CATEGORY_EXP_CACHE_ERRORS,
+      ZES_RAS_ERROR_CATEGORY_EXP_DISPLAY_ERRORS,
+      ZES_RAS_ERROR_CATEGORY_EXP_MEMORY_ERRORS,
+      ZES_RAS_ERROR_CATEGORY_EXP_SCALE_ERRORS,
+      ZES_RAS_ERROR_CATEGORY_EXP_L3FABRIC_ERRORS};
+
+  EXPECT_NE(error_category.end(),
+            std::find(error_category.begin(), error_category.end(),
+                      ras_state.category));
+  EXPECT_GE(ras_state.errorCounter, 0);
 }
 
 void validate_ras_config(zes_ras_config_t rasConfig) {
@@ -237,6 +256,59 @@ TEST_F(
 
     for (auto ras_handle : ras_handles) {
       ASSERT_NE(nullptr, ras_handle);
+    }
+  }
+}
+
+TEST_F(RAS_TEST,
+       GivenValidRASHandleWhenRetrievingStateExpThenValidStateExpIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto ras_handles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto ras_handle : ras_handles) {
+      ASSERT_NE(nullptr, ras_handle);
+      auto ras_states = lzt::ras_get_state_exp(ras_handle);
+      for (auto state : ras_states) {
+        validate_ras_state_exp(state);
+      }
+    }
+  }
+}
+
+TEST_F(
+    RAS_TEST,
+    GivenValidRASHandleWhenRetrievingStateExpAfterInvokingClearstateExpThenUpdatedStateExpIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto ras_handles = lzt::get_ras_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto ras_handle : ras_handles) {
+      ASSERT_NE(nullptr, ras_handle);
+      uint32_t initial_errors = 0;
+      uint32_t errors_after_clear = 0;
+      auto ras_states = lzt::ras_get_state_exp(ras_handle);
+
+      for (auto state : ras_states) {
+        validate_ras_state_exp(state);
+        initial_errors += state.errorCounter;
+        lzt::ras_clear_state_exp(ras_handle, state.category);
+      }
+
+      ras_states = lzt::ras_get_state_exp(ras_handle);
+      for (auto state : ras_states) {
+        validate_ras_state_exp(state);
+        errors_after_clear += state.errorCounter;
+      }
+      EXPECT_LE(errors_after_clear, initial_errors);
     }
   }
 }
