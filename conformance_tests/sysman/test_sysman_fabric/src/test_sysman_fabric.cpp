@@ -289,6 +289,127 @@ TEST_F(
   }
 }
 
+TEST_F(
+    FABRICPORT_TEST,
+    GivenValidFabricPortHandleWhenRetrievingMultiPortThroughputsThenValidThroughputAreReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    auto multiport_throughPuts = lzt::get_multiport_throughputs(
+        device, count, fabric_port_handles.data());
+    ASSERT_EQ(fabric_port_handles.size(), count);
+
+    for (auto fabric_port_throughput : multiport_throughPuts) {
+      EXPECT_LT(fabric_port_throughput.rxCounter, UINT64_MAX);
+      EXPECT_LT(fabric_port_throughput.txCounter, UINT64_MAX);
+      EXPECT_LT(fabric_port_throughput.timestamp, UINT64_MAX);
+    }
+  }
+}
+
+TEST_F(
+    FABRICPORT_TEST,
+    GivenValidFabricPortHandleWhenRetrievingMultiportThroughputsThenValuesAreSameAsGetThroughput) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    uint32_t i = 0;
+    auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    // Taking values from zesFabricPortGetMultiPortThroughput
+    auto multiport_throughputs = lzt::get_multiport_throughputs(
+        device, count, fabric_port_handles.data());
+    ASSERT_EQ(fabric_port_handles.size(), count);
+
+    // Taking values from zesFabricPortGetThroughput and comparing it with
+    // multiport_throughPuts
+    for (auto fabric_port_handle : fabric_port_handles) {
+      ASSERT_NE(nullptr, fabric_port_handle);
+      auto throughput = lzt::get_fabric_port_throughput(fabric_port_handle);
+      EXPECT_EQ(throughput.rxCounter, multiport_throughputs[i].rxCounter);
+      EXPECT_EQ(throughput.txCounter, multiport_throughputs[i].txCounter);
+      EXPECT_EQ(throughput.timestamp, multiport_throughputs[i].timestamp);
+      i++;
+    }
+  }
+}
+
+TEST_F(
+    FABRICPORT_TEST,
+    GivenPortHandleVectorAsNullWhenRetrievingMultiportThroughputsThenRequiredErrorShouldBeReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handle found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    std::vector<zes_fabric_port_throughput_t> multiport_throughputs(count);
+    auto multiport_throughputdata = multiport_throughputs.data();
+
+    ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+              zesFabricPortGetMultiPortThroughput(device, count, nullptr,
+                                                  &multiport_throughputdata));
+  }
+}
+
+TEST_F(
+    FABRICPORT_TEST,
+    GivenMultiportThroughputOutputVectorAsNullWhenRetrievingMultiportThroughputsThenRequiredErrorShouldBeReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handle found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+              zesFabricPortGetMultiPortThroughput(
+                  device, count, fabric_port_handles.data(), nullptr));
+  }
+}
+
+TEST_F(
+    FABRICPORT_TEST,
+    GivenValidFabricPortHandlesInReverseWhenRetrievingMultiportThroughputsThenValuesAreSameAsGetThroughput) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    uint32_t i = 0;
+    auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    // Reversing the port array.
+    reverse(fabric_port_handles.begin(), fabric_port_handles.end());
+
+    // Taking values from zesFabricPortGetMultiPortThroughput
+    auto multiport_throughputs = lzt::get_multiport_throughputs(
+        device, count - count / 2, fabric_port_handles.data());
+    ASSERT_EQ(fabric_port_handles.size(), count);
+
+    // Taking values from zesFabricPortGetThroughput and comparing it with
+    // multiport_throughPuts
+    for (auto fabric_port_handle : fabric_port_handles) {
+      ASSERT_NE(nullptr, fabric_port_handle);
+      auto throughput = lzt::get_fabric_port_throughput(fabric_port_handle);
+      EXPECT_EQ(throughput.rxCounter, multiport_throughputs[i].rxCounter);
+      EXPECT_EQ(throughput.txCounter, multiport_throughputs[i].txCounter);
+      EXPECT_EQ(throughput.timestamp, multiport_throughputs[i].timestamp);
+      i++;
+    }
+  }
+}
+
 TEST_F(FABRICPORT_TEST,
        GivenValidFabricPortHandleWhenGettingPortLinkThenSuccessIsReturned) {
   for (auto device : devices) {

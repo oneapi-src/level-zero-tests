@@ -34,6 +34,10 @@ get_fabric_port_state(zes_fabric_port_handle_t fabricPortHandle);
 zes_fabric_port_throughput_t
 get_fabric_port_throughput(zes_fabric_port_handle_t fabricPortHandle);
 
+std::vector<zes_fabric_port_throughput_t>
+get_multiport_throughputs(zes_device_handle_t device, uint32_t count,
+                          zes_fabric_port_handle_t *fabric_port_handle);
+
 zes_fabric_link_type_t
 get_fabric_port_link(zes_fabric_port_handle_t fabricPortHandle);
 
