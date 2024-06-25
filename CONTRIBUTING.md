@@ -38,7 +38,8 @@ In addition, use the following naming conventions:
   * A test requiring **at least one sub-device** SHALL include `SubDevice` in
     its name.
   * A test requiring **more than one sub-device** SHALL include one of
-    `MultipleSubDevice`, `DifferentSubDevice` or `TwoSubDevice` in its name.
+    `MultipleSubDevice`, `MultiTile`, `MultipleTile`, `DifferentSubDevice` or
+    `TwoSubDevice` in its name.
   * A test requiring **exactly zero sub-devices** SHALL include `NoSubDevice` in
     its name.
   * A test requiring **exactly one root device** SHALL include one of
