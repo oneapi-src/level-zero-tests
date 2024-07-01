@@ -282,9 +282,8 @@ TEST_F(
   }
 }
 
-TEST_F(
-    SYSMAN_DEVICE_TEST,
-    GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetIsSucceded) {
+TEST_F(SYSMAN_DEVICE_TEST,
+       GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetSucceeds) {
   for (auto device : devices) {
     lzt::sysman_device_reset(device);
   }
@@ -292,7 +291,7 @@ TEST_F(
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
-    GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceded) {
+    GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceeds) {
   int number_iterations = 2;
   for (int i = 0; i < number_iterations; i++) {
     for (auto device : devices) {
@@ -464,6 +463,14 @@ void compute_workload(workload_thread_parameters *t_params) {
   lzt::free_memory(b_buffer);
   lzt::free_memory(c_buffer);
   lzt::destroy_module(module);
+}
+
+void set_reset_properties(zes_reset_properties_t &properties, ze_bool_t force,
+                          zes_reset_type_t type) {
+  properties.stype = ZES_STRUCTURE_TYPE_RESET_PROPERTIES;
+  properties.pNext = nullptr;
+  properties.force = force;
+  properties.resetType = type;
 }
 
 TEST_F(
@@ -643,5 +650,28 @@ TEST_F(
     }
   }
 }
-
+TEST_F(SYSMAN_DEVICE_TEST,
+       GivenValidDeviceWhenWarmResettingDeviceThenDeviceResetExtSucceeds) {
+  for (auto device : devices) {
+    zes_reset_properties_t properties{};
+    set_reset_properties(properties, false, ZES_RESET_TYPE_WARM);
+    lzt::sysman_device_reset_ext(device, properties);
+  }
+}
+TEST_F(SYSMAN_DEVICE_TEST,
+       GivenValidDeviceWhenColdResettingDeviceThenDeviceResetExtSucceeds) {
+  for (auto device : devices) {
+    zes_reset_properties_t properties{};
+    set_reset_properties(properties, false, ZES_RESET_TYPE_COLD);
+    lzt::sysman_device_reset_ext(device, properties);
+  }
+}
+TEST_F(SYSMAN_DEVICE_TEST,
+       GivenValidDeviceWhenFlrResettingDeviceThenDeviceResetExtSucceeds) {
+  for (auto device : devices) {
+    zes_reset_properties_t properties{};
+    set_reset_properties(properties, false, ZES_RESET_TYPE_FLR);
+    lzt::sysman_device_reset_ext(device, properties);
+  }
+}
 } // namespace
