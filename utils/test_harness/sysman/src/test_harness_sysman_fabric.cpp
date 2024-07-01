@@ -36,6 +36,17 @@ get_fabric_port_handles(zes_device_handle_t device, uint32_t &count) {
   return fabric_port_handles;
 }
 
+std::vector<zes_fabric_port_throughput_t>
+get_multiport_throughputs(zes_device_handle_t device, uint32_t count,
+                          zes_fabric_port_handle_t *fabric_port_handle) {
+  std::vector<zes_fabric_port_throughput_t> multiport_throughputs(count);
+  auto multiport_throughputdata = multiport_throughputs.data();
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesFabricPortGetMultiPortThroughput(
+                device, count, fabric_port_handle, &multiport_throughputdata));
+  return multiport_throughputs;
+}
+
 zes_fabric_port_properties_t
 get_fabric_port_properties(zes_fabric_port_handle_t fabric_port_handle) {
   zes_fabric_port_properties_t properties = {
