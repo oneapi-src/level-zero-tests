@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -8,8 +8,6 @@
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <chrono>
-#include <thread>
 
 #include "gtest/gtest.h"
 
@@ -66,11 +64,17 @@ TEST_P(zeDriverAllocDeviceMemAlignmentTests,
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(zeDriverAllocDeviceMemTestVarySizeAndAlignment,
-                         zeDriverAllocDeviceMemAlignmentTests,
-                         ::testing::Combine(::testing::Values(0),
-                                            lzt::memory_allocation_sizes,
-                                            lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(
+    zeDriverAllocDeviceMemTestVarySizeAndAlignment,
+    zeDriverAllocDeviceMemAlignmentTests,
+    ::testing::Combine(::testing::Values(0), lzt::memory_allocation_sizes,
+                       lzt::memory_allocation_alignments_small));
+
+INSTANTIATE_TEST_SUITE_P(
+    zeDriverAllocDeviceMemTestVarySizeAndLargeAlignment,
+    zeDriverAllocDeviceMemAlignmentTests,
+    ::testing::Combine(::testing::Values(0), lzt::memory_allocation_sizes,
+                       lzt::memory_allocation_alignments_large));
 
 class zeMemGetAllocPropertiesTests : public zeDriverAllocDeviceMemTests {};
 
@@ -266,37 +270,53 @@ class zeDriverAllocSharedMemAlignmentTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<ze_device_mem_alloc_flag_t, ze_host_mem_alloc_flag_t,
-                     size_t, size_t>> {};
+                     size_t, size_t>> {
+protected:
+  void SetUp() override {
+    const ze_device_mem_alloc_flag_t dev_flags = std::get<0>(GetParam());
+    const ze_host_mem_alloc_flag_t host_flags = std::get<1>(GetParam());
+    size_ = std::get<2>(GetParam());
+    alignment_ = std::get<3>(GetParam());
+
+    auto driver = lzt::get_default_driver();
+    auto device = lzt::get_default_device(driver);
+    context_ = lzt::create_context();
+    memory_ = lzt::allocate_shared_memory(size_, alignment_, dev_flags,
+                                          host_flags, device, context_);
+  }
+
+  void TearDown() override {
+    lzt::free_memory(context_, memory_);
+    lzt::destroy_context(context_);
+  }
+
+  size_t size_;
+  size_t alignment_;
+  void *memory_ = nullptr;
+  ze_context_handle_t context_;
+};
 
 TEST_P(zeDriverAllocSharedMemAlignmentTests,
        GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned) {
-
-  const ze_device_mem_alloc_flag_t dev_flags = std::get<0>(GetParam());
-  const ze_host_mem_alloc_flag_t host_flags = std::get<1>(GetParam());
-  const size_t size = std::get<2>(GetParam());
-  const size_t alignment = std::get<3>(GetParam());
-
-  void *memory = nullptr;
-  auto driver = lzt::get_default_driver();
-  auto device = lzt::get_default_device(driver);
-  auto context = lzt::create_context();
-
-  memory = lzt::allocate_shared_memory(size, alignment, dev_flags, host_flags,
-                                       device, context);
-  EXPECT_NE(nullptr, memory);
-  if (alignment != 0) {
-    EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory) % alignment);
+  EXPECT_NE(nullptr, memory_);
+  if (alignment_ != 0) {
+    EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory_) % alignment_);
   }
-  lzt::free_memory(context, memory);
-  lzt::destroy_context(context);
 }
 
-INSTANTIATE_TEST_SUITE_P(zeDriverAllocSharedMemTestVarySizeAndAlignment,
-                         zeDriverAllocSharedMemAlignmentTests,
-                         ::testing::Combine(::testing::Values(0),
-                                            ::testing::Values(0),
-                                            lzt::memory_allocation_sizes,
-                                            lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(
+    zeDriverAllocSharedMemTestVarySizeAndAlignment,
+    zeDriverAllocSharedMemAlignmentTests,
+    ::testing::Combine(::testing::Values(0), ::testing::Values(0),
+                       lzt::memory_allocation_sizes,
+                       lzt::memory_allocation_alignments_small));
+
+INSTANTIATE_TEST_SUITE_P(
+    zeDriverAllocSharedMemTestVarySizeAndLargeAlignment,
+    zeDriverAllocSharedMemAlignmentTests,
+    ::testing::Combine(::testing::Values(0), ::testing::Values(0),
+                       lzt::memory_allocation_sizes,
+                       lzt::memory_allocation_alignments_large));
 
 class zeSharedMemGetPropertiesTests
     : public ::testing::Test,
@@ -433,33 +453,42 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_HOST_MEM_ALLOC_FLAG_BIAS_WRITE_COMBINED),
         lzt::memory_allocation_sizes, lzt::memory_allocation_alignments));
 
-class zeDriverAllocHostMemAlignmentTests : public zeDriverAllocHostMemTests {};
+class zeDriverAllocHostMemAlignmentTests : public zeDriverAllocHostMemTests {
+protected:
+  void SetUp() override {
+    const ze_host_mem_alloc_flag_t flags = std::get<0>(GetParam());
+    size_ = std::get<1>(GetParam());
+    alignment_ = std::get<2>(GetParam());
+    memory_ = lzt::allocate_host_memory(size_, alignment_, flags, nullptr,
+                                        lzt::get_default_context());
+  }
+
+  void TearDown() override { lzt::free_memory(memory_); }
+
+  size_t size_;
+  size_t alignment_;
+  void *memory_ = nullptr;
+};
 
 TEST_P(zeDriverAllocHostMemAlignmentTests,
        GivenSizeAndAlignmentWhenAllocatingHostMemoryThenPointerIsAligned) {
-
-  const ze_host_mem_alloc_flag_t flags = std::get<0>(GetParam());
-
-  const size_t size = std::get<1>(GetParam());
-  const size_t alignment = std::get<2>(GetParam());
-
-  void *memory = nullptr;
-  memory = lzt::allocate_host_memory(size, alignment, flags, nullptr,
-                                     lzt::get_default_context());
-
-  EXPECT_NE(nullptr, memory);
-  if (alignment != 0) {
-    EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory) % alignment);
+  EXPECT_NE(nullptr, memory_);
+  if (alignment_ != 0) {
+    EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory_) % alignment_);
   }
-
-  lzt::free_memory(memory);
 }
 
-INSTANTIATE_TEST_SUITE_P(zeDriverAllocHostMemTestVarySizeAndAlignment,
-                         zeDriverAllocHostMemAlignmentTests,
-                         ::testing::Combine(::testing::Values(0),
-                                            lzt::memory_allocation_sizes,
-                                            lzt::memory_allocation_alignments));
+INSTANTIATE_TEST_SUITE_P(
+    zeDriverAllocHostMemTestVarySizeAndAlignment,
+    zeDriverAllocHostMemAlignmentTests,
+    ::testing::Combine(::testing::Values(0), lzt::memory_allocation_sizes,
+                       lzt::memory_allocation_alignments_small));
+
+INSTANTIATE_TEST_SUITE_P(
+    zeDriverAllocHostMemTestVarySizeAndLargeAlignment,
+    zeDriverAllocHostMemAlignmentTests,
+    ::testing::Combine(::testing::Values(0), lzt::memory_allocation_sizes,
+                       lzt::memory_allocation_alignments_large));
 
 class zeHostMemPropertiesTests
     : public ::testing::Test,
