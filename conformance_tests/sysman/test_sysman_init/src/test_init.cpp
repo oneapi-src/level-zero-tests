@@ -45,7 +45,7 @@ TEST(SysmanInitTests,
 TEST(SysmanInitTests,
      GivenCoreNotInitializedWhenSysmanInitializedThenzesDriverGetWorks) {
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
-  uint32_t pCount;
+  uint32_t pCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&pCount, nullptr));
   ASSERT_GT(pCount, 0);
 }
@@ -55,7 +55,7 @@ TEST(SysmanInitTests,
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
-  uint32_t pCount;
+  uint32_t pCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&pCount, nullptr));
   ASSERT_GT(pCount, 0);
 }
