@@ -611,7 +611,11 @@ TEST_F(
   const char *valueString = std::getenv("LZT_SYSMAN_DEVICE_TEST_ITERATIONS");
   uint32_t number_iterations = 2;
   if (valueString != nullptr) {
-    number_iterations = atoi(valueString);
+    auto _value = atoi(valueString);
+    number_iterations = _value < 0 ? number_iterations : std::min(_value, 300);
+    if (number_iterations != _value) {
+      LOG_WARNING << "Number of iterations is capped at 300\n";
+    }
   }
 
   for (auto device : devices) {
