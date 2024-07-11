@@ -1975,7 +1975,7 @@ TEST_F(
   ze_result_t result =
       zeSamplerCreate(context, device, &sampler_desc, &sampler);
   if ((result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) ||
-      (result = ZE_RESULT_ERROR_UNINITIALIZED)) {
+      (result == ZE_RESULT_ERROR_UNINITIALIZED)) {
     LOG_WARNING << "test not executed because "
                    "sampler is not supported";
     user_data.prologue_called = true;

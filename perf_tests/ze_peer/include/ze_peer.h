@@ -274,8 +274,8 @@ public:
 
   std::vector<uint32_t> queues{};
 
-  char *ze_host_buffer;
-  char *ze_host_validate_buffer;
+  char *ze_host_buffer = nullptr;
+  char *ze_host_validate_buffer = nullptr;
 
   std::vector<ze_peer_device_t> ze_peer_devices;
   ze_ipc_mem_handle_t pIpcHandle = {};
