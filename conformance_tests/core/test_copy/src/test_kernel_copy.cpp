@@ -563,7 +563,7 @@ protected:
       EXPECT_EQ(0, memcmp(input_data[i].data, output_data[i].data + offset,
                           (size - offset) * sizeof(uint32_t)));
       // break to cleanup
-      if (::testing::Test::HasFailure) {
+      if (::testing::Test::HasFailure()) {
         break;
       }
     }
