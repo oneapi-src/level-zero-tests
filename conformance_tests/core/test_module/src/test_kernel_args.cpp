@@ -87,7 +87,7 @@ void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, int x, int y,
                                           uint32_t val, bool is_immediate) {
 
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
-  lzt::ImagePNG32Bit temp_png(img_height, img_width);
+  lzt::ImagePNG32Bit temp_png(img_width, img_height);
   temp_png.set_pixel(x, y, val);
   lzt::append_image_copy_from_mem(cmd_bundle.list, image, temp_png.raw_data(),
                                   nullptr);
@@ -102,7 +102,7 @@ uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image, int x,
                                               int y, bool is_immediate) {
 
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
-  lzt::ImagePNG32Bit temp_png(img_height, img_width);
+  lzt::ImagePNG32Bit temp_png(img_width, img_height);
   lzt::append_image_copy_to_mem(cmd_bundle.list, temp_png.raw_data(), image,
                                 nullptr);
   lzt::close_command_list(cmd_bundle.list);
