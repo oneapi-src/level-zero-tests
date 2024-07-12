@@ -493,9 +493,15 @@ void measure_bandwidth_Host2Device2Host(ZeImageCopy &Imagecopy,
     std::stringstream Image_dimensions;
     Image_dimensions << Imagecopy.width << "X" << Imagecopy.height << "X"
                      << Imagecopy.depth;
-    test_ptree->put(
-        "Name", "Host2Device2Host: Bandwidth copying from Host->Device->Host ");
-    test_ptree->put("Image size", Image_dimensions.str());
+    try {
+      test_ptree->put(
+          "Name",
+          "Host2Device2Host: Bandwidth copying from Host->Device->Host ");
+      test_ptree->put("Image size", Image_dimensions.str());
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting host to device to host bw measurement: "
+                << e.what() << std::endl;
+    }
   } else {
     std::cout << "Host2Device2Host: Measuring Bandwidth for copying the "
                  "image buffer size "
@@ -506,9 +512,14 @@ void measure_bandwidth_Host2Device2Host(ZeImageCopy &Imagecopy,
   Imagecopy.measureHost2Device2Host();
 
   if (Imagecopy.is_json_output_enabled()) {
-    test_ptree->put("GBPS", Imagecopy.gbps);
-    if (Imagecopy.data_validation)
-      test_ptree->put("Result", (Imagecopy.validRet ? "PASSED" : "FAILED"));
+    try {
+      test_ptree->put("GBPS", Imagecopy.gbps);
+      if (Imagecopy.data_validation)
+        test_ptree->put("Result", (Imagecopy.validRet ? "PASSED" : "FAILED"));
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting host to device to host bw measurement: "
+                << e.what() << std::endl;
+    }
   } else {
     if (Imagecopy.data_validation) {
       std::cout << "  Results: Data validation "
@@ -523,8 +534,14 @@ void measure_bandwidth_Host2Device(ZeImageCopy &Imagecopy, ptree *test_ptree) {
     std::stringstream Image_dimensions;
     Image_dimensions << Imagecopy.width << "X" << Imagecopy.height << "X"
                      << Imagecopy.depth;
-    test_ptree->put("Name", "Host2Device: Bandwidth copying from Host->Device");
-    test_ptree->put("Image size", Image_dimensions.str());
+    try {
+      test_ptree->put("Name",
+                      "Host2Device: Bandwidth copying from Host->Device");
+      test_ptree->put("Image size", Image_dimensions.str());
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting host to device bw measurement: "
+                << e.what() << std::endl;
+    }
   } else {
     std::cout
         << "Host2Device: Measuring Bandwidth/Latency for copying the image "
@@ -536,9 +553,14 @@ void measure_bandwidth_Host2Device(ZeImageCopy &Imagecopy, ptree *test_ptree) {
   Imagecopy.measureParallelHost2Device();
 
   if (Imagecopy.is_json_output_enabled()) {
-    test_ptree->put("GBPS", Imagecopy.gbps);
-    if (Imagecopy.data_validation) {
-      test_ptree->put("Result", (Imagecopy.validRet ? "PASSED" : "FAILED"));
+    try {
+      test_ptree->put("GBPS", Imagecopy.gbps);
+      if (Imagecopy.data_validation) {
+        test_ptree->put("Result", (Imagecopy.validRet ? "PASSED" : "FAILED"));
+      }
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting host to device bw measurement: "
+                << e.what() << std::endl;
     }
   } else {
     if (Imagecopy.data_validation) {
@@ -555,8 +577,14 @@ void measure_bandwidth_Device2Host(ZeImageCopy &Imagecopy, ptree *test_ptree) {
     std::stringstream Image_dimensions;
     Image_dimensions << Imagecopy.width << "X" << Imagecopy.height << "X"
                      << Imagecopy.depth;
-    test_ptree->put("Name", "Device2Host: Bandwidth copying from Device->Host");
-    test_ptree->put("Image size", Image_dimensions.str());
+    try {
+      test_ptree->put("Name",
+                      "Device2Host: Bandwidth copying from Device->Host");
+      test_ptree->put("Image size", Image_dimensions.str());
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting device to host bw measurement: "
+                << e.what() << std::endl;
+    }
   } else {
     std::cout
         << "Device2Host: Measurign Bandwidth/Latency for copying the image "
@@ -568,9 +596,14 @@ void measure_bandwidth_Device2Host(ZeImageCopy &Imagecopy, ptree *test_ptree) {
   Imagecopy.measureParallelDevice2Host();
 
   if (Imagecopy.is_json_output_enabled()) {
-    test_ptree->put("GBPS", Imagecopy.gbps);
-    if (Imagecopy.data_validation)
-      test_ptree->put("Result", (Imagecopy.validRet ? "PASSED" : "FAILED"));
+    try {
+      test_ptree->put("GBPS", Imagecopy.gbps);
+      if (Imagecopy.data_validation)
+        test_ptree->put("Result", (Imagecopy.validRet ? "PASSED" : "FAILED"));
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting device to host bw measurement: "
+                << e.what() << std::endl;
+    }
   } else {
     if (Imagecopy.data_validation) {
       std::cout << "  Results: Data validation "
@@ -593,12 +626,17 @@ void measure_bandwidth(ZeImageCopy &Imagecopy) {
   measure_bandwidth_Device2Host(Imagecopy, &ptree_Device2Host);
 
   if (Imagecopy.is_json_output_enabled()) {
-    Imagecopy.param_array.push_back(std::make_pair("", ptree_Host2Device2Host));
-    Imagecopy.param_array.push_back(std::make_pair("", ptree_Host2Device));
-    Imagecopy.param_array.push_back(std::make_pair("", ptree_Device2Host));
-    ptree_main.put_child("Performance Benchmark.bandwidth",
-                         Imagecopy.param_array);
-    pt::write_json(Imagecopy.JsonFileName.c_str(), ptree_main);
+    try {
+      Imagecopy.param_array.push_back(
+          std::make_pair("", ptree_Host2Device2Host));
+      Imagecopy.param_array.push_back(std::make_pair("", ptree_Host2Device));
+      Imagecopy.param_array.push_back(std::make_pair("", ptree_Device2Host));
+      ptree_main.put_child("Performance Benchmark.bandwidth",
+                           Imagecopy.param_array);
+      pt::write_json(Imagecopy.JsonFileName.c_str(), ptree_main);
+    } catch (const std::exception &e) {
+      std::cerr << "Error writing json output: " << e.what() << std::endl;
+    }
   }
 }
 
@@ -608,11 +646,16 @@ void measure_latency_Host2Device(ZeImageCopyLatency &imageCopyLatency,
     std::stringstream Image_dimensions;
     Image_dimensions << imageCopyLatency.width << "X" << imageCopyLatency.height
                      << "X" << imageCopyLatency.depth;
-    test_ptree->put("Name",
-                    "Host2Device: Measuring Latency for copying the image ");
-    test_ptree->put("Image size", Image_dimensions.str());
-    test_ptree->put("Image format", imageCopyLatency.Imageformat);
-    test_ptree->put("Image Layout", imageCopyLatency.Imagelayout);
+    try {
+      test_ptree->put("Name",
+                      "Host2Device: Measuring Latency for copying the image ");
+      test_ptree->put("Image size", Image_dimensions.str());
+      test_ptree->put("Image format", imageCopyLatency.Imageformat);
+      test_ptree->put("Image Layout", imageCopyLatency.Imagelayout);
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting host to device latency measurement: "
+                << e.what() << std::endl;
+    }
   } else {
     std::cout
         << "Host2Device: Measuring Bandwidth/Latency for copying the image "
@@ -628,10 +671,15 @@ void measure_latency_Host2Device(ZeImageCopyLatency &imageCopyLatency,
   imageCopyLatency.measureParallelHost2Device();
 
   if (imageCopyLatency.is_json_output_enabled()) {
-    test_ptree->put("Latency", imageCopyLatency.latency);
-    if (imageCopyLatency.data_validation)
-      test_ptree->put("Result",
-                      (imageCopyLatency.validRet ? "PASSED" : "FAILED"));
+    try {
+      test_ptree->put("Latency", imageCopyLatency.latency);
+      if (imageCopyLatency.data_validation)
+        test_ptree->put("Result",
+                        (imageCopyLatency.validRet ? "PASSED" : "FAILED"));
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting host to device latency measurement: "
+                << e.what() << std::endl;
+    }
   }
 }
 
@@ -641,11 +689,16 @@ void measure_latency_Device2Host(ZeImageCopyLatency &imageCopyLatency,
     std::stringstream Image_dimensions;
     Image_dimensions << imageCopyLatency.width << "X" << imageCopyLatency.height
                      << "X" << imageCopyLatency.depth;
-    test_ptree->put("Name",
-                    "Device2Host: Measuring Latency for copying the image");
-    test_ptree->put("Image size", Image_dimensions.str());
-    test_ptree->put("Image format", imageCopyLatency.Imageformat);
-    test_ptree->put("Image Layout", imageCopyLatency.Imagelayout);
+    try {
+      test_ptree->put("Name",
+                      "Device2Host: Measuring Latency for copying the image");
+      test_ptree->put("Image size", Image_dimensions.str());
+      test_ptree->put("Image format", imageCopyLatency.Imageformat);
+      test_ptree->put("Image Layout", imageCopyLatency.Imagelayout);
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting device to host latency measurement: "
+                << e.what() << std::endl;
+    }
   } else {
     std::cout
         << "Device2Host: Measuring Bandwidth/Latency for copying the image "
@@ -661,10 +714,15 @@ void measure_latency_Device2Host(ZeImageCopyLatency &imageCopyLatency,
   imageCopyLatency.measureParallelDevice2Host();
 
   if (imageCopyLatency.is_json_output_enabled()) {
-    test_ptree->put("Latency", imageCopyLatency.latency);
-    if (imageCopyLatency.data_validation)
-      test_ptree->put("Result",
-                      (imageCopyLatency.validRet ? "PASSED" : "FAILED"));
+    try {
+      test_ptree->put("Latency", imageCopyLatency.latency);
+      if (imageCopyLatency.data_validation)
+        test_ptree->put("Result",
+                        (imageCopyLatency.validRet ? "PASSED" : "FAILED"));
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting device to host latency measurement: "
+                << e.what() << std::endl;
+    }
   }
 }
 
@@ -676,7 +734,11 @@ void measure_latency(ZeImageCopyLatency &imageCopyLatency) {
   ptree ptree_param_array;
 
   if (imageCopyLatency.is_json_output_enabled()) {
-    pt::read_json(imageCopyLatency.JsonFileName, ptree_main);
+    try {
+      pt::read_json(imageCopyLatency.JsonFileName, ptree_main);
+    } catch (const std::exception &e) {
+      std::cerr << "Error reading json file: " << e.what() << std::endl;
+    }
   }
   measure_latency_Host2Device(imageCopyLatency, &ptree_Host2Device);
   measure_latency_Device2Host(imageCopyLatency, &ptree_Device2Host);
@@ -684,8 +746,12 @@ void measure_latency(ZeImageCopyLatency &imageCopyLatency) {
   if (imageCopyLatency.is_json_output_enabled()) {
     ptree_param_array.push_back(std::make_pair("", ptree_Host2Device));
     ptree_param_array.push_back(std::make_pair("", ptree_Device2Host));
-    ptree_main.put_child("Performance Benchmark.latency", ptree_param_array);
-    pt::write_json(imageCopyLatency.JsonFileName.c_str(), ptree_main);
+    try {
+      ptree_main.put_child("Performance Benchmark.latency", ptree_param_array);
+      pt::write_json(imageCopyLatency.JsonFileName.c_str(), ptree_main);
+    } catch (const std::exception &e) {
+      std::cerr << "Error writing json output: " << e.what() << std::endl;
+    }
   }
 }
 

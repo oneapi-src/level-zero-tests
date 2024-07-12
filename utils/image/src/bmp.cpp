@@ -218,7 +218,10 @@ bool BmpUtils::load_bmp_image(uint8_t *&data, int &width, int &height,
   }
 
   gap = file_header.bf_off_bits_ - sizeof(file_header) - sizeof(info_header);
-  fseek(stream, gap, SEEK_CUR);
+  if (fseek(stream, gap, SEEK_CUR)) {
+    LOG_ERROR << "Failed to seek in BMP file";
+    goto error_exit;
+  }
 
   width = info_header.bi_width_;
   height = info_header.bi_height_ > 0 ? info_header.bi_height_

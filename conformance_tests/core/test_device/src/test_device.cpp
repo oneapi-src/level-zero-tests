@@ -931,8 +931,8 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   auto device_time_0 = std::get<1>(timestamps);
   auto device_time_1 = std::get<1>(timestamps_1);
   auto device_properties = lzt::get_device_properties(device);
-  uint64_t timestamp_max_val =
-      ~(-1 << device_properties.kernelTimestampValidBits);
+  uint64_t timestamp_max_val = ~(static_cast<uint64_t>(-1)
+                                 << device_properties.kernelTimestampValidBits);
   uint64_t timestamp_freq = device_properties.timerResolution;
 
   auto device_diff_ns =

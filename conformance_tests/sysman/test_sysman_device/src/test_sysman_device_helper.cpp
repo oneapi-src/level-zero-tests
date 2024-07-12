@@ -54,8 +54,9 @@ void get_ze_root_uuids(std::vector<ze_device_handle_t> ze_devices,
 int main(int argc, char **argv) {
 
   char *device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
-  LOG_INFO << "Device Hierarchy : " << device_hierarchy;
   EXPECT_NE(device_hierarchy, nullptr);
+  LOG_INFO << "Device Hierarchy : " << device_hierarchy ? device_hierarchy
+                                                        : "NULL";
 
   auto driver = lzt::zeDevice::get_instance()->get_driver();
   std::vector<ze_device_handle_t> ze_devices = lzt::get_ze_devices(driver);

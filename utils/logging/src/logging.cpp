@@ -111,16 +111,20 @@ LoggingSettings parse_command_line(std::vector<std::string> &command_line) {
           po::value(&settings.level)->default_value(logging_level::info),
           "minimal logging level to print");
 
-  po::parsed_options parsed = po::command_line_parser(command_line)
-                                  .options(desc)
-                                  .allow_unregistered()
-                                  .run();
-  po::variables_map vm;
-  po::store(parsed, vm);
-  po::notify(vm);
+  try {
+    po::parsed_options parsed = po::command_line_parser(command_line)
+                                    .options(desc)
+                                    .allow_unregistered()
+                                    .run();
+    po::variables_map vm;
+    po::store(parsed, vm);
+    po::notify(vm);
 
-  command_line =
-      po::collect_unrecognized(parsed.options, po::include_positional);
+    command_line =
+        po::collect_unrecognized(parsed.options, po::include_positional);
+  } catch (const po::error &e) {
+    std::cerr << "Error parsing command line: " << e.what() << std::endl;
+  }
   return settings;
 }
 

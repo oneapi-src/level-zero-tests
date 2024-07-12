@@ -41,7 +41,7 @@ if(NOT TARGET GTest::GTest AND NOT TARGET GMock::GMock AND NOT BUILD_ZE_PERF_TES
 endif()
 enable_testing()
 
-set(GTEST_HAS_EXCEPTIONS 0)
+add_compile_definitions(GTEST_HAS_EXCEPTIONS=0)
 
 set(CMAKE_CXX_STANDARD 14)
 

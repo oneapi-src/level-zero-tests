@@ -27,7 +27,9 @@ void get_sysman_devices(const std::string set_device_hierarchy,
   putenv(sys_env);
   char *get_device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
   EXPECT_NE(get_device_hierarchy, nullptr);
-  LOG_INFO << "Child Process : Device Hierarchy = " << get_device_hierarchy;
+  LOG_INFO << "Child Process : Device Hierarchy = " << get_device_hierarchy
+      ? get_device_hierarchy
+      : "NULL";
   devices = GET_DEVICE_FN();
 }
 
