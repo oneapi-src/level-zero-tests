@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -97,6 +97,8 @@ protected:
   void
   RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(bool is_immediate);
   void RunGivenValidSpecConstantsWhenCreatingModuleTest(bool is_immediate);
+  void RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(
+      bool is_immediate);
   void
   RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(bool is_immediate);
   void RunGivenModuleCompiledWithOptimizationsWhenExecuting(bool is_immediate);
@@ -341,6 +343,59 @@ TEST_F(
     zeModuleCreateTests,
     GivenValidSpecConstantsWhenCreatingModuleThenExpectSpecConstantInKernelGetsUpdatesOnImmediateCmdList) {
   RunGivenValidSpecConstantsWhenCreatingModuleTest(true);
+}
+
+void zeModuleCreateTests::RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(
+bool is_immediate) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+
+  uint32_t spec_constants_num = 4;
+  const uint64_t val_1 = 11, val_2 = 22, val_3 = 33, val_4 = 44;
+  const uint64_t *spec_constants_values[] = {&val_1, &val_2, &val_3, &val_4};
+  uint32_t spec_constants_ids[] = {0, 1, 2, 3};
+  ze_module_constants_t spec_constants{spec_constants_num, spec_constants_ids,
+                                      (const void **)spec_constants_values};
+
+  const std::string filename = "spec_constant_composite.spv";
+  const std::vector<uint8_t> binary_file = level_zero_tests::load_binary_file(filename);
+
+  ze_module_desc_t module_description = {};
+  module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+  module_description.pNext = nullptr;
+  module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
+  module_description.inputSize = static_cast<uint32_t>(binary_file.size());
+  module_description.pInputModule = binary_file.data();
+  module_description.pBuildFlags = nullptr;
+  module_description.pConstants = &spec_constants;
+  ze_module_handle_t module_spec;
+  ze_module_build_log_handle_t build_log = nullptr;
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeModuleCreate(lzt::get_default_context(), device, &module_description, &module_spec, &build_log));
+  void* buff_spec = lzt::allocate_host_memory(sizeof(uint64_t) * spec_constants_num);
+  const std::string kernel_name = "test";
+  lzt::create_and_execute_function(device, module_spec, kernel_name, 1, buff_spec, is_immediate);
+  uint64_t* output = static_cast<uint64_t *>(buff_spec);
+
+  for (int i = 0; i < spec_constants_num; i++) {
+    int expected = (i + 1) * 11 + 1;
+    int actual = output[i];
+    EXPECT_EQ(expected, actual);
+  }
+
+  lzt::free_memory(buff_spec);
+  lzt::destroy_module(module_spec);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenValidSpecConstantsWhenUsingSpecConstantCompositeThenExpectVectorCreates) {
+  RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(false);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenValidSpecConstantsWhenUsingSpecConstantCompositeThenExpectVectorCreatesOnImmediateCmdList) {
+  RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(true);
 }
 
 void zeModuleCreateTests::
