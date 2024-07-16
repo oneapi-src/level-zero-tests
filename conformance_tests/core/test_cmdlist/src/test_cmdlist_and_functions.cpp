@@ -55,6 +55,10 @@ public:
     file_name = std::tmpnam(nullptr);
     file_descriptor = creat(file_name.c_str(), _S_IREAD | _S_IWRITE);
 #endif
+    if (file_descriptor < 0) {
+      LOG_ERROR << "Error creating file" << std::endl;
+      return;
+    }
     fflush(nullptr);
     dup2(file_descriptor, stream);
     close(file_descriptor);
@@ -67,7 +71,9 @@ public:
       close(orig_file_descriptor);
       orig_file_descriptor = -1;
     }
-    remove(file_name.c_str());
+    if (remove(file_name.c_str())) {
+      LOG_WARNING << "Error removing file: " << file_name << std::endl;
+    }
   }
 
   std::stringstream GetOutput() {

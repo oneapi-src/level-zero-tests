@@ -393,15 +393,17 @@ void append_launch_function(ze_command_list_handle_t hCommandList,
   auto function_initial = hFunction;
   auto signal_event_initial = hSignalEvent;
   std::vector<ze_event_handle_t> wait_events_initial(numWaitEvents);
-  std::memcpy(wait_events_initial.data(), phWaitEvents,
-              sizeof(ze_event_handle_t) * numWaitEvents);
+  if (phWaitEvents) {
+    std::memcpy(wait_events_initial.data(), phWaitEvents,
+                sizeof(ze_event_handle_t) * numWaitEvents);
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
                                    hCommandList, hFunction, pLaunchFuncArgs,
                                    hSignalEvent, numWaitEvents, phWaitEvents));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hFunction, function_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < numWaitEvents; i++) {
+  for (int i = 0; i < numWaitEvents && phWaitEvents; i++) {
     EXPECT_EQ(phWaitEvents[i], wait_events_initial[i]);
   }
 }

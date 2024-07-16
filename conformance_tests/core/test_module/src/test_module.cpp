@@ -64,7 +64,9 @@ std::vector<ze_module_handle_t> create_module_vector_and_log(
                                           ZE_MODULE_FORMAT_NATIVE, nullptr,
                                           &build_log->at(count)));
       count++;
-      std::remove(filename_native.c_str());
+      if (std::remove(filename_native.c_str())) {
+        LOG_WARNING << "FAILED to remove file " << filename_native;
+      }
     }
   } else {
     for (auto flag : build_flag) {
@@ -511,7 +513,9 @@ TEST_F(
   std::ifstream stream(filename_native, std::ios::in | std::ios::binary);
   stream.seekg(0, stream.end);
   EXPECT_EQ(static_cast<size_t>(stream.tellg()), size);
-  std::remove(filename_native.c_str());
+  if (std::remove(filename_native.c_str())) {
+    LOG_WARNING << "FAILED to remove file " << filename_native;
+  }
   lzt::destroy_module(module);
   stream.close();
 }

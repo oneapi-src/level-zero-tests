@@ -103,7 +103,7 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
     if (pid == 0) {
       pid_t test_pid = fork();
       if (test_pid == 0) {
-        ZePeer peer(local_device_ids, remote_device_ids, pair_device_ids,
+        ZePeer peer(remote_device_ids, local_device_ids, pair_device_ids,
                     queues);
         if (ZePeer::validate_results) {
           peer.warm_up_iterations = 0;
