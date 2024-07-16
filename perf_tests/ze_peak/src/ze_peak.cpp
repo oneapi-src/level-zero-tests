@@ -307,7 +307,11 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
         sub_devices.resize(sub_device_count);
         result = zeDeviceGetSubDevices(device, &sub_device_count,
                                        sub_devices.data());
-        if (verbose)
+        if (ZE_RESULT_SUCCESS != result) {
+          std::cout << "zeDeviceGetSubDevices failed: "
+                    << std::to_string(result) << "\n";
+          sub_device_count = 0;
+        } else if (verbose)
           std::cout << "Sub Device Handles retrieved\n";
       } else {
         sub_device_count = 0;

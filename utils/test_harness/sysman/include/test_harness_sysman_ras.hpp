@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -20,6 +20,9 @@ zes_ras_config_t get_ras_config(zes_ras_handle_t rasHandle);
 void set_ras_config(zes_ras_handle_t rasHandle, zes_ras_config_t rasConfig);
 zes_ras_state_t get_ras_state(zes_ras_handle_t rasHandle, ze_bool_t clear);
 uint64_t sum_of_ras_errors(zes_ras_state_t state);
+std::vector<zes_ras_state_exp_t> ras_get_state_exp(zes_ras_handle_t ras_handle);
+void ras_clear_state_exp(zes_ras_handle_t ras_handle,
+                         zes_ras_error_category_exp_t category);
 } // namespace level_zero_tests
 
 #endif

@@ -442,7 +442,8 @@ int main(int argc, char **argv) {
       i++;
     } else if (strcmp(argv[i], "-z") == 0) {
       if (isdigit(argv[i + 1][0])) {
-        size_to_run = atoi(argv[i + 1]);
+        size_to_run = std::min(atoi(argv[i + 1]),
+                               static_cast<int>(max_number_of_elements));
       } else {
         std::cout << usage_str;
         exit(-1);

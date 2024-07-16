@@ -149,14 +149,14 @@ bool check_for_throttling(zes_freq_handle_t pFreqHandle) {
   int wait = 0;
   do {
     zes_freq_state_t state = get_freq_state(pFreqHandle);
-    if (state.throttleReasons >= ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP &&
-        state.throttleReasons <= ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE |
-            ZES_FREQ_THROTTLE_REASON_FLAG_SW_RANGE |
-            ZES_FREQ_THROTTLE_REASON_FLAG_PSU_ALERT |
-            ZES_FREQ_THROTTLE_REASON_FLAG_THERMAL_LIMIT |
-            ZES_FREQ_THROTTLE_REASON_FLAG_CURRENT_LIMIT |
-            ZES_FREQ_THROTTLE_REASON_FLAG_BURST_PWR_CAP |
-            ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP)
+    if ((state.throttleReasons >= ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP) &&
+        (state.throttleReasons <= (ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE |
+                                   ZES_FREQ_THROTTLE_REASON_FLAG_SW_RANGE |
+                                   ZES_FREQ_THROTTLE_REASON_FLAG_PSU_ALERT |
+                                   ZES_FREQ_THROTTLE_REASON_FLAG_THERMAL_LIMIT |
+                                   ZES_FREQ_THROTTLE_REASON_FLAG_CURRENT_LIMIT |
+                                   ZES_FREQ_THROTTLE_REASON_FLAG_BURST_PWR_CAP |
+                                   ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP)))
       return true;
     std::this_thread::sleep_for(std::chrono::microseconds(1000 * 10));
     wait += 10;

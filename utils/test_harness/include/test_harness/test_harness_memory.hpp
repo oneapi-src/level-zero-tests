@@ -9,7 +9,6 @@
 #ifndef level_zero_tests_ZE_TEST_HARNESS_MEMORY_HPP
 #define level_zero_tests_ZE_TEST_HARNESS_MEMORY_HPP
 
-#include "test_harness_device.hpp"
 #include <level_zero/ze_api.h>
 #include "gtest/gtest.h"
 
@@ -29,6 +28,11 @@ const auto memory_allocation_sizes =
 const auto memory_allocation_alignments = ::testing::Values(
     0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384,
     32768, 65536, 1u << 17, 1u << 18, 1u << 19, 1u << 20, 1u << 21, 1u << 22);
+const auto memory_allocation_alignments_small =
+    ::testing::Values(0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048,
+                      4096, 8192, 16384, 32768, 65536);
+const auto memory_allocation_alignments_large = ::testing::Values(
+    1u << 17, 1u << 18, 1u << 19, 1u << 20, 1u << 21, 1u << 22, 1u << 23);
 
 void *allocate_host_memory(const size_t size);
 void *allocate_host_memory(const size_t size, const size_t alignment);
