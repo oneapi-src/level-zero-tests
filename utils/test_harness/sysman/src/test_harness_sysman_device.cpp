@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -24,10 +24,32 @@ zes_device_properties_t
 get_sysman_device_properties(zes_device_handle_t device) {
   zes_device_properties_t properties = {ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES,
                                         nullptr};
-
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceGetProperties(device, &properties));
-
   return properties;
+}
+
+std::vector<zes_subdevice_exp_properties_t>
+get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t &count) {
+  if (count == 0) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zesDeviceGetSubDevicePropertiesExp(device, &count, nullptr));
+  }
+  std::vector<zes_subdevice_exp_properties_t> sub_device_properties(count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceGetSubDevicePropertiesExp(device, &count,
+                                               sub_device_properties.data()));
+  return sub_device_properties;
+}
+
+zes_device_handle_t get_sysman_device_by_uuid(zes_driver_handle_t driver,
+                                              zes_uuid_t uuid,
+                                              ze_bool_t &on_sub_device,
+                                              uint32_t &sub_device_id) {
+  zes_device_handle_t device = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDriverGetDeviceByUuidExp(driver, uuid, &device, &on_sub_device,
+                                        &sub_device_id));
+  return device;
 }
 
 uint32_t get_processes_count(zes_device_handle_t device) {

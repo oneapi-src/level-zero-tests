@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -125,6 +125,51 @@ TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenDeviceHierarchyModesFlatAndCombinedWhenRetrievingSysmanDevicesThenValidDevicesAreReturned) {
   run_device_hierarchy_child_process();
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenValidDeviceWhenRetrievingSubDevicePropertiesThenValidPropertiesAreReturned) {
+  for (auto device : devices) {
+    auto device_properties = lzt::get_sysman_device_properties(device);
+    uint32_t sub_devices_count = device_properties.numSubdevices;
+
+    if (sub_devices_count > 0) {
+      uint32_t num_sub_devices = 0;
+      auto sub_device_properties =
+          lzt::get_sysman_subdevice_properties(device, num_sub_devices);
+      EXPECT_EQ(sub_devices_count, num_sub_devices);
+      for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
+           sub_device_index++) {
+        EXPECT_LT(sub_device_properties[sub_device_index].subdeviceId,
+                  num_sub_devices);
+        EXPECT_GT(sub_device_properties[sub_device_index].uuid.id[0], 0);
+      }
+    }
+  }
+}
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenValidDriverWhenRetrievingDeviceHandleFromUUIDThenReturnedDeviceHandleShouldMatchCurrentDeviceHandle) {
+  zes_driver_handle_t driver = lzt::get_default_zes_driver();
+  for (auto device : devices) {
+    auto properties = lzt::get_sysman_device_properties(device);
+    uint32_t sub_devices_count = properties.numSubdevices;
+    zes_uuid_t uuid = {};
+    for (uint32_t i = 0; i < sizeof(properties.core.uuid.id); i++) {
+      uuid.id[i] = properties.core.uuid.id[i];
+    }
+    ze_bool_t on_sub_device = false;
+    uint32_t sub_device_id = 0;
+    zes_device_handle_t device_handle_from_uuid =
+        lzt::get_sysman_device_by_uuid(driver, uuid, on_sub_device,
+                                       sub_device_id);
+    EXPECT_EQ(device_handle_from_uuid, device);
+    if (on_sub_device == true) {
+      EXPECT_LT(sub_device_id, sub_devices_count);
+    }
+  }
 }
 
 TEST_F(
