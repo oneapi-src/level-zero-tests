@@ -18,12 +18,12 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(SysmanInitTests,
-     GivenCoreInitializedFirstWhenSysmanInitializedThenzesDriverGetWorks) {
-  if (strcmp(getenv("ZES_ENABLE_SYSMAN"), "1") == 0) {
-    static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(sys_env);
-  }
+TEST(
+    SysmanInitTests,
+    GivenSysmanEnableMacroIsDisabledAndCoreInitializedFirstWhenSysmanInitializedThenzesDriverGetWorks) {
+  static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
+  putenv(sys_env);
+
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
   uint32_t zeInitCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&zeInitCount, nullptr));

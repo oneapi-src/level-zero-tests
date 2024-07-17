@@ -110,21 +110,17 @@ static void run_child_process(const std::string &device_hierarchy) {
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
-    GivenDeviceHierarchyModeCombinedWhenSysmanDeviceUUIDsAreRetrievedThenSysmanAndCoreDeviceUUIDsAreMatched) {
-  if (strcmp(getenv("ZES_ENABLE_SYSMAN"), "1") == 0) {
-    static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(sys_env);
-  }
+    GivenDeviceHierarchyModeCombinedAndSysmanEnableMacroIsDisabledWhenSysmanDeviceUUIDsAreRetrievedThenSysmanAndCoreDeviceUUIDsAreMatched) {
+  static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
+  putenv(sys_env);
   run_child_process("COMBINED");
 }
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
-    GivenDeviceHierarchyModeCompositeWhenSysmanDeviceUUIDsAreRetrievedThenSysmanAndCoreDeviceUUIDsAreMatched) {
-  if (strcmp(getenv("ZES_ENABLE_SYSMAN"), "1") == 0) {
-    static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(sys_env);
-  }
+    GivenDeviceHierarchyModeCompositeAndSysmanEnableMacroIsDisabledWhenSysmanDeviceUUIDsAreRetrievedThenSysmanAndCoreDeviceUUIDsAreMatched) {
+  static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
+  putenv(sys_env);
   run_child_process("COMPOSITE");
 }
 #endif // USE_ZESINIT
