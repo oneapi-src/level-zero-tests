@@ -945,6 +945,42 @@ TEST_F(
 
 TEST_F(
     LTRACING_TEST_NAME,
+    GivenWhenTracerEnabledWithCalltoZetAPIThenSuccessIsReturnedFromZetAPI) {
+  prologues.CommandList.pfnResetCb = lzt::lprologue_callback;
+  epilogues.CommandList.pfnResetCb = lzt::lepilogue_callback;
+
+  init_command_list();
+
+  ze_result_t initial_result = zeCommandListReset(command_list);
+  ready_ltracer(tracer_handle, prologues, epilogues);
+
+  ASSERT_EQ(initial_result, zeCommandListReset(command_list));
+  uint32_t metricGroupCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupGet(device, &metricGroupCount, nullptr));
+}
+
+TEST_F(
+    LTRACING_TEST_NAME,
+    GivenWhenTracerEnabledWithCalltoZesAPIThenSuccessIsReturnedFromZesAPI) {
+  prologues.CommandList.pfnResetCb = lzt::lprologue_callback;
+  epilogues.CommandList.pfnResetCb = lzt::lepilogue_callback;
+
+  init_command_list();
+
+  ze_result_t initial_result = zeCommandListReset(command_list);
+  ready_ltracer(tracer_handle, prologues, epilogues);
+
+  ASSERT_EQ(initial_result, zeCommandListReset(command_list));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesInit(0));
+  uint32_t zesCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDriverGet(&zesCount, nullptr));
+}
+
+TEST_F(
+    LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCloseCallbacksWhenCallingzeCommandListCloseThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnCloseCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnCloseCb = lzt::lepilogue_callback;
