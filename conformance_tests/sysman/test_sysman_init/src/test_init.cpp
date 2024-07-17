@@ -20,10 +20,12 @@ namespace {
 
 TEST(
     SysmanInitTests,
-    GivenSysmanEnableMacroIsDisabledAndCoreInitializedFirstWhenSysmanInitializedThenzesDriverGetWorks) {
-  static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
-  putenv(sys_env);
-
+    GivenSysmanEnableEnvDisabledAndCoreInitializedFirstWhenSysmanInitializedThenzesDriverGetWorks) {
+  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
+  // Disabling enable_sysman env if it's defaultly enabled
+  if (strcmp(is_sysman_enabled, "1") == 0) {
+    putenv("ZES_ENABLE_SYSMAN=0");
+  }
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
   uint32_t zeInitCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&zeInitCount, nullptr));
@@ -32,6 +34,9 @@ TEST(
   uint32_t zesInitCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&zesInitCount, nullptr));
   ASSERT_GT(zesInitCount, 0);
+  if (strcmp(is_sysman_enabled, "1") == 0) {
+    putenv("ZES_ENABLE_SYSMAN=1");
+  }
 }
 
 TEST(SysmanInitTests, GivenSysmanInitializedThenCallingCoreInitSucceeds) {
