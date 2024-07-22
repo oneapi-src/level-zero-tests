@@ -114,7 +114,7 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
             test_type, transfer_type, false /* is_server */, sv[1],
             number_of_elements, local_device_id, remote_device_id);
       } else {
-        ZePeer peer(local_device_ids, remote_device_ids, pair_device_ids,
+        ZePeer peer(remote_device_ids, local_device_ids, pair_device_ids,
                     queues);
         if (ZePeer::validate_results) {
           peer.warm_up_iterations = 0;

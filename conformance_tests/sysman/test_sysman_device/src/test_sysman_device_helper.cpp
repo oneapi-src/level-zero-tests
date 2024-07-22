@@ -78,10 +78,10 @@ bool compare_core_and_sysman_uuid(std::vector<UUID> core_uuids,
 
 int main(int argc, char **argv) {
 
-  char *device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
+  const char *device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
   EXPECT_NE(device_hierarchy, nullptr);
-  LOG_INFO << "Device Hierarchy : " << device_hierarchy ? device_hierarchy
-                                                        : "NULL";
+  device_hierarchy = device_hierarchy ? device_hierarchy : "NULL";
+  LOG_INFO << "Device Hierarchy : " << device_hierarchy;
 
   auto driver = lzt::zeDevice::get_instance()->get_driver();
   std::vector<ze_device_handle_t> ze_devices = lzt::get_ze_devices(driver);
