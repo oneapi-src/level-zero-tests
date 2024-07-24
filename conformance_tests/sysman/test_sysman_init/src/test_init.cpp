@@ -20,7 +20,7 @@ namespace {
 
 TEST(SysmanInitTests,
      GivenCoreInitializedFirstWhenSysmanInitializedThenzesDriverGetWorks) {
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(2));
   uint32_t zeInitCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&zeInitCount, nullptr));
   ASSERT_GT(zeInitCount, 0);
@@ -36,7 +36,7 @@ TEST(SysmanInitTests,
   uint32_t zesInitCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&zesInitCount, nullptr));
   ASSERT_GT(zesInitCount, 0);
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(2));
   uint32_t zeInitCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&zeInitCount, nullptr));
   ASSERT_GT(zeInitCount, 0);
@@ -54,7 +54,7 @@ TEST(SysmanInitTests,
      GivenEnableSysmanEnvSetWhenCoreInitializedThenzesDriverGetWorks) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(2));
   uint32_t pCount = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&pCount, nullptr));
   ASSERT_GT(pCount, 0);
