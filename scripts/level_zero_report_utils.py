@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2021-2023 Intel Corporation
+# Copyright (C) 2021-2024 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 import re
@@ -270,6 +270,8 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "SysMan Device Properties"
     elif test_binary == "test_sysman_device_hierarchy_helper_zesinit":
         test_feature = "SysMan Device Properties"    
+    elif test_binary == "test_sysman_driver_zesinit":
+        test_feature = "SysMan Driver Extensions"
     elif test_binary == "test_sysman_events":
         test_feature = "SysMan Events"
     elif test_binary == "test_sysman_events_zesinit":

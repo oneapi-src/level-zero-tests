@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2020-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -14,6 +14,7 @@ add_subdirectory(test_sysman_events)
 add_subdirectory(test_sysman_memory)
 add_subdirectory(test_sysman_fabric)
 add_subdirectory(test_sysman_device)
+add_subdirectory(test_sysman_driver)
 add_subdirectory(test_sysman_psu)
 add_subdirectory(test_sysman_fan)
 add_subdirectory(test_sysman_led)
