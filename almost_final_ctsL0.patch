@@ -1,0 +1,113 @@
+diff --git a/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp b/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
+index 0159cc8..bca8498 100644
+--- a/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
++++ b/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
+@@ -136,10 +136,9 @@ TEST_F(
+ 
+     if (sub_devices_count > 0) {
+       uint32_t num_subdevices = 0;
+-      lzt::get_sysman_subdevice_properties(device, &num_subdevices);
+-      EXPECT_EQ(sub_devices_count, num_subdevices);
+       auto sub_device_properties =
+-          lzt::get_sysman_subdevice_properties(device, &num_subdevices);
++          lzt::get_sysman_subdevice_properties(device, num_subdevices);
++      EXPECT_EQ(sub_devices_count, num_subdevices);
+       for (uint32_t sub_device_index = 0; sub_device_index < num_subdevices;
+            sub_device_index++) {
+         EXPECT_LT(sub_device_properties[sub_device_index].subdeviceId,
+@@ -165,9 +164,9 @@ TEST_F(
+       uuid.id[i] = properties.core.uuid.id[i];
+     }
+     ze_bool_t on_subdevice = false;
+-    uint32_t subdevice_id; // 0
+-    zes_device_handle_t deviceHandleFromUUID = lzt::get_device_by_uuid(
+-        all_drivers[0], uuid, &on_subdevice, &subdevice_id);
++    uint32_t subdevice_id = 0;
++    zes_device_handle_t deviceHandleFromUUID = lzt::get_sysman_device_by_uuid(
++        all_drivers[0], uuid, on_subdevice, subdevice_id);
+     EXPECT_EQ(deviceHandleFromUUID, device);
+     if (on_subdevice == true) {
+       EXPECT_LE(subdevice_id, 1);
+diff --git a/utils/test_harness/sysman/include/test_harness_sysman_device.hpp b/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
+index 4b814dc..b031974 100644
+--- a/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
++++ b/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
+@@ -1,6 +1,6 @@
+ /*
+  *
+- * Copyright (C) 2020, 2024 Intel Corporation
++ * Copyright (C) 2020-2024 Intel Corporation
+  *
+  * SPDX-License-Identifier: MIT
+  *
+@@ -20,11 +20,12 @@ zes_device_properties_t
+ get_sysman_device_properties(zes_device_handle_t device);
+ 
+ std::vector<zes_subdevice_exp_properties_t>
+-get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t *pCount);
++get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t &pCount);
+ 
+-zes_device_handle_t get_device_by_uuid(zes_driver_handle_t hDriver,
+-                                       zes_uuid_t uuid, ze_bool_t *onSubdevice,
+-                                       uint32_t *subdeviceId);
++zes_device_handle_t get_sysman_device_by_uuid(zes_driver_handle_t hDriver,
++                                              zes_uuid_t uuid,
++                                              ze_bool_t &onSubdevice,
++                                              uint32_t &subdeviceId);
+ 
+ uint32_t get_processes_count(zes_device_handle_t device);
+ 
+diff --git a/utils/test_harness/sysman/src/test_harness_sysman_device.cpp b/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
+index 7eebef9..b6a546a 100644
+--- a/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
++++ b/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
+@@ -1,6 +1,6 @@
+ /*
+  *
+- * Copyright (C) 2020, 2024 Intel Corporation
++ * Copyright (C) 2020-2024 Intel Corporation
+  *
+  * SPDX-License-Identifier: MIT
+  *
+@@ -29,28 +29,26 @@ get_sysman_device_properties(zes_device_handle_t device) {
+ }
+ 
+ std::vector<zes_subdevice_exp_properties_t>
+-get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t *count) {
+-  std::vector<zes_subdevice_exp_properties_t> sub_device_properties(*count);
+-  if (*count == 0) {
++get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t &count) {
++  if (count == 0) {
+     EXPECT_EQ(ZE_RESULT_SUCCESS,
+-              zesDeviceGetSubDevicePropertiesExp(device, count, nullptr));
+-  } else {
+-    EXPECT_EQ(ZE_RESULT_SUCCESS,
+-              zesDeviceGetSubDevicePropertiesExp(device, count,
+-                                                 sub_device_properties.data()));
++              zesDeviceGetSubDevicePropertiesExp(device, &count, nullptr));
+   }
++  std::vector<zes_subdevice_exp_properties_t> sub_device_properties(count);
++  EXPECT_EQ(ZE_RESULT_SUCCESS,
++            zesDeviceGetSubDevicePropertiesExp(device, &count,
++                                               sub_device_properties.data()));
+   return sub_device_properties;
+ }
+ 
+-zes_device_handle_t get_device_by_uuid(zes_driver_handle_t hDriver,
+-                                       zes_uuid_t uuid, ze_bool_t *onSubdevice,
+-                                       uint32_t *subdeviceId) {
++zes_device_handle_t get_sysman_device_by_uuid(zes_driver_handle_t hDriver,
++                                              zes_uuid_t uuid,
++                                              ze_bool_t &onSubdevice,
++                                              uint32_t &subdeviceId) {
+   zes_device_handle_t device = {};
+-
+   EXPECT_EQ(ZE_RESULT_SUCCESS,
+-            zesDriverGetDeviceByUuidExp(hDriver, uuid, &device, onSubdevice,
+-                                        subdeviceId));
+-
++            zesDriverGetDeviceByUuidExp(hDriver, uuid, &device, &onSubdevice,
++                                        &subdeviceId));
+   return device;
+ }
+ 

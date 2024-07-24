@@ -85,4 +85,12 @@ get_fabric_port_link(zes_fabric_port_handle_t fabric_port_handle) {
   return link;
 }
 
+zes_fabric_port_error_counters_t
+get_fabric_port_error_counters(zes_fabric_port_handle_t fabric_port_handle) {
+  zes_fabric_port_error_counters_t counters = {};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesFabricPortGetFabricErrorCounters(fabric_port_handle, &counters));
+  return counters;
+}
+
 } // namespace level_zero_tests

@@ -343,4 +343,25 @@ TEST_F(
   }
 }
 
+TEST_F(
+    FABRICPORT_TEST,
+    GivenValidFabricPortHandleWhenRetrievingFabricPortErrorCountersThenValidCounterValuesAreReturned) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto fabric_port_handle : fabric_port_handles) {
+      ASSERT_NE(nullptr, fabric_port_handle);
+      auto fabric_port_error_counters =
+          lzt::get_fabric_port_error_counters(fabric_port_handle);
+      EXPECT_LT(fabric_port_error_counters.linkFailureCount, UINT64_MAX);
+      EXPECT_LT(fabric_port_error_counters.fwCommErrorCount, UINT64_MAX);
+      EXPECT_LT(fabric_port_error_counters.fwErrorCount, UINT64_MAX);
+      EXPECT_LT(fabric_port_error_counters.linkDegradeCount, UINT64_MAX);
+    }
+  }
+}
 } // namespace

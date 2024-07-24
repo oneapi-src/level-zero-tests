@@ -1,0 +1,61 @@
+diff --git a/conformance_tests/sysman/test_sysman_fabric/src/test_sysman_fabric.cpp b/conformance_tests/sysman/test_sysman_fabric/src/test_sysman_fabric.cpp
+index 5d41432..ff6c992 100644
+--- a/conformance_tests/sysman/test_sysman_fabric/src/test_sysman_fabric.cpp
++++ b/conformance_tests/sysman/test_sysman_fabric/src/test_sysman_fabric.cpp
+@@ -343,4 +343,25 @@ TEST_F(
+   }
+ }
+ 
++TEST_F(
++    FABRICPORT_TEST,
++    GivenValidFabricPortHandleWhenRetrievingFabricPortErrorCountersThenValidCounterValuesAreReturned) {
++  for (auto device : devices) {
++    uint32_t count = 0;
++    auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
++    if (count == 0) {
++      FAIL() << "No handles found: "
++             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
++    }
++    for (auto fabric_port_handle : fabric_port_handles) {
++      ASSERT_NE(nullptr, fabric_port_handle);
++      auto fabric_port_error_counters =
++          lzt::get_fabric_port_error_counters(fabric_port_handle);
++      EXPECT_LT(fabric_port_error_counters.linkFailureCount, UINT64_MAX);
++      EXPECT_LT(fabric_port_error_counters.fwCommErrorCount, UINT64_MAX);
++      EXPECT_LT(fabric_port_error_counters.fwErrorCount, UINT64_MAX);
++      EXPECT_LT(fabric_port_error_counters.linkDegradeCount, UINT64_MAX);
++    }
++  }
++}
+ } // namespace
+diff --git a/utils/test_harness/sysman/include/test_harness_sysman_fabric.hpp b/utils/test_harness/sysman/include/test_harness_sysman_fabric.hpp
+index 825018b..4ab502b 100644
+--- a/utils/test_harness/sysman/include/test_harness_sysman_fabric.hpp
++++ b/utils/test_harness/sysman/include/test_harness_sysman_fabric.hpp
+@@ -37,6 +37,9 @@ get_fabric_port_throughput(zes_fabric_port_handle_t fabricPortHandle);
+ zes_fabric_link_type_t
+ get_fabric_port_link(zes_fabric_port_handle_t fabricPortHandle);
+ 
++zes_fabric_port_error_counters_t
++get_fabric_port_error_counters(zes_fabric_port_handle_t fabric_port_handle);
++
+ } // namespace level_zero_tests
+ 
+ #endif
+diff --git a/utils/test_harness/sysman/src/test_harness_sysman_fabric.cpp b/utils/test_harness/sysman/src/test_harness_sysman_fabric.cpp
+index b13d607..04a93b4 100644
+--- a/utils/test_harness/sysman/src/test_harness_sysman_fabric.cpp
++++ b/utils/test_harness/sysman/src/test_harness_sysman_fabric.cpp
+@@ -85,4 +85,12 @@ get_fabric_port_link(zes_fabric_port_handle_t fabric_port_handle) {
+   return link;
+ }
+ 
++zes_fabric_port_error_counters_t
++get_fabric_port_error_counters(zes_fabric_port_handle_t fabric_port_handle) {
++  zes_fabric_port_error_counters_t counters = {};
++  EXPECT_EQ(ZE_RESULT_SUCCESS,
++            zesFabricPortGetFabricErrorCounters(fabric_port_handle, &counters));
++  return counters;
++}
++
+ } // namespace level_zero_tests

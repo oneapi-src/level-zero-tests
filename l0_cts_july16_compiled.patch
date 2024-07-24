@@ -1,0 +1,68 @@
+diff --git a/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp b/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
+index f4f98bd..fb26b95 100644
+--- a/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
++++ b/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
+@@ -127,6 +127,26 @@ TEST_F(
+   run_device_hierarchy_child_process();
+ }
+ 
++TEST_F(
++    SYSMAN_DEVICE_TEST,
++    GivenValidDeviceWhenRetrievingSubDeviePropertiesThenValidPropertiesAreReturned) {
++  for (auto device : devices) {
++    auto device_properties = lzt::get_sysman_device_properties(device);
++    uint32_t subdevicesCount = device_properties.numSubdevices;
++
++    if(subdevicesCount > 0) {
++      uint32_t numSubdevices = 0;
++      lzt::get_sysman_subdevice_properties(device, &numSubdevices);
++      EXPECT_EQ(subdevicesCount, numSubdevices);
++      auto subDeviceProperties = lzt::get_sysman_subdevice_properties(device, &numSubdevices);
++      for (uint32_t subDeviceIndex = 0; subDeviceIndex < numSubdevices; subDeviceIndex++) {
++        EXPECT_LT(subDeviceProperties[subDeviceIndex].subdeviceId, numSubdevices);
++        EXPECT_GT(subDeviceProperties[subDeviceIndex].uuid.id[0], 0);
++      }
++    }
++  }
++}
++
+ TEST_F(
+     SYSMAN_DEVICE_TEST,
+     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenValidPropertiesAreReturned) {
+diff --git a/utils/test_harness/sysman/include/test_harness_sysman_device.hpp b/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
+index d432008..afb46e8 100644
+--- a/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
++++ b/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
+@@ -19,6 +19,9 @@ void sysman_device_reset(zes_device_handle_t device);
+ zes_device_properties_t
+ get_sysman_device_properties(zes_device_handle_t device);
+ 
++std::vector<zes_subdevice_exp_properties_t>
++get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t *pCount);
++
+ uint32_t get_processes_count(zes_device_handle_t device);
+ 
+ zes_device_state_t get_device_state(zes_device_handle_t device);
+diff --git a/utils/test_harness/sysman/src/test_harness_sysman_device.cpp b/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
+index 1e4690d..feb1c86 100644
+--- a/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
++++ b/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
+@@ -30,6 +30,18 @@ get_sysman_device_properties(zes_device_handle_t device) {
+   return properties;
+ }
+ 
++std::vector<zes_subdevice_exp_properties_t>
++get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t *pCount){
++  std::vector<zes_subdevice_exp_properties_t> subDeviceProperties(*pCount);
++  if (*pCount == 0) {
++    EXPECT_EQ(ZE_RESULT_SUCCESS ,zesDeviceGetSubDevicePropertiesExp(device, pCount, nullptr));
++  }
++  else {
++  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceGetSubDevicePropertiesExp(device, pCount, subDeviceProperties.data()));
++  }
++  return subDeviceProperties;
++}
++
+ uint32_t get_processes_count(zes_device_handle_t device) {
+   uint32_t count = 0;
+   EXPECT_EQ(ZE_RESULT_SUCCESS,

@@ -1,0 +1,62 @@
+diff --git a/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp b/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
+index fb26b95..7046eff 100644
+--- a/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
++++ b/conformance_tests/sysman/test_sysman_device/src/test_sysman_device.cpp
+@@ -147,6 +147,23 @@ TEST_F(
+   }
+ }
+ 
++TEST_F(
++    SYSMAN_DEVICE_TEST,
++    GivenValidDeviceWhenRetrievingDeviceHandleFromUUIDThenReturnedDeviceHandleShouldMatchCurrentDeviceHandle) {
++  auto driver = lzt::get_default_driver();
++  for (auto device : devices) {
++    auto properties = lzt::get_sysman_device_properties(device);
++    zes_uuid_t uuid = {};
++    for (uint32_t i = 0; i < sizeof(properties.core.uuid.id); i++){
++      uuid.id[i] = properties.core.uuid.id[i];
++    }
++    ze_bool_t onSubdevice = false;
++    uint32_t subdeviceId;
++    zes_device_handle_t deviceHandleFromUUID = lzt::get_device_by_uuid(driver, uuid, &onSubdevice, &subdeviceId);
++    EXPECT_EQ(deviceHandleFromUUID, device);
++  }
++}
++
+ TEST_F(
+     SYSMAN_DEVICE_TEST,
+     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenValidPropertiesAreReturned) {
+diff --git a/utils/test_harness/sysman/include/test_harness_sysman_device.hpp b/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
+index afb46e8..cae4467 100644
+--- a/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
++++ b/utils/test_harness/sysman/include/test_harness_sysman_device.hpp
+@@ -22,6 +22,9 @@ get_sysman_device_properties(zes_device_handle_t device);
+ std::vector<zes_subdevice_exp_properties_t>
+ get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t *pCount);
+ 
++zes_device_handle_t
++get_device_by_uuid(zes_driver_handle_t hDriver, zes_uuid_t uuid, ze_bool_t *onSubdevice, uint32_t *subdeviceId);
++
+ uint32_t get_processes_count(zes_device_handle_t device);
+ 
+ zes_device_state_t get_device_state(zes_device_handle_t device);
+diff --git a/utils/test_harness/sysman/src/test_harness_sysman_device.cpp b/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
+index feb1c86..5969b22 100644
+--- a/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
++++ b/utils/test_harness/sysman/src/test_harness_sysman_device.cpp
+@@ -42,6 +42,15 @@ get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t *pCount){
+   return subDeviceProperties;
+ }
+ 
++zes_device_handle_t
++get_device_by_uuid(zes_driver_handle_t hDriver, zes_uuid_t uuid, ze_bool_t *onSubdevice, uint32_t *subdeviceId) {
++  zes_device_handle_t phDevice;
++
++  EXPECT_EQ(ZE_RESULT_SUCCESS ,zesDriverGetDeviceByUuidExp(hDriver, uuid, &phDevice, onSubdevice, subdeviceId));
++
++  return phDevice;
++}
++
+ uint32_t get_processes_count(zes_device_handle_t device) {
+   uint32_t count = 0;
+   EXPECT_EQ(ZE_RESULT_SUCCESS,
