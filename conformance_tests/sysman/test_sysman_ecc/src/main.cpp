@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   } else {
     auto is_sysman_enabled_int = atoi(is_sysman_enabled);
     if (is_sysman_enabled_int == 1) {
-      ze_result_t result = zeInit(1);
+      ze_result_t result = zeInit(2);
       if (result) {
         throw std::runtime_error("zeInit failed: " +
                                  level_zero_tests::to_string(result));

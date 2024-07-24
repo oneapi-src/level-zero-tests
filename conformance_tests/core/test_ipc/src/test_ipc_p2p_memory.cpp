@@ -45,7 +45,7 @@ bool check_p2p_capabilities(std::vector<ze_device_handle_t> devices) {
 void sigint_handler(int signal_number) { signum_caught = signal_number; }
 
 void init_driver() {
-  ze_result_t result = zeInit(1);
+  ze_result_t result = zeInit(2);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));

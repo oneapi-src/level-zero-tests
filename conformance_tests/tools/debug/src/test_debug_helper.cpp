@@ -1112,7 +1112,7 @@ int main(int argc, char **argv) {
 
   process_synchro synchro(options.enable_synchro, false, options.index_in);
 
-  ze_result_t result = zeInit(1);
+  ze_result_t result = zeInit(2);
   if (result != ZE_RESULT_SUCCESS) {
     LOG_ERROR << "[Application] zeInit failed";
     exit(1);

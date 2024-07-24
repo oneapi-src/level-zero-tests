@@ -21,13 +21,13 @@ std::once_flag zeDevice::instance;
 void initialize_core() {
   static char device_hierachy_env[] = "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE";
   putenv(device_hierachy_env);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(1));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(2));
 }
 
 zeDevice *zeDevice::get_instance() {
   std::call_once(instance, []() {
     instance_ = new zeDevice;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(1));
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(2));
 
     instance_->driver_ = lzt::get_default_driver();
     instance_->device_ = lzt::get_default_device(instance_->driver_);

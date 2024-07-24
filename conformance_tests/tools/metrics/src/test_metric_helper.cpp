@@ -34,7 +34,7 @@ void interrupt_process() {
 
 int main(int argc, char **argv) {
 
-  ze_result_t result = zeInit(1);
+  ze_result_t result = zeInit(2);
   if (result != ZE_RESULT_SUCCESS) {
     std::cout << "[Application] zeInit failed";
 

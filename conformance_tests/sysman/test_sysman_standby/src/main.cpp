@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     LOG_INFO << "Sysman is not Enabled";
     exit(0);
   } else {
-    ze_result_t result = zeInit(1);
+    ze_result_t result = zeInit(2);
     if (result) {
       throw std::runtime_error("zeInit failed: " +
                                level_zero_tests::to_string(result));

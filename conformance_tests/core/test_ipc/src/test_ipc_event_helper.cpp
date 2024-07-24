@@ -223,7 +223,7 @@ child_device_query_timestamp(const ze_event_pool_handle_t &hEventPool,
 }
 
 int main() {
-  ze_result_t result = zeInit(1);
+  ze_result_t result = zeInit(2);
   if (result != ZE_RESULT_SUCCESS) {
     LOG_DEBUG << "Child exit due to zeInit failure";
     exit(1);
