@@ -53,7 +53,7 @@ void _initialize_zes_wrap()
         _zes_exception("Error setting ZES_ENABLE_SYSMAN environment variable");
     }
 
-    result = zeInit(1);
+    result = zeInit(2);
 
     if (result != ZE_RESULT_SUCCESS)
     {

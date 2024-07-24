@@ -208,7 +208,7 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
       ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC, nullptr};
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  result = zeInit(1);
+  result = zeInit(2);
   if (result) {
     throw std::runtime_error("zeInit failed: " + std::to_string(result));
   }

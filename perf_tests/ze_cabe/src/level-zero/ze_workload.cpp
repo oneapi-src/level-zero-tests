@@ -15,7 +15,7 @@ ZeWorkload::ZeWorkload() : Workload() { workload_api = "Level-Zero"; }
 ZeWorkload::~ZeWorkload() {}
 
 void ZeWorkload::create_device() {
-  ZE_CHECK_RESULT(zeInit(1));
+  ZE_CHECK_RESULT(zeInit(2));
 
   uint32_t driverCount = 0;
   ZE_CHECK_RESULT(zeDriverGet(&driverCount, nullptr));

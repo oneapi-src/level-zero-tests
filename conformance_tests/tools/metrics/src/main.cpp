@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
   static char enable_metrics[] = "ZET_ENABLE_METRICS=1";
   putenv(enable_metrics);
 
-  ze_result_t result = zeInit(1);
+  ze_result_t result = zeInit(2);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
