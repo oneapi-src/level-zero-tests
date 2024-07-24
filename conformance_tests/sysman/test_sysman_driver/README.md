@@ -2,8 +2,7 @@
 
 ## Description
 
-This test suite is for validating driver Extension APIs provided in Sysman. Ensure that the test executable is run with
-root user permissions otherwise test will fail.
+This test suite is for validating driver Extension APIs provided in Sysman. 
 
 ### zesDriverGetExtensionProperties
 
@@ -15,4 +14,4 @@ root user permissions otherwise test will fail.
 
 * `GivenValidDriverHandleWhileRetrievingExtensionFunctionAddressThenValidAddressIsReturned`:
   Test case checks whether zesDriverGetExtensionFunctionAddress API returns success and 
-  retrieves valid function pointer for all vendor-specific or experimental extensions Sysman API.
+  retrieves valid function pointer for all vendor-specific or experimental extensions Sysman API's which are listed in the L0 specification.

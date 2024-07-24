@@ -8,10 +8,7 @@
 
 #include "test_harness/test_harness.hpp"
 
-namespace lzt = level_zero_tests;
-
 namespace level_zero_tests {
-
 ze_result_t get_driver_ext_properties(zes_driver_handle_t driver,
                                       uint32_t *count) {
   return zesDriverGetExtensionProperties(driver, count, nullptr);
