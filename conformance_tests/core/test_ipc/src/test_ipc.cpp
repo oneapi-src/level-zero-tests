@@ -37,7 +37,7 @@ protected:
 TEST_F(
     zeIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenGettingIpcMemHandleThenSuccessIsReturned) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -56,7 +56,7 @@ TEST_F(
 TEST_F(
     zeIpcMemHandleTests,
     GivenSameIpcMemoryHandleWhenOpeningIpcMemHandleMultipleTimesThenUniquePointersAreReturned) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -93,7 +93,7 @@ TEST_F(
 class zeIpcMemHandleCloseTests : public zeIpcMemHandleTests {
 protected:
   void SetUp() override {
-    ze_result_t result = zeInit(0);
+    ze_result_t result = zeInit(1);
     if (result) {
       throw std::runtime_error("zeInit failed: " +
                                level_zero_tests::to_string(result));

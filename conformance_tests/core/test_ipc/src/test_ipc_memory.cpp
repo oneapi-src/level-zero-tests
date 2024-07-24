@@ -31,7 +31,7 @@ namespace {
 static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
                                     bool reserved, ze_ipc_memory_flags_t flags,
                                     bool is_immediate) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Parent zeInit failed: " +
                              level_zero_tests::to_string(result));

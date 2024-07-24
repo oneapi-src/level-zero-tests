@@ -201,7 +201,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
   // launch child
   boost::process::child c("./ipc/test_ipc_event_helper");
 
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));

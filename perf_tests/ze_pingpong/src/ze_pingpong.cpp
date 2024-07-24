@@ -21,7 +21,7 @@ void L0Context::init() {
       ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC, nullptr};
   ze_result_t result = ZE_RESULT_SUCCESS;
 
-  result = zeInit(0);
+  result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " + std::to_string(result));
   }

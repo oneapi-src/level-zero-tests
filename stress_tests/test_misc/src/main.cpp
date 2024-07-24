@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     release = true;
   }
   reserve_memory(release);
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
