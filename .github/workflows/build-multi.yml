@@ -207,3 +207,8 @@ jobs:
         	ccache --show-stats
         	
         	EOF
+    - name: Upload windows artifacts
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        path: level-zero-tests-conformance
