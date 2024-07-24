@@ -32,7 +32,7 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
                                     int size, bool reserved, bool getFromFd,
                                     ze_ipc_memory_flags_t flags,
                                     bool is_immediate) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Parent zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -274,7 +274,7 @@ protected:
 TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenGettingIpcMemoryHandleThenReleasingHandleWithPutThenSuccessIsReturned) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -294,7 +294,7 @@ TEST_F(
 TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithMuliplePutsThenSuccessIsReturned) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -317,7 +317,7 @@ TEST_F(
 TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithMuliplePutsThenTrailingGetSuccessIsReturned) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -342,7 +342,7 @@ TEST_F(
 TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithSinglePutThenSuccessIsReturned) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -364,7 +364,7 @@ TEST_F(
 TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingPutIpcMemoryWithDifferentContextsReturnsSuccess) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -387,7 +387,7 @@ TEST_F(
 TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingFileDescriptorFromIpcHandleThenFileDescriptorReturnedMatchingAllocation) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -432,7 +432,7 @@ TEST_F(
 TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingIpcHandleFromFileDescriptorThenOpenIpcHandleIsSuccessfull) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -480,7 +480,7 @@ TEST_F(
 TEST(
     zePutIpcMemHandleMultiThreadedTests,
     GivenMultipleThreadsWhenGettingAndPuttingIpcHandlesThenOperationsAreSuccessful) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(1));
 
   auto ipc_flags = lzt::get_ipc_properties(lzt::get_default_driver()).flags;
   if ((ipc_flags & ZE_IPC_PROPERTY_FLAG_MEMORY) == 0) {

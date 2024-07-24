@@ -260,7 +260,7 @@ get_metric_group_info(ze_device_handle_t device,
                       zet_metric_group_sampling_type_flags_t metricSamplingType,
                       bool includeExpFeature) {
 
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -300,7 +300,7 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
     ze_device_handle_t device,
     zet_metric_group_sampling_type_flags_t metricSamplingType) {
 
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -340,7 +340,7 @@ std::vector<std::string>
 get_metric_group_name_list(ze_device_handle_t device,
                            zet_metric_group_sampling_type_flags_t samplingType,
                            bool includeExpFeature = true) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));

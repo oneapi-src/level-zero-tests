@@ -109,7 +109,7 @@ static void child_put_subdevice_test(int size, ze_ipc_memory_flags_t flags,
 }
 
 int main() {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Child zeInit failed: " +
                              level_zero_tests::to_string(result));

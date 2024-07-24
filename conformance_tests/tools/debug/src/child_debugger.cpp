@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
   auto index = options.index_in;
   process_synchro synchro(true, true, index);
 
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result != ZE_RESULT_SUCCESS) {
     LOG_ERROR << "[Child Debugger] zeInit failed";
     exit(1);

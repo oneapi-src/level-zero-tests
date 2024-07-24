@@ -31,7 +31,7 @@ namespace lzt = level_zero_tests;
   (C) Send that fd to a unix local socket
 */
 int main(int argc, char **argv) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result != ZE_RESULT_SUCCESS) {
     LOG_WARNING << "zeInit failed";
     exit(1);

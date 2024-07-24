@@ -19,7 +19,7 @@ namespace {
 #ifdef __linux__
 
 void multi_sub_device_sender(size_t size, bool reserved, bool is_immediate) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Sender zeInit failed: " +
                              level_zero_tests::to_string(result));
@@ -131,7 +131,7 @@ void multi_sub_device_sender(size_t size, bool reserved, bool is_immediate) {
 }
 
 void multi_sub_device_receiver(size_t size, bool is_immediate) {
-  ze_result_t result = zeInit(0);
+  ze_result_t result = zeInit(1);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Receiver zeInit failed: " +
                              level_zero_tests::to_string(result));

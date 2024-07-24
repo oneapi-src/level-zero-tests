@@ -46,14 +46,14 @@ ZeApp::ZeApp(void) {
   context = nullptr;
   _module_path = "";
 
-  SUCCESS_OR_TERMINATE(zeInit(0));
+  SUCCESS_OR_TERMINATE(zeInit(1));
 }
 
 ZeApp::ZeApp(std::string module_path) {
   context = nullptr;
   _module_path = module_path;
 
-  SUCCESS_OR_TERMINATE(zeInit(0));
+  SUCCESS_OR_TERMINATE(zeInit(1));
 
   _binary_file = load_binary_file(_module_path);
 }
