@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,6 +18,14 @@ void sysman_device_reset(zes_device_handle_t device);
 
 zes_device_properties_t
 get_sysman_device_properties(zes_device_handle_t device);
+
+std::vector<zes_subdevice_exp_properties_t>
+get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t &count);
+
+zes_device_handle_t get_sysman_device_by_uuid(zes_driver_handle_t driver,
+                                              zes_uuid_t uuid,
+                                              ze_bool_t &on_sub_device,
+                                              uint32_t &sub_device_id);
 
 uint32_t get_processes_count(zes_device_handle_t device);
 
