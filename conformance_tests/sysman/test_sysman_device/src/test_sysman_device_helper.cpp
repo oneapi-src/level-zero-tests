@@ -99,28 +99,22 @@ int main(int argc, char **argv) {
   auto sysman_devices = lzt::get_zes_devices();
   EXPECT_FALSE(sysman_devices.empty());
 
-  if (strcmp(device_hierarchy, "FLAT") != 0) { // composite or combined mode
-    std::vector<UUID> sysman_device_uuids;
-    std::vector<UUID> ze_root_uuids;
+  std::vector<UUID> sysman_device_uuids{};
+  std::vector<UUID> ze_device_uuids{};
 
+  if (strcmp(device_hierarchy, "FLAT") != 0) { // composite or combined mode
     for (const auto &sysman_device : sysman_devices) {
       sysman_device_uuids.push_back(get_sysman_device_uuid(sysman_device));
     }
 
     for (const auto &ze_device : ze_devices) {
       auto ze_root_uuid = get_ze_root_uuid(ze_device, device_hierarchy);
-      if (std::find(ze_root_uuids.begin(), ze_root_uuids.end(), ze_root_uuid) ==
-          ze_root_uuids.end()) {
-        ze_root_uuids.push_back(ze_root_uuid);
+      if (std::find(ze_device_uuids.begin(), ze_device_uuids.end(),
+                    ze_root_uuid) == ze_device_uuids.end()) {
+        ze_device_uuids.push_back(ze_root_uuid);
       }
     }
-
-    EXPECT_TRUE(
-        compare_core_and_sysman_uuid(ze_root_uuids, sysman_device_uuids));
   } else { // flat mode
-    std::vector<UUID> sysman_device_uuids;
-    std::vector<UUID> ze_device_uuids;
-
     for (const auto &sysman_device : sysman_devices) {
       auto device_properties = lzt::get_sysman_device_properties(sysman_device);
       uint32_t sub_devices_count = device_properties.numSubdevices;
@@ -136,10 +130,10 @@ int main(int argc, char **argv) {
     for (const auto &ze_device : ze_devices) {
       ze_device_uuids.push_back(get_ze_device_uuid(ze_device));
     }
-
-    EXPECT_TRUE(
-        compare_core_and_sysman_uuid(ze_device_uuids, sysman_device_uuids));
   }
+
+  EXPECT_TRUE(
+      compare_core_and_sysman_uuid(ze_device_uuids, sysman_device_uuids));
 
   exit(0);
 }
