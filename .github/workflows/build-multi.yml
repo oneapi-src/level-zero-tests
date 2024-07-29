@@ -211,4 +211,4 @@ jobs:
       if: runner.os == 'Windows'
       uses: actions/upload-artifact@v4
       with:
-        path: level-zero-tests-conformance
+        path: level-zero-tests-*
