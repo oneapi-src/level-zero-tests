@@ -12,7 +12,7 @@
 
 namespace lzt = level_zero_tests;
 
-#define UUID std::array<uint8_t, ZE_MAX_DEVICE_UUID_SIZE>
+typedef std::array<uint8_t, ZE_MAX_DEVICE_UUID_SIZE> UUID;
 
 #define TO_STD_ARRAY(x)                                                        \
   [](const uint8_t(&arr)[ZE_MAX_DEVICE_UUID_SIZE]) {                           \
@@ -95,8 +95,7 @@ void get_ze_root_uuids(std::vector<ze_device_handle_t> ze_devices,
 }
 
 void get_ze_device_uuids(std::vector<ze_device_handle_t> ze_devices,
-                         std::vector<UUID> &ze_device_uuids,
-                         char *device_hierarchy) {
+                         std::vector<UUID> &ze_device_uuids) {
   for (const auto &ze_device : ze_devices) {
     auto ze_device_properties = lzt::get_device_properties(ze_device);
     auto ze_device_uuid = ze_device_properties.uuid;
@@ -147,7 +146,7 @@ int main(int argc, char **argv) {
     std::vector<UUID> sysman_sub_device_uuids;
     get_sysman_sub_devices_uuids(sysman_devices, sysman_sub_device_uuids);
     std::vector<UUID> ze_device_uuids;
-    get_ze_device_uuids(ze_devices, ze_device_uuids, device_hierarchy);
+    get_ze_device_uuids(ze_devices, ze_device_uuids);
 
     compare_core_and_sysman_uuid(ze_device_uuids, sysman_sub_device_uuids);
   }
