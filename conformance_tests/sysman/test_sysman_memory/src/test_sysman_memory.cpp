@@ -229,7 +229,7 @@ uint64_t get_free_memory_state(ze_device_handle_t device) {
 }
 
 #ifdef USE_ZESINIT
-bool is_uuids_equal(uint8_t *uuid1, uint8_t *uuid2) {
+bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2) {
   for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
     if (uuid1[i] != uuid2[i]) {
       return false;
@@ -243,7 +243,7 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
   auto core_devices = lzt::get_ze_devices(driver);
   for (auto device : core_devices) {
     auto device_properties = lzt::get_device_properties(device);
-    if (is_uuids_equal(uuid, device_properties.uuid.id)) {
+    if (is_uuid_pair_equal(uuid, device_properties.uuid.id)) {
       return device;
     }
   }
