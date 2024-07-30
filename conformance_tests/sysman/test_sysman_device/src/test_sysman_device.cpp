@@ -172,7 +172,7 @@ TEST_F(
 #ifdef USE_ZESINIT
 TEST_F(
     SYSMAN_DEVICE_TEST,
-    GivenValidDeviceWhenRetrievingSubDeviceUUIDThenVerifySubDeviceUUIDNotMatchingWithRootDeviceUUID) {
+    GivenValidDeviceWhenRetrievingSubDevicesThenEnsureNoSubDeviceUUIDMatchesDeviceUUID) {
   for (auto device : devices) {
     auto device_properties = lzt::get_sysman_device_properties(device);
     uint32_t sub_devices_count = device_properties.numSubdevices;
