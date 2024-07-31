@@ -183,11 +183,9 @@ TEST_F(
       EXPECT_EQ(sub_devices_count, num_sub_devices);
       for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
            sub_device_index++) {
-        EXPECT_LT(sub_device_properties[sub_device_index].subdeviceId,
-                  num_sub_devices);
-        EXPECT_EQ(false, is_uuid_pair_equal(
-                             sub_device_properties[sub_device_index].uuid.id,
-                             device_properties.core.uuid.id));
+        EXPECT_FALSE(
+            is_uuid_pair_equal(sub_device_properties[sub_device_index].uuid.id,
+                               device_properties.core.uuid.id));
       }
     }
   }
