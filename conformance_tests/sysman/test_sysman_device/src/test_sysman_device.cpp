@@ -113,12 +113,14 @@ TEST_F(
     GivenHierarchyModeCombindedAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
   auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
   // Disabling enable_sysman env if it's defaultly enabled
-  if (strcmp(is_sysman_enabled, "1") == 0) {
-    putenv("ZES_ENABLE_SYSMAN=0");
+  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
+    char disable_sysman_env[] = "ZES_ENABLE_SYSMAN=0";
+    putenv(disable_sysman_env);
   }
   run_child_process("COMBINED");
-  if (strcmp(is_sysman_enabled, "1") == 0) {
-    putenv("ZES_ENABLE_SYSMAN=1");
+  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
+    char enable_sysman_env[] = "ZES_ENABLE_SYSMAN=1";
+    putenv(enable_sysman_env);
   }
 }
 
@@ -127,12 +129,14 @@ TEST_F(
     GivenHierarchyModeCompositeAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
   auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
   // Disabling enable_sysman env if it's defaultly enabled
-  if (strcmp(is_sysman_enabled, "1") == 0) {
-    putenv("ZES_ENABLE_SYSMAN=0");
+  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
+    char disable_sysman_env[] = "ZES_ENABLE_SYSMAN=0";
+    putenv(disable_sysman_env);
   }
   run_child_process("COMPOSITE");
-  if (strcmp(is_sysman_enabled, "1") == 0) {
-    putenv("ZES_ENABLE_SYSMAN=1");
+  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
+    char enable_sysman_env[] = "ZES_ENABLE_SYSMAN=1";
+    putenv(enable_sysman_env);
   }
 }
 #endif // USE_ZESINIT
