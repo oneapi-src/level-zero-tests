@@ -210,8 +210,8 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "SysMan Frequency"
     elif test_binary == "test_sysman_frequency_zesinit":
         test_feature = "SysMan Frequency"    
-    elif test_binary == "test_sysman_init":
-        test_feature = "SysMan Device Properties"
+    elif (re.search('test_init_sysman', test_binary, re.IGNORECASE)):
+        test_feature = "SysMan Init"
     elif test_binary == "test_sysman_pci":
         test_feature = "SysMan PCIe"
     elif test_binary == "test_sysman_pci_zesinit":
