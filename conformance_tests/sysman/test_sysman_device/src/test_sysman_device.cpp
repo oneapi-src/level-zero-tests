@@ -52,6 +52,10 @@ class SysmanDeviceTest : public lzt::SysmanCtsClass {};
 #define SYSMAN_DEVICE_TEST SysmanDeviceTest
 #endif // USE_ZESINIT
 
+#ifdef USE_ZESINIT
+bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2);
+#endif // USE_ZESINIT
+
 void run_device_hierarchy_child_process() {
   fs::path helper_path(fs::current_path() / "sysman_device");
   std::vector<fs::path> paths;
@@ -168,6 +172,29 @@ TEST_F(
     }
   }
 }
+
+#ifdef USE_ZESINIT
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenValidDeviceWhenRetrievingSubDevicesThenEnsureNoSubDeviceUUIDMatchesDeviceUUID) {
+  for (auto device : devices) {
+    auto device_properties = lzt::get_sysman_device_properties(device);
+    uint32_t sub_devices_count = device_properties.numSubdevices;
+    if (sub_devices_count > 0) {
+      uint32_t num_sub_devices = 0;
+      auto sub_device_properties =
+          lzt::get_sysman_subdevice_properties(device, num_sub_devices);
+      EXPECT_EQ(sub_devices_count, num_sub_devices);
+      for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
+           sub_device_index++) {
+        EXPECT_FALSE(
+            is_uuid_pair_equal(sub_device_properties[sub_device_index].uuid.id,
+                               device_properties.core.uuid.id));
+      }
+    }
+  }
+}
+#endif // USE_ZESINIT
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
@@ -446,7 +473,7 @@ static void compare_results(std::vector<float> c, std::vector<float> c_cpu) {
 }
 
 #ifdef USE_ZESINIT
-bool is_uuids_equal(uint8_t *uuid1, uint8_t *uuid2) {
+bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2) {
   for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
     if (uuid1[i] != uuid2[i]) {
       return false;
@@ -460,7 +487,7 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
   auto core_devices = lzt::get_ze_devices(driver);
   for (auto device : core_devices) {
     auto device_properties = lzt::get_device_properties(device);
-    if (is_uuids_equal(uuid, device_properties.uuid.id)) {
+    if (is_uuid_pair_equal(uuid, device_properties.uuid.id)) {
       return device;
     }
   }
