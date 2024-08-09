@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023 Intel Corporation
+ * Copyright (C) 2023-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -12,43 +12,68 @@
 
 namespace lzt = level_zero_tests;
 
-void get_sysman_devices_uuids(std::vector<zes_device_handle_t> sysman_devices,
-                              std::vector<zes_uuid_t> &sysman_device_uuids) {
-  for (const auto &sysman_device : sysman_devices) {
-    zes_device_properties_t properties = {ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES};
-    zes_device_ext_properties_t ext_properties = {
-        ZES_STRUCTURE_TYPE_DEVICE_EXT_PROPERTIES};
-    properties.pNext = &ext_properties;
-    ze_result_t result = zesDeviceGetProperties(sysman_device, &properties);
-    auto sysman_device_uuid = ext_properties.uuid;
-    sysman_device_uuids.push_back(sysman_device_uuid);
+typedef std::array<uint8_t, ZE_MAX_DEVICE_UUID_SIZE> UUID;
+
+#define TO_STD_ARRAY(x)                                                        \
+  [](const uint8_t(&arr)[ZE_MAX_DEVICE_UUID_SIZE]) {                           \
+    UUID uuid;                                                                 \
+    std::copy(std::begin(arr), std::end(arr), uuid.begin());                   \
+    return uuid;                                                               \
+  }(x)
+
+UUID get_sysman_device_uuid(zes_device_handle_t sysman_device) {
+  zes_device_properties_t properties = {ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+  zes_device_ext_properties_t ext_properties = {
+      ZES_STRUCTURE_TYPE_DEVICE_EXT_PROPERTIES};
+  properties.pNext = &ext_properties;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceGetProperties(sysman_device, &properties));
+  auto sysman_device_uuid = ext_properties.uuid;
+  return TO_STD_ARRAY(sysman_device_uuid.id);
+}
+
+void get_sysman_sub_devices_uuids(zes_device_handle_t sysman_device,
+                                  std::vector<UUID> &sysman_device_uuids) {
+  uint32_t num_sub_devices = 0;
+  auto sub_device_properties =
+      lzt::get_sysman_subdevice_properties(sysman_device, num_sub_devices);
+  for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
+       sub_device_index++) {
+    sysman_device_uuids.push_back(
+        TO_STD_ARRAY(sub_device_properties[sub_device_index].uuid.id));
   }
 }
 
-void get_ze_root_uuids(std::vector<ze_device_handle_t> ze_devices,
-                       std::vector<ze_device_uuid_t> &ze_root_uuids,
-                       char *device_hierarchy) {
-  for (const auto &ze_device : ze_devices) {
-    ze_device_handle_t ze_root_device;
-    if (strcmp(device_hierarchy, "COMBINED") == 0) {
-      ze_root_device = lzt::get_root_device(ze_device);
-      if (ze_root_device == nullptr) {
-        ze_root_device = ze_device;
-      }
-    } else if (strcmp(device_hierarchy, "COMPOSITE") == 0) {
+UUID get_ze_device_uuid(ze_device_handle_t ze_device) {
+  auto ze_device_properties = lzt::get_device_properties(ze_device);
+  auto ze_device_uuid = ze_device_properties.uuid;
+  return TO_STD_ARRAY(ze_device_uuid.id);
+}
+
+UUID get_ze_root_uuid(ze_device_handle_t ze_device, char *device_hierarchy) {
+  ze_device_handle_t ze_root_device;
+  if (strcmp(device_hierarchy, "COMBINED") == 0) {
+    ze_root_device = lzt::get_root_device(ze_device);
+    if (ze_root_device == nullptr) {
       ze_root_device = ze_device;
-    } else {
-      LOG_WARNING << "Unhandled ZE_FLAT_DEVICE_HIERARCHY mode:"
-                  << device_hierarchy;
-      continue;
     }
-    auto root_device_properties = lzt::get_device_properties(ze_root_device);
-    auto root_uuid = root_device_properties.uuid;
-    if (std::find(ze_root_uuids.begin(), ze_root_uuids.end(), root_uuid) ==
-        ze_root_uuids.end()) {
-      ze_root_uuids.push_back(root_uuid);
-    }
+  } else if (strcmp(device_hierarchy, "COMPOSITE") == 0) {
+    ze_root_device = ze_device;
+  } else {
+    LOG_WARNING << "Unhandled ZE_FLAT_DEVICE_HIERARCHY mode:"
+                << device_hierarchy;
   }
+
+  return get_ze_device_uuid(ze_root_device);
+}
+
+bool compare_core_and_sysman_uuid(std::vector<UUID> core_uuids,
+                                  std::vector<UUID> sysman_uuids) {
+  std::sort(core_uuids.begin(), core_uuids.end());
+  std::sort(sysman_uuids.begin(), sysman_uuids.end());
+  return (
+      core_uuids.size() == sysman_uuids.size() &&
+      std::equal(core_uuids.begin(), core_uuids.end(), sysman_uuids.begin()));
 }
 
 int main(int argc, char **argv) {
@@ -74,23 +99,41 @@ int main(int argc, char **argv) {
   auto sysman_devices = lzt::get_zes_devices();
   EXPECT_FALSE(sysman_devices.empty());
 
-  std::vector<zes_uuid_t> sysman_device_uuids;
-  get_sysman_devices_uuids(sysman_devices, sysman_device_uuids);
+  std::vector<UUID> sysman_device_uuids{};
+  std::vector<UUID> ze_device_uuids{};
 
-  std::vector<ze_device_uuid_t> ze_root_uuids;
-  get_ze_root_uuids(ze_devices, ze_root_uuids, device_hierarchy);
+  if (strcmp(device_hierarchy, "FLAT") != 0) { // composite or combined mode
+    for (const auto &sysman_device : sysman_devices) {
+      sysman_device_uuids.push_back(get_sysman_device_uuid(sysman_device));
+    }
 
-  for (const auto &ze_root_uuid : ze_root_uuids) {
-    bool ze_and_sysman_uuid_equal = false;
-    for (const auto &sysman_device_uuid : sysman_device_uuids) {
-      if (memcmp(ze_root_uuid.id, sysman_device_uuid.id,
-                 ZE_MAX_DEVICE_UUID_SIZE) == false) {
-        ze_and_sysman_uuid_equal = true;
-        break;
+    for (const auto &ze_device : ze_devices) {
+      auto ze_root_uuid = get_ze_root_uuid(ze_device, device_hierarchy);
+      if (std::find(ze_device_uuids.begin(), ze_device_uuids.end(),
+                    ze_root_uuid) == ze_device_uuids.end()) {
+        ze_device_uuids.push_back(ze_root_uuid);
       }
     }
-    EXPECT_TRUE(ze_and_sysman_uuid_equal);
+  } else { // flat mode
+    for (const auto &sysman_device : sysman_devices) {
+      auto device_properties = lzt::get_sysman_device_properties(sysman_device);
+      uint32_t sub_devices_count = device_properties.numSubdevices;
+      if (sub_devices_count > 0) {
+        get_sysman_sub_devices_uuids(sysman_device, sysman_device_uuids);
+      } else {
+        // if subdevice doesn't exist for a device, then root device UUID
+        // is retrieved to match with core UUID's retrieved from flat mode
+        sysman_device_uuids.push_back(get_sysman_device_uuid(sysman_device));
+      }
+    }
+
+    for (const auto &ze_device : ze_devices) {
+      ze_device_uuids.push_back(get_ze_device_uuid(ze_device));
+    }
   }
+
+  EXPECT_TRUE(
+      compare_core_and_sysman_uuid(ze_device_uuids, sysman_device_uuids));
 
   exit(0);
 }

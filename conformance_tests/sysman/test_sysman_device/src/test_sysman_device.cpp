@@ -143,6 +143,22 @@ TEST_F(
     putenv(enable_sysman_env);
   }
 }
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenHierarchyModeFlatAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
+  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
+  // Disabling enable_sysman env if it's defaultly enabled
+  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
+    char disable_sysman_env[] = "ZES_ENABLE_SYSMAN=0";
+    putenv(disable_sysman_env);
+  }
+  run_child_process("FLAT");
+  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
+    char enable_sysman_env[] = "ZES_ENABLE_SYSMAN=1";
+    putenv(enable_sysman_env);
+  }
+}
 #endif // USE_ZESINIT
 
 TEST_F(
