@@ -19,6 +19,8 @@ void sysman_device_reset(zes_device_handle_t device);
 zes_device_properties_t
 get_sysman_device_properties(zes_device_handle_t device);
 
+zes_uuid_t get_sysman_device_uuid(zes_device_handle_t device);
+
 std::vector<zes_subdevice_exp_properties_t>
 get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t &count);
 

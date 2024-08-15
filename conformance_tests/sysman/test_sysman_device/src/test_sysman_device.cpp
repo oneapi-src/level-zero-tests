@@ -167,6 +167,7 @@ TEST_F(
   run_device_hierarchy_child_process();
 }
 
+#ifdef USE_ZESINIT
 TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSubDevicePropertiesThenValidPropertiesAreReturned) {
@@ -189,12 +190,12 @@ TEST_F(
   }
 }
 
-#ifdef USE_ZESINIT
 TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSubDevicesThenEnsureNoSubDeviceUUIDMatchesDeviceUUID) {
   for (auto device : devices) {
     auto device_properties = lzt::get_sysman_device_properties(device);
+    auto device_uuid = lzt::get_sysman_device_uuid(device);
     uint32_t sub_devices_count = device_properties.numSubdevices;
     if (sub_devices_count > 0) {
       uint32_t num_sub_devices = 0;
@@ -203,14 +204,12 @@ TEST_F(
       EXPECT_EQ(sub_devices_count, num_sub_devices);
       for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
            sub_device_index++) {
-        EXPECT_FALSE(
-            is_uuid_pair_equal(sub_device_properties[sub_device_index].uuid.id,
-                               device_properties.core.uuid.id));
+        EXPECT_FALSE(is_uuid_pair_equal(
+            device_uuid.id, sub_device_properties[sub_device_index].uuid.id));
       }
     }
   }
 }
-#endif // USE_ZESINIT
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
@@ -234,6 +233,37 @@ TEST_F(
     }
   }
 }
+
+TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenValidDriverWhenRetrievingDeviceHandleFromUUIDThenEnsureFetchedOnSubDeviceAndSubDeviceIdAreValid) {
+  zes_driver_handle_t driver = lzt::get_default_zes_driver();
+  for (auto device : devices) {
+    auto device_properties = lzt::get_sysman_device_properties(device);
+    uint32_t num_sub_devices = device_properties.numSubdevices;
+    zes_uuid_t test_uuid = lzt::get_sysman_device_uuid(device);
+    ze_bool_t on_sub_device = false;
+    uint32_t sub_device_id = 0;
+    zes_device_handle_t device_handle_from_uuid =
+        lzt::get_sysman_device_by_uuid(driver, test_uuid, on_sub_device,
+                                       sub_device_id);
+    EXPECT_FALSE(on_sub_device);
+    if (num_sub_devices) {
+      auto sub_device_properties =
+          lzt::get_sysman_subdevice_properties(device, num_sub_devices);
+      for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
+           sub_device_index++) {
+        test_uuid = sub_device_properties[sub_device_index].uuid;
+        device_handle_from_uuid = lzt::get_sysman_device_by_uuid(
+            driver, test_uuid, on_sub_device, sub_device_id);
+        EXPECT_TRUE(on_sub_device);
+        EXPECT_EQ(sub_device_properties[sub_device_index].subdeviceId,
+                  sub_device_id);
+      }
+    }
+  }
+}
+#endif // USE_ZESINIT
 
 TEST_F(
     SYSMAN_DEVICE_TEST,
