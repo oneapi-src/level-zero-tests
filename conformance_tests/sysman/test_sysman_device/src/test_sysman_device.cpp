@@ -218,14 +218,11 @@ TEST_F(
   for (auto device : devices) {
     auto properties = lzt::get_sysman_device_properties(device);
     uint32_t sub_devices_count = properties.numSubdevices;
-    zes_uuid_t uuid = {};
-    for (uint32_t i = 0; i < sizeof(properties.core.uuid.id); i++) {
-      uuid.id[i] = properties.core.uuid.id[i];
-    }
+    auto device_uuid = lzt::get_sysman_device_uuid(device);
     ze_bool_t on_sub_device = false;
     uint32_t sub_device_id = 0;
     zes_device_handle_t device_handle_from_uuid =
-        lzt::get_sysman_device_by_uuid(driver, uuid, on_sub_device,
+        lzt::get_sysman_device_by_uuid(driver, device_uuid, on_sub_device,
                                        sub_device_id);
     EXPECT_EQ(device_handle_from_uuid, device);
     if (on_sub_device == true) {
@@ -241,11 +238,11 @@ TEST_F(
   for (auto device : devices) {
     auto device_properties = lzt::get_sysman_device_properties(device);
     uint32_t num_sub_devices = device_properties.numSubdevices;
-    zes_uuid_t test_uuid = lzt::get_sysman_device_uuid(device);
+    auto device_uuid = lzt::get_sysman_device_uuid(device);
     ze_bool_t on_sub_device = false;
     uint32_t sub_device_id = 0;
     zes_device_handle_t device_handle_from_uuid =
-        lzt::get_sysman_device_by_uuid(driver, test_uuid, on_sub_device,
+        lzt::get_sysman_device_by_uuid(driver, device_uuid, on_sub_device,
                                        sub_device_id);
     EXPECT_FALSE(on_sub_device);
     if (num_sub_devices) {
@@ -253,9 +250,9 @@ TEST_F(
           lzt::get_sysman_subdevice_properties(device, num_sub_devices);
       for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
            sub_device_index++) {
-        test_uuid = sub_device_properties[sub_device_index].uuid;
+        auto sub_device_uuid = sub_device_properties[sub_device_index].uuid;
         device_handle_from_uuid = lzt::get_sysman_device_by_uuid(
-            driver, test_uuid, on_sub_device, sub_device_id);
+            driver, sub_device_uuid, on_sub_device, sub_device_id);
         EXPECT_TRUE(on_sub_device);
         EXPECT_EQ(sub_device_properties[sub_device_index].subdeviceId,
                   sub_device_id);
