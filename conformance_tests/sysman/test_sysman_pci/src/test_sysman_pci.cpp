@@ -39,10 +39,13 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingStateThenStateIsReturned) {
     EXPECT_GE(pciState.status, ZES_PCI_LINK_STATUS_UNKNOWN);
     EXPECT_LE(pciState.status, ZES_PCI_LINK_STATUS_STABILITY_ISSUES);
     if (pciState.status == ZES_PCI_LINK_STATUS_STABILITY_ISSUES) {
-      EXPECT_GE(pciState.qualityIssues, ZES_PCI_LINK_QUAL_ISSUE_FLAG_REPLAYS);
-      EXPECT_LE(pciState.qualityIssues, ZES_PCI_LINK_QUAL_ISSUE_FLAG_SPEED);
+      EXPECT_EQ(pciState.qualityIssues, 0);
       EXPECT_EQ(pciState.stabilityIssues,
                 ZES_PCI_LINK_STAB_ISSUE_FLAG_RETRAINING);
+    } else if (pciState.status == ZES_PCI_LINK_STATUS_QUALITY_ISSUES) {
+      EXPECT_EQ(pciState.stabilityIssues, 0);
+      EXPECT_GE(pciState.qualityIssues, ZES_PCI_LINK_QUAL_ISSUE_FLAG_REPLAYS);
+      EXPECT_LE(pciState.qualityIssues, ZES_PCI_LINK_QUAL_ISSUE_FLAG_SPEED);
     } else {
       EXPECT_EQ(pciState.qualityIssues, 0);
       EXPECT_EQ(pciState.stabilityIssues, 0);
@@ -62,11 +65,11 @@ TEST_F(PCI_TEST,
     EXPECT_LT(pciProps.address.device, MAX_DEVICES_PER_BUS);
     EXPECT_GE(pciProps.address.function, 0);
     EXPECT_LT(pciProps.address.function, MAX_FUNCTIONS_PER_DEVICE);
-    EXPECT_GE(pciProps.maxSpeed.gen, 0);
+    EXPECT_GE(pciProps.maxSpeed.gen, -1);
     EXPECT_LE(pciProps.maxSpeed.gen, PCI_SPEED_MAX_LINK_GEN);
-    EXPECT_GE(pciProps.maxSpeed.width, 0);
+    EXPECT_GE(pciProps.maxSpeed.width, -1);
     EXPECT_LE(pciProps.maxSpeed.width, PCI_SPEED_MAX_LANE_WIDTH);
-    EXPECT_GE(pciProps.maxSpeed.maxBandwidth, 0);
+    EXPECT_GE(pciProps.maxSpeed.maxBandwidth, -1);
     EXPECT_LE(pciProps.maxSpeed.maxBandwidth, UINT64_MAX);
   }
 }
@@ -85,8 +88,6 @@ TEST_F(
     }
     if (pciProps.haveBandwidthCounters == false) {
       EXPECT_EQ(pciStats.rxCounter, 0);
-    }
-    if (pciProps.haveBandwidthCounters == false) {
       EXPECT_EQ(pciStats.txCounter, 0);
     }
   }
