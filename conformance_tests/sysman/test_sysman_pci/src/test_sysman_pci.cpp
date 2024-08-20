@@ -6,6 +6,8 @@
  *
  */
 
+#include <thread>
+#include <chrono>
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"
@@ -168,6 +170,9 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
     lzt::free_memory(device_memory);
     lzt::destroy_command_queue(cq);
     lzt::destroy_command_list(command_list);
+
+    // delay to prevent identical counters in rare cases
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     auto pci_stats_later = lzt::get_pci_stats(device);
     EXPECT_LE(pci_stats_later.txCounter, UINT64_MAX);
     EXPECT_LE(pci_stats_later.rxCounter, UINT64_MAX);
