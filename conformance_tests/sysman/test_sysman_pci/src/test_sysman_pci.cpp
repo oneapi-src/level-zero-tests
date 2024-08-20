@@ -67,11 +67,11 @@ TEST_F(PCI_TEST,
     EXPECT_LT(pciProps.address.device, MAX_DEVICES_PER_BUS);
     EXPECT_GE(pciProps.address.function, 0);
     EXPECT_LT(pciProps.address.function, MAX_FUNCTIONS_PER_DEVICE);
-    EXPECT_GE(pciProps.maxSpeed.gen, -1);
+    EXPECT_GT(pciProps.maxSpeed.gen, 0);
     EXPECT_LE(pciProps.maxSpeed.gen, PCI_SPEED_MAX_LINK_GEN);
-    EXPECT_GE(pciProps.maxSpeed.width, -1);
+    EXPECT_GT(pciProps.maxSpeed.width, 0);
     EXPECT_LE(pciProps.maxSpeed.width, PCI_SPEED_MAX_LANE_WIDTH);
-    EXPECT_GE(pciProps.maxSpeed.maxBandwidth, -1);
+    EXPECT_GT(pciProps.maxSpeed.maxBandwidth, 0);
     EXPECT_LE(pciProps.maxSpeed.maxBandwidth, UINT64_MAX);
   }
 }
