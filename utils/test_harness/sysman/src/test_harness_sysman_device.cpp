@@ -28,6 +28,15 @@ get_sysman_device_properties(zes_device_handle_t device) {
   return properties;
 }
 
+zes_uuid_t get_sysman_device_uuid(zes_device_handle_t device) {
+  zes_device_properties_t properties = {ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+  zes_device_ext_properties_t ext_properties = {
+      ZES_STRUCTURE_TYPE_DEVICE_EXT_PROPERTIES};
+  properties.pNext = &ext_properties;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceGetProperties(device, &properties));
+  return ext_properties.uuid;
+}
+
 std::vector<zes_subdevice_exp_properties_t>
 get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t &count) {
   if (count == 0) {
