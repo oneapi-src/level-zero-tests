@@ -30,6 +30,7 @@ add_lzt_test(
     update_variable_on_device
     module_add
     update_variable_with_spec_constant
+    spec_constant_composite
     import_kernel
     export_kernel
     module_fptr_call
