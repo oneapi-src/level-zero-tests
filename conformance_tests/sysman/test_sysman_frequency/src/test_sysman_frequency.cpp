@@ -190,7 +190,7 @@ TEST_F(
 
       for (uint32_t i = 0; i < pFrequency.size(); i++) {
         if (pFrequency[i] != -1) {
-          EXPECT_GT(pFrequency[i], 0);
+          EXPECT_GE(pFrequency[i], freq_property.min);
           EXPECT_LE(pFrequency[i], freq_property.max);
         }
         if (i > 0)
