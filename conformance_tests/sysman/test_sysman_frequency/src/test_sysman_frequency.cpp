@@ -415,7 +415,7 @@ TEST_F(
 
 TEST_F(
     FREQUENCY_TEST,
-    GivenInvalidFrequencyRangeWhenRequestingSetFrequencyThenExpectMinAndMaxFrequencyInGetFrequencyCall) {
+    GivenValidFrequencyHandleWhenRequestingSetFrequencyWithInvalidRangeThenExpectMinAndMaxFrequencyAreClampedToHardwareLimits) {
   for (auto device : devices) {
     uint32_t p_count = 0;
     auto pfreq_handles = lzt::get_freq_handles(device, p_count);
