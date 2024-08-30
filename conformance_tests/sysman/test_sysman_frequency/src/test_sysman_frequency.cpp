@@ -433,7 +433,11 @@ TEST_F(
       zes_freq_properties_t freq_property =
           lzt::get_freq_properties(pfreq_handle);
 
-      freq_range.min = freq_property.min - 100;
+      if (freq_property.min - 100 >= 0) {
+        freq_range.min = freq_property.min - 100;
+      } else {
+        freq_range.min = 0;
+      }
       freq_range.max = freq_property.max + 100;
 
       lzt::set_freq_range(pfreq_handle, freq_range);
