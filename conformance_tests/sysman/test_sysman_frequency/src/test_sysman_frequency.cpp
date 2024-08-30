@@ -183,11 +183,15 @@ TEST_F(
     for (auto pfreq_handle : pfreq_handles) {
       EXPECT_NE(nullptr, pfreq_handle);
       uint32_t count = 0;
+      zes_freq_properties_t freq_property =
+          lzt::get_freq_properties(pfreq_handle);
+
       auto pFrequency = lzt::get_available_clocks(pfreq_handle, count);
 
       for (uint32_t i = 0; i < pFrequency.size(); i++) {
         if (pFrequency[i] != -1) {
           EXPECT_GT(pFrequency[i], 0);
+          EXPECT_LE(pFrequency[i], freq_property.max);
         }
         if (i > 0)
           EXPECT_GE(
@@ -386,7 +390,7 @@ TEST_F(
       zes_freq_range_t freqRange = {};
       zes_freq_range_t freqRangeReset = {};
       uint32_t count = 0;
-      auto frequency = lzt::get_available_clocks(*pfreq_handles.data(), count);
+      auto frequency = lzt::get_available_clocks(pfreq_handle, count);
       ASSERT_GT(frequency.size(), 0);
       if (count == 1) {
         freqRange.min = frequency[0];
@@ -408,6 +412,38 @@ TEST_F(
     }
   }
 }
+
+TEST_F(
+    FREQUENCY_TEST,
+    GivenInvalidFrequencyRangeWhenRequestingSetFrequencyThenExpectMinAndMaxFrequencyInGetFrequencyCall) {
+  for (auto device : devices) {
+    uint32_t p_count = 0;
+    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+    if (p_count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
+
+      zes_freq_range_t freq_range = {};
+      zes_freq_range_t modified_freq_range = {};
+
+      zes_freq_properties_t freq_property =
+          lzt::get_freq_properties(pfreq_handle);
+
+      freq_range.min = freq_property.min - 100;
+      freq_range.max = freq_property.max + 100;
+
+      lzt::set_freq_range(pfreq_handle, freq_range);
+      modified_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
+      EXPECT_EQ(freq_property.min, modified_freq_range.min);
+      EXPECT_EQ(freq_property.max, modified_freq_range.max);
+    }
+  }
+}
+
 void load_for_gpu(ze_device_handle_t target_device) {
   int m, k, n;
   m = k = n = 5000;
