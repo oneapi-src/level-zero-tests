@@ -427,23 +427,29 @@ TEST_F(
     for (auto pfreq_handle : pfreq_handles) {
       EXPECT_NE(nullptr, pfreq_handle);
 
-      zes_freq_range_t freq_range = {};
-      zes_freq_range_t modified_freq_range = {};
+      zes_freq_range_t invalid_freq_range = {};
+      zes_freq_range_t clamped_freq_range = {};
 
       zes_freq_properties_t freq_property =
           lzt::get_freq_properties(pfreq_handle);
 
-      if (freq_property.min - 100 >= 0) {
-        freq_range.min = freq_property.min - 100;
-      } else {
-        freq_range.min = 0;
-      }
-      freq_range.max = freq_property.max + 100;
+      if (freq_property.canControl) {
+        if (freq_property.min - 100 >= 0) {
+          invalid_freq_range.min = freq_property.min - 100;
+        } else {
+          invalid_freq_range.min = 0;
+        }
+        invalid_freq_range.max = freq_property.max + 100;
 
-      lzt::set_freq_range(pfreq_handle, freq_range);
-      modified_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
-      EXPECT_EQ(freq_property.min, modified_freq_range.min);
-      EXPECT_EQ(freq_property.max, modified_freq_range.max);
+        lzt::set_freq_range(pfreq_handle, invalid_freq_range);
+        clamped_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
+        EXPECT_EQ(freq_property.min, clamped_freq_range.min);
+        EXPECT_EQ(freq_property.max, clamped_freq_range.max);
+      } else {
+        LOG_WARNING << "User cannot control min/max frequency setting for "
+                       "frequency domain "
+                    << freq_property.type;
+      }
     }
   }
 }
