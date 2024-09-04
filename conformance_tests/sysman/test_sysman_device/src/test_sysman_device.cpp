@@ -14,6 +14,8 @@
 
 #include <boost/process.hpp>
 #include <boost/filesystem.hpp>
+#include <thread>
+#include <chrono>
 
 namespace bp = boost::process;
 namespace fs = boost::filesystem;
@@ -586,13 +588,14 @@ void compute_workload(workload_thread_parameters *t_params) {
   lzt::close_command_list(cmd_list);
   ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
 
-  uint32_t number_iterations = 100;
+  uint32_t number_iterations = 10;
   while (number_iterations--) {
     lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
     lzt::synchronize(cmd_q, UINT64_MAX);
-    t_params->get_process_state_flag = true;
-    t_params->condition.notify_one();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+  t_params->get_process_state_flag = true;
+  t_params->condition.notify_one();
 
   lzt::destroy_command_queue(cmd_q);
   lzt::destroy_command_list(cmd_list);
@@ -622,7 +625,15 @@ TEST_F(
     EXPECT_NE(core_device, nullptr);
 #endif
 
-    auto processes = lzt::get_processes_state(device, count);
+    ze_result_t result{};
+    auto processes = lzt::get_processes_state(device, count, result);
+    if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      LOG_INFO << "zesDeviceProcessesGetState is Unsupported!";
+      // proceeed to next device
+      continue;
+    }
+    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+
     for (auto process : processes) {
       preAllocDeviceMemorySize += process.memSize;
     }
@@ -680,15 +691,35 @@ TEST_F(
                             [&] { return t_params.get_process_state_flag; });
 
     uint32_t engine_type = 0;
-    while (engine_type != ZES_ENGINE_TYPE_FLAG_COMPUTE) {
-      auto processes = lzt::get_processes_state(device, count);
+    ze_result_t result{};
+    std::chrono::time_point<std::chrono::system_clock> start =
+        std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = std::chrono::seconds{0};
+
+    while (engine_type != ZES_ENGINE_TYPE_FLAG_COMPUTE &&
+           elapsed_seconds < std::chrono::seconds{30}) {
+      auto processes = lzt::get_processes_state(device, count, result);
+      if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        LOG_INFO << "zesDeviceProcessesGetState is Unsupported!";
+        break;
+      }
+      EXPECT_EQ(ZE_RESULT_SUCCESS, result);
       for (auto process : processes) {
         engine_type = process.engines;
       }
       processes.clear();
+      elapsed_seconds = std::chrono::system_clock::now() - start;
     }
 
     thread.join();
+    if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      // proceeed to next device
+      continue;
+    }
+    if (elapsed_seconds >= std::chrono::seconds{30}) {
+      FAIL() << "TimeOut of 30 seconds elapsed while waiting for engine type "
+                "to get update ";
+    }
     EXPECT_EQ(engine_type, ZES_ENGINE_TYPE_FLAG_COMPUTE);
   }
 }

@@ -68,6 +68,12 @@ uint32_t get_processes_count(zes_device_handle_t device) {
   return count;
 }
 
+uint32_t get_processes_count(zes_device_handle_t device, ze_result_t &result) {
+  uint32_t count = 0;
+  result = zesDeviceProcessesGetState(device, &count, nullptr);
+  return count;
+}
+
 std::vector<zes_process_state_t> get_processes_state(zes_device_handle_t device,
                                                      uint32_t &count) {
   if (count == 0)
@@ -79,6 +85,27 @@ std::vector<zes_process_state_t> get_processes_state(zes_device_handle_t device,
   }
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zesDeviceProcessesGetState(device, &count, processes.data()));
+  return processes;
+}
+
+std::vector<zes_process_state_t> get_processes_state(zes_device_handle_t device,
+                                                     uint32_t &count,
+                                                     ze_result_t &result) {
+  if (count == 0)
+    count = get_processes_count(device, result);
+
+  if (result != ZE_RESULT_SUCCESS) {
+    return {};
+  }
+  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+
+  std::vector<zes_process_state_t> processes(count);
+  for (uint32_t i = 0; i < count; i++) {
+    processes[i].stype = ZES_STRUCTURE_TYPE_PROCESS_STATE;
+    processes[i].pNext = nullptr;
+  }
+
+  result = zesDeviceProcessesGetState(device, &count, processes.data());
   return processes;
 }
 
