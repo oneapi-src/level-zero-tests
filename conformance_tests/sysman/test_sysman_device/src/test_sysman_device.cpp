@@ -537,10 +537,10 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
 }
 #endif // USE_ZESINIT
 
-void validate_engine_type(ze_event_handle_t end_event,
+void validate_engine_type(ze_event_handle_t event,
                           zes_device_handle_t sysman_device) {
   bool is_compute_engine = false;
-  while (zeEventQueryStatus(end_event) != ZE_RESULT_SUCCESS) {
+  while (zeEventQueryStatus(event) != ZE_RESULT_SUCCESS) {
     uint32_t count = 0;
     auto processes = lzt::get_processes_state(sysman_device, count);
 
