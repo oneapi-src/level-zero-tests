@@ -537,7 +537,7 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
 }
 #endif // USE_ZESINIT
 
-bool is_compute_engine_used(pid_t pid, zes_device_handle_t device) {
+bool is_compute_engine_used(int pid, zes_device_handle_t device) {
   uint32_t count = 0;
   auto processes = lzt::get_processes_state(device, count);
 
@@ -553,7 +553,8 @@ bool is_compute_engine_used(pid_t pid, zes_device_handle_t device) {
 bool validate_engine_type(ze_event_handle_t event,
                           zes_device_handle_t sysman_device) {
   bool is_compute_engine = false;
-  pid_t process_id = getpid();
+  int process_id = getpid();
+
   while (zeEventQueryStatus(event) != ZE_RESULT_SUCCESS && !is_compute_engine) {
     is_compute_engine = is_compute_engine_used(process_id, sysman_device);
 
@@ -732,10 +733,11 @@ TEST_F(
 #endif // USE_ZESINIT
 
     bool is_success = compute_workload_and_validate(device_handle);
+
     // when engine type is not updated during workload execution,
     // checking the process state after workload exectuion
     // with timeout of 10 seconds
-    pid_t process_id = getpid();
+    int process_id = getpid();
     std::chrono::duration<double> elapsed = std::chrono::seconds{0};
     auto start = std::chrono::steady_clock::now();
     if (!is_success) {
