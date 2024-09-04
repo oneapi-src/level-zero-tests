@@ -592,6 +592,7 @@ void compute_workload(workload_thread_parameters *t_params) {
   while (number_iterations--) {
     lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
     lzt::synchronize(cmd_q, UINT64_MAX);
+    // sleep for some time for synchronize to take effect
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   t_params->get_process_state_flag = true;
@@ -625,15 +626,7 @@ TEST_F(
     EXPECT_NE(core_device, nullptr);
 #endif
 
-    ze_result_t result{};
-    auto processes = lzt::get_processes_state(device, count, result);
-    if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-      LOG_INFO << "zesDeviceProcessesGetState is Unsupported!";
-      // proceeed to next device
-      continue;
-    }
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
-
+    auto processes = lzt::get_processes_state(device, count);
     for (auto process : processes) {
       preAllocDeviceMemorySize += process.memSize;
     }
@@ -699,11 +692,11 @@ TEST_F(
     while (engine_type != ZES_ENGINE_TYPE_FLAG_COMPUTE &&
            elapsed_seconds < std::chrono::seconds{30}) {
       auto processes = lzt::get_processes_state(device, count, result);
+      EXPECT_EQ(ZE_RESULT_SUCCESS, result);
       if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-        LOG_INFO << "zesDeviceProcessesGetState is Unsupported!";
+        LOG_INFO << "zesDeviceProcessesGetState is Unsupported on this device!";
         break;
       }
-      EXPECT_EQ(ZE_RESULT_SUCCESS, result);
       for (auto process : processes) {
         engine_type = process.engines;
       }
@@ -712,15 +705,14 @@ TEST_F(
     }
 
     thread.join();
-    if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-      // proceeed to next device
-      continue;
-    }
     if (elapsed_seconds >= std::chrono::seconds{30}) {
       FAIL() << "TimeOut of 30 seconds elapsed while waiting for engine type "
                 "to get update ";
     }
-    EXPECT_EQ(engine_type, ZES_ENGINE_TYPE_FLAG_COMPUTE);
+
+    if (result != ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      EXPECT_EQ(engine_type, ZES_ENGINE_TYPE_FLAG_COMPUTE);
+    }
   }
 }
 
