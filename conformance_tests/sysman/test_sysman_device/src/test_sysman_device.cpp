@@ -555,12 +555,13 @@ bool validate_engine_type(ze_event_handle_t event,
   bool is_compute_engine = false;
   int process_id = getpid();
 
-  while (zeEventQueryStatus(event) != ZE_RESULT_SUCCESS && !is_compute_engine) {
+  do {
     is_compute_engine = is_compute_engine_used(process_id, sysman_device);
-
     // sleep for sometime before next check
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
+  } while (zeEventQueryStatus(event) != ZE_RESULT_SUCCESS &&
+           !is_compute_engine);
+
   return is_compute_engine;
 }
 
