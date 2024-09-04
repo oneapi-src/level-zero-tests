@@ -747,6 +747,10 @@ TEST_F(
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         elapsed = std::chrono::steady_clock::now() - start;
       }
+      if (is_compute_engine) {
+        LOG_WARNING << "Engine type was updated after the workload execution "
+                       "completed!!";
+      }
       EXPECT_TRUE(is_compute_engine);
     }
   }
