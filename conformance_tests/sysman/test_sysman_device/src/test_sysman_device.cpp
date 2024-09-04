@@ -537,31 +537,36 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
 }
 #endif // USE_ZESINIT
 
-void validate_engine_type(ze_event_handle_t event,
-                          zes_device_handle_t sysman_device) {
+bool is_compute_engine_used(pid_t pid, zes_device_handle_t device) {
+  uint32_t count = 0;
+  auto processes = lzt::get_processes_state(device, count);
   bool is_compute_engine = false;
-  while (zeEventQueryStatus(event) != ZE_RESULT_SUCCESS) {
-    uint32_t count = 0;
-    auto processes = lzt::get_processes_state(sysman_device, count);
 
-    for (const auto &process : processes) {
-      if (process.engines == ZES_ENGINE_TYPE_FLAG_COMPUTE) {
-        is_compute_engine = true;
-        break;
-      }
-    }
-    processes.clear();
-
-    if (is_compute_engine) {
+  for (const auto &process : processes) {
+    if (process.processId == pid &&
+        process.engines == ZES_ENGINE_TYPE_FLAG_COMPUTE) {
+      is_compute_engine = true;
       break;
     }
+  }
+  processes.clear();
+  return is_compute_engine;
+}
+
+bool validate_engine_type(ze_event_handle_t event,
+                          zes_device_handle_t sysman_device) {
+  bool is_compute_engine = false;
+  pid_t process_id = getpid();
+  while (zeEventQueryStatus(event) != ZE_RESULT_SUCCESS && !is_compute_engine) {
+    is_compute_engine = is_compute_engine_used(process_id, sysman_device);
+
     // sleep for sometime before next check
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
-  EXPECT_TRUE(is_compute_engine);
+  return is_compute_engine;
 }
 
-void compute_workload_and_validate(device_handles_t device) {
+bool compute_workload_and_validate(device_handles_t device) {
 
   int m, k, n;
   m = k = n = 512;
@@ -639,7 +644,8 @@ void compute_workload_and_validate(device_handles_t device) {
                               std::numeric_limits<uint64_t>::max());
 
   // validating engine type between two events
-  validate_engine_type(end_event, device.sysman_handle);
+  auto is_compute_engine =
+      validate_engine_type(end_event, device.sysman_handle);
 
   lzt::event_host_synchronize(end_event, std::numeric_limits<uint64_t>::max());
 
@@ -655,6 +661,8 @@ void compute_workload_and_validate(device_handles_t device) {
   lzt::free_memory(b_buffer);
   lzt::free_memory(c_buffer);
   lzt::destroy_module(module);
+
+  return is_compute_engine;
 }
 
 TEST_F(
@@ -721,12 +729,29 @@ TEST_F(
     EXPECT_NE(core_device, nullptr);
     device_handle.core_handle = core_device;
     device_handle.sysman_handle = device;
-    compute_workload_and_validate(device_handle);
 #else  // USE_ZESINIT
     device_handle.core_handle = device;
     device_handle.sysman_handle = device;
-    compute_workload_and_validate(device_handle);
 #endif // USE_ZESINIT
+
+    bool is_success = compute_workload_and_validate(device_handle);
+    // when engine type is not updated during workload execution,
+    // checking the process state after workload exectuion
+    // with timeout of 10 seconds
+    pid_t process_id = getpid();
+    std::chrono::duration<double> elapsed = std::chrono::seconds{0};
+    auto start = std::chrono::steady_clock::now();
+    if (!is_success) {
+      bool is_compute_engine = false;
+      while (!is_compute_engine && elapsed < std::chrono::seconds{10}) {
+        is_compute_engine = is_compute_engine_used(process_id, device);
+
+        // sleep for sometime before next check
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        elapsed = std::chrono::steady_clock::now() - start;
+      }
+      EXPECT_TRUE(is_compute_engine);
+    }
   }
 }
 
