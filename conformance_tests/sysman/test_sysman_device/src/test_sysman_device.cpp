@@ -540,17 +540,14 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
 bool is_compute_engine_used(pid_t pid, zes_device_handle_t device) {
   uint32_t count = 0;
   auto processes = lzt::get_processes_state(device, count);
-  bool is_compute_engine = false;
 
   for (const auto &process : processes) {
     if (process.processId == pid &&
         process.engines == ZES_ENGINE_TYPE_FLAG_COMPUTE) {
-      is_compute_engine = true;
-      break;
+      return true;
     }
   }
-  processes.clear();
-  return is_compute_engine;
+  return false;
 }
 
 bool validate_engine_type(ze_event_handle_t event,
