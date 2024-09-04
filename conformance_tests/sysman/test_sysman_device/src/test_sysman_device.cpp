@@ -557,8 +557,6 @@ bool validate_engine_type(ze_event_handle_t event,
 
   do {
     is_compute_engine = is_compute_engine_used(process_id, sysman_device);
-    // sleep for sometime before next check
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   } while (zeEventQueryStatus(event) != ZE_RESULT_SUCCESS &&
            !is_compute_engine);
 
@@ -734,28 +732,7 @@ TEST_F(
 #endif // USE_ZESINIT
 
     bool is_success = compute_workload_and_validate(device_handle);
-
-    // when engine type is not updated during workload execution,
-    // checking the process state after workload exectuion
-    // with timeout of 10 seconds
-    int process_id = getpid();
-    std::chrono::duration<double> elapsed = std::chrono::seconds{0};
-    auto start = std::chrono::steady_clock::now();
-    if (!is_success) {
-      bool is_compute_engine = false;
-      while (!is_compute_engine && elapsed < std::chrono::seconds{10}) {
-        is_compute_engine = is_compute_engine_used(process_id, device);
-
-        // sleep for sometime before next check
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        elapsed = std::chrono::steady_clock::now() - start;
-      }
-      if (is_compute_engine) {
-        LOG_WARNING << "Engine type was updated after the workload execution "
-                       "completed!!";
-      }
-      EXPECT_TRUE(is_compute_engine);
-    }
+    EXPECT_TRUE(is_success);
   }
 }
 
