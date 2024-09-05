@@ -183,11 +183,15 @@ TEST_F(
     for (auto pfreq_handle : pfreq_handles) {
       EXPECT_NE(nullptr, pfreq_handle);
       uint32_t count = 0;
+      zes_freq_properties_t freq_property =
+          lzt::get_freq_properties(pfreq_handle);
+
       auto pFrequency = lzt::get_available_clocks(pfreq_handle, count);
 
       for (uint32_t i = 0; i < pFrequency.size(); i++) {
         if (pFrequency[i] != -1) {
-          EXPECT_GT(pFrequency[i], 0);
+          EXPECT_GE(pFrequency[i], freq_property.min);
+          EXPECT_LE(pFrequency[i], freq_property.max);
         }
         if (i > 0)
           EXPECT_GE(
@@ -386,7 +390,7 @@ TEST_F(
       zes_freq_range_t freqRange = {};
       zes_freq_range_t freqRangeReset = {};
       uint32_t count = 0;
-      auto frequency = lzt::get_available_clocks(*pfreq_handles.data(), count);
+      auto frequency = lzt::get_available_clocks(pfreq_handle, count);
       ASSERT_GT(frequency.size(), 0);
       if (count == 1) {
         freqRange.min = frequency[0];
@@ -408,6 +412,64 @@ TEST_F(
     }
   }
 }
+
+std::string get_freq_domain(zes_freq_domain_t domain) {
+  switch (domain) {
+  case zes_freq_domain_t::ZES_FREQ_DOMAIN_GPU:
+    return "ZES_FREQ_DOMAIN_GPU";
+    break;
+  case zes_freq_domain_t::ZES_FREQ_DOMAIN_MEMORY:
+    return "ZES_FREQ_DOMAIN_MEMORY";
+    break;
+  case zes_freq_domain_t::ZES_FREQ_DOMAIN_MEDIA:
+    return "ZES_FREQ_DOMAIN_MEDIA";
+    break;
+  default:
+    return "ZES_FREQ_DOMAIN_FORCE_UINT32";
+  }
+}
+
+TEST_F(
+    FREQUENCY_TEST,
+    GivenValidFrequencyHandleWhenRequestingSetFrequencyWithInvalidRangeThenExpectMinAndMaxFrequencyAreClampedToHardwareLimits) {
+  for (auto device : devices) {
+    uint32_t p_count = 0;
+    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+    if (p_count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto pfreq_handle : pfreq_handles) {
+      EXPECT_NE(nullptr, pfreq_handle);
+
+      zes_freq_range_t invalid_freq_range = {};
+      zes_freq_range_t clamped_freq_range = {};
+
+      zes_freq_properties_t freq_property =
+          lzt::get_freq_properties(pfreq_handle);
+
+      if (freq_property.canControl) {
+        if (freq_property.min - 100 >= 0) {
+          invalid_freq_range.min = freq_property.min - 100;
+        } else {
+          invalid_freq_range.min = 0;
+        }
+        invalid_freq_range.max = freq_property.max + 100;
+
+        lzt::set_freq_range(pfreq_handle, invalid_freq_range);
+        clamped_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
+        EXPECT_EQ(freq_property.min, clamped_freq_range.min);
+        EXPECT_EQ(freq_property.max, clamped_freq_range.max);
+      } else {
+        LOG_WARNING << "User cannot control min/max frequency setting for "
+                       "frequency domain "
+                    << get_freq_domain(freq_property.type);
+      }
+    }
+  }
+}
+
 void load_for_gpu(ze_device_handle_t target_device) {
   int m, k, n;
   m = k = n = 5000;
