@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -155,10 +155,10 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   static constexpr uint16_t bufferSize =
       512; // Also defined in test_debug_helper.cpp for SLM buffer size
 
-  zet_debug_memory_space_desc_t desc;
+  zet_debug_memory_space_desc_t desc = {};
   desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
 
-  zet_debug_memory_space_desc_t verifyDesc;
+  zet_debug_memory_space_desc_t verifyDesc = {};
   verifyDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
   verifyDesc.address = slmBaseAddress;
 
@@ -318,7 +318,7 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
 
   static constexpr uint8_t bufferSize = 16;
   bool read_success = false;
-  zet_debug_memory_space_desc_t desc;
+  zet_debug_memory_space_desc_t desc = {};
   desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
   uint8_t buffer1[bufferSize];
   uint8_t buffer2[bufferSize];
@@ -767,7 +767,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
       FAIL() << "[Debugger] Did not find stopped threads";
     }
 
-    zet_debug_memory_space_desc_t memorySpaceDesc;
+    zet_debug_memory_space_desc_t memorySpaceDesc = {};
     memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
     int sizeToRead = 512;
     uint8_t *buffer = new uint8_t[sizeToRead];
@@ -802,7 +802,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
                                            0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD,
                                            0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 
-          zet_debug_memory_space_desc_t slmSpaceDesc;
+          zet_debug_memory_space_desc_t slmSpaceDesc = {};
           slmSpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
           slmSpaceDesc.address = slmBaseAddress;
 
