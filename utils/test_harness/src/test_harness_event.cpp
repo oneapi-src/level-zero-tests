@@ -157,7 +157,7 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
                                const ze_structure_type_t property_type) {
 
   double context_time_ns;
-  auto device_properties = lzt::get_device_properties(device);
+  auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
       ~(-1L << device_properties.kernelTimestampValidBits);
