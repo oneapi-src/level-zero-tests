@@ -76,7 +76,9 @@ std::vector<ze_module_handle_t> create_module_vector_and_log(
       lzt::save_native_binary_file(module.back(), filename_native);
       module.push_back(lzt::create_module(
           device, filename_native, ZE_MODULE_FORMAT_NATIVE, nullptr, nullptr));
-      std::remove(filename_native.c_str());
+      if (std::remove(filename_native.c_str())) {
+        LOG_WARNING << "FAILED to remove file " << filename_native;
+      }
     }
   }
   return (module);
