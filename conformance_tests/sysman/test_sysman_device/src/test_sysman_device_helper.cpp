@@ -50,7 +50,8 @@ UUID get_ze_device_uuid(ze_device_handle_t ze_device) {
   return TO_STD_ARRAY(ze_device_uuid.id);
 }
 
-UUID get_ze_root_uuid(ze_device_handle_t ze_device, char *device_hierarchy) {
+UUID get_ze_root_uuid(ze_device_handle_t ze_device,
+                      const char *device_hierarchy) {
   ze_device_handle_t ze_root_device;
   if (strcmp(device_hierarchy, "COMBINED") == 0) {
     ze_root_device = lzt::get_root_device(ze_device);
