@@ -589,10 +589,15 @@ void measure_latency(ClImageCopyLatency &imageCopyLatency) {
   measure_latency_Device2Host(imageCopyLatency, &ptree_Device2Host);
 
   if (imageCopyLatency.is_json_output_enabled()) {
-    ptree_param_array.push_back(std::make_pair("", ptree_Host2Device));
-    ptree_param_array.push_back(std::make_pair("", ptree_Device2Host));
-    ptree_main.put_child("Performance Benchmark.latency", ptree_param_array);
-    pt::write_json(imageCopyLatency.JsonFileName.c_str(), ptree_main);
+    try {
+      ptree_param_array.push_back(std::make_pair("", ptree_Host2Device));
+      ptree_param_array.push_back(std::make_pair("", ptree_Device2Host));
+      ptree_main.put_child("Performance Benchmark.latency", ptree_param_array);
+      pt::write_json(imageCopyLatency.JsonFileName.c_str(), ptree_main);
+    } catch (const std::exception &e) {
+      std::cerr << "Error outputting latency measurement:" << e.what()
+                << std::endl;
+    }
   }
 }
 

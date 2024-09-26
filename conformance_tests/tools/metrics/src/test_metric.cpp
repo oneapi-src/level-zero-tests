@@ -453,7 +453,7 @@ protected:
     EXPECT_NE(nullptr, metricQueryPoolHandle);
     metricQueryHandle = lzt::metric_query_create(metricQueryPoolHandle);
   }
-  ~zetMetricQueryTest() {
+  void TearDown() override {
     lzt::destroy_metric_query(metricQueryHandle);
     lzt::destroy_metric_query_pool(metricQueryPoolHandle);
   }

@@ -127,7 +127,7 @@ public:
     cmd_queue_ = lzt::create_command_queue();
   }
 
-  ~ModuleNegativeLocalMemoryTests() {
+  void TearDown() override {
     lzt::destroy_module(module_);
     lzt::destroy_command_list(cmd_list_);
     lzt::destroy_command_queue(cmd_queue_);

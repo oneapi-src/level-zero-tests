@@ -61,7 +61,7 @@ public:
     ze_img_dest = lzt::create_ze_image(img_desc);
   }
 
-  ~zeCommandListAppendImageCopyTests() {
+  void TearDown() override {
     if (!(lzt::image_support())) {
       return;
     }
