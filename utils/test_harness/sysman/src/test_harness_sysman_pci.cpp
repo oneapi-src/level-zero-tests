@@ -54,7 +54,7 @@ get_pci_bars_extension(zes_device_handle_t device, uint32_t *p_count) {
   std::vector<zes_pci_bar_properties_1_2_t> pciBarExtProps(*p_count);
   for (uint32_t i = 0; i < *p_count; i++) {
     pciBarProps[i].stype = ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES;
-    pciBarProps[i].pNext = static_cast<void *>(&pciBarExtProps[i]);
+    pciBarProps[i].pNext = std::move(static_cast<void *>(&pciBarExtProps[i]));
     pciBarExtProps[i].stype = ZES_STRUCTURE_TYPE_PCI_BAR_PROPERTIES_1_2;
     pciBarExtProps[i].pNext = nullptr;
   }

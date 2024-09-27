@@ -1011,7 +1011,14 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
   ze_command_list_handle_t command_list_1;
   result = zeCommandListCreate(context, device_1, &command_list_desc,
                                &command_list_1);
-  ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_ERROR << "[Application] " << __LINE__ << " FAIL: " << result;
+    delete[] validation_buffer_0;
+    delete[] validation_buffer_1;
+    lzt::free_memory(context, values);
+    lzt::free_memory(context, values_1);
+    FAIL();
+  }
   auto fence_1 = lzt::create_fence(command_queue_1);
   auto event_1 = lzt::create_event(event_pool, event_desc);
   lzt::append_memory_copy(command_list_1, values_1, src.data(), size, event_1,
@@ -1081,6 +1088,8 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
   }
 
   // cleanup
+  delete[] validation_buffer_0;
+  delete[] validation_buffer_1;
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
   lzt::destroy_fence(fence);
@@ -1108,7 +1117,12 @@ int main(int argc, char **argv) {
   putenv(enable_debug);
 
   debug_options options;
-  options.parse_options(argc, argv);
+  try {
+    options.parse_options(argc, argv);
+  } catch (const boost::bad_any_cast &e) {
+    LOG_ERROR << e.what();
+    exit(1);
+  }
 
   process_synchro synchro(options.enable_synchro, false, options.index_in);
 

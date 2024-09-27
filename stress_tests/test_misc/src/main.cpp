@@ -66,7 +66,12 @@ void reserve_memory(bool release) {
 }
 
 int main(int argc, char **argv) {
-  ::testing::InitGoogleMock(&argc, argv);
+  try {
+    ::testing::InitGoogleMock(&argc, argv);
+  } catch (const std::exception &e) {
+    LOG_ERROR << "Failed to init google mock: " << e.what();
+    return 1;
+  }
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
   std::string user_arg = "release_memory";
@@ -84,5 +89,10 @@ int main(int argc, char **argv) {
   LOG_TRACE << "Driver initialized";
   level_zero_tests::print_platform_overview();
 
-  return RUN_ALL_TESTS();
+  try {
+    auto result = RUN_ALL_TESTS();
+  } catch (const std::runtime_error &e) {
+    LOG_ERROR << "Failed to run tests: " << e.what();
+    return 1;
+  }
 }

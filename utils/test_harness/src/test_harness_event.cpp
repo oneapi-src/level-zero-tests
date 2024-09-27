@@ -280,7 +280,10 @@ zeEventPool::~zeEventPool() {
   // If the event pool was never created, do not attempt to destroy it
   // as that will needlessly cause a test failure.
   if (event_pool_) {
-    destroy_event_pool(event_pool_);
+    auto result = zeEventPoolDestroy(event_pool_);
+    if (ZE_RESULT_SUCCESS != result) {
+      LOG_ERROR << "Failed to destroy event pool: " << result;
+    }
   }
 }
 

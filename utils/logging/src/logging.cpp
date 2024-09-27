@@ -63,7 +63,11 @@ void init_logging(const LoggingSettings settings) {
 }
 
 void init_logging(std::vector<std::string> &command_line) {
+  try {
   init_logging(parse_command_line(command_line));
+  } catch (const boost::bad_lexical_cast &e) {
+    std::cerr << "Error initializing logging parsing command line: " << e.what() << std::endl;
+  }
 }
 
 void stop_logging() {
