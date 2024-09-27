@@ -134,8 +134,15 @@ zeImageCreateCommon::zeImageCreateCommon()
 }
 
 zeImageCreateCommon::~zeImageCreateCommon() {
-  destroy_ze_image(dflt_device_image_);
-  destroy_ze_image(dflt_device_image_2_);
+
+  auto result = zeImageDestroy(dflt_device_image_);
+  if (result != ZE_RESULT_SUCCESS) {
+    LOG_ERROR << "Failed to destroy image: " << result;
+  }
+  result = zeImageDestroy(dflt_device_image_2_);
+  if (result != ZE_RESULT_SUCCESS) {
+    LOG_ERROR << "Failed to destroy image: " << result;
+  }
 }
 
 void print_image_descriptor_unsupported(const ze_image_desc_t descriptor) {

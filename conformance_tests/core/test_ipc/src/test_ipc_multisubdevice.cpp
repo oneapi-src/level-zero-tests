@@ -296,5 +296,11 @@ int main(int argc, char **argv) {
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
 
-  return RUN_ALL_TESTS();
+  try {
+    auto result = RUN_ALL_TESTS();
+    return result;
+  } catch (std::runtime_error &e) {
+    std::cerr << "Test failed with exception: " << e.what() << std::endl;
+    return 1;
+  }
 }
