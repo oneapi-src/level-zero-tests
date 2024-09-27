@@ -1117,7 +1117,12 @@ int main(int argc, char **argv) {
   putenv(enable_debug);
 
   debug_options options;
-  options.parse_options(argc, argv);
+  try {
+    options.parse_options(argc, argv);
+  } catch (const boost::bad_any_cast &e) {
+    LOG_ERROR << e.what();
+    exit(1);
+  }
 
   process_synchro synchro(options.enable_synchro, false, options.index_in);
 

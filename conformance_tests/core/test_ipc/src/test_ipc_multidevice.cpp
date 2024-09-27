@@ -257,7 +257,12 @@ TEST(
 // zeInit should be handled with fork(), so each process must call
 // zeInit
 int main(int argc, char **argv) {
-  ::testing::InitGoogleMock(&argc, argv);
+  try {
+    ::testing::InitGoogleMock(&argc, argv);
+  } catch (const std::exception &e) {
+    LOG_ERROR << "Failed to init google mock: " << e.what();
+    return 1;
+  }
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
 
