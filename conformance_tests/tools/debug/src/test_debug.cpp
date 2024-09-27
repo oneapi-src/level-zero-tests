@@ -1305,10 +1305,13 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
 
             for (int i = 0; i < buffer_size; i++) {
               if (static_cast<char>(0xaa) != static_cast<char *>(buffer)[i]) {
+                delete[] kernel_buffer;
+                auto found_val = static_cast<char *>(buffer)[i];
+                lzt::free_memory(buffer);
+                lzt::free_memory(buffer_copy);
                 FAIL() << "[Debugger] register set " << regSetNumber
                        << " FAILED write test. Expected "
-                       << static_cast<char>(0xaa) << " , found "
-                       << static_cast<char *>(buffer)[i];
+                       << static_cast<char>(0xaa) << " , found " << found_val;
               }
             }
 
