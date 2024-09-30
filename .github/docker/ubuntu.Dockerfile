@@ -10,12 +10,27 @@ ARG VMIN
 SHELL ["/bin/bash", "-e", "-c"]
 
 RUN <<EOF
-sed -i 's/^deb/deb [arch=amd64]/' /etc/apt/sources.list
 source /etc/lsb-release
-echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${DISTRIB_CODENAME} main restricted universe multiverse" >> /etc/apt/sources.list
-echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${DISTRIB_CODENAME}-updates main restricted universe multiverse" >> /etc/apt/sources.list
-echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${DISTRIB_CODENAME}-security main restricted universe multiverse" >> /etc/apt/sources.list
-echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${DISTRIB_CODENAME}-backports main restricted universe multiverse" >> /etc/apt/sources.list
+if ((VMAJ < 24)); then
+    sed -i 's/^deb/deb [arch=amd64]/' /etc/apt/sources.list
+    cat >> /etc/apt/sources.list <<EOF2
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${DISTRIB_CODENAME} main restricted universe multiverse
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${DISTRIB_CODENAME}-updates main restricted universe multiverse
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${DISTRIB_CODENAME}-security main restricted universe multiverse
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${DISTRIB_CODENAME}-backports main restricted universe multiverse
+EOF2
+else
+    sed -i '/^Components:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+    cat >> /etc/apt/sources.list.d/ubuntu.sources <<EOF2
+
+types: deb
+URIs: http://ports.ubuntu.com/ubuntu-ports/
+Suites: ${DISTRIB_CODENAME} ${DISTRIB_CODENAME}-updates ${DISTRIB_CODENAME}-security ${DISTRIB_CODENAME}-backports
+Components: main universe restricted multiverse
+Architectures: arm64
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+EOF2
+fi
 dpkg --add-architecture arm64
 EOF
 
@@ -37,9 +52,6 @@ apt-get install -o Dpkg::Options::="--force-overwrite" -y \
   ninja-build \
   gcc-aarch64-linux-gnu \
   g++-aarch64-linux-gnu \
-  $(((VMAJ >= 20)) && echo \
-    gcc-10-aarch64-linux-gnu \
-    g++-10-aarch64-linux-gnu) \
   libc6:arm64 \
   libstdc++6:arm64 \
   libpapi-dev \
