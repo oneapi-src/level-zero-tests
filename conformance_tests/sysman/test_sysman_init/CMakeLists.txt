@@ -29,17 +29,17 @@ add_lzt_test(
     LINK_LIBRARIES level_zero_tests::logging level_zero_tests::utils)
 
 add_lzt_test(
-    NAME test_init_sysman_from_core_handle
+    NAME test_init_enum_freq_with_core_handle
     GROUP   "/conformance_tests/tools/sysman"
     SOURCES
-    src/test_init_sysman_from_core_handle.cpp
+    src/test_init_enum_freq_with_core_handle.cpp
     src/main.cpp
     LINK_LIBRARIES level_zero_tests::logging level_zero_tests::utils)
 
 add_lzt_test(
-    NAME test_init_sysman_from_sysman_handle
+    NAME test_init_enum_freq_with_sysman_handle
     GROUP   "/conformance_tests/tools/sysman"
     SOURCES
-    src/test_init_sysman_from_sysman_handle.cpp
+    src/test_init_enum_freq_with_sysman_handle.cpp
     src/main.cpp
     LINK_LIBRARIES level_zero_tests::logging level_zero_tests::utils)
