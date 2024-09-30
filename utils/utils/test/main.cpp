@@ -15,6 +15,9 @@ int main(int argc, char **argv) {
   } catch (std::exception &e) {
     std::cerr << "Test failed with exception: " << e.what() << std::endl;
     return 1;
+  } catch (...) {
+    std::cerr << "Test failed with unknown exception" << std::endl;
+    return 1;
   }
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
