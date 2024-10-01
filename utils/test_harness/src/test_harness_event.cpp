@@ -282,7 +282,11 @@ zeEventPool::~zeEventPool() {
   if (event_pool_) {
     auto result = zeEventPoolDestroy(event_pool_);
     if (ZE_RESULT_SUCCESS != result) {
-      LOG_ERROR << "Failed to destroy event pool: " << result;
+      try {
+        LOG_ERROR << "Failed to destroy event pool: " << result;
+      } catch (...) {
+        // Do nothing
+      }
     }
   }
 }

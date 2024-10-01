@@ -583,7 +583,11 @@ void measure_latency(ClImageCopyLatency &imageCopyLatency) {
   ptree ptree_param_array;
 
   if (imageCopyLatency.is_json_output_enabled()) {
-    pt::read_json(imageCopyLatency.JsonFileName, ptree_main);
+    try {
+      pt::read_json(imageCopyLatency.JsonFileName, ptree_main);
+    } catch (const std::exception &e) {
+      std::cerr << "Error reading json file:" << e.what() << std::endl;
+    }
   }
   measure_latency_Host2Device(imageCopyLatency, &ptree_Host2Device);
   measure_latency_Device2Host(imageCopyLatency, &ptree_Device2Host);

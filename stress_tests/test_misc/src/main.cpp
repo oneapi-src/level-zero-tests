@@ -71,6 +71,9 @@ int main(int argc, char **argv) {
   } catch (const std::exception &e) {
     LOG_ERROR << "Failed to init google mock: " << e.what();
     return 1;
+  } catch (...) {
+    LOG_ERROR << "Failed to init google mock";
+    return 1;
   }
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
