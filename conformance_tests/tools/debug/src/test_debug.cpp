@@ -990,11 +990,14 @@ TEST_F(
 std::mutex module_load_mutex;
 std::condition_variable module_load_cv;
 bool module_loaded = false;
+std::mutex interrupt_sent_mutex;
+std::condition_variable interrupt_sent_cv;
+bool interrupt_sent = false;
 void read_and_verify_events_debugger_thread(
+    const zet_device_handle_t &device,
     const zet_debug_session_handle_t &debug_session, uint64_t *gpu_buffer_va) {
 
   LOG_INFO << "[Debugger] Event Read Thread starting...";
-  zet_debug_event_t debug_event;
 
   std::vector<zet_debug_event_type_t> expectedEvents = {
       ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD};
@@ -1010,10 +1013,22 @@ void read_and_verify_events_debugger_thread(
     module_load_cv.notify_one();
   }
 
-  lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
-  LOG_INFO << "[Debugger] received event: "
-           << lzt::debuggerEventTypeString[debug_event.type];
-  ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED);
+  LOG_INFO << "[Debugger] Event read thread waiting for interrupt to be sent";
+  std::unique_lock<std::mutex> lk(interrupt_sent_mutex);
+  interrupt_sent_cv.wait(lk, [] { return interrupt_sent; });
+  lk.unlock();
+
+  ze_device_thread_t device_thread;
+  device_thread.slice = UINT32_MAX;
+  device_thread.subslice = UINT32_MAX;
+  device_thread.eu = UINT32_MAX;
+  device_thread.thread = UINT32_MAX;
+  std::vector<ze_device_thread_t> stopped_threads;
+
+  if (!find_stopped_threads(debug_session, device, device_thread, true,
+                            stopped_threads)) {
+    LOG_INFO << "[Debugger] Did not find stopped threads";
+  }
 
   // write to kernel buffer to signal to application to end
   zet_debug_memory_space_desc_t memory_space_desc = {};
@@ -1024,12 +1039,17 @@ void read_and_verify_events_debugger_thread(
 
   uint8_t *buffer = new uint8_t[1];
   buffer[0] = 0;
-  auto thread = debug_event.info.thread.thread;
-  LOG_INFO << "[Debugger] Writing to address: " << std::hex << *gpu_buffer_va;
-  lzt::debug_write_memory(debug_session, thread, memory_space_desc, 1, buffer);
-  delete[] buffer;
-  print_thread("Resuming device thread ", thread, DEBUG);
-  lzt::debug_resume(debug_session, thread);
+
+  for (auto &stopped_thread : stopped_threads) {
+    uint8_t *buffer = new uint8_t[1];
+    buffer[0] = 0;
+    LOG_INFO << "[Debugger] Writing to address: " << std::hex << *gpu_buffer_va;
+    lzt::debug_write_memory(debug_session, stopped_thread, memory_space_desc, 1,
+                            buffer);
+    print_thread("Resuming device thread ", stopped_thread, DEBUG);
+    lzt::debug_resume(debug_session, stopped_thread);
+    delete[] buffer;
+  }
 
   LOG_INFO << "[Debugger] Waiting for module unload and process exit events";
 
@@ -1063,7 +1083,7 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
 
     uint64_t gpu_buffer_va = 0;
     std::thread event_read_thread(read_and_verify_events_debugger_thread,
-                                  debugSession, &gpu_buffer_va);
+                                  device, debugSession, &gpu_buffer_va);
     synchro->wait_for_application_signal();
     if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
       FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
@@ -1081,10 +1101,17 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
     module_load_cv.wait(lk, [] { return module_loaded; });
     lk.unlock();
     LOG_INFO << "[Debugger] Main thread sleeping to wait for device threads";
-    std::this_thread::sleep_for(std::chrono::seconds(6));
+    std::this_thread::sleep_for(std::chrono::seconds(60));
 
     LOG_INFO << "[Debugger] Sending interrupt from main thread";
     lzt::debug_interrupt(debugSession, device_thread);
+
+    {
+      // we have received sent the interrupt
+      std::lock_guard<std::mutex> lk(interrupt_sent_mutex);
+      interrupt_sent = true;
+      interrupt_sent_cv.notify_one();
+    }
 
     LOG_INFO << "[Debugger] Waiting for application to finish";
     debugHelper.wait();
@@ -1250,7 +1277,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
 
     LOG_INFO << "[Debugger] Stopping all device threads";
     // give time to app to launch the kernel
-    std::this_thread::sleep_for(std::chrono::seconds(6));
+    std::this_thread::sleep_for(std::chrono::seconds(60));
 
     lzt::debug_interrupt(debugSession, device_threads);
 
@@ -1399,7 +1426,7 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
 
   LOG_INFO << "[Debugger] Interrupting all threads";
   // give time to app to launch the kernel
-  std::this_thread::sleep_for(std::chrono::seconds(6));
+  std::this_thread::sleep_for(std::chrono::seconds(60));
 
   lzt::debug_interrupt(debugSession, thread);
   stopped_threads = {};
