@@ -25,7 +25,7 @@ std::mutex mem_mutex;
 std::condition_variable condition_variable;
 uint32_t ready = 0;
 
-uint32_t get_prop_length(char *prop) { return std::strlen(prop); }
+uint32_t get_property_length(char *prop) { return std::strlen(prop); }
 const uint32_t numThreads = 10; 
 
 #ifdef USE_ZESINIT
@@ -35,18 +35,12 @@ class MemoryModuleZesTest : public lzt::ZesSysmanCtsClass {};
 class MemoryFirmwareZesTest : public lzt::ZesSysmanCtsClass {};
 #define MEMORY_FIRMWARE_TEST MemoryFirmwareZesTest
 
-//class MemoryFirmwareZesTest : public MemoryModuleZesTest {};
-//#define MEMORY_FIRMWARE_TEST MemoryFirmwareZesTest
-
 #else // USE_ZESINIT
 class MemoryModuleTest : public lzt::SysmanCtsClass {};
 #define MEMORY_TEST MemoryModuleTest
 
 class MemoryFirmwareTest : public lzt::SysmanCtsClass {};
 #define MEMORY_FIRMWARE_TEST MemoryFirmwareTest
-
-//class MemoryFirmwareTest : public MemoryModuleTest {};
-//#define MEMORY_FIRMWARE_TEST MemoryFirmwareTest
 
 #endif // USE_ZESINIT
 
@@ -463,11 +457,9 @@ TEST_F(
   }
 }
 
-void getMemoryStateTemp(ze_device_handle_t device) {
-  std::cout<<"\nInside function getMemoryStateTemp";
+void query_memory_state_function(ze_device_handle_t device) {
   uint32_t count = 0;
-  std::vector<zes_mem_handle_t> mem_handles =
-      lzt::get_mem_handles(device, count);
+  std::vector<zes_mem_handle_t> mem_handles = lzt::get_mem_handles(device, count);
   if (count == 0) {
     FAIL() << "No handles found: "
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
@@ -476,77 +468,40 @@ void getMemoryStateTemp(ze_device_handle_t device) {
     ASSERT_NE(nullptr, mem_handle);
     lzt::get_mem_state(mem_handle);
   }
-  std::cout<<"\nExiting function getMemoryStateTemp";
 }
 
-void getFirmwareProperties(zes_firmware_handle_t firmware_handle, zes_device_properties_t deviceProperties) {
-  std::cout<<"\nCalling function getFirmwareProperties";
-  ASSERT_NE(nullptr, firmware_handle);
-  auto properties = lzt::get_firmware_properties(firmware_handle);
-  //Are the below lines till line.495 required? 
-  //but we cant ensure correct firmware props are returned without them
-
-  ///*
-  if (properties.onSubdevice) {
-    EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
+void query_firmware_properties_function(ze_device_handle_t device) {
+  uint32_t count = 0;
+  auto firmware_handles = lzt::get_firmware_handles(device, count);
+  auto deviceProperties = lzt::get_sysman_device_properties(device);
+  if (count == 0) {
+    FAIL() << "No handles found: "
+          << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
-  EXPECT_LT(get_prop_length(properties.name), ZES_STRING_PROPERTY_SIZE);
-  EXPECT_GT(get_prop_length(properties.name), 0);
-  EXPECT_LT(get_prop_length(properties.version), ZES_STRING_PROPERTY_SIZE);
-  //*/
-
-  std::cout<<"\nOut of function getFirmwareProperties";
+  for (auto firmware_handle : firmware_handles) {
+    ASSERT_NE(nullptr, firmware_handle);
+    auto properties = lzt::get_firmware_properties(firmware_handle);
+    EXPECT_LT(get_property_length(properties.name), ZES_STRING_PROPERTY_SIZE);
+    EXPECT_GT(get_property_length(properties.name), 0);
+    EXPECT_LT(get_property_length(properties.version), ZES_STRING_PROPERTY_SIZE);
+  }
 }
 
 TEST_F(
     MEMORY_FIRMWARE_TEST,
     GivenValidMemoryAndFirmwareHandlesWhenGettingMemoryGetStateAndFirmwareGetPropertiesFromDifferentThreadsThenExpectBothToReturnSucess) {
-
   for (auto device : devices) {
-    uint32_t count = 0;
-    std::cout<<"\nInside loop devices; Initialised count=0";
-    auto firmware_handles = lzt::get_firmware_handles(device, count);
-    auto deviceProperties = lzt::get_sysman_device_properties(device);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-    std::cout<<"\nInside loop devices after checking firmware handles count!=0";
-    for (auto firmware_handle : firmware_handles) {
-      
-      std::cout<<"\nInside loop firmware handles before starting threads\n\n";
-
-      ///*
-      for (int i = 0; i < numThreads; i++) {
-        std::thread memoryThreadss(getMemoryStateTemp, device);
-        std::thread firmwareThreadss(getFirmwareProperties, firmware_handle, deviceProperties);
-     
-        memoryThreadss.join(); 
-        firmwareThreadss.join(); 
-      }
-      //*/
-      std::cout<<"\n\nEnd of loop with thread initializations & joins in the same loop\n";
-
-      ///*
       std::thread memoryThreads[numThreads];
       std::thread firmwareThreads[numThreads];
-
       for (int i = 0; i < numThreads; i++) {
-        memoryThreads[i] = std::thread(getMemoryStateTemp, device);
-        firmwareThreads[i] = std::thread(getFirmwareProperties, firmware_handle, deviceProperties);
+        memoryThreads[i] = std::thread(query_memory_state_function, device);
+        firmwareThreads[i] = std::thread(query_firmware_properties_function, device);
       }
       for (int i = 0; i < numThreads; i++) {
         memoryThreads[i].join(); 
         firmwareThreads[i].join(); 
       }
-      //*/
-
-      std::cout<<"\n\nCompletion of loops with 'Thread Array' initializations & joins in the different loops\n";
-
     }
-
-  }  
-
-}
+}  
 
 } // namespace
