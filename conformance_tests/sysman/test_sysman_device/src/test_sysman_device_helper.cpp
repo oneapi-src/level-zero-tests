@@ -96,8 +96,18 @@ int main(int argc, char **argv) {
     exit(1);
   }
   LOG_INFO << "Child Process : Sysman initialized";
-
-  auto sysman_devices = lzt::get_zes_devices();
+  // We must retrieve the SysMan Drivers on the system, then verify that the driver has valid devices.
+  // The first driver with valid devices will be used.
+  auto zes_drivers = lzt::get_all_zes_driver_handles();
+  zes_driver_handle_t zes_driver_used;
+  for (const auto &zes_driver : zes_drivers) {
+    auto device_count = lzt::get_zes_device_count(zes_driver);
+    if (device_count > 0) {
+      zes_driver_used = zes_driver;
+      break;
+    }
+  }
+  auto sysman_devices = lzt::get_zes_devices(lzt::get_zes_device_count(zes_driver_used), zes_driver_used);
   EXPECT_FALSE(sysman_devices.empty());
 
   std::vector<UUID> sysman_device_uuids{};
