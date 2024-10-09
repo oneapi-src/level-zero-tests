@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -24,6 +24,9 @@ class TempModuleZesTest : public lzt::ZesSysmanCtsClass {};
 class TempModuleTest : public lzt::SysmanCtsClass {};
 #define TEMPERATURE_TEST TempModuleTest
 #endif // USE_ZESINIT
+
+constexpr double max_valid_temperature = 125;
+constexpr double min_valid_temperature = 10;
 
 TEST_F(
     TEMPERATURE_TEST,
@@ -252,8 +255,9 @@ TEST_F(TEMPERATURE_TEST,
 
     for (auto temp_handle : temp_handles) {
       ASSERT_NE(nullptr, temp_handle);
-      auto temp = lzt::get_temp_state(temp_handle);
-      EXPECT_GT(temp, 0);
+      auto current_temperature = lzt::get_temp_state(temp_handle);
+      EXPECT_GE(current_temperature, min_valid_temperature);
+      EXPECT_LE(current_temperature, max_valid_temperature);
     }
   }
 }
