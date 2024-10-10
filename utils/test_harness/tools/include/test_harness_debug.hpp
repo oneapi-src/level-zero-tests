@@ -25,7 +25,7 @@ extern std::unordered_map<zet_debug_session_handle_t, bool>
     sessionsAttachStatus;
 zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,
                                         const zet_debug_config_t &debug_config,
-                                        uint32_t timeout = 30);
+                                        uint32_t timeout = 3600);
 
 void debug_detach(const zet_debug_session_handle_t &debug_session);
 
