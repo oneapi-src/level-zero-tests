@@ -21,6 +21,9 @@ get_sysman_device_properties(zes_device_handle_t device);
 
 zes_uuid_t get_sysman_device_uuid(zes_device_handle_t device);
 
+uint32_t get_zes_device_count(zes_driver_handle_t driver);
+std::vector<zes_device_handle_t> get_zes_devices(uint32_t count,
+                                                 zes_driver_handle_t driver);
 std::vector<zes_subdevice_exp_properties_t>
 get_sysman_subdevice_properties(zes_device_handle_t device, uint32_t &count);
 
