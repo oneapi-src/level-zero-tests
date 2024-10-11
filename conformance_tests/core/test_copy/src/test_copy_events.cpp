@@ -28,7 +28,7 @@ public:
     ep.create_event(hEvent, ZE_EVENT_SCOPE_FLAG_HOST, 0);
   }
 
-  ~zeCommandListEventTests() { ep.destroy_event(hEvent); }
+  void TearDown() override { ep.destroy_event(hEvent); }
 
   ze_event_handle_t hEvent;
   size_t size = 16;

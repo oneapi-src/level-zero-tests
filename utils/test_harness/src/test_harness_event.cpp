@@ -157,7 +157,7 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
                                const ze_structure_type_t property_type) {
 
   double context_time_ns;
-  auto device_properties = lzt::get_device_properties(device);
+  auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
       ~(-1L << device_properties.kernelTimestampValidBits);
@@ -280,7 +280,14 @@ zeEventPool::~zeEventPool() {
   // If the event pool was never created, do not attempt to destroy it
   // as that will needlessly cause a test failure.
   if (event_pool_) {
-    destroy_event_pool(event_pool_);
+    auto result = zeEventPoolDestroy(event_pool_);
+    if (ZE_RESULT_SUCCESS != result) {
+      try {
+        LOG_ERROR << "Failed to destroy event pool: " << result;
+      } catch (...) {
+        // Do nothing
+      }
+    }
   }
 }
 

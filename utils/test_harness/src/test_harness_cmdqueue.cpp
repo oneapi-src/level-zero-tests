@@ -82,7 +82,10 @@ ze_command_queue_handle_t create_command_queue(
 zeCommandQueue::zeCommandQueue() { command_queue_ = create_command_queue(); }
 
 zeCommandQueue::~zeCommandQueue() {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(command_queue_));
+  auto result = zeCommandQueueDestroy(command_queue_);
+  if (result != ZE_RESULT_SUCCESS) {
+    LOG_ERROR << "zeCommandQueueDestroy failed: " << lzt::to_string(result);
+  }
 }
 
 void execute_command_lists(ze_command_queue_handle_t cq,

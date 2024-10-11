@@ -36,7 +36,10 @@ TEST(ImageIntegrationTests, WritesPNGFile) {
 
   level_zero_tests::ImagePNG32Bit output("output.png");
   EXPECT_EQ(output.get_pixels(), pixels);
-  std::remove("output.png");
+  auto result = std::remove("output.png");
+  if (result != 0) {
+    std::cerr << "Error deleting file output.png" << std::endl;
+  }
 
   EXPECT_EQ(image.get_pixels(), pixels);
 }
@@ -72,7 +75,10 @@ TEST(ImageIntegrationTests, WritesGrayscaleBMPFile) {
 
   level_zero_tests::ImageBMP8Bit output("output.bmp");
   EXPECT_EQ(output.get_pixels(), pixels);
-  std::remove("output.bmp");
+  auto result = std::remove("output.bmp");
+  if (result != 0) {
+    std::cerr << "Error deleting file output.bmp" << std::endl;
+  }
 
   EXPECT_EQ(image.get_pixels(), pixels);
 }
@@ -104,7 +110,10 @@ TEST(ImageIntegrationTests, WritesColorBMPFile) {
 
   level_zero_tests::ImageBMP32Bit output("output.bmp");
   EXPECT_EQ(output.get_pixels(), pixels);
-  std::remove("output.bmp");
+  auto result = std::remove("output.bmp");
+  if (result != 0) {
+    std::cerr << "Error deleting file output.bmp" << std::endl;
+  }
 
   EXPECT_EQ(image.get_pixels(), pixels);
 }

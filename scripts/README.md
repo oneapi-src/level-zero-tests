@@ -109,6 +109,12 @@
 
 ## Output
 
+* The output between the <> indicates individual tests and their results as a summary.
+  * The Print of `-` == Passed test.
+  * The Print of `N` == Unsupported test on this device/driver.
+  * The Print of `F` == Failed test.
+  * The Print of `T` == test which has timedout.
+
 example command line output:
 
     Level Zero Test Report Generator

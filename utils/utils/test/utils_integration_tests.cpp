@@ -30,7 +30,9 @@ TEST(SaveBinaryFile, ValidFile) {
 
   level_zero_tests::save_binary_file(bytes, path);
   const std::vector<uint8_t> output = level_zero_tests::load_binary_file(path);
-  std::remove(path.c_str());
+  if (std::remove(path.c_str()) != 0) {
+    perror("Error deleting file");
+  }
 
   EXPECT_EQ(bytes, output);
 }

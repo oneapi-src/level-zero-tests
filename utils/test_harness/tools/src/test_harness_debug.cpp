@@ -11,6 +11,7 @@
 #include "test_harness/test_harness.hpp"
 #include <level_zero/ze_api.h>
 #include "utils/utils.hpp"
+#include "test_harness/zet_intel_gpu_debug.h"
 
 namespace lzt = level_zero_tests;
 
@@ -139,6 +140,70 @@ void debug_resume(const zet_debug_session_handle_t &debug_session,
                   const ze_device_thread_t &device_thread) {
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugResume(debug_session, device_thread));
+}
+
+void printRegSetProperties(zet_debug_regset_properties_t regSet) {
+
+  LOG_DEBUG << "[Debugger] Reg Set Type: " << regSet.type;
+  LOG_DEBUG << "[Debugger] Reg Set Version: " << regSet.version;
+  LOG_DEBUG << "[Debugger] Reg Set GeneralFlags: " << regSet.generalFlags;
+  LOG_DEBUG << "[Debugger] Reg Set deviceFlags: " << regSet.deviceFlags;
+  LOG_DEBUG << "[Debugger] Reg Set count: " << regSet.count;
+  LOG_DEBUG << "[Debugger] Reg Set bit size: " << regSet.bitSize;
+  LOG_DEBUG << "[Debugger] Reg Set byte size: " << regSet.byteSize;
+  return;
+}
+
+bool get_register_set_props(ze_device_handle_t device,
+                            zet_debug_regset_type_intel_gpu_t type,
+                            zet_debug_regset_properties_t &reg) {
+  uint32_t nRegSets = 0;
+  zetDebugGetRegisterSetProperties(device, &nRegSets, nullptr);
+  zet_debug_regset_properties_t *pRegSets =
+      new zet_debug_regset_properties_t[nRegSets];
+  for (int i = 0; i < nRegSets; i++) {
+    pRegSets[i] = {ZET_STRUCTURE_TYPE_DEBUG_REGSET_PROPERTIES, nullptr};
+  }
+  zetDebugGetRegisterSetProperties(device, &nRegSets, pRegSets);
+
+  bool found = false;
+  for (int i = 0; i < nRegSets; i++) {
+    if (pRegSets[i].type == type) {
+      printRegSetProperties(pRegSets[i]);
+      reg = pRegSets[i];
+      found = true;
+      break;
+    }
+  }
+
+  delete[] pRegSets;
+  return found;
+}
+
+void clear_exceptions(const ze_device_handle_t &device,
+                    const zet_debug_session_handle_t &debug_session,
+                  const ze_device_thread_t &device_thread) {
+  size_t reg_size_in_bytes = 0;
+
+  zet_debug_regset_properties_t cr_reg_prop;
+  ASSERT_TRUE(get_register_set_props(device, ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU,
+                                     cr_reg_prop));
+
+  reg_size_in_bytes = cr_reg_prop.count * cr_reg_prop.byteSize;
+  uint8_t *cr_values = new uint8_t[reg_size_in_bytes];
+  uint32_t *uint32_values = (uint32_t *)cr_values;
+
+  ASSERT_EQ(zetDebugReadRegisters(debug_session, device_thread,
+                                  ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
+                                  cr_reg_prop.count, cr_values),
+            ZE_RESULT_SUCCESS);
+
+  uint32_values[1] &=
+      ~((1 << 26) | (1 << 30));
+  ASSERT_EQ(zetDebugWriteRegisters(debug_session, device_thread,
+                                   ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
+                                   cr_reg_prop.count, cr_values),
+            ZE_RESULT_SUCCESS);
 }
 
 void debug_read_memory(const zet_debug_session_handle_t &debug_session,

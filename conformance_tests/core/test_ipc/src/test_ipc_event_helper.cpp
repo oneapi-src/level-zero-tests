@@ -264,7 +264,8 @@ int main() {
         lzt::get_default_device(lzt::get_default_driver());
     devices.push_back(device);
   }
-  auto context = lzt::create_context_ex(lzt::get_default_driver(), std::move(devices));
+  auto context =
+      lzt::create_context_ex(lzt::get_default_driver(), std::move(devices));
   ze_event_pool_handle_t hEventPool = 0;
   LOG_INFO << "IPC Child open event handle";
   lzt::open_ipc_event_handle(context, hIpcEventPool, &hEventPool);
@@ -311,7 +312,11 @@ int main() {
     lzt::destroy_context(context);
     exit(1);
   }
-  lzt::close_ipc_event_handle(hEventPool);
+  try {
+    lzt::close_ipc_event_handle(hEventPool);
+  } catch (const std::runtime_error &ex) {
+    LOG_ERROR << "Error closing IPC event handle: " << ex.what();
+  }
   lzt::destroy_context(context);
   if (testing::Test::HasFailure()) {
     LOG_DEBUG << "IPC Child Failed GTEST Check";
