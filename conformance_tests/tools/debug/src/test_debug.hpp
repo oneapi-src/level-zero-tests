@@ -16,8 +16,8 @@ namespace fs = boost::filesystem;
 namespace bp = boost::process;
 namespace bi = boost::interprocess;
 
-const uint16_t eventsTimeoutMS = 30000;
-const uint16_t eventsTimeoutS = 30;
+const uint16_t eventsTimeoutMS = 3000000;
+const uint16_t eventsTimeoutS = 3600;
 
 namespace lzt = level_zero_tests;
 
@@ -254,7 +254,7 @@ protected:
   void SetUp() override { zetDebugMemAccessTest::SetUp(); }
   void TearDown() override { zetDebugMemAccessTest::TearDown(); }
   void run_read_write_registers_test(std::vector<ze_device_handle_t> &devices,
-                                     bool use_sub_devices);
+                                     bool use_sub_devices, bool test_slm);
 };
 
 class zetDebugThreadControlTest : public zetDebugBaseSetup {

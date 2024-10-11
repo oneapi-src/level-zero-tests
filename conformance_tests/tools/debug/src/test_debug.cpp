@@ -1234,15 +1234,17 @@ TEST(
 }
 
 void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
-    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
+    bool test_slm) {
   for (auto &device : devices) {
     print_device(device);
     if (!is_debug_supported(device))
       continue;
 
     synchro->clear_debugger_signal();
-    debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
-                                 use_sub_devices);
+    debug_test_type_t test_type = test_slm ? LONG_RUNNING_KERNEL_INTERRUPTED_SLM
+                                           : LONG_RUNNING_KERNEL_INTERRUPTED;
+    debugHelper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_event_t module_event;
     attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
@@ -1381,14 +1383,14 @@ TEST_F(
     GivenActiveDebugSessionWhenReadingAndWritingRegistersThenValidDataReadAndDataWrittenSuccessfully) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
-  run_read_write_registers_test(devices, false);
+  run_read_write_registers_test(devices, false, true);
 }
 
 TEST_F(
     zetDebugReadWriteRegistersTest,
     GivenActiveDebugSessionWhenReadingAndWritingSubDeviceRegistersThenValidDataReadAndDataWrittenSuccessfully) {
   auto all_sub_devices = lzt::get_all_sub_devices();
-  run_read_write_registers_test(all_sub_devices, true);
+  run_read_write_registers_test(all_sub_devices, true, false);
 }
 
 void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,

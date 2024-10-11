@@ -404,7 +404,8 @@ void multiple_modules_created_test(ze_context_handle_t context,
 }
 
 void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
-                     process_synchro &synchro, debug_options &options) {
+                     process_synchro &synchro, debug_options &options,
+                     bool test_slm) {
 
   auto command_list = lzt::create_command_list(device);
   auto command_queue = lzt::create_command_queue(device);
@@ -426,9 +427,11 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   }
 
   synchro.wait_for_debugger_signal();
+  const char *build_flags =
+      test_slm ? "-g" : "-g -igc_opts 'VISAOptions=-forcespills'";
   auto module =
       lzt::create_module(device, module_name, ZE_MODULE_FORMAT_IL_SPIRV,
-                         "-g" /* include debug symbols*/, nullptr);
+                         build_flags /* include debug symbols*/, nullptr);
 
   auto kernel = lzt::create_function(module, kernel_name);
 
@@ -1219,13 +1222,13 @@ int main(int argc, char **argv) {
     attach_after_module_destroyed_test(context, device, synchro, options);
     break;
   case LONG_RUNNING_KERNEL_INTERRUPTED:
-    run_long_kernel(context, device, synchro, options);
+    run_long_kernel(context, device, synchro, options, false);
     break;
   case LONG_RUNNING_KERNEL_INTERRUPTED_SLM:
     options.use_custom_module = true;
     options.module_name_in = "debug_loop_slm.spv";
     options.kernel_name_in = "long_kernel_slm";
-    run_long_kernel(context, device, synchro, options);
+    run_long_kernel(context, device, synchro, options, true);
     break;
   case MULTIPLE_THREADS:
     run_multiple_threads(context, device, synchro, options);
