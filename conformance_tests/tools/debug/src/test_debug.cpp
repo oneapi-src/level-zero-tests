@@ -1440,6 +1440,7 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
             smaller_thread_functor());
 }
 
+#define INTERRUPT_TEST_SLEEP std::chrono::seconds(2)
 void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
   for (auto &device : devices) {
@@ -1467,7 +1468,7 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
       }
       i++;
     }
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(INTERRUPT_TEST_SLEEP);
 
     LOG_INFO
         << "[Debugger] ######### Interrupting Odd AND resumming Even threads "
@@ -1494,7 +1495,7 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
       }
       i++;
     }
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(INTERRUPT_TEST_SLEEP);
 
     LOG_INFO
         << "[Debugger] ######### Interrupting Even threads AND resumming Odd "
@@ -1521,7 +1522,7 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
       }
       i++;
     }
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(INTERRUPT_TEST_SLEEP);
 
     LOG_INFO << "[Debugger] ######### Interrupting Odd threads ##########";
     threadsToCheck.clear();
@@ -1559,7 +1560,7 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
       i++;
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(INTERRUPT_TEST_SLEEP);
     EXPECT_EQ(debugHelper.running(), true);
 
     LOG_INFO << "[Debugger] ######### Ressuming Odd threads ##########";
@@ -1573,7 +1574,7 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
     }
 
     LOG_INFO << "[Debugger] ######### Checking ALL threads are running ######";
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(INTERRUPT_TEST_SLEEP);
     stoppedThreadsCheck.clear();
     stoppedThreadsCheck = get_stopped_threads(debugSession, device);
     EXPECT_EQ(stoppedThreadsCheck.size(), 0);
@@ -1608,7 +1609,7 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
 
     LOG_INFO
         << "[Debugger] ######### Checking ALL threads are running ##########";
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(INTERRUPT_TEST_SLEEP);
     stoppedThreadsCheck.clear();
     stoppedThreadsCheck = get_stopped_threads(debugSession, device);
     EXPECT_EQ(stoppedThreadsCheck.size(), 0);

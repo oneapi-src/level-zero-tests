@@ -37,14 +37,15 @@ void debug_ack_event(const zet_debug_session_handle_t &debug_session,
                      const zet_debug_event_t *debug_event);
 
 void debug_interrupt(const zet_debug_session_handle_t &debug_session,
-                     const ze_device_thread_t &device_thread);
+                     const ze_device_thread_t &device_thread,
+                     bool retry = false);
 
 void debug_resume(const zet_debug_session_handle_t &debug_session,
                   const ze_device_thread_t &device_thread);
 
 void clear_exceptions(const ze_device_handle_t &device,
-                    const zet_debug_session_handle_t &debug_session,
-                  const ze_device_thread_t &device_thread);
+                      const zet_debug_session_handle_t &debug_session,
+                      const ze_device_thread_t &device_thread);
 
 void debug_read_memory(const zet_debug_session_handle_t &debug_session,
                        const ze_device_thread_t &device_thread,
