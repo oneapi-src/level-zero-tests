@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -40,8 +40,7 @@ std::vector<uint8_t> L0Context::load_binary_file(const std::string &file_path) {
   binary_file.resize(length);
   stream.read(reinterpret_cast<char *>(binary_file.data()), length);
   if (verbose)
-    std::cout << "Binary file loaded"
-              << "\n";
+    std::cout << "Binary file loaded\n";
   stream.close();
 
   return binary_file;
@@ -144,6 +143,7 @@ void L0Context::print_ze_device_properties(
             << "\n"
             << " * UUID : " << id << "\n"
             << " * coreClockRate : " << std::dec << props.coreClockRate << "\n"
+            << " * maxMemAllocSize : " << props.maxMemAllocSize << " bytes\n"
             << std::endl;
 }
 
@@ -846,8 +846,11 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
   if (type == TimingMeasurement::BANDWIDTH) {
     if (context.sub_device_count) {
-      SUCCESS_OR_TERMINATE(
-          zeCommandListReset(context.cmd_list[current_sub_device_id]));
+      if (current_sub_device_id == 0) {
+        for (uint32_t i = 0; i < context.sub_device_count; i++) {
+          SUCCESS_OR_TERMINATE(zeCommandListReset(context.cmd_list[i]));
+        }
+      }
     } else {
       SUCCESS_OR_TERMINATE(zeCommandListReset(context.command_list));
     }
@@ -862,6 +865,12 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
           &workgroup_info.thread_group_dimensions, nullptr, 0, nullptr);
       if (result) {
         throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
+                                 std::to_string(result));
+      }
+      result = zeCommandListAppendBarrier(
+          context.cmd_list[current_sub_device_id], nullptr, 0, nullptr);
+      if (result) {
+        throw std::runtime_error("zeCommandListAppendBarrier failed: " +
                                  std::to_string(result));
       }
     } else {
@@ -894,35 +903,39 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
     for (uint32_t i = 0; i < warmup_iterations; i++) {
       run_command_queue(context);
+      synchronize_command_queue(context);
+    }
+    if (verbose)
+      std::cout << "Warmup finished\n";
 
-      if (context.sub_device_count) {
-        if (context.sub_device_count == current_sub_device_id + 1) {
-          current_sub_device_id = 0;
-          while (current_sub_device_id < context.sub_device_count) {
-            synchronize_command_queue(context);
-            current_sub_device_id++;
-          }
-          current_sub_device_id = context.sub_device_count - 1;
-        }
-      } else {
-        synchronize_command_queue(context);
+    if (context.sub_device_count) {
+      SUCCESS_OR_TERMINATE(
+          zeCommandListReset(context.cmd_list[current_sub_device_id]));
+      for (uint32_t i = 0; i < iters; i++) {
+        SUCCESS_OR_TERMINATE(zeCommandListAppendLaunchKernel(
+            context.cmd_list[current_sub_device_id], function,
+            &workgroup_info.thread_group_dimensions, nullptr, 0, nullptr));
+        SUCCESS_OR_TERMINATE(zeCommandListAppendBarrier(
+            context.cmd_list[current_sub_device_id], nullptr, 0, nullptr));
       }
+      SUCCESS_OR_TERMINATE(
+          zeCommandListClose(context.cmd_list[current_sub_device_id]));
     }
 
     timer.start();
-    for (uint32_t i = 0; i < iters; i++) {
+    if (context.sub_device_count) {
       run_command_queue(context);
-
-      if (context.sub_device_count) {
-        if (context.sub_device_count == current_sub_device_id + 1) {
-          current_sub_device_id = 0;
-          while (current_sub_device_id < context.sub_device_count) {
-            synchronize_command_queue(context);
-            current_sub_device_id++;
-          }
-          current_sub_device_id = context.sub_device_count - 1;
+      if (context.sub_device_count == current_sub_device_id + 1) {
+        current_sub_device_id = 0;
+        while (current_sub_device_id < context.sub_device_count) {
+          synchronize_command_queue(context);
+          current_sub_device_id++;
         }
-      } else {
+        current_sub_device_id = context.sub_device_count - 1;
+      }
+    } else {
+      for (uint32_t i = 0; i < iters; i++) {
+        run_command_queue(context);
         synchronize_command_queue(context);
       }
     }
