@@ -846,6 +846,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
   if (type == TimingMeasurement::BANDWIDTH) {
     if (context.sub_device_count) {
+      // This branch is taken when we're running the FLAT device hierarchy and
+      // there are multiple sub-devices per device
       if (current_sub_device_id == 0) {
         // This is the beginning of the entire explicit scaling benchmark, reset
         // all cmdlists for all subdevices just once
