@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -37,7 +37,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
     numItems = numItems - (numItems % context.sub_device_count);
     if (verbose)
       std::cout << "splitting the total work items ::" << numItems
-                << "across subdevices ::" << context.sub_device_count
+                << " across subdevices ::" << context.sub_device_count
                 << std::endl;
     numItems = set_workgroups(context, numItems / context.sub_device_count,
                               &workgroup_info);
@@ -121,7 +121,6 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
         throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                                  std::to_string(result));
       }
-      i++;
     }
   } else {
     result = zeCommandListAppendMemoryCopy(
@@ -264,7 +263,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
     setup_function(context, global_offset_v16,
                    "global_bandwidth_v16_global_offset", inputBuf, outputBuf);
   }
-  std::cout << "Global memory bandwidth (GBPS)\n";
+  std::cout << "Global memory bandwidth (GB/s)\n";
 
   timed = 0;
   timed_lo = 0;
@@ -295,7 +294,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
                           numItems * context.sub_device_count * sizeof(float));
-    std::cout << gbps << " GFLOPS\n";
+    std::cout << gbps << " GB/s\n";
   } else {
     timed_lo = run_kernel(context, local_offset_v1, workgroup_info, type);
     timed_go = run_kernel(context, global_offset_v1, workgroup_info, type);
@@ -303,7 +302,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
     gbps = calculate_gbps(timed, numItems * sizeof(float));
 
-    std::cout << gbps << " GBPS\n";
+    std::cout << gbps << " GB/s\n";
   }
 
   timed = 0;
@@ -332,7 +331,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
                           numItems * context.sub_device_count * sizeof(float));
-    std::cout << gbps << " GFLOPS\n";
+    std::cout << gbps << " GB/s\n";
   } else {
     timed_lo = run_kernel(context, local_offset_v2, workgroup_info, type);
     timed_go = run_kernel(context, global_offset_v2, workgroup_info, type);
@@ -340,7 +339,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
     gbps = calculate_gbps(timed, numItems * sizeof(float));
 
-    std::cout << gbps << " GBPS\n";
+    std::cout << gbps << " GB/s\n";
   }
 
   timed = 0;
@@ -370,7 +369,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
                           numItems * context.sub_device_count * sizeof(float));
-    std::cout << gbps << " GFLOPS\n";
+    std::cout << gbps << " GB/s\n";
   } else {
     timed_lo = run_kernel(context, local_offset_v4, workgroup_info, type);
     timed_go = run_kernel(context, global_offset_v4, workgroup_info, type);
@@ -378,7 +377,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
     gbps = calculate_gbps(timed, numItems * sizeof(float));
 
-    std::cout << gbps << " GBPS\n";
+    std::cout << gbps << " GB/s\n";
   }
 
   timed = 0;
@@ -407,7 +406,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
                           numItems * context.sub_device_count * sizeof(float));
-    std::cout << gbps << " GFLOPS\n";
+    std::cout << gbps << " GB/s\n";
   } else {
     timed_lo = run_kernel(context, local_offset_v8, workgroup_info, type);
     timed_go = run_kernel(context, global_offset_v8, workgroup_info, type);
@@ -415,7 +414,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
     gbps = calculate_gbps(timed, numItems * sizeof(float));
 
-    std::cout << gbps << " GBPS\n";
+    std::cout << gbps << " GB/s\n";
   }
 
   timed = 0;
@@ -443,7 +442,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
                           numItems * context.sub_device_count * sizeof(float));
-    std::cout << gbps << " GFLOPS\n";
+    std::cout << gbps << " GB/s\n";
   } else {
     timed_lo = run_kernel(context, local_offset_v16, workgroup_info, type);
     timed_go = run_kernel(context, global_offset_v16, workgroup_info, type);
@@ -451,7 +450,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
     gbps = calculate_gbps(timed, numItems * sizeof(float));
 
-    std::cout << gbps << " GBPS\n";
+    std::cout << gbps << " GB/s\n";
   }
 
   if (context.sub_device_count) {
