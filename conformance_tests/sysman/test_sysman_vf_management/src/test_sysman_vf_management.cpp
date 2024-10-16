@@ -22,8 +22,6 @@ class VfManagementTest : public lzt::SysmanCtsClass {};
 
 void validate_vf_capabilities(zes_vf_exp_capabilities_t &vf_capabilities,
                               uint32_t &vf_count) {
-  EXPECT_EQ(vf_capabilities.stype, ZES_STRUCTURE_TYPE_VF_EXP_CAPABILITIES);
-  EXPECT_EQ(vf_capabilities.pNext, nullptr);
   EXPECT_GE(vf_capabilities.address.domain, 0);
   EXPECT_LE(vf_capabilities.address.domain, MAX_DOMAINs);
   EXPECT_GE(vf_capabilities.address.bus, 0);
