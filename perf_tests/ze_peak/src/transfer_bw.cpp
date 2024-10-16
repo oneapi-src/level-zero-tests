@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -198,7 +198,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
                                    local_memory_size);
   }
   std::cout << "GPU Copy Host to Shared Memory : ";
-  std::cout << gflops << " GBPS\n";
+  std::cout << gflops << " GB/s\n";
 
   gflops = 0;
   if (context.sub_device_count) {
@@ -215,7 +215,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
                                    local_memory_size);
   }
   std::cout << "GPU Copy Shared Memory to Host : ";
-  std::cout << gflops << " GBPS\n";
+  std::cout << gflops << " GB/s\n";
 
   gflops = 0;
   if (context.sub_device_count) {
@@ -232,7 +232,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
                                     local_memory_size, true);
   }
   std::cout << "System Memory Copy to Shared Memory : ";
-  std::cout << gflops << " GBPS\n";
+  std::cout << gflops << " GB/s\n";
 
   gflops = 0;
   if (context.sub_device_count) {
@@ -249,7 +249,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
                                     local_memory_size, false);
   }
   std::cout << "System Memory Copy from Shared Memory : ";
-  std::cout << gflops << " GBPS\n";
+  std::cout << gflops << " GB/s\n";
 
   current_sub_device_id = 0;
 
@@ -328,7 +328,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
   if (verbose)
     std::cout << "device buffer allocated\n";
 
-  std::cout << "Transfer Bandwidth (GBPS)\n";
+  std::cout << "Transfer Bandwidth (GB/s)\n";
 
   gflops = 0;
   if (context.sub_device_count) {
@@ -345,7 +345,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
                                    local_memory_size);
   }
   std::cout << "enqueueWriteBuffer : ";
-  std::cout << gflops << " GBPS\n";
+  std::cout << gflops << " GB/s\n";
 
   gflops = 0;
   if (context.sub_device_count) {
@@ -362,7 +362,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
                                    local_memory_size);
   }
   std::cout << "enqueueReadBuffer : ";
-  std::cout << gflops << " GBPS\n";
+  std::cout << gflops << " GB/s\n";
 
   current_sub_device_id = 0;
 
