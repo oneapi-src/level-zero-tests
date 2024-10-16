@@ -8,6 +8,7 @@
 
 #include "test_debug.hpp"
 #include "test_debug_utils.hpp"
+#include "test_harness/zet_intel_gpu_debug.h"
 
 namespace lzt = level_zero_tests;
 
@@ -1374,6 +1375,128 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
     lzt::debug_detach(debugSession);
     ASSERT_EQ(debugHelper.exit_code(), 0);
   }
+}
+
+void zetDebugReadWriteRegistersTest::run_read_registers_test(
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+  for (auto &device : devices) {
+    print_device(device);
+    if (!is_debug_supported(device))
+      continue;
+
+    synchro->clear_debugger_signal();
+    debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED_SCRATCH,
+                                 device, use_sub_devices);
+
+    zet_debug_event_t module_event;
+    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
+                                module_event);
+
+    if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
+      LOG_DEBUG << "[Debugger] Acking event: "
+                << lzt::debuggerEventTypeString[module_event.type];
+      lzt::debug_ack_event(debugSession, &module_event);
+    }
+
+    uint64_t gpu_buffer_va = 0;
+    synchro->wait_for_application_signal();
+    if (!synchro->get_app_gpu_buffer_address(gpu_buffer_va)) {
+      FAIL() << "[Debugger] Could not get a valid GPU buffer VA";
+    }
+    synchro->clear_application_signal();
+
+    zet_debug_memory_space_desc_t memorySpaceDesc;
+    memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
+    int sizeToRead = 512;
+    uint8_t *kernel_buffer = new uint8_t[sizeToRead];
+    // set buffer[0] to 0 to break the loop. See debug_loop_slm.cl
+    kernel_buffer[0] = 0;
+    memorySpaceDesc.address = gpu_buffer_va;
+
+    ze_device_thread_t device_threads = {};
+    device_threads.slice = UINT32_MAX;
+    device_threads.subslice = UINT32_MAX;
+    device_threads.eu = UINT32_MAX;
+    device_threads.thread = UINT32_MAX;
+
+    LOG_INFO << "[Debugger] Stopping all device threads";
+    // give time to app to launch the kernel
+    std::this_thread::sleep_for(std::chrono::seconds(6));
+    lzt::debug_interrupt(debugSession, device_threads);
+
+    std::vector<ze_device_thread_t> stopped_threads;
+    if (!find_stopped_threads(debugSession, device, device_threads, true,
+                              stopped_threads)) {
+      delete[] kernel_buffer;
+      FAIL() << "[Debugger] Did not find stopped threads";
+    }
+
+    LOG_INFO << "[Debugger] Reading/Writing Thread Scratch Register on "
+                "interrupted threads";
+
+    for (auto &stopped_thread : stopped_threads) {
+      std::vector<zet_debug_regset_properties_t> register_set_properties =
+          lzt::get_register_set_properties(device);
+      if (lzt::is_heapless_mode(stopped_thread, device, debugSession)) {
+        for (auto &register_set : register_set_properties) {
+          if ((register_set.type ==
+               ZET_DEBUG_REGSET_TYPE_THREAD_SCRATCH_INTEL_GPU) &&
+              (register_set.generalFlags & ZET_DEBUG_REGSET_FLAG_READABLE)) {
+            LOG_DEBUG << "[Debugger] Register set type " << register_set.type
+                      << " is readable";
+            size_t reg_size_in_bytes =
+                register_set.count * register_set.byteSize;
+
+            uint64_t *thread_scratch_reg_values =
+                new uint64_t[reg_size_in_bytes];
+            ASSERT_EQ(zetDebugReadRegisters(
+                          debugSession, stopped_thread,
+                          ZET_DEBUG_REGSET_TYPE_DEBUG_SCRATCH_INTEL_GPU, 0,
+                          register_set.count, thread_scratch_reg_values),
+                      ZE_RESULT_SUCCESS);
+          } else {
+            FAIL() << "[Debugger] Register set type " << register_set.type
+                   << " is NOT readable";
+          }
+          if (register_set.generalFlags & ZET_DEBUG_REGSET_FLAG_WRITEABLE) {
+            FAIL() << "[Debugger] Register set type " << register_set.type
+                   << " should NOT be Writable";
+          } else {
+            LOG_INFO << "[Debugger] Register set " << register_set.type
+                     << " type is NOT writeable";
+          }
+        }
+      } else {
+        GTEST_SKIP() << "Test is not supported on this device";
+      }
+    }
+
+    lzt::debug_write_memory(debugSession, device_threads, memorySpaceDesc, 1,
+                            kernel_buffer);
+    delete[] kernel_buffer;
+
+    LOG_INFO << "[Debugger] resuming interrupted threads";
+    lzt::debug_resume(debugSession, device_threads);
+    debugHelper.wait();
+
+    std::vector<zet_debug_event_type_t> expectedEvents = {
+        ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT};
+
+    if (!check_events(debugSession, expectedEvents)) {
+      FAIL() << "[Debugger] Did not receive expected events";
+    }
+
+    lzt::debug_detach(debugSession);
+    ASSERT_EQ(debugHelper.exit_code(), 0);
+  }
+}
+
+TEST_F(
+    zetDebugReadWriteRegistersTest,
+    GivenActiveDebugSessionWhenReadingScratchRegistersThenDataReadIsDoneSuccessfully) {
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  run_read_registers_test(devices, false);
 }
 
 TEST_F(
