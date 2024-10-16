@@ -490,35 +490,39 @@ TEST_F(
         }
       }
 
-      if (power_sustained_set.limitValueLocked == false) {
-        lzt::set_power_limits_ext(
-            p_power_handle, &count_power,
-            power_limits_descriptors.data()); // set power limits for all
-                                              // descriptors
+      if (power_sustained_set.level == ZES_POWER_LEVEL_SUSTAINED) {
+        if (power_sustained_set.limitValueLocked == false) {
+          lzt::set_power_limits_ext(
+              p_power_handle, &count_power,
+              power_limits_descriptors.data()); // set power limits for all
+                                                // descriptors
 
-        zes_power_limit_ext_desc_t power_sustained_get = {};
+          zes_power_limit_ext_desc_t power_sustained_get = {};
 
-        auto power_limits_descriptors_get =
-            lzt::get_power_limits_ext(p_power_handle, &count_power);
-        for (auto p_power_limits_descriptor_get :
-             power_limits_descriptors_get) {
-          if (p_power_limits_descriptor_get.level ==
-              ZES_POWER_LEVEL_SUSTAINED) {
-            power_sustained_get = p_power_limits_descriptor_get;
+          auto power_limits_descriptors_get =
+              lzt::get_power_limits_ext(p_power_handle, &count_power);
+          for (auto p_power_limits_descriptor_get :
+               power_limits_descriptors_get) {
+            if (p_power_limits_descriptor_get.level ==
+                ZES_POWER_LEVEL_SUSTAINED) {
+              power_sustained_get = p_power_limits_descriptor_get;
+            }
           }
+
+          EXPECT_EQ(power_sustained_get.limitValueLocked,
+                    power_sustained_set.limitValueLocked);
+          EXPECT_EQ(power_sustained_get.interval, power_sustained_set.interval);
+          EXPECT_EQ(power_sustained_get.limit, power_sustained_set.limit);
+
+          lzt::set_power_limits_ext(p_power_handle, &count_power,
+                                    power_limits_descriptors_initial
+                                        .data()); // restore initial limits
+        } else {
+          LOG_INFO << "Set limit not supported due to sustained "
+                      "limitValueLocked flag is true";
         }
-
-        EXPECT_EQ(power_sustained_get.limitValueLocked,
-                  power_sustained_set.limitValueLocked);
-        EXPECT_EQ(power_sustained_get.interval, power_sustained_set.interval);
-        EXPECT_EQ(power_sustained_get.limit, power_sustained_set.limit);
-
-        lzt::set_power_limits_ext(
-            p_power_handle, &count_power,
-            power_limits_descriptors_initial.data()); // restore initial limits
       } else {
-        LOG_INFO << "Set limit not supported due to sustained "
-                    "limitValueLocked flag is true";
+        LOG_INFO << "Sustained power limit not supported";
       }
     }
   }
@@ -852,34 +856,37 @@ TEST_F(
         power_sustained_Initial = power_limits_descriptors[i];
         power_sustained_Max.limit = std::numeric_limits<int>::max();
         power_sustained_Initial.limit *= 2;
-      }
-      if (power_sustained_Max.limitValueLocked == false) {
-        lzt::set_power_limits_ext(power_card_handle, &count_power,
-                                  &power_sustained_Max);
-        auto power_limits_descriptors_getMax =
-            lzt::get_power_limits_ext(power_card_handle, &count_power);
-        for (auto p_power_limits_descriptor_get :
-             power_limits_descriptors_getMax) {
-          if (p_power_limits_descriptor_get.level ==
-              ZES_POWER_LEVEL_SUSTAINED) {
-            power_sustained_getMax = p_power_limits_descriptor_get;
+
+        if (power_sustained_Max.limitValueLocked == false) {
+          lzt::set_power_limits_ext(power_card_handle, &count_power,
+                                    &power_sustained_Max);
+          auto power_limits_descriptors_getMax =
+              lzt::get_power_limits_ext(power_card_handle, &count_power);
+          for (auto p_power_limits_descriptor_get :
+               power_limits_descriptors_getMax) {
+            if (p_power_limits_descriptor_get.level ==
+                ZES_POWER_LEVEL_SUSTAINED) {
+              power_sustained_getMax = p_power_limits_descriptor_get;
+            }
           }
-        }
-        lzt::set_power_limits_ext(power_card_handle, &count_power,
-                                  &power_sustained_Initial);
-        auto power_limits_descriptors_get =
-            lzt::get_power_limits_ext(power_card_handle, &count_power);
-        for (auto p_power_limits_descriptor_get :
-             power_limits_descriptors_get) {
-          if (p_power_limits_descriptor_get.level ==
-              ZES_POWER_LEVEL_SUSTAINED) {
-            power_sustained_get = p_power_limits_descriptor_get;
+          lzt::set_power_limits_ext(power_card_handle, &count_power,
+                                    &power_sustained_Initial);
+          auto power_limits_descriptors_get =
+              lzt::get_power_limits_ext(power_card_handle, &count_power);
+          for (auto p_power_limits_descriptor_get :
+               power_limits_descriptors_get) {
+            if (p_power_limits_descriptor_get.level ==
+                ZES_POWER_LEVEL_SUSTAINED) {
+              power_sustained_get = p_power_limits_descriptor_get;
+            }
           }
+          EXPECT_LE(power_sustained_get.limit, power_sustained_getMax.limit);
+        } else {
+          LOG_INFO << "Set limit not supported due to sustained "
+                      "limitValueLocked flag is true";
         }
-        EXPECT_LE(power_sustained_get.limit, power_sustained_getMax.limit);
       } else {
-        LOG_INFO << "Set limit not supported due to sustained "
-                    "limitValueLocked flag is true";
+          LOG_INFO << "Sustained power limit not supported";
       }
     }
   }
@@ -894,44 +901,50 @@ TEST_F(
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
     uint32_t count_power = 0;
-    zes_power_limit_ext_desc_t power_peak_initial = {};
-    zes_power_limit_ext_desc_t power_peak_Max = {};
-    zes_power_limit_ext_desc_t power_peak_getMax = {};
-    zes_power_limit_ext_desc_t power_peak_get = {};
+    uint32_t single_count = 1;
+    
     auto power_limits_descriptors =
         lzt::get_power_limits_ext(power_card_handle, &count_power);
     for (int i = 0; i < power_limits_descriptors.size(); i++) {
+      zes_power_limit_ext_desc_t power_peak_initial = {};
+      zes_power_limit_ext_desc_t power_peak_Max = {};
+      zes_power_limit_ext_desc_t power_peak_getMax = {};
+      zes_power_limit_ext_desc_t power_peak_get = {};
       if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_PEAK) {
+        zes_power_source_t power_source = power_limits_descriptors[i].source;
         power_peak_Max = power_limits_descriptors[i];
         power_peak_initial = power_limits_descriptors[i];
         power_peak_Max.limit = std::numeric_limits<int>::max();
         power_peak_initial.limit *= 2;
-      }
-      if (power_peak_Max.limitValueLocked == false) {
-        lzt::set_power_limits_ext(power_card_handle, &count_power,
-                                  &power_peak_Max);
-        auto power_limits_descriptors_getMax =
-            lzt::get_power_limits_ext(power_card_handle, &count_power);
-        for (auto p_power_limits_descriptor_get :
-             power_limits_descriptors_getMax) {
-          if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK) {
-            power_peak_getMax = p_power_limits_descriptor_get;
+
+        if (power_limits_descriptors[i].limitValueLocked == false) {
+          lzt::set_power_limits_ext(power_card_handle, &single_count,
+                                    &power_peak_Max);
+          auto power_limits_descriptors_getMax =
+              lzt::get_power_limits_ext(power_card_handle, &count_power);
+          for (auto p_power_limits_descriptor_get :
+               power_limits_descriptors_getMax) {
+            if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK &&
+                p_power_limits_descriptor_get.source == power_source) {
+              power_peak_getMax = p_power_limits_descriptor_get;
+            }
           }
-        }
-        lzt::set_power_limits_ext(power_card_handle, &count_power,
-                                  &power_peak_initial);
-        auto power_limits_descriptors_get =
-            lzt::get_power_limits_ext(power_card_handle, &count_power);
-        for (auto p_power_limits_descriptor_get :
-             power_limits_descriptors_get) {
-          if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK) {
-            power_peak_get = p_power_limits_descriptor_get;
+          lzt::set_power_limits_ext(power_card_handle, &single_count,
+                                    &power_peak_initial);
+          auto power_limits_descriptors_get =
+              lzt::get_power_limits_ext(power_card_handle, &count_power);
+          for (auto p_power_limits_descriptor_get :
+               power_limits_descriptors_get) {
+            if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK &&
+                p_power_limits_descriptor_get.source == power_source) {
+              power_peak_get = p_power_limits_descriptor_get;
+            }
           }
+          EXPECT_LE(power_peak_get.limit, power_peak_getMax.limit);
+        } else {
+          LOG_INFO << "Set limit not supported due to peak "
+                      "limitValueLocked flag is true";
         }
-        EXPECT_LE(power_peak_get.limit, power_peak_getMax.limit);
-      } else {
-        LOG_INFO << "Set limit not supported due to peak "
-                    "limitValueLocked flag is true";
       }
     }
   }
