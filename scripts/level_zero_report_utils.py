@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2021-2023 Intel Corporation
+# Copyright (C) 2021-2024 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 import re
@@ -286,6 +286,10 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "SysMan Firmware"
     elif test_binary == "test_sysman_firmware_zesinit":
         test_feature = "SysMan Firmware"    
+    elif test_binary == "test_sysman_vf_management":
+        test_feature = "SysMan VF Management"
+    elif test_binary == "test_sysman_vf_management_zesinit":
+        test_feature = "SysMan VF Management"   
     elif (re.search('performance', test_name, re.IGNORECASE)):
         test_feature = "SysMan Perf Profiles"
     elif test_binary == "test_metric":
