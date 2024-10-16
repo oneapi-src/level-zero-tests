@@ -338,4 +338,100 @@ TEST_F(
   }
 }
 
+TEST_F(
+    VF_MANAGEMENT_TEST,
+    GivenValidDeviceWhenRetrievingVfEngineUtilizationThenExpectValidUtilization) {
+  for (auto device : devices) {
+    uint32_t count = lzt::get_vf_handles_count(device);
+    if (count > 0) {
+      is_vf_enabled = true;
+      LOG_INFO << "VF is enabled on this device!!";
+      auto vf_handles = lzt::get_vf_handles(device, count);
+
+      for (const auto &vf_handle : vf_handles) {
+        uint32_t engine_util_count = lzt::get_vf_engine_util_count(vf_handle);
+        ASSERT_GT(engine_util_count, 0);
+        auto vf_engine_util =
+            lzt::get_vf_engine_util(vf_handle, engine_util_count);
+
+        for (const auto &engine_util : vf_engine_util) {
+          EXPECT_GE(engine_util.vfEngineType, ZES_ENGINE_GROUP_ALL);
+          EXPECT_LE(engine_util.vfEngineType,
+                    ZES_ENGINE_GROUP_MEDIA_CODEC_SINGLE);
+          EXPECT_GT(engine_util.activeCounterValue, 0);
+          EXPECT_GT(engine_util.samplingCounterValue, 0);
+        }
+      }
+    } else {
+      LOG_INFO << "No VF handles found for this device!!";
+    }
+  }
+
+  if (!is_vf_enabled) {
+    FAIL() << "No VF handles found in any of the devices!!";
+  }
+}
+
+TEST_F(
+    VF_MANAGEMENT_TEST,
+    GivenValidDeviceWhenRetrievingVfEngineUtilizationWithCountGreaterThanActualThenExpectActualCountIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = lzt::get_vf_handles_count(device);
+    if (count > 0) {
+      is_vf_enabled = true;
+      LOG_INFO << "VF is enabled on this device!!";
+      auto vf_handles = lzt::get_vf_handles(device, count);
+
+      for (const auto &vf_handle : vf_handles) {
+        uint32_t engine_util_count = lzt::get_vf_engine_util_count(vf_handle);
+        ASSERT_GT(engine_util_count, 0);
+        uint32_t test_count = engine_util_count + 1;
+        auto vf_engine_util =
+            lzt::get_vf_engine_util(vf_handle, engine_util_count);
+        EXPECT_EQ(test_count, engine_util_count);
+      }
+    } else {
+      LOG_INFO << "No VF handles found for this device!!";
+    }
+  }
+
+  if (!is_vf_enabled) {
+    FAIL() << "No VF handles found in any of the devices!!";
+  }
+}
+
+TEST_F(
+    VF_MANAGEMENT_TEST,
+    GivenValidDeviceWhenRetrievingVfEngineUtilizationWithCountLessThanActualThenExpectReducedCountIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = lzt::get_vf_handles_count(device);
+    if (count > 0) {
+      is_vf_enabled = true;
+      LOG_INFO << "VF is enabled on this device!!";
+      auto vf_handles = lzt::get_vf_handles(device, count);
+
+      for (const auto &vf_handle : vf_handles) {
+        uint32_t engine_util_count = lzt::get_vf_engine_util_count(vf_handle);
+        ASSERT_GT(engine_util_count, 0);
+
+        if (engine_util_count > 1) {
+          uint32_t test_count = engine_util_count - 1;
+          auto vf_engine_util =
+              lzt::get_vf_engine_util(vf_handle, engine_util_count);
+          EXPECT_EQ(test_count, engine_util_count - 1);
+        } else {
+          LOG_INFO << "Insufficient number of engine util count to validate "
+                      "this test";
+        }
+      }
+    } else {
+      LOG_INFO << "No VF handles found for this device!!";
+    }
+  }
+
+  if (!is_vf_enabled) {
+    FAIL() << "No VF handles found in any of the devices!!";
+  }
+}
+
 } // namespace

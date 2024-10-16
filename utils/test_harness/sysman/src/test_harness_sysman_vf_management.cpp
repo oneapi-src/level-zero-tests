@@ -56,4 +56,23 @@ std::vector<zes_vf_util_mem_exp2_t> get_vf_mem_util(zes_vf_handle_t vf_handle,
   return vf_util_mem_exp;
 }
 
+uint32_t get_vf_engine_util_count(zes_vf_handle_t vf_handle) {
+  uint32_t count = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesVFManagementGetVFEngineUtilizationExp2(
+                                   vf_handle, &count, nullptr));
+  return count;
+}
+
+std::vector<zes_vf_util_engine_exp2_t>
+get_vf_engine_util(zes_vf_handle_t vf_handle, uint32_t &count) {
+  if (count == 0) {
+    count = get_vf_engine_util_count(vf_handle);
+  }
+  std::vector<zes_vf_util_engine_exp2_t> vf_util_engine_exp(count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesVFManagementGetVFEngineUtilizationExp2(
+                vf_handle, &count, vf_util_engine_exp.data()));
+  return vf_util_engine_exp;
+}
+
 } // namespace level_zero_tests
