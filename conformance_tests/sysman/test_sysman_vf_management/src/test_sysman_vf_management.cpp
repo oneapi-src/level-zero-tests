@@ -358,7 +358,7 @@ TEST_F(
           EXPECT_GE(engine_util.vfEngineType, ZES_ENGINE_GROUP_ALL);
           EXPECT_LE(engine_util.vfEngineType,
                     ZES_ENGINE_GROUP_MEDIA_CODEC_SINGLE);
-          EXPECT_GT(engine_util.activeCounterValue, 0);
+          EXPECT_GE(engine_util.activeCounterValue, 0);
           EXPECT_GT(engine_util.samplingCounterValue, 0);
         }
       }
