@@ -76,7 +76,7 @@ TEST_F(
   }
 
   if (!is_vf_enabled) {
-    FAIL() << "No VF handles found in all devices!!";
+    FAIL() << "No VF handles found in any of the devices!!";
   }
 }
 
@@ -108,7 +108,7 @@ TEST_F(
   }
 
   if (!is_vf_enabled) {
-    FAIL() << "No VF handles found in all devices!!";
+    FAIL() << "No VF handles found in any of the devices!!";
   }
 }
 
@@ -134,7 +134,7 @@ TEST_F(
   }
 
   if (!is_vf_enabled) {
-    FAIL() << "No VF handles found in all devices!!";
+    FAIL() << "No VF handles found in any of the devices!!";
   }
 }
 
@@ -162,7 +162,7 @@ TEST_F(
   }
 
   if (!is_vf_enabled) {
-    FAIL() << "No VF handles found in all devices!!";
+    FAIL() << "No VF handles found in any of the devices!!";
   }
 }
 
@@ -186,7 +186,7 @@ TEST_F(
   }
 
   if (!is_vf_enabled) {
-    FAIL() << "No VF handles found in all devices!!";
+    FAIL() << "No VF handles found in any of the devices!!";
   }
 }
 
@@ -211,7 +211,7 @@ TEST_F(
   }
 
   if (!is_vf_enabled) {
-    FAIL() << "No VF handles found in all devices!!";
+    FAIL() << "No VF handles found in any of the devices!!";
   }
 }
 
@@ -241,7 +241,100 @@ TEST_F(VF_MANAGEMENT_TEST,
   }
 
   if (!is_vf_enabled) {
-    FAIL() << "No VF handles found in all devices!!";
+    FAIL() << "No VF handles found in any of the devices!!";
+  }
+}
+
+TEST_F(
+    VF_MANAGEMENT_TEST,
+    GivenValidDeviceWhenRetrievingVfMemoryUtilizationThenExpectValidUtilization) {
+  for (auto device : devices) {
+    uint32_t count = lzt::get_vf_handles_count(device);
+    if (count > 0) {
+      is_vf_enabled = true;
+      LOG_INFO << "VF is enabled on this device!!";
+      auto vf_handles = lzt::get_vf_handles(device, count);
+
+      for (const auto &vf_handle : vf_handles) {
+        auto vf_capabilities = lzt::get_vf_capabilities(vf_handle);
+        uint32_t mem_util_count = lzt::get_vf_mem_util_count(vf_handle);
+        ASSERT_GT(mem_util_count, 0);
+        auto vf_mem_util = lzt::get_vf_mem_util(vf_handle, mem_util_count);
+
+        for (const auto &mem_util : vf_mem_util) {
+          EXPECT_GE(mem_util.vfMemLocation, ZES_MEM_LOC_SYSTEM);
+          EXPECT_LE(mem_util.vfMemLocation, ZES_MEM_LOC_DEVICE);
+          EXPECT_GT(mem_util.vfMemUtilized, 0);
+          EXPECT_LE(mem_util.vfMemUtilized, vf_capabilities.vfDeviceMemSize);
+        }
+      }
+    } else {
+      LOG_INFO << "No VF handles found for this device!!";
+    }
+  }
+
+  if (!is_vf_enabled) {
+    FAIL() << "No VF handles found in any of the devices!!";
+  }
+}
+
+TEST_F(
+    VF_MANAGEMENT_TEST,
+    GivenValidDeviceWhenRetrievingVfMemoryUtilizationWithCountGreaterThanActualThenExpectActualCountIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = lzt::get_vf_handles_count(device);
+    if (count > 0) {
+      is_vf_enabled = true;
+      LOG_INFO << "VF is enabled on this device!!";
+      auto vf_handles = lzt::get_vf_handles(device, count);
+
+      for (const auto &vf_handle : vf_handles) {
+        uint32_t mem_util_count = lzt::get_vf_mem_util_count(vf_handle);
+        ASSERT_GT(mem_util_count, 0);
+        uint32_t test_count = mem_util_count + 1;
+        auto vf_mem_util = lzt::get_vf_mem_util(vf_handle, test_count);
+        EXPECT_EQ(test_count, mem_util_count);
+      }
+    } else {
+      LOG_INFO << "No VF handles found for this device!!";
+    }
+  }
+
+  if (!is_vf_enabled) {
+    FAIL() << "No VF handles found in any of the devices!!";
+  }
+}
+
+TEST_F(
+    VF_MANAGEMENT_TEST,
+    GivenValidDeviceWhenRetrievingVfMemoryUtilizationWithCountLessThanActualThenExpectReducedCountIsReturned) {
+  for (auto device : devices) {
+    uint32_t count = lzt::get_vf_handles_count(device);
+    if (count > 0) {
+      is_vf_enabled = true;
+      LOG_INFO << "VF is enabled on this device!!";
+      auto vf_handles = lzt::get_vf_handles(device, count);
+
+      for (const auto &vf_handle : vf_handles) {
+        uint32_t mem_util_count = lzt::get_vf_mem_util_count(vf_handle);
+        ASSERT_GT(mem_util_count, 0);
+
+        if (mem_util_count > 1) {
+          uint32_t test_count = mem_util_count - 1;
+          auto vf_mem_util = lzt::get_vf_mem_util(vf_handle, test_count);
+          EXPECT_EQ(test_count, mem_util_count - 1);
+        } else {
+          LOG_INFO
+              << "Insufficient number of mem util count to validate this test";
+        }
+      }
+    } else {
+      LOG_INFO << "No VF handles found for this device!!";
+    }
+  }
+
+  if (!is_vf_enabled) {
+    FAIL() << "No VF handles found in any of the devices!!";
   }
 }
 
