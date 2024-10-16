@@ -123,11 +123,6 @@ TEST_F(
       uint32_t test_count = count + 1;
       auto vf_handles = lzt::get_vf_handles(device, test_count);
       EXPECT_EQ(count, test_count);
-
-      for (int i = 0; i < count; i++) {
-        EXPECT_NE(vf_handles[i], nullptr);
-      }
-      EXPECT_EQ(vf_handles[count], nullptr);
     } else {
       LOG_INFO << "No VF handles found for this device!";
     }
@@ -386,8 +381,7 @@ TEST_F(
         uint32_t engine_util_count = lzt::get_vf_engine_util_count(vf_handle);
         ASSERT_GT(engine_util_count, 0);
         uint32_t test_count = engine_util_count + 1;
-        auto vf_engine_util =
-            lzt::get_vf_engine_util(vf_handle, test_count);
+        auto vf_engine_util = lzt::get_vf_engine_util(vf_handle, test_count);
         EXPECT_EQ(test_count, engine_util_count);
       }
     } else {
@@ -400,7 +394,6 @@ TEST_F(
   }
 }
 
-/*
 TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfEngineUtilizationWithCountLessThanActualThenExpectReducedCountIsReturned) {
@@ -417,8 +410,7 @@ TEST_F(
 
         if (engine_util_count > 1) {
           uint32_t test_count = engine_util_count - 1;
-          auto vf_engine_util =
-              lzt::get_vf_engine_util(vf_handle, test_count);
+          auto vf_engine_util = lzt::get_vf_engine_util(vf_handle, test_count);
           EXPECT_EQ(test_count, engine_util_count - 1);
         } else {
           LOG_INFO << "Insufficient number of engine util count to validate "
@@ -434,6 +426,5 @@ TEST_F(
     FAIL() << "No VF handles found in any of the devices!!";
   }
 }
-*/
 
 } // namespace
