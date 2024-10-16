@@ -31,4 +31,11 @@ std::vector<zes_vf_handle_t> get_vf_handles(zes_device_handle_t device,
   return vf_handles;
 }
 
+zes_vf_exp_capabilities_t get_vf_capabilities(zes_vf_handle_t vf_handle) {
+  zes_vf_exp_capabilities_t vf_capabilities{};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesVFManagementGetVFCapabilitiesExp(vf_handle, &vf_capabilities));
+  return vf_capabilities;
+}
+
 } // namespace level_zero_tests

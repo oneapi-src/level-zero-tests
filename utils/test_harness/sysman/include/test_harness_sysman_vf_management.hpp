@@ -16,6 +16,7 @@ namespace level_zero_tests {
 uint32_t get_vf_handles_count(zes_device_handle_t device);
 std::vector<zes_vf_handle_t> get_vf_handles(zes_device_handle_t device,
                                             uint32_t &count);
+zes_vf_exp_capabilities_t get_vf_capabilities(zes_vf_handle_t vf_handle);
 
 } // namespace level_zero_tests
 
