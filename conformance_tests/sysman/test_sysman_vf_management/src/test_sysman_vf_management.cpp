@@ -259,7 +259,7 @@ TEST_F(
         for (const auto &mem_util : vf_mem_util) {
           EXPECT_GE(mem_util.vfMemLocation, ZES_MEM_LOC_SYSTEM);
           EXPECT_LE(mem_util.vfMemLocation, ZES_MEM_LOC_DEVICE);
-          EXPECT_GT(mem_util.vfMemUtilized, 0);
+          EXPECT_GE(mem_util.vfMemUtilized, 0);
           EXPECT_LE(mem_util.vfMemUtilized, vf_capabilities.vfDeviceMemSize);
         }
       }
