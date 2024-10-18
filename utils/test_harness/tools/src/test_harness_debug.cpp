@@ -181,8 +181,8 @@ bool get_register_set_props(ze_device_handle_t device,
 }
 
 void clear_exceptions(const ze_device_handle_t &device,
-                    const zet_debug_session_handle_t &debug_session,
-                  const ze_device_thread_t &device_thread) {
+                      const zet_debug_session_handle_t &debug_session,
+                      const ze_device_thread_t &device_thread) {
   size_t reg_size_in_bytes = 0;
 
   zet_debug_regset_properties_t cr_reg_prop;
@@ -198,8 +198,7 @@ void clear_exceptions(const ze_device_handle_t &device,
                                   cr_reg_prop.count, cr_values),
             ZE_RESULT_SUCCESS);
 
-  uint32_values[1] &=
-      ~((1 << 26) | (1 << 30));
+  uint32_values[1] &= ~((1 << 26) | (1 << 30));
   ASSERT_EQ(zetDebugWriteRegisters(debug_session, device_thread,
                                    ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
                                    cr_reg_prop.count, cr_values),
@@ -303,6 +302,33 @@ std::vector<uint8_t> get_debug_info(const zet_module_handle_t &module_handle) {
                                   ZET_MODULE_DEBUG_INFO_FORMAT_ELF_DWARF, &size,
                                   debug_info.data()));
   return debug_info;
+}
+
+bool is_heapless_mode(ze_device_thread_t stopped_thread,
+                      ze_device_handle_t &device_handle,
+                      zet_debug_session_handle_t debug_session) {
+
+  uint8_t *mode_values = nullptr;
+  bool result = false;
+  std::vector<zet_debug_regset_properties_t> regset_properties =
+      lzt::get_register_set_properties(device_handle);
+  for (auto &register_set : regset_properties) {
+    if (register_set.type == ZET_DEBUG_REGSET_TYPE_MODE_FLAGS_INTEL_GPU) {
+      auto reg_size_in_bytes = register_set.count * register_set.byteSize;
+      mode_values = new uint8_t[reg_size_in_bytes];
+      EXPECT_EQ(
+          zetDebugReadRegisters(debug_session, stopped_thread,
+                                ZET_DEBUG_REGSET_TYPE_MODE_FLAGS_INTEL_GPU, 0,
+                                register_set.count, mode_values),
+          ZE_RESULT_SUCCESS);
+
+      uint32_t *uint32_t_values = (uint32_t *)mode_values;
+      LOG_DEBUG << "[Debugger] mode value: %u " << uint32_t_values[0];
+      result = (uint32_t_values[0] & ZET_DEBUG_MODE_FLAG_HEAPLESS);
+    }
+  }
+
+  return result;
 }
 
 } // namespace level_zero_tests
