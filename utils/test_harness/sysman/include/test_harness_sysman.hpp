@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -31,4 +31,5 @@
 #include "test_harness_sysman_scheduler.hpp"
 #include "test_harness_sysman_performance.hpp"
 #include "test_harness_sysman_ecc.hpp"
+#include "test_harness_sysman_vf_management.hpp"
 #endif
