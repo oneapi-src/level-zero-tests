@@ -426,9 +426,15 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   }
 
   synchro.wait_for_debugger_signal();
+
+  std::string mod_options = "-g";
+  if (options.module_options_in != "") {
+    mod_options.append("," + options.module_options_in);
+  }
+  LOG_INFO << "Module Options: " << mod_options;
   auto module =
       lzt::create_module(device, module_name, ZE_MODULE_FORMAT_IL_SPIRV,
-                         "-g" /* include debug symbols*/, nullptr);
+                         mod_options.c_str(), nullptr);
 
   auto kernel = lzt::create_function(module, kernel_name);
 
