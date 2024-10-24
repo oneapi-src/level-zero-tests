@@ -17,7 +17,7 @@
 namespace {
 
 TEST(SysmanInitTests,
-     GivenSysmanInitialzedFromZesInitAndCoreInitializedWithSysmanFlagWhenzesEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
+     GivenSysmanInitializedFromZesInitAndCoreInitializedWithSysmanFlagWhenzesEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
