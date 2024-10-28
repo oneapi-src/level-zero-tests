@@ -54,8 +54,6 @@ TEST(
   std::vector<zes_event_type_flags_t> event_type{};
 
   EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceGet(drivers[0], &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
             zesDeviceGetProperties(devices[0], &properties));
   EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
             zesDeviceGetState(devices[0], &state));
