@@ -14,6 +14,7 @@
 
 #include <boost/process.hpp>
 #include <boost/filesystem.hpp>
+#include <thread>
 
 namespace bp = boost::process;
 namespace fs = boost::filesystem;
@@ -24,11 +25,9 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-struct workload_thread_parameters {
-  ze_device_handle_t device;
-  std::mutex device_mutex;
-  std::condition_variable condition;
-  bool get_process_state_flag;
+struct device_handles_t {
+  ze_device_handle_t core_handle;
+  zes_device_handle_t sysman_handle;
 };
 
 uint32_t get_prop_length(char prop[ZES_STRING_PROPERTY_SIZE]) {
@@ -538,7 +537,33 @@ ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
 }
 #endif // USE_ZESINIT
 
-void compute_workload(workload_thread_parameters *t_params) {
+bool is_compute_engine_used(int pid, zes_device_handle_t device) {
+  uint32_t count = 0;
+  auto processes = lzt::get_processes_state(device, count);
+
+  for (const auto &process : processes) {
+    if (process.processId == pid &&
+        process.engines == ZES_ENGINE_TYPE_FLAG_COMPUTE) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool validate_engine_type(ze_event_handle_t event,
+                          zes_device_handle_t sysman_device) {
+  bool is_compute_engine = false;
+  int process_id = getpid();
+
+  do {
+    is_compute_engine = is_compute_engine_used(process_id, sysman_device);
+  } while (zeEventQueryStatus(event) != ZE_RESULT_SUCCESS &&
+           !is_compute_engine);
+
+  return is_compute_engine;
+}
+
+bool compute_workload_and_validate(device_handles_t device) {
 
   int m, k, n;
   m = k = n = 512;
@@ -547,15 +572,17 @@ void compute_workload(workload_thread_parameters *t_params) {
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
 
-  ze_device_handle_t device = t_params->device;
-  void *a_buffer = lzt::allocate_device_memory(
-      m * k * sizeof(float), 1, 0, device, lzt::get_default_context());
-  void *b_buffer = lzt::allocate_device_memory(
-      k * n * sizeof(float), 1, 0, device, lzt::get_default_context());
-  void *c_buffer = lzt::allocate_device_memory(
-      m * n * sizeof(float), 1, 0, device, lzt::get_default_context());
+  void *a_buffer = lzt::allocate_device_memory(m * k * sizeof(float), 1, 0,
+                                               device.core_handle,
+                                               lzt::get_default_context());
+  void *b_buffer = lzt::allocate_device_memory(k * n * sizeof(float), 1, 0,
+                                               device.core_handle,
+                                               lzt::get_default_context());
+  void *c_buffer = lzt::allocate_device_memory(m * n * sizeof(float), 1, 0,
+                                               device.core_handle,
+                                               lzt::get_default_context());
   ze_module_handle_t module =
-      lzt::create_module(device, "sysman_matrix_multiplication.spv",
+      lzt::create_module(device.core_handle, "sysman_matrix_multiplication.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
   ze_kernel_handle_t function =
       lzt::create_function(module, "sysman_matrix_multiplication");
@@ -566,7 +593,8 @@ void compute_workload(workload_thread_parameters *t_params) {
   lzt::set_argument_value(function, 3, sizeof(k), &k);
   lzt::set_argument_value(function, 4, sizeof(n), &n);
   lzt::set_argument_value(function, 5, sizeof(c_buffer), &c_buffer);
-  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
+  ze_command_list_handle_t cmd_list =
+      lzt::create_command_list(device.core_handle);
   lzt::append_memory_copy(cmd_list, a_buffer, a.data(), lzt::size_in_bytes(a),
                           nullptr);
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
@@ -581,19 +609,48 @@ void compute_workload(workload_thread_parameters *t_params) {
   tg.groupCountY = group_count_y;
   tg.groupCountZ = 1;
 
-  zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0, nullptr);
-  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
-  lzt::close_command_list(cmd_list);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+  // events creation
+  ze_event_pool_handle_t event_pool = lzt::create_event_pool(
+      lzt::get_default_context(), 2, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
 
-  uint32_t number_iterations = 100;
-  while (number_iterations--) {
-    lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
-    lzt::synchronize(cmd_q, UINT64_MAX);
-    t_params->get_process_state_flag = true;
-    t_params->condition.notify_one();
+  ze_event_handle_t start_event, end_event;
+  ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0,
+                                ZE_EVENT_SCOPE_FLAG_DEVICE,
+                                ZE_EVENT_SCOPE_FLAG_HOST};
+
+  start_event = lzt::create_event(event_pool, event_desc);
+  event_desc.index = 1;
+  end_event = lzt::create_event(event_pool, event_desc);
+
+  lzt::append_signal_event(cmd_list, start_event);
+
+  for (int i = 0; i < 20; ++i) {
+    lzt::append_launch_function(cmd_list, function, &tg, nullptr, 0, nullptr);
   }
 
+  lzt::append_signal_event(cmd_list, end_event);
+
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
+  ze_command_queue_handle_t cmd_q =
+      lzt::create_command_queue(device.core_handle);
+
+  lzt::execute_command_lists(cmd_q, 1, &cmd_list, nullptr);
+
+  lzt::event_host_synchronize(start_event,
+                              std::numeric_limits<uint64_t>::max());
+
+  // validating engine type between two events
+  auto is_compute_engine =
+      validate_engine_type(end_event, device.sysman_handle);
+
+  lzt::event_host_synchronize(end_event, std::numeric_limits<uint64_t>::max());
+
+  lzt::synchronize(cmd_q, UINT64_MAX);
+
+  lzt::destroy_event(start_event);
+  lzt::destroy_event(end_event);
+  lzt::destroy_event_pool(event_pool);
   lzt::destroy_command_queue(cmd_q);
   lzt::destroy_command_list(cmd_list);
   lzt::destroy_function(function);
@@ -601,6 +658,8 @@ void compute_workload(workload_thread_parameters *t_params) {
   lzt::free_memory(b_buffer);
   lzt::free_memory(c_buffer);
   lzt::destroy_module(module);
+
+  return is_compute_engine;
 }
 
 TEST_F(
@@ -659,37 +718,21 @@ TEST_F(
 
   for (auto device : devices) {
 
-    workload_thread_parameters t_params;
-    t_params.get_process_state_flag = false;
-
+    device_handles_t device_handle{};
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
         get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
     EXPECT_NE(core_device, nullptr);
-    t_params.device = core_device;
-    std::thread thread(compute_workload, &t_params);
+    device_handle.core_handle = core_device;
+    device_handle.sysman_handle = device;
 #else  // USE_ZESINIT
-    t_params.device = device;
-    std::thread thread(compute_workload, &t_params);
+    device_handle.core_handle = device;
+    device_handle.sysman_handle = device;
 #endif // USE_ZESINIT
 
-    uint32_t count = 0;
-    std::unique_lock<std::mutex> locker(t_params.device_mutex);
-    t_params.condition.wait(locker,
-                            [&] { return t_params.get_process_state_flag; });
-
-    uint32_t engine_type = 0;
-    while (engine_type != ZES_ENGINE_TYPE_FLAG_COMPUTE) {
-      auto processes = lzt::get_processes_state(device, count);
-      for (auto process : processes) {
-        engine_type = process.engines;
-      }
-      processes.clear();
-    }
-
-    thread.join();
-    EXPECT_EQ(engine_type, ZES_ENGINE_TYPE_FLAG_COMPUTE);
+    bool is_success = compute_workload_and_validate(device_handle);
+    EXPECT_TRUE(is_success);
   }
 }
 

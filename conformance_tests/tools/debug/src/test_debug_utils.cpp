@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -155,10 +155,10 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   static constexpr uint16_t bufferSize =
       512; // Also defined in test_debug_helper.cpp for SLM buffer size
 
-  zet_debug_memory_space_desc_t desc;
+  zet_debug_memory_space_desc_t desc = {};
   desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
 
-  zet_debug_memory_space_desc_t verifyDesc;
+  zet_debug_memory_space_desc_t verifyDesc = {};
   verifyDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
   verifyDesc.address = slmBaseAddress;
 
@@ -318,7 +318,7 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
 
   static constexpr uint8_t bufferSize = 16;
   bool read_success = false;
-  zet_debug_memory_space_desc_t desc;
+  zet_debug_memory_space_desc_t desc = {};
   desc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
   uint8_t buffer1[bufferSize];
   uint8_t buffer2[bufferSize];
@@ -522,6 +522,7 @@ get_stopped_threads(const zet_debug_session_handle_t &debug_session,
 
           if (read_register(debug_session, device_thread, regset_properties[2],
                             false)) {
+            lzt::clear_exceptions(device, debug_session, device_thread);
             threads.push_back(device_thread);
           }
         }
@@ -533,7 +534,7 @@ get_stopped_threads(const zet_debug_session_handle_t &debug_session,
   return threads;
 }
 
-// wait for stopped thread event and retunrn stopped threads
+// wait for stopped thread event and return stopped threads
 bool find_stopped_threads(const zet_debug_session_handle_t &debugSession,
                           const ze_device_handle_t &device,
                           ze_device_thread_t thread, bool checkEvent,
@@ -679,10 +680,11 @@ void wait_for_events_interrupt_and_resume(
   LOG_INFO << "[Debugger] Sending interrupt";
   lzt::debug_interrupt(debugSession, device_thread);
 
-  lzt::debug_read_event(debugSession, debug_event, eventsTimeoutMS, false);
-  LOG_INFO << "[Debugger] received event: "
-           << lzt::debuggerEventTypeString[debug_event.type];
-  ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED);
+  std::vector<ze_device_thread_t> stopped_threads;
+  if (!find_stopped_threads(debugSession, device, device_thread, true,
+                            stopped_threads)) {
+    FAIL() << "[Debugger] Did not find stopped threads";
+  }
 
   // write to kernel buffer to signal to application to end
   zet_debug_memory_space_desc_t memory_space_desc = {};
@@ -758,7 +760,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
 
     LOG_INFO << "[Debugger] Interrupting all threads";
     // give time to app to launch the kernel
-    std::this_thread::sleep_for(std::chrono::seconds(6));
+    std::this_thread::sleep_for(std::chrono::seconds(60));
 
     lzt::debug_interrupt(debugSession, thread);
     std::vector<ze_device_thread_t> stopped_threads;
@@ -767,7 +769,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
       FAIL() << "[Debugger] Did not find stopped threads";
     }
 
-    zet_debug_memory_space_desc_t memorySpaceDesc;
+    zet_debug_memory_space_desc_t memorySpaceDesc = {};
     memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
     int sizeToRead = 512;
     uint8_t *buffer = new uint8_t[sizeToRead];
@@ -802,7 +804,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
                                            0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD,
                                            0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 
-          zet_debug_memory_space_desc_t slmSpaceDesc;
+          zet_debug_memory_space_desc_t slmSpaceDesc = {};
           slmSpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_SLM;
           slmSpaceDesc.address = slmBaseAddress;
 

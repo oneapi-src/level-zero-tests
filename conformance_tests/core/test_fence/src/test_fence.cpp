@@ -56,7 +56,8 @@ public:
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceCreate(cmd_q_, &descriptor, &fence_));
     EXPECT_NE(nullptr, fence_);
   }
-  ~zeFenceTests() {
+
+  void TearDown() override {
     EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceDestroy(fence_));
     lzt::destroy_command_queue(cmd_q_);
     lzt::destroy_command_list(cmd_list_);

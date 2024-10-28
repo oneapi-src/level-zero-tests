@@ -37,7 +37,6 @@ def add_to_test_list(test_name: str,
                     exclude_regex: str):
     already_exists = False
     checks_passed = True
-
     if requested_sections and checks_passed:
         test_section_list = requested_sections.split(",")
         for test_section_requested in test_section_list:
@@ -151,6 +150,7 @@ def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
                 fail_log.write(test_plan[i][0] + ' FAILED' + "\n")
                 for line in output:
                     fail_log.write(line + "\n")
+                print("F", end = '')
             elif unsupported == 1:
                 result = (test_plan[i][0], test_plan[i][4], test_plan[i][3], 'UNSUPPORTED')
                 results.append(result)
@@ -158,12 +158,13 @@ def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
                 fail_log.write(test_plan[i][0] + ' UNSUPPORTED' + "\n")
                 for line in output:
                     fail_log.write(line + "\n")
+                print("N", end = '')
             else:
                 result = (test_plan[i][0], test_plan[i][4], test_plan[i][3], 'PASSED')
                 results.append(result)
                 num_passed += 1
+                print("-", end = '')
             i += 1
-            print("-", end = '')
             sys.stdout.flush()
         except subprocess.TimeoutExpired:
             fout.close()
@@ -305,7 +306,7 @@ def generate_test_case(binary_and_path: str,
         suffix = ""
         if parameterized:
             suffix = "/*"
-        test_filter = "--gtest_filter=" + case_name + suffix
+        test_filter = "--gtest_filter=" + suite_name + "." + case_name + suffix
         test_feature, test_section_by_feature = level_zero_report_utils.assign_test_feature(test_binary, test_name)
         if (test_section == "None"):
             test_section= test_section_by_feature

@@ -43,8 +43,13 @@ int main(int argc, char **argv) {
 
   lzt::shared_ipc_event_data_t shared_data;
   bipc::shared_memory_object shm;
-  shm = bipc::shared_memory_object(bipc::open_only, "ipc_ltracing_event_test",
-                                   bipc::read_write);
+  try {
+    shm = bipc::shared_memory_object(bipc::open_only, "ipc_ltracing_event_test",
+                                     bipc::read_write);
+  } catch (bipc::interprocess_exception &ex) {
+    LOG_DEBUG << "Child exit due to shared memory object open failure";
+    exit(EXIT_FAILURE);
+  }
   shm.truncate(sizeof(lzt::shared_ipc_event_data_t));
   bipc::mapped_region region(shm, bipc::read_only);
   std::memcpy(&shared_data, region.get_address(),

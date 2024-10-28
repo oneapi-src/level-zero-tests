@@ -166,11 +166,11 @@ int main(int argc, char **argv) {
       LOG_INFO << "[Child Debugger] Sending interrupt";
       lzt::debug_interrupt(debugSession, device_thread);
 
-      lzt::debug_read_event(debugSession, debug_event, eventsTimeoutMS, false);
-      LOG_INFO << "[Child Debugger] received event: "
-               << lzt::debuggerEventTypeString[debug_event.type];
+      std::vector<ze_device_thread_t> stopped_threads;
+      if (!find_stopped_threads(debugSession, device, device_thread, true,
+                                stopped_threads)) {
 
-      if (debug_event.type != ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
+        LOG_INFO << "[Child Debugger] Did not find stopped threads";
         exit(1);
       }
 

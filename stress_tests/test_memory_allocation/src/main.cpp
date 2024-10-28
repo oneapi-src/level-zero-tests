@@ -23,5 +23,11 @@ int main(int argc, char **argv) {
   LOG_TRACE << "Driver initialized";
   level_zero_tests::print_platform_overview();
 
-  return RUN_ALL_TESTS();
+  try {
+    auto result = RUN_ALL_TESTS();
+    return result;
+  } catch (const std::exception &e) {
+    LOG_ERROR << "Error: " << e.what();
+    return 1;
+  }
 }
