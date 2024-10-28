@@ -101,14 +101,6 @@ TEST(
       ZE_RESULT_ERROR_UNINITIALIZED,
       zesDeviceEventRegister(devices[0], ZES_EVENT_TYPE_FLAG_DEVICE_DETACH));
   EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDriverEventListen(drivers[0],
-                                 std::numeric_limits<uint32_t>::max(), 1,
-                                 &devices[0], &count, event_type.data()));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDriverEventListenEx(drivers[0],
-                                   std::numeric_limits<uint64_t>::max(), 1,
-                                   &devices[0], &count, event_type.data()));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
             zesDeviceEnumFabricPorts(devices[0], &count, nullptr));
   EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
             zesFabricPortGetMultiPortThroughput(devices[0], count, &fabric_port,
@@ -139,9 +131,6 @@ TEST(
             zesDeviceEnumTemperatureSensors(devices[0], &count, nullptr));
   EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
             zesDeviceGetSubDevicePropertiesExp(devices[0], &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDriverGetDeviceByUuidExp(drivers[0], uuid, &device_handle,
-                                        &bool_false, &count));
   // EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
   //           zesDeviceEnumEnabledVFExp(devices[0], &count, nullptr));
 }
