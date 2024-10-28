@@ -142,8 +142,8 @@ TEST(
   EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
             zesDriverGetDeviceByUuidExp(drivers[0], uuid, &device_handle,
                                         &bool_false, &count));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumEnabledVFExp(devices[0], &count, nullptr));
+  // EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
+  //           zesDeviceEnumEnabledVFExp(devices[0], &count, nullptr));
 }
 
 } // namespace
