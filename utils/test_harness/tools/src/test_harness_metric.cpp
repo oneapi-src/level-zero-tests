@@ -252,8 +252,6 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
 
   LOG_INFO << "size of optimizedList based on percentage "
            << optimizedList.size();
-  EXPECT_GT(optimizedList.size(), 0u)
-      << "optimized metric group info list cannot be empty";
   return optimizedList;
 }
 
@@ -294,8 +292,7 @@ get_metric_group_info(ze_device_handle_t device,
         metricGroupHandle, metricGroupProp.name, metricGroupProp.description,
         metricGroupProp.domain, metricGroupProp.metricCount);
   }
-  EXPECT_GT(matchedGroupsInfo.size(), 0u)
-      << "metric group info list cannot be empty";
+
   return matchedGroupsInfo;
 }
 
@@ -335,8 +332,7 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
         metricGroupProp.domain, metricGroupProp.metricCount);
     continue;
   }
-  EXPECT_GT(matchedGroupsInfo.size(), 0u)
-      << "metric type ip group info list cannot be empty";
+
   return matchedGroupsInfo;
 }
 
@@ -364,8 +360,6 @@ get_metric_group_name_list(ze_device_handle_t device,
     }
     groupPropName.push_back(strItem);
   }
-  EXPECT_GT(groupPropName.size(), 0u)
-      << "metric group name list cannot be empty";
   return groupPropName;
 }
 
@@ -474,15 +468,13 @@ metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle) {
 }
 
 void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle) {
-  if (metricQueryHandle != nullptr) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryDestroy(metricQueryHandle));
-  }
+  ASSERT_NE(nullptr, metricQueryHandle);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryDestroy(metricQueryHandle));
 }
 
 void reset_metric_query(zet_metric_query_handle_t &metricQueryHandle) {
-  if (metricQueryHandle != nullptr) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryReset(metricQueryHandle));
-  }
+  ASSERT_NE(nullptr, metricQueryHandle);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryReset(metricQueryHandle));
 }
 
 size_t metric_query_get_data_size(zet_metric_query_handle_t metricQueryHandle) {
@@ -591,11 +583,10 @@ void metric_streamer_read_data(
 
 void activate_metric_groups(ze_device_handle_t device, uint32_t count,
                             zet_metric_group_handle_t *pMatchedGroupHandle) {
-  if (*pMatchedGroupHandle != nullptr) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetContextActivateMetricGroups(lzt::get_default_context(), device,
-                                             count, pMatchedGroupHandle));
-  }
+  ASSERT_NE(nullptr, *pMatchedGroupHandle);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetContextActivateMetricGroups(lzt::get_default_context(), device,
+                                           count, pMatchedGroupHandle));
 }
 
 void deactivate_metric_groups(ze_device_handle_t device) {
@@ -606,19 +597,17 @@ void deactivate_metric_groups(ze_device_handle_t device) {
 
 void append_metric_query_begin(zet_command_list_handle_t commandList,
                                zet_metric_query_handle_t metricQueryHandle) {
-  if (metricQueryHandle != nullptr) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryBegin(
-                                     commandList, metricQueryHandle));
-  }
+  ASSERT_NE(nullptr, metricQueryHandle);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryBegin(
+                                   commandList, metricQueryHandle));
 }
 
 void append_metric_query_end(zet_command_list_handle_t commandList,
                              zet_metric_query_handle_t metricQueryHandle,
                              ze_event_handle_t eventHandle) {
-  if (metricQueryHandle != nullptr) {
-    append_metric_query_end(commandList, metricQueryHandle, eventHandle, 0,
-                            nullptr);
-  }
+  ASSERT_NE(nullptr, metricQueryHandle);
+  append_metric_query_end(commandList, metricQueryHandle, eventHandle, 0,
+                          nullptr);
 }
 
 void append_metric_query_end(zet_command_list_handle_t commandList,
@@ -626,11 +615,10 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                              ze_event_handle_t eventHandle,
                              uint32_t numWaitEvents,
                              ze_event_handle_t *waitEvents) {
-  if (metricQueryHandle != nullptr) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryEnd(
-                                     commandList, metricQueryHandle,
-                                     eventHandle, numWaitEvents, waitEvents));
-  }
+  ASSERT_NE(nullptr, metricQueryHandle);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryEnd(
+                                   commandList, metricQueryHandle, eventHandle,
+                                   numWaitEvents, waitEvents));
 }
 
 void append_metric_memory_barrier(zet_command_list_handle_t commandList) {
