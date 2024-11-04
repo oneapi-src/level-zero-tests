@@ -43,3 +43,4 @@ add_lzt_test(
     src/test_init_enum_freq_with_sysman_handle.cpp
     src/main.cpp
     LINK_LIBRARIES level_zero_tests::logging level_zero_tests::utils)
+
