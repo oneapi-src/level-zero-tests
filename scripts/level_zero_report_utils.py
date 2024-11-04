@@ -212,7 +212,7 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "SysMan Frequency"    
     elif (re.search('test_init_sysman', test_binary, re.IGNORECASE)):
         test_feature = "SysMan Init"
-    elif (re.search(' test_init_enum_freq_with', test_binary, re.IGNORECASE)):
+    elif (re.search('test_init_enum_freq_with', test_binary, re.IGNORECASE)):
         test_feature = "SysMan Init"
     elif test_binary == "test_sysman_pci":
         test_feature = "SysMan PCIe"
