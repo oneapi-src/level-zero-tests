@@ -16,8 +16,9 @@
 
 namespace {
 
-TEST(SysmanInitTests,
-     GivenSysmanInitializedFromZesInitAndCoreInitializedWithSysmanFlagWhenzesEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
+TEST(
+    SysmanInitTests,
+    GivenSysmanInitializedFromZesInitAndCoreInitializedWithSysmanFlagWhenzesEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
@@ -31,13 +32,15 @@ TEST(SysmanInitTests,
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&driver_count, drivers.data()));
 
   uint32_t device_count = 0;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zesDeviceGet(drivers[0], &device_count, nullptr));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceGet(drivers[0], &device_count, nullptr));
   std::vector<zes_device_handle_t> devices(device_count);
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zesDeviceGet(drivers[0], &device_count, devices.data()));
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceGet(drivers[0], &device_count, devices.data()));
 
   uint32_t count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumFrequencyDomains(devices[0], &count, nullptr));
-
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zesDeviceEnumFrequencyDomains(devices[0], &count, nullptr));
 }
 
-} //namespace
+} // namespace
