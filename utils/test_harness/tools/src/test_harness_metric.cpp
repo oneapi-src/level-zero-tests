@@ -581,12 +581,13 @@ void metric_streamer_read_data(
   rawDataSize = metricSize;
 }
 
-void activate_metric_groups(ze_device_handle_t device, uint32_t count,
-                            zet_metric_group_handle_t *pMatchedGroupHandle) {
-  ASSERT_NE(nullptr, *pMatchedGroupHandle);
+void activate_metric_groups(
+    ze_device_handle_t device, uint32_t count,
+    zet_metric_group_handle_t *ptr_matched_group_handle) {
+  ASSERT_NE(nullptr, *ptr_matched_group_handle);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetContextActivateMetricGroups(lzt::get_default_context(), device,
-                                           count, pMatchedGroupHandle));
+                                           count, ptr_matched_group_handle));
 }
 
 void deactivate_metric_groups(ze_device_handle_t device) {

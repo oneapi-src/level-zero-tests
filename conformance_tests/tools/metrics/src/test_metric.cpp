@@ -453,10 +453,12 @@ protected:
     metricQueryHandle = lzt::metric_query_create(metricQueryPoolHandle);
   }
   void TearDown() override {
-    ASSERT_NE(nullptr, matchedGroupHandle);
-    lzt::destroy_metric_query(metricQueryHandle);
-    ASSERT_NE(nullptr, metricQueryPoolHandle);
-    lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+    if (metricQueryHandle != nullptr) {
+      lzt::destroy_metric_query(metricQueryHandle);
+    }
+    if (metricQueryPoolHandle != nullptr) {
+      lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+    }
   }
 };
 

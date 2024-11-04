@@ -103,8 +103,9 @@ size_t metric_streamer_read_data_size(
 void metric_streamer_read_data(
     zet_metric_streamer_handle_t metricStreamerHandle,
     std::vector<uint8_t> *metricData);
-void activate_metric_groups(ze_device_handle_t device, uint32_t count,
-                            zet_metric_group_handle_t *matchedGroupHandle);
+void activate_metric_groups(
+    ze_device_handle_t device, uint32_t count,
+    zet_metric_group_handle_t *ptr_matched_group_handle);
 void deactivate_metric_groups(ze_device_handle_t device);
 void append_metric_query_begin(zet_command_list_handle_t commandList,
                                zet_metric_query_handle_t metricQueryHandle);
