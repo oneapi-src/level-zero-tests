@@ -55,8 +55,9 @@ protected:
     event_desc.wait = 0;
     event = lzt::create_event(ep, event_desc);
     EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
-    size_t size = 10000;
-    size_t buff_size = size * sizeof(int);
+
+    uint32_t elems_nb{10000};
+    size_t buff_size{elems_nb * sizeof(int)};
     src_buffer = lzt::allocate_host_memory(buff_size, 1, context);
     dst_buffer = lzt::allocate_host_memory(buff_size, 1, context);
     const int addval = 0x11223344;
@@ -68,7 +69,7 @@ protected:
                                 ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
     kernel = lzt::create_function(module, "profile_add_constant");
     lzt::set_group_size(kernel, 1, 1, 1);
-    ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+    ze_group_count_t args = {elems_nb, 1, 1};
     lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
     lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
     lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
@@ -338,8 +339,9 @@ void RunGivenKernelEventWhenUsingEventToSyncTest(bool is_immediate) {
   event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   ze_event_handle_t event = lzt::create_event(ep, event_desc);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event));
-  size_t size = 10000;
-  size_t buff_size = size * sizeof(int);
+
+  uint32_t elems_nb{10000};
+  size_t buff_size{elems_nb * sizeof(int)};
   void *src_buffer = lzt::allocate_host_memory(buff_size, 1, context);
   void *dst_buffer =
       lzt::allocate_device_memory(buff_size, 8, 0, 0, device, context);
@@ -360,7 +362,7 @@ void RunGivenKernelEventWhenUsingEventToSyncTest(bool is_immediate) {
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "profile_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
-  ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+  ze_group_count_t args = {elems_nb, 1, 1};
   lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
   lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
   lzt::set_argument_value(kernel, 2, sizeof(addval), &addval);
@@ -378,7 +380,7 @@ void RunGivenKernelEventWhenUsingEventToSyncTest(bool is_immediate) {
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
 
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < elems_nb; i++) {
     int value = ((int *)src_buffer)[i];
     ASSERT_EQ(value, addval);
   }
@@ -410,7 +412,6 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
                                         std::vector<ze_device_handle_t> devices,
                                         ze_driver_handle_t driver,
                                         bool is_immediate) {
-  const size_t size = 1000;
   auto device0 = devices[0];
   auto device1 = devices[1];
 
@@ -437,14 +438,18 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
       lzt::create_module(context, device0, "profile_add.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
   auto kernel0 = lzt::create_function(module0, "profile_add_constant");
+  lzt::set_group_size(kernel0, 1, 1, 1);
 
-  ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
-  const int addval = 1;
+  constexpr uint32_t elems_nb{1000};
+  constexpr size_t buff_size{elems_nb * sizeof(int)};
+  constexpr int addval{1};
+  constexpr int alignment{1};
+  ze_group_count_t args = {elems_nb, 1, 1};
 
   void *src_buffer0 =
-      lzt::allocate_shared_memory(size, 1, 0, 0, device0, context);
+      lzt::allocate_shared_memory(buff_size, alignment, 0, 0, device0, context);
   void *dst_buffer0 =
-      lzt::allocate_shared_memory(size, 1, 0, 0, device0, context);
+      lzt::allocate_shared_memory(buff_size, alignment, 0, 0, device0, context);
 
   lzt::set_argument_value(kernel0, 0, sizeof(src_buffer0), &src_buffer0);
   lzt::set_argument_value(kernel0, 1, sizeof(dst_buffer0), &dst_buffer0);
@@ -460,12 +465,12 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   ze_kernel_timestamp_result_t *time_result0 = nullptr;
   time_result0 =
       static_cast<ze_kernel_timestamp_result_t *>(lzt::allocate_shared_memory(
-          sizeof(ze_kernel_timestamp_result_t), 1, 0, 0, device1, context));
+          sizeof(ze_kernel_timestamp_result_t), alignment, 0, 0, device1, context));
 
   ze_kernel_timestamp_result_t *time_result1 = nullptr;
   time_result1 =
       static_cast<ze_kernel_timestamp_result_t *>(lzt::allocate_shared_memory(
-          sizeof(ze_kernel_timestamp_result_t), 1, 0, 0, device1, context));
+          sizeof(ze_kernel_timestamp_result_t), alignment, 0, 0, device1, context));
 
   // Verify kernel timestamp can be queried from other device
   // with accessibility to event
@@ -485,11 +490,12 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
       lzt::create_module(context, device1, "profile_add.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
   auto kernel1 = lzt::create_function(module1, "profile_add_constant");
+  lzt::set_group_size(kernel1, 1, 1, 1);
 
   void *src_buffer1 =
-      lzt::allocate_shared_memory(size, 1, 0, 0, device1, context);
+      lzt::allocate_shared_memory(buff_size, alignment, 0, 0, device1, context);
   void *dst_buffer1 =
-      lzt::allocate_shared_memory(size, 1, 0, 0, device1, context);
+      lzt::allocate_shared_memory(buff_size, alignment, 0, 0, device1, context);
 
   lzt::set_argument_value(kernel1, 0, sizeof(src_buffer1), &src_buffer1);
   lzt::set_argument_value(kernel1, 1, sizeof(dst_buffer1), &dst_buffer1);
@@ -646,7 +652,6 @@ void RunGivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsTest(
   }
 
   auto context = lzt::create_context(driver);
-  const size_t size = 1000;
 
   ze_event_pool_desc_t event_pool_desc = {};
   event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
@@ -668,14 +673,17 @@ void RunGivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsTest(
                                    ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
 
   auto kernel = lzt::create_function(module, "profile_add_constant");
+  lzt::set_group_size(kernel, 1, 1, 1);
 
-  ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+  constexpr uint32_t elems_nb{1000};
+  constexpr size_t buff_size{elems_nb * sizeof(int)};
+  ze_group_count_t args = {elems_nb, 1, 1};
   const int addval = 1;
 
   void *src_buffer =
-      lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+      lzt::allocate_shared_memory(buff_size, 1, 0, 0, device, context);
   void *dst_buffer =
-      lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+      lzt::allocate_shared_memory(buff_size, 1, 0, 0, device, context);
 
   lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);
   lzt::set_argument_value(kernel, 1, sizeof(dst_buffer), &dst_buffer);
@@ -749,7 +757,7 @@ protected:
     event_desc.index = 0;
     event_desc.signal = 0;
     event_desc.wait = 0;
-    size_t buff_size = size * sizeof(int);
+    size_t buff_size{elems_nb * sizeof(int)};
     src_buffer = lzt::allocate_host_memory(buff_size, 1, context);
     dst_buffer = lzt::allocate_host_memory(buff_size, 1, context);
     memset(src_buffer, 0, buff_size);
@@ -782,8 +790,8 @@ protected:
   ze_context_handle_t context = nullptr;
   ze_event_pool_handle_t ep = nullptr;
   ze_event_desc_t event_desc = {};
-  size_t size = 10000;
-  ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+  uint32_t elems_nb{10000};
+  ze_group_count_t args = {elems_nb, 1, 1};
 };
 
 TEST_P(
