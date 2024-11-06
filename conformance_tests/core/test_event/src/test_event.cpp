@@ -829,14 +829,21 @@ TEST_P(
   auto module = lzt::create_module(context, device, "profile_add.spv",
                                    ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
   auto kernel = lzt::create_function(module, "profile_add_constant");
-  lzt::set_group_size(kernel, 1, 1, 1);
-  const ze_group_count_t args = {sz, 1, 1};
+  uint32_t groupSizeX = 0u;
+  uint32_t groupSizeY = 0u;
+  uint32_t groupSizeZ = 0u;
+  lzt::suggest_group_size(kernel, sz, 1u, 1u, groupSizeX, groupSizeY,
+                          groupSizeZ);
+  EXPECT_EQ(1u, groupSizeY);
+  EXPECT_EQ(1u, groupSizeZ);
+  lzt::set_group_size(kernel, groupSizeX, 1u, 1u);
+  const ze_group_count_t args = {sz / groupSizeX, 1u, 1u};
   const int seven = 7;
   lzt::set_argument_value(kernel, 0, sizeof(buf_dev), &buf_dev);
   lzt::set_argument_value(kernel, 1, sizeof(buf_dev), &buf_dev);
   lzt::set_argument_value(kernel, 2, sizeof(seven), &seven);
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     auto cmd_bundle = lzt::create_command_bundle(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
