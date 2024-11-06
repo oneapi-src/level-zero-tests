@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -40,8 +40,7 @@ std::vector<uint8_t> L0Context::load_binary_file(const std::string &file_path) {
   binary_file.resize(length);
   stream.read(reinterpret_cast<char *>(binary_file.data()), length);
   if (verbose)
-    std::cout << "Binary file loaded"
-              << "\n";
+    std::cout << "Binary file loaded\n";
   stream.close();
 
   return binary_file;
@@ -144,6 +143,7 @@ void L0Context::print_ze_device_properties(
             << "\n"
             << " * UUID : " << id << "\n"
             << " * coreClockRate : " << std::dec << props.coreClockRate << "\n"
+            << " * maxMemAllocSize : " << props.maxMemAllocSize << " bytes\n"
             << std::endl;
 }
 
@@ -846,13 +846,21 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
   if (type == TimingMeasurement::BANDWIDTH) {
     if (context.sub_device_count) {
-      SUCCESS_OR_TERMINATE(
-          zeCommandListReset(context.cmd_list[current_sub_device_id]));
+      // This branch is taken when we're running the FLAT device hierarchy and
+      // there are multiple sub-devices per device
+      if (current_sub_device_id == 0) {
+        // This is the beginning of the entire explicit scaling benchmark, reset
+        // all cmdlists for all subdevices just once
+        for (uint32_t i = 0; i < context.sub_device_count; i++) {
+          SUCCESS_OR_TERMINATE(zeCommandListReset(context.cmd_list[i]));
+        }
+      }
     } else {
       SUCCESS_OR_TERMINATE(zeCommandListReset(context.command_list));
     }
 
     if (context.sub_device_count) {
+      // Explicit scaling: warmup on the current subdevice
       if (verbose) {
         std::cout << "current_sub_device_id value is ::"
                   << current_sub_device_id << std::endl;
@@ -864,6 +872,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
         throw std::runtime_error("zeCommandListAppendLaunchKernel failed: " +
                                  std::to_string(result));
       }
+      SUCCESS_OR_TERMINATE(zeCommandListAppendBarrier(
+          context.cmd_list[current_sub_device_id], nullptr, 0, nullptr));
     } else {
       result = zeCommandListAppendLaunchKernel(
           context.command_list, function,
@@ -894,35 +904,45 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
 
     for (uint32_t i = 0; i < warmup_iterations; i++) {
       run_command_queue(context);
+      synchronize_command_queue(context);
+    }
+    if (verbose)
+      std::cout << "Warmup finished\n";
 
-      if (context.sub_device_count) {
-        if (context.sub_device_count == current_sub_device_id + 1) {
-          current_sub_device_id = 0;
-          while (current_sub_device_id < context.sub_device_count) {
-            synchronize_command_queue(context);
-            current_sub_device_id++;
-          }
-          current_sub_device_id = context.sub_device_count - 1;
-        }
-      } else {
-        synchronize_command_queue(context);
+    if (context.sub_device_count) {
+      SUCCESS_OR_TERMINATE(
+          zeCommandListReset(context.cmd_list[current_sub_device_id]));
+      // Append memcpy & barriers to the current cmdlist and execute once
+      // This is required for explicit scaling since we don't do multi-threaded
+      // submission, so long cmdlists are needed to achieve overlap
+      for (uint32_t i = 0; i < iters; i++) {
+        SUCCESS_OR_TERMINATE(zeCommandListAppendLaunchKernel(
+            context.cmd_list[current_sub_device_id], function,
+            &workgroup_info.thread_group_dimensions, nullptr, 0, nullptr));
+        SUCCESS_OR_TERMINATE(zeCommandListAppendBarrier(
+            context.cmd_list[current_sub_device_id], nullptr, 0, nullptr));
       }
+      SUCCESS_OR_TERMINATE(
+          zeCommandListClose(context.cmd_list[current_sub_device_id]));
     }
 
     timer.start();
-    for (uint32_t i = 0; i < iters; i++) {
+    if (context.sub_device_count) {
       run_command_queue(context);
-
-      if (context.sub_device_count) {
-        if (context.sub_device_count == current_sub_device_id + 1) {
-          current_sub_device_id = 0;
-          while (current_sub_device_id < context.sub_device_count) {
-            synchronize_command_queue(context);
-            current_sub_device_id++;
-          }
-          current_sub_device_id = context.sub_device_count - 1;
+      if (context.sub_device_count == current_sub_device_id + 1) {
+        // This is the last subdevice, sync with all subdevices and measure the
+        // time Otherwise we skip synchronization and the callee of this
+        // function proceed to the remaining subdevices
+        current_sub_device_id = 0;
+        while (current_sub_device_id < context.sub_device_count) {
+          synchronize_command_queue(context);
+          current_sub_device_id++;
         }
-      } else {
+        current_sub_device_id = context.sub_device_count - 1;
+      }
+    } else {
+      for (uint32_t i = 0; i < iters; i++) {
+        run_command_queue(context);
         synchronize_command_queue(context);
       }
     }
