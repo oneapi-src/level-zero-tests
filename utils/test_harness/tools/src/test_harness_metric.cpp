@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2024 Intel Corporation
+ * Copyright (C) 2019 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -468,12 +468,10 @@ metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle) {
 }
 
 void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle) {
-  ASSERT_NE(nullptr, metricQueryHandle);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryDestroy(metricQueryHandle));
 }
 
 void reset_metric_query(zet_metric_query_handle_t &metricQueryHandle) {
-  ASSERT_NE(nullptr, metricQueryHandle);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryReset(metricQueryHandle));
 }
 
@@ -581,15 +579,12 @@ void metric_streamer_read_data(
   rawDataSize = metricSize;
 }
 
-void activate_metric_groups(
-    ze_device_handle_t device, uint32_t count,
-    zet_metric_group_handle_t *ptr_matched_group_handle) {
-  ASSERT_NE(nullptr, *ptr_matched_group_handle);
+void activate_metric_groups(ze_device_handle_t device, uint32_t count,
+                            zet_metric_group_handle_t *matchedGroupHandle) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetContextActivateMetricGroups(lzt::get_default_context(), device,
-                                           count, ptr_matched_group_handle));
+                                           count, matchedGroupHandle));
 }
-
 void deactivate_metric_groups(ze_device_handle_t device) {
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetContextActivateMetricGroups(lzt::get_default_context(), device,
@@ -598,7 +593,6 @@ void deactivate_metric_groups(ze_device_handle_t device) {
 
 void append_metric_query_begin(zet_command_list_handle_t commandList,
                                zet_metric_query_handle_t metricQueryHandle) {
-  ASSERT_NE(nullptr, metricQueryHandle);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryBegin(
                                    commandList, metricQueryHandle));
 }
@@ -606,7 +600,6 @@ void append_metric_query_begin(zet_command_list_handle_t commandList,
 void append_metric_query_end(zet_command_list_handle_t commandList,
                              zet_metric_query_handle_t metricQueryHandle,
                              ze_event_handle_t eventHandle) {
-  ASSERT_NE(nullptr, metricQueryHandle);
   append_metric_query_end(commandList, metricQueryHandle, eventHandle, 0,
                           nullptr);
 }
@@ -616,7 +609,6 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                              ze_event_handle_t eventHandle,
                              uint32_t numWaitEvents,
                              ze_event_handle_t *waitEvents) {
-  ASSERT_NE(nullptr, metricQueryHandle);
   EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryEnd(
                                    commandList, metricQueryHandle, eventHandle,
                                    numWaitEvents, waitEvents));
