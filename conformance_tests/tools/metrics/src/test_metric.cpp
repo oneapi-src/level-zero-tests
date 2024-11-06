@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2022 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -432,30 +432,33 @@ TEST_F(
 
 class zetMetricQueryTest : public zetMetricGroupTest {
 protected:
-  zet_metric_query_pool_handle_t metricQueryPoolHandle;
-  zet_metric_query_handle_t metricQueryHandle;
+  zet_metric_query_pool_handle_t metricQueryPoolHandle{};
+  zet_metric_query_handle_t metricQueryHandle{};
 
   std::vector<std::string> groupNameList;
-  zet_metric_group_handle_t matchedGroupHandle;
+  zet_metric_group_handle_t matchedGroupHandle{};
   std::string groupName;
-
-  zetMetricQueryTest() {
-
+  void SetUp() override {
     groupNameList = lzt::get_metric_group_name_list(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+    ASSERT_GT(groupNameList.size(), 0u) << "No query metric groups found";
     groupName = groupNameList[0];
 
     matchedGroupHandle = lzt::find_metric_group(
         device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED);
-    EXPECT_NE(nullptr, matchedGroupHandle);
+    ASSERT_NE(nullptr, matchedGroupHandle);
     metricQueryPoolHandle = lzt::create_metric_query_pool(
         1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE, matchedGroupHandle);
-    EXPECT_NE(nullptr, metricQueryPoolHandle);
+    ASSERT_NE(nullptr, metricQueryPoolHandle);
     metricQueryHandle = lzt::metric_query_create(metricQueryPoolHandle);
   }
   void TearDown() override {
-    lzt::destroy_metric_query(metricQueryHandle);
-    lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+    if (metricQueryHandle != nullptr) {
+      lzt::destroy_metric_query(metricQueryHandle);
+    }
+    if (metricQueryPoolHandle != nullptr) {
+      lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+    }
   }
 };
 
@@ -473,7 +476,6 @@ TEST_F(zetMetricQueryTest,
 TEST_F(
     zetMetricQueryTest,
     GivenOnlyMetricQueryWhenCommandListIsCreatedThenExpectCommandListToExecuteSucessfully) {
-
   zet_command_list_handle_t commandList = lzt::create_command_list();
   lzt::activate_metric_groups(device, 1, &matchedGroupHandle);
   lzt::append_metric_query_begin(commandList, metricQueryHandle);
@@ -535,6 +537,7 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+    ASSERT_GT(metricGroupInfo.size(), 0u) << "No query metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     for (auto groupInfo : metricGroupInfo) {
@@ -629,6 +632,7 @@ void run_test(const ze_device_handle_t &device,
   }
   auto metricGroupInfo = lzt::get_metric_group_info(
       device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+  ASSERT_GT(metricGroupInfo.size(), 0u) << "No query metric groups found";
   metricGroupInfo =
       lzt::optimize_metric_group_info_list(metricGroupInfo, reset ? 1 : 20);
 
@@ -802,8 +806,10 @@ void run_multi_device_query_load_test(
 
   auto metric_group_info_0 = lzt::get_metric_group_info(
       device_0, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true);
+  ASSERT_GT(metric_group_info_0.size(), 0u) << "No query metric groups found";
   auto metric_group_info_1 = lzt::get_metric_group_info(
       device_1, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true);
+  ASSERT_GT(metric_group_info_1.size(), 0u) << "No query metric groups found";
 
   metric_group_info_0 =
       lzt::optimize_metric_group_info_list(metric_group_info_0);
@@ -970,6 +976,7 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+    ASSERT_GT(metricGroupInfo.size(), 0u) << "No query metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo, 1);
 
     for (auto groupInfo : metricGroupInfo) {
