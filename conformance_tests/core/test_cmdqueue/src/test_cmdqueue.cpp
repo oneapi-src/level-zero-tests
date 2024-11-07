@@ -475,7 +475,6 @@ TEST(
       std::vector<ze_command_list_handle_t> cmdlist_compute_lows;
 
       std::vector<void *> buffer_compute_lows;
-      uint32_t index = event_desc.index;
       for (int i = 0; i < num_low_priority_compute_queues; i++) {
         auto cmdqueue_compute_low = lzt::create_command_queue(
             device, static_cast<ze_command_queue_flag_t>(0),
@@ -489,7 +488,7 @@ TEST(
         auto buffer_compute_low = lzt::allocate_shared_memory(buff_size_low);
         buffer_compute_lows.push_back(buffer_compute_low);
 
-        event_desc.index = index++;
+        event_desc.index = i + 1;
         auto event_compute_low = lzt::create_event(ep_time, event_desc);
         event_compute_lows.push_back(event_compute_low);
       }
