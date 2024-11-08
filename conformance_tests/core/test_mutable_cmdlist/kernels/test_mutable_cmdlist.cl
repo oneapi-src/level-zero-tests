@@ -11,9 +11,19 @@ kernel void addValue(global int *inOut, int val) {
   inOut[gId] += val;
 }
 
+kernel void subValue(global int *inOut, int val) {
+  const int gId = get_global_id(0);
+  inOut[gId] -= val;
+}
+
 kernel void mulValue(global int *inOut, int val) {
   const int gId = get_global_id(0);
   inOut[gId] *= val;
+}
+
+kernel void divValue(global int *inOut, int val) {
+  const int gId = get_global_id(0);
+  inOut[gId] /= val;
 }
 
 kernel void testGlobalSizes(global int *inOut,
