@@ -453,7 +453,13 @@ TEST_F(
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
     for (auto power_handle : power_handles) {
-      auto energy_threshold = lzt::get_power_energy_threshold(power_handle);
+      zes_energy_threshold_t energy_threshold = {};
+      auto status =
+          lzt::get_power_energy_threshold(power_handle, &energy_threshold);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_EQ(status, ZE_RESULT_SUCCESS);
       // Aim to receive event for energy threshold after setting energy
       // threshold 25% more than current threshold
       double threshold =
@@ -490,7 +496,13 @@ TEST_F(
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
     for (auto power_handle : power_handles) {
-      auto energy_threshold = lzt::get_power_energy_threshold(power_handle);
+      zes_energy_threshold_t energy_threshold = {};
+      auto status =
+          lzt::get_power_energy_threshold(power_handle, &energy_threshold);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_EQ(status, ZE_RESULT_SUCCESS);
       // Aim to receive event for energy threshold after setting energy
       // threshold 25% more than current threshold
       double threshold =

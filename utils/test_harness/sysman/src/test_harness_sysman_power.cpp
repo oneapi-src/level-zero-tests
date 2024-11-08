@@ -44,29 +44,33 @@ zes_power_properties_t get_power_properties(zes_pwr_handle_t pPowerHandle) {
             zesPowerGetProperties(pPowerHandle, &pProperties));
   return pProperties;
 }
-uint32_t get_power_limit_count(zes_pwr_handle_t hPower) {
-  uint32_t pCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesPowerGetLimitsExt(hPower, &pCount, nullptr));
-  EXPECT_GE(pCount, 0);
-  return pCount;
+ze_result_t get_power_limit_count(zes_pwr_handle_t hPower, uint32_t *pCount) {
+  *pCount = 0;
+  ze_result_t status = zesPowerGetLimitsExt(hPower, pCount, nullptr);  
+  return status;
 }
-std::vector<zes_power_limit_ext_desc_t>
-get_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount) {
-  if (*pCount == 0)
-    *pCount = get_power_limit_count(hPower);
-  std::vector<zes_power_limit_ext_desc_t> p_power_limits_descriptors(*pCount);
-  for (auto desc : p_power_limits_descriptors) {
+ze_result_t
+get_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount,
+    std::vector<zes_power_limit_ext_desc_t> &pPowerLimitsDescriptors) {
+  if (*pCount == 0) {
+    ze_result_t status = get_power_limit_count(hPower, pCount);
+    if (status != ZE_RESULT_SUCCESS) {
+      return status;
+    }
+  }
+  pPowerLimitsDescriptors.resize(*pCount);
+  for (auto desc : pPowerLimitsDescriptors) {
     desc = {ZES_STRUCTURE_TYPE_POWER_LIMIT_EXT_DESC, nullptr};
   }
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
-      zesPowerGetLimitsExt(hPower, pCount, p_power_limits_descriptors.data()));
-  return p_power_limits_descriptors;
+  ze_result_t status =
+      zesPowerGetLimitsExt(hPower, pCount, pPowerLimitsDescriptors.data());  
+  return status;
 }
-void set_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount,
+ze_result_t set_power_limits_ext(zes_pwr_handle_t hPower, uint32_t *pCount,
                           zes_power_limit_ext_desc_t *pSustained) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesPowerSetLimitsExt(hPower, pCount, pSustained));
+  ze_result_t status =
+      zesPowerSetLimitsExt(hPower, pCount, pSustained);  
+  return status;  
 }
 void compare_power_descriptor_structures(
     zes_power_limit_ext_desc_t firstDescriptor,
@@ -85,30 +89,30 @@ void compare_power_descriptor_structures(
             secondDescriptor.limitValueLocked);
   EXPECT_EQ(firstDescriptor.limit, secondDescriptor.limit);
 }
-void get_power_limits(zes_pwr_handle_t pPowerHandle,
+ze_result_t get_power_limits(zes_pwr_handle_t pPowerHandle,
                       zes_power_sustained_limit_t *pSustained,
                       zes_power_burst_limit_t *pBurst,
                       zes_power_peak_limit_t *pPeak) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesPowerGetLimits(pPowerHandle, pSustained, pBurst, pPeak));
+  ze_result_t status =
+      zesPowerGetLimits(pPowerHandle, pSustained, pBurst, pPeak);
+  return status;  
 }
-void set_power_limits(zes_pwr_handle_t pPowerHandle,
+ze_result_t set_power_limits(zes_pwr_handle_t pPowerHandle,
                       zes_power_sustained_limit_t *pSustained,
                       zes_power_burst_limit_t *pBurst,
                       zes_power_peak_limit_t *pPeak) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesPowerSetLimits(pPowerHandle, pSustained, pBurst, pPeak));
+  ze_result_t status =
+      zesPowerSetLimits(pPowerHandle, pSustained, pBurst, pPeak);
+  return status;
 }
 void get_power_energy_counter(zes_pwr_handle_t pPowerHandle,
                               zes_power_energy_counter_t *pEnergy) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesPowerGetEnergyCounter(pPowerHandle, pEnergy));
 }
-zes_energy_threshold_t
-get_power_energy_threshold(zes_pwr_handle_t pPowerHandle) {
-  zes_energy_threshold_t pThreshold = {};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesPowerGetEnergyThreshold(pPowerHandle, &pThreshold));
-  return pThreshold;
+ze_result_t get_power_energy_threshold(zes_pwr_handle_t pPowerHandle,
+                           zes_energy_threshold_t *pThreshold) {
+  ze_result_t status = zesPowerGetEnergyThreshold(pPowerHandle, pThreshold);
+  return status;
 }
 void set_power_energy_threshold(zes_pwr_handle_t pPowerHandle,
                                 double threshold) {

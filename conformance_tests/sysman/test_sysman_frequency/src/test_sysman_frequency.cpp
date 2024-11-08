@@ -569,12 +569,20 @@ TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
         for (auto p_power_handle : p_power_handles) {
           EXPECT_NE(nullptr, p_power_handle);
           zes_power_sustained_limit_t power_sustained_limit_Initial;
-          lzt::get_power_limits(p_power_handle, &power_sustained_limit_Initial,
+          auto status = lzt::get_power_limits(p_power_handle, &power_sustained_limit_Initial,
                                 nullptr, nullptr);
+          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            continue;
+          }
+          EXPECT_EQ(status, ZE_RESULT_SUCCESS);
           zes_power_sustained_limit_t power_sustained_limit_set;
           power_sustained_limit_set.power = 0;
-          lzt::set_power_limits(p_power_handle, &power_sustained_limit_set,
+          status = lzt::set_power_limits(p_power_handle, &power_sustained_limit_set,
                                 nullptr, nullptr);
+          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            continue;
+          }
+          EXPECT_EQ(status, ZE_RESULT_SUCCESS);
           auto before_throttletime = lzt::get_throttle_time(pfreq_handle);
           zes_freq_throttle_time_t throttletime;
 #ifdef USE_ZESINIT
@@ -596,8 +604,12 @@ TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
                     after_throttletime.throttleTime);
           EXPECT_NE(before_throttletime.timestamp,
                     after_throttletime.timestamp);
-          lzt::set_power_limits(p_power_handle, &power_sustained_limit_Initial,
+          status = lzt::set_power_limits(p_power_handle, &power_sustained_limit_Initial,
                                 nullptr, nullptr);
+          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            continue;
+          }
+          EXPECT_EQ(status, ZE_RESULT_SUCCESS);
         }
       }
     }
