@@ -180,7 +180,7 @@ bool check_metric_type_ip(zet_metric_group_handle_t metricGroupHandle,
     MetricProp.pNext = nullptr;
     EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGetProperties(metric, &MetricProp));
 
-    if (MetricProp.metricType == ZET_METRIC_TYPE_IP_EXP && !includeExpFeature) {
+    if (MetricProp.metricType == ZET_METRIC_TYPE_IP && !includeExpFeature) {
       return true;
     }
   }
@@ -284,7 +284,7 @@ get_metric_group_info(ze_device_handle_t device,
 
     if (check_metric_type_ip(metricGroupHandle, includeExpFeature)) {
       LOG_WARNING
-          << "Test includes ZET_METRIC_TYPE_IP_EXP Metric Type - Skipped...";
+          << "Test includes ZET_METRIC_TYPE_IP Metric Type - Skipped...";
       continue;
     }
 
@@ -355,7 +355,7 @@ get_metric_group_name_list(ze_device_handle_t device,
     if (check_metric_type_ip(device, strItem, samplingType,
                              includeExpFeature)) {
       LOG_WARNING
-          << "Test includes ZET_METRIC_TYPE_IP_EXP Metric Type - Skipped...";
+          << "Test includes ZET_METRIC_TYPE_IP Metric Type - Skipped...";
       continue;
     }
     groupPropName.push_back(strItem);
@@ -847,7 +847,7 @@ bool verify_metric_type(zet_metric_type_t metric_type) {
   case zet_metric_type_t::ZET_METRIC_TYPE_FLAG:
   case zet_metric_type_t::ZET_METRIC_TYPE_RATIO:
   case zet_metric_type_t::ZET_METRIC_TYPE_RAW:
-  case zet_metric_type_t::ZET_METRIC_TYPE_IP_EXP:
+  case zet_metric_type_t::ZET_METRIC_TYPE_IP:
     break;
   default:
     metric_type_is_valid = false;
