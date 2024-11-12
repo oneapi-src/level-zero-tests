@@ -103,7 +103,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenSysmanInitializationDoneUsingZesInitFollowedByZeInitAlongWithSysmanFlagEnabledThenWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
+    GivenSysmanInitializedViaZesInitAndCoreInitializedWithSysmanEnabledWhenEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
@@ -122,7 +122,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenSysmanInitializationDoneUsingZesInitFollowedByZeInitAlongWithSysmanFlagEnabledThenWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithCoreHandleThenUninitializedErrorIsReturned) {
+    GivenSysmanInitializedViaZesInitAndCoreInitializedWithSysmanEnabledWhenEnumFrequencyDomainsIsCalledWithCoreHandleThenUninitializedErrorIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
@@ -142,7 +142,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenCoreInitializedFirstWithSysmanFlagEnabledWhenSysmanInitializedViaZesInitThenUninitializedErrorIsReturned) {
+    GivenCoreInitializedWithSysmanEnabledWhenSysmanInitializedViaZesInitThenUninitializedErrorIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
@@ -152,7 +152,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenSysmanInitializedFirstViaZesInitAndCoreInitializedNextWithSysmanFlagEnabledWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithCoreToSysmanMappedHandleThenSuccessIsReturned) {
+    GivenSysmanInitializedViaZesInitAndCoreInitializedWithSysmanEnabledWhenEnumFrequencyDomainsIsCalledWithCoreToSysmanMappedHandleThenSuccessIsReturned) {
 
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
@@ -178,6 +178,7 @@ TEST(
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDriverGetDeviceByUuidExp(
                                    zes_drivers[0], uuid, &sysman_device_handle,
                                    &on_subdevice, &subdevice_id));
+  ASSERT_NE(sysman_device_handle, nullptr);
 
   uint32_t count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumFrequencyDomains(
@@ -186,7 +187,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenSysmanInitializationDoneUsingZesInitFollowedByZeInitAlongWithSysmanFlagDisabledThenWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithCoreHandleThenUninitializedErrorIsReturned) {
+    GivenSysmanInitializedViaZesInitAndCoreInitializedWithSysmanDisabledWhenEnumFrequencyDomainsIsCalledWithCoreHandleThenUninitializedErrorIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
   putenv(sys_env);
 
@@ -206,7 +207,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenSysmanInitializationDoneUsingZesInitFollowedByZeInitAlongWithSysmanFlagDisabledThenWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
+    GivenSysmanInitializedViaZesInitAndCoreInitializedWithSysmanDisabledWhenEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
   putenv(sys_env);
 
@@ -225,7 +226,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenCoreInitializedFirstWithSysmanFlagDisabledFollowedBySysManInitializedViaZesInitWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
+    GivenCoreInitializedWithSysmanDisabledAndSysmanInitializedViaZesInitWhenEnumFrequencyDomainsIsCalledWithSysmanHandleThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
   putenv(sys_env);
 
@@ -244,7 +245,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenCoreInitializedWithSysmanFlagDisabledAndSysmanInitializationDoneUsingZesInitWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithCoreHandleThenUninitializedErrorIsReturned) {
+    GivenCoreInitializedWithSysmanDisabledAndSysmanInitializedViaZesInitWhenEnumFrequencyDomainsIsCalledWithCoreHandleThenUninitializedErrorIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
   putenv(sys_env);
 
@@ -264,7 +265,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenSysmanInitializationDoneUsingZesInitFollowedByZeInitAlongWithSysmanFlagDisabledWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithCoreToSysmanMappedHandleThenSuccessIsReturned) {
+    GivenSysmanInitializationDoneViaZesInitAndCoreInitializedWithSysmanDisabledWhenEnumFrequencyDomainsIsCalledWithCoreToSysmanMappedHandleThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
   putenv(sys_env);
 
@@ -289,6 +290,7 @@ TEST(
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDriverGetDeviceByUuidExp(
                                    zes_drivers[0], uuid, &sysman_device_handle,
                                    &on_subdevice, &subdevice_id));
+  ASSERT_NE(sysman_device_handle, nullptr);
 
   uint32_t count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumFrequencyDomains(
@@ -297,7 +299,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenCoreInitializedFirstwithSysmanFlagDisabledAndSysmanInitializationDoneUsingZesInitWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithCoreToSysmanMappedHandleThenSuccessIsReturned) {
+    GivenCoreInitializedWithSysmanDisabledAndSysmanInitializedViaZesInitWhenEnumFrequencyDomainsIsCalledWithCoreToSysmanMappedHandleThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
   putenv(sys_env);
 
@@ -322,6 +324,7 @@ TEST(
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDriverGetDeviceByUuidExp(
                                    zes_drivers[0], uuid, &sysman_device_handle,
                                    &on_subdevice, &subdevice_id));
+  ASSERT_NE(sysman_device_handle, nullptr);
 
   uint32_t count = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumFrequencyDomains(
@@ -330,7 +333,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenSysmanInitializedFromZesInitAndCoreInitializedWithSysmanFlagEnabledWhenSysmanApiAreCalledWithCoreHandleThenUninitializedErrorIsReturned) {
+    GivenSysmanInitializedViaZesInitAndCoreInitializedWithSysmanEnabledWhenSysmanApiAreCalledWithCoreHandleThenUninitializedErrorIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
