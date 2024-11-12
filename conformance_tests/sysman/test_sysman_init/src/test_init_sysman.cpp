@@ -59,6 +59,179 @@ get_zes_devices(zes_driver_handle_t zes_driver) {
   return zes_devices;
 }
 
+void validate_sysman_api(zes_device_handle_t zes_device,
+                         ze_result_t expected_result) {
+  uint32_t count = 0;
+  ze_bool_t bool_false{};
+  zes_device_handle_t device_handle{};
+  zes_uuid_t uuid{};
+  zes_device_properties_t properties{};
+  zes_device_state_t state{};
+  zes_pci_properties_t pci_properties{};
+  zes_pci_state_t pci_state{};
+  zes_pci_stats_t pci_stats{};
+  zes_overclock_mode_t overclock_mode = ZES_OVERCLOCK_MODE_MODE_OFF;
+  zes_pending_action_t pending_action = ZES_PENDING_ACTION_PENDING_NONE;
+  zes_pwr_handle_t power_handle{};
+  zes_device_ecc_properties_t ecc_properties{};
+  const zes_device_ecc_desc_t ecc_state{};
+  zes_fabric_port_handle_t fabric_port{};
+  zes_fabric_port_throughput_t *fabric_throughput{};
+  std::vector<zes_event_type_flags_t> event_type{};
+  ze_result_t result{};
+
+  result = zesDeviceGetProperties(zes_device, &properties);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceGetState(zes_device, &state);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceProcessesGetState(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDevicePciGetProperties(zes_device, &pci_properties);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDevicePciGetState(zes_device, &pci_state);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDevicePciGetBars(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDevicePciGetStats(zes_device, &pci_stats);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceSetOverclockWaiver(zes_device);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceGetOverclockDomains(zes_device, &count);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceGetOverclockControls(zes_device, ZES_OVERCLOCK_DOMAIN_CARD,
+                                         &count);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceResetOverclockSettings(zes_device, false);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result =
+      zesDeviceReadOverclockState(zes_device, &overclock_mode, &bool_false,
+                                  &bool_false, &pending_action, &bool_false);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumOverclockDomains(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumDiagnosticTestSuites(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEccAvailable(zes_device, &bool_false);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEccConfigurable(zes_device, &bool_false);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceGetEccState(zes_device, &ecc_properties);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceSetEccState(zes_device, &ecc_state, &ecc_properties);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumEngineGroups(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result =
+      zesDeviceEventRegister(zes_device, ZES_EVENT_TYPE_FLAG_DEVICE_DETACH);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumFabricPorts(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  if (count > 0) {
+    result = zesFabricPortGetMultiPortThroughput(
+        zes_device, count, &fabric_port, &fabric_throughput);
+    EXPECT_TRUE(result == expected_result ||
+                result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+  }
+
+  result = zesDeviceEnumFans(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumFirmwares(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumFrequencyDomains(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumLeds(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumMemoryModules(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumPerformanceFactorDomains(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumPowerDomains(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceGetCardPowerDomain(zes_device, &power_handle);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumPsus(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumRasErrorSets(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumSchedulers(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumStandbyDomains(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceEnumTemperatureSensors(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+
+  result = zesDeviceGetSubDevicePropertiesExp(zes_device, &count, nullptr);
+  EXPECT_TRUE(result == expected_result ||
+              result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+}
+
 TEST(SysmanInitTests,
      GivenCoreNotInitializedWhenSysmanInitializedThenzesDriverGetWorks) {
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
@@ -344,84 +517,40 @@ TEST(
   std::vector<ze_device_handle_t> ze_devices = get_ze_devices(ze_drivers[0]);
   ASSERT_FALSE(ze_devices.empty());
 
-  uint32_t count = 0;
-  ze_bool_t bool_false{};
-  zes_device_handle_t device_handle{};
-  zes_uuid_t uuid{};
-  zes_device_properties_t properties{};
-  zes_device_state_t state{};
-  zes_reset_properties_t reset_properties{};
-  zes_pci_properties_t pci_properties{};
-  zes_pci_state_t pci_state{};
-  zes_pci_stats_t pci_stats{};
-  zes_device_ecc_properties_t ecc_properties{};
-  const zes_device_ecc_desc_t ecc_state{};
-  zes_fabric_port_handle_t fabric_port{};
-  zes_fabric_port_throughput_t *fabric_throughput{};
-  std::vector<zes_event_type_flags_t> event_type{};
+  validate_sysman_api(static_cast<zes_device_handle_t>(ze_devices[0]),
+                      ZE_RESULT_ERROR_UNINITIALIZED);
+}
 
-  zes_device_handle_t zes_device =
-      static_cast<zes_device_handle_t>(ze_devices[0]);
+TEST(
+    SysmanInitTests,
+    GivenSysmanInitializedViaZesInitAndCoreInitializedWithSysmanEnabledWhenSysmanApiAreCalledWithCoreToSysmanMappedHandleThenSuccessIsReturned) {
+  static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
+  putenv(sys_env);
 
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceGetProperties(zes_device, &properties));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceGetState(zes_device, &state));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zesDeviceReset(zes_device, false));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceResetExt(zes_device, &reset_properties));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceProcessesGetState(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDevicePciGetProperties(zes_device, &pci_properties));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDevicePciGetState(zes_device, &pci_state));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDevicePciGetBars(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDevicePciGetStats(zes_device, &pci_stats));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumDiagnosticTestSuites(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEccAvailable(zes_device, &bool_false));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEccConfigurable(zes_device, &bool_false));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceGetEccState(zes_device, &ecc_properties));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceSetEccState(zes_device, &ecc_state, &ecc_properties));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumEngineGroups(zes_device, &count, nullptr));
-  EXPECT_EQ(
-      ZE_RESULT_ERROR_UNINITIALIZED,
-      zesDeviceEventRegister(zes_device, ZES_EVENT_TYPE_FLAG_DEVICE_DETACH));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumFabricPorts(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesFabricPortGetMultiPortThroughput(zes_device, count, &fabric_port,
-                                                &fabric_throughput));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumFans(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumFirmwares(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumFrequencyDomains(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumMemoryModules(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumPerformanceFactorDomains(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumPowerDomains(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumRasErrorSets(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumSchedulers(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumStandbyDomains(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumTemperatureSensors(zes_device, &count, nullptr));
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceGetSubDevicePropertiesExp(zes_device, &count, nullptr));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+
+  std::vector<ze_driver_handle_t> ze_drivers = get_ze_drivers();
+  std::vector<ze_device_handle_t> ze_devices = get_ze_devices(ze_drivers[0]);
+  ASSERT_FALSE(ze_devices.empty());
+
+  ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetProperties(ze_devices[0], &properties));
+
+  zes_uuid_t uuid = {};
+  memcpy(uuid.id, properties.uuid.id, ZE_MAX_DEVICE_UUID_SIZE);
+  std::vector<zes_driver_handle_t> zes_drivers = get_zes_drivers();
+
+  zes_device_handle_t sysman_device_handle{};
+  ze_bool_t on_subdevice = false;
+  uint32_t subdevice_id = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDriverGetDeviceByUuidExp(
+                                   zes_drivers[0], uuid, &sysman_device_handle,
+                                   &on_subdevice, &subdevice_id));
+  ASSERT_NE(sysman_device_handle, nullptr);
+
+  validate_sysman_api(sysman_device_handle, ZE_RESULT_SUCCESS);
 }
 
 } // namespace
