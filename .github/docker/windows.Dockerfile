@@ -34,7 +34,7 @@ RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
     iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 SHELL ["cmd", "/S", "/C"]
-RUN call "%ProgramFiles(x86)%\Microsoft Visual Studio\current\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && `
+RUN call "%ProgramFiles(x86)%\Microsoft Visual Studio\%VS_VERSION%\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && `
     powershell -command "[Environment]::SetEnvironmentVariable('Path', $env:Path, [System.EnvironmentVariableTarget]::Machine)"
 RUN choco feature disable --name showDownloadProgress && `
     choco install -y --fail-on-error-output git -params '"/GitAndUnixToolsOnPath"' && `
