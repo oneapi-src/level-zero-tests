@@ -32,9 +32,15 @@ private:
 
 void initialize_core();
 ze_device_handle_t get_root_device(ze_device_handle_t device);
+uint32_t get_zes_device_count();
+uint32_t get_zes_device_count(zes_driver_handle_t driver);
+std::vector<zes_device_handle_t> get_zes_devices();
+std::vector<zes_device_handle_t> get_zes_devices(uint32_t count);
+std::vector<zes_device_handle_t> get_zes_devices(zes_driver_handle_t driver);
+std::vector<zes_device_handle_t> get_zes_devices(uint32_t count,
+                                                 zes_driver_handle_t driver);
 uint32_t get_ze_device_count();
 uint32_t get_ze_device_count(ze_driver_handle_t driver);
-std::vector<zes_device_handle_t> get_zes_devices();
 std::vector<ze_device_handle_t> get_ze_devices();
 std::vector<ze_device_handle_t> get_ze_devices(uint32_t count);
 std::vector<ze_device_handle_t> get_ze_devices(ze_driver_handle_t driver);

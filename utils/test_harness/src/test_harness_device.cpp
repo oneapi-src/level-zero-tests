@@ -56,6 +56,10 @@ uint32_t get_zes_device_count() {
   return get_zes_device_count(lzt::get_default_zes_driver());
 }
 
+std::vector<zes_device_handle_t> get_zes_devices(zes_driver_handle_t driver) {
+  return get_zes_devices(get_zes_device_count(driver), driver);
+}
+
 std::vector<zes_device_handle_t> get_zes_devices(uint32_t count,
                                                  zes_driver_handle_t driver) {
   uint32_t count_out = count;
