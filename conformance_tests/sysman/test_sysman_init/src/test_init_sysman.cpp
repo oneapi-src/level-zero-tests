@@ -615,7 +615,7 @@ TEST(
   if (new_platform) {
     count = 0;
     ze_result_t result =
-        zesDeviceEnumFrequencyDomains(zes_devices[0], &count, nullptr);
+        zesDeviceEnumFrequencyDomains(ze_devices[0], &count, nullptr);
     if (result == ZE_RESULT_SUCCESS) {
       ASSERT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zesInit(0));
     }
