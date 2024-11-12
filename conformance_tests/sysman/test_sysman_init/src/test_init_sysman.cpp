@@ -319,7 +319,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenZesInitAndzeInitWithSysmanEnabledWhenSysmanApiIsCalledWithCoreToSysmanMappedDeviceThenSuccessIsReturned) {
+    GivenZesInitAndZeInitWithSysmanEnabledWhenSysmanApiIsCalledWithCoreToSysmanMappedDeviceThenSuccessIsReturned) {
 
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
@@ -482,7 +482,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenZeInitWithSysmanDisabledAndZesInitWhenSysmanApiIsCalledWithCoreToSysmanMappedHandleThenSuccessIsReturned) {
+    GivenZeInitWithSysmanDisabledAndZesInitWhenSysmanApiIsCalledWithCoreToSysmanMappedDeviceThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
   putenv(sys_env);
 
