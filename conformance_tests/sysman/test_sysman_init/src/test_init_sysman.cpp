@@ -324,28 +324,32 @@ TEST(
   putenv(sys_env);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+  ze_result_t init_result = zesInit(0);
 
   std::vector<ze_driver_handle_t> ze_drivers = get_ze_drivers();
   std::vector<ze_device_handle_t> ze_devices = get_ze_devices(ze_drivers[0]);
   ASSERT_FALSE(ze_devices.empty());
 
   uint32_t count = 0;
-  ze_result_t result = zesDeviceEnumFrequencyDomains(
+  ze_result_t enum_result = zesDeviceEnumFrequencyDomains(
       static_cast<zes_device_handle_t>(ze_devices[0]), &count, nullptr);
 
-  if (result == ZE_RESULT_SUCCESS) {
-    ASSERT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zesInit(0));
-  } else if (result == ZE_RESULT_ERROR_UNINITIALIZED) {
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
+  if (init_result == ZE_RESULT_SUCCESS) {
+    EXPECT_EQ(enum_result, ZE_RESULT_ERROR_UNINITIALIZED);
     std::vector<zes_driver_handle_t> zes_drivers = get_zes_drivers();
     std::vector<zes_device_handle_t> zes_devices =
         get_zes_devices(zes_drivers[0]);
     ASSERT_FALSE(zes_devices.empty());
+
     count = 0;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zesDeviceEnumFrequencyDomains(zes_devices[0], &count, nullptr));
+    LOG_INFO << "zesInit is Successful... ";
+  } else if (init_result == ZE_RESULT_ERROR_UNINITIALIZED) {
+    EXPECT_EQ(enum_result, ZE_RESULT_SUCCESS);
+    LOG_INFO << "Legacy Init is Successful... ";
   } else {
-    FAIL() << "Enum Frequency Domain Fails With Error Code : " << result;
+    FAIL() << "zesInit failed with error code : " << init_result;
   }
 }
 
@@ -581,7 +585,7 @@ TEST(
 
 TEST(
     SysmanInitTests,
-    GivenLegacySysmanInitializedWhenEnableSysmanFlagIsResetOnNewPlatformAndZesInitIsCalledThenSuccessIsReturned) {
+    GivenLegacySysmanInitializedWhenZesInitIsCalledThenSuccessIsReturnedOnNewPlatforms) {
   char sysman_env_enable[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sysman_env_enable);
 
@@ -613,16 +617,6 @@ TEST(
   }
 
   if (new_platform) {
-    count = 0;
-    ze_result_t result =
-        zesDeviceEnumFrequencyDomains(ze_devices[0], &count, nullptr);
-    if (result == ZE_RESULT_SUCCESS) {
-      ASSERT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zesInit(0));
-    }
-
-    char sysman_env_disable[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(sysman_env_disable);
-
     ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
 
     std::vector<zes_driver_handle_t> zes_drivers = get_zes_drivers();
@@ -633,10 +627,17 @@ TEST(
     count = 0;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zesDeviceEnumFrequencyDomains(zes_devices[0], &count, nullptr));
+
+    count = 0;
+    EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
+              zesDeviceEnumFrequencyDomains(ze_devices[0], &count, nullptr));
+    LOG_INFO << "zesInit is Successful... ";
   } else {
     count = 0;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zesDeviceEnumFrequencyDomains(ze_devices[0], &count, nullptr));
+    ASSERT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zesInit(0));
+    LOG_INFO << "Legacy Init is Successful... ";
   }
 }
 
