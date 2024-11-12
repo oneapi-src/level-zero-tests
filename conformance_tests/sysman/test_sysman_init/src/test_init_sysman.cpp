@@ -609,6 +609,8 @@ TEST(SysmanInitTests, GivenValidDeviceWhenCallingInitThenSuccessIsReturned) {
   }
 
   if (new_platform) {
+    ASSERT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zesInit(0));
+
     char sysman_env_disable[] = "ZES_ENABLE_SYSMAN=0";
     putenv(sysman_env_disable);
 
