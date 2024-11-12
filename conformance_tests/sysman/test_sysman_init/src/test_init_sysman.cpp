@@ -579,4 +579,54 @@ TEST(
   validate_sysman_api(sysman_device_handle, ZE_RESULT_SUCCESS);
 }
 
+TEST(SysmanInitTests, GivenValidDeviceWhenCallingInitThenSuccessIsReturned) {
+  static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
+  putenv(sys_env);
+
+  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+
+  std::vector<ze_driver_handle_t> ze_drivers = get_ze_drivers();
+  std::vector<ze_device_handle_t> ze_devices = get_ze_devices(ze_drivers[0]);
+  ASSERT_FALSE(ze_devices.empty());
+
+  ze_device_properties_t properties = {};
+  ze_device_ip_version_ext_t ip_version_ext{};
+  properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+  properties.pNext = &ip_version_ext;
+  ip_version_ext.stype = ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT;
+  ip_version_ext.pNext = nullptr;
+
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetProperties(ze_devices[0], &properties));
+
+  bool new_platform = false;
+  if (properties.type == ZE_DEVICE_TYPE_GPU && properties.vendorId == 0x8086) {
+    ze_device_ip_version_ext_t *ip_version =
+        static_cast<ze_device_ip_version_ext_t *>(properties.pNext);
+    if (ip_version->ipVersion >= 0x05004000) {
+      new_platform = true;
+    }
+  }
+
+  if (new_platform) {
+    static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
+    putenv(sys_env);
+
+    ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
+
+    std::vector<zes_driver_handle_t> zes_drivers = get_zes_drivers();
+    std::vector<zes_device_handle_t> zes_devices =
+        get_zes_devices(zes_drivers[0]);
+    ASSERT_FALSE(zes_devices.empty());
+
+    uint32_t count = 0;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zesDeviceEnumFrequencyDomains(zes_devices[0], &count, nullptr));
+  } else {
+    uint32_t count = 0;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zesDeviceEnumFrequencyDomains(ze_devices[0], &count, nullptr));
+  }
+}
+
 } // namespace
