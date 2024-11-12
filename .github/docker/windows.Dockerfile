@@ -25,9 +25,8 @@ RUN (start /w vs_buildtools.exe --quiet --wait --norestart --nocache `
         --add Microsoft.VisualStudio.Component.VC.Runtimes.x86.x64.Spectre `
         || IF "%ERRORLEVEL%"=="3010" EXIT 0) `
     && del /q vs_buildtools.exe `
-    && mklink /d "C:\Program Files (x86)\Microsoft Visual Studio\current" "C:\Program Files (x86)\Microsoft Visual Studio\%VS_VERSION%" `
-    && if not exist "C:\Program Files (x86)\Microsoft Visual Studio\%VS_VERSION%\BuildTools\Common7\Tools\VsDevCmd.bat" exit 1
-ENTRYPOINT ["C:\\Program Files (x86)\\Microsoft Visual Studio\\current\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&"]
+    && if not exist "C:\Program Files (x86)\Microsoft Visual Studio\%VS_VERSION%\BuildTools\VC\Auxiliary\Build\vcvars64.bat" exit 1
+ENTRYPOINT ["C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&"]
 
 SHELL ["powershell"]
 ENV chocolateyUseWindowsCompression false
