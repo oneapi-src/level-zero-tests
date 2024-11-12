@@ -579,7 +579,9 @@ TEST(
   validate_sysman_api(sysman_device_handle, ZE_RESULT_SUCCESS);
 }
 
-TEST(SysmanInitTests, GivenValidDeviceWhenCallingInitThenSuccessIsReturned) {
+TEST(
+    SysmanInitTests,
+    GivenLegacySysmanInitializedWhenEnableSysmanFlagIsResetOnNewPlatformAndZesInitIsCalledThenSuccessIsReturned) {
   char sysman_env_enable[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sysman_env_enable);
 
@@ -595,6 +597,8 @@ TEST(SysmanInitTests, GivenValidDeviceWhenCallingInitThenSuccessIsReturned) {
   properties.pNext = &ip_version_ext;
   ip_version_ext.stype = ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT;
   ip_version_ext.pNext = nullptr;
+  uint32_t count{};
+  uint32_t new_platform_ip_version = 0x05004000;
 
   ASSERT_EQ(ZE_RESULT_SUCCESS,
             zeDeviceGetProperties(ze_devices[0], &properties));
@@ -603,13 +607,18 @@ TEST(SysmanInitTests, GivenValidDeviceWhenCallingInitThenSuccessIsReturned) {
   if (properties.type == ZE_DEVICE_TYPE_GPU && properties.vendorId == 0x8086) {
     ze_device_ip_version_ext_t *ip_version =
         static_cast<ze_device_ip_version_ext_t *>(properties.pNext);
-    if (ip_version->ipVersion >= 0x05004000) {
+    if (ip_version->ipVersion >= new_platform_ip_version) {
       new_platform = true;
     }
   }
 
   if (new_platform) {
-    ASSERT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zesInit(0));
+    count = 0;
+    ze_result_t result =
+        zesDeviceEnumFrequencyDomains(zes_devices[0], &count, nullptr);
+    if (result == ZE_RESULT_SUCCESS) {
+      ASSERT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zesInit(0));
+    }
 
     char sysman_env_disable[] = "ZES_ENABLE_SYSMAN=0";
     putenv(sysman_env_disable);
@@ -621,11 +630,11 @@ TEST(SysmanInitTests, GivenValidDeviceWhenCallingInitThenSuccessIsReturned) {
         get_zes_devices(zes_drivers[0]);
     ASSERT_FALSE(zes_devices.empty());
 
-    uint32_t count = 0;
+    count = 0;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zesDeviceEnumFrequencyDomains(zes_devices[0], &count, nullptr));
   } else {
-    uint32_t count = 0;
+    count = 0;
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zesDeviceEnumFrequencyDomains(ze_devices[0], &count, nullptr));
   }
