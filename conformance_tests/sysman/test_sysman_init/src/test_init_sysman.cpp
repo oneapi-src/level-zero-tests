@@ -580,8 +580,8 @@ TEST(
 }
 
 TEST(SysmanInitTests, GivenValidDeviceWhenCallingInitThenSuccessIsReturned) {
-  static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
-  putenv(sys_env);
+  char sysman_env_enable[] = "ZES_ENABLE_SYSMAN=1";
+  putenv(sysman_env_enable);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
 
@@ -609,8 +609,8 @@ TEST(SysmanInitTests, GivenValidDeviceWhenCallingInitThenSuccessIsReturned) {
   }
 
   if (new_platform) {
-    static char sys_env[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(sys_env);
+    char sysman_env_disable[] = "ZES_ENABLE_SYSMAN=0";
+    putenv(sysman_env_disable);
 
     ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
 
