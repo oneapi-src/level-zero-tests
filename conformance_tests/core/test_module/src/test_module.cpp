@@ -349,8 +349,9 @@ TEST_F(
   RunGivenValidSpecConstantsWhenCreatingModuleTest(true);
 }
 
-void zeModuleCreateTests::RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(
-bool is_immediate) {
+void zeModuleCreateTests::
+    RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(
+        bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
   uint32_t spec_constants_num = 4;
@@ -358,10 +359,11 @@ bool is_immediate) {
   const uint64_t *spec_constants_values[] = {&val_1, &val_2, &val_3, &val_4};
   uint32_t spec_constants_ids[] = {0, 1, 2, 3};
   ze_module_constants_t spec_constants{spec_constants_num, spec_constants_ids,
-                                      (const void **)spec_constants_values};
+                                       (const void **)spec_constants_values};
 
   const std::string filename = "spec_constant_composite.spv";
-  const std::vector<uint8_t> binary_file = level_zero_tests::load_binary_file(filename);
+  const std::vector<uint8_t> binary_file =
+      level_zero_tests::load_binary_file(filename);
 
   ze_module_desc_t module_description = {};
   module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
@@ -374,11 +376,14 @@ bool is_immediate) {
   ze_module_handle_t module_spec;
   ze_module_build_log_handle_t build_log = nullptr;
   ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleCreate(lzt::get_default_context(), device, &module_description, &module_spec, &build_log));
-  void* buff_spec = lzt::allocate_host_memory(sizeof(uint64_t) * spec_constants_num);
+            zeModuleCreate(lzt::get_default_context(), device,
+                           &module_description, &module_spec, &build_log));
+  void *buff_spec =
+      lzt::allocate_host_memory(sizeof(uint64_t) * spec_constants_num);
   const std::string kernel_name = "test";
-  lzt::create_and_execute_function(device, module_spec, kernel_name, 1, buff_spec, is_immediate);
-  uint64_t* output = static_cast<uint64_t *>(buff_spec);
+  lzt::create_and_execute_function(device, module_spec, kernel_name, 1,
+                                   buff_spec, is_immediate);
+  uint64_t *output = static_cast<uint64_t *>(buff_spec);
 
   for (int i = 0; i < spec_constants_num; i++) {
     int expected = (i + 1) * 11 + 1;
@@ -1209,21 +1214,25 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   LOG_DEBUG << "Total available memory: " << total_mem;
   LOG_DEBUG << "Max Mem alloc size: " << device_properties.maxMemAllocSize;
 
-  if (device_properties.maxMemAllocSize >= mem_properties[0].totalSize) {
+  if (device_properties.maxMemAllocSize > mem_properties[0].totalSize) {
     GTEST_SKIP()
-        << "Device max memory allocation size is equal to or greater than "
-           "total memory, "
+        << "Device max memory allocation size is greater than total memory, "
            "skipping test";
   }
   size_t difference =
       mem_properties[0].totalSize - device_properties.maxMemAllocSize;
   LOG_DEBUG << "Difference between total memory and max mem alloc size: "
             << difference;
-  head = std::min(difference, head);
+  size_t size = 0;
+  if (difference == 0) {
+    size = device_properties.maxMemAllocSize;
+  } else {
+    head = std::min(difference, head);
+    size = std::max(static_cast<uint64_t>(1UL << 32) /*4 GiB*/,
+                    device_properties.maxMemAllocSize) +
+           head;
+  }
   auto validation_buffer_size = head;
-  auto size = std::max(4000000000UL /*4 gigabytes*/,
-                       (unsigned long)device_properties.maxMemAllocSize) +
-              head;
 
   LOG_DEBUG << "Request device memory allocation size: " << size;
 
