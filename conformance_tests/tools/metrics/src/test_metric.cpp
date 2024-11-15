@@ -2032,7 +2032,7 @@ TEST(
                          ZE_EVENT_SCOPE_FLAG_HOST);
 
   uint32_t notifyEveryNReports = 3000;
-  uint32_t samplingPeriod = 1000000;
+  uint32_t samplingPeriod = 10000;
   zet_metric_streamer_handle_t metricStreamerHandle =
       lzt::metric_streamer_open_for_device(device, groupInfo.metricGroupHandle,
                                            eventHandle, notifyEveryNReports,
@@ -2114,7 +2114,7 @@ TEST(
                          ZE_EVENT_SCOPE_FLAG_HOST);
 
   uint32_t notifyEveryNReports = 3000;
-  uint32_t samplingPeriod = 1000000;
+  uint32_t samplingPeriod = 10000;
   zet_metric_streamer_handle_t metricStreamerHandle =
       lzt::metric_streamer_open_for_device(device, groupInfo.metricGroupHandle,
                                            eventHandle, notifyEveryNReports,
