@@ -86,8 +86,8 @@ void metric_query_get_data(zet_metric_query_handle_t metricQueryHandle,
                            std::vector<uint8_t> *metricData);
 zet_metric_streamer_handle_t metric_streamer_open_for_device(
     ze_device_handle_t device, zet_metric_group_handle_t matchedGroupHandle,
-    ze_event_handle_t eventHandle, uint32_t notifyEveryNReports,
-    uint32_t samplingPeriod);
+    ze_event_handle_t eventHandle, uint32_t &notifyEveryNReports,
+    uint32_t &samplingPeriod);
 zet_metric_streamer_handle_t
 metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
                      ze_event_handle_t eventHandle,
