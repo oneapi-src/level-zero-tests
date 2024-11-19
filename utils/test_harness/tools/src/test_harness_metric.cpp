@@ -530,12 +530,11 @@ zet_metric_streamer_handle_t metric_streamer_open_for_device(
   return metricStreamerHandle;
 }
 
-void commandlist_append_streamer_marker(
+ze_result_t commandlist_append_streamer_marker(
     zet_command_list_handle_t commandList,
     zet_metric_streamer_handle_t metricStreamerHandle, uint32_t tracerMarker) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetCommandListAppendMetricStreamerMarker(
-                commandList, metricStreamerHandle, tracerMarker));
+  return zetCommandListAppendMetricStreamerMarker(
+      commandList, metricStreamerHandle, tracerMarker);
 }
 
 size_t metric_streamer_read_data_size(
