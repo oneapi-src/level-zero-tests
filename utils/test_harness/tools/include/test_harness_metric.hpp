@@ -93,7 +93,7 @@ metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
                      ze_event_handle_t eventHandle,
                      uint32_t notifyEveryNReports, uint32_t samplingPeriod);
 void metric_streamer_close(zet_metric_streamer_handle_t metricStreamerHandle);
-void commandlist_append_streamer_marker(
+ze_result_t commandlist_append_streamer_marker(
     zet_command_list_handle_t commandList,
     zet_metric_streamer_handle_t metricStreamerHandle, uint32_t streamerMarker);
 size_t metric_streamer_read_data_size(
