@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -28,6 +28,7 @@ protected:
   zeCommandQueue cq;
 };
 
+uint32_t getComputeQueueGroupOrdinal(ze_device_handle_t device);
 ze_command_queue_handle_t create_command_queue();
 ze_command_queue_handle_t create_command_queue(ze_device_handle_t device);
 ze_command_queue_handle_t create_command_queue(ze_context_handle_t context,

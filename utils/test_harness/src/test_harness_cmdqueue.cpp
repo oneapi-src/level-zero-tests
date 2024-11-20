@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -13,6 +13,27 @@
 namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
+
+uint32_t getComputeQueueGroupOrdinal(ze_device_handle_t device) {
+  uint32_t numQueueGroups = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCommandQueueGroupProperties(
+                                   device, &numQueueGroups, nullptr));
+  EXPECT_GT(numQueueGroups, 0) << "No queue groups found!";
+  std::vector<ze_command_queue_group_properties_t> queueProperties(
+      numQueueGroups);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetCommandQueueGroupProperties(device, &numQueueGroups,
+                                                   queueProperties.data()));
+  uint32_t computeQueueGroupOrdinal = numQueueGroups;
+  for (uint32_t i = 0; i < numQueueGroups; i++) {
+    if (queueProperties[i].flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
+      computeQueueGroupOrdinal = i;
+      break;
+    }
+  }
+  return computeQueueGroupOrdinal;
+}
 
 ze_command_queue_handle_t create_command_queue() {
   return create_command_queue(zeDevice::get_instance()->get_device());
