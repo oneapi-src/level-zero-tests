@@ -251,11 +251,13 @@ protected:
         ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC};
     ze_command_list_desc_t cmdListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC};
 
-    cmdQueueDesc.ordinal = lzt::getComputeQueueGroupOrdinal(device);
+    cmdQueueDesc.ordinal = lzt::get_compute_queue_group_ordinals(device)[0];
 
     cmdQueueDesc.index = 0;
     cmdQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
+
+    //lzt::create_immediate_command_list()
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeCommandListCreateImmediate(context, device, &cmdQueueDesc,
                                            &command_list_immediate));
@@ -303,7 +305,7 @@ protected:
 
       ze_command_list_handle_t command_list_regular;
       cmdListDesc.commandQueueGroupOrdinal =
-          lzt::getComputeQueueGroupOrdinal(device);
+          lzt::get_compute_queue_group_ordinals(device)[0];
       cmdListDesc.flags = 0;
       EXPECT_EQ(ZE_RESULT_SUCCESS,
                 zeCommandListCreate(context, device, &cmdListDesc,
