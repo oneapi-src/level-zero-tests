@@ -65,7 +65,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_ContextStatusTest_GivenContextCreateWhenUsingValidHandleThenContextGetStatusReturnsSuccess', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_TimestampsTest_GivenExecutedKernelWhenGettingGlobalTimestampsThenDeviceAndHostTimestampDurationsAreClose', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_TimestampsTest_GivenExecutedKernelWhenGettingGlobalTimestampsOnImmediateCmdListThenDeviceAndHostTimestampDurationsAreClose', test_name, re.IGNORECASE)) or \
-                    (re.search('L0_CTS_zeCommandListImmediateAppendCommandListsExpTestsHostSynchronize_GivenCommandListImmediateAppendCommandListsExpAndSyncUsingCommandListHostSynchronizeThenCallSucceeds', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_TestIncreasingNumberCommandListImmediateAppendCommandListsExpWithSynchronize_zeCommandListImmediateAppendCommandListsExpTestsHostSynchronize_GivenCommandListImmediateAppendCommandListsExpAndSyncUsingCommandListHostSynchronizeThenCallSucceeds', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillVerificationTests_GivenHostMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly', test_name, re.IGNORECASE)) or \
