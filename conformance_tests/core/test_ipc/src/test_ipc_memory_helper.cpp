@@ -13,6 +13,7 @@
 #include "net/test_ipc_comm.hpp"
 
 #include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/sync/named_semaphore.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/process.hpp>
 
@@ -115,6 +116,9 @@ int main() {
                              level_zero_tests::to_string(result));
   }
   LOG_INFO << "[Child] Driver initialized\n";
+
+  bipc::named_semaphore semaphore(bipc::open_only, "ipc_memory_test_semaphore");
+  semaphore.post();
 
   shared_data_t shared_data;
   int count = 0;
