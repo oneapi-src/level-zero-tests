@@ -240,33 +240,25 @@ class zeImmediateCommandListAppendCommandListsExpTests
       public ::testing::WithParamInterface<CustomExecuteParams> {
 protected:
   void SetUp() override {
-    ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+
     const ze_driver_handle_t driver = lzt::get_default_driver();
     const ze_context_handle_t context = lzt::get_default_context();
     EXPECT_GT(params.num_command_lists, 0);
 
     print_cmdqueue_exec(params.num_command_lists, params.sync_timeout);
 
-    ze_command_queue_desc_t cmdQueueDesc = {
-        ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC};
-    ze_command_list_desc_t cmdListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC};
+    ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+    auto ordinal = lzt::get_compute_queue_group_ordinals(device)[0];
 
-    cmdQueueDesc.ordinal = lzt::get_compute_queue_group_ordinals(device)[0];
+    command_list_immediate = lzt::create_immediate_command_list(
+        device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+        ordinal);
 
-    cmdQueueDesc.index = 0;
-    cmdQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-
-
-    //lzt::create_immediate_command_list()
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListCreateImmediate(context, device, &cmdQueueDesc,
-                                           &command_list_immediate));
-    EXPECT_NE(nullptr, command_list_immediate);
-
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
-        zeCommandQueueCreate(context, device, &cmdQueueDesc, &command_queue));
-    EXPECT_NE(nullptr, command_queue);
+    command_queue = lzt::create_command_queue(
+        context, device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+        ordinal);
 
     for (uint32_t i = 0; i < buff_size_bytes; i++) {
       verification_buffer[i] = lzt::generate_value<uint8_t>(0, 255, 0);
@@ -274,15 +266,8 @@ protected:
 
     for (uint32_t i = 0; i < params.num_command_lists; i++) {
 
-      void *host_buffer = nullptr;
-      ze_host_mem_alloc_desc_t hostDesc = {};
-      hostDesc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
-      hostDesc.pNext = nullptr;
-      hostDesc.flags = 0;
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeMemAllocHost(context, &hostDesc, buff_size_bytes, 1,
-                               (void **)(&host_buffer)));
-      EXPECT_NE(nullptr, host_buffer);
+      void *host_buffer =
+          lzt::allocate_host_memory(buff_size_bytes, 1, context);
 
       uint8_t *char_input = static_cast<uint8_t *>(host_buffer);
       for (uint32_t j = 0; j < buff_size_bytes; j++) {
@@ -291,44 +276,26 @@ protected:
 
       host_buffers.push_back(static_cast<uint8_t *>(host_buffer));
 
-      void *deive_buffer = nullptr;
-      ze_device_mem_alloc_desc_t deviceDesc = {};
-      deviceDesc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
-      deviceDesc.ordinal = 0;
-      deviceDesc.flags = 0;
-      deviceDesc.pNext = nullptr;
+      void *device_buffer =
+          lzt::allocate_device_memory(buff_size_bytes, buff_size_bytes, 0,
+                                      nullptr, ordinal, device, context);
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeMemAllocDevice(context, &deviceDesc, buff_size_bytes,
-                                 buff_size_bytes, device, &deive_buffer));
-      device_buffers.push_back(static_cast<uint8_t *>(deive_buffer));
+      device_buffers.push_back(static_cast<uint8_t *>(device_buffer));
 
-      ze_command_list_handle_t command_list_regular;
-      cmdListDesc.commandQueueGroupOrdinal =
-          lzt::get_compute_queue_group_ordinals(device)[0];
-      cmdListDesc.flags = 0;
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListCreate(context, device, &cmdListDesc,
-                                    &command_list_regular));
-      EXPECT_NE(nullptr, command_list_regular);
+      ze_command_list_handle_t command_list_regular =
+          lzt::create_command_list(context, device, 0, ordinal);
 
       // Copy from host-allocated to device-allocated memory
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListAppendMemoryCopy(
-                    command_list_regular, deive_buffer, host_buffer,
-                    buff_size_bytes, nullptr, 0, nullptr));
+      lzt::append_memory_copy(command_list_regular, device_buffer, host_buffer,
+                              buff_size_bytes, nullptr);
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListAppendBarrier(command_list_regular, nullptr, 0,
-                                           nullptr));
+      lzt::append_barrier(command_list_regular, nullptr, 0, nullptr);
 
       // Copy from device-allocated memory back to host-allocated memory
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListAppendMemoryCopy(command_list_regular, host_buffer,
-                                              deive_buffer, buff_size_bytes,
-                                              nullptr, 0, nullptr));
+      lzt::append_memory_copy(command_list_regular, host_buffer, device_buffer,
+                              buff_size_bytes, nullptr);
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(command_list_regular));
+      lzt::close_command_list(command_list_regular);
       list_of_command_lists.push_back(command_list_regular);
     }
   }
@@ -339,8 +306,7 @@ protected:
       EXPECT_EQ(
           0, memcmp(host_buffers.at(i), verification_buffer, buff_size_bytes));
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListDestroy(list_of_command_lists.at(i)));
+      lzt::destroy_command_list(list_of_command_lists.at(i));
       lzt::free_memory(host_buffers.at(i));
       lzt::free_memory(device_buffers.at(i));
     }
@@ -367,15 +333,9 @@ TEST_P(
     zeCommandListImmediateAppendCommandListsExpTestsHostSynchronize,
     GivenCommandListImmediateAppendCommandListsExpAndSyncUsingCommandListHostSynchronizeThenCallSucceeds) {
 
-  auto command_lists_initial = list_of_command_lists;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListImmediateAppendCommandListsExp(
-                command_list_immediate, params.num_command_lists,
-                list_of_command_lists.data(), nullptr, 0, nullptr));
-
-  for (int i = 0; i < list_of_command_lists.size(); i++) {
-    ASSERT_EQ(list_of_command_lists[i], command_lists_initial[i]);
-  }
+  lzt::append_command_lists_immediate_exp(command_list_immediate,
+                                          params.num_command_lists,
+                                          list_of_command_lists.data());
 
   ze_result_t sync_status = ZE_RESULT_NOT_READY;
   while (sync_status != ZE_RESULT_SUCCESS) {
@@ -409,7 +369,6 @@ INSTANTIATE_TEST_SUITE_P(
     TestIncreasingNumberCommandListImmediateAppendCommandListsExpWithSynchronize,
     zeCommandListImmediateAppendCommandListsExpTestsHostSynchronize,
     testing::ValuesIn(synchronize_test_input));
-
 
 class zeCommandQueueExecuteCommandListTestsFence
     : public zeCommandQueueExecuteCommandListTests {};

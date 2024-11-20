@@ -103,6 +103,46 @@ ze_command_list_handle_t create_immediate_command_list(
   return command_list;
 }
 
+void append_command_lists_immediate_exp(
+    ze_command_list_handle_t hCommandList, uint32_t numCommandLists,
+    ze_command_list_handle_t *phCommandLists, ze_event_handle_t hSignalEvent) {
+  append_command_lists_immediate_exp(hCommandList, numCommandLists,
+                                     phCommandLists, hSignalEvent, 0, nullptr);
+}
+
+void append_command_lists_immediate_exp(
+    ze_command_list_handle_t hCommandList, uint32_t numCommandLists,
+    ze_command_list_handle_t *phCommandLists) {
+  append_command_lists_immediate_exp(hCommandList, numCommandLists,
+                                     phCommandLists, nullptr, 0, nullptr);
+}
+
+void append_command_lists_immediate_exp(
+    ze_command_list_handle_t hCommandList, uint32_t numCommandLists,
+    ze_command_list_handle_t *phCommandLists, ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
+  auto command_list_initial = hCommandList;
+  std::vector<ze_command_list_handle_t> command_lists_initial(numCommandLists);
+  std::memcpy(command_lists_initial.data(), phCommandLists,
+              sizeof(ze_command_list_handle_t) * numCommandLists);
+  auto signal_event_initial = hSignalEvent;
+  std::vector<ze_event_handle_t> wait_events_initial(numWaitEvents);
+  std::memcpy(wait_events_initial.data(), phWaitEvents,
+              sizeof(ze_event_handle_t) * numWaitEvents);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListImmediateAppendCommandListsExp(
+                hCommandList, numCommandLists, phCommandLists, hSignalEvent,
+                numWaitEvents, phWaitEvents));
+  EXPECT_EQ(hCommandList, command_list_initial);
+  EXPECT_EQ(hSignalEvent, signal_event_initial);
+  for (int i = 0; i < numCommandLists; i++) {
+    EXPECT_EQ(phCommandLists[i], command_lists_initial[i]);
+  }
+  for (int i = 0; i < numWaitEvents; i++) {
+    EXPECT_EQ(phWaitEvents[i], wait_events_initial[i]);
+  }
+}
+
 zeCommandBundle create_command_bundle(bool isImmediate) {
   return create_command_bundle(zeDevice::get_instance()->get_device(),
                                isImmediate);
