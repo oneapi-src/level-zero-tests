@@ -516,8 +516,8 @@ metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
 
 zet_metric_streamer_handle_t metric_streamer_open_for_device(
     ze_device_handle_t device, zet_metric_group_handle_t matchedGroupHandle,
-    ze_event_handle_t eventHandle, uint32_t notifyEveryNReports,
-    uint32_t samplingPeriod) {
+    ze_event_handle_t eventHandle, uint32_t &notifyEveryNReports,
+    uint32_t &samplingPeriod) {
   zet_metric_streamer_handle_t metricStreamerHandle = nullptr;
   zet_metric_streamer_desc_t metricStreamerDesc = {
       ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, notifyEveryNReports,
@@ -527,6 +527,8 @@ zet_metric_streamer_handle_t metric_streamer_open_for_device(
                                   matchedGroupHandle, &metricStreamerDesc,
                                   eventHandle, &metricStreamerHandle));
   EXPECT_NE(nullptr, metricStreamerHandle);
+  notifyEveryNReports = metricStreamerDesc.notifyEveryNReports;
+  samplingPeriod = metricStreamerDesc.samplingPeriod;
   return metricStreamerHandle;
 }
 
