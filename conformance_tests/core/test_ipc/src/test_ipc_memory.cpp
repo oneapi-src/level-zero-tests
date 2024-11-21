@@ -76,13 +76,14 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  // Wait until child zeInit is completed
-  semaphore.wait();
-
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
   ze_ipc_mem_handle_t ipc_handle_zero{};
   ASSERT_NE(0, memcmp((void *)&ipc_handle, (void *)&ipc_handle_zero,
                       sizeof(ipc_handle)));
+
+  // Wait until the child is ready to receive the IPC handle
+  semaphore.wait();
+
   lzt::send_ipc_handle(ipc_handle);
 
   // Free device memory once receiver is done

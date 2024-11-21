@@ -31,6 +31,10 @@ static void child_device_access_test(int size, ze_ipc_memory_flags_t flags,
   ze_ipc_mem_handle_t ipc_handle;
   void *memory = nullptr;
 
+  bipc::named_semaphore semaphore(bipc::open_only, "ipc_memory_test_semaphore");
+  // Signal parent to send IPC handle
+  semaphore.post();
+
   int ipc_descriptor =
       lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
   memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
@@ -71,6 +75,10 @@ static void child_subdevice_access_test(int size, ze_ipc_memory_flags_t flags,
 
   ze_ipc_mem_handle_t ipc_handle;
   void *memory = nullptr;
+
+  bipc::named_semaphore semaphore(bipc::open_only, "ipc_memory_test_semaphore");
+  // Signal parent to send IPC handle
+  semaphore.post();
 
   int ipc_descriptor =
       lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
@@ -116,9 +124,6 @@ int main() {
                              level_zero_tests::to_string(result));
   }
   LOG_INFO << "[Child] Driver initialized\n";
-
-  bipc::named_semaphore semaphore(bipc::open_only, "ipc_memory_test_semaphore");
-  semaphore.post();
 
   shared_data_t shared_data;
   int count = 0;
