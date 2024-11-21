@@ -79,6 +79,10 @@ void debug_write_registers(const zet_debug_session_handle_t &debug_session,
 
 std::vector<uint8_t> get_debug_info(const zet_module_handle_t &module);
 
+bool is_heapless_mode(ze_device_thread_t stopped_thread,
+                      ze_device_handle_t &device_handle,
+                      zet_debug_session_handle_t debug_session);
+
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_DEBUG_HPP */
