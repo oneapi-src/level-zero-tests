@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022-2023 Intel Corporation
+ * Copyright (C) 2022-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -14,6 +14,10 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+
+#ifdef __linux__
+#include <unistd.h>
+#endif
 
 namespace lzt = level_zero_tests;
 
@@ -35,7 +39,8 @@ public:
   size_t pageSize = 0;
   size_t allocationSize = (1024 * 1024);
   void *reservedVirtualMemory = nullptr;
-  ze_physical_mem_handle_t reservedPhysicalMemory;
+  ze_physical_mem_handle_t reservedPhysicalDeviceMemory = nullptr;
+  ze_physical_mem_handle_t reservedPhysicalHostMemory = nullptr;
 };
 
 TEST_F(zeVirtualMemoryTests,
@@ -134,9 +139,23 @@ TEST_F(zeVirtualMemoryTests,
        GivenPageAlignedSizeThenVirtualAndPhysicalMemoryReservedSuccessfully) {
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemory);
-  lzt::physical_memory_destroy(context, reservedPhysicalMemory);
+  lzt::physical_device_memory_allocation(context, device, allocationSize,
+                                         &reservedPhysicalDeviceMemory);
+  lzt::physical_memory_destroy(context, reservedPhysicalDeviceMemory);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenPageAlignedSizeThenVirtualAndPhysicalHostMemoryReservedSuccessfully) {
+#ifdef __linux__
+  pageSize = sysconf(_SC_PAGE_SIZE);
+  allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
+  lzt::physical_host_memory_allocation(context, allocationSize,
+                                       &reservedPhysicalHostMemory);
+  lzt::physical_memory_destroy(context, reservedPhysicalHostMemory);
+#else
+  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
+#endif
 }
 
 TEST_F(
@@ -144,8 +163,12 @@ TEST_F(
     GivenPageAlignedSizeThenPhysicalMemoryisSuccessfullyReservedForAllAccessTypes) {
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemory);
+  lzt::physical_device_memory_allocation(context, device, allocationSize,
+                                         &reservedPhysicalDeviceMemory);
+#ifdef __linux__
+  lzt::physical_host_memory_allocation(context, allocationSize,
+                                       &reservedPhysicalHostMemory);
+#endif
   lzt::virtual_memory_reservation(context, nullptr, allocationSize,
                                   &reservedVirtualMemory);
   EXPECT_NE(nullptr, reservedVirtualMemory);
@@ -156,33 +179,62 @@ TEST_F(
 
   for (auto accessFlags : memoryAccessFlags) {
     lzt::virtual_memory_map(context, reservedVirtualMemory, allocationSize,
-                            reservedPhysicalMemory, 0, accessFlags);
+                            reservedPhysicalDeviceMemory, 0, accessFlags);
+    lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
+  }
+#ifdef __linux__
+  for (auto accessFlags : memoryAccessFlags) {
+    lzt::virtual_memory_map(context, reservedVirtualMemory, allocationSize,
+                            reservedPhysicalHostMemory, 0, accessFlags);
     lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
   }
 
-  lzt::physical_memory_destroy(context, reservedPhysicalMemory);
+  lzt::physical_memory_destroy(context, reservedPhysicalHostMemory);
+#endif
+  lzt::physical_memory_destroy(context, reservedPhysicalDeviceMemory);
   lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
 }
 
 void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
-    zeVirtualMemoryTests &test, bool is_immediate) {
+    zeVirtualMemoryTests &test, bool is_host_memory, bool is_immediate) {
   auto bundle = lzt::create_command_bundle(test.device, is_immediate);
 
-  lzt::query_page_size(test.context, test.device, test.allocationSize,
-                       &test.pageSize);
+  if (is_host_memory) {
+#ifdef __linux__
+    test.pageSize = sysconf(_SC_PAGE_SIZE);
+#endif
+  } else {
+    lzt::query_page_size(test.context, test.device, test.allocationSize,
+                         &test.pageSize);
+  }
+
   test.allocationSize =
       lzt::create_page_aligned_size(test.allocationSize, test.pageSize);
-  lzt::physical_memory_allocation(test.context, test.device,
-                                  test.allocationSize,
-                                  &test.reservedPhysicalMemory);
   lzt::virtual_memory_reservation(test.context, nullptr, test.allocationSize,
                                   &test.reservedVirtualMemory);
-  EXPECT_NE(nullptr, test.reservedVirtualMemory);
 
-  ASSERT_EQ(zeVirtualMemMap(test.context, test.reservedVirtualMemory,
-                            test.allocationSize, test.reservedPhysicalMemory, 0,
-                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-            ZE_RESULT_SUCCESS);
+  EXPECT_NE(nullptr, test.reservedVirtualMemory);
+  if (is_host_memory) {
+    lzt::physical_host_memory_allocation(test.context, test.allocationSize,
+                                         &test.reservedPhysicalHostMemory);
+    EXPECT_NE(nullptr, test.reservedPhysicalHostMemory);
+    ASSERT_EQ(zeVirtualMemMap(test.context, test.reservedVirtualMemory,
+                              test.allocationSize,
+                              test.reservedPhysicalHostMemory, 0,
+                              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+              ZE_RESULT_SUCCESS);
+  } else {
+    lzt::physical_device_memory_allocation(test.context, test.device,
+                                           test.allocationSize,
+                                           &test.reservedPhysicalDeviceMemory);
+    EXPECT_NE(nullptr, test.reservedPhysicalDeviceMemory);
+    ASSERT_EQ(zeVirtualMemMap(test.context, test.reservedVirtualMemory,
+                              test.allocationSize,
+                              test.reservedPhysicalDeviceMemory, 0,
+                              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
+              ZE_RESULT_SUCCESS);
+  }
+
   int8_t pattern = 9;
   void *memory =
       lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
@@ -200,7 +252,12 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
 
   lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
                             test.allocationSize);
-  lzt::physical_memory_destroy(test.context, test.reservedPhysicalMemory);
+  if (is_host_memory) {
+    lzt::physical_memory_destroy(test.context, test.reservedPhysicalHostMemory);
+  } else {
+    lzt::physical_memory_destroy(test.context,
+                                 test.reservedPhysicalDeviceMemory);
+  }
   lzt::virtual_memory_free(test.context, test.reservedVirtualMemory,
                            test.allocationSize);
   lzt::free_memory(memory);
@@ -210,15 +267,37 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
 TEST_F(
     zeVirtualMemoryTests,
     GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemorySucceeds) {
-  RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(*this,
-                                                                      false);
+  RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
+      *this, false, false);
 }
 
 TEST_F(
     zeVirtualMemoryTests,
     GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemoryOnImmediateCommandListSucceeds) {
-  RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(*this,
-                                                                      true);
+  RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
+      *this, false, true);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualHostMemorySucceeds) {
+#ifdef __linux__
+  RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
+      *this, true, false);
+#else
+  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
+#endif
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualHostMemoryOnImmediateCommandListSucceeds) {
+#ifdef __linux__
+  RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
+      *this, true, true);
+#else
+  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
+#endif
 }
 
 void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemory(
@@ -242,9 +321,9 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
   test.allocationSize =
       lzt::create_page_aligned_size(test.allocationSize, test.pageSize);
   for (int i = 0; i < devices.size(); i++) {
-    lzt::physical_memory_allocation(test.context, devices[i],
-                                    test.allocationSize,
-                                    &reservedPhysicalMemoryArray[i]);
+    lzt::physical_device_memory_allocation(test.context, devices[i],
+                                           test.allocationSize,
+                                           &reservedPhysicalMemoryArray[i]);
   }
 
   size_t totalAllocationSize = test.allocationSize * devices.size();
@@ -330,9 +409,9 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   test.allocationSize =
       lzt::create_page_aligned_size(test.allocationSize, test.pageSize);
   for (int i = 0; i < devices.size(); i++) {
-    lzt::physical_memory_allocation(test.context, devices[i],
-                                    test.allocationSize,
-                                    &reservedPhysicalMemoryArray[i]);
+    lzt::physical_device_memory_allocation(test.context, devices[i],
+                                           test.allocationSize,
+                                           &reservedPhysicalMemoryArray[i]);
   }
   size_t totalAllocationSize = test.allocationSize * devices.size();
   size_t virtualReservationSize = lzt::nextPowerOfTwo(totalAllocationSize);
@@ -498,8 +577,8 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
   lzt::query_page_size(context, rootDevice, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
   for (int i = 0; i < devices.size(); i++) {
-    lzt::physical_memory_allocation(context, devices[i], allocationSize,
-                                    &reservedPhysicalMemory[i]);
+    lzt::physical_device_memory_allocation(context, devices[i], allocationSize,
+                                           &reservedPhysicalMemory[i]);
   }
   size_t virtualReservationSize =
       lzt::nextPowerOfTwo(allocationSize * devices.size());

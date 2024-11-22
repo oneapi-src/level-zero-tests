@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2021 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -52,9 +52,9 @@ class LCTracingCreateMultipleTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<uint32_t> {};
 
-
 #ifdef USE_RUNTIME_TRACING
-class LCDynamicTracingCreateMultipleTests : public LCTracingCreateMultipleTests {};
+class LCDynamicTracingCreateMultipleTests
+    : public LCTracingCreateMultipleTests {};
 #define LCTRACING_CREATE_MULTIPLE_TEST_NAME LCDynamicTracingCreateMultipleTests
 #else // USE Tracing ENV
 #define LCTRACING_CREATE_MULTIPLE_TEST_NAME LCTracingCreateMultipleTests
@@ -170,15 +170,16 @@ protected:
     std::memcpy(region.get_address(), &test_data,
                 sizeof(lzt::shared_ipc_event_data_t));
 
-    #ifdef USE_RUNTIME_TRACING
+#ifdef USE_RUNTIME_TRACING
     // launch child
-    boost::process::child c("./tracing/test_ltracing_compat_ipc_event_helper_dynamic",
-                            test_type_name.c_str());
-    #else
+    boost::process::child c(
+        "./tracing/test_ltracing_compat_ipc_event_helper_dynamic",
+        test_type_name.c_str());
+#else
     // launch child
     boost::process::child c("./tracing/test_ltracing_compat_ipc_event_helper",
                             test_type_name.c_str());
-    #endif
+#endif
     lzt::send_ipc_handle(hIpcEventPool);
 
     c.wait(); // wait for the process to exit
@@ -403,7 +404,8 @@ protected:
 };
 
 #ifdef USE_RUNTIME_TRACING
-class LCDynamicTracingPrologueEpilogueTests : public LCTracingPrologueEpilogueTests {};
+class LCDynamicTracingPrologueEpilogueTests
+    : public LCTracingPrologueEpilogueTests {};
 #define LCTRACING_TEST_NAME LCDynamicTracingPrologueEpilogueTests
 #else // USE Tracing ENV
 #define LCTRACING_TEST_NAME LCTracingPrologueEpilogueTests
@@ -3245,8 +3247,8 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemory);
+  lzt::physical_device_memory_allocation(context, device, allocationSize,
+                                         &reservedPhysicalMemory);
   lzt::physical_memory_destroy(context, reservedPhysicalMemory);
 }
 
@@ -3265,8 +3267,8 @@ TEST_F(
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
 
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemory);
+  lzt::physical_device_memory_allocation(context, device, allocationSize,
+                                         &reservedPhysicalMemory);
 
   lzt::enable_ltracer(tracer_handle);
 
@@ -3373,8 +3375,8 @@ TEST_F(
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
 
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemory);
+  lzt::physical_device_memory_allocation(context, device, allocationSize,
+                                         &reservedPhysicalMemory);
   lzt::physical_memory_destroy(context, reservedPhysicalMemory);
 }
 
@@ -3422,8 +3424,8 @@ TEST_F(
 
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemory);
+  lzt::physical_device_memory_allocation(context, device, allocationSize,
+                                         &reservedPhysicalMemory);
   lzt::virtual_memory_reservation(context, nullptr, allocationSize,
                                   &reservedVirtualMemory);
   EXPECT_NE(nullptr, reservedVirtualMemory);
@@ -3459,8 +3461,8 @@ TEST_F(
 
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
-  lzt::physical_memory_allocation(context, device, allocationSize,
-                                  &reservedPhysicalMemory);
+  lzt::physical_device_memory_allocation(context, device, allocationSize,
+                                         &reservedPhysicalMemory);
   lzt::virtual_memory_reservation(context, nullptr, allocationSize,
                                   &reservedVirtualMemory);
   EXPECT_NE(nullptr, reservedVirtualMemory);

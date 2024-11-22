@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2021 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -50,7 +50,8 @@ class LTracingCreateMultipleTests
       public ::testing::WithParamInterface<uint32_t> {};
 
 #ifdef USE_RUNTIME_TRACING
-class LDynamicTracingCreateMultipleTests : public LTracingCreateMultipleTests {};
+class LDynamicTracingCreateMultipleTests : public LTracingCreateMultipleTests {
+};
 #define LTRACING_CREATE_MULTIPLE_TEST_NAME LDynamicTracingCreateMultipleTests
 #else // USE Tracing ENV
 #define LTRACING_CREATE_MULTIPLE_TEST_NAME LTracingCreateMultipleTests
@@ -79,7 +80,8 @@ TEST_P(LTRACING_CREATE_MULTIPLE_TEST_NAME,
   delete[] user_data;
 }
 
-INSTANTIATE_TEST_CASE_P(CreateMultipleTracerTest, LTRACING_CREATE_MULTIPLE_TEST_NAME,
+INSTANTIATE_TEST_CASE_P(CreateMultipleTracerTest,
+                        LTRACING_CREATE_MULTIPLE_TEST_NAME,
                         ::testing::Values(1, 10, 100, 1000));
 
 #ifdef USE_RUNTIME_TRACING
@@ -162,15 +164,15 @@ protected:
     std::memcpy(region.get_address(), &test_data,
                 sizeof(lzt::shared_ipc_event_data_t));
 
-    #ifdef USE_RUNTIME_TRACING
+#ifdef USE_RUNTIME_TRACING
     // launch child
     boost::process::child c("./tracing/test_ltracing_ipc_event_helper_dynamic",
                             test_type_name.c_str());
-    #else
+#else
     // launch child
     boost::process::child c("./tracing/test_ltracing_ipc_event_helper",
                             test_type_name.c_str());
-    #endif
+#endif
     lzt::send_ipc_handle(hIpcEventPool);
 
     c.wait(); // wait for the process to exit
@@ -404,7 +406,8 @@ static void ready_ltracer(zel_tracer_handle_t tracer, ze_callbacks_t prologues,
 }
 
 #ifdef USE_RUNTIME_TRACING
-class LDynamicTracingPrologueEpilogueTests : public LTracingPrologueEpilogueTests {};
+class LDynamicTracingPrologueEpilogueTests
+    : public LTracingPrologueEpilogueTests {};
 #define LTRACING_TEST_NAME LDynamicTracingPrologueEpilogueTests
 #else // USE Tracing ENV
 #define LTRACING_TEST_NAME LTracingPrologueEpilogueTests
@@ -943,9 +946,8 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandListReset(command_list));
 }
 
-TEST_F(
-    LTRACING_TEST_NAME,
-    GivenWhenTracerEnabledWithCalltoZetAPIThenSuccessIsReturnedFromZetAPI) {
+TEST_F(LTRACING_TEST_NAME,
+       GivenWhenTracerEnabledWithCalltoZetAPIThenSuccessIsReturnedFromZetAPI) {
   prologues.CommandList.pfnResetCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnResetCb = lzt::lepilogue_callback;
 
@@ -960,9 +962,8 @@ TEST_F(
             zetMetricGroupGet(device, &metricGroupCount, nullptr));
 }
 
-TEST_F(
-    LTRACING_TEST_NAME,
-    GivenWhenTracerEnabledWithCalltoZesAPIThenSuccessIsReturnedFromZesAPI) {
+TEST_F(LTRACING_TEST_NAME,
+       GivenWhenTracerEnabledWithCalltoZesAPIThenSuccessIsReturnedFromZesAPI) {
   prologues.CommandList.pfnResetCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnResetCb = lzt::lepilogue_callback;
 
@@ -972,11 +973,9 @@ TEST_F(
   ready_ltracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result, zeCommandListReset(command_list));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesInit(0));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
   uint32_t zesCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDriverGet(&zesCount, nullptr));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&zesCount, nullptr));
 }
 
 TEST_F(
