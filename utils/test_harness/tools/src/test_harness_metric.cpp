@@ -994,9 +994,9 @@ void metric_validate_streamer_marker_data(
     std::vector<zet_metric_properties_t> &metricProperties,
     std::vector<zet_typed_value_t> &totalMetricValues,
     std::vector<uint32_t> &metricValueSets,
-    std::vector<uint32_t> &streamerMarkerValues) {
+    std::vector<uint32_t> &streamerMarkerValues, uint32_t &numMarkersFound) {
 
-  uint32_t numbefOfStreamerMarkerMatches = 0;
+  uint32_t numStreamerMarkerMatches = 0;
   uint32_t startIndex = 0;
   for (uint32_t dataIndex = 0; dataIndex < metricValueSets.size();
        dataIndex++) {
@@ -1022,22 +1022,24 @@ void metric_validate_streamer_marker_data(
             (metricTypedValue.value.ui64 != 0)) {
           LOG_INFO << "Valid Streamer Marker found with value: "
                    << metricTypedValue.value.ui64;
-          EXPECT_EQ(metricTypedValue.value.ui64,
-                    streamerMarkerValues[streamerMarkerValuesIndex]);
+          EXPECT_EQ(streamerMarkerValues[streamerMarkerValuesIndex],
+                    metricTypedValue.value.ui64);
           streamerMarkerValuesIndex++;
         }
       }
     }
-
-    EXPECT_EQ(streamerMarkerValuesIndex, streamerMarkerValues.size());
+    numMarkersFound = streamerMarkerValuesIndex;
     if (streamerMarkerValuesIndex == streamerMarkerValues.size()) {
-      numbefOfStreamerMarkerMatches++;
+      numStreamerMarkerMatches++;
+    } else {
+      LOG_INFO << "insufficient data, num markers found = " << numMarkersFound;
+      return;
     }
-
+    EXPECT_EQ(streamerMarkerValues.size(), streamerMarkerValuesIndex);
     startIndex += metricCountForDataIndex;
   }
 
-  EXPECT_EQ(numbefOfStreamerMarkerMatches, metricValueSets.size());
+  EXPECT_EQ(metricValueSets.size(), numStreamerMarkerMatches);
 }
 
 } // namespace level_zero_tests

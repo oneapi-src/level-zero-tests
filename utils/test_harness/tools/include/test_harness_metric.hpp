@@ -162,7 +162,7 @@ void metric_validate_streamer_marker_data(
     std::vector<zet_metric_properties_t> &metricProperties,
     std::vector<zet_typed_value_t> &totalMetricValues,
     std::vector<uint32_t> &metricValueSets,
-    std::vector<uint32_t> &streamerMarkerValues);
+    std::vector<uint32_t> &streamerMarkerValues, uint32_t &numMarkersFound);
 
 }; // namespace level_zero_tests
 
