@@ -8,6 +8,7 @@
 #ifdef __linux__
 #include <unistd.h>
 #include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/sync/named_semaphore.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/process.hpp>
 #endif
@@ -38,6 +39,9 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   }
   LOG_DEBUG << "[Parent] Driver initialized\n";
   lzt::print_platform_overview();
+
+  bipc::named_semaphore::remove("ipc_memory_test_semaphore");
+  bipc::named_semaphore semaphore(bipc::create_only, "ipc_memory_test_semaphore", 0);
 
   bipc::shared_memory_object::remove("ipc_memory_test");
   // launch child
@@ -76,6 +80,10 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   ze_ipc_mem_handle_t ipc_handle_zero{};
   ASSERT_NE(0, memcmp((void *)&ipc_handle, (void *)&ipc_handle_zero,
                       sizeof(ipc_handle)));
+
+  // Wait until the child is ready to receive the IPC handle
+  semaphore.wait();
+
   lzt::send_ipc_handle(ipc_handle);
 
   // Free device memory once receiver is done
