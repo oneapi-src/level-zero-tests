@@ -994,17 +994,19 @@ void metric_validate_streamer_marker_data(
     std::vector<zet_metric_properties_t> &metricProperties,
     std::vector<zet_typed_value_t> &totalMetricValues,
     std::vector<uint32_t> &metricValueSets,
-    std::vector<uint32_t> &streamerMarkerValues, uint32_t &numMarkersFound) {
+    std::vector<uint32_t> &streamerMarkerValues,
+    uint32_t &streamer_marker_values_index) {
 
-  uint32_t numStreamerMarkerMatches = 0;
   uint32_t startIndex = 0;
+  uint32_t validated_markers_count = 0;
   for (uint32_t dataIndex = 0; dataIndex < metricValueSets.size();
        dataIndex++) {
 
     const uint32_t metricCountForDataIndex = metricValueSets[dataIndex];
     const uint32_t reportCount =
         metricCountForDataIndex / metricProperties.size();
-    uint32_t streamerMarkerValuesIndex = 0;
+    uint32_t streamer_marker_values_index_per_set =
+        streamer_marker_values_index;
 
     LOG_INFO << "for dataIndex " << dataIndex << " metricCountForDataIndex "
              << metricCountForDataIndex << " reportCount " << reportCount;
@@ -1020,26 +1022,27 @@ void metric_validate_streamer_marker_data(
 
         if ((strcmp("StreamMarker", metricProperty.name) == 0) &&
             (metricTypedValue.value.ui64 != 0)) {
-          LOG_INFO << "Valid Streamer Marker found with value: "
-                   << metricTypedValue.value.ui64;
-          EXPECT_EQ(streamerMarkerValues[streamerMarkerValuesIndex],
-                    metricTypedValue.value.ui64);
-          streamerMarkerValuesIndex++;
+          if (streamer_marker_values_index_per_set <
+              streamerMarkerValues.size()) {
+            LOG_INFO << "Valid Streamer Marker found with value: "
+                     << metricTypedValue.value.ui64;
+            EXPECT_EQ(
+                streamerMarkerValues.at(streamer_marker_values_index_per_set),
+                metricTypedValue.value.ui64);
+            streamer_marker_values_index_per_set++;
+          } else {
+            FAIL() << "totalMetricValues contains more markers than those "
+                      "appended";
+          }
         }
       }
     }
-    numMarkersFound = streamerMarkerValuesIndex;
-    if (streamerMarkerValuesIndex == streamerMarkerValues.size()) {
-      numStreamerMarkerMatches++;
-    } else {
-      LOG_INFO << "insufficient data, num markers found = " << numMarkersFound;
-      return;
-    }
-    EXPECT_EQ(streamerMarkerValues.size(), streamerMarkerValuesIndex);
+    validated_markers_count += streamer_marker_values_index_per_set;
     startIndex += metricCountForDataIndex;
   }
-
-  EXPECT_EQ(metricValueSets.size(), numStreamerMarkerMatches);
+  EXPECT_FALSE(validated_markers_count % metricValueSets.size());
+  streamer_marker_values_index =
+      validated_markers_count / metricValueSets.size();
 }
 
 } // namespace level_zero_tests

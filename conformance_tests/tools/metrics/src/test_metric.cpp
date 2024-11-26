@@ -1389,7 +1389,7 @@ TEST_F(
       double minimumTimeBeforeEventIsExpected =
           notifyEveryNReports *
           (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
-      // Initializing a 10% error buffer to prevent corner cases
+      // Initializing the error buffer to prevent corner cases
       double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
                 << minimumTimeBeforeEventIsExpected;
@@ -1489,7 +1489,7 @@ TEST_F(
       double minimumTimeBeforeEventIsExpected =
           notifyEveryNReports *
           (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
-      // Initializing a 5% error buffer to prevent corner cases
+      // Initializing the error buffer to prevent corner cases
       double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
                 << minimumTimeBeforeEventIsExpected;
@@ -2022,7 +2022,6 @@ TEST_F(
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
       std::vector<uint32_t> streamerMarkerValues = {10, 20};
-      uint32_t numMarkersFound{};
 
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
@@ -2078,30 +2077,32 @@ TEST_F(
           FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
         }
 
-        std::vector<uint8_t> rawData{};
-        uint32_t rawDataSize{};
-        const char *valueString =
+        const char *value_string =
             std::getenv("LZT_METRIC_READ_DATA_MAX_DURATION_MS");
-        uint32_t maxDuration = 5; // millisecond(s)
-        if (valueString != nullptr) {
-          uint32_t value = atoi(valueString);
-          maxDuration = value != 0 ? value : maxDuration;
-          maxDuration = std::min(maxDuration, 100u);
+        uint32_t max_duration_in_milliseconds = 10;
+        if (value_string != nullptr) {
+          uint32_t value = atoi(value_string);
+          max_duration_in_milliseconds =
+              value != 0 ? value : max_duration_in_milliseconds;
+          max_duration_in_milliseconds =
+              std::min(max_duration_in_milliseconds, 100u);
         }
         auto start_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::milliseconds(maxDuration);
-
+        auto duration = std::chrono::milliseconds(max_duration_in_milliseconds);
+        uint32_t streamer_marker_values_index = 0;
         while ((std::chrono::high_resolution_clock::now() - start_time) <
-               duration) {
-          std::vector<uint8_t> fetchedData{};
-          uint32_t fetchedDataSize{};
-          lzt::metric_streamer_read_data(metricStreamerHandle, fetchedDataSize,
-                                         &fetchedData);
+                   duration &&
+               (streamer_marker_values_index < streamerMarkerValues.size())) {
+          std::vector<uint8_t> rawData{};
+          uint32_t rawDataSize{};
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
+                                         &rawData);
 
-          fetchedData.resize(fetchedDataSize);
-          rawData.insert(rawData.end(), fetchedData.begin(), fetchedData.end());
-          rawDataSize += fetchedDataSize;
-          EXPECT_NE(0, rawDataSize);
+          rawData.resize(rawDataSize);
+          if (rawDataSize == 0) {
+            continue;
+          }
           std::vector<zet_typed_value_t> metricValues;
           std::vector<uint32_t> metricValueSets;
           lzt::metric_calculate_metric_values_from_raw_data(
@@ -2118,13 +2119,9 @@ TEST_F(
 
           lzt::metric_validate_streamer_marker_data(
               metricProperties, metricValues, metricValueSets,
-              streamerMarkerValues, numMarkersFound);
-          if (numMarkersFound == streamerMarkerValues.size()) {
-            LOG_INFO << "all streamer markers are present in the fetched data";
-            break;
-          }
+              streamerMarkerValues, streamer_marker_values_index);
         }
-        EXPECT_EQ(streamerMarkerValues.size(), numMarkersFound);
+        EXPECT_EQ(streamerMarkerValues.size(), streamer_marker_values_index);
       } else if (ZE_RESULT_ERROR_UNSUPPORTED_FEATURE == markerResult) {
         LOG_INFO << "metricGroup " << groupInfo.metricGroupName
                  << " doesn't support streamer marker";
