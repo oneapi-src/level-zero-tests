@@ -1040,6 +1040,7 @@ void metric_validate_streamer_marker_data(
     validated_markers_count += streamer_marker_values_index_per_set;
     startIndex += metricCountForDataIndex;
   }
+  // Expecting that an equal number of markers have been validated for each set.
   EXPECT_FALSE(validated_markers_count % metricValueSets.size());
   streamer_marker_values_index =
       validated_markers_count / metricValueSets.size();

@@ -2025,6 +2025,14 @@ TEST_F(
 
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
+      std::vector<zet_metric_handle_t> metricHandles;
+      lzt::metric_get_metric_handles_from_metric_group(
+          groupInfo.metricGroupHandle, metricHandles);
+      std::vector<zet_metric_properties_t> metricProperties(
+          metricHandles.size());
+      lzt::metric_get_metric_properties_for_metric_group(metricHandles,
+                                                         metricProperties);
+
       ze_event_handle_t eventHandle{};
       lzt::zeEventPool eventPool{};
       ze_result_t markerResult;
@@ -2079,17 +2087,24 @@ TEST_F(
 
         const char *value_string =
             std::getenv("LZT_METRIC_READ_DATA_MAX_DURATION_MS");
-        uint32_t max_duration_in_milliseconds = 10;
+        uint32_t max_wait_time_in_milliseconds = 10;
         if (value_string != nullptr) {
           uint32_t value = atoi(value_string);
-          max_duration_in_milliseconds =
-              value != 0 ? value : max_duration_in_milliseconds;
-          max_duration_in_milliseconds =
-              std::min(max_duration_in_milliseconds, 100u);
+          max_wait_time_in_milliseconds =
+              value != 0 ? value : max_wait_time_in_milliseconds;
+          max_wait_time_in_milliseconds =
+              std::min(max_wait_time_in_milliseconds, 100u);
         }
         auto start_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::milliseconds(max_duration_in_milliseconds);
+        auto duration =
+            std::chrono::milliseconds(max_wait_time_in_milliseconds);
         uint32_t streamer_marker_values_index = 0;
+
+        // Since there can be a delay in reading data from the hardware buffer,
+        // all data may not be available at once and may need to be fetched in
+        // batches. This loop will continuously read, calculate and validate
+        // until either the specified wait time is reached or all the markers
+        // have been validated.
         while ((std::chrono::high_resolution_clock::now() - start_time) <
                    duration &&
                (streamer_marker_values_index < streamerMarkerValues.size())) {
@@ -2098,7 +2113,7 @@ TEST_F(
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
           lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
                                          &rawData);
-
+          // Keep retrying until raw data (complete or in batches) is available.
           if (rawDataSize == 0) {
             continue;
           }
@@ -2109,18 +2124,12 @@ TEST_F(
               groupInfo.metricGroupHandle, rawData, metricValues,
               metricValueSets);
 
-          std::vector<zet_metric_handle_t> metricHandles;
-          lzt::metric_get_metric_handles_from_metric_group(
-              groupInfo.metricGroupHandle, metricHandles);
-          std::vector<zet_metric_properties_t> metricProperties(
-              metricHandles.size());
-          lzt::metric_get_metric_properties_for_metric_group(metricHandles,
-                                                             metricProperties);
-
           lzt::metric_validate_streamer_marker_data(
               metricProperties, metricValues, metricValueSets,
               streamerMarkerValues, streamer_marker_values_index);
         }
+        // Expecting that all streamer marker values have been validated by this
+        // point.
         EXPECT_EQ(streamerMarkerValues.size(), streamer_marker_values_index);
       } else if (ZE_RESULT_ERROR_UNSUPPORTED_FEATURE == markerResult) {
         LOG_INFO << "metricGroup " << groupInfo.metricGroupName
