@@ -2099,10 +2099,10 @@ TEST_F(
           lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
                                          &rawData);
 
-          rawData.resize(rawDataSize);
           if (rawDataSize == 0) {
             continue;
           }
+          rawData.resize(rawDataSize);
           std::vector<zet_typed_value_t> metricValues;
           std::vector<uint32_t> metricValueSets;
           lzt::metric_calculate_metric_values_from_raw_data(
