@@ -17,11 +17,11 @@
 namespace {
 
 TEST(SysmanInitTests,
-     GivenCoreNotInitializedWhenSysmanInitializedThenzesDriverGetWorks) {
+     GivenZesInitWhenZesDriverGetIsCalledThenSuccessIsReturned) {
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
-  uint32_t pCount = 0;
+  uint32_t count = 0;
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&pCount, nullptr));
-  ASSERT_GT(pCount, 0);
+  ASSERT_GT(count, 0);
 }
 
 } // namespace

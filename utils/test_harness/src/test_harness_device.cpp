@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -54,6 +54,10 @@ uint32_t get_zes_device_count(zes_driver_handle_t driver) {
 
 uint32_t get_zes_device_count() {
   return get_zes_device_count(lzt::get_default_zes_driver());
+}
+
+std::vector<zes_device_handle_t> get_zes_devices(zes_driver_handle_t driver) {
+  return get_zes_devices(get_zes_device_count(driver), driver);
 }
 
 std::vector<zes_device_handle_t> get_zes_devices(uint32_t count,
