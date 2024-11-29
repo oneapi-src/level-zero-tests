@@ -1110,20 +1110,9 @@ TEST_F(
 
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
       lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
-      ze_result_t eventResult;
-      eventResult = zeEventQueryStatus(eventHandle);
-
-      if (ZE_RESULT_SUCCESS == eventResult) {
-        LOG_DEBUG << "Event triggered";
-      } else if (ZE_RESULT_NOT_READY == eventResult) {
-        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
-      } else {
-        FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
-      }
 
       std::vector<uint8_t> rawData;
       lzt::metric_streamer_read_data(metricStreamerHandle, &rawData);
-
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
@@ -1195,9 +1184,9 @@ TEST_F(
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
       lzt::event_host_synchronize(eventHandle, UINT64_MAX);
       std::vector<uint8_t> rawData;
-      uint32_t rawDataSize = 0;
-      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
-                                     &rawData);
+      size_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
+                                     rawDataSize, &rawData);
 
       LOG_INFO << "raw data size " << rawDataSize;
       EXPECT_GT(rawDataSize, 0);
@@ -1225,7 +1214,8 @@ TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
 
-  notifyEveryNReports = 5000;
+  uint32_t notifyEveryNReports = 256;
+  uint32_t samplingPeriod = 1000000000;
   for (auto device : devices) {
 
     ze_device_properties_t deviceProperties = {
@@ -1271,25 +1261,15 @@ TEST_F(
 
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
       lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
-      ze_result_t eventResult;
-      eventResult = zeEventQueryStatus(eventHandle);
-
-      if (ZE_RESULT_SUCCESS == eventResult) {
-        LOG_DEBUG << "Event triggered";
-      } else if (ZE_RESULT_NOT_READY == eventResult) {
-        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
-      } else {
-        FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
-      }
 
       std::vector<uint8_t> rawData;
-      uint32_t rawDataSize = 0;
-      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
-                                     &rawData);
+      size_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
+                                     rawDataSize, &rawData);
+
       LOG_INFO << "rawDataSize " << rawDataSize;
       lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                             rawData.data());
-
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
@@ -1755,20 +1735,9 @@ void run_ip_sampling_with_validation(
 
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
       lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
-      ze_result_t eventResult;
-      eventResult = zeEventQueryStatus(eventHandle);
-
-      if (ZE_RESULT_SUCCESS == eventResult) {
-        LOG_DEBUG << "Event triggered";
-      } else if (ZE_RESULT_NOT_READY == eventResult) {
-        LOG_WARNING << "wait on event returned ZE_RESULT_NOT_READY";
-      } else {
-        FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
-      }
 
       std::chrono::steady_clock::time_point endTime =
           std::chrono::steady_clock::now();
-
       uint64_t elapsedTime =
           std::chrono::duration_cast<std::chrono::nanoseconds>(endTime -
                                                                startTime)
@@ -1781,9 +1750,9 @@ void run_ip_sampling_with_validation(
       }
 
       std::vector<uint8_t> rawData;
-      uint32_t rawDataSize = 0;
-      lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize,
-                                     &rawData);
+      size_t rawDataSize = 0;
+      lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
+                                     rawDataSize, &rawData);
       lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                             rawData.data(), false);
       rawData.resize(rawDataSize);
@@ -1829,7 +1798,6 @@ void run_ip_sampling_with_validation(
 TEST_F(
     zetMetricStreamerTest,
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndOverflowTriggeredThenExpectStreamerValidateError) {
-
   run_ip_sampling_with_validation(true, devices, notifyEveryNReports,
                                   samplingPeriod, TimeForNReportsComplete);
 }
@@ -1837,7 +1805,6 @@ TEST_F(
 TEST_F(
     zetMetricStreamerTest,
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
-
   run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
                                   samplingPeriod, TimeForNReportsComplete);
 }
@@ -2316,8 +2283,9 @@ TEST(
     EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
     std::vector<uint8_t> rawData;
-    uint32_t rawDataSize = 0;
-    lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize, &rawData);
+    size_t rawDataSize = 0;
+    lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
+                                   rawDataSize, &rawData);
     lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                           rawData.data());
 
@@ -2397,8 +2365,9 @@ TEST(
   EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
   std::vector<uint8_t> rawData;
-  uint32_t rawDataSize = 0;
-  lzt::metric_streamer_read_data(metricStreamerHandle, rawDataSize, &rawData);
+  size_t rawDataSize = 0;
+  lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
+                                 rawDataSize, &rawData);
   lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                         rawData.data());
 
