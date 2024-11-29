@@ -16,28 +16,24 @@ namespace {
 
 TEST(
     SysmanInitTests,
-    GivenSysmanInitializationDoneUsingZesInitFollowedByZeInitAlongWithSysmanFlagEnabledThenWhenSysmanApiZesDeviceEnumFrequencyDomainsIsCalledWithCoreHandleThenUninitializedErrorIsReturned) {
+    GivenZesInitAndZeInitWithSysmanEnabledWhenSysmanApiIsCalledWithZeDeviceThenUninitializedErrorIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
   ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
   ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
 
-  uint32_t driver_count = 0;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&driver_count, nullptr));
-  ASSERT_GT(driver_count, 0);
-  std::vector<zes_driver_handle_t> drivers(driver_count);
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&driver_count, drivers.data()));
-
-  uint32_t device_count = 0;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDeviceGet(drivers[0], &device_count, nullptr));
-  std::vector<zes_device_handle_t> devices(device_count);
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGet(drivers[0], &device_count, devices.data()));
+  std::vector<ze_driver_handle_t> ze_drivers = lzt::get_all_driver_handles();
+  EXPECT_FALSE(ze_drivers.empty());
+  std::vector<ze_device_handle_t> ze_devices =
+      lzt::get_ze_devices(ze_drivers[0]);
+  EXPECT_FALSE(ze_devices.empty());
 
   uint32_t count = 0;
-  EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED,
-            zesDeviceEnumFrequencyDomains(devices[0], &count, nullptr));
+  EXPECT_EQ(
+      ZE_RESULT_ERROR_UNINITIALIZED,
+      zesDeviceEnumFrequencyDomains(
+          static_cast<zes_device_handle_t>(ze_devices[0]), &count, nullptr));
 }
 
 } // namespace
