@@ -582,6 +582,15 @@ void metric_streamer_read_data(
   rawDataSize = metricSize;
 }
 
+void metric_streamer_read_data(
+    zet_metric_streamer_handle_t metricStreamerHandle, uint32_t reports,
+    size_t &rawDataSize, std::vector<uint8_t> *metricData) {
+  ASSERT_NE(nullptr, metricData);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricStreamerReadData(metricStreamerHandle, reports,
+                                      &rawDataSize, metricData->data()));
+}
+
 void activate_metric_groups(
     ze_device_handle_t device, uint32_t count,
     zet_metric_group_handle_t *ptr_matched_group_handle) {
