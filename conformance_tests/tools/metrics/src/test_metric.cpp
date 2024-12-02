@@ -1217,9 +1217,7 @@ TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
 
-  /* The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds))
-   * For this test it will be 512 seconds which ensure this limit is never likely to hit even on the slowest of platform
-   */  
+  // The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds)) for this test it will be 512 seconds
   uint32_t notifyEveryNReports = 256;
   uint32_t samplingPeriod = 1000000000;
   for (auto device : devices) {
@@ -1305,7 +1303,6 @@ TEST_F(
   
   /* The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds))
    * For this test it will be 9 seconds. The execution time between metric_streamer_open_for_device and synchronize observed on average is less than 50% of this
-   * which ensure this limit is never likely to hit even on the slowest of platform
    */ 
   uint32_t notifyEveryNReports = 4500;
   for (auto device : devices) {
@@ -1408,7 +1405,6 @@ TEST_F(
   
   /* The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds))
    * For this test it will be 9 seconds. The execution time between metric_streamer_open_for_device and synchronize observed on average is less than 50% of this
-   * which ensure this limit is never likely to hit even on the slowest of platform
    */ 
   uint32_t notifyEveryNReports = 4500;
   for (auto device : devices) {
