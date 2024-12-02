@@ -1183,8 +1183,11 @@ TEST_F(
 
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
       lzt::event_host_synchronize(eventHandle, UINT64_MAX);
-      std::vector<uint8_t> rawData;
       size_t rawDataSize = 0;
+      std::vector<uint8_t> rawData;
+      rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle, notifyEveryNReports);
+      EXPECT_GT(rawDataSize, 0);
+      rawData.resize(rawDataSize);      
       lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
                                      rawDataSize, &rawData);
 
@@ -1214,6 +1217,9 @@ TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
 
+  /* The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds))
+   * For this test it will be 512 seconds which ensure this limit is never likely to hit even on the slowest of platform
+   */  
   uint32_t notifyEveryNReports = 256;
   uint32_t samplingPeriod = 1000000000;
   for (auto device : devices) {
@@ -1262,8 +1268,11 @@ TEST_F(
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
       lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
 
-      std::vector<uint8_t> rawData;
       size_t rawDataSize = 0;
+      std::vector<uint8_t> rawData;
+      rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle, notifyEveryNReports);
+      EXPECT_GT(rawDataSize, 0);
+      rawData.resize(rawDataSize);      
       lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
                                      rawDataSize, &rawData);
 
@@ -1293,7 +1302,11 @@ TEST_F(
    * ZE_RESULT_NOT_READY. Once the expected time has elapsed it will come out of
    * the loop and expect the event to be generated.
    */
-
+  
+  /* The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds))
+   * For this test it will be 9 seconds. The execution time between metric_streamer_open_for_device and synchronize observed on average is less than 50% of this
+   * which ensure this limit is never likely to hit even on the slowest of platform
+   */ 
   uint32_t notifyEveryNReports = 4500;
   for (auto device : devices) {
 
@@ -1392,7 +1405,11 @@ TEST_F(
 TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToGenrateCorrectNumberOfReports) {
-
+  
+  /* The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds))
+   * For this test it will be 9 seconds. The execution time between metric_streamer_open_for_device and synchronize observed on average is less than 50% of this
+   * which ensure this limit is never likely to hit even on the slowest of platform
+   */ 
   uint32_t notifyEveryNReports = 4500;
   for (auto device : devices) {
 
@@ -1749,8 +1766,11 @@ void run_ip_sampling_with_validation(
         LOG_WARNING << "elapsed time for workload completion is too short";
       }
 
-      std::vector<uint8_t> rawData;
       size_t rawDataSize = 0;
+      std::vector<uint8_t> rawData;
+      rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle, notifyEveryNReports);
+      EXPECT_GT(rawDataSize, 0);
+      rawData.resize(rawDataSize);      
       lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
                                      rawDataSize, &rawData);
       lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
@@ -2247,8 +2267,8 @@ TEST(
   eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
                          ZE_EVENT_SCOPE_FLAG_HOST);
 
-  uint32_t notifyEveryNReports = 3000;
-  uint32_t samplingPeriod = 10000;
+  uint32_t notifyEveryNReports = 4500;
+  uint32_t samplingPeriod = 1000000;
   zet_metric_streamer_handle_t metricStreamerHandle =
       lzt::metric_streamer_open_for_device(device, groupInfo.metricGroupHandle,
                                            eventHandle, notifyEveryNReports,
@@ -2282,10 +2302,13 @@ TEST(
 
     EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-    std::vector<uint8_t> rawData;
     size_t rawDataSize = 0;
+    std::vector<uint8_t> rawData;
+    rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle, notifyEveryNReports);
+    EXPECT_GT(rawDataSize, 0);
+    rawData.resize(rawDataSize);      
     lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
-                                   rawDataSize, &rawData);
+                                    rawDataSize, &rawData);
     lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                           rawData.data());
 
@@ -2330,8 +2353,8 @@ TEST(
   eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
                          ZE_EVENT_SCOPE_FLAG_HOST);
 
-  uint32_t notifyEveryNReports = 3000;
-  uint32_t samplingPeriod = 10000;
+  uint32_t notifyEveryNReports = 4500;
+  uint32_t samplingPeriod = 1000000;
   zet_metric_streamer_handle_t metricStreamerHandle =
       lzt::metric_streamer_open_for_device(device, groupInfo.metricGroupHandle,
                                            eventHandle, notifyEveryNReports,
@@ -2364,10 +2387,13 @@ TEST(
 
   EXPECT_GE(allReportsSize / oneReportSize, notifyEveryNReports);
 
-  std::vector<uint8_t> rawData;
   size_t rawDataSize = 0;
+  std::vector<uint8_t> rawData;
+  rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle, notifyEveryNReports);
+  EXPECT_GT(rawDataSize, 0);
+  rawData.resize(rawDataSize);      
   lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
-                                 rawDataSize, &rawData);
+                                  rawDataSize, &rawData);
   lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                         rawData.data());
 
