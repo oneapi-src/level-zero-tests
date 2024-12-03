@@ -1217,8 +1217,10 @@ TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
 
-  // The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds)) for this test it will be 512 seconds
-  uint32_t notifyEveryNReports = 256;
+  /* The time in seconds for the buffer to overflow would be 2 * (notifyEveryNReports * (samplingPeriod/nanoSecToSeconds)) for this test it will be 18000 seconds
+   * A high value of notifyEveryNReports makes sure buffer overflow does not happen even if context-switching caused extra reports to be generated
+   */
+  uint32_t notifyEveryNReports = 9000;
   uint32_t samplingPeriod = 1000000000;
   for (auto device : devices) {
 
@@ -1357,7 +1359,7 @@ TEST_F(
           notifyEveryNReports *
           (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
-      double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
+      double errorBuffer = 0.10 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
                 << minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "errorBuffer " << errorBuffer;
@@ -1373,6 +1375,9 @@ TEST_F(
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         currentTime = std::chrono::system_clock::now();
         elapsedSeconds = currentTime - startTime;
+        // Need to keep runnning some workload since some platforms go into sleep mode when idle and dont generate reports. This will delay the event generation.
+        lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+        lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
       }
 
       // Sleep again for the error buffer time to ensure corner cases are
@@ -1459,7 +1464,7 @@ TEST_F(
           notifyEveryNReports *
           (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
-      double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
+      double errorBuffer = 0.10 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
                 << minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "errorBuffer " << errorBuffer;
@@ -1473,6 +1478,9 @@ TEST_F(
         LOG_DEBUG << "additional sleep before expecting event to be ready "
                   << timeLeft;
         std::this_thread::sleep_for(std::chrono::seconds(timeLeft));
+        // Need to keep runnning some workload since some platforms go into sleep mode when idle and dont generate reports. This will delay the event generation.
+        lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+        lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
       }
 
       ze_result_t eventResult;
