@@ -155,6 +155,8 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
     lzt::close_command_list(bundle.list);
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
+    uint32_t output_value = reinterpret_cast<uint32_t*>(memory_out)[0];
+
     switch(accessFlags) {
       case ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE:
         EXPECT_EQ(output_value, input_value);
@@ -167,6 +169,8 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
     lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory, test.allocationSize);
   }
 
+  lzt::free_memory(memory_in);
+  lzt::free_memory(memory_out);
   lzt::physical_memory_destroy(test.context, test.reservedPhysicalMemory);
   lzt::virtual_memory_free(test.context, test.reservedVirtualMemory, test.allocationSize);
 }
