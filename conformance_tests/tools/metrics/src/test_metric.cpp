@@ -1222,8 +1222,7 @@ TEST_F(
 
   /* This test tries to validate the readData feature of streamers. Hence a high
    * value of notifyEveryNReports and samplingPeriod is chosen such that buffer
-   * overflow does not happen even if context-switching causes extra reports to
-   * be generated.
+   * overflow does not generarlly happen.
    */
   uint32_t notifyEveryNReports = 9000;
   uint32_t samplingPeriod = 1000000000;
