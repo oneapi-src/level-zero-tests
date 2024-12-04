@@ -1374,7 +1374,7 @@ TEST_F(
           notifyEveryNReports *
           (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
-      double errorBuffer = 0.10 * minimumTimeBeforeEventIsExpected;
+      double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
                 << minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "errorBuffer " << errorBuffer;
@@ -1485,7 +1485,7 @@ TEST_F(
           notifyEveryNReports *
           (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
-      double errorBuffer = 0.10 * minimumTimeBeforeEventIsExpected;
+      double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
                 << minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "errorBuffer " << errorBuffer;
