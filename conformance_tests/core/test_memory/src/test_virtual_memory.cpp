@@ -118,7 +118,6 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
   void *memory_in = lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
   void *memory_out = lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
 
-  const uint32_t zero_val = 0;
   const uint32_t input_value = 0x99999999;
   reinterpret_cast<uint32_t*>(memory_in)[0] = input_value;
 
@@ -141,16 +140,13 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
     lzt::virtual_memory_map(test.context, test.reservedVirtualMemory, test.allocationSize,
                             test.reservedPhysicalMemory, 0, accessFlags);
 
-    lzt::append_memory_copy(bundle.list, test.reservedVirtualMemory, &zero_val,
-                          sizeof(zero_val), nullptr);
+    lzt::append_memory_set(bundle.list, test.reservedPhysicalMemory, 0,
+                         test.allocationSize, nullptr);
     lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(bundle.list, test.reservedVirtualMemory, &input_value,
+    lzt::append_memory_copy(bundle.list, test.reservedVirtualMemory, memory_in,
                           sizeof(input_value), nullptr);
     lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
     lzt::append_memory_copy(bundle.list, memory_out, test.reservedVirtualMemory,
-                          sizeof(input_value), nullptr);
-    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(bundle.list, test.reservedVirtualMemory, &zero_val,
                           sizeof(input_value), nullptr);
     lzt::close_command_list(bundle.list);
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
@@ -161,8 +157,11 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
       case ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE:
         EXPECT_EQ(output_value, input_value);
         break;
+      case ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY:
+        EXPECT_EQ(output_value, 0);
+        break;
       default:
-        EXPECT_NE(output_value, input_value);
+        EXPECT_EQ(output_value, ~input_value);
         break;
     };
 
