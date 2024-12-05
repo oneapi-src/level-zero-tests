@@ -35,6 +35,16 @@ namespace {
 
 static constexpr uint32_t nanoSecToSeconds = 1000000000;
 std::atomic<bool> workloadThreadFlag(false);
+
+void workloadThread(ze_command_queue_handle_t cq, uint32_t numCommandLists,
+                    ze_command_list_handle_t *phCommandLists,
+                    ze_fence_handle_t hFence) {
+  while (workloadThreadFlag) {
+    lzt::execute_command_lists(cq, 1, phCommandLists, nullptr);
+    lzt::synchronize(cq, std::numeric_limits<uint64_t>::max());
+  }
+}
+
 class zetMetricGroupTest : public ::testing::Test {
 protected:
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -1220,14 +1230,20 @@ TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
 
-  /* This test tries to validate the readData feature of streamers. Hence a high
-   * value of notifyEveryNReports and samplingPeriod is chosen such that buffer
-   * overflow does not generally happen.
+  /* This test tries to validate the readData feature of streamers.
+   * numberOfReportsReq is the minimum number of reports needed by this test
+   * after streamerOpen(). timeBeforeReadInNanoSec is the minimum time interval
+   * between streamerOpen() and readData() . using above definitions sampling
+   * period needed becomes samplingPeriod = timeBeforeReadInNanoSec /
+   * numberOfReportsReq
    */
+  constexpr uint32_t maxReadAttempts = 20;
+  constexpr uint32_t numberOfReportsReq = 100;
+  constexpr uint32_t timeBeforeReadInNanoSec = 500000000;
+  uint32_t samplingPeriod = timeBeforeReadInNanoSec / numberOfReportsReq;
   uint32_t notifyEveryNReports = 9000;
-  uint32_t samplingPeriod = 1000000000;
-  for (auto device : devices) {
 
+  for (auto device : devices) {
     ze_device_properties_t deviceProperties = {
         ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
@@ -1250,10 +1266,6 @@ TEST_F(
     for (auto groupInfo : metricGroupInfo) {
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
-      ze_event_handle_t eventHandle;
-      lzt::zeEventPool eventPool;
-      eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
-                             ZE_EVENT_SCOPE_FLAG_HOST);
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
@@ -1263,14 +1275,21 @@ TEST_F(
                                       nullptr);
       lzt::close_command_list(commandList);
 
+      // Spawn a thread which continuously runs a workload
+      workloadThreadFlag = true;
+      std::thread thread(workloadThread, commandQueue, 1, &commandList,
+                         nullptr);
+
       zet_metric_streamer_handle_t metricStreamerHandle =
           lzt::metric_streamer_open_for_device(
-              device, groupInfo.metricGroupHandle, eventHandle,
-              notifyEveryNReports, samplingPeriod);
-      ASSERT_NE(nullptr, metricStreamerHandle);
+              device, groupInfo.metricGroupHandle, nullptr, notifyEveryNReports,
+              samplingPeriod);
 
-      lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
-      lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
+      // Sleep for timeBeforeReadInNanoSec to ensure required reports are
+      // generated
+      std::this_thread::sleep_for(
+          std::chrono::nanoseconds(timeBeforeReadInNanoSec));
+      ASSERT_NE(nullptr, metricStreamerHandle);
 
       size_t rawDataSize = 0;
       std::vector<uint8_t> rawData;
@@ -1278,10 +1297,21 @@ TEST_F(
                                                         notifyEveryNReports);
       EXPECT_GT(rawDataSize, 0);
       rawData.resize(rawDataSize);
-      lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
-                                     rawDataSize, &rawData);
+      for (uint32_t count = 0; count < maxReadAttempts; count++) {
+        lzt::metric_streamer_read_data(
+            metricStreamerHandle, notifyEveryNReports, rawDataSize, &rawData);
+        if (rawDataSize > 0) {
+          break;
+        } else {
+          std::this_thread::sleep_for(std::chrono::nanoseconds(samplingPeriod));
+        }
+      }
 
       LOG_INFO << "rawDataSize " << rawDataSize;
+      // Stop the worker thread running the workload
+      workloadThreadFlag = false;
+      thread.join();
+
       lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                             rawData.data());
       lzt::metric_streamer_close(metricStreamerHandle);
@@ -1290,20 +1320,10 @@ TEST_F(
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
       lzt::free_memory(c_buffer);
-      eventPool.destroy_event(eventHandle);
       lzt::reset_command_list(commandList);
     }
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
-  }
-}
-
-void workloadThread(ze_command_queue_handle_t cq, uint32_t numCommandLists,
-                    ze_command_list_handle_t *phCommandLists,
-                    ze_fence_handle_t hFence) {
-  while (workloadThreadFlag) {
-    lzt::execute_command_lists(cq, 1, phCommandLists, nullptr);
-    lzt::synchronize(cq, std::numeric_limits<uint64_t>::max());
   }
 }
 
