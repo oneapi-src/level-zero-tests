@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -174,11 +174,11 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
     zes_pci_stats_t pci_stats_later{};
     uint32_t wait = 0;
     do {
-      pci_stats_later = lzt::get_pci_stats(device);
       wait += IDLE_WAIT_TIMESTEP_MSEC;
       // sleep for sometime before next check
       std::this_thread::sleep_for(
           std::chrono::milliseconds(IDLE_WAIT_TIMESTEP_MSEC));
+      pci_stats_later = lzt::get_pci_stats(device);
     } while (pci_stats_later.timestamp == pci_stats_initial.timestamp &&
              wait <= IDLE_WAIT_TIMEOUT_MSEC);
 
