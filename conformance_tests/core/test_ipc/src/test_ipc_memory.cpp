@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -67,8 +67,8 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   ze_physical_mem_handle_t reservedPhysicalMemory = {};
   void *memory = nullptr;
   if (reserved) {
-    memory = lzt::reserve_allocate_and_map_memory(context, device, allocSize,
-                                                  &reservedPhysicalMemory);
+    memory = lzt::reserve_allocate_and_map_device_memory(
+        context, device, allocSize, &reservedPhysicalMemory);
   } else {
     memory = lzt::allocate_device_memory(size, 1, 0, context);
   }

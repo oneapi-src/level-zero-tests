@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -249,7 +249,7 @@ protected:
           dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev,
           mem_size_, &pageSize);
       mem_size_ = lzt::create_page_aligned_size(mem_size_, pageSize);
-      lzt::physical_memory_allocation(
+      lzt::physical_device_memory_allocation(
           lzt::get_default_context(),
           dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev,
           mem_size_, &dev_access_[0].device_mem_remote_physical);

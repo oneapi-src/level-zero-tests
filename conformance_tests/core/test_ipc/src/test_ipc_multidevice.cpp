@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -70,8 +70,8 @@ void multi_device_sender(size_t size, bool reserved, bool is_immediate) {
   ze_physical_mem_handle_t reservedPhysicalMemory = {};
   void *memory = nullptr;
   if (reserved) {
-    memory = lzt::reserve_allocate_and_map_memory(context, device, allocSize,
-                                                  &reservedPhysicalMemory);
+    memory = lzt::reserve_allocate_and_map_device_memory(
+        context, device, allocSize, &reservedPhysicalMemory);
   } else {
     memory = lzt::allocate_device_memory(size, 1, flags, device, context);
   }

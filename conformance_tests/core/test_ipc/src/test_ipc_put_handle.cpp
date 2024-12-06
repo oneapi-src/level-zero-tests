@@ -64,8 +64,8 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
   ze_physical_mem_handle_t reservedPhysicalMemory = {};
   void *memory = nullptr;
   if (reserved) {
-    memory = lzt::reserve_allocate_and_map_memory(context, device, allocSize,
-                                                  &reservedPhysicalMemory);
+    memory = lzt::reserve_allocate_and_map_device_memory(
+        context, device, allocSize, &reservedPhysicalMemory);
   } else {
     memory = lzt::allocate_device_memory(size, 1, 0, context);
   }

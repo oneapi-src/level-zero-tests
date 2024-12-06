@@ -137,10 +137,13 @@ void physical_memory_allocation(ze_context_handle_t context,
                                 ze_device_handle_t device,
                                 ze_physical_mem_desc_t *desc,
                                 ze_physical_mem_handle_t *memory);
-void physical_memory_allocation(ze_context_handle_t context,
-                                ze_device_handle_t device,
-                                size_t allocation_size,
-                                ze_physical_mem_handle_t *memory);
+void physical_device_memory_allocation(ze_context_handle_t context,
+                                       ze_device_handle_t device,
+                                       size_t allocation_size,
+                                       ze_physical_mem_handle_t *memory);
+void physical_host_memory_allocation(ze_context_handle_t context,
+                                     size_t allocation_size,
+                                     ze_physical_mem_handle_t *memory);
 void physical_memory_destroy(ze_context_handle_t context,
                              ze_physical_mem_handle_t memory);
 void virtual_memory_map(ze_context_handle_t context,
@@ -157,7 +160,7 @@ void virtual_memory_reservation_get_access(ze_context_handle_t context,
 void virtual_memory_reservation_set_access(ze_context_handle_t context,
                                            const void *ptr, size_t size,
                                            ze_memory_access_attribute_t access);
-void *reserve_allocate_and_map_memory(
+void *reserve_allocate_and_map_device_memory(
     ze_context_handle_t context, ze_device_handle_t device, size_t &allocSize,
     ze_physical_mem_handle_t *reservedPhysicalMemory);
 void unmap_and_free_reserved_memory(

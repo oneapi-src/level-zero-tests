@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -56,10 +56,10 @@ protected:
         mem_size_ =
             lzt::create_page_aligned_size(mem_size_ + offset_, pageSize);
         offset_ = 0;
-        lzt::physical_memory_allocation(context, device, mem_size_,
-                                        &instance.src_physical_region);
-        lzt::physical_memory_allocation(context, device, mem_size_,
-                                        &instance.dst_physical_region);
+        lzt::physical_device_memory_allocation(context, device, mem_size_,
+                                               &instance.src_physical_region);
+        lzt::physical_device_memory_allocation(context, device, mem_size_,
+                                               &instance.dst_physical_region);
         lzt::virtual_memory_reservation(context, nullptr, mem_size_,
                                         &instance.src_region);
         EXPECT_NE(nullptr, instance.src_region);
@@ -103,10 +103,10 @@ protected:
           mem_size_ =
               lzt::create_page_aligned_size(mem_size_ + offset_, pageSize);
           offset_ = 0;
-          lzt::physical_memory_allocation(
+          lzt::physical_device_memory_allocation(
               context, sub_device, mem_size_,
               &sub_device_instance.src_physical_region);
-          lzt::physical_memory_allocation(
+          lzt::physical_device_memory_allocation(
               context, sub_device, mem_size_,
               &sub_device_instance.dst_physical_region);
           lzt::virtual_memory_reservation(context, nullptr, mem_size_,

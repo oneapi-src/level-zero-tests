@@ -365,15 +365,15 @@ void get_mem_alloc_properties(
   EXPECT_EQ(context, context_initial);
 }
 
-void *reserve_allocate_and_map_memory(
+void *reserve_allocate_and_map_device_memory(
     ze_context_handle_t context, ze_device_handle_t device, size_t &allocSize,
     ze_physical_mem_handle_t *reservedPhysicalMemory) {
   size_t pageSize = 0;
   void *reservedMemory = nullptr;
   lzt::query_page_size(context, device, allocSize, &pageSize);
   allocSize = lzt::create_page_aligned_size(allocSize, pageSize);
-  lzt::physical_memory_allocation(context, device, allocSize,
-                                  reservedPhysicalMemory);
+  lzt::physical_device_memory_allocation(context, device, allocSize,
+                                         reservedPhysicalMemory);
   lzt::virtual_memory_reservation(context, nullptr, allocSize, &reservedMemory);
   EXPECT_NE(nullptr, reservedMemory);
   EXPECT_EQ(zeVirtualMemMap(context, reservedMemory, allocSize,
@@ -424,14 +424,25 @@ void virtual_memory_free(ze_context_handle_t context, void *memory,
   EXPECT_EQ(zeVirtualMemFree(context, memory, alloc_size), ZE_RESULT_SUCCESS);
 }
 
-void physical_memory_allocation(ze_context_handle_t context,
-                                ze_device_handle_t device,
-                                size_t allocation_size,
-                                ze_physical_mem_handle_t *memory) {
+void physical_device_memory_allocation(ze_context_handle_t context,
+                                       ze_device_handle_t device,
+                                       size_t allocation_size,
+                                       ze_physical_mem_handle_t *memory) {
   ze_physical_mem_desc_t physDesc = {ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC,
                                      nullptr};
   physDesc.size = allocation_size;
+  physDesc.flags = ZE_PHYSICAL_MEM_FLAG_ALLOCATE_ON_DEVICE;
   lzt::physical_memory_allocation(context, device, &physDesc, memory);
+}
+
+void physical_host_memory_allocation(ze_context_handle_t context,
+                                     size_t allocation_size,
+                                     ze_physical_mem_handle_t *memory) {
+  ze_physical_mem_desc_t physDesc = {ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC,
+                                     nullptr};
+  physDesc.size = allocation_size;
+  physDesc.flags = ZE_PHYSICAL_MEM_FLAG_ALLOCATE_ON_HOST;
+  lzt::physical_memory_allocation(context, nullptr, &physDesc, memory);
 }
 
 void physical_memory_allocation(ze_context_handle_t context,
