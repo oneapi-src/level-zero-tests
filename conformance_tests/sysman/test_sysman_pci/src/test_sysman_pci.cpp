@@ -172,7 +172,7 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
     lzt::destroy_command_list(command_list);
 
     zes_pci_stats_t pci_stats_later{};
-    int wait = 0;
+    uint32_t wait = 0;
     do {
       pci_stats_later = lzt::get_pci_stats(device);
       wait += IDLE_WAIT_TIMESTEP_MSEC;
