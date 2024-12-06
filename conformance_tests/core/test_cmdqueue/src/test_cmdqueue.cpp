@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -235,6 +235,117 @@ TEST_P(
   }
 }
 
+class zeImmediateCommandListAppendCommandListsExpTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<CustomExecuteParams> {
+protected:
+  void SetUp() override {
+
+    const ze_driver_handle_t driver = lzt::get_default_driver();
+    const ze_context_handle_t context = lzt::get_default_context();
+    EXPECT_GT(params.num_command_lists, 0);
+
+    print_cmdqueue_exec(params.num_command_lists, params.sync_timeout);
+
+    ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+    auto ordinal = lzt::get_compute_queue_group_ordinals(device)[0];
+
+    command_list_immediate = lzt::create_immediate_command_list(
+        device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+        ordinal);
+
+    command_queue = lzt::create_command_queue(
+        context, device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+        ordinal);
+
+    for (uint32_t i = 0; i < buff_size_bytes; i++) {
+      verification_buffer[i] = lzt::generate_value<uint8_t>(0, 255, 0);
+    }
+
+    for (uint32_t i = 0; i < params.num_command_lists; i++) {
+
+      void *host_buffer =
+          lzt::allocate_host_memory(buff_size_bytes, 1, context);
+
+      uint8_t *char_input = static_cast<uint8_t *>(host_buffer);
+      for (uint32_t j = 0; j < buff_size_bytes; j++) {
+        char_input[j] = verification_buffer[j];
+      }
+
+      host_buffers.push_back(static_cast<uint8_t *>(host_buffer));
+
+      void *device_buffer =
+          lzt::allocate_device_memory(buff_size_bytes, buff_size_bytes, 0,
+                                      nullptr, ordinal, device, context);
+
+      device_buffers.push_back(static_cast<uint8_t *>(device_buffer));
+
+      ze_command_list_handle_t command_list_regular =
+          lzt::create_command_list(context, device, 0, ordinal);
+
+      // Copy from host-allocated to device-allocated memory
+      lzt::append_memory_copy(command_list_regular, device_buffer, host_buffer,
+                              buff_size_bytes, nullptr);
+
+      lzt::append_barrier(command_list_regular, nullptr, 0, nullptr);
+
+      // Copy from device-allocated memory back to host-allocated memory
+      lzt::append_memory_copy(command_list_regular, host_buffer, device_buffer,
+                              buff_size_bytes, nullptr);
+
+      lzt::close_command_list(command_list_regular);
+      list_of_command_lists.push_back(command_list_regular);
+    }
+  }
+
+  void TearDown() override {
+    for (uint32_t i = 0; i < params.num_command_lists; i++) {
+
+      EXPECT_EQ(
+          0, memcmp(host_buffers.at(i), verification_buffer, buff_size_bytes));
+
+      lzt::destroy_command_list(list_of_command_lists.at(i));
+      lzt::free_memory(host_buffers.at(i));
+      lzt::free_memory(device_buffers.at(i));
+    }
+    lzt::destroy_command_queue(command_queue);
+  }
+
+  static const uint32_t buff_size_bytes = 12;
+  uint8_t verification_buffer[buff_size_bytes];
+  CustomExecuteParams params = GetParam();
+
+  ze_command_queue_handle_t command_queue = nullptr;
+  std::vector<ze_command_list_handle_t> list_of_command_lists;
+
+  std::vector<uint8_t *> host_buffers;
+  std::vector<uint8_t *> device_buffers;
+
+  ze_command_list_handle_t command_list_immediate;
+};
+
+class zeCommandListImmediateAppendCommandListsExpTestsHostSynchronize
+    : public zeImmediateCommandListAppendCommandListsExpTests {};
+
+TEST_P(
+    zeCommandListImmediateAppendCommandListsExpTestsHostSynchronize,
+    GivenCommandListImmediateAppendCommandListsExpAndSyncUsingCommandListHostSynchronizeThenCallSucceeds) {
+
+  lzt::append_command_lists_immediate_exp(command_list_immediate,
+                                          params.num_command_lists,
+                                          list_of_command_lists.data());
+
+  ze_result_t sync_status = ZE_RESULT_NOT_READY;
+  while (sync_status != ZE_RESULT_SUCCESS) {
+    EXPECT_EQ(sync_status, ZE_RESULT_NOT_READY);
+    sync_status = zeCommandListHostSynchronize(command_list_immediate,
+                                               params.sync_timeout);
+    std::this_thread::yield();
+  }
+}
+
 CustomExecuteParams synchronize_test_input[] = {{1, 0},
                                                 {2, UINT32_MAX >> 30},
                                                 {3, UINT32_MAX >> 28},
@@ -253,6 +364,11 @@ CustomExecuteParams synchronize_test_input[] = {{1, 0},
 INSTANTIATE_TEST_SUITE_P(TestIncreasingNumberCommandListsWithSynchronize,
                          zeCommandQueueExecuteCommandListTestsSynchronize,
                          testing::ValuesIn(synchronize_test_input));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestIncreasingNumberCommandListImmediateAppendCommandListsExpWithSynchronize,
+    zeCommandListImmediateAppendCommandListsExpTestsHostSynchronize,
+    testing::ValuesIn(synchronize_test_input));
 
 class zeCommandQueueExecuteCommandListTestsFence
     : public zeCommandQueueExecuteCommandListTests {};

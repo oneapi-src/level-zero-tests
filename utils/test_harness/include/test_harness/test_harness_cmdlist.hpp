@@ -48,6 +48,17 @@ ze_command_list_handle_t create_immediate_command_list(
 
 ze_command_list_handle_t create_immediate_command_list();
 
+void append_command_lists_immediate_exp(
+    ze_command_list_handle_t hCommandList, uint32_t numCommandLists,
+    ze_command_list_handle_t *phCommandLists, ze_event_handle_t hSignalEvent);
+void append_command_lists_immediate_exp(
+    ze_command_list_handle_t hCommandList, uint32_t numCommandLists,
+    ze_command_list_handle_t *phCommandLists);
+void append_command_lists_immediate_exp(
+    ze_command_list_handle_t hCommandList, uint32_t numCommandLists,
+    ze_command_list_handle_t *phCommandLists, ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents);
+
 zeCommandBundle create_command_bundle(bool isImmediate);
 zeCommandBundle create_command_bundle(ze_device_handle_t device,
                                       bool isImmediate);
