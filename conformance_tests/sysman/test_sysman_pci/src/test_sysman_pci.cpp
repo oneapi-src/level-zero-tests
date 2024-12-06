@@ -176,7 +176,7 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
     do {
       pci_stats_later = lzt::get_pci_stats(device);
       wait += IDLE_WAIT_TIMESTEP_MSEC;
-      // sleep for sometime befor next check
+      // sleep for sometime before next check
       std::this_thread::sleep_for(
           std::chrono::milliseconds(IDLE_WAIT_TIMESTEP_MSEC));
     } while (pci_stats_later.timestamp == pci_stats_initial.timestamp &&
