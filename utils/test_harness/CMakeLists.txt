@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2020 Intel Corporation
+# Copyright (C) 2020-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -29,6 +29,7 @@ add_core_library(test_harness
     "sysman/src/test_harness_sysman_pci.cpp"
     "sysman/src/test_harness_sysman_power.cpp"
     "sysman/src/test_harness_sysman_diagnostics.cpp"
+    "sysman/src/test_harness_sysman_driver.cpp"
     "sysman/src/test_harness_sysman_event.cpp"
     "sysman/src/test_harness_sysman_memory.cpp"
     "sysman/src/test_harness_sysman_fabric.cpp"
