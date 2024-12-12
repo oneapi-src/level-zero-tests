@@ -461,6 +461,7 @@ TEST_F(
         lzt::set_freq_range(pfreq_handle, invalid_freq_range, result);
 
         if (result == ZE_RESULT_SUCCESS) {
+          // driver allows to set out of range freq limits
           clamped_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
           EXPECT_EQ(freq_property.min, clamped_freq_range.min);
           EXPECT_EQ(freq_property.max, clamped_freq_range.max);
