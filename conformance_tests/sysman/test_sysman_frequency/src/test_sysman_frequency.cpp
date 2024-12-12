@@ -465,8 +465,7 @@ TEST_F(
           EXPECT_EQ(freq_property.min, clamped_freq_range.min);
           EXPECT_EQ(freq_property.max, clamped_freq_range.max);
         } else {
-          LOG_WARNING << "Setting Out of Range Freq Limits Failed. Frequency "
-                         "Clamping is Unsupported!";
+          LOG_WARNING << "Setting Out of Range Freq Limits Failed!";
         }
       } else {
         LOG_WARNING << "User cannot control min/max frequency setting for "
