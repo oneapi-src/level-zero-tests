@@ -10,7 +10,6 @@
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
-#include <condition_variable>
 #include <thread>
 
 namespace lzt = level_zero_tests;
@@ -20,8 +19,6 @@ namespace lzt = level_zero_tests;
 namespace {
 
 std::mutex mem_mutex;
-std::condition_variable condition_variable;
-uint32_t ready = 0;
 
 #ifdef USE_ZESINIT
 class MemoryModuleZesTest : public lzt::ZesSysmanCtsClass {};
@@ -405,13 +402,11 @@ void getMemoryState(ze_device_handle_t device) {
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
   std::unique_lock<std::mutex> lock(mem_mutex);
-  ready++;
-  condition_variable.notify_all();
-  condition_variable.wait(lock, [] { return ready == 2; });
   for (auto mem_handle : mem_handles) {
     ASSERT_NE(nullptr, mem_handle);
     lzt::get_mem_state(mem_handle);
   }
+  lock.unlock();
 }
 
 void getRasState(ze_device_handle_t device) {
@@ -423,14 +418,12 @@ void getRasState(ze_device_handle_t device) {
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
   std::unique_lock<std::mutex> lock(mem_mutex);
-  ready++;
-  condition_variable.notify_all();
-  condition_variable.wait(lock, [] { return ready == 2; });
   for (auto ras_handle : ras_handles) {
     ASSERT_NE(nullptr, ras_handle);
     ze_bool_t clear = 0;
     lzt::get_ras_state(ras_handle, clear);
   }
+  lock.unlock();
 }
 
 TEST_F(
