@@ -39,7 +39,8 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
 std::vector<metricGroupInfo_t>
 get_metric_group_info(ze_device_handle_t device,
                       zet_metric_group_sampling_type_flags_t samplingType,
-                      bool includeExpFeature);
+                      bool includeExpFeature,
+                      bool useConcurrentMetricGroups = false);
 
 uint32_t get_metric_group_handles_count(ze_device_handle_t device);
 std::vector<zet_metric_group_handle_t>
@@ -169,6 +170,9 @@ void metric_validate_streamer_marker_data(
     std::vector<uint32_t> &streamerMarkerValues,
     uint32_t &streamer_marker_values_index);
 
+std::vector<zet_metric_group_handle_t> get_concurrent_metric_group(
+    ze_device_handle_t device,
+    std::vector<zet_metric_group_handle_t> &metricGroupHandleList);
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */
