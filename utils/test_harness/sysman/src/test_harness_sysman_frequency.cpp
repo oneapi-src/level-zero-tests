@@ -52,6 +52,11 @@ void set_freq_range(zes_freq_handle_t pFreqHandle, zes_freq_range_t &pLimits) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesFrequencySetRange(pFreqHandle, &pLimits));
 }
 
+void set_freq_range(zes_freq_handle_t pFreqHandle, zes_freq_range_t &pLimits,
+                    ze_result_t &result) {
+  result = zesFrequencySetRange(pFreqHandle, &pLimits);
+}
+
 zes_freq_properties_t get_freq_properties(zes_freq_handle_t pFreqHandle) {
   zes_freq_properties_t pProperties = {ZES_STRUCTURE_TYPE_FREQ_PROPERTIES,
                                        nullptr};

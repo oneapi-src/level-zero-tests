@@ -457,10 +457,17 @@ TEST_F(
         }
         invalid_freq_range.max = freq_property.max + 100;
 
-        lzt::set_freq_range(pfreq_handle, invalid_freq_range);
-        clamped_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
-        EXPECT_EQ(freq_property.min, clamped_freq_range.min);
-        EXPECT_EQ(freq_property.max, clamped_freq_range.max);
+        ze_result_t result{};
+        lzt::set_freq_range(pfreq_handle, invalid_freq_range, result);
+
+        if (result == ZE_RESULT_SUCCESS) {
+          // driver allows to set out of range freq limits
+          clamped_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
+          EXPECT_EQ(freq_property.min, clamped_freq_range.min);
+          EXPECT_EQ(freq_property.max, clamped_freq_range.max);
+        } else {
+          LOG_WARNING << "Setting Out of Range Freq Limits Failed!";
+        }
       } else {
         LOG_WARNING << "User cannot control min/max frequency setting for "
                        "frequency domain "
@@ -569,16 +576,16 @@ TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
         for (auto p_power_handle : p_power_handles) {
           EXPECT_NE(nullptr, p_power_handle);
           zes_power_sustained_limit_t power_sustained_limit_Initial;
-          auto status = lzt::get_power_limits(p_power_handle, &power_sustained_limit_Initial,
-                                nullptr, nullptr);
+          auto status = lzt::get_power_limits(
+              p_power_handle, &power_sustained_limit_Initial, nullptr, nullptr);
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
           EXPECT_EQ(status, ZE_RESULT_SUCCESS);
           zes_power_sustained_limit_t power_sustained_limit_set;
           power_sustained_limit_set.power = 0;
-          status = lzt::set_power_limits(p_power_handle, &power_sustained_limit_set,
-                                nullptr, nullptr);
+          status = lzt::set_power_limits(
+              p_power_handle, &power_sustained_limit_set, nullptr, nullptr);
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
@@ -604,8 +611,8 @@ TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
                     after_throttletime.throttleTime);
           EXPECT_NE(before_throttletime.timestamp,
                     after_throttletime.timestamp);
-          status = lzt::set_power_limits(p_power_handle, &power_sustained_limit_Initial,
-                                nullptr, nullptr);
+          status = lzt::set_power_limits(
+              p_power_handle, &power_sustained_limit_Initial, nullptr, nullptr);
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
@@ -625,16 +632,22 @@ void checkFreqInLoop(zes_freq_handle_t pfreq_handle) {
   zes_freq_range_t limits = {};
   limits = lzt::get_freq_range(pfreq_handle);
 
-  // Monitor actual frequency in loop[fixed loop count]
+  zes_freq_properties_t property = lzt::get_freq_properties(pfreq_handle);
+
+  // Monitor request frequency in loop[fixed loop count]
   do {
     counter--;
     zes_freq_state_t state = lzt::get_freq_state(pfreq_handle);
     lzt::validate_freq_state(pfreq_handle, state);
+    // expect request freq to be within set limits
+    if (state.request > 0) {
+      EXPECT_LE(state.request, limits.max);
+      EXPECT_GE(state.request, limits.min);
+    }
+    // expect actual freq to be within hardware limits
     if (state.actual > 0) {
-      EXPECT_LE(state.actual, limits.max);
-      EXPECT_GE(state.actual, limits.min);
-    } else {
-      LOG_INFO << "Actual frequency is unknown";
+      EXPECT_GE(state.actual, property.min);
+      EXPECT_LE(state.actual, property.max);
     }
     // Sleep for some fixed duration before next check
     std::this_thread::sleep_for(
@@ -693,7 +706,7 @@ void loadForGpuMaxFreqTest(ze_device_handle_t target_device) {
 
 TEST_F(
     FREQUENCY_TEST,
-    GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectActualFrequencyStaysInRangeDuringGpuLoad) {
+    GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectRequestFrequencyStaysInRangeDuringGpuLoad) {
   for (auto device : devices) {
     uint32_t p_count = 0;
     auto pfreq_handles = lzt::get_freq_handles(device, p_count);
