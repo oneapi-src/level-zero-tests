@@ -62,7 +62,7 @@ TEST(
   // Check for multiple errors depending on if this is the first call to zeInitDrivers.
   auto result = zeInitDrivers(nullptr, nullptr, &desc);
   EXPECT_TRUE(result == ZE_RESULT_ERROR_INVALID_ARGUMENT ||
-              result == ZE_RESULT_ERROR_INVALID_ENUMERATION || ZE_RESULT_ERROR_INVALID_NULL_POINTER);
+              result == ZE_RESULT_ERROR_INVALID_ENUMERATION || result == ZE_RESULT_ERROR_INVALID_NULL_POINTER);
   // The second call will be deterministically ZE_RESULT_ERROR_INVALID_NULL_POINTER
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER, zeInitDrivers(nullptr, nullptr, &desc));
 }
