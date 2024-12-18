@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -171,9 +171,21 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
     lzt::destroy_command_queue(cq);
     lzt::destroy_command_list(command_list);
 
-    // delay to prevent identical counters in rare cases
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    auto pci_stats_later = lzt::get_pci_stats(device);
+    zes_pci_stats_t pci_stats_later{};
+    uint32_t wait = 0;
+    do {
+      wait += IDLE_WAIT_TIMESTEP_MSEC;
+      // sleep for sometime before next check
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(IDLE_WAIT_TIMESTEP_MSEC));
+      pci_stats_later = lzt::get_pci_stats(device);
+    } while (pci_stats_later.timestamp == pci_stats_initial.timestamp &&
+             wait <= IDLE_WAIT_TIMEOUT_MSEC);
+
+    if (wait > IDLE_WAIT_TIMEOUT_MSEC) {
+      FAIL() << "TimeOut has occured before the stats gets updated!";
+    }
+
     EXPECT_LE(pci_stats_later.txCounter, UINT64_MAX);
     EXPECT_LE(pci_stats_later.rxCounter, UINT64_MAX);
     EXPECT_LE(pci_stats_later.replayCounter, UINT64_MAX);
@@ -189,7 +201,7 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
     if (pciProps.haveReplayCounters == true) {
       EXPECT_GE(pci_stats_later.replayCounter, pci_stats_initial.replayCounter);
     }
-    EXPECT_NE(pci_stats_later.timestamp, pci_stats_initial.timestamp);
+    EXPECT_GT(pci_stats_later.timestamp, pci_stats_initial.timestamp);
   }
 }
 } // namespace
