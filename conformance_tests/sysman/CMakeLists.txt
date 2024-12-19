@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2020-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -25,3 +25,4 @@ add_subdirectory(test_sysman_overclocking)
 add_subdirectory(test_sysman_scheduler)
 add_subdirectory(test_sysman_performance)
 add_subdirectory(test_sysman_ecc)
+add_subdirectory(test_sysman_vf_management)
