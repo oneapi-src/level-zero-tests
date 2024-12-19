@@ -71,7 +71,8 @@ TEST_F(
     GTEST_SKIP()
         << "No devices that have metric groups of type Tracer were found";
   }
-  for (auto device_with_metric_group_handles : tracer_supporting_devices_list) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
     ze_result_t result;
 
@@ -125,7 +126,8 @@ TEST_F(
     GTEST_SKIP()
         << "No devices that have metric groups of type Tracer were found";
   }
-  for (auto device_with_metric_group_handles : tracer_supporting_devices_list) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
     ze_result_t result;
 
@@ -193,7 +195,8 @@ TEST_F(
     GTEST_SKIP()
         << "No devices that have metric groups of type Tracer were found";
   }
-  for (auto device_with_metric_group_handles : tracer_supporting_devices_list) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
 
     lzt::display_device_properties(device);
@@ -362,7 +365,8 @@ TEST_P(
     GTEST_SKIP()
         << "No devices that have metric groups of type Tracer were found";
   }
-  for (auto device_with_metric_group_handles : tracer_supporting_devices_list) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
 
     lzt::display_device_properties(device);
@@ -552,7 +556,8 @@ TEST_F(zetMetricTracerTest,
     GTEST_SKIP()
         << "No devices that have metric groups of type Tracer were found";
   }
-  for (auto device_with_metric_group_handles : tracer_supporting_devices_list) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
 
     lzt::display_device_properties(device);
@@ -601,7 +606,8 @@ TEST_F(zetMetricTracerTest,
     GTEST_SKIP()
         << "No devices that have metric groups of type Tracer were found";
   }
-  for (auto device_with_metric_group_handles : tracer_supporting_devices_list) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
 
     lzt::display_device_properties(device);
@@ -698,7 +704,8 @@ TEST_F(
     GTEST_SKIP()
         << "No devices that have metric groups of type Tracer were found";
   }
-  for (auto device_with_metric_group_handles : tracer_supporting_devices_list) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
     ze_result_t result;
 
