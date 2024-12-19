@@ -669,6 +669,7 @@ void verify_typed_metric_value(zet_typed_value_t result,
     break;
   default:
     ADD_FAILURE() << "Unexpected value type returned for metric query";
+    break;
   }
 }
 
@@ -1062,7 +1063,7 @@ void generate_activatable_metric_group_list_for_device(
     std::vector<zet_metric_group_handle_t> &activatable_metric_group_list) {
   std::map<uint32_t, zet_metric_group_handle_t> domain_map;
 
-  for (auto group_info : metric_group_info_list) {
+  for (auto &group_info : metric_group_info_list) {
 
     auto it = domain_map.find(group_info.domain);
     if (it == domain_map.end()) {
@@ -1073,7 +1074,7 @@ void generate_activatable_metric_group_list_for_device(
     }
   }
 
-  for (auto map_entry : domain_map) {
+  for (auto &map_entry : domain_map) {
     activatable_metric_group_list.push_back(map_entry.second);
   }
 }
@@ -1138,7 +1139,7 @@ void generate_device_list_with_activatable_metric_group_handles(
     activatable_metric_group_handle_list_for_device_t list_entry;
     list_entry.device = device;
     list_entry.activatable_metric_group_handle_list =
-        activatable_metric_group_handle_list;
+        std::move(activatable_metric_group_handle_list);
     activatable_metric_group_handles_with_devices_list.push_back(list_entry);
   }
   LOG_DEBUG << "LEAVE generate_activatable_devices_list";
@@ -1192,7 +1193,7 @@ void generate_device_list_with_metric_programmable_handles(
 
     metric_programmable_handle_list_for_device list;
     list.device = device;
-    list.device_description = device_description;
+    list.device_description = std::move(device_description);
     list.metric_programmable_handle_count = metric_programmable_handle_count;
     list.metric_programmable_handles_for_device = {
         metric_programmable_handles.begin(),
@@ -1240,6 +1241,7 @@ bool programmable_param_info_type_to_string(
 
   default:
     param_info_type_is_valid = false;
+    break;
   }
   return param_info_type_is_valid;
 }
@@ -1312,6 +1314,7 @@ bool programmable_param_info_value_info_type_to_string(
            "contains an fp64 that is not a number";
     value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_FLOAT64_RANGE";
     oss << param_info.defaultValue.fp64;
+    break;
 
   default:
     EXPECT_TRUE(false)
@@ -1417,7 +1420,7 @@ void generate_param_info_exp_list_from_metric_programmable(
 
   param_infos.resize(metric_programmable_properties.parameterCount);
 
-  for (auto parameter_info : param_infos) {
+  for (auto &parameter_info : param_infos) {
     parameter_info.stype =
         ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_INFO_EXP;
     parameter_info.pNext = nullptr;
@@ -1518,13 +1521,14 @@ void generate_param_value_info_list_from_param_info(
     info->stype = ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
     info->pNext = nullptr;
 
+    zet_metric_programmable_param_value_info_exp_t *desc =
+        &value_info_desc[index];
+    desc->stype = static_cast<zet_structure_type_t>(
+        ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP);
+    desc->pNext = nullptr;
+
     if (include_value_info_desc) {
-      zet_metric_programmable_param_value_info_exp_t *desc =
-          &value_info_desc[index];
       info->pNext = desc;
-      desc->pNext = nullptr;
-      desc->stype = static_cast<zet_structure_type_t>(
-          ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP);
     }
   }
 
