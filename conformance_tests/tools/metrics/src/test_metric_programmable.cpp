@@ -165,7 +165,7 @@ protected:
   }
 
   void destroy_metric_group_handles_list(
-      std::vector<zet_metric_group_handle_t> metric_group_handles_list) {
+      std::vector<zet_metric_group_handle_t> &metric_group_handles_list) {
     LOG_DEBUG << "ENTER destroy_metric_group_handles_list of size "
               << metric_group_handles_list.size();
     for (auto metric_group_handle : metric_group_handles_list) {
@@ -175,6 +175,7 @@ protected:
       EXPECT_EQ(result, ZE_RESULT_SUCCESS)
           << "metric group destroy on handle has failed";
     }
+    metric_group_handles_list.resize(0);
     LOG_DEBUG << "LEAVE destroy_metric_group_handles_list";
   }
 };
@@ -188,7 +189,7 @@ TEST_F(
         << "There are no devices found that support metric programmable";
   }
 
-  for (auto device_with_metric_programmable_groups :
+  for (auto &device_with_metric_programmable_groups :
        metric_programmable_lists_with_devices) {
 
     LOG_INFO << "description of the device being tested: "
@@ -210,7 +211,7 @@ TEST_F(zetMetricMetricProgrammableTest,
         << "There are no devices found that support metric programmable";
   }
 
-  for (auto device_with_metric_programmable_groups :
+  for (auto &device_with_metric_programmable_groups :
        metric_programmable_lists_with_devices) {
 
     LOG_INFO << "description of the device being tested: "
@@ -327,7 +328,7 @@ TEST_F(
         << "There are no devices found that support metric programmable";
   }
 
-  for (auto device_with_metric_programmable_groups :
+  for (auto &device_with_metric_programmable_groups :
        metric_programmable_lists_with_devices) {
 
     LOG_INFO << "description of the device being tested: "
@@ -351,7 +352,7 @@ TEST_F(
           metric_programmable_handle, param_infos,
           metric_programmable_param_info_limit);
       ASSERT_GT(param_infos.size(), 0u);
-      for (auto param_info : param_infos) {
+      for (auto &param_info : param_infos) {
         bool success;
         std::string type_string;
         std::string value_info_type_string;
@@ -381,7 +382,7 @@ TEST_F(
         << "There are no devices found that support metric programmable";
   }
 
-  for (auto device_with_metric_programmable_groups :
+  for (auto &device_with_metric_programmable_groups :
        metric_programmable_lists_with_devices) {
 
     LOG_INFO << "description of the device being tested: "
@@ -407,7 +408,7 @@ TEST_F(
 
       uint32_t param_info_ordinal = 0;
       ASSERT_GT(param_infos.size(), 0u);
-      for (auto param_info : param_infos) {
+      for (auto &param_info : param_infos) {
         bool success;
         std::string type_string;
         std::string value_info_type_string;
@@ -446,7 +447,7 @@ TEST_F(
         << "There are no devices found that support metric programmable";
   }
 
-  for (auto device_with_metric_programmable_groups :
+  for (auto &device_with_metric_programmable_groups :
        metric_programmable_lists_with_devices) {
 
     LOG_INFO << "description of the device being tested: "
@@ -479,7 +480,7 @@ TEST_F(
 
       uint32_t param_info_index = 0;
       ASSERT_GT(param_infos.size(), 0u);
-      for (auto param_info : param_infos) {
+      for (auto &param_info : param_infos) {
         parameter_values[param_info_index].value = param_info.defaultValue;
         param_info_index++;
       }
@@ -505,7 +506,7 @@ TEST_F(
         << "There are no devices found that support metric programmable";
   }
 
-  for (auto device_with_metric_programmable_groups :
+  for (auto &device_with_metric_programmable_groups :
        metric_programmable_lists_with_devices) {
 
     LOG_INFO << "description of the device being tested: "
@@ -538,7 +539,7 @@ TEST_F(
 
       uint32_t param_info_index = 0;
       ASSERT_GT(param_infos.size(), 0u);
-      for (auto param_info : param_infos) {
+      for (auto &param_info : param_infos) {
         parameter_values[param_info_index].value = param_info.defaultValue;
         param_info_index++;
       }
