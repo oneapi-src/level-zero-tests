@@ -7,18 +7,6 @@ add_lzt_test(
   SOURCES
     src/test_metric_utils.cpp
     src/test_metric.cpp
-    src/main.cpp
-  LINK_LIBRARIES
-    level_zero_tests::logging
-    level_zero_tests::utils
-  KERNELS
-    ze_matrix_multiplication_metrics
-)
-add_lzt_test(
-  NAME test_metric_tracer_and_programmable
-  GROUP "/conformance_tests/tools/metrics"
-  SOURCES
-    src/test_metric_utils.cpp
     src/test_metric_tracer.cpp
     src/test_metric_programmable.cpp
     src/main.cpp
