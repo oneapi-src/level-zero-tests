@@ -22,8 +22,9 @@ namespace {
 
 class zeDriverSpreadKernelsStressTest
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<
-          float, float, uint32_t, ze_memory_type_t, bool, bool, bool>> {
+      public ::testing::WithParamInterface<
+          std::tuple<float, float, uint32_t, ze_memory_type_t, bool, bool, bool,
+                     bool, bool>> {
 protected:
   void dispatch_kernels(const ze_device_handle_t device,
                         const std::vector<ze_module_handle_t> &module,
@@ -33,7 +34,8 @@ protected:
                         uint32_t dispatch_count, uint32_t one_case_data_count,
                         ze_context_handle_t context,
                         bool separate_command_lists,
-                        bool separate_command_queues, bool separate_modules) {
+                        bool separate_command_queues, bool separate_modules,
+                        bool is_immediate, bool is_registered_on_immediate) {
 
     std::vector<ze_kernel_handle_t> test_functions;
 
@@ -42,31 +44,46 @@ protected:
 
     ze_command_queue_handle_t current_command_queue = nullptr;
     std::vector<ze_command_queue_handle_t> command_queues;
+    bool case_with_immediate = is_immediate | is_registered_on_immediate;
+    ze_command_list_handle_t immediate_for_registered_command_lists = nullptr;
 
     if (separate_command_lists || separate_command_queues) {
 
       for (uint32_t dispatch_id = 0; dispatch_id < dispatch_count;
            dispatch_id++) {
-        if (separate_command_queues) {
+        if (separate_command_queues && !case_with_immediate) {
           current_command_queue = lzt::create_command_queue(
               context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
               ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
           command_queues.push_back(current_command_queue);
         }
         if (separate_command_lists) {
-          current_command_list = lzt::create_command_list(context, device, 0);
+          if (is_immediate) {
+            current_command_list = lzt::create_immediate_command_list(device);
+          } else {
+            current_command_list = lzt::create_command_list(context, device, 0);
+          }
           command_lists.push_back(current_command_list);
         }
       }
     }
-    if (!separate_command_queues) {
+    if (!separate_command_queues && !is_immediate) {
       current_command_queue = lzt::create_command_queue(
           context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
           ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
       command_queues.push_back(current_command_queue);
     }
     if (!separate_command_lists) {
-      current_command_list = lzt::create_command_list(context, device, 0);
+      if (is_immediate) {
+        current_command_list = lzt::create_immediate_command_list(device);
+      } else {
+        current_command_list = lzt::create_command_list(context, device, 0);
+      }
+    }
+
+    if (is_registered_on_immediate) {
+      immediate_for_registered_command_lists =
+          lzt::create_immediate_command_list(device);
     }
 
     for (uint32_t dispatch_id = 0; dispatch_id < dispatch_count;
@@ -113,34 +130,71 @@ protected:
       test_functions.push_back(test_function);
     }
     auto it_command_queues = command_queues.begin();
+
     if (separate_command_lists) {
-      for (auto command_list : command_lists) {
-        lzt::close_command_list(command_list);
-        if (separate_command_queues) {
-          current_command_queue = *it_command_queues;
-          it_command_queues++;
+      if (is_registered_on_immediate) {
+        for (auto command_list : command_lists) {
+          lzt::close_command_list(command_list);
         }
-        lzt::execute_command_lists(current_command_queue, 1, &command_list,
-                                   nullptr);
-        lzt::synchronize(current_command_queue, UINT64_MAX);
+        lzt::append_command_lists_immediate_exp(
+            immediate_for_registered_command_lists, command_lists.size(),
+            command_lists.data());
+      } else {
+        for (auto command_list : command_lists) {
+          if (separate_command_queues) {
+            current_command_queue = *it_command_queues;
+            it_command_queues++;
+          }
+          if (is_immediate) {
+            lzt::synchronize_command_list_host(command_list, UINT64_MAX);
+          } else {
+            lzt::close_command_list(command_list);
+            lzt::execute_command_lists(current_command_queue, 1, &command_list,
+                                       nullptr);
+            lzt::synchronize(current_command_queue, UINT64_MAX);
+          }
+        }
       }
     } else {
       lzt::close_command_list(current_command_list);
       if (separate_command_queues) {
         for (auto command_queue : command_queues) {
-          lzt::execute_command_lists(command_queue, 1, &current_command_list,
-                                     nullptr);
-          lzt::synchronize(command_queue, UINT64_MAX);
+          if (is_immediate) {
+            lzt::synchronize_command_list_host(current_command_list,
+                                               UINT64_MAX);
+          } else {
+            lzt::execute_command_lists(command_queue, 1, &current_command_list,
+                                       nullptr);
+            lzt::synchronize(current_command_queue, UINT64_MAX);
+          }
         }
       } else {
-        lzt::execute_command_lists(current_command_queue, 1,
-                                   &current_command_list, nullptr);
-        lzt::synchronize(current_command_queue, UINT64_MAX);
+        if (is_immediate) {
+          lzt::synchronize_command_list_host(current_command_list, UINT64_MAX);
+        } else if (is_registered_on_immediate) {
+          std::vector<ze_command_list_handle_t> current_command_lists;
+          current_command_lists.emplace_back(current_command_list);
+          lzt::append_command_lists_immediate_exp(
+              immediate_for_registered_command_lists,
+              current_command_lists.size(), current_command_lists.data());
+        } else {
+          lzt::execute_command_lists(current_command_queue, 1,
+                                     &current_command_list, nullptr);
+          lzt::synchronize(current_command_queue, UINT64_MAX);
+        }
       }
     }
 
+    if (is_registered_on_immediate) {
+      lzt::synchronize_command_list_host(immediate_for_registered_command_lists,
+                                         UINT64_MAX);
+      lzt::destroy_command_list(immediate_for_registered_command_lists);
+    }
+
     if (!separate_command_queues) {
-      lzt::destroy_command_queue(current_command_queue);
+      if (current_command_queue != nullptr) {
+        lzt::destroy_command_queue(current_command_queue);
+      }
     }
     if (!separate_command_lists) {
       lzt::destroy_command_list(current_command_list);
@@ -152,7 +206,9 @@ protected:
     }
     if (separate_command_queues) {
       for (auto command_queue : command_queues) {
-        lzt::destroy_command_queue(command_queue);
+        if (command_queue != nullptr) {
+          lzt::destroy_command_queue(command_queue);
+        }
       }
     }
 
@@ -167,6 +223,8 @@ protected:
     bool separate_modules;
     bool separate_command_lists;
     bool separate_command_queues;
+    bool is_immediate;
+    bool is_registered_on_immediate;
   } OverloadingTestArguments_t;
 
   uint32_t workgroup_size_x_ = 8;
@@ -184,12 +242,28 @@ TEST_P(
       std::get<3>(GetParam()), // memory type
       std::get<4>(GetParam()), // separated modules mode
       std::get<5>(GetParam()), // separated command lists mode
-      std::get<6>(GetParam())  // separated command queues mode
+      std::get<6>(GetParam()), // separated command queues mode
+      std::get<7>(GetParam()), // is immediate command list
+      std::get<8>(
+          GetParam()) // is registerd command lists on immediate command list
   };
 
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
+  if ((test_arguments.separate_command_queues && test_arguments.is_immediate) ||
+      (test_arguments.separate_command_queues &&
+       test_arguments.is_registered_on_immediate)) {
+    GTEST_SKIP()
+        << " Test skipped. Immediate command lists do not use command queues";
+  }
+
+  if (test_arguments.is_immediate &&
+      test_arguments.is_registered_on_immediate) {
+    GTEST_SKIP()
+        << " Test skipped. Immediate command list is designed only to run only "
+           "registered command lists";
+  }
 
   ze_device_properties_t device_properties = lzt::get_device_properties(device);
   test_arguments.base_arguments.print_test_arguments(device_properties);
@@ -274,7 +348,8 @@ TEST_P(
                    number_of_requested_dispatches, test_single_allocation_count,
                    context, test_arguments.separate_command_lists,
                    test_arguments.separate_command_queues,
-                   test_arguments.separate_modules);
+                   test_arguments.separate_modules, test_arguments.is_immediate,
+                   test_arguments.is_registered_on_immediate);
 
   LOG_INFO << "call free output allocation memory";
   for (auto each_allocation : output_allocations) {
@@ -320,7 +395,8 @@ struct CombinationsTestNameSuffix {
     ss << "dispatches_" << std::get<2>(info.param) << "_spread_modules_"
        << std::get<4>(info.param) << "_spread_cmd_lists_"
        << std::get<5>(info.param) << "_spread_cmd_queues_"
-       << std::get<6>(info.param);
+       << std::get<6>(info.param) << "_immediate_" << std::get<7>(info.param)
+       << "_registered_onimmediate_" << std::get<8>(info.param);
     return ss.str();
   }
 };
@@ -329,26 +405,30 @@ std::vector<uint32_t> dispatches = {1, 4, 100, 1000, 2000};
 std::vector<bool> use_separate_modules = {true, false};
 std::vector<bool> use_separate_command_lists = {true, false};
 std::vector<bool> use_separate_command_queues = {true, false};
+std::vector<bool> is_immediate_command_list = {true, false};
+std::vector<bool> is_registered_on_immediate_command_list = {true, false};
 
 INSTANTIATE_TEST_CASE_P(
     zeDriverSpreadKernelsStressTestMaxMemory, zeDriverSpreadKernelsStressTest,
-    ::testing::Combine(::testing::Values(hundred_percent),
-                       ::testing::Values(hundred_percent),
-                       ::testing::ValuesIn(dispatches),
-                       testing::Values(ZE_MEMORY_TYPE_DEVICE),
-                       ::testing::ValuesIn(use_separate_command_lists),
-                       ::testing::ValuesIn(use_separate_command_queues),
-                       ::testing::ValuesIn(use_separate_modules)),
+    ::testing::Combine(
+        ::testing::Values(hundred_percent), ::testing::Values(hundred_percent),
+        ::testing::ValuesIn(dispatches), testing::Values(ZE_MEMORY_TYPE_DEVICE),
+        ::testing::ValuesIn(use_separate_command_lists),
+        ::testing::ValuesIn(use_separate_command_queues),
+        ::testing::ValuesIn(use_separate_modules),
+        ::testing::ValuesIn(is_immediate_command_list),
+        ::testing::ValuesIn(is_registered_on_immediate_command_list)),
     CombinationsTestNameSuffix());
 INSTANTIATE_TEST_CASE_P(
     zeDriverSpreadKernelsStressTestMinMemory, zeDriverSpreadKernelsStressTest,
-    ::testing::Combine(::testing::Values(hundred_percent),
-                       ::testing::Values(five_percent),
-                       ::testing::ValuesIn(dispatches),
-                       testing::Values(ZE_MEMORY_TYPE_DEVICE),
-                       ::testing::ValuesIn(use_separate_command_lists),
-                       ::testing::ValuesIn(use_separate_command_queues),
-                       ::testing::ValuesIn(use_separate_modules)),
+    ::testing::Combine(
+        ::testing::Values(hundred_percent), ::testing::Values(five_percent),
+        ::testing::ValuesIn(dispatches), testing::Values(ZE_MEMORY_TYPE_DEVICE),
+        ::testing::ValuesIn(use_separate_command_lists),
+        ::testing::ValuesIn(use_separate_command_queues),
+        ::testing::ValuesIn(use_separate_modules),
+        ::testing::ValuesIn(is_immediate_command_list),
+        ::testing::ValuesIn(is_registered_on_immediate_command_list)),
     CombinationsTestNameSuffix());
 
 } // namespace

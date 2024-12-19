@@ -24,7 +24,7 @@ class zeDriverMultiplyObjectsStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<float, float, uint32_t, ze_memory_type_t, uint64_t,
-                     uint64_t, uint64_t, uint64_t>> {
+                     uint64_t, uint64_t, uint64_t, bool, bool>> {
 protected:
   ze_kernel_handle_t create_kernel(ze_module_handle_t module,
                                    const std::string &kernel_name,
@@ -63,22 +63,62 @@ protected:
     lzt::append_barrier(command_list, nullptr);
   };
 
-  void
-  send_command_to_execution(ze_command_list_handle_t command_list,
-                            const ze_command_queue_handle_t &command_queue) {
-    lzt::close_command_list(command_list);
-    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-    lzt::synchronize(command_queue, UINT64_MAX);
+  void send_command_to_execution(ze_command_list_handle_t command_list,
+                                 const ze_command_queue_handle_t &command_queue,
+                                 bool is_immediate) {
+    if (is_immediate) {
+      lzt::synchronize_command_list_host(command_list, UINT64_MAX);
+    } else {
+      lzt::close_command_list(command_list);
+      lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+      lzt::synchronize(command_queue, UINT64_MAX);
+    }
+
     // can be used in next iteration. Need to be recycled
     lzt::reset_command_list(command_list);
   };
+
   typedef struct OverloadingMTestArguments {
     TestArguments base_arguments;
     uint64_t multiply_kernels;
     uint64_t multiply_modules;
     uint64_t multiply_command_lists;
     uint64_t multiply_command_queues;
+    bool is_immediate;
+    bool is_registered_on_immediate;
   } OverloadingMTestArguments_t;
+
+  void set_modules_for_cmdlists(
+      const ze_context_handle_t &context, const ze_device_handle_t &device,
+      OverloadingMTestArguments_t test_arguments,
+      ze_command_list_handle_t &next_cmd_list,
+      uint32_t test_single_allocation_count, uint64_t &dispatch_id,
+      std::vector<uint32_t *> &output_allocations,
+      std::vector<std::vector<uint32_t>> &data_for_all_dispatches,
+      std::vector<ze_module_handle_t> &multiple_module_handle,
+      std::vector<ze_kernel_handle_t> &multiple_kernel_handle) {
+    for (uint64_t module_id = 0; module_id < test_arguments.multiply_modules;
+         module_id++) {
+      ze_module_handle_t module_handle = lzt::create_module(
+          context, device, "test_commands_overloading.spv",
+          ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required",
+          nullptr);
+      multiple_module_handle.push_back(module_handle);
+      for (uint64_t kernel_id = 0; kernel_id < test_arguments.multiply_kernels;
+           kernel_id++) {
+        std::string kernel_name = "test_device_memory1";
+
+        ze_kernel_handle_t kernel_handle = create_kernel(
+            module_handle, kernel_name, output_allocations, dispatch_id);
+
+        multiple_kernel_handle.push_back(kernel_handle);
+        set_command_list(next_cmd_list, kernel_handle,
+                         test_single_allocation_count, dispatch_id,
+                         output_allocations, data_for_all_dispatches);
+        dispatch_id++;
+      }
+    }
+  };
 
   uint32_t use_this_ordinal_on_device_ = 0;
   uint32_t workgroup_size_x_ = 8;
@@ -96,13 +136,31 @@ TEST_P(zeDriverMultiplyObjectsStressTest,
       std::get<4>(GetParam()), // multiply kernels
       std::get<5>(GetParam()), // multiply modules
       std::get<6>(GetParam()), // multiply command lists
-      std::get<7>(GetParam())  // multiply command queues
+      std::get<7>(GetParam()), // multiply command queues
+      std::get<8>(GetParam()), // is immediate command list
+      std::get<9>(
+          GetParam()) // is registerd command lists on immediate command list
 
   };
 
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
+
+  if ((test_arguments.multiply_command_queues > 1 &&
+       test_arguments.is_immediate) ||
+      (test_arguments.multiply_command_queues > 1 &&
+       test_arguments.is_registered_on_immediate)) {
+    GTEST_SKIP()
+        << " Test skipped. Immediate command lists do not use command queues";
+  }
+
+  if (test_arguments.is_immediate &&
+      test_arguments.is_registered_on_immediate) {
+    GTEST_SKIP()
+        << " Test skipped. Immediate command list is designed only to run only "
+           "registered command lists";
+  }
 
   ze_device_properties_t device_properties = lzt::get_device_properties(device);
   test_arguments.base_arguments.print_test_arguments(device_properties);
@@ -200,48 +258,58 @@ TEST_P(zeDriverMultiplyObjectsStressTest,
   LOG_INFO << "call create command queues... ";
   for (uint64_t cmd_queue_id = 0;
        cmd_queue_id < test_arguments.multiply_command_queues; cmd_queue_id++) {
-    ze_command_queue_handle_t command_queue = lzt::create_command_queue(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+    ze_command_queue_handle_t command_queue = nullptr;
+    if (!test_arguments.is_immediate) {
+      command_queue = lzt::create_command_queue(
+          context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+          ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+    }
     multiple_command_queue_handle.push_back(command_queue);
   }
 
   LOG_INFO << "call create command lists... ";
   for (uint64_t cmd_list_id = 0;
        cmd_list_id < test_arguments.multiply_command_lists; cmd_list_id++) {
-    ze_command_list_handle_t command_list =
-        lzt::create_command_list(context, device, 0);
+    ze_command_list_handle_t command_list = nullptr;
+    if (test_arguments.is_immediate) {
+      command_list = lzt::create_immediate_command_list(device);
+    } else {
+      command_list = lzt::create_command_list(context, device, 0);
+    }
     multiple_command_list_handle.push_back(command_list);
   }
 
   LOG_INFO << "call create modules and kernels, set command lists.";
   LOG_INFO << "finally send command list to execution... ";
+  ze_command_list_handle_t immediate_for_registered_command_lists = nullptr;
   uint64_t dispatch_id = 0;
-  for (auto &next_cmd_queue : multiple_command_queue_handle) {
+  if (test_arguments.is_registered_on_immediate) {
+    immediate_for_registered_command_lists =
+        lzt::create_immediate_command_list(device);
     for (auto &next_cmd_list : multiple_command_list_handle) {
-      // for (auto next_module : multiple_module_handle) {
-      for (uint64_t module_id = 0; module_id < test_arguments.multiply_modules;
-           module_id++) {
-        ze_module_handle_t module_handle = lzt::create_module(
-            context, device, "test_commands_overloading.spv",
-            ZE_MODULE_FORMAT_IL_SPIRV,
-            "-ze-opt-greater-than-4GB-buffer-required", nullptr);
-        multiple_module_handle.push_back(module_handle);
-        for (uint64_t kernel_id = 0;
-             kernel_id < test_arguments.multiply_kernels; kernel_id++) {
-          std::string kernel_name = "test_device_memory1";
-
-          ze_kernel_handle_t kernel_handle = create_kernel(
-              module_handle, kernel_name, output_allocations, dispatch_id);
-
-          multiple_kernel_handle.push_back(kernel_handle);
-          set_command_list(next_cmd_list, kernel_handle,
-                           test_single_allocation_count, dispatch_id,
-                           output_allocations, data_for_all_dispatches);
-          dispatch_id++;
-        }
+      set_modules_for_cmdlists(context, device, test_arguments, next_cmd_list,
+                               test_single_allocation_count, dispatch_id,
+                               output_allocations, data_for_all_dispatches,
+                               multiple_module_handle, multiple_kernel_handle);
+      lzt::close_command_list(next_cmd_list);
+    }
+    lzt::append_command_lists_immediate_exp(
+        immediate_for_registered_command_lists,
+        multiple_command_list_handle.size(),
+        multiple_command_list_handle.data());
+    lzt::synchronize_command_list_host(immediate_for_registered_command_lists,
+                                       UINT64_MAX);
+  } else {
+    for (auto &next_cmd_queue : multiple_command_queue_handle) {
+      for (auto &next_cmd_list : multiple_command_list_handle) {
+        set_modules_for_cmdlists(context, device, test_arguments, next_cmd_list,
+                                 test_single_allocation_count, dispatch_id,
+                                 output_allocations, data_for_all_dispatches,
+                                 multiple_module_handle,
+                                 multiple_kernel_handle);
+        send_command_to_execution(next_cmd_list, next_cmd_queue,
+                                  test_arguments.is_immediate);
       }
-      send_command_to_execution(next_cmd_list, next_cmd_queue);
     }
   }
 
@@ -282,7 +350,12 @@ TEST_P(zeDriverMultiplyObjectsStressTest,
   }
 
   for (auto next_cmd_queue : multiple_command_queue_handle) {
-    lzt::destroy_command_queue(next_cmd_queue);
+    if (next_cmd_queue != nullptr) {
+      lzt::destroy_command_queue(next_cmd_queue);
+    }
+  }
+  if (test_arguments.is_registered_on_immediate) {
+    lzt::destroy_command_list(immediate_for_registered_command_lists);
   }
   lzt::destroy_context(context);
 
@@ -295,7 +368,9 @@ struct CombinationsTestNameSuffix {
     std::stringstream ss;
     ss << "kernels_" << std::get<4>(info.param) << "_modules_"
        << std::get<5>(info.param) << "_cmd_lists_" << std::get<6>(info.param)
-       << "_cmd_queues_" << std::get<7>(info.param);
+       << "_cmd_queues_" << std::get<7>(info.param) << "_is_immediate_"
+       << std::get<8>(info.param) << "_registered_onimmediate_"
+       << std::get<9>(info.param);
     return ss.str();
   }
 };
@@ -305,28 +380,34 @@ std::vector<uint64_t> multiple_kernels = input_values;
 std::vector<uint64_t> multiple_command_lists = input_values;
 std::vector<uint64_t> multiple_command_queues = input_values;
 std::vector<uint64_t> multiple_modules = input_values;
+std::vector<bool> is_immediate_command_list = {true, false};
+std::vector<bool> is_registered_on_immediate_command_list = {true, false};
 
 INSTANTIATE_TEST_CASE_P(
     zeDriverMultiplyObjectsStressTestMinMemory,
     zeDriverMultiplyObjectsStressTest,
-    ::testing::Combine(::testing::Values(hundred_percent),
-                       ::testing::Values(one_percent), ::testing::Values(1),
-                       testing::Values(ZE_MEMORY_TYPE_DEVICE),
-                       ::testing::ValuesIn(multiple_kernels),
-                       ::testing::ValuesIn(multiple_modules),
-                       ::testing::ValuesIn(multiple_command_lists),
-                       ::testing::ValuesIn(multiple_command_queues)),
+    ::testing::Combine(
+        ::testing::Values(hundred_percent), ::testing::Values(one_percent),
+        ::testing::Values(1), testing::Values(ZE_MEMORY_TYPE_DEVICE),
+        ::testing::ValuesIn(multiple_kernels),
+        ::testing::ValuesIn(multiple_modules),
+        ::testing::ValuesIn(multiple_command_lists),
+        ::testing::ValuesIn(multiple_command_queues),
+        ::testing::ValuesIn(is_immediate_command_list),
+        ::testing::ValuesIn(is_registered_on_immediate_command_list)),
     CombinationsTestNameSuffix());
 INSTANTIATE_TEST_CASE_P(
     zeDriverMultiplyObjectsStressTestMaxMemory,
     zeDriverMultiplyObjectsStressTest,
-    ::testing::Combine(::testing::Values(hundred_percent),
-                       ::testing::Values(hundred_percent), ::testing::Values(1),
-                       testing::Values(ZE_MEMORY_TYPE_DEVICE),
-                       ::testing::ValuesIn(multiple_kernels),
-                       ::testing::ValuesIn(multiple_modules),
-                       ::testing::ValuesIn(multiple_command_lists),
-                       ::testing::ValuesIn(multiple_command_queues)),
+    ::testing::Combine(
+        ::testing::Values(hundred_percent), ::testing::Values(hundred_percent),
+        ::testing::Values(1), testing::Values(ZE_MEMORY_TYPE_DEVICE),
+        ::testing::ValuesIn(multiple_kernels),
+        ::testing::ValuesIn(multiple_modules),
+        ::testing::ValuesIn(multiple_command_lists),
+        ::testing::ValuesIn(multiple_command_queues),
+        ::testing::ValuesIn(is_immediate_command_list),
+        ::testing::ValuesIn(is_registered_on_immediate_command_list)),
     CombinationsTestNameSuffix());
 
 } // namespace
