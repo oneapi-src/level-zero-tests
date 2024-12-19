@@ -12,6 +12,7 @@
 #include "utils/utils.hpp"
 #include <cstring>
 #include <cstdlib>
+#include <cmath>
 #include <map>
 
 namespace lzt = level_zero_tests;
@@ -1053,6 +1054,601 @@ void metric_validate_streamer_marker_data(
   EXPECT_FALSE(validated_markers_count % metricValueSets.size());
   streamer_marker_values_index =
       validated_markers_count / metricValueSets.size();
+}
+
+void generate_activatable_metric_group_list_for_device(
+    ze_device_handle_t device,
+    std::vector<metricGroupInfo_t> &metric_group_info_list,
+    std::vector<zet_metric_group_handle_t> &activatable_metric_group_list) {
+  std::map<uint32_t, zet_metric_group_handle_t> domain_map;
+
+  for (auto group_info : metric_group_info_list) {
+
+    auto it = domain_map.find(group_info.domain);
+    if (it == domain_map.end()) {
+      domain_map.insert({group_info.domain, group_info.metricGroupHandle});
+      LOG_DEBUG << "adding metric group handle for "
+                << group_info.metricGroupName
+                << " to activatable metric group list";
+    }
+  }
+
+  for (auto map_entry : domain_map) {
+    activatable_metric_group_list.push_back(map_entry.second);
+  }
+}
+
+void collect_device_properties(ze_device_handle_t device,
+                               std::string &device_description) {
+
+  ze_device_properties_t device_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+
+  zeDeviceGetProperties(device, &device_properties);
+
+  device_description = "test device name: ";
+  device_description.append(device_properties.name);
+  device_description.append(" uuid ");
+  device_description.append(lzt::to_string(device_properties.uuid));
+  device_description.append(". ");
+  if (device_properties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+    device_description.append("test subdevice id ");
+    device_description.append(std::to_string(device_properties.subdeviceId));
+    device_description.append(". ");
+  } else {
+    device_description.append("test device is a root device.");
+  }
+}
+
+void display_device_properties(ze_device_handle_t device) {
+  std::string device_description;
+
+  collect_device_properties(device, device_description);
+  LOG_INFO << device_description;
+}
+
+void generate_device_list_with_activatable_metric_group_handles(
+    std::vector<ze_device_handle_t> devices,
+    zet_metric_group_sampling_type_flags_t sampling_type,
+    std::vector<activatable_metric_group_handle_list_for_device_t>
+        &activatable_metric_group_handles_with_devices_list) {
+
+  LOG_DEBUG << "ENTER generate_activatable_devices_list";
+
+  for (auto device : devices) {
+    ze_result_t result;
+    lzt::display_device_properties(device);
+
+    auto metric_group_info =
+        lzt::get_metric_group_info(device, sampling_type, true);
+    if (metric_group_info.size() == 0) {
+      continue;
+    }
+
+    metric_group_info = lzt::optimize_metric_group_info_list(metric_group_info);
+
+    std::vector<zet_metric_group_handle_t> activatable_metric_group_handle_list;
+    lzt::generate_activatable_metric_group_list_for_device(
+        device, metric_group_info, activatable_metric_group_handle_list);
+
+    if (activatable_metric_group_handle_list.size() == 0) {
+      continue;
+    }
+
+    activatable_metric_group_handle_list_for_device_t list_entry;
+    list_entry.device = device;
+    list_entry.activatable_metric_group_handle_list =
+        activatable_metric_group_handle_list;
+    activatable_metric_group_handles_with_devices_list.push_back(list_entry);
+  }
+  LOG_DEBUG << "LEAVE generate_activatable_devices_list";
+}
+
+void generate_device_list_with_metric_programmable_handles(
+    std::vector<ze_device_handle_t> devices,
+    std::vector<metric_programmable_handle_list_for_device>
+        &device_list_with_metric_programmable_handles,
+    uint32_t metric_programmable_handle_limit) {
+
+  LOG_DEBUG << "ENTER generate_device_list_with_metric_programmable_handles, "
+               "metric_programmable_limit "
+            << metric_programmable_handle_limit;
+
+  for (auto device : devices) {
+    ze_result_t result;
+    std::string device_description;
+
+    collect_device_properties(device, device_description);
+
+    uint32_t metric_programmable_handle_count = 0;
+    result = zetMetricProgrammableGetExp(
+        device, &metric_programmable_handle_count, nullptr);
+    ASSERT_EQ(result, ZE_RESULT_SUCCESS)
+        << "zetMetricProgrammableGetExp() failed on device: "
+        << device_description;
+
+    if (metric_programmable_handle_count == 0) {
+      LOG_INFO << "the device: " << device_description
+               << "does not support metric programmable";
+      continue;
+    }
+
+    std::vector<zet_metric_programmable_exp_handle_t>
+        metric_programmable_handles(metric_programmable_handle_count);
+    result =
+        zetMetricProgrammableGetExp(device, &metric_programmable_handle_count,
+                                    metric_programmable_handles.data());
+    ASSERT_EQ(result, ZE_RESULT_SUCCESS)
+        << "zetMetricProgrammableGetExp failed to retrieve metric handles on "
+           "device "
+        << device_description;
+
+    uint32_t metric_programmable_handle_subset_size =
+        metric_programmable_handle_count;
+    if (metric_programmable_handle_limit) {
+      metric_programmable_handle_subset_size = std::min(
+          metric_programmable_handle_count, metric_programmable_handle_limit);
+    }
+
+    metric_programmable_handle_list_for_device list;
+    list.device = device;
+    list.device_description = device_description;
+    list.metric_programmable_handle_count = metric_programmable_handle_count;
+    list.metric_programmable_handles_for_device = {
+        metric_programmable_handles.begin(),
+        metric_programmable_handles.begin() +
+            metric_programmable_handle_subset_size};
+
+    device_list_with_metric_programmable_handles.push_back(list);
+  }
+  LOG_DEBUG << "LEAVE generate_device_list_with_metric_programmable_handles";
+}
+
+// Validate param_info type.
+bool programmable_param_info_type_to_string(
+    zet_metric_programmable_param_info_exp_t &param_info,
+    std::string &type_string) {
+
+  bool param_info_type_is_valid = true;
+
+  switch (param_info.type) {
+  case ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_DISAGGREGATION:
+    type_string = "ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_DISAGGREGATION";
+    break;
+
+  case ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_LATENCY:
+    type_string = "ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_LATENCY";
+    break;
+
+  case ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_NORMALIZATION_UTILIZATION:
+    type_string = "ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_NORMALIZATION_"
+                  "UTILIZATION";
+    break;
+
+  case ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_NORMALIZATION_AVERAGE:
+    type_string =
+        "ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_NORMALIZATION_AVERAGE";
+    break;
+
+  case ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_NORMALIZATION_RATE:
+    type_string = "ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_NORMALIZATION_RATE";
+    break;
+
+  case ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_NORMALIZATION_BYTES:
+    type_string = "ZET_METRIC_PROGRAMMABLE_PARAM_TYPE_EXP_NORMALIZATION_BYTES";
+    break;
+
+  default:
+    param_info_type_is_valid = false;
+  }
+  return param_info_type_is_valid;
+}
+
+// Validate param info valueInfoType, get value string
+bool programmable_param_info_value_info_type_to_string(
+    zet_metric_programmable_param_info_exp_t &param_info,
+    std::string &value_info_type_string,
+    std::string &value_info_default_value_string) {
+
+  std::ostringstream oss;
+  bool entry_is_valid = true;
+
+  switch (param_info.valueInfoType) {
+  case ZET_VALUE_INFO_TYPE_EXP_UINT32:
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_UINT32";
+    oss << param_info.defaultValue.ui32;
+    break;
+
+  case ZET_VALUE_INFO_TYPE_EXP_UINT64:
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_UINT64";
+    oss << param_info.defaultValue.ui64;
+    break;
+
+  case ZET_VALUE_INFO_TYPE_EXP_FLOAT32:
+    EXPECT_FALSE(std::isnan(param_info.defaultValue.fp32))
+        << "zetMetricProgrammableGetParamInfoExp has returned a "
+           "zet_metric_programmable_param_info_exp_t structure with a "
+           "ZET_VALUE_INFO_TYPE_EXP_FLOAT32 type field that contains an "
+           "fp32 value that is not a number";
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_FLOAT32";
+    oss << param_info.defaultValue.fp32;
+    break;
+
+  case ZET_VALUE_INFO_TYPE_EXP_FLOAT64:
+    EXPECT_FALSE(std::isnan(param_info.defaultValue.fp64))
+        << "zetMetricProgrammableGetParamInfoExp has returned a "
+           "zet_metric_programmable_param_info_exp_t structure with a "
+           "ZET_VALUE_INFO_TYPE_EXP_FLOAT64 type field that contains an "
+           "fp64 value that is not a number";
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_FLOAT64";
+    oss << param_info.defaultValue.fp64;
+    break;
+
+  case ZET_VALUE_INFO_TYPE_EXP_BOOL8:
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_BOOL8";
+    oss << (param_info.defaultValue.b8 ? "TRUE" : "FALSE");
+    break;
+
+  case ZET_VALUE_INFO_TYPE_EXP_UINT8:
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_UINT8";
+    oss << param_info.defaultValue.ui32;
+    break;
+
+  case ZET_VALUE_INFO_TYPE_EXP_UINT16:
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_UINT16";
+    oss << param_info.defaultValue.ui32;
+    break;
+
+  case ZET_VALUE_INFO_TYPE_EXP_UINT64_RANGE:
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_UINT64_RANGE";
+    oss << param_info.defaultValue.ui64;
+    break;
+
+  case ZET_VALUE_INFO_TYPE_EXP_FLOAT64_RANGE:
+    EXPECT_FALSE(std::isnan(param_info.defaultValue.fp64))
+        << "zetMetricProgrammableGetParamInfoExp has returned a "
+           "zet_metric_programmable_param_info_exp_t structure with a "
+           "ZET_VALUE_INFO_TYPE_EXP_FLOAT64_RANGE type field that "
+           "contains an fp64 that is not a number";
+    value_info_type_string = "ZET_VALUE_INFO_TYPE_EXP_FLOAT64_RANGE";
+    oss << param_info.defaultValue.fp64;
+
+  default:
+    EXPECT_TRUE(false)
+        << "metric programmable param_info value valueInfoType field has "
+           "an improper value "
+        << param_info.valueInfoType;
+    entry_is_valid = false;
+    value_info_type_string = "INVALID InfoType ";
+    oss << "Invalid InfoType " << param_info.valueInfoType << "has no value";
+    break;
+  }
+
+  value_info_default_value_string = oss.str();
+  return entry_is_valid;
+}
+
+bool programmable_param_info_validate(
+    zet_metric_programmable_param_info_exp_t &param_info,
+    std::string &type_string, std::string &value_info_type_string,
+    std::string &value_info_type_default_value_string) {
+
+  LOG_DEBUG << "ENTER programmable_param_info_validate";
+
+  bool success = false;
+
+  success = programmable_param_info_type_to_string(param_info, type_string);
+  EXPECT_TRUE(success) << "param_info has invalid type string " << type_string;
+
+  size_t name_length;
+  name_length =
+      strnlen(param_info.name, ZET_MAX_METRIC_PROGRAMMABLE_PARAMETER_NAME_EXP);
+  EXPECT_GT(name_length, 0)
+      << "metric programmable parameter_info name string is zero length";
+  EXPECT_LT(name_length, ZET_MAX_METRIC_PROGRAMMABLE_PARAMETER_NAME_EXP)
+      << "metric programmable  parameter_info name string length "
+      << name_length
+      << " is longer than the allowed "
+         "ZET_MAX_METRIC_PROGRAMMABLE_PARAMETER_NAME_EXP";
+
+  success = programmable_param_info_value_info_type_to_string(
+      param_info, value_info_type_string, value_info_type_default_value_string);
+  EXPECT_TRUE(success) << "param_info valueInfoType or defaultValue fields are "
+                          "invalid. valueInfoTYpestring: "
+                       << value_info_type_string << " ValueInfoDefaultValue: "
+                       << value_info_type_default_value_string;
+
+  EXPECT_GT(param_info.valueInfoCount, 0)
+      << "programmablemetric param_info valueInfoCount field has a value "
+         "of zero, which "
+         "is not valid";
+
+  LOG_DEBUG << "LEAVE programmable_param_info_validate";
+  return success;
+}
+
+void fetch_metric_programmable_exp_properties(
+    zet_metric_programmable_exp_handle_t metric_programmable_handle,
+    zet_metric_programmable_exp_properties_t &metric_programmable_properties) {
+  LOG_DEBUG << "ENTER fetch_metric_programmable_exp_properties";
+
+  ze_result_t result;
+
+  metric_programmable_properties.stype =
+      ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_EXP_PROPERTIES;
+  metric_programmable_properties.pNext = nullptr;
+  result = zetMetricProgrammableGetPropertiesExp(
+      metric_programmable_handle, &metric_programmable_properties);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS)
+      << "zetMetricProgrammableGetPropertiesExp failed with error code "
+      << result;
+  LOG_DEBUG << "metric programmable properties ########";
+  LOG_DEBUG << "name " << metric_programmable_properties.name;
+  LOG_DEBUG << "description " << metric_programmable_properties.description;
+  LOG_DEBUG << "component " << metric_programmable_properties.component;
+  LOG_DEBUG << "samplingType " << metric_programmable_properties.samplingType;
+  LOG_DEBUG << "tierNumber " << metric_programmable_properties.tierNumber;
+  LOG_DEBUG << "domain " << metric_programmable_properties.domain;
+  LOG_DEBUG << "sourceId " << metric_programmable_properties.sourceId;
+  LOG_DEBUG << "#####";
+
+  LOG_DEBUG << "LEAVE fetch_metric_programmable_exp_properties";
+}
+
+void generate_param_info_exp_list_from_metric_programmable(
+    zet_metric_programmable_exp_handle_t metric_programmable_handle,
+    std::vector<zet_metric_programmable_param_info_exp_t> &param_infos,
+    uint32_t metric_programmable_param_info_limit) {
+
+  ze_result_t result;
+
+  LOG_DEBUG << "ENTER generate_param_info_exp_list_from_metric_Programmable, "
+               "metric_programmable_param_info_limit "
+               "metric_programmable_limit "
+            << metric_programmable_param_info_limit;
+
+  zet_metric_programmable_exp_properties_t metric_programmable_properties;
+  fetch_metric_programmable_exp_properties(metric_programmable_handle,
+                                           metric_programmable_properties);
+
+  EXPECT_GT(metric_programmable_properties.parameterCount, 0)
+      << "zet_metric_programmable_exp_properties_t 'parameterCount' has an "
+         "invald value of zero.";
+
+  param_infos.resize(metric_programmable_properties.parameterCount);
+
+  for (auto parameter_info : param_infos) {
+    parameter_info.stype =
+        ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_INFO_EXP;
+    parameter_info.pNext = nullptr;
+  }
+
+  result = zetMetricProgrammableGetParamInfoExp(
+      metric_programmable_handle,
+      &metric_programmable_properties.parameterCount, param_infos.data());
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS)
+      << "zetMetricProgrammableGetParamInfoExp has failed retrieving with "
+         "error code "
+      << result;
+
+  uint32_t metric_programmable_param_info_subset_size =
+      metric_programmable_properties.parameterCount;
+
+  if (metric_programmable_param_info_limit) {
+    metric_programmable_param_info_subset_size =
+        std::min(metric_programmable_param_info_limit,
+                 metric_programmable_properties.parameterCount);
+  }
+
+  LOG_INFO << "metric programmable group name: '"
+           << metric_programmable_properties.name << "' description: '"
+           << metric_programmable_properties.description << "' parameterCount: "
+           << metric_programmable_properties.parameterCount
+           << " but testing only: "
+           << metric_programmable_param_info_subset_size << " parameters";
+
+  param_infos.resize(metric_programmable_param_info_subset_size);
+
+  LOG_DEBUG << "LEAVE generate_param_info_exp_list_from_metric_Programmable";
+}
+
+static void print_value_info(zet_value_info_type_exp_t value_info_type,
+                             zet_value_info_exp_t value_info) {
+  LOG_DEBUG << "ENTER print_value_info";
+  switch (value_info_type) {
+  case ZET_VALUE_INFO_TYPE_EXP_UINT32:
+    LOG_DEBUG << value_info.ui32;
+    break;
+  case ZET_VALUE_INFO_TYPE_EXP_UINT64:
+    LOG_DEBUG << value_info.ui64;
+    break;
+  case ZET_VALUE_INFO_TYPE_EXP_FLOAT32:
+    LOG_DEBUG << value_info.fp32;
+    break;
+  case ZET_VALUE_INFO_TYPE_EXP_FLOAT64:
+    LOG_DEBUG << value_info.fp64;
+    break;
+  case ZET_VALUE_INFO_TYPE_EXP_BOOL8:
+    LOG_DEBUG << (value_info.b8 ? "TRUE" : "FALSE");
+    break;
+  case ZET_VALUE_INFO_TYPE_EXP_UINT8:
+    LOG_DEBUG << value_info.ui8;
+    break;
+  case ZET_VALUE_INFO_TYPE_EXP_UINT16:
+    LOG_DEBUG << value_info.ui16;
+    break;
+  case ZET_VALUE_INFO_TYPE_EXP_UINT64_RANGE:
+    LOG_DEBUG << "[" << value_info.ui64Range.ui64Min << ","
+              << value_info.ui64Range.ui64Max << "]";
+    break;
+  case ZET_VALUE_INFO_TYPE_EXP_FLOAT64_RANGE: {
+    double minVal = 0;
+    memcpy(&minVal, &value_info.ui64Range.ui64Min, sizeof(uint64_t));
+    double maxVal = 0;
+    memcpy(&maxVal, &value_info.ui64Range.ui64Max, sizeof(uint64_t));
+    LOG_DEBUG << "[" << minVal << "," << maxVal << "]";
+  } break;
+  default:
+    EXPECT_TRUE(false) << "We have found invalid value for param_info "
+                          "zet_value_info_exp_t field";
+    break;
+  }
+  LOG_DEBUG << "LEAVE print_value_info";
+}
+
+void generate_param_value_info_list_from_param_info(
+    zet_metric_programmable_exp_handle_t &programmable_handle, uint32_t ordinal,
+    uint32_t value_info_count, zet_value_info_type_exp_t value_info_type,
+    bool include_value_info_desc) {
+
+  LOG_DEBUG << "ENTER generate_param_value_info_list_from_param_info";
+
+  ze_result_t result;
+
+  std::vector<zet_metric_programmable_param_value_info_exp_t> value_info(
+      value_info_count);
+
+  std::vector<zet_metric_programmable_param_value_info_exp_t> value_info_desc(
+      value_info_count);
+
+  uint32_t count = value_info_count;
+  uint32_t index;
+  for (index = 0; index < count; index++) {
+    zet_metric_programmable_param_value_info_exp_t *info = &value_info[index];
+    info->stype = ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
+    info->pNext = nullptr;
+
+    if (include_value_info_desc) {
+      zet_metric_programmable_param_value_info_exp_t *desc =
+          &value_info_desc[index];
+      info->pNext = desc;
+      desc->pNext = nullptr;
+      desc->stype = static_cast<zet_structure_type_t>(
+          ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP);
+    }
+  }
+
+  result = zetMetricProgrammableGetParamValueInfoExp(
+      programmable_handle, ordinal, &count, value_info.data());
+  EXPECT_EQ(result, ZE_RESULT_SUCCESS)
+      << "an error occurred in the zetMetricProgrammableGetParamValueInfoExp() "
+         "call, error code "
+      << result;
+  EXPECT_EQ(count, value_info_count)
+      << "the number of zet_metric_programmable_param_value_info_exp_t "
+         "returned: "
+      << count << " , does not agree with the expected count "
+      << value_info_count;
+  LOG_INFO << "param_info valueInfoCount is " << value_info_count;
+
+  for (index = 0; index < count; index++) {
+    zet_metric_programmable_param_value_info_exp_t *info = &value_info[index];
+    print_value_info(value_info_type, info->valueInfo);
+    if (include_value_info_desc) {
+      zet_metric_programmable_param_value_info_exp_t *desc =
+          &value_info_desc[index];
+      size_t description_len;
+      description_len = strnlen(
+          desc->description, ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
+      EXPECT_LT(description_len,
+                ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
+      LOG_DEBUG << "value info description: " << desc->description;
+    }
+  }
+  LOG_DEBUG << "LEAVE generate_param_value_info_list_from_param_info";
+}
+
+void generate_metric_handles_list_from_param_values(
+    zet_metric_programmable_exp_handle_t &metric_programmable_handle,
+    std::string name, std::string description,
+    std::vector<zet_metric_programmable_param_value_exp_t> &parameter_values,
+    std::vector<zet_metric_handle_t> &metric_handles,
+    uint32_t metric_handles_limit) {
+
+  ze_result_t result;
+  uint32_t metric_handles_count = 0;
+
+  LOG_DEBUG << "ENTER generate_metric_handles_list_from_param_values, "
+               "metric_handles_limit "
+            << metric_handles_limit << " :metric_programmable name: " << name
+            << " :metric_programmable description: " << description;
+
+  result = zetMetricCreateFromProgrammableExp(
+      metric_programmable_handle, parameter_values.data(),
+      parameter_values.size(), name.c_str(), description.c_str(),
+      &metric_handles_count, nullptr);
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS)
+      << "zetMetricCreateFromProgrammableExp FIRST call failed with error "
+         "code "
+      << result;
+  LOG_INFO
+      << "zetMetricCreateFromProgrammableExp returned metric handle count: "
+      << metric_handles_count << "\n";
+
+  if (metric_handles_count == 0) {
+    LOG_INFO << "skipping metric programmable which has no metrics";
+    LOG_DEBUG << "LEAVE generate_metric_list_from_param_values, skipping, has "
+                 "no metrics";
+    metric_handles.resize(0);
+    return;
+  }
+
+  uint32_t metric_handles_subset_size = metric_handles_count;
+
+  if (metric_handles_limit) {
+    metric_handles_subset_size =
+        std::min(metric_handles_subset_size, metric_handles_limit);
+  }
+
+  LOG_INFO << "limiting number of handles to " << metric_handles_subset_size;
+
+  metric_handles.resize(metric_handles_subset_size);
+
+  result = zetMetricCreateFromProgrammableExp(
+      metric_programmable_handle, parameter_values.data(),
+      parameter_values.size(), name.c_str(), description.c_str(),
+      &metric_handles_subset_size, metric_handles.data());
+  ASSERT_EQ(result, ZE_RESULT_SUCCESS)
+      << "zetMetricCreateFromProgrammableExp SECOND call failed with error "
+      << result;
+
+  for (uint32_t handle_index = 0; handle_index < metric_handles_subset_size;
+       ++handle_index) {
+    const zet_metric_handle_t metric_handle = metric_handles[handle_index];
+    zet_metric_properties_t metric_properties = {};
+    lzt::get_metric_properties(metric_handle, &metric_properties);
+    LOG_DEBUG << "%%%%%%%%";
+    LOG_DEBUG << "metric properties for index " << handle_index;
+    LOG_DEBUG << "name " << metric_properties.name;
+    LOG_DEBUG << "description " << metric_properties.description;
+    LOG_DEBUG << "component " << metric_properties.component;
+    LOG_DEBUG << "tier number " << metric_properties.tierNumber;
+    LOG_DEBUG << "type "
+              << lzt::metric_type_to_string(metric_properties.metricType);
+    LOG_DEBUG << "value type "
+              << lzt::metric_value_type_to_string(metric_properties.resultType);
+    LOG_DEBUG << "result units " << metric_properties.resultUnits;
+    LOG_DEBUG << "%%%%%%";
+  }
+  LOG_DEBUG << "LEAVE generate_metric_list_from_param_values, "
+               "metric_handles_subset_size "
+            << metric_handles_subset_size;
+}
+
+void destroy_metric_handles_list(
+    std::vector<zet_metric_handle_t> &metric_handles) {
+
+  LOG_DEBUG << "ENTER destroy_metric_handles_list, size "
+            << metric_handles.size();
+
+  for (auto metric_handle : metric_handles) {
+    ze_result_t result;
+    result = zetMetricDestroyExp(metric_handle);
+    EXPECT_EQ(result, ZE_RESULT_SUCCESS);
+  }
+
+  metric_handles.resize(0);
+  LOG_DEBUG << "LEAVE destroy_metric_handles_list";
 }
 
 } // namespace level_zero_tests

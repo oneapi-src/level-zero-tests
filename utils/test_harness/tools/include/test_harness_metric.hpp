@@ -169,6 +169,91 @@ void metric_validate_streamer_marker_data(
     std::vector<uint32_t> &streamerMarkerValues,
     uint32_t &streamer_marker_values_index);
 
+void generate_activatable_metric_group_handles_for_device(
+    ze_device_handle_t device,
+    std::vector<metricGroupInfo_t> &metric_group_info_list,
+    std::vector<zet_metric_group_handle_t>
+        &activatable_metric_group_handle_list);
+
+void display_device_properties(ze_device_handle_t device);
+
+typedef struct activatable_metric_group_handle_list_for_device {
+  ze_device_handle_t device;
+  std::vector<zet_metric_group_handle_t> activatable_metric_group_handle_list;
+} activatable_metric_group_handle_list_for_device_t;
+
+void generate_device_list_with_activatable_metric_group_handles(
+    std::vector<ze_device_handle_t> devices,
+    zet_metric_group_sampling_type_flags_t sampling_type,
+    std::vector<activatable_metric_group_handle_list_for_device_t>
+        &device_list_with_activatable_metric_group_handles);
+
+typedef struct metric_programmable_handle_list_for_device {
+  ze_device_handle_t device;
+  std::string device_description;
+  uint32_t metric_programmable_handle_count;
+  std::vector<zet_metric_programmable_exp_handle_t>
+      metric_programmable_handles_for_device;
+} metric_programmable_handle_list_for_device_t;
+
+void generate_device_list_with_metric_programmable_handles(
+    std::vector<ze_device_handle_t> devices,
+    std::vector<metric_programmable_handle_list_for_device>
+        &device_list_with_metric_programmable_handles,
+    uint32_t metric_programmable_handle_limit);
+
+bool verify_value_type(zet_value_type_t value_type);
+
+bool verify_metric_type(zet_metric_type_t metric_type);
+
+void get_metric_properties(zet_metric_handle_t hMetric,
+                           zet_metric_properties_t *metric_properties);
+
+// Validate param_info type field.
+bool programmable_param_info_type_to_string(
+    zet_metric_programmable_param_info_exp_t &param_info,
+    std::string &type_string);
+
+// Validate param info valueInfoType, get value string
+bool programmable_param_info_value_info_type_to_string(
+    zet_metric_programmable_param_info_exp_t &param_info,
+    std::string &value_info_type_string,
+    std::string &value_info_default_value_string);
+
+// Validate param_info structures
+bool programmable_param_info_validate(
+    zet_metric_programmable_param_info_exp_t &param_info,
+    std::string &type_string, std::string &value_info_type_string,
+    std::string &value_info_type_default_value_string);
+
+void generate_param_info_exp_list_from_metric_programmable(
+    zet_metric_programmable_exp_handle_t metric_programmable_handle,
+    std::vector<zet_metric_programmable_param_info_exp_t> &param_infos,
+    uint32_t metric_programmable_info_limit);
+
+void generate_param_value_info_list_from_param_info(
+    zet_metric_programmable_exp_handle_t &programmable_handle, uint32_t ordinal,
+    uint32_t value_info_count, zet_value_info_type_exp_t value_info_type,
+    bool include_value_info_desc);
+
+void fetch_metric_programmable_exp_properties(
+    zet_metric_programmable_exp_handle_t metric_programmable_handle,
+    zet_metric_programmable_exp_properties_t &metric_programmable_properties);
+
+std::string metric_value_type_to_string(zet_value_type_t result_type);
+
+std::string metric_type_to_string(zet_metric_type_t metric_type);
+
+void generate_metric_handles_list_from_param_values(
+    zet_metric_programmable_exp_handle_t &metric_programmable_handle,
+    const std::string group_name_prefix, const std::string description,
+    std::vector<zet_metric_programmable_param_value_exp_t> &parameter_values,
+    std::vector<zet_metric_handle_t> &metric_handles,
+    uint32_t metric_handles_limit);
+
+void destroy_metric_handles_list(
+    std::vector<zet_metric_handle_t> &metric_handles);
+
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */
