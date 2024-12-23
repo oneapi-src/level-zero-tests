@@ -82,10 +82,13 @@ bool verify_external_memory_type_flag_support (ze_device_handle_t device,
   return true;
 }
 
-void export_memory(ze_context_handle_t context, ze_device_handle_t device,
+ze_result_t export_memory(ze_context_handle_t context, ze_device_handle_t device,
     bool is_immediate, size_t size, uint8_t pattern, test_memory_type_t test_memory_type,
     ze_external_memory_type_flag_t external_memory_type_flag, void **exported_memory,
     int *fd, ze_image_handle_t *image_handle) {
+
+  auto result = ZE_RESULT_SUCCESS;
+
   /* Export Memory As DMA_BUF*/
   ze_external_memory_export_desc_t export_desc = {};
   export_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_DESC;
@@ -127,22 +130,32 @@ void export_memory(ze_context_handle_t context, ze_device_handle_t device,
           break;
       }
 
-      ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, device, &image_desc, image_handle));
+      result = zeImageCreate(context, device, &image_desc, image_handle);
+      if (ZE_RESULT_SUCCESS != result) {
+        LOG_ERROR << "zeImageCreate function failed with exit code: " << result;
+        return result;
+      }
+
     }
 
     ze_device_mem_alloc_desc_t device_alloc_desc = {};
     device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
     device_alloc_desc.pNext = &export_desc;
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
-                            exported_memory));
+    result = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
+                            exported_memory);
+    if (ZE_RESULT_SUCCESS != result) {
+      LOG_ERROR << "zeMemAllocDevice function failed with exit code: " << result;
+      return result;
+    }
   } else {
     ze_host_mem_alloc_desc_t host_alloc_desc = {};
     host_alloc_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
     host_alloc_desc.pNext = &export_desc;
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocHost(context, &host_alloc_desc, size, 1, exported_memory));
+    result = zeMemAllocHost(context, &host_alloc_desc, size, 1, exported_memory);
+    if (ZE_RESULT_SUCCESS != result) {
+      LOG_ERROR << "zeMemAllocHost function failed with exit code: " << result;
+      return result;
+    }
   }
 
   // Fill the allocated memory with some pattern so we can verify
@@ -172,17 +185,20 @@ void export_memory(ze_context_handle_t context, ze_device_handle_t device,
 
   // mmap the fd to the exported device memory to the host space
   // and verify host can read
-  EXPECT_NE(export_fd.fd, 0);
 
   *fd = export_fd.fd;
 
   // cleanup
   lzt::destroy_command_bundle(cmd_bundle);
+
+  return result;
 }
 
-void import_memory(ze_context_handle_t context, ze_device_handle_t device,
+ze_result_t import_memory(ze_context_handle_t context, ze_device_handle_t device,
     size_t size, int fd, test_memory_type_t test_memory_type,
     void **imported_memory, ze_image_handle_t *image_handle) {
+
+  auto result = ZE_RESULT_SUCCESS;
 
   ze_external_memory_import_fd_t import_fd = {};
   import_fd.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_FD;
@@ -226,24 +242,35 @@ void import_memory(ze_context_handle_t context, ze_device_handle_t device,
           break;
       }
 
-      ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, device, &image_desc, image_handle));
+      result = zeImageCreate(context, device, &image_desc, image_handle);
+      if (ZE_RESULT_SUCCESS != result) {
+        LOG_ERROR << "zeImageCreate function failed with exit code: " << result;
+        return result;
+      }
     } else {
       ze_device_mem_alloc_desc_t device_alloc_import_desc = {};
       device_alloc_import_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
       device_alloc_import_desc.pNext = &import_fd;
-      ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocDevice(context, &device_alloc_import_desc,
-                             size, 1, device, imported_memory));
+      result = zeMemAllocDevice(context, &device_alloc_import_desc,
+                             size, 1, device, imported_memory);
+      if (ZE_RESULT_SUCCESS != result) {
+        LOG_ERROR << "zeMemAllocDevice function failed with exit code: " << result;
+        return result;
+      }
     }
   } else {
     ze_host_mem_alloc_desc_t host_alloc_import_desc = {};
     host_alloc_import_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
     host_alloc_import_desc.pNext = &import_fd;
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocHost(context, &host_alloc_import_desc,
-                             size, 1, imported_memory));
+    result = zeMemAllocHost(context, &host_alloc_import_desc,
+                             size, 1, imported_memory);
+    if (ZE_RESULT_SUCCESS != result) {
+        LOG_ERROR << "zeMemAllocHost function failed with exit code: " << result;
+        return result;
+      }
   }
+
+  return result;
 }
 
 #ifdef __linux__
@@ -434,9 +461,11 @@ void zeDeviceGetExternalMemoryProperties::
   int fd = 0;
   ze_image_handle_t export_image_handle;
 
-  export_memory(context, device, is_immediate, size, pattern, test_memory_type,
-                ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
-                &export_image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                export_memory(context, device, is_immediate, size, pattern, test_memory_type,
+                              ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
+                              &export_image_handle));
+  EXPECT_NE(fd, 0);
 
   /* Import exported Memory As DMA_BUF*/
   auto external_memory_import_properties =
@@ -452,8 +481,9 @@ void zeDeviceGetExternalMemoryProperties::
 
   void *imported_memory = nullptr;
   ze_image_handle_t import_image_handle;
-  import_memory(context, device, size, fd, test_memory_type,
-                &imported_memory, &import_image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                import_memory(context, device, size, fd, test_memory_type,
+                              &imported_memory, &import_image_handle));
 
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
@@ -503,8 +533,10 @@ void memory_import_thread(thread_args *args) {
   auto size = 1024;
   void *imported_memory = nullptr;
   ze_image_handle_t image_handle;
-  import_memory(context, device, size, args->fd, args->test_memory_type,
-                &imported_memory, &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                import_memory(context, device, size, args->fd,
+                              args->test_memory_type,
+                              &imported_memory, &image_handle));
 
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
@@ -549,9 +581,11 @@ void zeDeviceGetExternalMemoryProperties::
   void *exported_memory = nullptr;
   int fd = 0;
   ze_image_handle_t image_handle;
-  export_memory(context, device, is_immediate, size, pattern, test_memory_type,
-                ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
-                &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                export_memory(context, device, is_immediate, size, pattern, test_memory_type,
+                              ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
+                              &image_handle));
+  EXPECT_NE(fd, 0);
 
   // spawn a new thread and pass fd as argument
   thread_args args = {};
@@ -587,9 +621,11 @@ void zeDeviceGetExternalMemoryProperties::
   int fd = 0;
   ze_image_handle_t image_handle;
 
-  export_memory(context, device, is_immediate, size, pattern, test_memory_type,
-                ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
-                &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                export_memory(context, device, is_immediate, size, pattern, test_memory_type,
+                              ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
+                              &image_handle));
+  EXPECT_NE(fd, 0);
 
   auto mapped_memory =
       mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -642,8 +678,9 @@ void zeDeviceGetExternalMemoryProperties::
   auto size = 1024;
   void *imported_memory = nullptr;
   ze_image_handle_t image_handle;
-  import_memory(context, device, size, imported_fd, test_memory_type,
-                &imported_memory, &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                import_memory(context, device, size, imported_fd, test_memory_type,
+                              &imported_memory, &image_handle));
 
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
@@ -730,9 +767,12 @@ void zeDeviceGetExternalMemoryProperties::
   int fd = 0;
   ze_image_handle_t image_handle;
 
-  export_memory(context, device, is_immediate, size, pattern, TEST_MEMORY_TYPE_DEVICE,
-                ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE,
-                &exported_memory, &fd, &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                export_memory(context, device, is_immediate, size, pattern,
+                              TEST_MEMORY_TYPE_DEVICE,
+                              ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE,
+                              &exported_memory, &fd, &image_handle));
+  EXPECT_NE(fd, 0);
 
   // cleanup
   if (exported_memory) {
@@ -761,9 +801,12 @@ void zeDeviceGetExternalMemoryProperties::
   int fd = 0;
   ze_image_handle_t image_handle;
 
-  export_memory(context, device, is_immediate, size, pattern, TEST_MEMORY_TYPE_DEVICE,
-                ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT,
-                &exported_memory, &fd, &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                export_memory(context, device, is_immediate, size, pattern,
+                              TEST_MEMORY_TYPE_DEVICE,
+                              ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT,
+                              &exported_memory, &fd, &image_handle));
+  EXPECT_NE(fd, 0);
 
   // cleanup
   if (exported_memory) {
@@ -792,9 +835,12 @@ void zeDeviceGetExternalMemoryProperties::
   int fd = 0;
   ze_image_handle_t image_handle;
 
-  export_memory(context, device, is_immediate, size, pattern, TEST_MEMORY_TYPE_DEVICE,
-                ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP,
-                &exported_memory, &fd, &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                export_memory(context, device, is_immediate, size, pattern,
+                              TEST_MEMORY_TYPE_DEVICE,
+                              ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP,
+                              &exported_memory, &fd, &image_handle));
+  EXPECT_NE(fd, 0);
 
   // cleanup
   if (exported_memory) {
@@ -823,9 +869,12 @@ void zeDeviceGetExternalMemoryProperties::
   int fd = 0;
   ze_image_handle_t image_handle;
 
-  export_memory(context, device, is_immediate, size, pattern, TEST_MEMORY_TYPE_DEVICE,
-                ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE,
-                &exported_memory, &fd, &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                export_memory(context, device, is_immediate, size, pattern,
+                              TEST_MEMORY_TYPE_DEVICE,
+                              ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE,
+                              &exported_memory, &fd, &image_handle));
+  EXPECT_NE(fd, 0);
 
   // cleanup
   if (exported_memory) {
@@ -878,8 +927,11 @@ void zeDeviceGetExternalMemoryProperties::
   int fd = 0;
   ze_image_handle_t image_handle;
 
-  export_memory(context, device, is_immediate, size, pattern, TEST_MEMORY_TYPE_DEVICE,
-                external_memory_type_flag, &exported_memory, &fd, &image_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+                export_memory(context, device, is_immediate, size, pattern,
+                              TEST_MEMORY_TYPE_DEVICE, external_memory_type_flag,
+                              &exported_memory, &fd, &image_handle));
+  EXPECT_NE(fd, 0);
 
   ze_external_memory_export_win32_handle_t export_handle = {};
   export_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_WIN32;
