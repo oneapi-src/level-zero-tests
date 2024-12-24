@@ -239,9 +239,12 @@ int main(int argc, char **argv) {
   ze_device_mem_alloc_desc_t device_alloc_desc = {};
   device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_alloc_desc.pNext = &import_handle;
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
-                             &imported_memory));
+  result  = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
+                             &imported_memory);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_WARNING << "Error allocating device memory to be imported\n";
+    exit(1);
+  }
 
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
