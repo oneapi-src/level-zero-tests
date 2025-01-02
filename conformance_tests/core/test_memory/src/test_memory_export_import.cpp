@@ -1145,28 +1145,28 @@ TEST_F(
 TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData) {
-  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(false, TEST_MEMORY_TYPE_DEVICE,
+  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(false, TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32, lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
 }
 
 TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
-  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(true, TEST_MEMORY_TYPE_DEVICE,
+  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(true, TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32, lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
 }
 
 TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData) {
-  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(false, TEST_MEMORY_TYPE_DEVICE,
+  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(false, TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT, lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
 }
 
 TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
-  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(true, TEST_MEMORY_TYPE_DEVICE,
+  RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(true, TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT, lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
 }
 
