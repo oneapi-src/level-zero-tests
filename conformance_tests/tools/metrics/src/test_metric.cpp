@@ -10,6 +10,7 @@
 #include <ctime>
 #include <thread>
 #include <atomic>
+#include <cmath>
 
 #include <boost/filesystem.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>

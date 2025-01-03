@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -12,6 +12,7 @@
 #include "logging/logging.hpp"
 #include "test_ipc_event.hpp"
 #include "net/test_ipc_comm.hpp"
+#include <boost/interprocess/sync/named_semaphore.hpp>
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -171,6 +172,9 @@ static void run_workload(ze_event_handle_t &timestamp_event,
 
   lzt::synchronize(command_queue, UINT64_MAX);
 
+  bipc::named_semaphore semaphore(bipc::open_only, "ipc_event_test_semaphore");
+  semaphore.post();
+
   // get time data
   if (mapped_timestamp) {
     std::vector<ze_kernel_timestamp_result_t> kernel_timestamp_buffer{};
@@ -197,6 +201,9 @@ static void run_ipc_event_test(parent_test_t parent_test,
                                child_test_t child_test, bool multi_device,
                                bool isImmediate) {
 #ifdef __linux__
+  bipc::named_semaphore::remove("ipc_event_test_semaphore");
+  bipc::named_semaphore semaphore(bipc::create_only, "ipc_event_test_semaphore", 0);
+
   bipc::shared_memory_object::remove("ipc_event_test");
   // launch child
   boost::process::child c("./ipc/test_ipc_event_helper");
@@ -272,6 +279,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
 
   if (parent_test == PARENT_TEST_HOST_LAUNCHES_KERNEL) {
     // ensure the timestamps match
+    std::memcpy(&test_data, region.get_address(), sizeof(shared_data_t));
     EXPECT_EQ(test_data.start_time, startTime);
     EXPECT_EQ(test_data.end_time, endTime);
   }

@@ -8,6 +8,7 @@
 #include <chrono>
 #include <thread>
 #include <map>
+#include <cmath>
 
 #include "test_debug.hpp"
 #include "test_debug_utils.hpp"
