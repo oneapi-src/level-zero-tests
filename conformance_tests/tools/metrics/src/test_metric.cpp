@@ -1270,10 +1270,7 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
-<<<<<<< HEAD
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
-=======
->>>>>>> test: Make streamer test to use concurrent metric groups
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     for (auto groupInfo : metricGroupInfo) {
@@ -1370,10 +1367,7 @@ TEST_F(
 
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
-<<<<<<< HEAD
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
-=======
->>>>>>> test: Make streamer test to use concurrent metric groups
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
     void *a_buffer, *b_buffer, *c_buffer;
