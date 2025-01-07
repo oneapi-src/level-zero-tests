@@ -23,6 +23,8 @@ uint32_t get_freq_handle_count(zes_device_handle_t device);
 std::vector<zes_freq_handle_t> get_freq_handles(zes_device_handle_t device,
                                                 uint32_t &count);
 zes_freq_state_t get_freq_state(zes_freq_handle_t pFreqHandle);
+std::vector<zes_freq_state_t>
+get_freq_state(std::vector<zes_freq_handle_t> &freq_handles);
 zes_freq_range_t get_freq_range(zes_freq_handle_t pFreqHandle);
 void set_freq_range(zes_freq_handle_t pFreqHandle, zes_freq_range_t &pLimits);
 void set_freq_range(zes_freq_handle_t pFreqHandle, zes_freq_range_t &pLimits,

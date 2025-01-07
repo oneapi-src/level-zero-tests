@@ -42,6 +42,17 @@ zes_freq_state_t get_freq_state(zes_freq_handle_t pFreqHandle) {
   return pState;
 }
 
+std::vector<zes_freq_state_t>
+get_freq_state(std::vector<zes_freq_handle_t> &freq_handles) {
+  std::vector<zes_freq_state_t> states{};
+  for (auto &freq_handle : freq_handles) {
+    EXPECT_NE(nullptr, freq_handle);
+    zes_freq_state_t state = get_freq_state(freq_handle);
+    states.push_back(state);
+  }
+  return states;
+}
+
 zes_freq_range_t get_freq_range(zes_freq_handle_t pFreqHandle) {
   zes_freq_range_t pLimits = {};
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesFrequencyGetRange(pFreqHandle, &pLimits));
