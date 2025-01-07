@@ -90,7 +90,7 @@ cd ../.. && `
 rm -rf OpenCL-ICD-Loader-2022.09.30"
 
 RUN "`
-curl -OSL --ssl-no-revoke https://boostorg.jfrog.io/artifactory/main/release/1.73.0/source/boost_1_73_0.7z && `
+curl -OSL --ssl-no-revoke https://archives.boost.io/release/1.73.0/source/boost_1_73_0.7z && `
 7z.exe x boost_1_73_0.7z && `
 cd boost_1_73_0 && `
 MSYS_NO_PATHCONV=1 cmd /c bootstrap.bat && `
