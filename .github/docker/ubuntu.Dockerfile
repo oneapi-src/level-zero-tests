@@ -84,7 +84,7 @@ EOF
 # without conflicts
 # Required for https://github.com/boostorg/thread/issues/364 on Ubuntu 22+
 ENV BOOST_BUILD_PATH=/boost_1_73_0
-ADD https://boostorg.jfrog.io/artifactory/main/release/1.73.0/source/boost_1_73_0.tar.gz /boost_1_73_0.tar.gz
+ADD https://archives.boost.io/release/1.73.0/source/boost_1_73_0.tar.gz /boost_1_73_0.tar.gz
 RUN <<EOF
 tar xf /boost_1_73_0.tar.gz
 rm /boost_1_73_0.tar.gz
