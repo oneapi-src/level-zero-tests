@@ -254,6 +254,9 @@ void generate_metric_handles_list_from_param_values(
 void destroy_metric_handles_list(
     std::vector<zet_metric_handle_t> &metric_handles);
 
+std::vector<zet_metric_group_handle_t> get_concurrent_metric_group(
+    ze_device_handle_t device,
+    std::vector<zet_metric_group_handle_t> &metricGroupHandleList);
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */

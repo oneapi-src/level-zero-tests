@@ -197,6 +197,31 @@ bool check_metric_type_ip(ze_device_handle_t device, std::string groupName,
   return check_metric_type_ip(groupHandle, includeExpFeature);
 }
 
+std::vector<zet_metric_group_handle_t> get_concurrent_metric_group(
+    ze_device_handle_t device,
+    std::vector<zet_metric_group_handle_t> &metricGroupHandleList) {
+
+  uint32_t concurrentGroupCount = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetDeviceGetConcurrentMetricGroupsExp(
+                device, metricGroupHandleList.size(),
+                metricGroupHandleList.data(), nullptr, &concurrentGroupCount));
+  std::vector<uint32_t> countPerConcurrentGroup(concurrentGroupCount);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetDeviceGetConcurrentMetricGroupsExp(
+                device, metricGroupHandleList.size(),
+                metricGroupHandleList.data(), countPerConcurrentGroup.data(),
+                &concurrentGroupCount));
+
+  std::vector<zet_metric_group_handle_t> concurrentMetricGroupList;
+  uint32_t metricGroupCountInConcurrentGroup = countPerConcurrentGroup[0];
+
+  for (uint32_t i = 0; i < metricGroupCountInConcurrentGroup; i++) {
+    concurrentMetricGroupList.push_back(metricGroupHandleList[i]);
+  }
+  return concurrentMetricGroupList;
+}
+
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
     uint32_t percentOfMetricGroupForTest, const char *metricGroupName) {
@@ -271,6 +296,7 @@ get_metric_group_info(ze_device_handle_t device,
       get_metric_group_handles(device);
 
   std::vector<metricGroupInfo_t> matchedGroupsInfo;
+  std::vector<zet_metric_group_handle_t> concurrentMetricGroupHandles;
 
   for (auto metricGroupHandle : metricGroupHandles) {
     zet_metric_group_properties_t metricGroupProp = {};
@@ -289,12 +315,25 @@ get_metric_group_info(ze_device_handle_t device,
       continue;
     }
 
+    concurrentMetricGroupHandles.push_back(metricGroupHandle);
     matchedGroupsInfo.emplace_back(
         metricGroupHandle, metricGroupProp.name, metricGroupProp.description,
         metricGroupProp.domain, metricGroupProp.metricCount);
   }
 
-  return matchedGroupsInfo;
+  concurrentMetricGroupHandles =
+      get_concurrent_metric_group(device, concurrentMetricGroupHandles);
+  std::vector<metricGroupInfo_t> concurrentMatchedGroupsInfo;
+
+  for (auto groupsInfo : matchedGroupsInfo) {
+    if (count(concurrentMetricGroupHandles.begin(),
+              concurrentMetricGroupHandles.end(),
+              groupsInfo.metricGroupHandle)) {
+      concurrentMatchedGroupsInfo.push_back(groupsInfo);
+    }
+  }
+
+  return concurrentMatchedGroupsInfo;
 }
 
 std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
