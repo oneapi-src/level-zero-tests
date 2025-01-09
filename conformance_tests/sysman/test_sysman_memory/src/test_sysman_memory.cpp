@@ -13,6 +13,8 @@
 #include <condition_variable>
 #include <thread>
 
+#include "test_harness/test_harness.hpp"
+
 namespace lzt = level_zero_tests;
 
 #include <level_zero/zes_api.h>
@@ -23,12 +25,23 @@ std::mutex mem_mutex;
 std::condition_variable condition_variable;
 uint32_t ready = 0;
 
+uint32_t get_property_length(char *prop) { return std::strlen(prop); }
+const uint32_t numThreads = 10; 
+
 #ifdef USE_ZESINIT
 class MemoryModuleZesTest : public lzt::ZesSysmanCtsClass {};
 #define MEMORY_TEST MemoryModuleZesTest
+
+class MemoryFirmwareZesTest : public lzt::ZesSysmanCtsClass {};
+#define MEMORY_FIRMWARE_TEST MemoryFirmwareZesTest
+
 #else // USE_ZESINIT
 class MemoryModuleTest : public lzt::SysmanCtsClass {};
 #define MEMORY_TEST MemoryModuleTest
+
+class MemoryFirmwareTest : public lzt::SysmanCtsClass {};
+#define MEMORY_FIRMWARE_TEST MemoryFirmwareTest
+
 #endif // USE_ZESINIT
 
 TEST_F(
@@ -443,4 +456,52 @@ TEST_F(
     memoryThread.join();
   }
 }
+
+void query_memory_state_function(ze_device_handle_t device) {
+  uint32_t count = 0;
+  std::vector<zes_mem_handle_t> mem_handles = lzt::get_mem_handles(device, count);
+  if (count == 0) {
+    FAIL() << "No handles found: "
+           << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+  }
+  for (auto mem_handle : mem_handles) {
+    ASSERT_NE(nullptr, mem_handle);
+    lzt::get_mem_state(mem_handle);
+  }
+}
+
+void query_firmware_properties_function(ze_device_handle_t device) {
+  uint32_t count = 0;
+  auto firmware_handles = lzt::get_firmware_handles(device, count);
+  auto deviceProperties = lzt::get_sysman_device_properties(device);
+  if (count == 0) {
+    FAIL() << "No handles found: "
+          << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+  }
+  for (auto firmware_handle : firmware_handles) {
+    ASSERT_NE(nullptr, firmware_handle);
+    auto properties = lzt::get_firmware_properties(firmware_handle);
+    EXPECT_LT(get_property_length(properties.name), ZES_STRING_PROPERTY_SIZE);
+    EXPECT_GT(get_property_length(properties.name), 0);
+    EXPECT_LT(get_property_length(properties.version), ZES_STRING_PROPERTY_SIZE);
+  }
+}
+
+TEST_F(
+    MEMORY_FIRMWARE_TEST,
+    GivenValidMemoryAndFirmwareHandlesWhenGettingMemoryGetStateAndFirmwareGetPropertiesFromDifferentThreadsThenExpectBothToReturnSucess) {
+  for (auto device : devices) {
+      std::thread memoryThreads[numThreads];
+      std::thread firmwareThreads[numThreads];
+      for (int i = 0; i < numThreads; i++) {
+        memoryThreads[i] = std::thread(query_memory_state_function, device);
+        firmwareThreads[i] = std::thread(query_firmware_properties_function, device);
+      }
+      for (int i = 0; i < numThreads; i++) {
+        memoryThreads[i].join(); 
+        firmwareThreads[i].join(); 
+      }
+    }
+}  
+
 } // namespace
