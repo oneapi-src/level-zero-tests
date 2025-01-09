@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,10 +18,16 @@ namespace lzt = level_zero_tests;
 
 namespace {
 #ifdef USE_ZESINIT
-class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {};
+class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {
+public:
+  bool power_handles_available = false;
+};
 #define POWER_TEST PowerModuleZesTest
 #else // USE_ZESINIT
-class PowerModuleTest : public lzt::SysmanCtsClass {};
+class PowerModuleTest : public lzt::SysmanCtsClass {
+public:
+  bool power_handles_available = false;
+};
 #define POWER_TEST PowerModuleTest
 #endif // USE_ZESINIT
 
@@ -1264,5 +1270,51 @@ TEST_F(
     }
   }
 }
+
+#ifdef __linux__
+TEST_F(
+    POWER_TEST,
+    GivenValidDeviceWhenCallingPowerGetEnergyCountersMultipleTimesThenExpectFirstCallIsSlowerThanSubsequentCalls) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto power_handles = lzt::get_power_handles(device, count);
+
+    if (count > 0) {
+      power_handles_available = true;
+      auto start = std::chrono::steady_clock::now();
+      auto energy_counters = lzt::get_power_energy_counter(power_handles);
+      auto end = std::chrono::steady_clock::now();
+      std::chrono::duration<double, std::micro> elapsed_initial = end - start;
+
+      uint32_t iterations = 20;
+      std::chrono::duration<double, std::micro> total_time(0);
+
+      for (uint32_t i = 0; i < iterations; i++) {
+        auto start = std::chrono::steady_clock::now();
+        auto energy_counters = lzt::get_power_energy_counter(power_handles);
+        auto end = std::chrono::steady_clock::now();
+        std::chrono::duration<double, std::micro> elapsed = end - start;
+        total_time += elapsed;
+      }
+
+      auto avg_time = total_time / iterations;
+      LOG_INFO << "Initial Telemetry collection time (micro sec): "
+               << elapsed_initial.count();
+      LOG_INFO << "Average Telemetry collection time (micro sec) for "
+               << iterations << " iterations : " << avg_time.count();
+
+      EXPECT_GT(elapsed_initial.count(), 0);
+      EXPECT_GT(avg_time.count(), 0);
+      EXPECT_GT(elapsed_initial.count(), avg_time.count());
+    } else {
+      LOG_WARNING << "No handles found on this device!";
+    }
+  }
+
+  if (!power_handles_available) {
+    FAIL() << "No handles found in any of the devices!";
+  }
+}
+#endif
 
 } // namespace

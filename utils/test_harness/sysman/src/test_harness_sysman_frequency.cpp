@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -40,6 +40,17 @@ zes_freq_state_t get_freq_state(zes_freq_handle_t pFreqHandle) {
   zes_freq_state_t pState = {ZES_STRUCTURE_TYPE_FREQ_STATE, nullptr};
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesFrequencyGetState(pFreqHandle, &pState));
   return pState;
+}
+
+std::vector<zes_freq_state_t>
+get_freq_state(std::vector<zes_freq_handle_t> &freq_handles) {
+  std::vector<zes_freq_state_t> states{};
+  for (auto &freq_handle : freq_handles) {
+    EXPECT_NE(nullptr, freq_handle);
+    zes_freq_state_t state = get_freq_state(freq_handle);
+    states.push_back(state);
+  }
+  return states;
 }
 
 zes_freq_range_t get_freq_range(zes_freq_handle_t pFreqHandle) {

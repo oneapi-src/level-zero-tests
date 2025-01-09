@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2020 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -107,6 +107,17 @@ ze_result_t set_power_limits(zes_pwr_handle_t pPowerHandle,
 void get_power_energy_counter(zes_pwr_handle_t pPowerHandle,
                               zes_power_energy_counter_t *pEnergy) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesPowerGetEnergyCounter(pPowerHandle, pEnergy));
+}
+std::vector<zes_power_energy_counter_t>
+get_power_energy_counter(std::vector<zes_pwr_handle_t> &power_handles) {
+  std::vector<zes_power_energy_counter_t> energy_counters{};
+  for (auto &power_handle : power_handles) {
+    EXPECT_NE(nullptr, power_handle);
+    zes_power_energy_counter_t energy_counter = {};
+    get_power_energy_counter(power_handle, &energy_counter);
+    energy_counters.push_back(energy_counter);
+  }
+  return energy_counters;
 }
 ze_result_t get_power_energy_threshold(zes_pwr_handle_t pPowerHandle,
                                        zes_energy_threshold_t *pThreshold) {
