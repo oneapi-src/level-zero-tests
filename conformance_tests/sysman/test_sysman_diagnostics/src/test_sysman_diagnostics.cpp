@@ -248,15 +248,24 @@ TEST_F(
 TEST_F(
     DIAGNOSTICS_TEST,
     GivenValidDeviceWhenMemoryDiagnosticsIsRunAndMemoryGetStateIsCalledThenExpectSuccessIsReturned) {
-  for (auto device : devices) {
+  for (auto &device : devices) {
     uint32_t count = 0;
     auto diag_handles = lzt::get_diag_handles(device, count);
-    uint32_t mem_count_initial = lzt::get_mem_handle_count(device);
+    uint32_t mem_count_initial = 0;
+    std::vector<zes_mem_handle_t> mem_handles_initial =
+        lzt::get_mem_handles(device, mem_count_initial);
+
+    std::vector<zes_mem_health_t> mem_health_initial{};
+    for (auto &mem_handle : mem_handles_initial) {
+      ASSERT_NE(nullptr, mem_handle);
+      auto state = lzt::get_mem_state(mem_handle);
+      mem_health_initial.push_back(state.health);
+    }
 
     if (count > 0) {
       diag_handles_available = true;
       bool mem_diag_available = false;
-      for (auto diag_handle : diag_handles) {
+      for (auto &diag_handle : diag_handles) {
         ASSERT_NE(nullptr, diag_handle);
         auto properties = lzt::get_diag_properties(diag_handle);
 
@@ -272,10 +281,15 @@ TEST_F(
               lzt::get_mem_handles(device, mem_count_later);
           EXPECT_EQ(mem_count_initial, mem_count_later);
 
-          for (auto mem_handle : mem_handles) {
+          std::vector<zes_mem_health_t> mem_health_later{};
+          for (auto &mem_handle : mem_handles) {
             ASSERT_NE(nullptr, mem_handle);
-            lzt::get_mem_state(mem_handle);
+            auto state = lzt::get_mem_state(mem_handle);
+            mem_health_later.push_back(state.health);
           }
+          EXPECT_TRUE(std::equal(mem_health_initial.begin(),
+                                 mem_health_initial.end(),
+                                 mem_health_later.begin()));
         }
       }
 
