@@ -277,12 +277,12 @@ TEST_F(
 
           // get memory state after memory diagnostics
           uint32_t mem_count_later = 0;
-          std::vector<zes_mem_handle_t> mem_handles =
+          std::vector<zes_mem_handle_t> mem_handles_later =
               lzt::get_mem_handles(device, mem_count_later);
           EXPECT_EQ(mem_count_initial, mem_count_later);
 
           std::vector<zes_mem_health_t> mem_health_later{};
-          for (auto &mem_handle : mem_handles) {
+          for (auto &mem_handle : mem_handles_later) {
             ASSERT_NE(nullptr, mem_handle);
             auto state = lzt::get_mem_state(mem_handle);
             mem_health_later.push_back(state.health);
