@@ -251,6 +251,7 @@ TEST_F(
   for (auto device : devices) {
     uint32_t count = 0;
     auto diag_handles = lzt::get_diag_handles(device, count);
+    uint32_t mem_count_initial = lzt::get_mem_handle_count(device);
 
     if (count > 0) {
       diag_handles_available = true;
@@ -260,16 +261,16 @@ TEST_F(
         auto properties = lzt::get_diag_properties(diag_handle);
 
         if (strcmp(properties.name, "MEMORY_PPR") == 0) {
-          bool mem_diag_available = true;
+          mem_diag_available = true;
           auto result = lzt::run_diag_tests(
               diag_handle, ZES_DIAG_FIRST_TEST_INDEX, ZES_DIAG_LAST_TEST_INDEX);
           EXPECT_EQ(result, ZES_DIAG_RESULT_NO_ERRORS);
 
           // get memory state after memory diagnostics
-          uint32_t mem_handles_count = 0;
+          uint32_t mem_count_later = 0;
           std::vector<zes_mem_handle_t> mem_handles =
-              lzt::get_mem_handles(device, mem_handles_count);
-          EXPECT_GT(mem_handles_count, 0);
+              lzt::get_mem_handles(device, mem_count_later);
+          EXPECT_EQ(mem_count_initial, mem_count_later);
 
           for (auto mem_handle : mem_handles) {
             ASSERT_NE(nullptr, mem_handle);
@@ -282,12 +283,12 @@ TEST_F(
         FAIL() << "Memory Diagnostics is not available for this device!";
       }
     } else {
-      LOG_WARNING << "No handles found on this device!";
+      LOG_WARNING << "No Diagnostics handles found on this device!";
     }
   }
 
   if (!diag_handles_available) {
-    FAIL() << "No handles found in any of the devices!";
+    FAIL() << "No Diagnostics handles found in any of the devices!";
   }
 }
 } // namespace
