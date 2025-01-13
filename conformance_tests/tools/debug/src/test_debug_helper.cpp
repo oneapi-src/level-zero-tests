@@ -429,7 +429,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 
   std::string mod_options = "-g";
   if (options.module_options_in != "") {
-    mod_options.append("," + options.module_options_in);
+    mod_options.append(" " + options.module_options_in);
   }
   LOG_INFO << "Module Options: " << mod_options;
   auto module =
