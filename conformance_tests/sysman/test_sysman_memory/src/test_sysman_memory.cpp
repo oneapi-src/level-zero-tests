@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,10 +18,6 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
-
-std::mutex mem_mutex;
-std::condition_variable condition_variable;
-uint32_t ready = 0;
 
 #ifdef USE_ZESINIT
 class MemoryModuleZesTest : public lzt::ZesSysmanCtsClass {};
@@ -404,10 +400,6 @@ void getMemoryState(ze_device_handle_t device) {
     FAIL() << "No handles found: "
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
-  std::unique_lock<std::mutex> lock(mem_mutex);
-  ready++;
-  condition_variable.notify_all();
-  condition_variable.wait(lock, [] { return ready == 2; });
   for (auto mem_handle : mem_handles) {
     ASSERT_NE(nullptr, mem_handle);
     lzt::get_mem_state(mem_handle);
@@ -422,10 +414,6 @@ void getRasState(ze_device_handle_t device) {
     FAIL() << "No handles found: "
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
-  std::unique_lock<std::mutex> lock(mem_mutex);
-  ready++;
-  condition_variable.notify_all();
-  condition_variable.wait(lock, [] { return ready == 2; });
   for (auto ras_handle : ras_handles) {
     ASSERT_NE(nullptr, ras_handle);
     ze_bool_t clear = 0;
