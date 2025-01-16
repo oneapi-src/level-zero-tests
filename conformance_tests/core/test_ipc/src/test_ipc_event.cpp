@@ -263,13 +263,17 @@ static void run_ipc_event_test(parent_test_t parent_test,
     run_workload(hEvent, context, startTime, endTime,
                  (timestamp_type == MAPPED_KERNEL_TIMESTAMP));
     break;
+  case PARENT_TEST_QUERY_EVENT_STATUS:
+    break;
   default:
     FAIL() << "Fatal test error";
   }
 
   c.wait(); // wait for the process to exit
   ASSERT_EQ(c.exit_code(), 0);
-
+  if (parent_test == PARENT_TEST_QUERY_EVENT_STATUS) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(hEvent));
+  }
   if (parent_test == PARENT_TEST_HOST_LAUNCHES_KERNEL) {
     // ensure the timestamps match
     EXPECT_EQ(test_data.start_time, startTime);
@@ -352,6 +356,12 @@ TEST(
     GivenTwoProcessesWhenMappedTimestampEventSignalledThenEventSetInChildFromHostPerspective) {
   run_ipc_event_test(PARENT_TEST_HOST_LAUNCHES_KERNEL,
                      CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS, false, false);
+}
+
+TEST(zeIPCEventTests,
+     GivenTwoProcessesWhenEventSignaledByChildThenEventQueryStatusSuccess) {
+  run_ipc_event_test(PARENT_TEST_QUERY_EVENT_STATUS,
+                     CHILD_TEST_QUERY_EVENT_STATUS, false, false);
 }
 
 TEST(
