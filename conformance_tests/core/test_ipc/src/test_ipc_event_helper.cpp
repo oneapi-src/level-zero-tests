@@ -42,6 +42,16 @@ static void child_host_reads(ze_event_pool_handle_t hEventPool) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
 }
 
+static void child_query_event_status(ze_event_pool_handle_t hEventPool) {
+  ze_event_handle_t hEvent = nullptr;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(hEvent));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+}
+
 static void child_device_reads(ze_event_pool_handle_t hEventPool,
                                bool device_events, ze_context_handle_t context,
                                bool isImmediate) {
@@ -317,6 +327,9 @@ int main() {
   case CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS:
     child_host_query_timestamp(hEventPool, shared_data, true);
     std::memcpy(region.get_address(), &shared_data, sizeof(shared_data_t));
+    break;
+  case CHILD_TEST_QUERY_EVENT_STATUS:
+    child_query_event_status(hEventPool);
     break;
   default:
     LOG_DEBUG << "Unrecognized test case";
