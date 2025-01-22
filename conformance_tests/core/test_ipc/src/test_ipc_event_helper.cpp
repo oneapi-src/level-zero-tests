@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -11,6 +11,7 @@
 #include "logging/logging.hpp"
 #include "test_ipc_event.hpp"
 #include "net/test_ipc_comm.hpp"
+#include <boost/interprocess/sync/named_semaphore.hpp>
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -228,6 +229,7 @@ int main() {
     LOG_DEBUG << "Child exit due to zeInit failure";
     exit(1);
   }
+
   LOG_INFO << "IPC Child zeInit";
 
   shared_data_t shared_data;
@@ -247,7 +249,7 @@ int main() {
     }
   }
   shm.truncate(sizeof(shared_data_t));
-  bipc::mapped_region region(shm, bipc::read_only);
+  bipc::mapped_region region(shm, bipc::read_write);
   std::memcpy(&shared_data, region.get_address(), sizeof(shared_data_t));
 
   ze_ipc_event_pool_handle_t hIpcEventPool{};
@@ -281,6 +283,12 @@ int main() {
     device_events = true;
   }
 
+  if (shared_data.parent_type == PARENT_TEST_HOST_LAUNCHES_KERNEL) {
+    // Wait until the child is ready to query the time stamp
+    bipc::named_semaphore semaphore(bipc::open_only, "ipc_event_test_semaphore");
+    semaphore.wait();
+  }
+
   const bool isImmediate = shared_data.is_immediate;
   LOG_INFO << "IPC Child open event handle success";
   switch (shared_data.child_type) {
@@ -299,13 +307,16 @@ int main() {
     break;
   case CHILD_TEST_HOST_TIMESTAMP_READS:
     child_host_query_timestamp(hEventPool, shared_data, false);
+    std::memcpy(region.get_address(), &shared_data, sizeof(shared_data_t));
     break;
   case CHILD_TEST_DEVICE_TIMESTAMP_READS:
     child_device_query_timestamp(hEventPool, device_events, context,
                                  shared_data, isImmediate);
+    std::memcpy(region.get_address(), &shared_data, sizeof(shared_data_t));
     break;
   case CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS:
     child_host_query_timestamp(hEventPool, shared_data, true);
+    std::memcpy(region.get_address(), &shared_data, sizeof(shared_data_t));
     break;
   default:
     LOG_DEBUG << "Unrecognized test case";
