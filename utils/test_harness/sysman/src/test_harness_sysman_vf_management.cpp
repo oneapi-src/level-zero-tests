@@ -31,10 +31,11 @@ std::vector<zes_vf_handle_t> get_vf_handles(zes_device_handle_t device,
   return vf_handles;
 }
 
-zes_vf_exp_capabilities_t get_vf_capabilities(zes_vf_handle_t vf_handle) {
-  zes_vf_exp_capabilities_t vf_capabilities{};
+zes_vf_exp2_capabilities_t get_vf_capabilities(zes_vf_handle_t vf_handle) {
+  zes_vf_exp2_capabilities_t vf_capabilities = {
+      ZES_STRUCTURE_TYPE_VF_EXP2_CAPABILITIES};
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesVFManagementGetVFCapabilitiesExp(vf_handle, &vf_capabilities));
+            zesVFManagementGetVFCapabilitiesExp2(vf_handle, &vf_capabilities));
   return vf_capabilities;
 }
 
@@ -51,6 +52,9 @@ std::vector<zes_vf_util_mem_exp2_t> get_vf_mem_util(zes_vf_handle_t vf_handle,
     count = get_vf_mem_util_count(vf_handle);
   }
   std::vector<zes_vf_util_mem_exp2_t> vf_util_mem_exp(count);
+  for (uint32_t i = 0; i < count; i++) {
+    vf_util_mem_exp[i].stype = ZES_STRUCTURE_TYPE_VF_UTIL_MEM_EXP2;
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesVFManagementGetVFMemoryUtilizationExp2(
                                    vf_handle, &count, vf_util_mem_exp.data()));
   return vf_util_mem_exp;
@@ -69,6 +73,9 @@ get_vf_engine_util(zes_vf_handle_t vf_handle, uint32_t &count) {
     count = get_vf_engine_util_count(vf_handle);
   }
   std::vector<zes_vf_util_engine_exp2_t> vf_util_engine_exp(count);
+  for (uint32_t i = 0; i < count; i++) {
+    vf_util_engine_exp[i].stype = ZES_STRUCTURE_TYPE_VF_UTIL_ENGINE_EXP2;
+  }
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zesVFManagementGetVFEngineUtilizationExp2(
                 vf_handle, &count, vf_util_engine_exp.data()));

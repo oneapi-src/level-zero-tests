@@ -26,7 +26,7 @@ public:
 #define VF_MANAGEMENT_TEST VfManagementTest
 #endif // USE_ZESINIT
 
-void validate_vf_capabilities(zes_vf_exp_capabilities_t &vf_capabilities,
+void validate_vf_capabilities(zes_vf_exp2_capabilities_t &vf_capabilities,
                               uint32_t &vf_count) {
   EXPECT_GE(vf_capabilities.address.domain, 0);
   EXPECT_LE(vf_capabilities.address.domain, MAX_DOMAINs);
@@ -41,8 +41,8 @@ void validate_vf_capabilities(zes_vf_exp_capabilities_t &vf_capabilities,
   EXPECT_LE(vf_capabilities.vfID, vf_count);
 }
 
-void compare_vf_capabilities(zes_vf_exp_capabilities_t &vf_capability_initial,
-                             zes_vf_exp_capabilities_t &vf_capability_later) {
+void compare_vf_capabilities(zes_vf_exp2_capabilities_t &vf_capability_initial,
+                             zes_vf_exp2_capabilities_t &vf_capability_later) {
   EXPECT_EQ(vf_capability_initial.stype, vf_capability_later.stype);
   EXPECT_EQ(vf_capability_initial.pNext, vf_capability_later.pNext);
   EXPECT_EQ(vf_capability_initial.address.domain,
