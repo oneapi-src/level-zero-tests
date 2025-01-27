@@ -26,8 +26,9 @@ public:
 #define VF_MANAGEMENT_TEST VfManagementTest
 #endif // USE_ZESINIT
 
-void validate_vf_capabilities(zes_vf_exp_capabilities_t &vf_capabilities,
+void validate_vf_capabilities(zes_vf_exp2_capabilities_t &vf_capabilities,
                               uint32_t &vf_count) {
+  EXPECT_EQ(vf_capabilities.stype, ZES_STRUCTURE_TYPE_VF_EXP2_CAPABILITIES);
   EXPECT_GE(vf_capabilities.address.domain, 0);
   EXPECT_LE(vf_capabilities.address.domain, MAX_DOMAINs);
   EXPECT_GE(vf_capabilities.address.bus, 0);
@@ -41,8 +42,8 @@ void validate_vf_capabilities(zes_vf_exp_capabilities_t &vf_capabilities,
   EXPECT_LE(vf_capabilities.vfID, vf_count);
 }
 
-void compare_vf_capabilities(zes_vf_exp_capabilities_t &vf_capability_initial,
-                             zes_vf_exp_capabilities_t &vf_capability_later) {
+void compare_vf_capabilities(zes_vf_exp2_capabilities_t &vf_capability_initial,
+                             zes_vf_exp2_capabilities_t &vf_capability_later) {
   EXPECT_EQ(vf_capability_initial.stype, vf_capability_later.stype);
   EXPECT_EQ(vf_capability_initial.pNext, vf_capability_later.pNext);
   EXPECT_EQ(vf_capability_initial.address.domain,
@@ -257,6 +258,7 @@ TEST_F(
         auto vf_mem_util = lzt::get_vf_mem_util(vf_handle, mem_util_count);
 
         for (const auto &mem_util : vf_mem_util) {
+          EXPECT_EQ(mem_util.stype, ZES_STRUCTURE_TYPE_VF_UTIL_MEM_EXP2);
           EXPECT_GE(mem_util.vfMemLocation, ZES_MEM_LOC_SYSTEM);
           EXPECT_LE(mem_util.vfMemLocation, ZES_MEM_LOC_DEVICE);
           EXPECT_GT(mem_util.vfMemUtilized, 0);
@@ -350,6 +352,7 @@ TEST_F(
             lzt::get_vf_engine_util(vf_handle, engine_util_count);
 
         for (const auto &engine_util : vf_engine_util) {
+          EXPECT_EQ(engine_util.stype, ZES_STRUCTURE_TYPE_VF_UTIL_ENGINE_EXP2);
           EXPECT_GE(engine_util.vfEngineType, ZES_ENGINE_GROUP_ALL);
           EXPECT_LE(engine_util.vfEngineType,
                     ZES_ENGINE_GROUP_MEDIA_CODEC_SINGLE);
