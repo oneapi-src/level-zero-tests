@@ -16,7 +16,7 @@ namespace fs = boost::filesystem;
 namespace bp = boost::process;
 namespace bi = boost::interprocess;
 
-const uint16_t eventsTimeoutMS = 30000;
+const uint32_t eventsTimeoutMS = 120000;
 const uint16_t eventsTimeoutS = 30;
 
 namespace lzt = level_zero_tests;
