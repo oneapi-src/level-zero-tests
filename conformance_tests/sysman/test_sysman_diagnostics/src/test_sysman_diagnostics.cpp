@@ -30,10 +30,16 @@ void validate_tests(std::vector<zes_diag_test_t> tests) {
 }
 
 #ifdef USE_ZESINIT
-class DiagnosticsZesTest : public lzt::ZesSysmanCtsClass {};
+class DiagnosticsZesTest : public lzt::ZesSysmanCtsClass {
+public:
+  bool diag_handles_available = false;
+};
 #define DIAGNOSTICS_TEST DiagnosticsZesTest
 #else // USE_ZESINIT
-class DiagnosticsTest : public lzt::SysmanCtsClass {};
+class DiagnosticsTest : public lzt::SysmanCtsClass {
+public:
+  bool diag_handles_available = false;
+};
 #define DIAGNOSTICS_TEST DiagnosticsTest
 #endif // USE_ZESINIT
 
@@ -236,6 +242,67 @@ TEST_F(
         EXPECT_LE(result, ZES_DIAG_RESULT_REBOOT_FOR_REPAIR);
       }
     }
+  }
+}
+
+TEST_F(
+    DIAGNOSTICS_TEST,
+    GivenValidDeviceWhenMemoryDiagnosticsIsRunAndMemoryGetStateIsCalledThenExpectSuccessIsReturned) {
+  for (auto &device : devices) {
+    uint32_t count = 0;
+    auto diag_handles = lzt::get_diag_handles(device, count);
+    uint32_t mem_count_initial = 0;
+    std::vector<zes_mem_handle_t> mem_handles_initial =
+        lzt::get_mem_handles(device, mem_count_initial);
+
+    std::vector<zes_mem_health_t> mem_health_initial{};
+    for (auto &mem_handle : mem_handles_initial) {
+      ASSERT_NE(nullptr, mem_handle);
+      auto state = lzt::get_mem_state(mem_handle);
+      mem_health_initial.push_back(state.health);
+    }
+
+    if (count > 0) {
+      diag_handles_available = true;
+      bool mem_diag_available = false;
+      for (auto &diag_handle : diag_handles) {
+        ASSERT_NE(nullptr, diag_handle);
+        auto properties = lzt::get_diag_properties(diag_handle);
+
+        if (strcmp(properties.name, "MEMORY_PPR") == 0) {
+          mem_diag_available = true;
+          auto result = lzt::run_diag_tests(
+              diag_handle, ZES_DIAG_FIRST_TEST_INDEX, ZES_DIAG_LAST_TEST_INDEX);
+          EXPECT_EQ(result, ZES_DIAG_RESULT_NO_ERRORS);
+
+          // get memory state after memory diagnostics
+          uint32_t mem_count_later = 0;
+          std::vector<zes_mem_handle_t> mem_handles_later =
+              lzt::get_mem_handles(device, mem_count_later);
+          EXPECT_EQ(mem_count_initial, mem_count_later);
+
+          std::vector<zes_mem_health_t> mem_health_later{};
+          for (auto &mem_handle : mem_handles_later) {
+            ASSERT_NE(nullptr, mem_handle);
+            auto state = lzt::get_mem_state(mem_handle);
+            mem_health_later.push_back(state.health);
+          }
+          EXPECT_TRUE(std::equal(mem_health_initial.begin(),
+                                 mem_health_initial.end(),
+                                 mem_health_later.begin()));
+        }
+      }
+
+      if (!mem_diag_available) {
+        FAIL() << "Memory Diagnostics is not available for this device!";
+      }
+    } else {
+      LOG_WARNING << "No Diagnostics handles found on this device!";
+    }
+  }
+
+  if (!diag_handles_available) {
+    FAIL() << "No Diagnostics handles found in any of the devices!";
   }
 }
 } // namespace
