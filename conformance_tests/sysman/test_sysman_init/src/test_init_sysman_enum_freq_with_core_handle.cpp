@@ -16,7 +16,7 @@ namespace {
 
 TEST(
     SysmanInitTests,
-    GivenZesInitAndZeInitWithSysmanEnabledWhenSysmanApiIsCalledWithZeDeviceThenUninitializedErrorIsReturned) {
+    GivenZesInitAndZeInitWithSysmanEnabledWhenSysmanApiIsCalledWithZeDeviceHandleThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
@@ -31,7 +31,7 @@ TEST(
 
   uint32_t count = 0;
   EXPECT_EQ(
-      ZE_RESULT_ERROR_UNINITIALIZED,
+      ZE_RESULT_SUCCESS,
       zesDeviceEnumFrequencyDomains(
           static_cast<zes_device_handle_t>(ze_devices[0]), &count, nullptr));
 }
