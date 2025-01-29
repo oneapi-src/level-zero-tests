@@ -373,6 +373,13 @@ void close_ipc_event_handle(ze_event_pool_handle_t eventPool) {
   EXPECT_EQ(event_pool_initial, eventPool);
 }
 
+void put_ipc_event_handle(ze_context_handle_t context,
+                          ze_ipc_event_pool_handle_t event_handle) {
+  auto context_initial = context;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventPoolPutIpcHandle(context, event_handle));
+  EXPECT_EQ(context, context_initial);
+}
+
 void open_ipc_event_handle(ze_context_handle_t context,
                            ze_ipc_event_pool_handle_t hIpc,
                            ze_event_pool_handle_t *eventPool) {

@@ -70,6 +70,8 @@ create_event_pool(ze_context_handle_t context, ze_event_pool_desc_t desc,
                   std::vector<ze_device_handle_t> devices);
 void event_host_synchronize(ze_event_handle_t hEvent, uint64_t timeout);
 void event_host_reset(ze_event_handle_t hEvent);
+void put_ipc_event_handle(ze_context_handle_t context,
+                          ze_ipc_event_pool_handle_t event_handle);
 void open_ipc_event_handle(ze_context_handle_t context,
                            ze_ipc_event_pool_handle_t hIpc,
                            ze_event_pool_handle_t *eventPool);
