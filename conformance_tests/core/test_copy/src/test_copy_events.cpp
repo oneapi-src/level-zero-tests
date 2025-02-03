@@ -194,11 +194,6 @@ TEST_F(
 
 void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
     zeCommandListEventTests &test, bool is_immediate) {
-  if (!lzt::is_concurrent_memory_access_supported(
-          lzt::get_default_device(lzt::get_default_driver()))) {
-    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
-                    "device, skipping test";
-  }
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   auto src_buffer = lzt::allocate_shared_memory(test.size);
   auto temp_buffer = lzt::allocate_shared_memory(test.size);
@@ -225,7 +220,12 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
   // Verify Copy Waits for Signal
   lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
-  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+
+  // Allocation can be accessed (while being used by GPU) only concurrently
+  if (lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+      EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+  }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
 
@@ -263,14 +263,6 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
-  // Check for concurrent access which is required for this functionality to
-  // work
-  if (!lzt::is_concurrent_memory_access_supported(
-          lzt::get_default_device(lzt::get_default_driver()))) {
-    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
-                    "device, skipping test";
-  }
-
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   auto src_buffer = lzt::allocate_shared_memory(test.size);
   auto dst_buffer = lzt::allocate_shared_memory(test.size);
@@ -288,11 +280,15 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
 
-  // Verify Copy Waits for Signal
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+
+  // Allocation can be accessed (while being used by GPU) only concurrently
+  if (lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+      EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+  }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));
 
@@ -324,11 +320,6 @@ TEST_F(
 
 void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
     zeCommandListEventTests &test, bool is_immediate) {
-  if (!lzt::is_concurrent_memory_access_supported(
-          lzt::get_default_device(lzt::get_default_driver()))) {
-    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
-                    "device, skipping test";
-  }
 
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   auto ref_buffer = lzt::allocate_shared_memory(test.size);
@@ -355,8 +346,12 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
 
   lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
-  // Verify Device waits for Signal
-  EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
+
+  // Allocation can be accessed (while being used by GPU) only concurrently
+  if (lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+      EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
+  }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
 
@@ -393,12 +388,6 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
-  if (!lzt::is_concurrent_memory_access_supported(
-          lzt::get_default_device(lzt::get_default_driver()))) {
-    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
-                    "device, skipping test";
-  }
-
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   auto ref_buffer = lzt::allocate_shared_memory(test.size);
   auto dst_buffer = lzt::allocate_shared_memory(test.size);
@@ -421,7 +410,12 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
+
+  // Allocation can be accessed (while being used by GPU) only concurrently
+  if (lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+      EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
+  }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));
 
@@ -457,12 +451,6 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
   uint32_t height = 16;
   test.size = height * width;
 
-  if (!lzt::is_concurrent_memory_access_supported(
-          lzt::get_default_device(lzt::get_default_driver()))) {
-    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
-                    "device, skipping test";
-  }
-
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   auto src_buffer = lzt::allocate_shared_memory(test.size);
   auto temp_buffer = lzt::allocate_shared_memory(test.size);
@@ -493,7 +481,12 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
   // Verify Copy Waits for Signal
   lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
-  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+
+  // Allocation can be accessed (while being used by GPU) only concurrently
+  if (lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+      EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+  }
 
   // Signal Event On Host
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
@@ -532,12 +525,6 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
-  if (!lzt::is_concurrent_memory_access_supported(
-          lzt::get_default_device(lzt::get_default_driver()))) {
-    GTEST_SKIP() << "Concurrent access for shared allocations unsupported by "
-                    "device, skipping test";
-  }
-
   uint32_t width = 16;
   uint32_t height = 16;
   test.size = height * width;
@@ -565,7 +552,13 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+
+  // Allocation can be accessed (while being used by GPU) only concurrently
+  if (lzt::is_concurrent_memory_access_supported(
+          lzt::get_default_device(lzt::get_default_driver()))) {
+      EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+  }
+
 
   // Signal Event On Host
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));
