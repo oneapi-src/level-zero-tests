@@ -27,7 +27,7 @@ namespace level_zero_tests {
 
 const std::chrono::milliseconds CONNECTION_WAIT =
     std::chrono::milliseconds(1000);
-const std::chrono::milliseconds CONNECTION_TIMEOUT = CONNECTION_WAIT * 10;
+const std::chrono::milliseconds CONNECTION_TIMEOUT = CONNECTION_WAIT * 60;
 
 #ifdef __linux__
 
