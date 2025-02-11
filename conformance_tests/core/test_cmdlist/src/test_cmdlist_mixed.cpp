@@ -743,6 +743,47 @@ TEST_P(zeTestMixedCMDListsIndependentOverlapping,
   }
 }
 
+std::string event_to_str(bool use_event) {
+  return use_event ? "using_event" : "not_using_event";
+}
+
+std::string command_list_flag_to_str(ze_command_list_flag_t flag) {
+  std::stringstream ss;
+  ss << "_cmd_list_flag_" << static_cast<uint32_t>(flag);
+  return ss.str();
+}
+
+std::string command_queue_flag_to_str(ze_command_queue_flag_t flag) {
+  std::stringstream ss;
+  ss << "_cmd_queue_flag_" << static_cast<uint32_t>(flag);
+  return ss.str();
+}
+
+std::string queue_mode_to_str(ze_command_queue_mode_t queue_mode) {
+  std::stringstream ss;
+  ss << "_queue_mode_" << static_cast<uint32_t>(queue_mode);
+  return ss.str();
+}
+
+struct zeTestMixedCMDListsIndependentOverlappingTestNameSuffix {
+  template <class ParamType>
+  std::string operator()(const testing::TestParamInfo<ParamType> &info) const {
+    std::stringstream ss;
+    ss << "compute"
+       << command_queue_flag_to_str(
+              static_cast<ze_command_queue_flag_t>(std::get<0>(info.param)));
+    ss << "_copy"
+       << command_queue_flag_to_str(
+              static_cast<ze_command_queue_flag_t>(std::get<1>(info.param)));
+    ss << queue_mode_to_str(
+        static_cast<ze_command_queue_mode_t>(std::get<2>(info.param)));
+    ss << command_list_flag_to_str(
+        static_cast<ze_command_list_flag_t>(std::get<3>(info.param)));
+    ss << "_" << event_to_str(std::get<4>(info.param));
+    return ss.str();
+  }
+};
+
 INSTANTIATE_TEST_SUITE_P(
     IndependentCMDListsOverlappingParameterization,
     zeTestMixedCMDListsIndependentOverlapping,
@@ -759,7 +800,8 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
                               ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
-        ::testing::Values(true, false)));
+        ::testing::Values(true, false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
 
 class zeTestMixedCMDListsInterdependPairSameEngineType
     : public zeMixedCMDListsTests,
@@ -904,6 +946,20 @@ TEST_P(
   lzt::destroy_command_queue(cq);
 }
 
+struct zeTestMixedCMDListsInterdependPairSameEngineTypeTestNameSuffix {
+  template <class ParamType>
+  std::string operator()(const testing::TestParamInfo<ParamType> &info) const {
+    std::stringstream ss;
+    ss << "cmd_queue_mode_" << std::get<0>(info.param);
+    ss << queue_mode_to_str(
+        static_cast<ze_command_queue_mode_t>(std::get<1>(info.param)));
+    ss << command_list_flag_to_str(
+        static_cast<ze_command_list_flag_t>(std::get<2>(info.param)));
+    ss << "_" << event_to_str(std::get<3>(info.param));
+    return ss.str();
+  }
+};
+
 INSTANTIATE_TEST_SUITE_P(
     InterdependCMDListsPairSameEngineTypeParameterization,
     zeTestMixedCMDListsInterdependPairSameEngineType,
@@ -917,7 +973,8 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
                               ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
-        ::testing::Values(true, false)));
+        ::testing::Values(true, false)),
+    zeTestMixedCMDListsInterdependPairSameEngineTypeTestNameSuffix());
 
 class zeTestMixedCMDListsInterdependPipelining
     : public zeMixedCMDListsTests,
@@ -1448,6 +1505,23 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
   lzt::destroy_command_queue(cq_fill);
 }
 
+struct zeTestMixedCMDListsInterdependPipeliningTestNameSuffix {
+  template <class ParamType>
+  std::string operator()(const testing::TestParamInfo<ParamType> &info) const {
+    std::stringstream ss;
+    ss << "compute"
+       << command_queue_flag_to_str(
+              static_cast<ze_command_queue_flag_t>(std::get<0>(info.param)));
+    ss << "_copy"
+       << command_queue_flag_to_str(
+              static_cast<ze_command_queue_flag_t>(std::get<1>(info.param)));
+    ss << command_list_flag_to_str(
+        static_cast<ze_command_list_flag_t>(std::get<2>(info.param)));
+    ss << "_" << event_to_str(std::get<3>(info.param));
+    return ss.str();
+  }
+};
+
 INSTANTIATE_TEST_SUITE_P(
     InterdependCMDListsPipeliningParameterization,
     zeTestMixedCMDListsInterdependPipelining,
@@ -1461,7 +1535,8 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
                               ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
-        ::testing::Values(true, false)));
+        ::testing::Values(true, false)),
+    zeTestMixedCMDListsInterdependPipeliningTestNameSuffix());
 
 class zeMixedCommandListEventCounterTests
     : public lzt::zeEventPoolTests {
