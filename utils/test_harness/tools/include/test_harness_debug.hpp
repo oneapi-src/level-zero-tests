@@ -14,6 +14,7 @@
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 #include "gtest/gtest.h"
+#include "test_harness/zet_intel_gpu_debug.h"
 
 namespace level_zero_tests {
 
@@ -43,8 +44,8 @@ void debug_resume(const zet_debug_session_handle_t &debug_session,
                   const ze_device_thread_t &device_thread);
 
 void clear_exceptions(const ze_device_handle_t &device,
-                    const zet_debug_session_handle_t &debug_session,
-                  const ze_device_thread_t &device_thread);
+                      const zet_debug_session_handle_t &debug_session,
+                      const ze_device_thread_t &device_thread);
 
 void debug_read_memory(const zet_debug_session_handle_t &debug_session,
                        const ze_device_thread_t &device_thread,
@@ -60,6 +61,12 @@ uint32_t get_register_set_properties_count(const ze_device_handle_t &device);
 
 std::vector<zet_debug_regset_properties_t>
 get_register_set_properties(const ze_device_handle_t &device);
+
+void printRegSetProperties(zet_debug_regset_properties_t regSet);
+
+bool get_register_set_props(ze_device_handle_t device,
+                            zet_debug_regset_type_intel_gpu_t type,
+                            zet_debug_regset_properties_t &reg);
 
 void debug_clean_assert_true(bool condition,
                              boost::process::child &debug_helper);
