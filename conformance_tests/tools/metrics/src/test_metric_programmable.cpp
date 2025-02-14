@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023-2024 Intel Corporation
+ * Copyright (C) 2023-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -362,10 +362,10 @@ TEST_F(
             param_info, type_string, value_info_type_string,
             value_info_type_default_value_string);
 
-        LOG_INFO << "parameter info type " << type_string
-                 << " value_info_type_string " << value_info_type_string
-                 << " value_info_type_default_value_string "
-                 << value_info_type_default_value_string;
+        LOG_DEBUG << "parameter info type " << type_string
+                  << " value_info_type_string " << value_info_type_string
+                  << " value_info_type_default_value_string "
+                  << value_info_type_default_value_string;
         EXPECT_TRUE(success)
             << "An invalid param_info_exp_t structure was encountered";
       }
@@ -424,11 +424,11 @@ TEST_F(
                   << value_info_type_default_value_string;
         EXPECT_TRUE(success)
             << "An invalid param_info_exp_t structure was encountered";
-        LOG_INFO << "test param_value_exp_t only";
+        LOG_DEBUG << "test param_value_exp_t only";
         lzt::generate_param_value_info_list_from_param_info(
             metric_programmable_handle, param_info_ordinal,
             param_info.valueInfoCount, param_info.valueInfoType, false);
-        LOG_INFO << "test param_value_exp_t AND param_value_info_desc_exp_t";
+        LOG_DEBUG << "test param_value_exp_t AND param_value_info_desc_exp_t";
         lzt::generate_param_value_info_list_from_param_info(
             metric_programmable_handle, param_info_ordinal,
             param_info.valueInfoCount, param_info.valueInfoType, true);

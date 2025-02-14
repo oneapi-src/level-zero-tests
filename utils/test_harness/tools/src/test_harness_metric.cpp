@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2024 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -1582,7 +1582,7 @@ void generate_param_value_info_list_from_param_info(
          "returned: "
       << count << " , does not agree with the expected count "
       << value_info_count;
-  LOG_INFO << "param_info valueInfoCount is " << value_info_count;
+  LOG_DEBUG << "param_info valueInfoCount is " << value_info_count;
 
   for (index = 0; index < count; index++) {
     zet_metric_programmable_param_value_info_exp_t *info = &value_info[index];
