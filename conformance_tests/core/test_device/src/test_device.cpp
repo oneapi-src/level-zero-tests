@@ -380,6 +380,164 @@ TEST(zeDeviceCanAccessPeerTests,
   EXPECT_EQ(a2b, b2a);
 }
 
+// Return false if uuuid's are NOT equal.
+bool areDeviceUuidsEqual(ze_device_uuid_t uuid1, ze_device_uuid_t uuid2) {
+  if (std::memcmp(&uuid1, &uuid2, sizeof(ze_device_uuid_t))) {
+    return false;
+  }
+  return true;
+}
+
+TEST(zeDeviceCanAccessPeerTests,
+     GivenTheSameDevicesWhenCheckingAccessThenTrueReturned) {
+  auto drivers = lzt::get_all_driver_handles();
+  ASSERT_GT(drivers.size(), 0)
+      << "no drivers found for peer to peer device test";
+
+  std::vector<ze_device_handle_t> all_devices;
+  for (auto driver : drivers) {
+    auto devices = lzt::get_ze_devices(driver);
+    all_devices.insert(all_devices.end(), devices.begin(), devices.end());
+  }
+
+  bool foundPair = false;
+  for (size_t i = 0; i < all_devices.size() && !foundPair; ++i) {
+    for (size_t j = i + 1; j < all_devices.size() && !foundPair; ++j) {
+      ze_device_properties_t deviceProperties =
+          lzt::get_device_properties(all_devices[i]);
+      ze_device_properties_t peerDeviceProperties =
+          lzt::get_device_properties(all_devices[j]);
+
+      if (areDeviceUuidsEqual(deviceProperties.uuid,
+                              peerDeviceProperties.uuid)) {
+        ze_bool_t a2b = lzt::can_access_peer(all_devices[i], all_devices[j]);
+        EXPECT_TRUE(a2b);
+        ze_bool_t b2a = lzt::can_access_peer(all_devices[j], all_devices[i]);
+        EXPECT_TRUE(b2a);
+        foundPair = true;
+      }
+    }
+  }
+
+  if (!foundPair) {
+    LOG_INFO << "No two devices with the same UUID were found.";
+  }
+}
+
+TEST(zeDeviceCanAccessPeerTests,
+     GivenTheSameSubdevicesWhenCheckingAccessThenTrueReturned) {
+  std::vector<ze_device_handle_t> sub_devices;
+  auto devices = lzt::get_ze_devices();
+
+  for (auto device : devices) {
+    sub_devices = lzt::get_ze_sub_devices(device);
+    if (sub_devices.size() >= 2)
+      break;
+  }
+  if (sub_devices.size() < 2) {
+    LOG_INFO << "WARNING: Exiting as no multiple subdevices was found";
+    GTEST_SKIP();
+  }
+
+  bool foundPair = false;
+  for (size_t i = 0; i < sub_devices.size() && !foundPair; ++i) {
+    for (size_t j = i + 1; j < sub_devices.size() && !foundPair; ++j) {
+      ze_device_properties_t deviceProperties =
+          lzt::get_device_properties(sub_devices[i]);
+      ze_device_properties_t peerDeviceProperties =
+          lzt::get_device_properties(sub_devices[j]);
+
+      if (areDeviceUuidsEqual(deviceProperties.uuid,
+                              peerDeviceProperties.uuid)) {
+        ze_bool_t a2b = lzt::can_access_peer(sub_devices[i], sub_devices[j]);
+        EXPECT_TRUE(a2b);
+        ze_bool_t b2a = lzt::can_access_peer(sub_devices[j], sub_devices[i]);
+        EXPECT_TRUE(b2a);
+        foundPair = true;
+      }
+    }
+  }
+
+  if (!foundPair) {
+    LOG_INFO << "No two subdevices with the same UUID were found.";
+  }
+}
+
+bool checkIfDevicesShareSameParent(ze_device_handle_t device1,
+                                   ze_device_handle_t device2) {
+  ze_device_handle_t rootDevice1 = nullptr;
+  ze_device_handle_t rootDevice2 = nullptr;
+
+  ze_result_t result1 = zeDeviceGetRootDevice(device1, &rootDevice1);
+  ze_result_t result2 = zeDeviceGetRootDevice(device2, &rootDevice2);
+
+  if (result1 != ZE_RESULT_SUCCESS || result2 != ZE_RESULT_SUCCESS) {
+    return false;
+  }
+
+  return rootDevice1 == rootDevice2;
+}
+
+TEST(zeDeviceCanAccessPeerTests,
+     GivenSubDevicesWithSameParentWhenCheckingAccessThenTrueReturned) {
+  std::vector<ze_device_handle_t> sub_devices;
+  auto devices = lzt::get_ze_devices();
+  bool sufficientSubDevicesFound = false;
+
+  for (auto device : devices) {
+    sub_devices = lzt::get_ze_sub_devices(device);
+
+    if (sub_devices.size() >= 2 &&
+        checkIfDevicesShareSameParent(sub_devices[0], sub_devices[1])) {
+      sufficientSubDevicesFound = true;
+      break;
+    }
+  }
+  if (!sufficientSubDevicesFound) {
+    LOG_INFO
+        << "WARNING: Exiting as no device with at least two subdevices exists";
+    GTEST_SKIP();
+  }
+  ze_bool_t a2b = lzt::can_access_peer(sub_devices[0], sub_devices[1]);
+  EXPECT_TRUE(a2b);
+  ze_bool_t b2a = lzt::can_access_peer(sub_devices[1], sub_devices[0]);
+  EXPECT_TRUE(b2a);
+}
+
+bool areDeviceHandlesEqual(ze_device_handle_t handle1, ze_device_handle_t handle2) {
+  return handle1 == handle2;
+}
+
+TEST(zeDeviceCanAccessPeerTests,
+     GivenTheSameDeviceHandleWhenCheckingAccessThenTrueReturned) {
+  auto drivers = lzt::get_all_driver_handles();
+  ASSERT_GT(drivers.size(), 0)
+      << "no drivers found for peer to peer device test";
+
+  std::vector<ze_device_handle_t> all_devices;
+  for (auto driver : drivers) {
+    auto devices = lzt::get_ze_devices(driver);
+    all_devices.insert(all_devices.end(), devices.begin(), devices.end());
+  }
+
+  bool foundSameHandle = false;
+  for (size_t i = 0; i < all_devices.size() && !foundSameHandle; ++i) {
+    for (size_t j = i + 1; j < all_devices.size() && !foundSameHandle; ++j) {
+      if (areDeviceHandlesEqual(all_devices[i], all_devices[j])) {
+        ze_bool_t a2b = lzt::can_access_peer(all_devices[i], all_devices[j]);
+        EXPECT_TRUE(a2b);
+        ze_bool_t b2a = lzt::can_access_peer(all_devices[j], all_devices[i]);
+        EXPECT_TRUE(b2a);
+        foundSameHandle = true;
+      }
+    }
+  }
+
+  if (!foundSameHandle) {
+    LOG_INFO << "No two devices with the same handle were found.";
+  }
+}
+
 TEST(
     zeDeviceGetModulePropertiesTests,
     GivenValidDeviceWhenRetrievingModulePropertiesThenValidPropertiesReturned) {
@@ -454,14 +612,6 @@ typedef struct DeviceHandlesBySku_ {
   uint32_t deviceId;
   std::vector<ze_device_handle_t> deviceHandlesForSku;
 } DeviceHandlesBySku_t;
-
-// Return false if uuuid's are NOT equal.
-bool areDeviceUuidsEqual(ze_device_uuid_t uuid1, ze_device_uuid_t uuid2) {
-  if (std::memcmp(&uuid1, &uuid2, sizeof(ze_device_uuid_t))) {
-    return false;
-  }
-  return true;
-}
 
 class DevicePropertiesTest : public ::testing::Test {
 public:
