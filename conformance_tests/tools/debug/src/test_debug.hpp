@@ -255,6 +255,8 @@ protected:
   void TearDown() override { zetDebugMemAccessTest::TearDown(); }
   void run_read_write_registers_test(std::vector<ze_device_handle_t> &devices,
                                      bool use_sub_devices);
+  void run_read_registers_test(std::vector<ze_device_handle_t> &devices,
+                          bool use_sub_devices);
 };
 
 class zetDebugThreadControlTest : public zetDebugBaseSetup {
