@@ -13,6 +13,7 @@ import sys
 import csv
 import signal
 import level_zero_report_utils
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 test_plan_generated = []
 binary_cwd = ""
@@ -106,7 +107,7 @@ def add_to_test_list(test_name: str,
     if checks_passed == True:
         test_plan_generated.append((test_name, test_filter, os.path.basename(binary_and_path), test_feature_tag, test_section, test_feature))
 
-def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
+def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str, num_threads: int):
     results = []
     i = 0
     failed = 0
@@ -115,82 +116,77 @@ def run_test_plan(test_plan: [], test_run_timeout: int, fail_log_name: str):
     num_failed = 0
     num_skipped = 0
     fail_log = open(fail_log_name, 'a')
-    for i in range(len(test_plan)):
+    def run_single_test(test):
         stdout_log = "_stdout.log"
         stderr_log = "_stderr.log"
-        fout = open(stdout_log, 'a+')
-        ferr = open(stderr_log, 'a+')
-        binary_prefix_path = os.path.join(binary_cwd, '')
-        test_run = subprocess.Popen([binary_prefix_path + test_plan[i][2], test_plan[i][1]], stdout=fout, stderr=ferr, start_new_session=True, cwd=binary_cwd)
-        try:
-            failed = 0
-            unsupported = 0
-            test_run.wait(timeout=test_run_timeout)
-            fout.close()
-            ferr.close()
-            fout = open(stdout_log, 'r')
-            ferr = open(stderr_log, 'r')
-            output = ferr.readlines() + fout.readlines()
-            for line in output:
-                if re.search("ZE_RESULT_ERROR_UNSUPPORTED*", line, re.IGNORECASE):
-                    unsupported = 1
-                    break
-                elif re.search("FAILED", line):
-                    failed = 1
-                    break
-
-            if not unsupported:
-                if test_run.returncode:
-                    failed = 1
-
-            if failed == 1:
-                result = (test_plan[i][0], test_plan[i][4], test_plan[i][3], 'FAILED')
-                results.append(result)
-                num_failed += 1
-                fail_log.write(test_plan[i][0] + ' FAILED' + "\n")
+        with open(stdout_log, 'a+') as fout, open(stderr_log, 'a+') as ferr:
+            binary_prefix_path = os.path.join(binary_cwd, '')
+            test_run = subprocess.Popen([binary_prefix_path + test[2], test[1]], stdout=fout, stderr=ferr, start_new_session=True, cwd=binary_cwd)
+            try:
+                failed = 0
+                unsupported = 0
+                test_run.wait(timeout=test_run_timeout)
+                fout.seek(0)
+                ferr.seek(0)
+                output = ferr.readlines() + fout.readlines()
                 for line in output:
-                    fail_log.write(line + "\n")
-                print("F", end = '')
-            elif unsupported == 1:
-                result = (test_plan[i][0], test_plan[i][4], test_plan[i][3], 'UNSUPPORTED')
-                results.append(result)
-                num_skipped += 1
-                fail_log.write(test_plan[i][0] + ' UNSUPPORTED' + "\n")
-                for line in output:
-                    fail_log.write(line + "\n")
-                print("N", end = '')
-            else:
-                result = (test_plan[i][0], test_plan[i][4], test_plan[i][3], 'PASSED')
-                results.append(result)
-                num_passed += 1
-                print("-", end = '')
-            i += 1
-            sys.stdout.flush()
-        except subprocess.TimeoutExpired:
-            fout.close()
-            ferr.close()
-            fout = open(stdout_log, 'r')
-            ferr = open(stderr_log, 'r')
+                    if re.search("ZE_RESULT_ERROR_UNSUPPORTED*", line, re.IGNORECASE):
+                        unsupported = 1
+                        break
+                    elif re.search("FAILED", line):
+                        failed = 1
+                        break
 
-            result = (test_plan[i][0], test_plan[i][4], test_plan[i][3], 'TIMEOUT')
-            results.append(result)
-            num_failed += 1
-            output = ferr.readlines() + fout.readlines()
-            fail_log.write(test_plan[i][0] + ' TIMEOUT' + "\n")
-            if output:
-                for line in output:
-                    fail_log.write(line + "\n")
-            os.killpg(os.getpgid(test_run.pid), signal.SIGTERM)
-            fout.close()
-            ferr.close()
-            i += 1
-            print("T", end = '')
-            sys.stdout.flush()
+                if not unsupported:
+                    if test_run.returncode:
+                        failed = 1
 
-        fout.close()
-        ferr.close()
-        os.remove(stdout_log)
-        os.remove(stderr_log)
+                if failed == 1:
+                    result = (test[0], test[4], test[3], 'FAILED')
+                    return result, 'F', output
+                elif unsupported == 1:
+                    result = (test[0], test[4], test[3], 'UNSUPPORTED')
+                    return result, 'N', output
+                else:
+                    result = (test[0], test[4], test[3], 'PASSED')
+                    return result, '-', output
+            except subprocess.TimeoutExpired:
+                fout.seek(0)
+                ferr.seek(0)
+                result = (test[0], test[4], test[3], 'TIMEOUT')
+                output = ferr.readlines() + fout.readlines()
+                os.killpg(os.getpgid(test_run.pid), signal.SIGTERM)
+                return result, 'T', output
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = {executor.submit(run_single_test, test): test for test in test_plan}
+        for future in as_completed(futures):
+            test = futures[future]
+            try:
+                result, status, output = future.result()
+                results.append(result)
+                if status == 'F':
+                    num_failed += 1
+                    fail_log.write(test[0] + ' FAILED' + "\n")
+                    for line in output:
+                        fail_log.write(line + "\n")
+                elif status == 'N':
+                    num_skipped += 1
+                    fail_log.write(test[0] + ' UNSUPPORTED' + "\n")
+                    for line in output:
+                        fail_log.write(line + "\n")
+                elif status == 'T':
+                    num_failed += 1
+                    fail_log.write(test[0] + ' TIMEOUT' + "\n")
+                    for line in output:
+                        fail_log.write(line + "\n")
+                elif status == '-':
+                    num_passed += 1
+                print(status, end='')
+                sys.stdout.flush()
+            except Exception as exc:
+                print(f'Test {test[0]} generated an exception: {exc}')
+
     fail_log.close()
     return results, num_passed, num_failed, num_skipped
 
@@ -230,10 +226,11 @@ def run_test_report(test_plan: [], test_run_timeout: int, log_prefix: str):
     results = []
     results_header = ("Name", "Feature", "Test Type", "Result")
     results.append(results_header)
+    num_threads = os.cpu_count()/2
+    print("Running Tests Across " + str(num_threads) + " Threads\n")
     print("<", end = '')
     sys.stdout.flush()
-
-    data = run_test_plan(test_plan, test_run_timeout, fail_log_name)
+    data = run_test_plan(test_plan, test_run_timeout, fail_log_name, num_threads)
     results += data[0]
     num_passed += data[1]
     num_failed += data[2]
