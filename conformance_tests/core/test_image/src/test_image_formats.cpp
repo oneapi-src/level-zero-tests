@@ -48,12 +48,12 @@ public:
                            ze_image_format_type_t format_type,
                            ze_image_format_layout_t layout);
 
-  void ImageFormatTests::run_test(void (*buffer_setup_f)(ImageFormatTests &),
-                                  void (*buffer_verify_f)(ImageFormatTests &),
-                                  ze_image_type_t image_type,
-                                  ze_image_format_type_t format_type,
-                                  ze_image_format_layout_t layout,
-                                  bool is_immediate);
+  void run_test(void (*buffer_setup_f)(ImageFormatTests &),
+                void (*buffer_verify_f)(ImageFormatTests &),
+                ze_image_type_t image_type,
+                ze_image_format_type_t format_type,
+                ze_image_format_layout_t layout,
+                bool is_immediate);
 
   virtual void get_kernel(ze_image_type_t image_type,
                           ze_image_format_type_t format_type,
