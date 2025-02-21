@@ -441,17 +441,9 @@ submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
   std::vector<float> c(m * n, 0);
   ze_device_handle_t device = targetDevice;
 
-  const size_t a_buffer_size = m * k * sizeof(float);
-  const size_t b_buffer_size = k * n * sizeof(float);
-  const size_t c_buffer_size = m * n * sizeof(float);
-
-  void *a_buffer = lzt::allocate_host_memory(a_buffer_size);
-  void *b_buffer = lzt::allocate_host_memory(b_buffer_size);
-  void *c_buffer = lzt::allocate_host_memory(c_buffer_size);
-  lzt::make_memory_resident(device, a_buffer, a_buffer_size);
-  lzt::make_memory_resident(device, b_buffer, b_buffer_size);
-  lzt::make_memory_resident(device, c_buffer, c_buffer_size);
-
+  void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
+  void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
+  void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
   ze_module_handle_t module =
       lzt::create_module(device, "sysman_matrix_multiplication.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
