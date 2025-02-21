@@ -155,8 +155,17 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
     std::vector<uint8_t> host_memory1(size), host_memory2(size, 0);
     void *device_memory =
         lzt::allocate_device_memory(lzt::size_in_bytes(host_memory1));
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    lzt::make_memory_resident(core_device, device_memory,
+                              lzt::size_in_bytes(host_memory1));
+#else
     lzt::make_memory_resident(device, device_memory,
                               lzt::size_in_bytes(host_memory1));
+#endif
     lzt::write_data_pattern(host_memory1.data(), size, 1);
     lzt::append_memory_copy(command_list, device_memory, host_memory1.data(),
                             lzt::size_in_bytes(host_memory1), nullptr);

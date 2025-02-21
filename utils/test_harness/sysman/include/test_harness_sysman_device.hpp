@@ -42,6 +42,10 @@ std::vector<zes_process_state_t> get_processes_state(zes_device_handle_t device,
 void sysman_device_reset_ext(zes_device_handle_t device, ze_bool_t force,
                              zes_reset_type_t type);
 
+bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2);
+
+ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid);
+
 } // namespace level_zero_tests
 
 #endif
