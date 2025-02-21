@@ -445,9 +445,17 @@ submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
   std::vector<float> c(m * n, 0);
   ze_device_handle_t device = targetDevice;
 
-  void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
-  void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
-  void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
+  const size_t a_buffer_size = m * k * sizeof(float);
+  const size_t b_buffer_size = k * n * sizeof(float);
+  const size_t c_buffer_size = m * n * sizeof(float);
+
+  void *a_buffer = lzt::allocate_host_memory(a_buffer_size);
+  void *b_buffer = lzt::allocate_host_memory(b_buffer_size);
+  void *c_buffer = lzt::allocate_host_memory(c_buffer_size);
+  lzt::make_memory_resident(device, a_buffer, a_buffer_size);
+  lzt::make_memory_resident(device, b_buffer, b_buffer_size);
+  lzt::make_memory_resident(device, c_buffer, c_buffer_size);
+
   ze_module_handle_t module =
       lzt::create_module(device, "sysman_matrix_multiplication.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
@@ -571,16 +579,20 @@ bool compute_workload_and_validate(device_handles_t device) {
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
+  const size_t a_buffer_size = m * k * sizeof(float);
+  const size_t b_buffer_size = k * n * sizeof(float);
+  const size_t c_buffer_size = m * n * sizeof(float);
 
-  void *a_buffer = lzt::allocate_device_memory(m * k * sizeof(float), 1, 0,
-                                               device.core_handle,
-                                               lzt::get_default_context());
-  void *b_buffer = lzt::allocate_device_memory(k * n * sizeof(float), 1, 0,
-                                               device.core_handle,
-                                               lzt::get_default_context());
-  void *c_buffer = lzt::allocate_device_memory(m * n * sizeof(float), 1, 0,
-                                               device.core_handle,
-                                               lzt::get_default_context());
+  void *a_buffer = lzt::allocate_device_memory(
+      a_buffer_size, 1, 0, device.core_handle, lzt::get_default_context());
+  void *b_buffer = lzt::allocate_device_memory(
+      b_buffer_size, 1, 0, device.core_handle, lzt::get_default_context());
+  void *c_buffer = lzt::allocate_device_memory(
+      c_buffer_size, 1, 0, device.core_handle, lzt::get_default_context());
+  lzt::make_memory_resident(device.core_handle, a_buffer, a_buffer_size);
+  lzt::make_memory_resident(device.core_handle, b_buffer, b_buffer_size);
+  lzt::make_memory_resident(device.core_handle, c_buffer, c_buffer_size);
+
   ze_module_handle_t module =
       lzt::create_module(device.core_handle, "sysman_matrix_multiplication.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
@@ -690,8 +702,10 @@ TEST_F(
 #ifdef USE_ZESINIT
     void *ptr = lzt::allocate_device_memory(sampleMemorySize, 1, 0, core_device,
                                             lzt::get_default_context());
+    lzt::make_memory_resident(core_device, ptr, sampleMemorySize);
 #else  // USE_ZESINIT
     void *ptr = lzt::allocate_device_memory(sampleMemorySize);
+    lzt::make_memory_resident(device, ptr, sampleMemorySize);
 #endif // USE_ZESINIT
 
     processes = lzt::get_processes_state(device, count);
