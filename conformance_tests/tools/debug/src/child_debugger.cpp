@@ -189,14 +189,13 @@ int main(int argc, char **argv) {
 
       uint8_t *buffer = new uint8_t[1];
       buffer[0] = 0;
-      auto thread = debug_event.info.thread.thread;
       LOG_INFO << "[Child Debugger] Writing to address: " << std::hex
                << gpu_buffer_va;
-      lzt::debug_write_memory(debugSession, thread, memory_space_desc, 1,
+      lzt::debug_write_memory(debugSession, device_thread, memory_space_desc, 1,
                               buffer);
       delete[] buffer;
-      print_thread("Resuming device thread ", thread, DEBUG);
-      lzt::debug_resume(debugSession, thread);
+      print_thread("Resuming device thread ", device_thread, DEBUG);
+      lzt::debug_resume(debugSession, device_thread);
     }
     LOG_DEBUG << "[Child Debugger] Detaching and exiting";
 
