@@ -47,7 +47,7 @@ uint32_t get_prop_length(char prop[ZES_STRING_PROPERTY_SIZE]) {
 bool is_alpha_numeric(char property[ZES_STRING_PROPERTY_SIZE]) {
   uint32_t length = get_prop_length(property);
   for (uint32_t i = 0; i < length; i++) {
-    if (!isalnum(property[i])) {
+    if (!std::isalnum(property[i])) {
       return false;
     }
   }
