@@ -15,6 +15,7 @@
 #include <boost/process.hpp>
 #include <boost/filesystem.hpp>
 #include <thread>
+#include <cctype>
 
 namespace bp = boost::process;
 namespace fs = boost::filesystem;
@@ -41,6 +42,16 @@ uint32_t get_prop_length(char prop[ZES_STRING_PROPERTY_SIZE]) {
   }
 
   return length;
+}
+
+bool is_alpha_numeric(char serial_number[ZES_STRING_PROPERTY_SIZE]) {
+  uint32_t length = get_prop_length(serial_number);
+  for (uint32_t i = 0; i < length; i++) {
+    if (!isalnum(serial_number[i])) {
+      return false;
+    }
+  }
+  return true;
 }
 
 #ifdef USE_ZESINIT
@@ -283,8 +294,10 @@ TEST_F(
     }
     EXPECT_LE(get_prop_length(properties.serialNumber),
               ZES_STRING_PROPERTY_SIZE);
+    EXPECT_TRUE(is_alpha_numeric(properties.serialNumber));
     EXPECT_LE(get_prop_length(properties.boardNumber),
               ZES_STRING_PROPERTY_SIZE);
+    EXPECT_TRUE(is_alpha_numeric(properties.boardNumber));
     EXPECT_LE(get_prop_length(properties.brandName), ZES_STRING_PROPERTY_SIZE);
     EXPECT_LE(get_prop_length(properties.modelName), ZES_STRING_PROPERTY_SIZE);
     EXPECT_LE(get_prop_length(properties.vendorName), ZES_STRING_PROPERTY_SIZE);
