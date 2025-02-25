@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -26,8 +26,10 @@ public:
       LOG_INFO << "device does not support images, cannot run test";
       GTEST_SKIP();
     }
-    module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
-                                "image_layout_tests.spv");
+    auto device = lzt::zeDevice::get_instance()->get_device();
+    module = lzt::create_module(device, "image_layout_tests.spv");
+    tested_image_types = lzt::get_supported_image_types(device, skip_array_type,
+                                                        skip_buffer_type);
   }
 
   void run_test(ze_image_type_t image_type,
@@ -35,51 +37,25 @@ public:
                 ze_image_format_layout_t convert_layout,
                 ze_image_format_type_t format_type, enum TestType test,
                 bool is_immediate) {
-    LOG_INFO << "RUN_TEST";
-    LOG_INFO << "image type " << image_type;
+    LOG_INFO << "RUN: TYPE - " << image_type << " FORMAT - " << format_type;
     LOG_INFO << "base layout " << base_layout;
-    LOG_INFO << "conver layout " << convert_layout;
-    LOG_INFO << "format type " << format_type;
+    LOG_INFO << "convert layout " << convert_layout;
     ze_result_t result;
     cmd_bundle = lzt::create_command_bundle(is_immediate);
-    std::string kernel_name = get_kernel(format_type);
+    std::string kernel_name = get_kernel(format_type, image_type);
     LOG_DEBUG << "kernel_name = " << kernel_name;
     ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
-    size_t image_width = 26;
-    size_t image_height = 11;
-    size_t image_depth = 1;
-    size_t image_size;
-    size_t bytes_per_pixel;
-    // Make dimensions large enough to guarantee minimum of 256 bytes
-    switch (image_type) {
-    case ZE_IMAGE_TYPE_2D:
-    case ZE_IMAGE_TYPE_2DARRAY:
-      image_width = 26;
-      image_height = 11;
-      image_depth = 1;
-      break;
-    case ZE_IMAGE_TYPE_3D:
-      image_width = 26;
-      image_height = 5;
-      image_depth = 3;
-      break;
-    default:
-      image_width = 256;
-      image_height = 1;
-      image_depth = 1;
-      break;
-    }
-    auto image_in =
-        create_image_desc_layout(base_layout, image_type, format_type,
-                                 image_width, image_height, image_depth);
-    auto image_out =
-        create_image_desc_layout(base_layout, image_type, format_type,
-                                 image_width, image_height, image_depth);
-    auto image_convert =
-        create_image_desc_layout(convert_layout, image_type, format_type,
-                                 image_width, image_height, image_depth);
+    image_dims = lzt::get_sample_image_dims(image_type);
+    image_size = static_cast<size_t>(image_dims.width * image_dims.height *
+                                     image_dims.depth);
 
-    image_size = image_width * image_height * image_depth;
+    auto image_in =
+        create_image_desc_layout(base_layout, image_type, format_type);
+    auto image_out =
+        create_image_desc_layout(base_layout, image_type, format_type);
+    auto image_convert =
+        create_image_desc_layout(convert_layout, image_type, format_type);
+
     size_t buffer_size = image_size * get_pixel_bytes(base_layout);
     auto buffer_in = lzt::allocate_host_memory(buffer_size);
     auto buffer_out = lzt::allocate_host_memory(buffer_size);
@@ -119,9 +95,10 @@ public:
     } else {
       // call kernel to copy image_in -> image_convert
       uint32_t group_size_x, group_size_y, group_size_z;
-      result = zeKernelSuggestGroupSize(kernel, image_width, image_height,
-                                        image_depth, &group_size_x,
-                                        &group_size_y, &group_size_z);
+      result = zeKernelSuggestGroupSize(
+          kernel, image_dims.width, image_dims.height, image_dims.depth,
+          &group_size_x, &group_size_y, &group_size_z);
+
       if (lzt::check_unsupported(result)) {
         return;
       }
@@ -136,10 +113,9 @@ public:
         return;
       }
 
-      ze_group_count_t group_dems = {
-          static_cast<uint32_t>(image_width / group_size_x),
-          static_cast<uint32_t>(image_height / group_size_y),
-          static_cast<uint32_t>(image_depth / group_size_z)};
+      ze_group_count_t group_dems = {(image_dims.width / group_size_x),
+                                     (image_dims.height / group_size_y),
+                                     (image_dims.depth / group_size_z)};
 
       lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr,
                                   0, nullptr);
@@ -152,9 +128,10 @@ public:
       } else {
         LOG_DEBUG << "TWO_KERNEL_CONVERT";
         // call kernel to copy image_convert -> image_out
-        result = zeKernelSuggestGroupSize(kernel, image_width, image_height,
-                                          image_depth, &group_size_x,
-                                          &group_size_y, &group_size_z);
+        result = zeKernelSuggestGroupSize(
+            kernel, image_dims.width, image_dims.height, image_dims.depth,
+            &group_size_x, &group_size_y, &group_size_z);
+
         if (lzt::check_unsupported(result)) {
           return;
         }
@@ -170,9 +147,9 @@ public:
           return;
         }
 
-        group_dems = {static_cast<uint32_t>(image_width / group_size_x),
-                      static_cast<uint32_t>(image_height / group_size_y),
-                      static_cast<uint32_t>(image_depth / group_size_z)};
+        group_dems = {(static_cast<uint32_t>(image_dims.width) / group_size_x),
+                      (image_dims.height / group_size_y),
+                      (image_dims.depth / group_size_z)};
 
         lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems,
                                     nullptr, 0, nullptr);
@@ -197,22 +174,26 @@ public:
   }
 
   void TearDown() override {
-    if (lzt::image_support()) {
+    if (module != nullptr) {
       lzt::destroy_module(module);
     }
   }
 
   ze_image_handle_t create_image_desc_layout(ze_image_format_layout_t layout,
                                              ze_image_type_t type,
-                                             ze_image_format_type_t format,
-                                             size_t image_width,
-                                             size_t image_height,
-                                             size_t image_depth);
-  size_t get_components(ze_image_format_layout_t layout);
+                                             ze_image_format_type_t format);
   size_t get_pixel_bytes(ze_image_format_layout_t layout);
-  std::string get_kernel(ze_image_format_type_t format_type);
+  std::string get_kernel(ze_image_format_type_t format_type,
+                         ze_image_type_t image_type);
+
+  static const bool skip_array_type = false;
+  static const bool skip_buffer_type = true;
+
   lzt::zeCommandBundle cmd_bundle;
   ze_module_handle_t module;
+  std::vector<ze_image_type_t> tested_image_types;
+  lzt::Dims image_dims;
+  size_t image_size;
 };
 
 size_t ImageLayoutTests::get_pixel_bytes(ze_image_format_layout_t layout) {
@@ -249,61 +230,31 @@ size_t ImageLayoutTests::get_pixel_bytes(ze_image_format_layout_t layout) {
   return bytes_per_pixel;
 }
 
-size_t ImageLayoutTests::get_components(ze_image_format_layout_t layout) {
-  size_t components = 1;
-  switch (layout) {
-  case ZE_IMAGE_FORMAT_LAYOUT_8:
-  case ZE_IMAGE_FORMAT_LAYOUT_16:
-  case ZE_IMAGE_FORMAT_LAYOUT_32:
-    components = 1;
-    break;
-  case ZE_IMAGE_FORMAT_LAYOUT_8_8:
-  case ZE_IMAGE_FORMAT_LAYOUT_16_16:
-  case ZE_IMAGE_FORMAT_LAYOUT_32_32:
-    components = 2;
-    break;
-  case ZE_IMAGE_FORMAT_LAYOUT_11_11_10:
-  case ZE_IMAGE_FORMAT_LAYOUT_5_6_5:
-    components = 3;
-    break;
-  case ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8:
-  case ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16:
-  case ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32:
-  case ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2:
-  case ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1:
-  case ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4:
-    components = 4;
-    break;
-  default:
-    break;
-  }
-  return components;
-}
-
-std::string ImageLayoutTests::get_kernel(ze_image_format_type_t format_type) {
-  std::string kernel;
+std::string ImageLayoutTests::get_kernel(ze_image_format_type_t format_type,
+                                         ze_image_type_t image_type) {
+  std::string kernel = "copy";
   switch (format_type) {
   case ZE_IMAGE_FORMAT_TYPE_UNORM:
   case ZE_IMAGE_FORMAT_TYPE_SNORM:
   case ZE_IMAGE_FORMAT_TYPE_FLOAT:
-    kernel = "copy_float_image";
+    kernel += "_float";
     break;
   case ZE_IMAGE_FORMAT_TYPE_SINT:
-    kernel = "copy_sint_image";
+    kernel += "_sint";
     break;
   default:
-    kernel = "copy_uint_image";
+    kernel += "_uint";
     break;
   }
-  return kernel;
+  return kernel + '_' + lzt::shortened_string(image_type);
 }
 
-ze_image_handle_t ImageLayoutTests::create_image_desc_layout(
-    ze_image_format_layout_t layout, ze_image_type_t type,
-    ze_image_format_type_t format, size_t image_width, size_t image_height,
-    size_t image_depth) {
+ze_image_handle_t
+ImageLayoutTests::create_image_desc_layout(ze_image_format_layout_t layout,
+                                           ze_image_type_t type,
+                                           ze_image_format_type_t format) {
   ze_image_desc_t image_desc = {};
-  size_t components = get_components(layout);
+  size_t components = lzt::get_format_component_count(layout);
   image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   ze_image_handle_t image;
 
@@ -334,9 +285,16 @@ ze_image_handle_t ImageLayoutTests::create_image_desc_layout(
     image_desc.format.w = ZE_IMAGE_FORMAT_SWIZZLE_X;
   }
 
-  image_desc.width = image_width;
-  image_desc.height = image_height;
-  image_desc.depth = image_depth;
+  if (type == ZE_IMAGE_TYPE_1DARRAY) {
+    image_desc.arraylevels = image_dims.height;
+  }
+  if (type == ZE_IMAGE_TYPE_2DARRAY) {
+    image_desc.arraylevels = image_dims.depth;
+  }
+
+  image_desc.width = image_dims.width;
+  image_desc.height = image_dims.height;
+  image_desc.depth = image_dims.depth;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeImageCreate(lzt::get_default_context(),
                           lzt::zeDevice::get_instance()->get_device(),
@@ -348,7 +306,6 @@ ze_image_handle_t ImageLayoutTests::create_image_desc_layout(
 
 void RunGivenImageLayoutWhenConvertingImageToMemoryTest(ImageLayoutTests &test,
                                                         bool is_immediate) {
-  auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT,
                       ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
   auto layout_type = {
@@ -358,7 +315,7 @@ void RunGivenImageLayoutWhenConvertingImageToMemoryTest(ImageLayoutTests &test,
       ZE_IMAGE_FORMAT_LAYOUT_32,          ZE_IMAGE_FORMAT_LAYOUT_32_32,
       ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2};
   LOG_DEBUG << "IMAGE OBJECT ONLY TESTS: UINT, SINT, UNORM AND SNORM";
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto format : format_type) {
       for (auto layout : layout_type) {
         test.run_test(image, layout, layout, format, IMAGE_OBJECT_ONLY,
@@ -369,7 +326,7 @@ void RunGivenImageLayoutWhenConvertingImageToMemoryTest(ImageLayoutTests &test,
   auto layout_type_unorm = {ZE_IMAGE_FORMAT_LAYOUT_5_6_5,
                             ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1,
                             ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4};
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto layout : layout_type_unorm) {
       test.run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_UNORM,
                     IMAGE_OBJECT_ONLY, is_immediate);
@@ -382,7 +339,7 @@ void RunGivenImageLayoutWhenConvertingImageToMemoryTest(ImageLayoutTests &test,
       ZE_IMAGE_FORMAT_LAYOUT_32_32,       ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32,
       ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,  ZE_IMAGE_FORMAT_LAYOUT_11_11_10};
   LOG_DEBUG << "IMAGE OBJECT ONLY TESTS: FLOAT";
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto layout : layout_type_float) {
       test.run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_FLOAT,
                     IMAGE_OBJECT_ONLY, is_immediate);
@@ -403,7 +360,6 @@ TEST_F(
 
 void RunGivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemoryTest(
     ImageLayoutTests &test, bool is_immediate) {
-  auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT};
   auto layout_type = {ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_8_8,
                       ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_LAYOUT_16,
@@ -414,7 +370,7 @@ void RunGivenImageLayoutWhenPassingIntImageThroughKernelAndConvertingImageToMemo
                       // may result in hang:
                       ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2};
   LOG_DEBUG << "ONE KERNEL ONLY TESTS: UINT, SINT";
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto format : format_type) {
       for (auto layout : layout_type) {
         test.run_test(image, layout, layout, format, ONE_KERNEL_ONLY,
@@ -440,7 +396,6 @@ TEST_F(
 
 void RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMemoryTest(
     ImageLayoutTests &test, bool is_immediate) {
-  auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
   auto layout_type = {ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_8_8,
                       ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_LAYOUT_16,
@@ -450,7 +405,7 @@ void RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMem
                       ZE_IMAGE_FORMAT_LAYOUT_32, ZE_IMAGE_FORMAT_LAYOUT_32_32,
                       ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32};
   LOG_DEBUG << "ONE KERNEL ONLY TESTS: UNORM, SNORM";
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto format : format_type) {
       for (auto layout : layout_type) {
         test.run_test(image, layout, layout, format, ONE_KERNEL_ONLY,
@@ -461,7 +416,7 @@ void RunGivenImageLayoutWhenPassingNormImageThroughKernelAndConvertingImageToMem
   auto layout_type_unorm = {ZE_IMAGE_FORMAT_LAYOUT_5_6_5,
                             ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1,
                             ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4};
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto layout : layout_type_unorm) {
       test.run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_UNORM,
                     ONE_KERNEL_ONLY, is_immediate);
@@ -485,14 +440,13 @@ TEST_F(
 
 void RunGivenImageLayoutWhenPassingFloatImageThroughKernelAndConvertingImageToMemoryTest(
     ImageLayoutTests &test, bool is_immediate) {
-  auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto layout_type = {
       ZE_IMAGE_FORMAT_LAYOUT_16,          ZE_IMAGE_FORMAT_LAYOUT_16_16,
       ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_LAYOUT_32,
       ZE_IMAGE_FORMAT_LAYOUT_32_32,       ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32,
       ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,  ZE_IMAGE_FORMAT_LAYOUT_11_11_10};
   LOG_DEBUG << "ONE KERNEL ONLY TESTS: FLOAT";
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto layout : layout_type) {
       test.run_test(image, layout, layout, ZE_IMAGE_FORMAT_TYPE_FLOAT,
                     ONE_KERNEL_ONLY, is_immediate);
@@ -516,10 +470,9 @@ TEST_F(
 
 void RunGivenIntImageLayoutWhenKernelConvertingImageTest(ImageLayoutTests &test,
                                                          bool is_immediate) {
-  auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT};
   LOG_DEBUG << "TWO_KERNEL_CONVERT TESTS: UINT AND SINT";
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto format : format_type) {
       test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
                     format, TWO_KERNEL_CONVERT, is_immediate);
@@ -547,7 +500,7 @@ void RunGivenIntImageLayoutWhenKernelConvertingImageTest(ImageLayoutTests &test,
                     TWO_KERNEL_CONVERT, is_immediate);
     }
   }
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
                   ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_TYPE_UINT,
                   TWO_KERNEL_CONVERT, is_immediate);
@@ -579,10 +532,9 @@ TEST_F(
 
 void RunGivenNormImageLayoutWhenKernelConvertingImageTest(
     ImageLayoutTests &test, bool is_immediate) {
-  auto image_type = {ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D};
   auto format_type = {ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM};
   LOG_DEBUG << "TWO_KERNEL_CONVERT TESTS: UNORM AND SNORM";
-  for (auto image : image_type) {
+  for (auto image : test.tested_image_types) {
     for (auto format : format_type) {
       test.run_test(image, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
                     format, TWO_KERNEL_CONVERT, is_immediate);

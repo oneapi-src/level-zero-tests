@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -15,6 +15,123 @@
 namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
+
+size_t get_format_component_count(ze_image_format_layout_t layout) {
+  size_t components = 1;
+  switch (layout) {
+  case ZE_IMAGE_FORMAT_LAYOUT_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32:
+    components = 1;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32:
+    components = 2;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_11_11_10:
+  case ZE_IMAGE_FORMAT_LAYOUT_5_6_5:
+    components = 3;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32:
+  case ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2:
+  case ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1:
+  case ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4:
+    components = 4;
+    break;
+  default:
+    LOG_WARNING << "UNHANDLED LAYOUT" << layout;
+    break;
+  }
+  return components;
+}
+
+std::string shortened_string(ze_image_type_t type) {
+  switch (type) {
+  case ZE_IMAGE_TYPE_1D:
+    return "img_1d";
+  case ZE_IMAGE_TYPE_1DARRAY:
+    return "img_1d_arr";
+  case ZE_IMAGE_TYPE_2D:
+    return "img_2d";
+  case ZE_IMAGE_TYPE_2DARRAY:
+    return "img_2d_arr";
+  case ZE_IMAGE_TYPE_3D:
+    return "img_3d";
+  case ZE_IMAGE_TYPE_BUFFER:
+    return "img_buffer";
+  default:
+    return "Unknown ze_image_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+lzt::Dims get_sample_image_dims(ze_image_type_t image_type) {
+  switch (image_type) {
+  case ZE_IMAGE_TYPE_1DARRAY:
+    return {256, 2, 1};
+  case ZE_IMAGE_TYPE_2D:
+    return {32, 16, 1};
+  case ZE_IMAGE_TYPE_2DARRAY:
+    return {16, 16, 2};
+  case ZE_IMAGE_TYPE_3D:
+    return {8, 8, 8};
+  default:
+    return {512, 1, 1};
+  }
+}
+
+std::vector<ze_image_type_t> get_supported_image_types(
+    ze_device_handle_t device,
+    bool exclude_arrays,
+    bool exclude_buffer) {
+  std::vector<ze_image_type_t> supported_types{};
+
+  ze_device_image_properties_t properties;
+  memset(&properties, 0, sizeof(properties));
+  properties.stype = ZE_STRUCTURE_TYPE_IMAGE_PROPERTIES;
+  auto result = zeDeviceGetImageProperties(device, &properties);
+
+  if (result != ZE_RESULT_SUCCESS) {
+    return {};
+  }
+
+  if (properties.maxImageDims1D > 0) {
+    supported_types.emplace_back(ZE_IMAGE_TYPE_1D);
+  } else {
+    LOG_INFO << "ZE_IMAGE_TYPE_1D unsupported";
+  }
+  if (properties.maxImageDims2D > 0) {
+    supported_types.emplace_back(ZE_IMAGE_TYPE_2D);
+  } else {
+    LOG_INFO << "ZE_IMAGE_TYPE_2D unsupported";
+  }
+  if (properties.maxImageDims3D > 0) {
+    supported_types.emplace_back(ZE_IMAGE_TYPE_3D);
+  } else {
+    LOG_INFO << "ZE_IMAGE_TYPE_3D unsupported";
+  }
+
+  if (properties.maxImageArraySlices > 0) {
+    if (!exclude_arrays) {
+      supported_types.insert(supported_types.end(),
+                             {ZE_IMAGE_TYPE_1DARRAY, ZE_IMAGE_TYPE_2DARRAY});
+    }
+  } else {
+    LOG_INFO << "ZE_IMAGE_TYPE_1DARRAY, ZE_IMAGE_TYPE_2DARRAY unsupported";
+  }
+
+  if (properties.maxImageBufferSize > 0) {
+    if (!exclude_buffer) {
+      supported_types.emplace_back(ZE_IMAGE_TYPE_BUFFER);
+    }
+  } else {
+    LOG_INFO << "ZE_IMAGE_TYPE_BUFFER unsupported";
+  }
+  return supported_types;
+}
 
 bool image_support() {
   ze_device_image_properties_t properties{};
