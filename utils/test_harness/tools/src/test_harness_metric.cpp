@@ -1167,6 +1167,14 @@ void generate_device_list_with_activatable_metric_group_handles(
 
     metric_group_info = lzt::optimize_metric_group_info_list(metric_group_info);
 
+    LOG_INFO << "metric_group_info.size() = " << metric_group_info.size();
+    LOG_INFO << "CALL OPTIMIZE";
+    metric_group_info =
+        lzt::optimize_metric_group_info_list(metric_group_info, 0, "Media");
+    LOG_INFO << "OPTIMIZED metric_group_info.size() = "
+             << metric_group_info.size();
+    EXPECT_EQ(1, metric_group_info.size());
+
     std::vector<zet_metric_group_handle_t> activatable_metric_group_handle_list;
     lzt::generate_activatable_metric_group_list_for_device(
         device, metric_group_info, activatable_metric_group_handle_list);
