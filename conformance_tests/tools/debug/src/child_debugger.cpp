@@ -117,8 +117,9 @@ int main(int argc, char **argv) {
     debug_config.pid = options.app_pid_in;
   } else {
     LOG_DEBUG << "[Child Debugger] Launching child application";
-    debug_helper = launcher.launch_process(options.test_selected, device,
-                                           options.use_sub_devices, "", index);
+    debug_helper =
+        launcher.launch_process(options.test_selected, device,
+                                options.use_sub_devices, "", index, false);
     debug_config.pid = debug_helper.id();
   }
 
