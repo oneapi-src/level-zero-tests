@@ -44,6 +44,8 @@ public:
     options(use_sub_devices_string, "run the test on subdevices if available");
     options(index_string, po::value<uint64_t>(&index_in),
             "Index of this debuggee");
+    options(use_many_threads_string,
+            "use a larger number of threads than usual");
 
     std::vector<std::string> parser(argv + 1, argv + argc);
     po::parsed_options parsed_options = po::command_line_parser(parser)
@@ -87,9 +89,15 @@ public:
       index_in = variables_map[index_string].as<uint64_t>();
       LOG_INFO << "[Application] Setting index: " << index_in;
     }
+
+    if (variables_map.count(use_many_threads_string)) {
+      use_many_threads = true;
+      LOG_INFO << "[Application] Using many threads";
+    }
   }
 
   bool use_sub_devices = false;
+  bool use_many_threads = false;
   std::string device_id_in = "";
   std::string module_name_in = "";
   std::string module_options_in = "";

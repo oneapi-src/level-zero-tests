@@ -34,6 +34,7 @@ constexpr auto module_string = "module";
 constexpr auto module_options_string = "module_build_options";
 constexpr auto test_type_string = "test_type";
 constexpr auto index_string = "index";
+constexpr auto use_many_threads_string = "use_many_threads";
 #ifdef _WIN32
 static void
 boost::interprocess::ipcdetail::get_shared_dir(std::string &shared_dir) {
