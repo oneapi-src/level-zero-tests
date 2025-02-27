@@ -490,9 +490,17 @@ void load_for_gpu(ze_device_handle_t target_device) {
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
   const ze_device_handle_t device = target_device;
-  void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
-  void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
-  void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
+
+  const size_t a_buffer_size = m * k * sizeof(float);
+  const size_t b_buffer_size = k * n * sizeof(float);
+  const size_t c_buffer_size = m * n * sizeof(float);
+  void *a_buffer = lzt::allocate_host_memory(a_buffer_size);
+  void *b_buffer = lzt::allocate_host_memory(b_buffer_size);
+  void *c_buffer = lzt::allocate_host_memory(c_buffer_size);
+  lzt::make_memory_resident(device, a_buffer, a_buffer_size);
+  lzt::make_memory_resident(device, b_buffer, b_buffer_size);
+  lzt::make_memory_resident(device, c_buffer, c_buffer_size);
+
   ze_module_handle_t module =
       lzt::create_module(device, "sysman_matrix_multiplication.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
@@ -538,29 +546,6 @@ void get_throttle_time_init(zes_freq_handle_t pfreq_handle,
   EXPECT_GT(throttletime.timestamp, 0);
 }
 
-#ifdef USE_ZESINIT
-bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2) {
-  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
-    if (uuid1[i] != uuid2[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
-  lzt::initialize_core();
-  auto driver = lzt::zeDevice::get_instance()->get_driver();
-  auto core_devices = lzt::get_ze_devices(driver);
-  for (auto device : core_devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    if (is_uuid_pair_equal(uuid, device_properties.uuid.id)) {
-      return device;
-    }
-  }
-  return nullptr;
-}
-#endif // USE_ZESINIT
-
 TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
   for (auto device : devices) {
     uint32_t count = 0;
@@ -601,8 +586,8 @@ TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
 #ifdef USE_ZESINIT
           auto sysman_device_properties =
               lzt::get_sysman_device_properties(device);
-          ze_device_handle_t core_device =
-              get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+          ze_device_handle_t core_device = lzt::get_core_device_by_uuid(
+              sysman_device_properties.core.uuid.id);
           EXPECT_NE(core_device, nullptr);
           std::thread first(load_for_gpu, core_device);
 #else  // USE_ZESINIT
@@ -669,9 +654,17 @@ void loadForGpuMaxFreqTest(ze_device_handle_t target_device) {
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
   const ze_device_handle_t device = target_device;
-  void *a_buffer = lzt::allocate_host_memory(m * k * sizeof(float));
-  void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
-  void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
+
+  const size_t a_buffer_size = m * k * sizeof(float);
+  const size_t b_buffer_size = k * n * sizeof(float);
+  const size_t c_buffer_size = m * n * sizeof(float);
+  void *a_buffer = lzt::allocate_host_memory(a_buffer_size);
+  void *b_buffer = lzt::allocate_host_memory(b_buffer_size);
+  void *c_buffer = lzt::allocate_host_memory(c_buffer_size);
+  lzt::make_memory_resident(device, a_buffer, a_buffer_size);
+  lzt::make_memory_resident(device, b_buffer, b_buffer_size);
+  lzt::make_memory_resident(device, c_buffer, c_buffer_size);
+
   ze_module_handle_t module =
       lzt::create_module(device, "sysman_matrix_multiplication.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
@@ -748,7 +741,7 @@ TEST_F(
         auto sysman_device_properties =
             lzt::get_sysman_device_properties(device);
         ze_device_handle_t core_device =
-            get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+            lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
         EXPECT_NE(core_device, nullptr);
         std::thread first(loadForGpuMaxFreqTest, core_device);
 #else  // USE_ZESINIT
