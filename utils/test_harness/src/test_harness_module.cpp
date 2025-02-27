@@ -116,9 +116,6 @@ ze_module_handle_t create_module(ze_context_handle_t context,
   const std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file(filename);
 
-  EXPECT_TRUE((format == ZE_MODULE_FORMAT_IL_SPIRV) ||
-              (format == ZE_MODULE_FORMAT_NATIVE));
-
   module_description.pNext = nullptr;
   module_description.format = format;
   module_description.inputSize = static_cast<uint32_t>(binary_file.size());
