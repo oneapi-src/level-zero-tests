@@ -181,8 +181,8 @@ bool get_register_set_props(ze_device_handle_t device,
 }
 
 void clear_exceptions(const ze_device_handle_t &device,
-                    const zet_debug_session_handle_t &debug_session,
-                  const ze_device_thread_t &device_thread) {
+                      const zet_debug_session_handle_t &debug_session,
+                      const ze_device_thread_t &device_thread) {
   size_t reg_size_in_bytes = 0;
 
   zet_debug_regset_properties_t cr_reg_prop;
@@ -198,8 +198,7 @@ void clear_exceptions(const ze_device_handle_t &device,
                                   cr_reg_prop.count, cr_values),
             ZE_RESULT_SUCCESS);
 
-  uint32_values[1] &=
-      ~((1 << 26) | (1 << 30));
+  uint32_values[1] &= ~((1 << 26) | (1 << 30));
   ASSERT_EQ(zetDebugWriteRegisters(debug_session, device_thread,
                                    ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
                                    cr_reg_prop.count, cr_values),
