@@ -1392,12 +1392,13 @@ TEST_F(
 }
 
 void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
-                                                   bool use_sub_devices) {
+                                                   bool use_sub_devices,
+                                                   bool use_many_threads) {
 
   LOG_INFO << "[Debugger] Setting up for thread control tests ";
   synchro->clear_debugger_signal();
-  debugHelper =
-      launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device, use_sub_devices);
+  debugHelper = launch_process(LONG_RUNNING_KERNEL_INTERRUPTED, device,
+                               use_sub_devices, use_many_threads);
 
   zet_debug_event_t module_event;
   attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
@@ -1650,7 +1651,8 @@ void zetDebugThreadControlTest::run_alternate_stop_resume_test(
 }
 
 void zetDebugThreadControlTest::run_interrupt_resume_test(
-    std::vector<ze_device_handle_t> &devices, bool use_sub_devices) {
+    std::vector<ze_device_handle_t> &devices, bool use_sub_devices,
+    bool use_many_threads) {
 
   for (auto &device : devices) {
     print_device(device);
@@ -1663,7 +1665,7 @@ void zetDebugThreadControlTest::run_interrupt_resume_test(
     ze_device_thread_t thread;
     bool breakKernelLoop = false;
 
-    SetUpThreadControl(device, use_sub_devices);
+    SetUpThreadControl(device, use_sub_devices, use_many_threads);
     if (::testing::Test::HasFailure()) {
       FAIL() << "[Debugger] Failed to setup Thread Control tests";
     }
@@ -1960,6 +1962,15 @@ TEST_F(
 
   auto all_sub_devices = lzt::get_all_sub_devices();
   run_interrupt_resume_test(all_sub_devices, true);
+}
+
+TEST_F(
+    zetDebugThreadControlTest,
+    GivenInterruptingAndResumingLargeNumberOfThreadsWhenDebuggingThenKernelCompletesSuccessfully) {
+
+  auto driver = lzt::get_default_driver();
+  auto devices = lzt::get_devices(driver);
+  run_interrupt_resume_test(devices, false, true);
 }
 
 TEST_F(zetDebugThreadControlTest,

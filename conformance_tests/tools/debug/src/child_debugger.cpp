@@ -117,8 +117,9 @@ int main(int argc, char **argv) {
     debug_config.pid = options.app_pid_in;
   } else {
     LOG_DEBUG << "[Child Debugger] Launching child application";
-    debug_helper = launcher.launch_process(options.test_selected, device,
-                                           options.use_sub_devices, "", index);
+    debug_helper =
+        launcher.launch_process(options.test_selected, device,
+                                options.use_sub_devices, "", index, false);
     debug_config.pid = debug_helper.id();
   }
 
@@ -189,14 +190,13 @@ int main(int argc, char **argv) {
 
       uint8_t *buffer = new uint8_t[1];
       buffer[0] = 0;
-      auto thread = debug_event.info.thread.thread;
       LOG_INFO << "[Child Debugger] Writing to address: " << std::hex
                << gpu_buffer_va;
-      lzt::debug_write_memory(debugSession, thread, memory_space_desc, 1,
+      lzt::debug_write_memory(debugSession, device_thread, memory_space_desc, 1,
                               buffer);
       delete[] buffer;
-      print_thread("Resuming device thread ", thread, DEBUG);
-      lzt::debug_resume(debugSession, thread);
+      print_thread("Resuming device thread ", device_thread, DEBUG);
+      lzt::debug_resume(debugSession, device_thread);
     }
     LOG_DEBUG << "[Child Debugger] Detaching and exiting";
 

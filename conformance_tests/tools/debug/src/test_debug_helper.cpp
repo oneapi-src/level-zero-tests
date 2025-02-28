@@ -419,6 +419,11 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
                                              : "long_kernel")
           : "long_kernel";
   bool slm = false;
+  ze_device_properties_t device_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDeviceGetProperties(device, &device_properties));
+
   size_t slm_buffer_size =
       512; // NOTE: Not all SKUs have same SLM so can go too big.
   if (!module_name.compare("debug_loop_slm.spv")) {
@@ -439,7 +444,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 
   auto kernel = lzt::create_function(module, kernel_name);
 
-  auto size = slm_buffer_size;
+  auto size = options.use_many_threads ? 8192 : slm_buffer_size;
 
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};

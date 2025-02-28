@@ -28,7 +28,7 @@ public:
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
                            std::string module_name, std::string module_options,
-                           uint64_t index) {
+                           uint64_t index, bool use_many_threads) {
 
     std::string device_id = " ";
     if (device) {
@@ -64,16 +64,18 @@ public:
         device ? optionize(device_id_string, device_id) : " ",
         module_name_option, module_build_options,
         (use_sub_devices ? optionize(use_sub_devices_string, "") : " "),
-        optionize(index_string, std::to_string(index)));
+        optionize(index_string, std::to_string(index)),
+        (use_many_threads ? optionize(use_many_threads_string, "") : " "));
 
     return debug_helper;
   }
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
-                           std::string module_name, uint64_t index) {
+                           std::string module_name, uint64_t index,
+                           bool use_many_threads) {
     return launch_process(test_type, device, use_sub_devices, module_name, "",
-                          index);
+                          index, use_many_threads);
   }
 
   bp::child launch_process(debug_test_type_t test_type,
@@ -81,19 +83,26 @@ public:
                            std::string module_name,
                            std::string module_options) {
     return launch_process(test_type, device, use_sub_devices, module_name,
-                          module_options, 0);
+                          module_options, 0, false);
   }
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
                            std::string module_name) {
     return launch_process(test_type, device, use_sub_devices, module_name, "",
-                          0);
+                          0, false);
+  }
+
+  bp::child launch_process(debug_test_type_t test_type,
+                           ze_device_handle_t device, bool use_sub_devices,
+                           bool use_many_threads) {
+    return launch_process(test_type, device, use_sub_devices, "", "", 0,
+                          use_many_threads);
   }
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices) {
-    return launch_process(test_type, device, use_sub_devices, "", "", 0);
+    return launch_process(test_type, device, use_sub_devices, "", "", 0, false);
   }
 
 protected:
@@ -261,11 +270,13 @@ class zetDebugThreadControlTest : public zetDebugBaseSetup {
 protected:
   void SetUp() override { zetDebugBaseSetup::SetUp(); }
   void TearDown() override { zetDebugBaseSetup::TearDown(); }
-  void SetUpThreadControl(ze_device_handle_t &device, bool use_sub_devices);
+  void SetUpThreadControl(ze_device_handle_t &device, bool use_sub_devices,
+                          bool use_many_threads = false);
   void run_alternate_stop_resume_test(std::vector<ze_device_handle_t> &devices,
                                       bool use_sub_devices);
   void run_interrupt_resume_test(std::vector<ze_device_handle_t> &devices,
-                                 bool use_sub_devices);
+                                 bool use_sub_devices,
+                                 bool use_many_threads = false);
   void run_unavailable_thread_test(std::vector<ze_device_handle_t> &devices,
                                    bool use_sub_devices);
   void run_interrupt_and_resume_device_threads_in_separate_host_threads_test(
