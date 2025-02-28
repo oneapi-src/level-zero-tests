@@ -96,7 +96,11 @@ class zeModuleCreateTests : public ::testing::Test {
 protected:
   void RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(
       bool is_immediate);
+  void RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(
+      bool is_immediate);
   void RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(
+      bool is_immediate);
+  void RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(
       bool is_immediate);
   void
   RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(bool is_immediate);
@@ -151,6 +155,57 @@ TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerOnImmediateCmdListThenPointerPointsToValidGlobalVariable) {
   RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(true);
+}
+
+void zeModuleCreateTests::
+    RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(
+        bool is_immediate) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {nullptr};
+  std::vector<ze_module_handle_t> module =
+      create_module_vector(device, build_flag, "single_global_variable");
+
+  const std::string global_name = "global_variable";
+  void *global_pointer;
+  const int expected_value = 321;
+  int *typed_global_pointer = nullptr;
+
+  for (auto mod : module) {
+    auto bundle = lzt::create_command_bundle(is_immediate);
+    global_pointer = nullptr;
+    ASSERT_EQ(ZE_RESULT_SUCCESS,
+              zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
+                                       &global_pointer));
+    EXPECT_NE(nullptr, global_pointer);
+    void *memory = lzt::allocate_shared_memory(sizeof(expected_value));
+    typed_global_pointer = static_cast<int *>(memory);
+    *typed_global_pointer = expected_value;
+    lzt::append_memory_copy(bundle.list, global_pointer, memory,
+      sizeof(expected_value));
+    lzt::close_command_list(bundle.list);
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+    *typed_global_pointer = ~expected_value;
+    lzt::append_memory_copy(bundle.list, memory, global_pointer,
+                            sizeof(expected_value));
+    lzt::close_command_list(bundle.list);
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+    EXPECT_EQ(expected_value, *typed_global_pointer);
+    lzt::free_memory(memory);
+    lzt::destroy_command_bundle(bundle);
+    lzt::destroy_module(mod);
+  }
+}
+
+TEST_F(
+  zeModuleCreateTests,
+  GivenModuleWithGlobalVariableWhenWritingDataToGlobalPointerThenGlobalVariableHasCorrectValue) {
+RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(false);
+}
+
+TEST_F(
+  zeModuleCreateTests,
+  GivenModuleWithGlobalVariableWhenWritingDataToGlobalPointerOnImmediateCmdListThenThenGlobalVariableHasCorrectValue) {
+RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(true);
 }
 
 TEST_F(
@@ -228,6 +283,57 @@ TEST_F(
     zeModuleCreateTests,
     GivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointersOnImmediateCmdListThenAllPointersPointToValidGlobalVariable) {
   RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(true);
+}
+
+void zeModuleCreateTests::
+    RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(
+        bool is_immediate) {
+  const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
+  std::vector<const char *> build_flag = {nullptr};
+  std::vector<ze_module_handle_t> module =
+      create_module_vector(device, build_flag, "multiple_global_variables");
+
+  const int global_count = 5;
+  void *global_pointer = nullptr;
+  int *typed_global_pointer = nullptr;
+
+  for (auto mod : module) {
+    for (int i = 0; i < global_count; ++i) {
+      auto bundle = lzt::create_command_bundle(is_immediate);
+      std::string global_name = "global_" + std::to_string(i);
+      global_pointer = nullptr;
+      ASSERT_EQ(ZE_RESULT_SUCCESS,
+                zeModuleGetGlobalPointer(mod, global_name.c_str(), nullptr,
+                                         &global_pointer));
+      EXPECT_NE(nullptr, global_pointer);
+      void *memory = lzt::allocate_shared_memory(sizeof(i));
+      typed_global_pointer = static_cast<int *>(memory);
+      *typed_global_pointer = i + 2;
+      lzt::append_memory_copy(bundle.list, global_pointer, memory, sizeof(i));
+      lzt::close_command_list(bundle.list);
+      lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+      *typed_global_pointer = 0;
+      lzt::append_memory_copy(bundle.list, memory, global_pointer, sizeof(i));
+      lzt::close_command_list(bundle.list);
+      lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+      EXPECT_EQ(i + 2, *typed_global_pointer);
+      lzt::free_memory(memory);
+      lzt::destroy_command_bundle(bundle);
+    }
+    lzt::destroy_module(mod);
+  }
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointersThenAllGlobalVariablesHaveCorrectValue) {
+  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(false);
+}
+
+TEST_F(
+    zeModuleCreateTests,
+    GivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointersOnImmediateCmdListThenGlobalVariablesHaveCorrectValue) {
+  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(true);
 }
 
 void zeModuleCreateTests::
