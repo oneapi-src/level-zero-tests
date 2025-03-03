@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "helpers_test_image.hpp"
 #include <complex>
 
 namespace lzt = level_zero_tests;
@@ -23,12 +24,11 @@ class ImageLayoutTests : public ::testing::Test {
 public:
   void SetUp() override {
     if (!(lzt::image_support())) {
-      LOG_INFO << "device does not support images, cannot run test";
-      GTEST_SKIP();
+      GTEST_SKIP() << "Device does not support images";
     }
     auto device = lzt::zeDevice::get_instance()->get_device();
     module = lzt::create_module(device, "image_layout_tests.spv");
-    tested_image_types = lzt::get_supported_image_types(device, skip_array_type,
+    tested_image_types = get_supported_image_types(device, skip_array_type,
                                                         skip_buffer_type);
   }
 
@@ -45,7 +45,7 @@ public:
     std::string kernel_name = get_kernel(format_type, image_type);
     LOG_DEBUG << "kernel_name = " << kernel_name;
     ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
-    image_dims = lzt::get_sample_image_dims(image_type);
+    image_dims = get_sample_image_dims(image_type);
     image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                      image_dims.depth);
 
@@ -95,14 +95,12 @@ public:
     } else {
       // call kernel to copy image_in -> image_convert
       uint32_t group_size_x, group_size_y, group_size_z;
-      result = zeKernelSuggestGroupSize(
-          kernel, image_dims.width, image_dims.height, image_dims.depth,
-          &group_size_x, &group_size_y, &group_size_z);
 
-      if (lzt::check_unsupported(result)) {
-        return;
-      }
+      lzt::suggest_group_size(
+          kernel, image_dims.width, image_dims.height, image_dims.depth,
+          group_size_x, group_size_y, group_size_z);
       lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
+
       result = zeKernelSetArgumentValue(kernel, 0, sizeof(image_in), &image_in);
       if (lzt::check_unsupported(result)) {
         return;
@@ -113,9 +111,10 @@ public:
         return;
       }
 
-      ze_group_count_t group_dems = {(image_dims.width / group_size_x),
-                                     (image_dims.height / group_size_y),
-                                     (image_dims.depth / group_size_z)};
+      ze_group_count_t group_dems = 
+        {(static_cast<uint32_t>(image_dims.width) / group_size_x),
+         (image_dims.height / group_size_y),
+         (image_dims.depth / group_size_z)};
 
       lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr,
                                   0, nullptr);
@@ -192,7 +191,7 @@ public:
   lzt::zeCommandBundle cmd_bundle;
   ze_module_handle_t module;
   std::vector<ze_image_type_t> tested_image_types;
-  lzt::Dims image_dims;
+  Dims image_dims;
   size_t image_size;
 };
 
@@ -246,7 +245,7 @@ std::string ImageLayoutTests::get_kernel(ze_image_format_type_t format_type,
     kernel += "_uint";
     break;
   }
-  return kernel + '_' + lzt::shortened_string(image_type);
+  return kernel + '_' + shortened_string(image_type);
 }
 
 ze_image_handle_t
@@ -256,7 +255,6 @@ ImageLayoutTests::create_image_desc_layout(ze_image_format_layout_t layout,
   ze_image_desc_t image_desc = {};
   size_t components = lzt::get_format_component_count(layout);
   image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-  ze_image_handle_t image;
 
   image_desc.pNext = nullptr;
   image_desc.flags = ZE_IMAGE_FLAG_KERNEL_WRITE | ZE_IMAGE_FLAG_BIAS_UNCACHED;
@@ -295,10 +293,9 @@ ImageLayoutTests::create_image_desc_layout(ze_image_format_layout_t layout,
   image_desc.width = image_dims.width;
   image_desc.height = image_dims.height;
   image_desc.depth = image_dims.depth;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::get_default_context(),
-                          lzt::zeDevice::get_instance()->get_device(),
-                          &image_desc, &image));
+
+  auto image = lzt::create_ze_image(lzt::get_default_context(),
+            lzt::zeDevice::get_instance()->get_device(), image_desc);
   EXPECT_NE(nullptr, image);
 
   return image;

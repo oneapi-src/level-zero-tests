@@ -13,6 +13,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "helpers_test_image.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -22,12 +23,11 @@ class zeCommandListAppendImageCopyWithSwizzleTests : public ::testing::Test {
 protected:
   void SetUp() override {
     if (!(lzt::image_support())) {
-      LOG_INFO << "device does not support images, cannot run test";
-      GTEST_SKIP();
+      GTEST_SKIP() << "Device does not support images";
     }
     auto device = lzt::zeDevice::get_instance()->get_device();
     module = lzt::create_module(device, "image_swizzle_tests.spv");
-    tested_image_types = lzt::get_supported_image_types(device, false, true);
+    tested_image_types = get_supported_image_types(device, false, true);
   }
 
   void TearDown() override {
@@ -43,18 +43,17 @@ public:
   ze_image_handle_t img_in, img_out;
   ze_module_handle_t module;
   std::vector<ze_image_type_t> tested_image_types;
-  lzt::Dims image_dims;
+  Dims image_dims;
   size_t image_size;
 };
 
 void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
     ze_image_type_t image_type, bool is_immediate) {
-  LOG_INFO << "RUN_TEST";
-  LOG_INFO << "image type " << image_type;
+  LOG_INFO << "RUN: TYPE - " << image_type;
 
-  std::string kernel_name = "swizzle_test_" + lzt::shortened_string(image_type);
+  std::string kernel_name = "swizzle_test_" + shortened_string(image_type);
 
-  image_dims = lzt::get_sample_image_dims(image_type);
+  image_dims = get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
 
@@ -75,19 +74,18 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
   lzt::append_image_copy_from_mem(bundle.list, img_in, inbuff, nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestGroupSize(
-                kernel, image_dims.width, image_dims.height, image_dims.depth,
-                &group_size_x, &group_size_y, &group_size_z));
+  lzt::suggest_group_size(
+      kernel, image_dims.width, image_dims.height, image_dims.depth,
+      group_size_x, group_size_y, group_size_z);
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetArgumentValue(kernel, 0, sizeof(img_in), &img_in));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetArgumentValue(kernel, 1, sizeof(img_out), &img_out));
 
-  ze_group_count_t group_dems = {(image_dims.width / group_size_x),
-                                 (image_dims.height / group_size_y),
-                                 (image_dims.depth / group_size_z)};
+  lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);
+  lzt::set_argument_value(kernel, 1, sizeof(img_out), &img_out);
+
+  ze_group_count_t group_dems = 
+    {(static_cast<uint32_t>(image_dims.width) / group_size_x),
+     (image_dims.height / group_size_y),
+     (image_dims.depth / group_size_z)};
   lzt::append_launch_function(bundle.list, kernel, &group_dems, nullptr, 0,
                               nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);

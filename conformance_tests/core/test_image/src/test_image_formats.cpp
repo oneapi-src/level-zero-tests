@@ -14,6 +14,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "helpers_test_image.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -23,11 +24,10 @@ class ImageFormatTests : public ::testing::Test {
 protected:
   void SetUp() override {
     if (!(lzt::image_support())) {
-      LOG_INFO << "device does not support images, cannot run test";
-      GTEST_SKIP();
+      GTEST_SKIP() << "Device does not support images";
     }
     tested_device = lzt::zeDevice::get_instance()->get_device();
-    tested_image_types = lzt::get_supported_image_types(
+    tested_image_types = get_supported_image_types(
         tested_device, skip_array_type, skip_buffer_type);
   }
 
@@ -71,12 +71,13 @@ public:
 
   static const bool skip_array_type = false;
   static const bool skip_buffer_type = true;
+  static constexpr float float_pixel_input = 3.5f;
 
   lzt::zeCommandBundle cmd_bundle;
   ze_image_handle_t img_in, img_out;
   ze_device_handle_t tested_device = nullptr;
   ze_module_handle_t module;
-  lzt::Dims image_dims;
+  Dims image_dims;
   size_t image_size;
   std::vector<ze_image_type_t> tested_image_types;
   void *inbuff = nullptr, *outbuff = nullptr;
@@ -98,7 +99,7 @@ void ImageFormatTests::setup_buffers_float(ImageFormatTests &test) {
   test.outbuff = lzt::allocate_host_memory(test.image_size * sizeof(float));
   float *in_ptr = static_cast<float *>(test.inbuff);
   for (int i = 0; i < test.image_size; i++) {
-    in_ptr[i] = 3.5;
+    in_ptr[i] = float_pixel_input;
   }
 }
 
@@ -143,7 +144,7 @@ void ImageFormatTests::get_kernel(ze_image_type_t image_type,
     kernel_name = "UNKNOWN_KERNEL";
     return;
   }
-  kernel_name += '_' + lzt::shortened_string(image_type);
+  kernel_name += '_' + shortened_string(image_type);
 }
 
 void ImageFormatTests::run_test(void (*buffer_setup_f)(ImageFormatTests &),
@@ -158,7 +159,7 @@ void ImageFormatTests::run_test(void (*buffer_setup_f)(ImageFormatTests &),
   get_kernel(image_type, format_type, layout);
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
 
-  image_dims = lzt::get_sample_image_dims(image_type);
+  image_dims = get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
 
@@ -169,30 +170,27 @@ void ImageFormatTests::run_test(void (*buffer_setup_f)(ImageFormatTests &),
 
   lzt::append_image_copy_from_mem(cmd_bundle.list, img_in, inbuff, nullptr);
   lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  auto result = zeKernelSuggestGroupSize(
+  lzt::suggest_group_size(
       kernel, image_dims.width, image_dims.height, image_dims.depth,
-      &group_size_x, &group_size_y, &group_size_z);
-  if (lzt::check_unsupported(result)) {
-    cleanup();
-    return;
-  }
+      group_size_x, group_size_y, group_size_z);
+
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-  result = zeKernelSetArgumentValue(kernel, 0, sizeof(img_in), &img_in);
+  auto result = zeKernelSetArgumentValue(kernel, 0, sizeof(img_in), &img_in);
   if (lzt::check_unsupported(result)) {
     cleanup();
     return;
   }
-
   result = zeKernelSetArgumentValue(kernel, 1, sizeof(img_out), &img_out);
   if (lzt::check_unsupported(result)) {
     cleanup();
     return;
   }
 
-  ze_group_count_t group_dems = {(image_dims.width / group_size_x),
-                                 (image_dims.height / group_size_y),
-                                 (image_dims.depth / group_size_z)};
+  ze_group_count_t group_dems = 
+    {(static_cast<uint32_t>(image_dims.width) / group_size_x),
+     (image_dims.height / group_size_y),
+     (image_dims.depth / group_size_z)};
 
   lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr, 0,
                               nullptr);
@@ -214,7 +212,6 @@ ImageFormatTests::create_image_desc_format(ze_image_type_t image_type,
                                            ze_image_format_layout_t layout) {
   ze_image_desc_t image_desc = {};
   image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-  ze_image_handle_t image;
 
   uint32_t array_levels = 0;
   if (image_type == ZE_IMAGE_TYPE_1DARRAY) {
@@ -226,30 +223,21 @@ ImageFormatTests::create_image_desc_format(ze_image_type_t image_type,
 
   image_desc.pNext = nullptr;
   image_desc.flags = (ZE_IMAGE_FLAG_KERNEL_WRITE | ZE_IMAGE_FLAG_BIAS_UNCACHED);
-  if (image_type != ZE_IMAGE_TYPE_BUFFER) {
-    image_desc.type = image_type;
-  }
-  if (image_type != ZE_IMAGE_TYPE_BUFFER) {
-    image_desc.format.layout = layout;
-    image_desc.format.type = format_type;
-    image_desc.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
-    image_desc.format.y = ZE_IMAGE_FORMAT_SWIZZLE_0;
-    image_desc.format.z = ZE_IMAGE_FORMAT_SWIZZLE_0;
-    image_desc.format.w = ZE_IMAGE_FORMAT_SWIZZLE_1;
-  }
+  image_desc.type = image_type;
+  image_desc.format.layout = layout;
+  image_desc.format.type = format_type;
+  image_desc.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
+  image_desc.format.y = ZE_IMAGE_FORMAT_SWIZZLE_0;
+  image_desc.format.z = ZE_IMAGE_FORMAT_SWIZZLE_0;
+  image_desc.format.w = ZE_IMAGE_FORMAT_SWIZZLE_1;
   image_desc.width = image_dims.width;
   image_desc.height = image_dims.height;
   image_desc.depth = image_dims.depth;
   image_desc.arraylevels = array_levels;
   image_desc.miplevels = 0;
-  auto result = zeImageCreate(lzt::get_default_context(),
-                              lzt::zeDevice::get_instance()->get_device(),
-                              &image_desc, &image);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::get_default_context(),
-                          lzt::zeDevice::get_instance()->get_device(),
-                          &image_desc, &image));
-  EXPECT_NE(nullptr, image);
+
+  auto image = lzt::create_ze_image(lzt::get_default_context(),
+            lzt::zeDevice::get_instance()->get_device(), image_desc);
 
   return image;
 }
@@ -395,7 +383,6 @@ ze_image_handle_t ImageFormatLayoutTests::create_image_desc_format(
     ze_image_type_t image_type, ze_image_format_type_t format_type,
     ze_image_format_layout_t layout) {
   ze_image_desc_t image_descriptor = {};
-  ze_image_handle_t image;
 
   uint32_t array_levels = 0;
   if (image_type == ZE_IMAGE_TYPE_1DARRAY) {
@@ -419,10 +406,9 @@ ze_image_handle_t ImageFormatLayoutTests::create_image_desc_format(
   image_descriptor.height = image_dims.height;
   image_descriptor.depth = image_dims.depth;
   image_descriptor.arraylevels = array_levels;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::get_default_context(), tested_device,
-                          &image_descriptor, &image));
-  EXPECT_NE(nullptr, image);
+
+  auto image = lzt::create_ze_image(lzt::get_default_context(), tested_device,
+                              image_descriptor);
 
   return image;
 }
@@ -454,7 +440,7 @@ void ImageFormatLayoutTests::get_kernel(ze_image_type_t image_type,
     kernel_name = "UNKNOWN_KERNEL";
     return;
   }
-  kernel_name += '_' + lzt::shortened_string(image_type);
+  kernel_name += '_' + shortened_string(image_type);
 }
 
 template <typename T, int size_multiplier>
@@ -511,7 +497,7 @@ TEST_P(ImageFormatLayoutTests,
   auto driver = lzt::get_default_driver();
   for (auto device : lzt::get_devices(driver)) {
     tested_device = device;
-    auto supported_img_types = lzt::get_supported_image_types(
+    auto supported_img_types = get_supported_image_types(
         tested_device, skip_array_type, skip_buffer_type);
     if (supported_img_types.size() == 0) {
       LOG_WARNING << "Device does not support images";

@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "helpers_test_image.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -17,11 +18,10 @@ namespace {
 class zeImageViewCreateTests : public ::testing::Test {
 public:
   void SetUp() override {
-    supported_img_types = lzt::get_supported_image_types(
+    supported_img_types = get_supported_image_types(
         lzt::zeDevice::get_instance()->get_device());
     if (supported_img_types.size() == 0) {
-      LOG_INFO << "Device does not support images";
-      GTEST_SKIP();
+      GTEST_SKIP() << "Device does not support images";
     }
   }
 
@@ -33,10 +33,10 @@ public:
     lzt::destroy_ze_image(view);
   }
 
-  virtual void check_extensions() = 0;
+  virtual bool check_view_support() = 0;
   virtual ze_image_handle_t
   create_image_view(ze_image_format_layout_t view_layout, uint32_t plane_index,
-                    lzt::Dims view_dims = {0, 0, 0}) const = 0;
+                    Dims view_dims = {0, 0, 0}) const = 0;
 
   ze_image_desc_t create_image_desc_view(ze_image_type_t img_type,
                                          ze_image_format_layout_t layout);
@@ -59,7 +59,7 @@ public:
 
 ze_image_desc_t zeImageViewCreateTests::create_image_desc_view(
     ze_image_type_t img_type, ze_image_format_layout_t layout) {
-  lzt::Dims img_dims = lzt::get_sample_image_dims(img_type);
+  Dims img_dims = get_sample_image_dims(img_type);
 
   uint32_t array_levels = 0;
   if (img_type == ZE_IMAGE_TYPE_1DARRAY) {
@@ -94,9 +94,10 @@ ze_image_desc_t zeImageViewCreateTests::create_image_desc_view(
 
 void zeImageViewCreateTests::run_test(ze_image_type_t img_type,
                                       ze_image_format_layout_t layout) {
-  LOG_INFO << "RUN";
-  LOG_INFO << img_type;
-  check_extensions();
+  LOG_INFO << "RUN: TYPE - " << img_type;
+  if (!check_view_support()) {
+    GTEST_SKIP();
+  }
   if (std::find(supported_img_types.begin(), supported_img_types.end(),
                 img_type) == supported_img_types.end()) {
     LOG_WARNING << img_type << "unsupported type";
@@ -149,23 +150,26 @@ class zeImageViewCreateExtTests : public zeImageViewCreateTests {
 public:
   virtual ze_image_handle_t
   create_image_view(ze_image_format_layout_t view_layout, uint32_t plane_index,
-                    lzt::Dims view_dims = {0, 0, 0}) const override;
+                    Dims view_dims = {0, 0, 0}) const override;
 
-  virtual void check_extensions() override {
+  virtual bool check_view_support() override {
     if (!lzt::check_if_extension_supported(lzt::get_default_driver(),
                                            ZE_IMAGE_VIEW_EXT_NAME)) {
-      GTEST_SKIP() << "Missing ZE_extension_image_view support\n";
+      LOG_INFO << "Missing ZE_extension_image_view support\n";
+      return false;
     }
     if (!lzt::check_if_extension_supported(lzt::get_default_driver(),
                                            ZE_IMAGE_VIEW_PLANAR_EXT_NAME)) {
-      GTEST_SKIP() << "Missing ZE_extension_image_view_planar support\n";
+      LOG_INFO << "Missing ZE_extension_image_view_planar support\n";
+      return false;
     }
+    return true;
   }
 };
 
 ze_image_handle_t zeImageViewCreateExtTests::create_image_view(
     ze_image_format_layout_t view_layout, uint32_t plane_index,
-    lzt::Dims view_dims) const {
+    Dims view_dims) const {
   ze_image_view_planar_ext_desc_t img_view_desc = {};
   img_view_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXT_DESC;
   img_view_desc.pNext = nullptr;
@@ -212,25 +216,28 @@ TEST_F(zeImageViewCreateExtTests,
 }
 
 class zeImageViewCreateExpTests : public zeImageViewCreateTests {
-  virtual void check_extensions() override {
+  virtual bool check_view_support() override {
     if (!lzt::check_if_extension_supported(lzt::get_default_driver(),
                                            ZE_IMAGE_VIEW_EXP_NAME)) {
-      GTEST_SKIP() << "Missing ZE_experimental_image_view support\n";
+      LOG_INFO << "Missing ZE_experimental_image_view support\n";
+      return false;
     }
     if (!lzt::check_if_extension_supported(lzt::get_default_driver(),
                                            ZE_IMAGE_VIEW_PLANAR_EXP_NAME)) {
-      GTEST_SKIP() << "Missing ZE_experimental_image_view_planar support\n";
+      LOG_INFO << "Missing ZE_experimental_image_view_planar support\n";
+      return false;
     }
+    return true;
   }
 
   virtual ze_image_handle_t
   create_image_view(ze_image_format_layout_t view_layout, uint32_t plane_index,
-                    lzt::Dims view_dims = {0, 0, 0}) const override;
+                    Dims view_dims = {0, 0, 0}) const override;
 };
 
 ze_image_handle_t zeImageViewCreateExpTests::create_image_view(
     ze_image_format_layout_t view_layout, uint32_t plane_index,
-    lzt::Dims view_dims) const {
+    Dims view_dims) const {
   ze_image_view_planar_ext_desc_t img_view_desc = {};
   img_view_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXP_DESC;
   img_view_desc.pNext = nullptr;
