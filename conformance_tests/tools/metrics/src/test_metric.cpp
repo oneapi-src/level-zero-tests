@@ -382,11 +382,13 @@ TEST_F(zetMetricGroupTest,
   for (auto groupName : groupNameList) {
     zet_metric_group_handle_t groupHandle = lzt::find_metric_group(
         device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
-    EXPECT_NE(nullptr, groupHandle);
+    ASSERT_NE(nullptr, groupHandle);
+    LOG_DEBUG << "Activating group " << groupName;
     lzt::activate_metric_groups(device, 1, &groupHandle);
+    LOG_DEBUG<< "Opening streamer on Group" << groupName;
     zet_metric_streamer_handle_t streamerHandle = lzt::metric_streamer_open(
         groupHandle, nullptr, notifyEveryNReports, samplingPeriod);
-    EXPECT_NE(nullptr, streamerHandle);
+    ASSERT_NE(nullptr, streamerHandle);
     lzt::metric_streamer_close(streamerHandle);
     lzt::deactivate_metric_groups(device);
   }
@@ -423,6 +425,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(deviceh, test_metric_group,
                                                nullptr, notifyEveryNReports,
                                                samplingPeriod);
+      ASSERT_NE(nullptr, metric_streamer_handle);
       auto report_size =
           lzt::metric_streamer_read_data_size(metric_streamer_handle, 1);
       lzt::metric_streamer_close(metric_streamer_handle);
