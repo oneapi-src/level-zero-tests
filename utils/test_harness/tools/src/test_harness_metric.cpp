@@ -1167,14 +1167,6 @@ void generate_device_list_with_activatable_metric_group_handles(
 
     metric_group_info = lzt::optimize_metric_group_info_list(metric_group_info);
 
-    LOG_INFO << "metric_group_info.size() = " << metric_group_info.size();
-    LOG_INFO << "CALL OPTIMIZE";
-    metric_group_info =
-        lzt::optimize_metric_group_info_list(metric_group_info, 0, "Media");
-    LOG_INFO << "OPTIMIZED metric_group_info.size() = "
-             << metric_group_info.size();
-    EXPECT_EQ(1, metric_group_info.size());
-
     std::vector<zet_metric_group_handle_t> activatable_metric_group_handle_list;
     lzt::generate_activatable_metric_group_list_for_device(
         device, metric_group_info, activatable_metric_group_handle_list);
@@ -1700,6 +1692,164 @@ void destroy_metric_handles_list(
 
   metric_handles.resize(0);
   LOG_DEBUG << "LEAVE destroy_metric_handles_list";
+}
+
+void metric_tracer_create(
+    zet_context_handle_t context_handle, zet_device_handle_t device_handle,
+    uint32_t metric_group_count,
+    zet_metric_group_handle_t *ptr_metric_group_handle,
+    zet_metric_tracer_exp_desc_t *ptr_tracer_descriptor,
+    ze_event_handle_t notification_event_handle,
+    zet_metric_tracer_exp_handle_t *ptr_metric_tracer_handle) {
+  LOG_DEBUG << "create tracer";
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricTracerCreateExp(
+                context_handle, device_handle, metric_group_count,
+                ptr_metric_group_handle, ptr_tracer_descriptor,
+                notification_event_handle, ptr_metric_tracer_handle))
+      << "zetMetricTracerCreateExp failed";
+  ASSERT_NE(nullptr, *ptr_metric_tracer_handle)
+      << "zetMetricTracerCreateExp returned a NULL handle";
+}
+
+void metric_tracer_destroy(
+    zet_metric_tracer_exp_handle_t metric_tracer_handle) {
+  LOG_DEBUG << "destroy tracer";
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricTracerDestroyExp(metric_tracer_handle))
+      << "zetMetricTracerDestroyExp failed";
+}
+
+void metric_tracer_enable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
+                          ze_bool_t synchronous) {
+  LOG_DEBUG << "enable tracer";
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricTracerEnableExp(metric_tracer_handle, synchronous))
+      << "zetMetricTracerEnableExp failed, synchronous = " << synchronous;
+}
+
+void metric_tracer_disable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
+                           ze_bool_t synchronous) {
+  LOG_DEBUG << "disable tracer";
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricTracerDisableExp(metric_tracer_handle, synchronous))
+      << "zetMetricTracerDisableExp failed, synchronous = " << synchronous;
+}
+
+size_t metric_tracer_read_data_size(
+    zet_metric_tracer_exp_handle_t metric_tracer_handle) {
+  size_t metric_size = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricTracerReadDataExp(
+                                   metric_tracer_handle, &metric_size, nullptr))
+      << "zetMetricTracerReadDataExp call failed when retrieving the raw data "
+         "size";
+  EXPECT_NE(0, metric_size)
+      << "zetMetricTracerReadDataExp reports that there are no "
+         "metrics available to read";
+  LOG_DEBUG << "raw data size = " << metric_size;
+  return metric_size;
+}
+
+void metric_tracer_read_data(
+    zet_metric_tracer_exp_handle_t metric_tracer_handle,
+    std::vector<uint8_t> *ptr_metric_data) {
+  EXPECT_NE(nullptr, ptr_metric_data);
+  size_t metric_size = metric_tracer_read_data_size(metric_tracer_handle);
+  EXPECT_GE(metric_size, ptr_metric_data->size());
+  ptr_metric_data->resize(metric_size);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricTracerReadDataExp(metric_tracer_handle, &metric_size,
+                                       ptr_metric_data->data()))
+      << "zetMetricTracerReadDataExp call failed when retrieving the raw data";
+}
+
+void metric_decoder_create(
+    zet_metric_tracer_exp_handle_t metric_tracer_handle,
+    zet_metric_decoder_exp_handle_t *ptr_metric_decoder_handle) {
+  LOG_DEBUG << "create tracer decoder";
+  ASSERT_NE(nullptr, metric_tracer_handle);
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricDecoderCreateExp(metric_tracer_handle,
+                                      ptr_metric_decoder_handle))
+      << "zetMetricDecoderCreateExp failed";
+  ASSERT_NE(nullptr, *ptr_metric_decoder_handle)
+      << "zetMetricDecoderCreateExp returned a NULL handle";
+}
+
+void metric_decoder_destroy(
+    zet_metric_decoder_exp_handle_t metric_decoder_handle) {
+  LOG_DEBUG << "destroy tracer decoder";
+  EXPECT_NE(nullptr, metric_decoder_handle);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricDecoderDestroyExp(metric_decoder_handle))
+      << "zetMetricDecoderDestroyExp failed";
+}
+
+uint32_t metric_decoder_get_decodable_metrics_count(
+    zet_metric_decoder_exp_handle_t metric_decoder_handle) {
+  uint32_t decodable_metric_count = 0;
+  EXPECT_NE(nullptr, metric_decoder_handle);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricDecoderGetDecodableMetricsExp(
+                metric_decoder_handle, &decodable_metric_count, nullptr))
+      << "zetMetricDecoderGetDecodableMetricsExp call failed when retrieving "
+         "the number of decodable metrics";
+  EXPECT_NE(0, decodable_metric_count)
+      << "zetMetricDecoderGetDecodableMetricsExp reports that there are no "
+         "decodable metrics";
+  LOG_DEBUG << "found " << decodable_metric_count << " decodable metrics";
+  return decodable_metric_count;
+}
+
+void metric_decoder_get_decodable_metrics(
+    zet_metric_decoder_exp_handle_t metric_decoder_handle,
+    std::vector<zet_metric_handle_t> *ptr_decodable_metric_handles) {
+  uint32_t decodable_metric_count =
+      metric_decoder_get_decodable_metrics_count(metric_decoder_handle);
+  EXPECT_GE(decodable_metric_count, ptr_decodable_metric_handles->size());
+  ptr_decodable_metric_handles->resize(decodable_metric_count);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricDecoderGetDecodableMetricsExp(
+                metric_decoder_handle, &decodable_metric_count,
+                ptr_decodable_metric_handles->data()))
+      << "zetMetricDecoderGetDecodableMetricsExp call failed when retrieving "
+         "the decodable metric handles";
+}
+
+void metric_tracer_decode_get_various_counts(
+    zet_metric_decoder_exp_handle_t metric_decoder_handle,
+    size_t *ptr_raw_data_size, std::vector<uint8_t> *ptr_raw_data,
+    uint32_t decodable_metric_count,
+    std::vector<zet_metric_handle_t> *ptr_decodable_metric_handles,
+    uint32_t *ptr_set_count, uint32_t *ptr_metric_entries_count) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricTracerDecodeExp(
+                metric_decoder_handle, ptr_raw_data_size, ptr_raw_data->data(),
+                decodable_metric_count, ptr_decodable_metric_handles->data(),
+                ptr_set_count, nullptr, ptr_metric_entries_count, nullptr))
+      << "zetMetricTracerDecodeExp failed";
+  LOG_DEBUG << "decodable metric entry count: " << *ptr_metric_entries_count;
+  LOG_DEBUG << "set count: " << *ptr_set_count;
+}
+
+void metric_tracer_decode(
+    zet_metric_decoder_exp_handle_t metric_decoder_handle,
+    size_t *ptr_raw_data_size, std::vector<uint8_t> *ptr_raw_data,
+    uint32_t decodable_metric_count,
+    std::vector<zet_metric_handle_t> *ptr_decodable_metric_handles,
+    uint32_t *ptr_set_count,
+    std::vector<uint32_t> *ptr_metric_entries_count_per_set,
+    uint32_t *ptr_metric_entries_count,
+    std::vector<zet_metric_entry_exp_t> *ptr_metric_entries) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricTracerDecodeExp(
+                metric_decoder_handle, ptr_raw_data_size, ptr_raw_data->data(),
+                decodable_metric_count, ptr_decodable_metric_handles->data(),
+                ptr_set_count, ptr_metric_entries_count_per_set->data(),
+                ptr_metric_entries_count, ptr_metric_entries->data()))
+      << "zetMetricTracerDecodeExp failed";
+  LOG_DEBUG << "actual decoded metric entry count: "
+            << *ptr_metric_entries_count;
+  LOG_DEBUG << "raw data decoded: " << *ptr_raw_data_size << " bytes";
 }
 
 } // namespace level_zero_tests
