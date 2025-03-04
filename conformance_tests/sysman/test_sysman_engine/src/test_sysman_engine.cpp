@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -252,29 +252,6 @@ static void workload_for_device(ze_device_handle_t device) {
   lzt::destroy_module(module);
 }
 
-#ifdef USE_ZESINIT
-bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2) {
-  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
-    if (uuid1[i] != uuid2[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
-  lzt::initialize_core();
-  auto driver = lzt::zeDevice::get_instance()->get_driver();
-  auto core_devices = lzt::get_ze_devices(driver);
-  for (auto device : core_devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    if (is_uuid_pair_equal(uuid, device_properties.uuid.id)) {
-      return device;
-    }
-  }
-  return nullptr;
-}
-#endif // USE_ZESINIT
-
 TEST_F(
     ENGINE_TEST,
     GivenValidEngineHandleWhenGpuWorkloadIsSubmittedThenEngineActivityMeasuredIsHigher) {
@@ -305,7 +282,7 @@ TEST_F(
         auto sysman_device_properties =
             lzt::get_sysman_device_properties(device);
         ze_device_handle_t core_device =
-            get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+            lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
         EXPECT_NE(core_device, nullptr);
         s1 = lzt::get_engine_activity(engine_handle);
         std::thread thread(workload_for_device, core_device);
