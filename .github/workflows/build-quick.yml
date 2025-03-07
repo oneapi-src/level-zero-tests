@@ -23,7 +23,9 @@ jobs:
           libboost-all-dev \
           libpapi-dev \
           libpng-dev \
-          libva-dev
+          libva-dev \
+          clang \
+          clang-format-14
     - uses: hendrikmuhs/ccache-action@v1
     - name: Build Loader
       working-directory: level-zero

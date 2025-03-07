@@ -18,7 +18,7 @@ FILES=$( \
     $TMP_SRC/utils \
     -name '*.cpp' -or -name '*.hpp' \
 )
-clang-format-7 -style=file -i $FILES >/dev/null
+clang-format-14 -style=file -i $FILES >/dev/null
 
 git -C $TMP_SRC diff
 
