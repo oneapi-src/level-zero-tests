@@ -149,10 +149,10 @@ std::vector<zet_metric_group_handle_t>
 get_metric_groups_with_different_domains(const ze_device_handle_t device,
                                          uint32_t metric_groups_per_domain);
 
-void metric_calculate_metric_values_from_raw_data(
+ze_result_t metric_calculate_metric_values_from_raw_data(
     zet_metric_group_handle_t hMetricGroup, std::vector<uint8_t> &rawData,
     std::vector<zet_typed_value_t> &totalMetricValues,
-    std::vector<uint32_t> &metricValueSets, bool expect_overflow = false);
+    std::vector<uint32_t> &metricValueSets);
 
 void metric_get_metric_handles_from_metric_group(
     zet_metric_group_handle_t hMetricGroup,

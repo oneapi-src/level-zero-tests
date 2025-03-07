@@ -1837,9 +1837,14 @@ void run_ip_sampling_with_validation(
 
       std::vector<zet_typed_value_t> metricValues;
       std::vector<uint32_t> metricValueSets;
-      level_zero_tests::metric_calculate_metric_values_from_raw_data(
-          groupInfo.metricGroupHandle, rawData, metricValues, metricValueSets,
-          enableOverflow);
+      ze_result_t result = level_zero_tests::metric_calculate_metric_values_from_raw_data(
+          groupInfo.metricGroupHandle, rawData, metricValues, metricValueSets);
+      
+      if (enableOverflow) {
+        ASSERT_EQ(ZE_RESULT_WARNING_DROPPED_DATA, result);
+      } else {
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);     
+      }
 
       std::vector<zet_metric_handle_t> metricHandles;
       lzt::metric_get_metric_handles_from_metric_group(
@@ -1945,13 +1950,12 @@ TEST_F(
       size_t rawDataSize = 0;
       std::vector<uint8_t> rawData;
       ze_result_t result;
-      constexpr uint32_t maxAttempts = 5;
-      bool endTest = false;
+      constexpr uint32_t maxAttempts = 6;
       uint64_t timeForNextIterationSec = 10;
 
       for (uint32_t i = 0; i < maxAttempts; i++) {
-        // Sleep before trying to read to increase chanceof  buffer overflow
-        LOG_INFO << "sleeping for " << timeForNextIterationSec
+        // Busy wait before trying to read to increase chanceof  buffer overflow
+        LOG_INFO << "Busy waiting for " << timeForNextIterationSec
                  << " in iteration " << i;
         time_t begin = std::time(0);
         while (1) {
@@ -1967,40 +1971,25 @@ TEST_F(
         result =
             zetMetricStreamerReadData(metricStreamerHandle, notifyEveryNReports,
                                       &rawDataSize, rawData.data());
-        LOG_INFO << "read data is " << rawDataSize;
+        LOG_DEBUG << "read data is " << rawDataSize;
 
         if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
-          endTest = true;
+          break;
+        }        
+
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);        
+        std::vector<zet_typed_value_t> metricValues;
+        std::vector<uint32_t> metricValueSets;
+        result = level_zero_tests::metric_calculate_metric_values_from_raw_data(groupInfo.metricGroupHandle, rawData, metricValues, metricValueSets);
+        if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
           break;
         }
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
         timeForNextIterationSec += timeForNextIterationSec;
       }
 
       workloadThreadFlag = false;
-      thread.join();
-
-      if (!endTest) {
-        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
-        lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
-                              rawData.data(), false);
-        rawData.resize(rawDataSize);
-        std::vector<zet_typed_value_t> metricValues;
-        std::vector<uint32_t> metricValueSets;
-        level_zero_tests::metric_calculate_metric_values_from_raw_data(
-            groupInfo.metricGroupHandle, rawData, metricValues, metricValueSets,
-            true);
-
-        std::vector<zet_metric_handle_t> metricHandles;
-        lzt::metric_get_metric_handles_from_metric_group(
-            groupInfo.metricGroupHandle, metricHandles);
-        std::vector<zet_metric_properties_t> metricProperties(
-            metricHandles.size());
-        lzt::metric_get_metric_properties_for_metric_group(metricHandles,
-                                                           metricProperties);
-
-        metric_validate_stall_sampling_data(metricProperties, metricValues,
-                                            metricValueSets);
-      }
+      thread.join();      
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
@@ -2262,9 +2251,10 @@ TEST_F(
           rawData.resize(rawDataSize);
           std::vector<zet_typed_value_t> metricValues;
           std::vector<uint32_t> metricValueSets;
-          lzt::metric_calculate_metric_values_from_raw_data(
+          ze_result_t result = lzt::metric_calculate_metric_values_from_raw_data(
               groupInfo.metricGroupHandle, rawData, metricValues,
               metricValueSets);
+          ASSERT_EQ(ZE_RESULT_SUCCESS, result);
 
           lzt::metric_validate_streamer_marker_data(
               metricProperties, metricValues, metricValueSets,

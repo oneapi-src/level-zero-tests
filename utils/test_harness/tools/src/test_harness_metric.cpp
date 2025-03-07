@@ -975,10 +975,10 @@ get_metric_groups_with_different_domains(const ze_device_handle_t device,
   return unique_domain_metric_group_list;
 }
 
-void metric_calculate_metric_values_from_raw_data(
+ze_result_t metric_calculate_metric_values_from_raw_data(
     zet_metric_group_handle_t hMetricGroup, std::vector<uint8_t> &rawData,
     std::vector<zet_typed_value_t> &totalMetricValues,
-    std::vector<uint32_t> &metricValueSets, bool expect_overflow) {
+    std::vector<uint32_t> &metricValueSets) {
 
   uint32_t setCount = 0;
   uint32_t totalMetricValueCount = 0;
@@ -1003,13 +1003,9 @@ void metric_calculate_metric_values_from_raw_data(
            << rawData.size() << " setCount " << setCount
            << " totalMetricValueCount " << totalMetricValueCount << " result "
            << result;
-
-  if (expect_overflow) {
-    EXPECT_TRUE(result == ZE_RESULT_WARNING_DROPPED_DATA);
-  } else {
-    EXPECT_TRUE(result == ZE_RESULT_SUCCESS);
-  }
+ 
   EXPECT_GT(totalMetricValueCount, 0);
+  return result;
 }
 
 void metric_get_metric_handles_from_metric_group(
