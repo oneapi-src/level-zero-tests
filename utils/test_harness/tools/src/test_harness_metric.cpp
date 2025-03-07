@@ -1003,7 +1003,7 @@ ze_result_t metric_calculate_metric_values_from_raw_data(
            << rawData.size() << " setCount " << setCount
            << " totalMetricValueCount " << totalMetricValueCount << " result "
            << result;
- 
+
   EXPECT_GT(totalMetricValueCount, 0);
   return result;
 }
