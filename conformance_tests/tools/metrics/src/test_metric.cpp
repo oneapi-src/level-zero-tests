@@ -492,7 +492,7 @@ protected:
 TEST_F(
     zetMetricQueryTest,
     GivenValidMetricQueryPoolWhenValidMetricGroupIsPassedThenExpectQueryHandle) {
-  ASSERT_NE(nullptr, metric_query_handle);
+  EXPECT_NE(nullptr, metric_query_handle);
 }
 
 TEST_F(zetMetricQueryTest,
@@ -611,12 +611,8 @@ TEST_F(
       lzt::metric_query_get_data(metric_query_handle, &rawData);
 
       eventPool.destroy_event(eventHandle);
-      if (metric_query_handle != nullptr) {
-        lzt::destroy_metric_query(metric_query_handle);
-      }
-      if (metric_query_pool_handle != nullptr) {
-        lzt::destroy_metric_query_pool(metric_query_pool_handle);
-      }
+      lzt::destroy_metric_query(metric_query_handle);
+      lzt::destroy_metric_query_pool(metric_query_pool_handle);
 
       lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
@@ -765,12 +761,8 @@ void run_test(const ze_device_handle_t &device,
     }
 
     eventPool.destroy_event(eventHandle);
-    if (metric_query_handle != nullptr) {
-      lzt::destroy_metric_query(metric_query_handle);
-    }
-    if (metric_query_pool_handle != nullptr) {
-      lzt::destroy_metric_query_pool(metric_query_pool_handle);
-    }
+    lzt::destroy_metric_query(metric_query_handle);
+    lzt::destroy_metric_query_pool(metric_query_pool_handle);
 
     lzt::deactivate_metric_groups(device);
     lzt::destroy_function(function);
@@ -952,18 +944,10 @@ void run_multi_device_query_load_test(
                         lzt::metric_query_get_data_size(metric_query_handle_1),
                         raw_data_1.data());
 
-  if (metric_query_handle_0 != nullptr) {
-    lzt::destroy_metric_query(metric_query_handle_0);
-  }
-  if (metric_query_handle_1 != nullptr) {
-    lzt::destroy_metric_query(metric_query_handle_1);
-  }
-  if (metric_query_pool_handle_0 != nullptr) {
-    lzt::destroy_metric_query_pool(metric_query_pool_handle_0);
-  }
-  if (metric_query_pool_handle_1 != nullptr) {
-    lzt::destroy_metric_query_pool(metric_query_pool_handle_1);
-  }
+  lzt::destroy_metric_query(metric_query_handle_0);
+  lzt::destroy_metric_query(metric_query_handle_1);
+  lzt::destroy_metric_query_pool(metric_query_pool_handle_0);
+  lzt::destroy_metric_query_pool(metric_query_pool_handle_1);
 
   lzt::deactivate_metric_groups(device_0);
   lzt::deactivate_metric_groups(device_1);
@@ -1089,12 +1073,8 @@ TEST_F(
           lzt::metric_query_get_data_size(metric_query_handle), rawData.data());
 
       eventPool.destroy_event(eventHandle);
-      if (metric_query_handle != nullptr) {
-        lzt::destroy_metric_query(metric_query_handle);
-      }
-      if (metric_query_pool_handle != nullptr) {
-        lzt::destroy_metric_query_pool(metric_query_pool_handle);
-      }
+      lzt::destroy_metric_query(metric_query_handle);
+      lzt::destroy_metric_query_pool(metric_query_pool_handle);
 
       lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
