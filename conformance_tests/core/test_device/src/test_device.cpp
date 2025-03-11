@@ -395,11 +395,14 @@ TEST(
               << ZE_MINOR_VERSION(properties.spirvVersionSupported);
     LOG_DEBUG << "nativeKernelSupported: " << properties.nativeKernelSupported;
     LOG_DEBUG << "16-bit Floating Point Supported: "
-              << lzt::to_string(properties.fp16flags);
+              << lzt::to_string(
+                     static_cast<ze_device_fp_flag_t>(properties.fp16flags));
     LOG_DEBUG << "32-bit Floating Point Supported: "
-              << lzt::to_string(properties.fp32flags);
+              << lzt::to_string(
+                     static_cast<ze_device_fp_flag_t>(properties.fp32flags));
     LOG_DEBUG << "64-bit Floating Point Supported: "
-              << lzt::to_string(properties.fp64flags);
+              << lzt::to_string(
+                     static_cast<ze_device_fp_flag_t>(properties.fp64flags));
     LOG_DEBUG << "Max Argument Size: " << properties.maxArgumentsSize;
     LOG_DEBUG << "Print Buffer Size: " << properties.printfBufferSize;
   }
