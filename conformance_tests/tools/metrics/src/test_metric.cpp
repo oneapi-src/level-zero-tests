@@ -385,7 +385,7 @@ TEST_F(zetMetricGroupTest,
     ASSERT_NE(nullptr, groupHandle);
     LOG_DEBUG << "Activating group " << groupName;
     lzt::activate_metric_groups(device, 1, &groupHandle);
-    LOG_DEBUG<< "Opening streamer on Group" << groupName;
+    LOG_DEBUG << "Opening streamer on Group" << groupName;
     zet_metric_streamer_handle_t streamerHandle = lzt::metric_streamer_open(
         groupHandle, nullptr, notifyEveryNReports, samplingPeriod);
     ASSERT_NE(nullptr, streamerHandle);
@@ -1837,9 +1837,16 @@ void run_ip_sampling_with_validation(
 
       std::vector<zet_typed_value_t> metricValues;
       std::vector<uint32_t> metricValueSets;
-      level_zero_tests::metric_calculate_metric_values_from_raw_data(
-          groupInfo.metricGroupHandle, rawData, metricValues, metricValueSets,
-          enableOverflow);
+      ze_result_t result =
+          level_zero_tests::metric_calculate_metric_values_from_raw_data(
+              groupInfo.metricGroupHandle, rawData, metricValues,
+              metricValueSets);
+
+      if (enableOverflow) {
+        ASSERT_EQ(ZE_RESULT_WARNING_DROPPED_DATA, result);
+      } else {
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+      }
 
       std::vector<zet_metric_handle_t> metricHandles;
       lzt::metric_get_metric_handles_from_metric_group(
@@ -1882,6 +1889,124 @@ TEST_F(
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
   run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
                                   samplingPeriod, TimeForNReportsComplete);
+}
+
+TEST_F(
+    zetMetricStreamerTest,
+    GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndBufferOverflowIsTriggeredThenProperErrorIsReturned) {
+
+  samplingPeriod = 100; // use fastest possible rate;
+
+  for (auto device : devices) {
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(device, &deviceProperties);
+
+    LOG_INFO << "test device name " << deviceProperties.name << " uuid "
+             << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    ze_command_queue_handle_t commandQueue = lzt::create_command_queue(device);
+    zet_command_list_handle_t commandList = lzt::create_command_list(device);
+
+    auto metricGroupInfo = lzt::get_metric_type_ip_group_info(
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
+    if (metricGroupInfo.size() == 0) {
+      GTEST_SKIP()
+          << "No IP metric groups are available to test on this platform";
+    }
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+
+    for (auto groupInfo : metricGroupInfo) {
+      LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
+
+      ze_event_handle_t eventHandle;
+      lzt::zeEventPool eventPool;
+      eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
+                             ZE_EVENT_SCOPE_FLAG_HOST);
+
+      void *a_buffer, *b_buffer, *c_buffer;
+      ze_group_count_t tg;
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer, 8192);
+      zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
+                                      nullptr);
+      lzt::close_command_list(commandList);
+
+      zet_metric_streamer_handle_t metricStreamerHandle =
+          lzt::metric_streamer_open_for_device(
+              device, groupInfo.metricGroupHandle, eventHandle,
+              notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
+
+      // Spawn a thread which continuously runs a workload
+      workloadThreadFlag = true;
+      std::thread thread(workloadThread, commandQueue, 1, &commandList,
+                         nullptr);
+
+      size_t rawDataSize = 0;
+      std::vector<uint8_t> rawData;
+      ze_result_t result;
+      constexpr uint32_t maxAttempts = 6;
+      uint64_t timeForNextIterationSec = 10;
+
+      for (uint32_t i = 0; i < maxAttempts; i++) {
+        // Busy wait before trying to read to increase chanceof  buffer overflow
+        LOG_INFO << "Busy waiting for " << timeForNextIterationSec
+                 << " in iteration " << i;
+        time_t begin = std::time(0);
+        while (1) {
+          time_t end = std::time(0);
+          if (end >= (begin + timeForNextIterationSec)) {
+            break;
+          }
+        }
+        rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle,
+                                                          notifyEveryNReports);
+        EXPECT_GT(rawDataSize, 0);
+        rawData.resize(rawDataSize);
+        result =
+            zetMetricStreamerReadData(metricStreamerHandle, notifyEveryNReports,
+                                      &rawDataSize, rawData.data());
+        LOG_DEBUG << "read data is " << rawDataSize;
+
+        if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+          break;
+        }
+
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+        std::vector<zet_typed_value_t> metricValues;
+        std::vector<uint32_t> metricValueSets;
+        result = level_zero_tests::metric_calculate_metric_values_from_raw_data(
+            groupInfo.metricGroupHandle, rawData, metricValues,
+            metricValueSets);
+        if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+          break;
+        }
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+        timeForNextIterationSec += timeForNextIterationSec;
+      }
+
+      workloadThreadFlag = false;
+      thread.join();
+
+      lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
+      lzt::destroy_function(function);
+      lzt::free_memory(a_buffer);
+      lzt::free_memory(b_buffer);
+      lzt::free_memory(c_buffer);
+      eventPool.destroy_event(eventHandle);
+      lzt::reset_command_list(commandList);
+    }
+    lzt::destroy_command_queue(commandQueue);
+    lzt::destroy_command_list(commandList);
+  }
 }
 
 using zetMetricStreamerAppendMarkerTestNoValidate = zetMetricStreamerTest;
@@ -2130,9 +2255,11 @@ TEST_F(
           rawData.resize(rawDataSize);
           std::vector<zet_typed_value_t> metricValues;
           std::vector<uint32_t> metricValueSets;
-          lzt::metric_calculate_metric_values_from_raw_data(
-              groupInfo.metricGroupHandle, rawData, metricValues,
-              metricValueSets);
+          ze_result_t result =
+              lzt::metric_calculate_metric_values_from_raw_data(
+                  groupInfo.metricGroupHandle, rawData, metricValues,
+                  metricValueSets);
+          ASSERT_EQ(ZE_RESULT_SUCCESS, result);
 
           lzt::metric_validate_streamer_marker_data(
               metricProperties, metricValues, metricValueSets,
