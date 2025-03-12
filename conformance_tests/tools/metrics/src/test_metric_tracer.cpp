@@ -1115,4 +1115,178 @@ TEST_F(zetMetricTracerTest,
   }
 }
 
+TEST_F(zetMetricTracerTest,
+       GivenTracerSupportingDevicesThenValidateMetricExportMemory) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+
+    ASSERT_NE(0u, device_with_metric_group_handles
+                      .activatable_metric_group_handle_list.size());
+
+    std::vector<zet_metric_group_handle_t> dma_buf_metric_group_handles =
+        lzt::get_metric_groups_supporting_dma_buf(
+            device_with_metric_group_handles
+                .activatable_metric_group_handle_list);
+    ASSERT_NE(0u, dma_buf_metric_group_handles.size());
+
+    uint32_t dma_buf_metric_group_count{};
+    for (uint32_t i = 0; i < dma_buf_metric_group_handles.size(); ++i) {
+      int fd = lzt::get_dma_buf_fd(dma_buf_metric_group_handles[i]);
+      if (fd != -1) {
+        dma_buf_metric_group_count++;
+        lzt::activate_metric_groups(device, dma_buf_metric_group_handles.size(),
+                                    dma_buf_metric_group_handles.data());
+        ze_command_queue_handle_t command_queue =
+            lzt::create_command_queue(device);
+        zet_command_list_handle_t command_list =
+            lzt::create_command_list(device);
+        const size_t size = 64;
+        int offset = 0;
+        auto module = lzt::create_module(device, "copy_module.spv");
+        auto kernel = lzt::create_function(module, "copy_data");
+        uint32_t *input_data, *output_data;
+        input_data = static_cast<uint32_t *>(
+            lzt::allocate_shared_memory(size * sizeof(uint32_t), device));
+        uint32_t set_data = 0xaaaaaaaa;
+        std::fill(input_data, input_data + size, set_data);
+        LOG_DEBUG << "set input data: " << std::hex << set_data;
+        output_data = static_cast<uint32_t *>(
+            lzt::map_dma_buf(device, context, fd, size * sizeof(uint32_t)));
+
+        lzt::set_argument_value(kernel, 0, sizeof(input_data), &input_data);
+        lzt::set_argument_value(kernel, 1, sizeof(output_data), &output_data);
+        lzt::set_argument_value(kernel, 2, sizeof(int), &offset);
+        lzt::set_argument_value(kernel, 3, sizeof(int), &size);
+        lzt::set_group_size(kernel, 1, 1, 1);
+        ze_group_count_t group_count = {1, 1, 1};
+        lzt::append_launch_function(command_list, kernel, &group_count, nullptr,
+                                    0, nullptr);
+        lzt::close_command_list(command_list);
+
+        zet_metric_tracer_exp_handle_t metric_tracer_handle;
+        lzt::metric_tracer_create(lzt::get_default_context(), device,
+                                  dma_buf_metric_group_handles.size(),
+                                  dma_buf_metric_group_handles.data(),
+                                  &tracer_descriptor, nullptr,
+                                  &metric_tracer_handle);
+        lzt::metric_tracer_enable(metric_tracer_handle, true);
+        LOG_DEBUG << "execute workload";
+        lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+        LOG_DEBUG << "synchronize with completion of workload";
+        lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+        lzt::metric_tracer_disable(metric_tracer_handle, true);
+        /* read data */
+        size_t raw_data_size = 0;
+        raw_data_size = lzt::metric_tracer_read_data_size(metric_tracer_handle);
+        std::vector<uint8_t> raw_data(raw_data_size, 0);
+        lzt::metric_tracer_read_data(metric_tracer_handle, &raw_data);
+        zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
+
+        lzt::metric_decoder_create(metric_tracer_handle,
+                                   &metric_decoder_handle);
+        uint32_t decodable_metric_count =
+            lzt::metric_decoder_get_decodable_metrics_count(
+                metric_decoder_handle);
+        std::vector<zet_metric_handle_t> decodable_metric_handles(
+            decodable_metric_count);
+        lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
+                                                  &decodable_metric_handles);
+        decodable_metric_count = decodable_metric_handles.size();
+        for (uint32_t j = 0; j < decodable_metric_count; ++j) {
+          const zet_metric_handle_t metric = decodable_metric_handles[j];
+          zet_metric_properties_t metric_properties{};
+          EXPECT_EQ(ZE_RESULT_SUCCESS,
+                    zetMetricGetProperties(metric, &metric_properties));
+          LOG_DEBUG << "\tdecodable metric[" << j << "]: "
+                    << "desc: " << metric_properties.description;
+          LOG_DEBUG << "\t\t -> name: " << metric_properties.name << " | "
+                    << "metricType: " << metric_properties.metricType << " | "
+                    << "resultType: " << metric_properties.resultType << " | "
+                    << "units: " << metric_properties.resultUnits << " | "
+                    << "component: " << metric_properties.component << " | "
+                    << "tier: " << metric_properties.tierNumber << " | ";
+        }
+        /* decode data */
+        uint32_t metric_entry_count = 0;
+        uint32_t set_count = 0;
+        lzt::metric_tracer_decode_get_various_counts(
+            metric_decoder_handle, &raw_data_size, &raw_data,
+            decodable_metric_count, &decodable_metric_handles, &set_count,
+            &metric_entry_count);
+        std::vector<uint32_t> metric_entries_per_set_count(set_count);
+        std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
+        lzt::metric_tracer_decode(metric_decoder_handle, &raw_data_size,
+                                  &raw_data, decodable_metric_count,
+                                  &decodable_metric_handles, &set_count,
+                                  &metric_entries_per_set_count,
+                                  &metric_entry_count, &metric_entries);
+
+        if (metric_entry_count != 0) {
+          uint32_t set_entry_start = 0;
+          for (uint32_t set_index = 0; set_index < set_count; set_index++) {
+            LOG_INFO << "set number: " << set_index << " entries in set: "
+                     << metric_entries_per_set_count[set_index] << "\n";
+            for (uint32_t entry_index = set_entry_start;
+                 entry_index <
+                 set_entry_start + metric_entries_per_set_count[set_index];
+                 entry_index++) {
+
+              auto &metric_entry = metric_entries[entry_index];
+              zet_metric_properties_t metric_properties{};
+              EXPECT_EQ(ZE_RESULT_SUCCESS,
+                        zetMetricGetProperties(
+                            decodable_metric_handles[metric_entry.metricIndex],
+                            &metric_properties));
+
+              zet_value_t value;
+              switch (metric_properties.resultType) {
+              case ZET_VALUE_TYPE_UINT32:
+              case ZET_VALUE_TYPE_UINT8:
+              case ZET_VALUE_TYPE_UINT16:
+                value.ui32 = metric_entry.value.ui32;
+                break;
+              case ZET_VALUE_TYPE_UINT64:
+                value.ui64 = metric_entry.value.ui64;
+                break;
+              case ZET_VALUE_TYPE_FLOAT32:
+                value.fp32 = metric_entry.value.fp32;
+                break;
+              case ZET_VALUE_TYPE_FLOAT64:
+                value.fp64 = metric_entry.value.fp64;
+                break;
+              case ZET_VALUE_TYPE_BOOL8:
+                value.b8 = metric_entry.value.b8;
+                break;
+              default:
+                LOG_ERROR << "encountered unsupported type";
+                break;
+              }
+              LOG_DEBUG << "component: " << metric_properties.component << " | "
+                        << "metric name: " << metric_properties.name << " | "
+                        << "value: 0x" << std::hex << value.ui32 << " | "
+                        << "timestamp: " << std::dec << metric_entry.timeStamp
+                        << " | ";
+            }
+            set_entry_start += metric_entries_per_set_count[set_index];
+          }
+          uint32_t exported_memory_data =
+              metric_entries[metric_entry_count - 1].value.ui32;
+          LOG_DEBUG << "exported memory data: " << std::hex
+                    << exported_memory_data;
+          EXPECT_EQ(set_data, exported_memory_data);
+        }
+        lzt::metric_decoder_destroy(metric_decoder_handle);
+        lzt::metric_tracer_destroy(metric_tracer_handle);
+        lzt::deactivate_metric_groups(device);
+        lzt::reset_command_list(command_list);
+        lzt::destroy_command_queue(command_queue);
+        lzt::destroy_command_list(command_list);
+      }
+    }
+    EXPECT_NE(0, dma_buf_metric_group_count);
+  }
+}
+
 } // namespace

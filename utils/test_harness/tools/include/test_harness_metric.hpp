@@ -311,6 +311,14 @@ void metric_tracer_decode(
     std::vector<uint32_t> *ptr_metric_entries_count_per_set,
     uint32_t *ptr_metric_entries_count,
     std::vector<zet_metric_entry_exp_t> *ptr_metric_entries);
+
+std::vector<zet_metric_group_handle_t> get_metric_groups_supporting_dma_buf(
+    const std::vector<zet_metric_group_handle_t> &metric_group_handles);
+
+int get_dma_buf_fd(zet_metric_group_handle_t metric_group_handle);
+
+void *map_dma_buf(ze_device_handle_t device, ze_context_handle_t context,
+                  int fd, size_t size);
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */
