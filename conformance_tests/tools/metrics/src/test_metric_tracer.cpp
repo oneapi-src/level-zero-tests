@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023-2024 Intel Corporation
+ * Copyright (C) 2023-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -47,6 +47,11 @@ protected:
     lzt::generate_device_list_with_activatable_metric_group_handles(
         devices, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EXP_TRACER_BASED,
         tracer_supporting_devices_list);
+
+    if (tracer_supporting_devices_list.size() == 0) {
+      GTEST_SKIP()
+          << "no devices that have metric groups of type tracer were found";
+    }
   }
 
   void TearDown() override { lzt::destroy_context(context); }
@@ -67,10 +72,6 @@ TEST_F(
     zetMetricTracerTest,
     GivenActivatedMetricGroupsWhenTracerIsCreatedWithOneOrMultipleMetricsGroupsThenTracerCreateSucceeds) {
 
-  if (tracer_supporting_devices_list.size() == 0) {
-    GTEST_SKIP()
-        << "No devices that have metric groups of type Tracer were found";
-  }
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
@@ -122,10 +123,6 @@ TEST_F(
     zetMetricTracerTest,
     GivenTracerIsCreatedWithOneOrMoreActivatedMetricGroupWhenTracerIsEnabledSynchronouslyThenExpectTracerEnableToSucceed) {
 
-  if (tracer_supporting_devices_list.size() == 0) {
-    GTEST_SKIP()
-        << "No devices that have metric groups of type Tracer were found";
-  }
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
@@ -191,10 +188,6 @@ TEST_F(
   constexpr int32_t retry_wait_milliseconds = 5;
   ze_result_t result;
 
-  if (tracer_supporting_devices_list.size() == 0) {
-    GTEST_SKIP()
-        << "No devices that have metric groups of type Tracer were found";
-  }
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
@@ -361,10 +354,6 @@ TEST_P(
   LOG_INFO << "testing zetMetricTracerReadDataExp with " << test_mode
            << " tracer Enable and Disable";
 
-  if (tracer_supporting_devices_list.size() == 0) {
-    GTEST_SKIP()
-        << "No devices that have metric groups of type Tracer were found";
-  }
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
@@ -552,10 +541,6 @@ TEST_F(zetMetricTracerTest,
 
   ze_result_t result;
 
-  if (tracer_supporting_devices_list.size() == 0) {
-    GTEST_SKIP()
-        << "No devices that have metric groups of type Tracer were found";
-  }
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
@@ -602,10 +587,6 @@ TEST_F(zetMetricTracerTest,
 
   ze_result_t result;
 
-  if (tracer_supporting_devices_list.size() == 0) {
-    GTEST_SKIP()
-        << "No devices that have metric groups of type Tracer were found";
-  }
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
@@ -700,10 +681,6 @@ TEST_F(
     zetMetricTracerTest,
     GivenDecoderIsCreatedAndWorkloadExecutedAndTracerIsEnabledThenDecoderSucceedsDecodingMetrics) {
 
-  if (tracer_supporting_devices_list.size() == 0) {
-    GTEST_SKIP()
-        << "No devices that have metric groups of type Tracer were found";
-  }
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
     device = device_with_metric_group_handles.device;
@@ -941,6 +918,198 @@ TEST_F(
       lzt::destroy_event(notification_event);
       lzt::destroy_event_pool(notification_event_pool);
     }
+    lzt::destroy_command_queue(commandQueue);
+    lzt::destroy_command_list(commandList);
+  }
+}
+
+TEST_F(zetMetricTracerTest,
+       GivenDecoderIsCreatedWhenTracerIsDestroyedThenDecoderRemainsActive) {
+  ze_result_t result;
+
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+    zet_metric_tracer_exp_handle_t metric_tracer_handle = nullptr;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+    zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
+    lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    uint32_t decodable_metric_count =
+        lzt::metric_decoder_get_decodable_metrics_count(metric_decoder_handle);
+    std::vector<zet_metric_handle_t> decodable_metric_handles(
+        decodable_metric_count);
+    lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
+                                              &decodable_metric_handles);
+    decodable_metric_count = decodable_metric_handles.size();
+    for (uint32_t i = 0; i < decodable_metric_count; i++) {
+      bool valid_type;
+      zet_metric_properties_t decodable_metric_properties;
+      lzt::get_metric_properties(decodable_metric_handles[i],
+                                 &decodable_metric_properties);
+      size_t metric_name_string_length;
+      metric_name_string_length =
+          strnlen(decodable_metric_properties.name, ZET_MAX_METRIC_NAME);
+      EXPECT_GT(metric_name_string_length, 0)
+          << "the name string for this metric is of zero length";
+      EXPECT_LT(metric_name_string_length, ZET_MAX_METRIC_NAME)
+          << "the name string for this metric is not null terminated";
+      valid_type =
+          lzt::verify_value_type(decodable_metric_properties.resultType);
+      EXPECT_TRUE(valid_type)
+          << "metric properties for metric " << decodable_metric_properties.name
+          << " has an incorrect resultType field "
+          << decodable_metric_properties.resultType;
+      valid_type =
+          lzt::verify_metric_type(decodable_metric_properties.metricType);
+      EXPECT_TRUE(valid_type)
+          << "metric properties for metric " << decodable_metric_properties.name
+          << " has an invalid metricType field "
+          << decodable_metric_properties.metricType;
+    }
+    lzt::metric_decoder_destroy(metric_decoder_handle);
+    lzt::deactivate_metric_groups(device);
+  }
+}
+
+TEST_F(zetMetricTracerTest,
+       GivenDecoderIsCreatedThenEnsureAllMetricEntriesTimeStampsAreValid) {
+
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+
+    ze_command_queue_handle_t commandQueue = lzt::create_command_queue(device);
+    zet_command_list_handle_t commandList = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 128);
+    lzt::append_launch_function(commandList, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(commandList);
+
+    ze_event_pool_handle_t notification_event_pool;
+    notification_event_pool = lzt::create_event_pool(
+        lzt::get_default_context(), 1, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+    ze_event_handle_t notification_event;
+    ze_event_desc_t notification_event_descriptor = {
+        ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, ZE_EVENT_SCOPE_FLAG_HOST,
+        ZE_EVENT_SCOPE_FLAG_DEVICE};
+    notification_event = lzt::create_event(notification_event_pool,
+                                           notification_event_descriptor);
+
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+    uint64_t host_timestamp_start, device_timestamp_start;
+    std::tie(host_timestamp_start, device_timestamp_start) =
+        lzt::get_global_timestamps(device);
+    LOG_DEBUG << "host_timestamp_start = " << host_timestamp_start
+              << " device_timestamp_start = " << device_timestamp_start;
+
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, notification_event,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
+    LOG_DEBUG << "synchronize on the tracer notification event";
+    lzt::event_host_synchronize(notification_event,
+                                std::numeric_limits<uint64_t>::max());
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+    /* read data */
+    size_t raw_data_size = 0;
+    raw_data_size = lzt::metric_tracer_read_data_size(metric_tracer_handle);
+    std::vector<uint8_t> raw_data(raw_data_size, 0);
+    lzt::metric_tracer_read_data(metric_tracer_handle, &raw_data);
+    zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
+
+    lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
+    uint32_t decodable_metric_count =
+        lzt::metric_decoder_get_decodable_metrics_count(metric_decoder_handle);
+    std::vector<zet_metric_handle_t> decodable_metric_handles(
+        decodable_metric_count);
+    lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
+                                              &decodable_metric_handles);
+    decodable_metric_count = decodable_metric_handles.size();
+    /* Decode Data */
+    uint32_t metric_entry_count = 0;
+    uint32_t set_count = 0;
+    lzt::metric_tracer_decode_get_various_counts(
+        metric_decoder_handle, &raw_data_size, &raw_data,
+        decodable_metric_count, &decodable_metric_handles, &set_count,
+        &metric_entry_count);
+    std::vector<uint32_t> metric_entries_per_set_count(set_count);
+    std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
+    lzt::metric_tracer_decode(metric_decoder_handle, &raw_data_size, &raw_data,
+                              decodable_metric_count, &decodable_metric_handles,
+                              &set_count, &metric_entries_per_set_count,
+                              &metric_entry_count, &metric_entries);
+
+    if (metric_entry_count != 0) {
+      uint64_t metric_entry_timestamp_start = 0;
+      uint64_t metric_entry_timestamp_end = 0;
+      metric_entry_timestamp_start = metric_entries[0].timeStamp;
+      LOG_DEBUG << "metric entry timestamp start "
+                << metric_entry_timestamp_start;
+      metric_entry_timestamp_end =
+          metric_entries[metric_entry_count - 1].timeStamp;
+      LOG_DEBUG << "metric entry timestamp end " << metric_entry_timestamp_end;
+
+      uint64_t host_timestamp_end, device_timestamp_end;
+      std::tie(host_timestamp_end, device_timestamp_end) =
+          lzt::get_global_timestamps(device);
+      LOG_DEBUG << "host_timestamp_end = " << host_timestamp_end
+                << " device_timestamp_end = " << device_timestamp_end;
+      EXPECT_GT(metric_entry_timestamp_start, device_timestamp_start)
+          << "first metric entry timestamp should be greater than first "
+             "device timestamp";
+      EXPECT_LT(metric_entry_timestamp_end, device_timestamp_end)
+          << "last metric entry timestamp should be lesser than last device "
+             "timestamp";
+    }
+    lzt::metric_decoder_destroy(metric_decoder_handle);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::reset_command_list(commandList);
+    lzt::destroy_event(notification_event);
+    lzt::destroy_event_pool(notification_event_pool);
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
   }
