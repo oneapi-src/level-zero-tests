@@ -224,29 +224,6 @@ uint64_t get_free_memory_state(ze_device_handle_t device) {
   return total_free_memory;
 }
 
-#ifdef USE_ZESINIT
-bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2) {
-  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
-    if (uuid1[i] != uuid2[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
-  lzt::initialize_core();
-  auto driver = lzt::zeDevice::get_instance()->get_driver();
-  auto core_devices = lzt::get_ze_devices(driver);
-  for (auto device : core_devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    if (is_uuid_pair_equal(uuid, device_properties.uuid.id)) {
-      return device;
-    }
-  }
-  return nullptr;
-}
-#endif // USE_ZESINIT
-
 ze_result_t copy_workload(ze_device_handle_t device,
                           ze_device_mem_alloc_desc_t *device_desc,
                           void *src_ptr, void *dst_ptr, int32_t local_size) {
@@ -316,7 +293,7 @@ TEST_F(
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
-        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
     EXPECT_NE(core_device, nullptr);
     ze_device_properties_t deviceProperties = {
         ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};

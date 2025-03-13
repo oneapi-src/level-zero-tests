@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2024 Intel Corporation
+ * Copyright (C) 2020-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -98,4 +98,25 @@ void sysman_device_reset_ext(zes_device_handle_t device, ze_bool_t force,
   EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceResetExt(device, &properties));
 }
 
+bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2) {
+  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
+    if (uuid1[i] != uuid2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
+  lzt::initialize_core();
+  auto driver = lzt::zeDevice::get_instance()->get_driver();
+  auto core_devices = lzt::get_ze_devices(driver);
+  for (auto device : core_devices) {
+    auto device_properties = lzt::get_device_properties(device);
+    if (is_uuid_pair_equal(uuid, device_properties.uuid.id)) {
+      return device;
+    }
+  }
+  return nullptr;
+}
 } // namespace level_zero_tests

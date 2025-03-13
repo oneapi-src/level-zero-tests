@@ -12,6 +12,14 @@
 #include "utils/utils_string.hpp"
 #include "logging/logging.hpp"
 
+namespace {
+std::stringstream &to_string_helper(std::stringstream &ss) {
+  if (ss.str().empty()) {
+    ss << "|NONE|";
+  }
+  return ss;
+}
+} // namespace
 namespace level_zero_tests {
 
 std::string to_string(const ze_api_version_t version) {
@@ -415,15 +423,15 @@ std::string to_string(const ze_image_format_swizzle_t swizzle) {
 }
 
 std::string to_string(const ze_image_flag_t flag) {
-  std::string flags = "";
+  std::stringstream flags;
   if (flag & ZE_IMAGE_FLAG_KERNEL_WRITE) {
-    flags.append("|ZE_IMAGE_FLAG_KERNEL_WRITE|");
+    flags << "|ZE_IMAGE_FLAG_KERNEL_WRITE|";
   }
   if (flag & ZE_IMAGE_FLAG_BIAS_UNCACHED) {
-    flags.append("|ZE_IMAGE_FLAG_BIAS_UNCACHED|");
+    flags << "|ZE_IMAGE_FLAG_BIAS_UNCACHED|";
   }
 
-  return flags;
+  return to_string_helper(flags).str();
 }
 
 ze_image_flags_t to_image_flag(const std::string flag) {
@@ -479,37 +487,73 @@ ze_image_type_t to_image_type(const std::string type) {
   }
 }
 
-std::string to_string(const ze_device_fp_flags_t capabilities) {
-  std::string capabilities_str = "";
-  if (capabilities == 0) {
-    capabilities_str.append("|NONE|");
-    return capabilities_str;
+std::string to_string(const ze_device_fp_flag_t flags) {
+  std::stringstream bitfield;
+  if (flags & ZE_DEVICE_FP_FLAG_DENORM) {
+    bitfield << "|ZE_DEVICE_FP_FLAG_DENORM|";
   }
-  if (capabilities & ZE_DEVICE_FP_FLAG_DENORM) {
-    capabilities_str.append("|ZE_DEVICE_FP_FLAG_DENORM|");
+  if (flags & ZE_DEVICE_FP_FLAG_INF_NAN) {
+    bitfield << "|ZE_DEVICE_FP_FLAG_INF_NAN|";
   }
-  if (capabilities & ZE_DEVICE_FP_FLAG_INF_NAN) {
-    capabilities_str.append("|ZE_DEVICE_FP_FLAG_INF_NAN|");
+  if (flags & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST) {
+    bitfield << "|ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST|";
   }
-  if (capabilities & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST) {
-    capabilities_str.append("|ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST|");
+  if (flags & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO) {
+    bitfield << "|ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO|";
   }
-  if (capabilities & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO) {
-    capabilities_str.append("|ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO|");
+  if (flags & ZE_DEVICE_FP_FLAG_ROUND_TO_INF) {
+    bitfield << "|ZE_DEVICE_FP_FLAG_ROUND_TO_INF|";
   }
-  if (capabilities & ZE_DEVICE_FP_FLAG_ROUND_TO_INF) {
-    capabilities_str.append("|ZE_DEVICE_FP_FLAG_ROUND_TO_INF|");
+  if (flags & ZE_DEVICE_FP_FLAG_FMA) {
+    bitfield << "|ZE_DEVICE_FP_FLAG_FMA|";
   }
-  if (capabilities & ZE_DEVICE_FP_FLAG_FMA) {
-    capabilities_str.append("|ZE_DEVICE_FP_FLAG_FMA|");
+  if (flags & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT) {
+    bitfield << "|ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT|";
   }
-  if (capabilities & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT) {
-    capabilities_str.append("|ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT|");
+  if (flags & ZE_DEVICE_FP_FLAG_SOFT_FLOAT) {
+    bitfield << "|ZE_DEVICE_FP_FLAG_SOFT_FLOAT|";
   }
-  if (capabilities & ZE_DEVICE_FP_FLAG_SOFT_FLOAT) {
-    capabilities_str.append("|ZE_DEVICE_FP_FLAG_SOFT_FLOAT|");
+  return to_string_helper(bitfield).str();
+}
+
+std::string to_string(const ze_memory_access_cap_flag_t flags) {
+  std::stringstream bitfield;
+  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_RW) {
+    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_RW|";
   }
-  return capabilities_str;
+  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC) {
+    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC|";
+  }
+  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT) {
+    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT|";
+  }
+  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC) {
+    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC|";
+  }
+  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_FORCE_UINT32) {
+    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_FORCE_UINT32|";
+  }
+  return to_string_helper(bitfield).str();
+}
+
+std::string to_string(const ze_device_property_flag_t flags) {
+  std::stringstream bitfield;
+  if (flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED) {
+    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_INTEGRATED|";
+  }
+  if (flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE|";
+  }
+  if (flags & ZE_DEVICE_PROPERTY_FLAG_ECC) {
+    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_ECC|";
+  }
+  if (flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
+    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING|";
+  }
+  if (flags & ZE_DEVICE_PROPERTY_FLAG_FORCE_UINT32) {
+    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_FORCE_UINT32|";
+  }
+  return to_string_helper(bitfield).str();
 }
 
 static char hexdigit(int i) { return (i > 9) ? 'a' - 10 + i : '0' + i; }

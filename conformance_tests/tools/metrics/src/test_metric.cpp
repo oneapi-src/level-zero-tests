@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2024 Intel Corporation
+ * Copyright (C) 2020-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -382,11 +382,13 @@ TEST_F(zetMetricGroupTest,
   for (auto groupName : groupNameList) {
     zet_metric_group_handle_t groupHandle = lzt::find_metric_group(
         device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
-    EXPECT_NE(nullptr, groupHandle);
+    ASSERT_NE(nullptr, groupHandle);
+    LOG_DEBUG << "Activating group " << groupName;
     lzt::activate_metric_groups(device, 1, &groupHandle);
+    LOG_DEBUG << "Opening streamer on Group" << groupName;
     zet_metric_streamer_handle_t streamerHandle = lzt::metric_streamer_open(
         groupHandle, nullptr, notifyEveryNReports, samplingPeriod);
-    EXPECT_NE(nullptr, streamerHandle);
+    ASSERT_NE(nullptr, streamerHandle);
     lzt::metric_streamer_close(streamerHandle);
     lzt::deactivate_metric_groups(device);
   }
@@ -423,6 +425,7 @@ TEST_F(
           lzt::metric_streamer_open_for_device(deviceh, test_metric_group,
                                                nullptr, notifyEveryNReports,
                                                samplingPeriod);
+      ASSERT_NE(nullptr, metric_streamer_handle);
       auto report_size =
           lzt::metric_streamer_read_data_size(metric_streamer_handle, 1);
       lzt::metric_streamer_close(metric_streamer_handle);
@@ -454,8 +457,8 @@ TEST_F(
 
 class zetMetricQueryTest : public zetMetricGroupTest {
 protected:
-  zet_metric_query_pool_handle_t metricQueryPoolHandle{};
-  zet_metric_query_handle_t metricQueryHandle{};
+  zet_metric_query_pool_handle_t metric_query_pool_handle{};
+  zet_metric_query_handle_t metric_query_handle{};
 
   std::vector<std::string> groupNameList;
   zet_metric_group_handle_t matchedGroupHandle{};
@@ -470,18 +473,21 @@ protected:
     matchedGroupHandle = lzt::find_metric_group(
         device, groupName, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED);
     ASSERT_NE(nullptr, matchedGroupHandle);
-    metricQueryPoolHandle = lzt::create_metric_query_pool(
+    metric_query_pool_handle = lzt::create_metric_query_pool(
         1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE, matchedGroupHandle);
-    ASSERT_NE(nullptr, metricQueryPoolHandle);
-    metricQueryHandle = lzt::metric_query_create(metricQueryPoolHandle);
+    ASSERT_NE(nullptr, metric_query_pool_handle)
+        << "failed to create metric query pool handle";
+    metric_query_handle = lzt::metric_query_create(metric_query_pool_handle);
+    ASSERT_NE(nullptr, metric_query_handle)
+        << "failed to create metric query handle";
   }
 
   void TearDown() override {
-    if (metricQueryHandle != nullptr) {
-      lzt::destroy_metric_query(metricQueryHandle);
+    if (metric_query_handle != nullptr) {
+      lzt::destroy_metric_query(metric_query_handle);
     }
-    if (metricQueryPoolHandle != nullptr) {
-      lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+    if (metric_query_pool_handle != nullptr) {
+      lzt::destroy_metric_query_pool(metric_query_pool_handle);
     }
   }
 };
@@ -489,12 +495,12 @@ protected:
 TEST_F(
     zetMetricQueryTest,
     GivenValidMetricQueryPoolWhenValidMetricGroupIsPassedThenExpectQueryHandle) {
-  EXPECT_NE(nullptr, metricQueryHandle);
+  EXPECT_NE(nullptr, metric_query_handle);
 }
 
 TEST_F(zetMetricQueryTest,
        GivenValidMetricQueryHandleWhenResettingQueryHandleThenExpectSuccess) {
-  lzt::reset_metric_query(metricQueryHandle);
+  lzt::reset_metric_query(metric_query_handle);
 }
 
 TEST_F(
@@ -502,8 +508,8 @@ TEST_F(
     GivenOnlyMetricQueryWhenCommandListIsCreatedThenExpectCommandListToExecuteSuccessfully) {
   zet_command_list_handle_t commandList = lzt::create_command_list();
   lzt::activate_metric_groups(device, 1, &matchedGroupHandle);
-  lzt::append_metric_query_begin(commandList, metricQueryHandle);
-  lzt::append_metric_query_end(commandList, metricQueryHandle, nullptr);
+  lzt::append_metric_query_begin(commandList, metric_query_handle);
+  lzt::append_metric_query_end(commandList, metric_query_handle, nullptr);
   lzt::close_command_list(commandList);
   ze_command_queue_handle_t commandQueue = lzt::create_command_queue();
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
@@ -518,9 +524,9 @@ TEST_F(
     GivenOnlyMetricQueryWithMetricMemoryBarrierWhenCommandListIsCreatedThenExpectCommandListToExecuteSucessfully) {
   zet_command_list_handle_t commandList = lzt::create_command_list();
   lzt::activate_metric_groups(device, 1, &matchedGroupHandle);
-  lzt::append_metric_query_begin(commandList, metricQueryHandle);
+  lzt::append_metric_query_begin(commandList, metric_query_handle);
   lzt::append_metric_memory_barrier(commandList);
-  lzt::append_metric_query_end(commandList, metricQueryHandle, nullptr);
+  lzt::append_metric_query_end(commandList, metric_query_handle, nullptr);
   lzt::close_command_list(commandList);
   ze_command_queue_handle_t commandQueue = lzt::create_command_queue();
   lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
@@ -567,16 +573,19 @@ TEST_F(
     for (auto groupInfo : metricGroupInfo) {
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
-      zet_metric_query_pool_handle_t metricQueryPoolHandle =
+      zet_metric_query_pool_handle_t metric_query_pool_handle =
           lzt::create_metric_query_pool_for_device(
               device, 1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE,
               groupInfo.metricGroupHandle);
-
-      zet_metric_query_handle_t metricQueryHandle =
-          lzt::metric_query_create(metricQueryPoolHandle);
+      ASSERT_NE(nullptr, metric_query_pool_handle)
+          << "failed to create metric query pool handle";
+      zet_metric_query_handle_t metric_query_handle =
+          lzt::metric_query_create(metric_query_pool_handle);
+      ASSERT_NE(nullptr, metric_query_handle)
+          << "failed to create metric query handle";
 
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
-      lzt::append_metric_query_begin(commandList, metricQueryHandle);
+      lzt::append_metric_query_begin(commandList, metric_query_handle);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
       ze_event_handle_t eventHandle;
       lzt::zeEventPool eventPool;
@@ -591,7 +600,8 @@ TEST_F(
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
-      lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
+      lzt::append_metric_query_end(commandList, metric_query_handle,
+                                   eventHandle);
 
       lzt::close_command_list(commandList);
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
@@ -601,11 +611,11 @@ TEST_F(
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
       std::vector<uint8_t> rawData;
 
-      lzt::metric_query_get_data(metricQueryHandle, &rawData);
+      lzt::metric_query_get_data(metric_query_handle, &rawData);
 
       eventPool.destroy_event(eventHandle);
-      lzt::destroy_metric_query(metricQueryHandle);
-      lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+      lzt::destroy_metric_query(metric_query_handle);
+      lzt::destroy_metric_query_pool(metric_query_pool_handle);
 
       lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
@@ -663,16 +673,19 @@ void run_test(const ze_device_handle_t &device,
   for (auto groupInfo : metricGroupInfo) {
     LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
-    zet_metric_query_pool_handle_t metricQueryPoolHandle =
+    zet_metric_query_pool_handle_t metric_query_pool_handle =
         lzt::create_metric_query_pool_for_device(
             device, 1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE,
             groupInfo.metricGroupHandle);
-
-    zet_metric_query_handle_t metricQueryHandle =
-        lzt::metric_query_create(metricQueryPoolHandle);
+    ASSERT_NE(nullptr, metric_query_pool_handle)
+        << "failed to create metric query pool handle";
+    zet_metric_query_handle_t metric_query_handle =
+        lzt::metric_query_create(metric_query_pool_handle);
+    ASSERT_NE(nullptr, metric_query_handle)
+        << "failed to create metric query handle";
 
     lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
-    lzt::append_metric_query_begin(commandList, metricQueryHandle);
+    lzt::append_metric_query_begin(commandList, metric_query_handle);
     lzt::append_barrier(commandList, nullptr, 0, nullptr);
     ze_event_handle_t eventHandle, wait_event_handle;
     lzt::zeEventPool eventPool;
@@ -691,11 +704,12 @@ void run_test(const ze_device_handle_t &device,
                                     nullptr);
 
     if (wait_event) {
-      lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle,
-                                   1, &wait_event_handle);
+      lzt::append_metric_query_end(commandList, metric_query_handle,
+                                   eventHandle, 1, &wait_event_handle);
     } else {
       lzt::append_barrier(commandList);
-      lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
+      lzt::append_metric_query_end(commandList, metric_query_handle,
+                                   eventHandle);
     }
 
     lzt::close_command_list(commandList);
@@ -711,15 +725,15 @@ void run_test(const ze_device_handle_t &device,
     }
 
     std::vector<uint8_t> rawData;
-    lzt::metric_query_get_data(metricQueryHandle, &rawData);
+    lzt::metric_query_get_data(metric_query_handle, &rawData);
     lzt::validate_metrics(groupInfo.metricGroupHandle,
-                          lzt::metric_query_get_data_size(metricQueryHandle),
+                          lzt::metric_query_get_data_size(metric_query_handle),
                           rawData.data());
     if (reset && !immediate) {
-      lzt::reset_metric_query(metricQueryHandle);
+      lzt::reset_metric_query(metric_query_handle);
 
       lzt::reset_command_list(commandList);
-      lzt::append_metric_query_begin(commandList, metricQueryHandle);
+      lzt::append_metric_query_begin(commandList, metric_query_handle);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
 
       // reset buffers
@@ -734,7 +748,8 @@ void run_test(const ze_device_handle_t &device,
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
-      lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
+      lzt::append_metric_query_end(commandList, metric_query_handle,
+                                   eventHandle);
       lzt::close_command_list(commandList);
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
 
@@ -742,15 +757,15 @@ void run_test(const ze_device_handle_t &device,
 
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
 
-      lzt::metric_query_get_data(metricQueryHandle, &rawData);
-      lzt::validate_metrics(groupInfo.metricGroupHandle,
-                            lzt::metric_query_get_data_size(metricQueryHandle),
-                            rawData.data());
+      lzt::metric_query_get_data(metric_query_handle, &rawData);
+      lzt::validate_metrics(
+          groupInfo.metricGroupHandle,
+          lzt::metric_query_get_data_size(metric_query_handle), rawData.data());
     }
 
     eventPool.destroy_event(eventHandle);
-    lzt::destroy_metric_query(metricQueryHandle);
-    lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+    lzt::destroy_metric_query(metric_query_handle);
+    lzt::destroy_metric_query_pool(metric_query_pool_handle);
 
     lzt::deactivate_metric_groups(device);
     lzt::destroy_function(function);
@@ -845,22 +860,30 @@ void run_multi_device_query_load_test(
   auto groupInfo_0 = metric_group_info_0[0];
   auto groupInfo_1 = metric_group_info_1[0];
 
-  auto metricQueryPoolHandle_0 = lzt::create_metric_query_pool_for_device(
+  auto metric_query_pool_handle_0 = lzt::create_metric_query_pool_for_device(
       device_0, 1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE,
       groupInfo_0.metricGroupHandle);
-
-  auto metricQueryPoolHandle_1 = lzt::create_metric_query_pool_for_device(
+  ASSERT_NE(nullptr, metric_query_pool_handle_0)
+      << "failed to create metric query pool handle";
+  auto metric_query_pool_handle_1 = lzt::create_metric_query_pool_for_device(
       device_1, 1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE,
       groupInfo_1.metricGroupHandle);
-
-  auto metricQueryHandle_0 = lzt::metric_query_create(metricQueryPoolHandle_0);
-  auto metricQueryHandle_1 = lzt::metric_query_create(metricQueryPoolHandle_1);
+  ASSERT_NE(nullptr, metric_query_pool_handle_1)
+      << "failed to create metric query pool handle";
+  auto metric_query_handle_0 =
+      lzt::metric_query_create(metric_query_pool_handle_0);
+  ASSERT_NE(nullptr, metric_query_handle_0)
+      << "failed to create metric query handle 0";
+  auto metric_query_handle_1 =
+      lzt::metric_query_create(metric_query_pool_handle_1);
+  ASSERT_NE(nullptr, metric_query_handle_1)
+      << "failed to create metric query handle 1";
 
   lzt::activate_metric_groups(device_0, 1, &groupInfo_0.metricGroupHandle);
   lzt::activate_metric_groups(device_1, 1, &groupInfo_1.metricGroupHandle);
 
-  lzt::append_metric_query_begin(command_list_0, metricQueryHandle_0);
-  lzt::append_metric_query_begin(command_list_1, metricQueryHandle_1);
+  lzt::append_metric_query_begin(command_list_0, metric_query_handle_0);
+  lzt::append_metric_query_begin(command_list_1, metric_query_handle_1);
 
   lzt::append_barrier(command_list_0, nullptr, 0, nullptr);
   lzt::append_barrier(command_list_1, nullptr, 0, nullptr);
@@ -888,13 +911,13 @@ void run_multi_device_query_load_test(
   lzt::append_launch_function(command_list_0, function_0, &tg_0, event_handle_0,
                               0, nullptr);
   lzt::append_barrier(command_list_0);
-  lzt::append_metric_query_end(command_list_0, metricQueryHandle_0,
+  lzt::append_metric_query_end(command_list_0, metric_query_handle_0,
                                event_handle_0);
 
   lzt::append_launch_function(command_list_1, function_1, &tg_1, event_handle_1,
                               0, nullptr);
   lzt::append_barrier(command_list_1);
-  lzt::append_metric_query_end(command_list_1, metricQueryHandle_1,
+  lzt::append_metric_query_end(command_list_1, metric_query_handle_1,
                                event_handle_1);
 
   lzt::close_command_list(command_list_0);
@@ -911,23 +934,23 @@ void run_multi_device_query_load_test(
 
   std::vector<uint8_t> raw_data_0, raw_data_1;
 
-  lzt::metric_query_get_data(metricQueryHandle_0, &raw_data_0);
-  lzt::metric_query_get_data(metricQueryHandle_1, &raw_data_1);
+  lzt::metric_query_get_data(metric_query_handle_0, &raw_data_0);
+  lzt::metric_query_get_data(metric_query_handle_1, &raw_data_1);
 
   event_pool.destroy_event(event_handle_0);
   event_pool.destroy_event(event_handle_1);
 
   lzt::validate_metrics(groupInfo_0.metricGroupHandle,
-                        lzt::metric_query_get_data_size(metricQueryHandle_0),
+                        lzt::metric_query_get_data_size(metric_query_handle_0),
                         raw_data_0.data());
   lzt::validate_metrics(groupInfo_1.metricGroupHandle,
-                        lzt::metric_query_get_data_size(metricQueryHandle_1),
+                        lzt::metric_query_get_data_size(metric_query_handle_1),
                         raw_data_1.data());
 
-  lzt::destroy_metric_query(metricQueryHandle_0);
-  lzt::destroy_metric_query(metricQueryHandle_1);
-  lzt::destroy_metric_query_pool(metricQueryPoolHandle_0);
-  lzt::destroy_metric_query_pool(metricQueryPoolHandle_1);
+  lzt::destroy_metric_query(metric_query_handle_0);
+  lzt::destroy_metric_query(metric_query_handle_1);
+  lzt::destroy_metric_query_pool(metric_query_pool_handle_0);
+  lzt::destroy_metric_query_pool(metric_query_pool_handle_1);
 
   lzt::deactivate_metric_groups(device_0);
   lzt::deactivate_metric_groups(device_1);
@@ -1009,16 +1032,19 @@ TEST_F(
 
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
 
-      zet_metric_query_pool_handle_t metricQueryPoolHandle =
+      zet_metric_query_pool_handle_t metric_query_pool_handle =
           lzt::create_metric_query_pool_for_device(
               device, 1000, ZET_METRIC_QUERY_POOL_TYPE_PERFORMANCE,
               groupInfo.metricGroupHandle);
-
-      zet_metric_query_handle_t metricQueryHandle =
-          lzt::metric_query_create(metricQueryPoolHandle);
+      ASSERT_NE(nullptr, metric_query_pool_handle)
+          << "failed to create metric query pool handle";
+      zet_metric_query_handle_t metric_query_handle =
+          lzt::metric_query_create(metric_query_pool_handle);
+      ASSERT_NE(nullptr, metric_query_handle)
+          << "failed to create metric query handle";
 
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
-      lzt::append_metric_query_begin(commandList, metricQueryHandle);
+      lzt::append_metric_query_begin(commandList, metric_query_handle);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
       ze_event_handle_t eventHandle;
       lzt::zeEventPool eventPool;
@@ -1033,7 +1059,8 @@ TEST_F(
       zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
                                       nullptr);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
-      lzt::append_metric_query_end(commandList, metricQueryHandle, eventHandle);
+      lzt::append_metric_query_end(commandList, metric_query_handle,
+                                   eventHandle);
 
       lzt::close_command_list(commandList);
       lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
@@ -1043,14 +1070,14 @@ TEST_F(
       EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
 
       std::vector<uint8_t> rawData;
-      lzt::metric_query_get_data(metricQueryHandle, &rawData);
+      lzt::metric_query_get_data(metric_query_handle, &rawData);
       lzt::validate_metrics_std(
           groupInfo.metricGroupHandle,
-          lzt::metric_query_get_data_size(metricQueryHandle), rawData.data());
+          lzt::metric_query_get_data_size(metric_query_handle), rawData.data());
 
       eventPool.destroy_event(eventHandle);
-      lzt::destroy_metric_query(metricQueryHandle);
-      lzt::destroy_metric_query_pool(metricQueryPoolHandle);
+      lzt::destroy_metric_query(metric_query_handle);
+      lzt::destroy_metric_query_pool(metric_query_pool_handle);
 
       lzt::deactivate_metric_groups(device);
       lzt::destroy_function(function);
@@ -1820,6 +1847,14 @@ void run_ip_sampling_with_validation(
         LOG_WARNING << "elapsed time for workload completion is too short";
       }
 
+      const char *sleep_in_buffer_overflow_test_environment_variable =
+      std::getenv("LZT_METRICS_BUFFER_OVERFLOW_SLEEP_MS");
+
+      if (sleep_in_buffer_overflow_test_environment_variable != nullptr) {
+        uint32_t value = atoi(sleep_in_buffer_overflow_test_environment_variable);
+        std::this_thread::sleep_for(std::chrono::milliseconds(value));
+      }
+
       size_t rawDataSize = 0;
       std::vector<uint8_t> rawData;
       rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle,
@@ -1834,9 +1869,16 @@ void run_ip_sampling_with_validation(
 
       std::vector<zet_typed_value_t> metricValues;
       std::vector<uint32_t> metricValueSets;
-      level_zero_tests::metric_calculate_metric_values_from_raw_data(
-          groupInfo.metricGroupHandle, rawData, metricValues, metricValueSets,
-          enableOverflow);
+      ze_result_t result =
+          level_zero_tests::metric_calculate_metric_values_from_raw_data(
+              groupInfo.metricGroupHandle, rawData, metricValues,
+              metricValueSets);
+
+      if (enableOverflow) {
+        ASSERT_EQ(ZE_RESULT_WARNING_DROPPED_DATA, result);
+      } else {
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+      }
 
       std::vector<zet_metric_handle_t> metricHandles;
       lzt::metric_get_metric_handles_from_metric_group(
@@ -1879,6 +1921,124 @@ TEST_F(
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
   run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
                                   samplingPeriod, TimeForNReportsComplete);
+}
+
+TEST_F(
+    zetMetricStreamerTest,
+    GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndBufferOverflowIsTriggeredThenProperErrorIsReturned) {
+
+  samplingPeriod = 100; // use fastest possible rate;
+
+  for (auto device : devices) {
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    zeDeviceGetProperties(device, &deviceProperties);
+
+    LOG_INFO << "test device name " << deviceProperties.name << " uuid "
+             << lzt::to_string(deviceProperties.uuid);
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << deviceProperties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    ze_command_queue_handle_t commandQueue = lzt::create_command_queue(device);
+    zet_command_list_handle_t commandList = lzt::create_command_list(device);
+
+    auto metricGroupInfo = lzt::get_metric_type_ip_group_info(
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
+    if (metricGroupInfo.size() == 0) {
+      GTEST_SKIP()
+          << "No IP metric groups are available to test on this platform";
+    }
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+
+    for (auto groupInfo : metricGroupInfo) {
+      LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
+      lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
+
+      ze_event_handle_t eventHandle;
+      lzt::zeEventPool eventPool;
+      eventPool.create_event(eventHandle, ZE_EVENT_SCOPE_FLAG_HOST,
+                             ZE_EVENT_SCOPE_FLAG_HOST);
+
+      void *a_buffer, *b_buffer, *c_buffer;
+      ze_group_count_t tg;
+      ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+          device, &tg, &a_buffer, &b_buffer, &c_buffer, 8192);
+      zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
+                                      nullptr);
+      lzt::close_command_list(commandList);
+
+      zet_metric_streamer_handle_t metricStreamerHandle =
+          lzt::metric_streamer_open_for_device(
+              device, groupInfo.metricGroupHandle, eventHandle,
+              notifyEveryNReports, samplingPeriod);
+      ASSERT_NE(nullptr, metricStreamerHandle);
+
+      // Spawn a thread which continuously runs a workload
+      workloadThreadFlag = true;
+      std::thread thread(workloadThread, commandQueue, 1, &commandList,
+                         nullptr);
+
+      size_t rawDataSize = 0;
+      std::vector<uint8_t> rawData;
+      ze_result_t result;
+      constexpr uint32_t maxAttempts = 6;
+      uint64_t timeForNextIterationSec = 10;
+
+      for (uint32_t i = 0; i < maxAttempts; i++) {
+        // Busy wait before trying to read to increase chanceof  buffer overflow
+        LOG_INFO << "Busy waiting for " << timeForNextIterationSec
+                 << " in iteration " << i;
+        time_t begin = std::time(0);
+        while (1) {
+          time_t end = std::time(0);
+          if (end >= (begin + timeForNextIterationSec)) {
+            break;
+          }
+        }
+        rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle,
+                                                          notifyEveryNReports);
+        EXPECT_GT(rawDataSize, 0);
+        rawData.resize(rawDataSize);
+        result =
+            zetMetricStreamerReadData(metricStreamerHandle, notifyEveryNReports,
+                                      &rawDataSize, rawData.data());
+        LOG_DEBUG << "read data is " << rawDataSize;
+
+        if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+          break;
+        }
+
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+        std::vector<zet_typed_value_t> metricValues;
+        std::vector<uint32_t> metricValueSets;
+        result = level_zero_tests::metric_calculate_metric_values_from_raw_data(
+            groupInfo.metricGroupHandle, rawData, metricValues,
+            metricValueSets);
+        if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+          break;
+        }
+        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+        timeForNextIterationSec += timeForNextIterationSec;
+      }
+
+      workloadThreadFlag = false;
+      thread.join();
+
+      lzt::metric_streamer_close(metricStreamerHandle);
+      lzt::deactivate_metric_groups(device);
+      lzt::destroy_function(function);
+      lzt::free_memory(a_buffer);
+      lzt::free_memory(b_buffer);
+      lzt::free_memory(c_buffer);
+      eventPool.destroy_event(eventHandle);
+      lzt::reset_command_list(commandList);
+    }
+    lzt::destroy_command_queue(commandQueue);
+    lzt::destroy_command_list(commandList);
+  }
 }
 
 using zetMetricStreamerAppendMarkerTestNoValidate = zetMetricStreamerTest;
@@ -2127,9 +2287,11 @@ TEST_F(
           rawData.resize(rawDataSize);
           std::vector<zet_typed_value_t> metricValues;
           std::vector<uint32_t> metricValueSets;
-          lzt::metric_calculate_metric_values_from_raw_data(
-              groupInfo.metricGroupHandle, rawData, metricValues,
-              metricValueSets);
+          ze_result_t result =
+              lzt::metric_calculate_metric_values_from_raw_data(
+                  groupInfo.metricGroupHandle, rawData, metricValues,
+                  metricValueSets);
+          ASSERT_EQ(ZE_RESULT_SUCCESS, result);
 
           lzt::metric_validate_streamer_marker_data(
               metricProperties, metricValues, metricValueSets,

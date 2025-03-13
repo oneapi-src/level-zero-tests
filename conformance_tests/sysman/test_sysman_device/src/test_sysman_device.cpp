@@ -62,10 +62,6 @@ class SysmanDeviceTest : public lzt::SysmanCtsClass {};
 #define SYSMAN_DEVICE_TEST SysmanDeviceTest
 #endif // USE_ZESINIT
 
-#ifdef USE_ZESINIT
-bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2);
-#endif // USE_ZESINIT
-
 void run_device_hierarchy_child_process() {
   fs::path helper_path(fs::current_path() / "sysman_device");
   std::vector<fs::path> paths;
@@ -214,7 +210,7 @@ TEST_F(
       EXPECT_EQ(sub_devices_count, num_sub_devices);
       for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
            sub_device_index++) {
-        EXPECT_FALSE(is_uuid_pair_equal(
+        EXPECT_FALSE(lzt::is_uuid_pair_equal(
             device_uuid.id, sub_device_properties[sub_device_index].uuid.id));
       }
     }
@@ -527,29 +523,6 @@ static void compare_results(std::vector<float> c, std::vector<float> c_cpu) {
   return;
 }
 
-#ifdef USE_ZESINIT
-bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2) {
-  for (uint32_t i = 0; i < ZE_MAX_UUID_SIZE; i++) {
-    if (uuid1[i] != uuid2[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid) {
-  lzt::initialize_core();
-  auto driver = lzt::zeDevice::get_instance()->get_driver();
-  auto core_devices = lzt::get_ze_devices(driver);
-  for (auto device : core_devices) {
-    auto device_properties = lzt::get_device_properties(device);
-    if (is_uuid_pair_equal(uuid, device_properties.uuid.id)) {
-      return device;
-    }
-  }
-  return nullptr;
-}
-#endif // USE_ZESINIT
-
 bool is_compute_engine_used(int pid, zes_device_handle_t device) {
   uint32_t count = 0;
   auto processes = lzt::get_processes_state(device, count);
@@ -584,16 +557,20 @@ bool compute_workload_and_validate(device_handles_t device) {
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);
+  const size_t a_buffer_size = m * k * sizeof(float);
+  const size_t b_buffer_size = k * n * sizeof(float);
+  const size_t c_buffer_size = m * n * sizeof(float);
 
-  void *a_buffer = lzt::allocate_device_memory(m * k * sizeof(float), 1, 0,
-                                               device.core_handle,
-                                               lzt::get_default_context());
-  void *b_buffer = lzt::allocate_device_memory(k * n * sizeof(float), 1, 0,
-                                               device.core_handle,
-                                               lzt::get_default_context());
-  void *c_buffer = lzt::allocate_device_memory(m * n * sizeof(float), 1, 0,
-                                               device.core_handle,
-                                               lzt::get_default_context());
+  void *a_buffer = lzt::allocate_device_memory(
+      a_buffer_size, 1, 0, device.core_handle, lzt::get_default_context());
+  void *b_buffer = lzt::allocate_device_memory(
+      b_buffer_size, 1, 0, device.core_handle, lzt::get_default_context());
+  void *c_buffer = lzt::allocate_device_memory(
+      c_buffer_size, 1, 0, device.core_handle, lzt::get_default_context());
+  lzt::make_memory_resident(device.core_handle, a_buffer, a_buffer_size);
+  lzt::make_memory_resident(device.core_handle, b_buffer, b_buffer_size);
+  lzt::make_memory_resident(device.core_handle, c_buffer, c_buffer_size);
+
   ze_module_handle_t module =
       lzt::create_module(device.core_handle, "sysman_matrix_multiplication.spv",
                          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
@@ -690,7 +667,7 @@ TEST_F(
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
-        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
     EXPECT_NE(core_device, nullptr);
 #endif
 
@@ -703,8 +680,10 @@ TEST_F(
 #ifdef USE_ZESINIT
     void *ptr = lzt::allocate_device_memory(sampleMemorySize, 1, 0, core_device,
                                             lzt::get_default_context());
+    lzt::make_memory_resident(core_device, ptr, sampleMemorySize);
 #else  // USE_ZESINIT
     void *ptr = lzt::allocate_device_memory(sampleMemorySize);
+    lzt::make_memory_resident(device, ptr, sampleMemorySize);
 #endif // USE_ZESINIT
 
     processes = lzt::get_processes_state(device, count);
@@ -735,7 +714,7 @@ TEST_F(
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
-        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
     EXPECT_NE(core_device, nullptr);
     device_handle.core_handle = core_device;
     device_handle.sysman_handle = device;
@@ -764,7 +743,7 @@ TEST_F(
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
-        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
     EXPECT_NE(core_device, nullptr);
     c = submit_workload_for_gpu(a, b, n, core_device);
 #else  // USE_ZESINIT
@@ -814,7 +793,7 @@ TEST_F(
 #ifdef USE_ZESINIT
       auto sysman_device_properties = lzt::get_sysman_device_properties(device);
       ze_device_handle_t core_device =
-          get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+          lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
       EXPECT_NE(core_device, nullptr);
       c = submit_workload_for_gpu(a, b, n, core_device);
 #else  // USE_ZESINIT
@@ -877,7 +856,7 @@ TEST_F(
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
-        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
     EXPECT_NE(core_device, nullptr);
     c = submit_workload_for_gpu(a, b, n, core_device);
 #else  // USE_ZESINIT
@@ -918,7 +897,7 @@ TEST_F(
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
-        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
     EXPECT_NE(core_device, nullptr);
     c = submit_workload_for_gpu(a, b, n, core_device);
 #else  // USE_ZESINIT
@@ -959,7 +938,7 @@ TEST_F(
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
-        get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
     EXPECT_NE(core_device, nullptr);
     c = submit_workload_for_gpu(a, b, n, core_device);
 #else  // USE_ZESINIT
