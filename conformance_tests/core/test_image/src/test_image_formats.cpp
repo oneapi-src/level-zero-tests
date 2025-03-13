@@ -50,10 +50,8 @@ public:
 
   void run_test(void (*buffer_setup_f)(ImageFormatTests &),
                 void (*buffer_verify_f)(ImageFormatTests &),
-                ze_image_type_t image_type,
-                ze_image_format_type_t format_type,
-                ze_image_format_layout_t layout,
-                bool is_immediate);
+                ze_image_type_t image_type, ze_image_format_type_t format_type,
+                ze_image_format_layout_t layout, bool is_immediate);
 
   virtual void get_kernel(ze_image_type_t image_type,
                           ze_image_format_type_t format_type,
@@ -170,27 +168,18 @@ void ImageFormatTests::run_test(void (*buffer_setup_f)(ImageFormatTests &),
 
   lzt::append_image_copy_from_mem(cmd_bundle.list, img_in, inbuff, nullptr);
   lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  lzt::suggest_group_size(
-      kernel, image_dims.width, image_dims.height, image_dims.depth,
-      group_size_x, group_size_y, group_size_z);
+  lzt::suggest_group_size(kernel, image_dims.width, image_dims.height,
+                          image_dims.depth, group_size_x, group_size_y,
+                          group_size_z);
 
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-  auto result = zeKernelSetArgumentValue(kernel, 0, sizeof(img_in), &img_in);
-  if (lzt::check_unsupported(result)) {
-    cleanup();
-    return;
-  }
-  result = zeKernelSetArgumentValue(kernel, 1, sizeof(img_out), &img_out);
-  if (lzt::check_unsupported(result)) {
-    cleanup();
-    return;
-  }
+  lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);
+  lzt::set_argument_value(kernel, 1, sizeof(img_out), &img_out);
 
-  ze_group_count_t group_dems = 
-    {(static_cast<uint32_t>(image_dims.width) / group_size_x),
-     (image_dims.height / group_size_y),
-     (image_dims.depth / group_size_z)};
+  ze_group_count_t group_dems = {
+      (static_cast<uint32_t>(image_dims.width) / group_size_x),
+      (image_dims.height / group_size_y), (image_dims.depth / group_size_z)};
 
   lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr, 0,
                               nullptr);
@@ -237,7 +226,8 @@ ImageFormatTests::create_image_desc_format(ze_image_type_t image_type,
   image_desc.miplevels = 0;
 
   auto image = lzt::create_ze_image(lzt::get_default_context(),
-            lzt::zeDevice::get_instance()->get_device(), image_desc);
+                                    lzt::zeDevice::get_instance()->get_device(),
+                                    image_desc);
 
   return image;
 }
@@ -245,7 +235,7 @@ ImageFormatTests::create_image_desc_format(ze_image_type_t image_type,
 void RunGivenImageFormatUINTWhenCopyingImageTest(ImageFormatTests &test,
                                                  bool is_immediate) {
   for (auto image_type : test.tested_image_types) {
-    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type); 
+    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type);
     test.run_test(ImageFormatTests::setup_buffers<uint32_t, 1>,
                   ImageFormatTests::verify_outbuffer<uint32_t, 2>, image_type,
                   ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_LAYOUT_32,
@@ -267,7 +257,7 @@ TEST_F(
 void RunGivenImageFormatINTWhenCopyingImageTest(ImageFormatTests &test,
                                                 bool is_immediate) {
   for (auto image_type : test.tested_image_types) {
-    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type); 
+    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type);
     test.run_test(ImageFormatTests::setup_buffers<int32_t, -1>,
                   ImageFormatTests::verify_outbuffer<int32_t, -2>, image_type,
                   ZE_IMAGE_FORMAT_TYPE_SINT, ZE_IMAGE_FORMAT_LAYOUT_32,
@@ -289,7 +279,7 @@ TEST_F(
 void RunGivenImageFormatFloatWhenCopyingImageTest(ImageFormatTests &test,
                                                   bool is_immediate) {
   for (auto image_type : test.tested_image_types) {
-    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type); 
+    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type);
     test.run_test(ImageFormatTests::setup_buffers_float,
                   ImageFormatTests::verify_outbuffer_float, image_type,
                   ZE_IMAGE_FORMAT_TYPE_FLOAT, ZE_IMAGE_FORMAT_LAYOUT_32,
@@ -311,7 +301,7 @@ TEST_F(
 void RunGivenImageFormatUNORMWhenCopyingImageTest(ImageFormatTests &test,
                                                   bool is_immediate) {
   for (auto image_type : test.tested_image_types) {
-    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type); 
+    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type);
     test.run_test(ImageFormatTests::setup_buffers<uint16_t, 0>,
                   ImageFormatTests::verify_outbuffer<uint16_t, 65535>,
                   image_type, ZE_IMAGE_FORMAT_TYPE_UNORM,
@@ -333,7 +323,7 @@ TEST_F(
 void RunGivenImageFormatSNORMWhenCopyingImageTest(ImageFormatTests &test,
                                                   bool is_immediate) {
   for (auto image_type : test.tested_image_types) {
-    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type); 
+    LOG_INFO << "RUN: TYPE - " << std::to_string(image_type);
     test.run_test(ImageFormatTests::setup_buffers<int16_t, -32768>,
                   ImageFormatTests::verify_outbuffer<int16_t, 32767>,
                   image_type, ZE_IMAGE_FORMAT_TYPE_SNORM,
@@ -408,7 +398,7 @@ ze_image_handle_t ImageFormatLayoutTests::create_image_desc_format(
   image_descriptor.arraylevels = array_levels;
 
   auto image = lzt::create_ze_image(lzt::get_default_context(), tested_device,
-                              image_descriptor);
+                                    image_descriptor);
 
   return image;
 }
