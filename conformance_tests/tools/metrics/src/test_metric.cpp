@@ -1847,6 +1847,14 @@ void run_ip_sampling_with_validation(
         LOG_WARNING << "elapsed time for workload completion is too short";
       }
 
+      const char *sleep_in_buffer_overflow_test_environment_variable =
+      std::getenv("LZT_METRICS_BUFFER_OVERFLOW_SLEEP_MS");
+
+      if (sleep_in_buffer_overflow_test_environment_variable != nullptr) {
+        uint32_t value = atoi(sleep_in_buffer_overflow_test_environment_variable);
+        std::this_thread::sleep_for(std::chrono::milliseconds(value));
+      }
+
       size_t rawDataSize = 0;
       std::vector<uint8_t> rawData;
       rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle,
