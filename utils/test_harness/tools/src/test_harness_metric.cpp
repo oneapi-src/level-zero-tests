@@ -1873,7 +1873,8 @@ std::vector<zet_metric_group_handle_t> get_metric_groups_supporting_dma_buf(
   return dma_buf_metric_group_handles;
 }
 
-int get_dma_buf_fd(zet_metric_group_handle_t metric_group_handle) {
+void get_dma_buf_fd_and_size(zet_metric_group_handle_t metric_group_handle,
+                             int &fd, size_t &size) {
   zet_export_dma_buf_exp_properties_t dma_buf_properties{};
   dma_buf_properties.stype = ZET_STRUCTURE_TYPE_EXPORT_DMA_EXP_PROPERTIES;
   dma_buf_properties.pNext = nullptr;
@@ -1889,13 +1890,16 @@ int get_dma_buf_fd(zet_metric_group_handle_t metric_group_handle) {
   ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EXP_TRACER_BASED;
   if (dma_buf_properties.fd != -1) {
     LOG_INFO << "metric group " << metric_group_properties.name
-             << " supports dma buf";
+             << " supports dma buf"
+             << ", fd = " << dma_buf_properties.fd
+             << ", size = " << dma_buf_properties.size;
   }
-  return dma_buf_properties.fd;
+  fd = dma_buf_properties.fd;
+  size = dma_buf_properties.size;
 }
 
 void *map_dma_buf(ze_device_handle_t device, ze_context_handle_t context,
-                  int fd, size_t size) {
+                  int fd, size_t size, size_t alignment) {
   void *mem_ret = nullptr;
   ze_external_memory_import_fd_t mem_import = {};
   mem_import.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_FD;
@@ -1907,8 +1911,8 @@ void *map_dma_buf(ze_device_handle_t device, ze_context_handle_t context,
   mem_desc.pNext = &mem_import;
   mem_desc.flags = 0;
   mem_desc.ordinal = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocDevice(context, &mem_desc, size, 4096, device, &mem_ret));
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemAllocDevice(context, &mem_desc, size,
+                                                alignment, device, &mem_ret));
   ze_memory_allocation_properties_t prop = {};
   prop.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   prop.pNext = NULL;
@@ -1916,6 +1920,18 @@ void *map_dma_buf(ze_device_handle_t device, ze_context_handle_t context,
             zeMemGetAllocProperties(context, mem_ret, &prop, NULL));
   LOG_DEBUG << "zeMemGetAllocProperties returned memory: " << mem_ret;
   return mem_ret;
+}
+
+ze_kernel_handle_t create_copy_kernel(ze_device_handle_t device, void *src_buf,
+                                      void *dst_buf, size_t size, int offset) {
+  auto module = lzt::create_module(device, "copy_module.spv");
+  auto kernel = lzt::create_function(module, "copy_data");
+  lzt::set_argument_value(kernel, 0, sizeof(src_buf), &src_buf);
+  lzt::set_argument_value(kernel, 1, sizeof(dst_buf), &dst_buf);
+  lzt::set_argument_value(kernel, 2, sizeof(int), &offset);
+  lzt::set_argument_value(kernel, 3, sizeof(int), &size);
+  lzt::set_group_size(kernel, 1, 1, 1);
+  return kernel;
 }
 
 } // namespace level_zero_tests
