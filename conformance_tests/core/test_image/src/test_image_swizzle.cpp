@@ -23,7 +23,7 @@ const std::vector<ze_image_type_t> tested_image_types = {
     ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_1DARRAY,
     ZE_IMAGE_TYPE_2DARRAY};
 
-class zeCommandListAppendImageCopyWithSwizzle
+class zeCommandListAppendImageCopyWithSwizzleTests
     : public ::testing::TestWithParam<std::tuple<ze_image_type_t, bool>> {
 protected:
   void SetUp() override {
@@ -56,7 +56,7 @@ public:
   size_t image_size;
 };
 
-void zeCommandListAppendImageCopyWithSwizzle::run_test(
+void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
     ze_image_type_t image_type, bool is_immediate) {
   LOG_INFO << "TYPE - " << image_type;
 
@@ -116,7 +116,7 @@ void zeCommandListAppendImageCopyWithSwizzle::run_test(
   static const bool skip_buffer_type = true;
 }
 
-void zeCommandListAppendImageCopyWithSwizzle::create_in_out_images(
+void zeCommandListAppendImageCopyWithSwizzleTests::create_in_out_images(
     ze_image_type_t image_type) {
   uint32_t array_levels = 0;
   if (image_type == ZE_IMAGE_TYPE_1DARRAY) {
@@ -161,7 +161,7 @@ void zeCommandListAppendImageCopyWithSwizzle::create_in_out_images(
 }
 
 TEST_P(
-    zeCommandListAppendImageCopyWithSwizzle,
+    zeCommandListAppendImageCopyWithSwizzleTests,
     GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturned) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
@@ -173,7 +173,7 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    LZT, zeCommandListAppendImageCopyWithSwizzle,
+    SwizzleTestsParam, zeCommandListAppendImageCopyWithSwizzleTests,
     ::testing::Combine(::testing::ValuesIn(tested_image_types),
                        ::testing::Bool()));
 
