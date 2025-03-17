@@ -19,7 +19,12 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-class zeCommandListAppendImageCopyWithSwizzleTests : public ::testing::Test {
+const std::vector<ze_image_type_t> tested_image_types = {
+    ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_1DARRAY,
+    ZE_IMAGE_TYPE_2DARRAY};
+
+class zeCommandListAppendImageCopyWithSwizzle
+    : public ::testing::TestWithParam<std::tuple<ze_image_type_t, bool>> {
 protected:
   void SetUp() override {
     if (!(lzt::image_support())) {
@@ -27,7 +32,8 @@ protected:
     }
     auto device = lzt::zeDevice::get_instance()->get_device();
     module = lzt::create_module(device, "image_swizzle_tests.spv");
-    tested_image_types = get_supported_image_types(device, false, true);
+    supported_image_types =
+        get_supported_image_types(device, skip_array_type, skip_buffer_type);
   }
 
   void TearDown() override {
@@ -40,16 +46,19 @@ protected:
 public:
   void run_test(ze_image_type_t image_type, bool is_immediate);
 
+  static const bool skip_array_type = false;
+  static const bool skip_buffer_type = true;
+
   ze_image_handle_t img_in, img_out;
   ze_module_handle_t module;
-  std::vector<ze_image_type_t> tested_image_types;
+  std::vector<ze_image_type_t> supported_image_types;
   Dims image_dims;
   size_t image_size;
 };
 
-void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
+void zeCommandListAppendImageCopyWithSwizzle::run_test(
     ze_image_type_t image_type, bool is_immediate) {
-  LOG_INFO << "RUN: TYPE - " << image_type;
+  LOG_INFO << "TYPE - " << image_type;
 
   std::string kernel_name = "swizzle_test_" + shortened_string(image_type);
 
@@ -74,18 +83,17 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
   lzt::append_image_copy_from_mem(bundle.list, img_in, inbuff, nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::suggest_group_size(
-      kernel, image_dims.width, image_dims.height, image_dims.depth,
-      group_size_x, group_size_y, group_size_z);
+  lzt::suggest_group_size(kernel, image_dims.width, image_dims.height,
+                          image_dims.depth, group_size_x, group_size_y,
+                          group_size_z);
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
   lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);
   lzt::set_argument_value(kernel, 1, sizeof(img_out), &img_out);
 
-  ze_group_count_t group_dems = 
-    {(static_cast<uint32_t>(image_dims.width) / group_size_x),
-     (image_dims.height / group_size_y),
-     (image_dims.depth / group_size_z)};
+  ze_group_count_t group_dems = {
+      (static_cast<uint32_t>(image_dims.width) / group_size_x),
+      (image_dims.height / group_size_y), (image_dims.depth / group_size_z)};
   lzt::append_launch_function(bundle.list, kernel, &group_dems, nullptr, 0,
                               nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
@@ -108,7 +116,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   static const bool skip_buffer_type = true;
 }
 
-void zeCommandListAppendImageCopyWithSwizzleTests::create_in_out_images(
+void zeCommandListAppendImageCopyWithSwizzle::create_in_out_images(
     ze_image_type_t image_type) {
   uint32_t array_levels = 0;
   if (image_type == ZE_IMAGE_TYPE_1DARRAY) {
@@ -152,25 +160,21 @@ void zeCommandListAppendImageCopyWithSwizzleTests::create_in_out_images(
   img_out = lzt::create_ze_image(image_descriptor_dest);
 }
 
-void RunGivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernel(
-    zeCommandListAppendImageCopyWithSwizzleTests &test, bool is_immediate) {
-  for (auto image_type : test.tested_image_types) {
-    test.run_test(image_type, is_immediate);
-  }
-}
-
-TEST_F(
-    zeCommandListAppendImageCopyWithSwizzleTests,
+TEST_P(
+    zeCommandListAppendImageCopyWithSwizzle,
     GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturned) {
-  RunGivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernel(
-      *this, false);
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto is_immediate = std::get<1>(GetParam());
+  run_test(image_type, is_immediate);
 }
 
-TEST_F(
-    zeCommandListAppendImageCopyWithSwizzleTests,
-    GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelOnImmediateCmdListThenImageIsCorrectAndSuccessIsReturned) {
-  RunGivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernel(
-      *this, true);
-}
+INSTANTIATE_TEST_SUITE_P(
+    LZT, zeCommandListAppendImageCopyWithSwizzle,
+    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+                       ::testing::Bool()));
 
 } // namespace

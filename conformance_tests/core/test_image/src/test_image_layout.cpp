@@ -44,7 +44,7 @@ public:
     LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format_type;
     LOG_INFO << "LAYOUT: BASE - " << base_layout << " CONVERT - "
              << convert_layout;
-    cmd_bundle = lzt::create_command_bundle(is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
     std::string kernel_name = get_kernel(format_type, image_type);
     LOG_DEBUG << "kernel_name = " << kernel_name;
     ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
@@ -174,7 +174,6 @@ public:
   static const bool skip_array_type = false;
   static const bool skip_buffer_type = true;
 
-  lzt::zeCommandBundle cmd_bundle;
   ze_module_handle_t module;
   std::vector<ze_image_type_t> supported_image_types;
   Dims image_dims;
@@ -288,13 +287,14 @@ ImageLayoutFixture::create_image_desc_layout(ze_image_format_layout_t layout,
   return image;
 }
 
-class ImageLayoutOneOrNoKernel
+class zeImageLayoutOneOrNoKernelTests
     : public ImageLayoutFixture,
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_type_t,
                      ze_image_format_layout_t, bool>> {};
 
-TEST_P(ImageLayoutOneOrNoKernel, GivenImageLayoutWhenConvertingImageToMemory) {
+TEST_P(zeImageLayoutOneOrNoKernelTests,
+       GivenImageLayoutWhenConvertingImageToMemory) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -307,7 +307,7 @@ TEST_P(ImageLayoutOneOrNoKernel, GivenImageLayoutWhenConvertingImageToMemory) {
 }
 
 TEST_P(
-    ImageLayoutOneOrNoKernel,
+    zeImageLayoutOneOrNoKernelTests,
     GivenImageLayoutWhenPassingImageThroughKernelAndConvertingImageToMemory) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
@@ -321,46 +321,47 @@ TEST_P(
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    TestLayoutUIntFormat, ImageLayoutOneOrNoKernel,
+    TestLayoutUIntFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(tested_image_types),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT),
                        ::testing::ValuesIn(lzt::image_format_layout_uint),
                        ::testing::Bool()));
 
 INSTANTIATE_TEST_SUITE_P(
-    TestLayoutSIntFormat, ImageLayoutOneOrNoKernel,
+    TestLayoutSIntFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(tested_image_types),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_SINT),
                        ::testing::ValuesIn(lzt::image_format_layout_sint),
                        ::testing::Bool()));
 
 INSTANTIATE_TEST_SUITE_P(
-    TestLayoutUNormFormat, ImageLayoutOneOrNoKernel,
+    TestLayoutUNormFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(tested_image_types),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UNORM),
                        ::testing::ValuesIn(lzt::image_format_layout_unorm),
                        ::testing::Bool()));
 
 INSTANTIATE_TEST_SUITE_P(
-    TestLayoutSNormFormat, ImageLayoutOneOrNoKernel,
+    TestLayoutSNormFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(tested_image_types),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_SNORM),
                        ::testing::ValuesIn(lzt::image_format_layout_snorm),
                        ::testing::Bool()));
 
 INSTANTIATE_TEST_SUITE_P(
-    TestLayoutFloatFormat, ImageLayoutOneOrNoKernel,
+    TestLayoutFloatFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(tested_image_types),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
                        ::testing::ValuesIn(lzt::image_format_layout_float),
                        ::testing::Bool()));
 
-class ImageLayoutTwoKernels
+class zeImageLayoutTwoKernelsTests
     : public ImageLayoutFixture,
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_type_t, bool>> {};
 
-TEST_P(ImageLayoutTwoKernels, GivenImageLayoutWhenKernelConvertingImage) {
+TEST_P(zeImageLayoutTwoKernelsTests,
+       GivenImageLayoutWhenKernelConvertingImage) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -414,7 +415,7 @@ TEST_P(ImageLayoutTwoKernels, GivenImageLayoutWhenKernelConvertingImage) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    TestLayoutTwoKernels, ImageLayoutTwoKernels,
+    LayoutTwoKernelsTestsParam, zeImageLayoutTwoKernelsTests,
     ::testing::Combine(::testing::ValuesIn(tested_image_types),
                        lzt::image_format_types, ::testing::Bool()));
 

@@ -1,3 +1,11 @@
+/*
+ *
+ * Copyright (C) 2025 Intel Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ */
+
 #include "helpers_test_image.hpp"
 
 namespace lzt = level_zero_tests;
@@ -48,17 +56,17 @@ std::vector<ze_image_type_t> get_supported_image_types(
   if (properties.maxImageDims1D > 0) {
     supported_types.emplace_back(ZE_IMAGE_TYPE_1D);
   } else {
-    LOG_INFO << std::to_string(ZE_IMAGE_TYPE_1D) << " unsupported";
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_1D) << " unsupported";
   }
   if (properties.maxImageDims2D > 0) {
     supported_types.emplace_back(ZE_IMAGE_TYPE_2D);
   } else {
-    LOG_INFO << std::to_string(ZE_IMAGE_TYPE_2D) << " unsupported";
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_2D) << " unsupported";
   }
   if (properties.maxImageDims3D > 0) {
     supported_types.emplace_back(ZE_IMAGE_TYPE_3D);
   } else {
-    LOG_INFO << std::to_string(ZE_IMAGE_TYPE_3D) << " unsupported";
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_3D) << " unsupported";
   }
 
   if (properties.maxImageArraySlices > 0) {
@@ -67,8 +75,8 @@ std::vector<ze_image_type_t> get_supported_image_types(
                              {ZE_IMAGE_TYPE_1DARRAY, ZE_IMAGE_TYPE_2DARRAY});
     }
   } else {
-    LOG_INFO << std::to_string(ZE_IMAGE_TYPE_1DARRAY) << ", "
-             << std::to_string(ZE_IMAGE_TYPE_2DARRAY) << " unsupported";
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_1DARRAY) << ", "
+             << lzt::to_string(ZE_IMAGE_TYPE_2DARRAY) << " unsupported";
   }
 
   if (properties.maxImageBufferSize > 0) {
@@ -76,7 +84,7 @@ std::vector<ze_image_type_t> get_supported_image_types(
       supported_types.emplace_back(ZE_IMAGE_TYPE_BUFFER);
     }
   } else {
-    LOG_INFO << std::to_string(ZE_IMAGE_TYPE_BUFFER) << " unsupported";
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_BUFFER) << " unsupported";
   }
   return supported_types;
 }

@@ -6,12 +6,13 @@
  *
  */
 
-#ifndef level_zero_tests_HELPERS_TEST_IMAGE_HPP
-#define level_zero_tests_HELPERS_TEST_IMAGE_HPP
+#ifndef CONFORMANCE_TESTS_CORE_TEST_IMAGE_INCLUDE_HELPERS_TEST_IMAGE_HPP
+#define CONFORMANCE_TESTS_CORE_TEST_IMAGE_INCLUDE_HELPERS_TEST_IMAGE_HPP
 
 #include <string>
 #include <vector>
 #include <algorithm>
+
 #include "test_harness/test_harness.hpp"
 
 struct Dims {
