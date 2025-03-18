@@ -313,16 +313,16 @@ void metric_tracer_decode(
     std::vector<zet_metric_entry_exp_t> *ptr_metric_entries);
 
 std::vector<zet_metric_group_handle_t> get_metric_groups_supporting_dma_buf(
-    const std::vector<zet_metric_group_handle_t> &metric_group_handles);
+    const std::vector<zet_metric_group_handle_t> &metric_group_handles,
+    zet_metric_group_sampling_type_flags_t sampling_type);
 
-void get_dma_buf_fd_and_size(zet_metric_group_handle_t metric_group_handle,
-                             int &fd, size_t &size);
+void metric_get_dma_buf_fd_and_size(
+    zet_metric_group_handle_t metric_group_handle, int &fd, size_t &size);
 
-void *map_dma_buf(ze_device_handle_t device, ze_context_handle_t context,
-                  int fd, size_t size, size_t alignment);
+void *metric_map_dma_buf_fd_to_memory(ze_device_handle_t device,
+                                      ze_context_handle_t context, int fd,
+                                      size_t size, size_t alignment);
 
-ze_kernel_handle_t create_copy_kernel(ze_device_handle_t device, void *src_buf,
-                                      void *dst_buf, size_t size, int offset);
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */
