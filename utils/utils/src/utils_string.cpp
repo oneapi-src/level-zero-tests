@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -451,17 +451,20 @@ ze_image_flags_t to_image_flag(const std::string flag) {
 }
 
 std::string to_string(const ze_image_type_t type) {
-  if (type == ZE_IMAGE_TYPE_1D) {
+  switch (type) {
+  case ZE_IMAGE_TYPE_1D:
     return "ZE_IMAGE_TYPE_1D";
-  } else if (type == ZE_IMAGE_TYPE_2D) {
-    return "ZE_IMAGE_TYPE_2D";
-  } else if (type == ZE_IMAGE_TYPE_3D) {
-    return "ZE_IMAGE_TYPE_3D";
-  } else if (type == ZE_IMAGE_TYPE_1DARRAY) {
+  case ZE_IMAGE_TYPE_1DARRAY:
     return "ZE_IMAGE_TYPE_1DARRAY";
-  } else if (type == ZE_IMAGE_TYPE_2DARRAY) {
+  case ZE_IMAGE_TYPE_2D:
+    return "ZE_IMAGE_TYPE_2D";
+  case ZE_IMAGE_TYPE_2DARRAY:
     return "ZE_IMAGE_TYPE_2DARRAY";
-  } else {
+  case ZE_IMAGE_TYPE_3D:
+    return "ZE_IMAGE_TYPE_3D";
+  case ZE_IMAGE_TYPE_BUFFER:
+    return "ZE_IMAGE_TYPE_BUFFER";
+  default:
     return "Unknown ze_image_type_t value: " +
            std::to_string(static_cast<int>(type));
   }

@@ -7,6 +7,7 @@ add_lzt_test(
   SOURCES
     src/test_image.cpp
     src/test_image_formats.cpp
+    src/helpers_test_image.cpp
     src/test_image_layout.cpp
     src/test_image_swizzle.cpp
     src/test_image_view.cpp

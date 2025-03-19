@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -89,6 +89,7 @@ const std::vector<ze_image_format_swizzle_t> image_format_swizzles_all = {
     ZE_IMAGE_FORMAT_SWIZZLE_0, ZE_IMAGE_FORMAT_SWIZZLE_1,
     ZE_IMAGE_FORMAT_SWIZZLE_X};
 
+size_t get_format_component_count(ze_image_format_layout_t layout);
 bool image_support();
 void print_image_format_descriptor(const ze_image_format_t descriptor);
 void print_image_descriptor(const ze_image_desc_t descriptor);

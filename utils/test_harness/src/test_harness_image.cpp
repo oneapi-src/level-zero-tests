@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -15,6 +15,37 @@
 namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
+
+size_t get_format_component_count(ze_image_format_layout_t layout) {
+  size_t components = 1;
+  switch (layout) {
+  case ZE_IMAGE_FORMAT_LAYOUT_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32:
+    components = 1;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32:
+    components = 2;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_11_11_10:
+  case ZE_IMAGE_FORMAT_LAYOUT_5_6_5:
+    components = 3;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32:
+  case ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2:
+  case ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1:
+  case ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4:
+    components = 4;
+    break;
+  default:
+    throw std::runtime_error("Unhandled layout");
+  }
+  return components;
+}
 
 bool image_support() {
   ze_device_image_properties_t properties{};
