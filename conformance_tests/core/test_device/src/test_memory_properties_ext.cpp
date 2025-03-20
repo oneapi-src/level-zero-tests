@@ -118,7 +118,8 @@ TEST(
   }
 
   ze_device_p2p_bandwidth_exp_properties_t P2PBandwidthProps = {};
-  P2PBandwidthProps.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_BANDWIDTH_EXP_PROPERTIES;
+  P2PBandwidthProps.stype =
+      ZE_STRUCTURE_TYPE_DEVICE_P2P_BANDWIDTH_EXP_PROPERTIES;
   ze_device_p2p_properties_t P2PProps = {};
   P2PProps.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
   P2PProps.pNext = &P2PBandwidthProps;
@@ -140,4 +141,4 @@ TEST(
 #else
 #warning                                                                       \
     "ZE_DEVICE_MEMORY_PROPERTIES_EXT support not found, not building tests for it"
-#endif //#ifdef ZE_DEVICE_MEMORY_PROPERTIES_EXT_NAME
+#endif // #ifdef ZE_DEVICE_MEMORY_PROPERTIES_EXT_NAME

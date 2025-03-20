@@ -21,7 +21,8 @@ namespace {
 
 // TEST(
 //     MetricNegativeTests,
-//     GivenZesDevicePropertiesWithInvalidParametersThenGetParameterValidationErrorReturns) {
+//     GivenZesDevicePropertiesWithInvalidParametersThenGetParameterValidationErrorReturns)
+//     {
 
 //   auto driver = lzt::get_default_driver();
 //   auto device = lzt::get_default_device(driver);

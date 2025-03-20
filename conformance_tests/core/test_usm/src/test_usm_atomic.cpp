@@ -220,104 +220,101 @@ INSTANTIATE_TEST_SUITE_P(
 
 class AtomicAccessTests : public ::testing::Test {};
 
-TEST_F(AtomicAccessTests,
-       SetAndGetAccessTypeForSharedAllocation) {
+TEST_F(AtomicAccessTests, SetAndGetAccessTypeForSharedAllocation) {
   auto context = lzt::get_default_context();
   auto device = lzt::get_default_device(lzt::get_default_driver());
 
   auto alloc_data = static_cast<int *>(lzt::allocate_shared_memory(
-              size * sizeof(int), 1, 0, 0, device, context));
+      size * sizeof(int), 1, 0, 0, device, context));
 
   auto memory_access_properties = lzt::get_memory_access_properties(device);
   ze_memory_atomic_attr_exp_flags_t access_type;
   ze_result_t result;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemSetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_ATOMICS));
-  
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemSetAtomicAccessAttributeExp(
+                                   context, device, alloc_data, size,
+                                   ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_ATOMICS));
+
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, &access_type));
+            zeMemGetAtomicAccessAttributeExp(context, device, alloc_data, size,
+                                             &access_type));
   EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_ATOMICS, access_type);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemSetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_HOST_ATOMICS));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemSetAtomicAccessAttributeExp(
+                context, device, alloc_data, size,
+                ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_HOST_ATOMICS));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, &access_type));
+            zeMemGetAtomicAccessAttributeExp(context, device, alloc_data, size,
+                                             &access_type));
   EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_HOST_ATOMICS, access_type);
 
-  result = zeMemSetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_HOST_ATOMICS);
+  result = zeMemSetAtomicAccessAttributeExp(
+      context, device, alloc_data, size,
+      ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_HOST_ATOMICS);
 
-  if (!(memory_access_properties.hostAllocCapabilities & ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC)) {
+  if (!(memory_access_properties.hostAllocCapabilities &
+        ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC)) {
     EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT, result);
   } else {
     EXPECT_EQ(ZE_RESULT_SUCCESS, result);
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, &access_type));
+              zeMemGetAtomicAccessAttributeExp(context, device, alloc_data,
+                                               size, &access_type));
     EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_HOST_ATOMICS, access_type);
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemSetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_DEVICE_ATOMICS));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemSetAtomicAccessAttributeExp(
+                context, device, alloc_data, size,
+                ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_DEVICE_ATOMICS));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, &access_type));
+            zeMemGetAtomicAccessAttributeExp(context, device, alloc_data, size,
+                                             &access_type));
   EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_DEVICE_ATOMICS, access_type);
 
-  result = zeMemSetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_DEVICE_ATOMICS);
+  result = zeMemSetAtomicAccessAttributeExp(
+      context, device, alloc_data, size,
+      ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_DEVICE_ATOMICS);
 
-  if (!(memory_access_properties.deviceAllocCapabilities & ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC)) {
+  if (!(memory_access_properties.deviceAllocCapabilities &
+        ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC)) {
     EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT, result);
   } else {
     EXPECT_EQ(ZE_RESULT_SUCCESS, result);
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, &access_type));
+              zeMemGetAtomicAccessAttributeExp(context, device, alloc_data,
+                                               size, &access_type));
     EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_DEVICE_ATOMICS, access_type);
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemSetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_SYSTEM_ATOMICS));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemSetAtomicAccessAttributeExp(
+                context, device, alloc_data, size,
+                ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_SYSTEM_ATOMICS));
 
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, &access_type));
+            zeMemGetAtomicAccessAttributeExp(context, device, alloc_data, size,
+                                             &access_type));
   EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_NO_SYSTEM_ATOMICS, access_type);
 
-  result = zeMemSetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_SYSTEM_ATOMICS);
+  result = zeMemSetAtomicAccessAttributeExp(
+      context, device, alloc_data, size,
+      ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_SYSTEM_ATOMICS);
 
-  if (!(memory_access_properties.sharedSingleDeviceAllocCapabilities & ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC)) {
+  if (!(memory_access_properties.sharedSingleDeviceAllocCapabilities &
+        ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC)) {
     EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT, result);
   } else {
     EXPECT_EQ(ZE_RESULT_SUCCESS, result);
     EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAtomicAccessAttributeExp(context,
-                                         device,
-                                         alloc_data, size, &access_type));
+              zeMemGetAtomicAccessAttributeExp(context, device, alloc_data,
+                                               size, &access_type));
     EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_SYSTEM_ATOMICS, access_type);
   }
   lzt::free_memory(context, alloc_data);
 } // namespace
-
 
 } // namespace

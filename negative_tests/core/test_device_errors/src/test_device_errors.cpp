@@ -36,8 +36,9 @@ TEST(
   }
 }
 
-// Temporarily disabling this test until stype and pNext validation in validation layer can be fixed.
-// TEST(DeviceNegativeTests, GivenInvalidStypeWhen) {
+// Temporarily disabling this test until stype and pNext validation in
+// validation layer can be fixed. TEST(DeviceNegativeTests,
+// GivenInvalidStypeWhen) {
 //   auto driver = lzt::get_default_driver();
 //   auto device = lzt::get_default_device(driver);
 
@@ -90,14 +91,16 @@ TEST(
 //   }
 
 //   ASSERT_EQ(ZE_RESULT_SUCCESS,
-//             zeDeviceGetCacheProperties(device, &count, cacheProperties.data()));
+//             zeDeviceGetCacheProperties(device, &count,
+//             cacheProperties.data()));
 
 //   ze_device_cache_properties_t dummyCacheProperties = {
 //       (ze_structure_type_t)0xaaaa, nullptr};
 //   cacheProperties[0].pNext = &dummyCacheProperties;
 
 //   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
-//             zeDeviceGetCacheProperties(device, &count, cacheProperties.data()));
+//             zeDeviceGetCacheProperties(device, &count,
+//             cacheProperties.data()));
 // }
 
 } // namespace

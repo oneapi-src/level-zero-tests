@@ -25,9 +25,9 @@ std::string shortened_string(ze_image_type_t type);
 
 Dims get_sample_image_dims(ze_image_type_t image_type);
 
-std::vector<ze_image_type_t> get_supported_image_types(
-    ze_device_handle_t device,
-    bool exclude_arrays = false,
-    bool exclude_buffer = false);
+std::vector<ze_image_type_t>
+get_supported_image_types(ze_device_handle_t device,
+                          bool exclude_arrays = false,
+                          bool exclude_buffer = false);
 
 #endif

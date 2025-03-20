@@ -14,7 +14,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
     bool divide_buffers) {
 
   size_t total_buffer_size = 0;
-  
+
   size_t num_engines = queues.size();
   size_t chunk = buffer_size / num_engines;
 
@@ -733,9 +733,9 @@ void ZePeer::bandwidth_latency_parallel_to_multiple_targets(
         test_type, transfer_type, remote_device_ids, local_device_ids,
         buffer_size, divide_buffers);
   } else {
-    perform_parallel_copy_to_multiple_targets(test_type, transfer_type,
-                                              remote_device_ids,
-                                              local_device_ids, buffer_size, divide_buffers);
+    perform_parallel_copy_to_multiple_targets(
+        test_type, transfer_type, remote_device_ids, local_device_ids,
+        buffer_size, divide_buffers);
   }
 
   if (validate_results) {

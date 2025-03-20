@@ -19,8 +19,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-// Temporarily disabling this test until stype and pNext validation in validation layer can be fixed.
-// TEST(MetricNegativeTests,
+// Temporarily disabling this test until stype and pNext validation in
+// validation layer can be fixed. TEST(MetricNegativeTests,
 //      GivenInvalidMetricParametersThenGetParameterValidationErrorReturns) {
 
 //   auto driver = lzt::get_default_driver();
@@ -35,14 +35,16 @@ namespace {
 //       ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, 1000, 40000};
 
 //   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
-//             zetMetricStreamerOpen(nullptr, device, test_handle, &streamer_desc1,
+//             zetMetricStreamerOpen(nullptr, device, test_handle,
+//             &streamer_desc1,
 //                                   nullptr, &streamer));
 //   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
 //             zetMetricStreamerOpen(lzt::get_default_context(), nullptr,
 //                                   test_handle, &streamer_desc1, nullptr,
 //                                   &streamer));
 //   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
-//             zetMetricStreamerOpen(lzt::get_default_context(), device, nullptr,
+//             zetMetricStreamerOpen(lzt::get_default_context(), device,
+//             nullptr,
 //                                   &streamer_desc1, nullptr, &streamer));
 //   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
 //             zetMetricStreamerOpen(lzt::get_default_context(), device,

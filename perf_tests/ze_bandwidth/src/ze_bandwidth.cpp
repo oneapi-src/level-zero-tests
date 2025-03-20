@@ -547,9 +547,9 @@ void ZeBandwidth::test_bidir(void) {
       benchmark->memoryAllocHost(size, &host_buffers_bidir[device_id]);
     }
 
-    transfer_bidir_size_test(size, device_buffers, host_buffers, host_buffers_bidir,
-                             device_buffers_bidir, device_times_nsec,
-                             total_time_nsec);
+    transfer_bidir_size_test(size, device_buffers, host_buffers,
+                             host_buffers_bidir, device_buffers_bidir,
+                             device_times_nsec, total_time_nsec);
 
     std::cout << "-----------------------------------------------------"
                  "---------------------------\n";

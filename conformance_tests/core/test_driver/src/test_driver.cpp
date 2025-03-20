@@ -69,8 +69,8 @@ TEST(zeDriverGetLastErrorDescription,
 
 #ifdef ZE_API_VERSION_CURRENT_M
 TEST(
-  zeInitDrivers,
-  GivenCallToZeInitDriversWithAllCombinationsOfFlagsThenExpectAtLeastOneValidDriverHandle) {
+    zeInitDrivers,
+    GivenCallToZeInitDriversWithAllCombinationsOfFlagsThenExpectAtLeastOneValidDriverHandle) {
 
   uint32_t pCount = 0;
   ze_init_driver_type_desc_t desc = {ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC};
@@ -103,8 +103,8 @@ TEST(
 }
 
 TEST(
-  zeInitDrivers,
-  GivenCallToZeInitDriversAndZeInitWithAllCombinationsOfFlagsThenExpectAtLeastOneValidDriverHandle) {
+    zeInitDrivers,
+    GivenCallToZeInitDriversAndZeInitWithAllCombinationsOfFlagsThenExpectAtLeastOneValidDriverHandle) {
 
   uint32_t pCount = 0;
   ze_init_driver_type_desc_t desc = {ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC};

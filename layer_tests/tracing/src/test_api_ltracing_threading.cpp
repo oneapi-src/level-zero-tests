@@ -179,7 +179,8 @@ protected:
 };
 
 #ifdef USE_RUNTIME_TRACING
-class LDynamicTracingThreadTestsDisabling : public LTracingThreadTestsDisabling {};
+class LDynamicTracingThreadTestsDisabling
+    : public LTracingThreadTestsDisabling {};
 #define LTRACING_THREAD_DISABLING_TEST_NAME LDynamicTracingThreadTestsDisabling
 #else // USE Tracing ENV
 #define LTRACING_THREAD_DISABLING_TEST_NAME LTracingThreadTestsDisabling
