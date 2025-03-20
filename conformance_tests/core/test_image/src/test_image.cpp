@@ -474,7 +474,9 @@ TEST_P(zeImageGetAllocPropertiesExtTests,
   case ZE_IMAGE_FORMAT_TYPE_FLOAT: {
     img_fmt_layouts = lzt::image_format_layout_float;
   } break;
-  default: { EXPECT_TRUE(false); } break;
+  default: {
+    EXPECT_TRUE(false);
+  } break;
   }
 
   ze_device_image_properties_t device_img_properties = {
@@ -593,7 +595,9 @@ TEST_P(
   case ZE_IMAGE_FORMAT_TYPE_FLOAT: {
     img_fmt_layouts = lzt::image_format_layout_float;
   } break;
-  default: { EXPECT_TRUE(false); } break;
+  default: {
+    EXPECT_TRUE(false);
+  } break;
   }
 
   ze_device_image_properties_t device_img_properties = {

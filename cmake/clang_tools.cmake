@@ -1,8 +1,8 @@
-# Copyright (C) 2019 Intel Corporation
+# Copyright (C) 2019-2025 Intel Corporation
 # SPDX-License-Identifier: MIT
-find_program(CLANG_FORMAT NAMES clang-format-7)
+find_program(CLANG_FORMAT NAMES clang-format-14)
 if(CLANG_FORMAT)
-    message(STATUS "Found clang-format-7: ${CLANG_FORMAT}")
+    message(STATUS "Found clang-format: ${CLANG_FORMAT}")
     add_custom_target(clang-format
       COMMENT "Checking code formatting and fixing issues"
       COMMAND
@@ -17,5 +17,5 @@ if(CLANG_FORMAT)
       COMMAND ! [ -s ${CMAKE_BINARY_DIR}/clang_format_results.patch ]
     )
 else()
-    message(WARNING "clang-format-7 not found. clang-format and clang-format-check targets will be disabled.")
+    message(WARNING "clang-format not found. clang-format and clang-format-check targets will be disabled.")
 endif()

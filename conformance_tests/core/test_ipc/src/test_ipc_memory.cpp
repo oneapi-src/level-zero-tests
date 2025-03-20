@@ -41,7 +41,8 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   lzt::print_platform_overview();
 
   bipc::named_semaphore::remove("ipc_memory_test_semaphore");
-  bipc::named_semaphore semaphore(bipc::create_only, "ipc_memory_test_semaphore", 0);
+  bipc::named_semaphore semaphore(bipc::create_only,
+                                  "ipc_memory_test_semaphore", 0);
 
   bipc::shared_memory_object::remove("ipc_memory_test");
   // launch child

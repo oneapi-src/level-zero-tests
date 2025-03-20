@@ -16,9 +16,10 @@ FILES=$( \
     $TMP_SRC/negative_tests \
     $TMP_SRC/perf_tests \
     $TMP_SRC/utils \
-    -name '*.cpp' -or -name '*.hpp' \
+    $TMP_SRC/layer_tests \
+    -name '*.cpp' -or -name '*.hpp' -or -name '*.h'
 )
-clang-format-7 -style=file -i $FILES >/dev/null
+clang-format-14 -style=file -i $FILES >/dev/null
 
 git -C $TMP_SRC diff
 

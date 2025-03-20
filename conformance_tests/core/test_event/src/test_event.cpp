@@ -903,8 +903,9 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices,
   ep_desc.count = 10;
   ze_context_handle_t context = lzt::create_context();
   auto ep = lzt::create_event_pool(context, ep_desc, devices);
-  ze_event_scope_flag_t flag = (ze_event_scope_flag_t)(
-      ZE_EVENT_SCOPE_FLAG_DEVICE | ZE_EVENT_SCOPE_FLAG_SUBDEVICE);
+  ze_event_scope_flag_t flag =
+      (ze_event_scope_flag_t)(ZE_EVENT_SCOPE_FLAG_DEVICE |
+                              ZE_EVENT_SCOPE_FLAG_SUBDEVICE);
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
   event_desc.index = 0;

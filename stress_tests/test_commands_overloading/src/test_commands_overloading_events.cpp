@@ -136,7 +136,8 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
   uint64_t dispatch_id = 0;
   ze_module_handle_t module_handle =
       lzt::create_module(context, device, "test_commands_overloading.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required", nullptr);
+                         ZE_MODULE_FORMAT_IL_SPIRV,
+                         "-ze-opt-greater-than-4GB-buffer-required", nullptr);
   std::string kernel_name = "test_device_memory1";
   ze_kernel_handle_t kernel_handle = create_kernel(
       module_handle, kernel_name, output_allocations, dispatch_id);
@@ -157,16 +158,13 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
   for (uint32_t data_idx = 0; data_idx < test_arguments.multiplier;
        data_idx++) {
     ze_event_desc_t event_desc_set = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
-                                      3 * data_idx, 0,
-                                      0};
+                                      3 * data_idx, 0, 0};
 
     ze_event_desc_t event_desc_exec = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
-                                       3 * data_idx + 1, 0,
-                                       0};
+                                       3 * data_idx + 1, 0, 0};
 
     ze_event_desc_t event_desc_read = {ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr,
-                                       3 * data_idx + 2, 0,
-                                       0};
+                                       3 * data_idx + 2, 0, 0};
     set_memory_events[data_idx] =
         lzt::create_event(memory_pool, event_desc_set);
     exec_memory_events[data_idx] =
@@ -374,9 +372,9 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
                             set_memory_events[data_idx]);
 
     lzt::append_memory_copy(
-        command_list, &data_for_all_dispatches[data_idx][0], &output_allocations[data_idx][0],
-        (size_t)sizeof(uint32_t), read_memory_events[data_idx], 1,
-        &set_memory_events[data_idx]);
+        command_list, &data_for_all_dispatches[data_idx][0],
+        &output_allocations[data_idx][0], (size_t)sizeof(uint32_t),
+        read_memory_events[data_idx], 1, &set_memory_events[data_idx]);
 
     lzt::append_wait_on_events(command_list, 1, &read_memory_events[data_idx]);
   }
@@ -406,7 +404,8 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
        byte_idx++) {
     if (data_for_all_dispatches[byte_idx][0] != byte_idx) {
       LOG_ERROR << "Results for byte offset ==  " << byte_idx << " failed. "
-                << "Found = 0x" << std::bitset<32>(data_for_all_dispatches[byte_idx][0])
+                << "Found = 0x"
+                << std::bitset<32>(data_for_all_dispatches[byte_idx][0])
                 << " expected = 0x" << std::bitset<32>(byte_idx);
       memory_test_failure = true;
       break;
@@ -425,9 +424,8 @@ struct CombinationsTestNameSuffix {
   }
 };
 
-std::vector<uint64_t> multiple_events = {
-    1,    32,   64,    128,    256,     512,     1024,
-    5000, 9000, 10000, 50000};
+std::vector<uint64_t> multiple_events = {1,    32,   64,   128,   256,  512,
+                                         1024, 5000, 9000, 10000, 50000};
 
 INSTANTIATE_TEST_CASE_P(
     TestEventsMatrixMinMemory, zeDriverMultiplyEventsStressTest,

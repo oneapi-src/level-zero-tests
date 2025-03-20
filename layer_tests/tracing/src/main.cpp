@@ -12,10 +12,10 @@
 #include <level_zero/loader/ze_loader.h>
 
 int main(int argc, char **argv) {
-  #ifndef USE_RUNTIME_TRACING
+#ifndef USE_RUNTIME_TRACING
   static char tracing_env[] = "ZE_ENABLE_TRACING_LAYER=1";
   putenv(tracing_env);
-  #endif
+#endif
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
@@ -25,14 +25,14 @@ int main(int argc, char **argv) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
   }
-  #ifdef USE_RUNTIME_TRACING
+#ifdef USE_RUNTIME_TRACING
   zelEnableTracingLayer();
-  #endif
+#endif
   LOG_TRACE << "Driver initialized";
 
   auto ret = RUN_ALL_TESTS();
-  #ifdef USE_RUNTIME_TRACING
+#ifdef USE_RUNTIME_TRACING
   zelDisableTracingLayer();
-  #endif
+#endif
   return ret;
 }

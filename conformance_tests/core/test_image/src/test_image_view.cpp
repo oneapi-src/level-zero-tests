@@ -18,8 +18,8 @@ namespace {
 class zeImageViewCreateTests : public ::testing::Test {
 public:
   void SetUp() override {
-    supported_img_types = get_supported_image_types(
-        lzt::zeDevice::get_instance()->get_device());
+    supported_img_types =
+        get_supported_image_types(lzt::zeDevice::get_instance()->get_device());
     if (supported_img_types.size() == 0) {
       GTEST_SKIP() << "Device does not support images";
     }

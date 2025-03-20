@@ -45,10 +45,9 @@ Dims get_sample_image_dims(ze_image_type_t image_type) {
   }
 }
 
-std::vector<ze_image_type_t> get_supported_image_types(
-    ze_device_handle_t device,
-    bool exclude_arrays,
-    bool exclude_buffer) {
+std::vector<ze_image_type_t>
+get_supported_image_types(ze_device_handle_t device, bool exclude_arrays,
+                          bool exclude_buffer) {
   std::vector<ze_image_type_t> supported_types{};
 
   auto properties = lzt::get_image_properties(device);
