@@ -200,24 +200,25 @@ bool check_metric_type_ip(ze_device_handle_t device, std::string groupName,
 std::vector<zet_metric_group_handle_t> get_concurrent_metric_group(
     ze_device_handle_t device,
     std::vector<zet_metric_group_handle_t> &metricGroupHandleList) {
+  std::vector<zet_metric_group_handle_t> concurrentMetricGroupList{};
+  if (metricGroupHandleList.size() != 0) {
+    uint32_t concurrentGroupCount = 0;
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zetDeviceGetConcurrentMetricGroupsExp(
+                                     device, metricGroupHandleList.size(),
+                                     metricGroupHandleList.data(), nullptr,
+                                     &concurrentGroupCount));
+    std::vector<uint32_t> countPerConcurrentGroup(concurrentGroupCount);
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetDeviceGetConcurrentMetricGroupsExp(
+                  device, metricGroupHandleList.size(),
+                  metricGroupHandleList.data(), countPerConcurrentGroup.data(),
+                  &concurrentGroupCount));
 
-  uint32_t concurrentGroupCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDeviceGetConcurrentMetricGroupsExp(
-                device, metricGroupHandleList.size(),
-                metricGroupHandleList.data(), nullptr, &concurrentGroupCount));
-  std::vector<uint32_t> countPerConcurrentGroup(concurrentGroupCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDeviceGetConcurrentMetricGroupsExp(
-                device, metricGroupHandleList.size(),
-                metricGroupHandleList.data(), countPerConcurrentGroup.data(),
-                &concurrentGroupCount));
+    uint32_t metricGroupCountInConcurrentGroup = countPerConcurrentGroup[0];
 
-  std::vector<zet_metric_group_handle_t> concurrentMetricGroupList;
-  uint32_t metricGroupCountInConcurrentGroup = countPerConcurrentGroup[0];
-
-  for (uint32_t i = 0; i < metricGroupCountInConcurrentGroup; i++) {
-    concurrentMetricGroupList.push_back(metricGroupHandleList[i]);
+    for (uint32_t i = 0; i < metricGroupCountInConcurrentGroup; i++) {
+      concurrentMetricGroupList.push_back(metricGroupHandleList[i]);
+    }
   }
   return concurrentMetricGroupList;
 }
@@ -1846,6 +1847,80 @@ void metric_tracer_decode(
   LOG_DEBUG << "actual decoded metric entry count: "
             << *ptr_metric_entries_count;
   LOG_DEBUG << "raw data decoded: " << *ptr_raw_data_size << " bytes";
+}
+
+std::vector<zet_metric_group_handle_t> get_metric_groups_supporting_dma_buf(
+    const std::vector<zet_metric_group_handle_t> &metric_group_handles,
+    zet_metric_group_sampling_type_flags_t sampling_type) {
+  std::vector<zet_metric_group_handle_t> dma_buf_metric_group_handles;
+  for (auto metric_group_handle : metric_group_handles) {
+    zet_metric_group_type_exp_t metric_group_type{};
+    metric_group_type.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_TYPE_EXP;
+    metric_group_type.pNext = nullptr;
+    metric_group_type.type = ZET_METRIC_GROUP_TYPE_EXP_FLAG_FORCE_UINT32;
+    zet_metric_group_properties_t metric_group_properties = {};
+    metric_group_properties.pNext = &metric_group_type;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricGroupGetProperties(metric_group_handle,
+                                          &metric_group_properties));
+    if (metric_group_properties.samplingType == sampling_type &&
+        metric_group_type.type ==
+            ZET_METRIC_GROUP_TYPE_EXP_FLAG_EXPORT_DMA_BUF) {
+      dma_buf_metric_group_handles.push_back(metric_group_handle);
+    }
+  }
+  return dma_buf_metric_group_handles;
+}
+
+void metric_get_dma_buf_fd_and_size(
+    zet_metric_group_handle_t metric_group_handle, int &fd, size_t &size) {
+  zet_export_dma_buf_exp_properties_t dma_buf_properties{};
+  dma_buf_properties.stype = ZET_STRUCTURE_TYPE_EXPORT_DMA_EXP_PROPERTIES;
+  dma_buf_properties.pNext = nullptr;
+  dma_buf_properties.fd = -1;
+  dma_buf_properties.size = 0;
+
+  zet_metric_group_properties_t metric_group_properties = {};
+  metric_group_properties.pNext = &dma_buf_properties;
+
+  ASSERT_EQ(ZE_RESULT_SUCCESS,
+            zetMetricGroupGetProperties(metric_group_handle,
+                                        &metric_group_properties));
+  ASSERT_NE(-1, dma_buf_properties.fd)
+      << "metric group " << metric_group_properties.name
+      << " is of type dma buf and cannot get the fd";
+  ASSERT_NE(0, dma_buf_properties.size)
+      << "metric group " << metric_group_properties.name
+      << " is of type dma buf and cannot get the size";
+  fd = dma_buf_properties.fd;
+  size = dma_buf_properties.size;
+  LOG_DEBUG << "metric group " << metric_group_properties.name
+            << " supports dma buf, fd = " << fd << ", size = " << size;
+}
+
+void *metric_map_dma_buf_fd_to_memory(ze_device_handle_t device,
+                                      ze_context_handle_t context, int fd,
+                                      size_t size, size_t alignment) {
+  void *mem_ret = nullptr;
+  ze_external_memory_import_fd_t mem_import = {};
+  mem_import.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_FD;
+  mem_import.pNext = nullptr;
+  mem_import.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF;
+  mem_import.fd = fd;
+  ze_device_mem_alloc_desc_t mem_desc = {};
+  mem_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+  mem_desc.pNext = &mem_import;
+  mem_desc.flags = 0;
+  mem_desc.ordinal = 0;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemAllocDevice(context, &mem_desc, size,
+                                                alignment, device, &mem_ret));
+  ze_memory_allocation_properties_t prop = {};
+  prop.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
+  prop.pNext = NULL;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemGetAllocProperties(context, mem_ret, &prop, NULL));
+  LOG_DEBUG << "zeMemGetAllocProperties returned memory: " << mem_ret;
+  return mem_ret;
 }
 
 } // namespace level_zero_tests
