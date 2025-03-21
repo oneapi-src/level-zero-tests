@@ -181,7 +181,7 @@ void zeModuleCreateTests::
     typed_global_pointer = static_cast<int *>(memory);
     *typed_global_pointer = expected_value;
     lzt::append_memory_copy(bundle.list, global_pointer, memory,
-      sizeof(expected_value));
+                            sizeof(expected_value));
     lzt::close_command_list(bundle.list);
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     *typed_global_pointer = ~expected_value;
@@ -197,15 +197,15 @@ void zeModuleCreateTests::
 }
 
 TEST_F(
-  zeModuleCreateTests,
-  GivenModuleWithGlobalVariableWhenWritingDataToGlobalPointerThenGlobalVariableHasCorrectValue) {
-RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(false);
+    zeModuleCreateTests,
+    GivenModuleWithGlobalVariableWhenWritingDataToGlobalPointerThenGlobalVariableHasCorrectValue) {
+  RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(false);
 }
 
 TEST_F(
-  zeModuleCreateTests,
-  GivenModuleWithGlobalVariableWhenWritingDataToGlobalPointerOnImmediateCmdListThenThenGlobalVariableHasCorrectValue) {
-RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(true);
+    zeModuleCreateTests,
+    GivenModuleWithGlobalVariableWhenWritingDataToGlobalPointerOnImmediateCmdListThenThenGlobalVariableHasCorrectValue) {
+  RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(true);
 }
 
 TEST_F(
@@ -327,13 +327,15 @@ void zeModuleCreateTests::
 TEST_F(
     zeModuleCreateTests,
     GivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointersThenAllGlobalVariablesHaveCorrectValue) {
-  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(false);
+  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(
+      false);
 }
 
 TEST_F(
     zeModuleCreateTests,
     GivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointersOnImmediateCmdListThenGlobalVariablesHaveCorrectValue) {
-  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(true);
+  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(
+      true);
 }
 
 void zeModuleCreateTests::
