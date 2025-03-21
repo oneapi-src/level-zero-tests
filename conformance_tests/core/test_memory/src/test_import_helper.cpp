@@ -65,8 +65,7 @@ int main(int argc, char **argv) {
     ze_device_mem_alloc_desc_t device_alloc_desc = {};
     device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
     device_alloc_desc.pNext = &export_desc;
-    result =
-        zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
+    result = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
                               &exported_memory);
     if (ZE_RESULT_SUCCESS != result) {
       LOG_WARNING << "Error allocating device memory to be imported\n";
@@ -76,7 +75,8 @@ int main(int argc, char **argv) {
     ze_host_mem_alloc_desc_t host_alloc_desc = {};
     host_alloc_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
     host_alloc_desc.pNext = &export_desc;
-    result = zeMemAllocHost(context, &host_alloc_desc, size, 1, &exported_memory);
+    result =
+        zeMemAllocHost(context, &host_alloc_desc, size, 1, &exported_memory);
     if (ZE_RESULT_SUCCESS != result) {
       LOG_WARNING << "Error allocating host memory to be imported\n";
       exit(1);
@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
   device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_alloc_desc.pNext = &import_handle;
   result = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
-                             &imported_memory);
+                            &imported_memory);
   if (ZE_RESULT_SUCCESS != result) {
     LOG_WARNING << "Error allocating device memory to be imported\n";
     exit(1);
