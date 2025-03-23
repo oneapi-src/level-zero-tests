@@ -1744,7 +1744,6 @@ void zeModuleCreateTests::RunGivenModuleWithGlobalVariableWhenWritingGlobalData(
                                    memory_out, is_immediate);
 
   for (uint32_t i = 0; i < work_group_size; i++) {
-    printf("Output %d: %d\n", i, output[i]);
     ASSERT_EQ(output[i], input[i]);
   }
 
