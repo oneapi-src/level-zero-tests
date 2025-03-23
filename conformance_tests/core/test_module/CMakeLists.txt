@@ -34,4 +34,5 @@ add_lzt_test(
     import_kernel
     export_kernel
     module_fptr_call
+    global_data_kernel
 )
