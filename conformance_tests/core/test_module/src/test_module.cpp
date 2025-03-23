@@ -1732,6 +1732,7 @@ void zeModuleCreateTests::RunGivenModuleWithGlobalVariableWhenWritingGlobalData(
   const int expected_value = 321;
   for (uint32_t i = 0; i < work_group_size; i++) {
     input[i] = expected_value;
+    output[i] = 0;
   }
 
   auto bundle = lzt::create_command_bundle(is_immediate);
