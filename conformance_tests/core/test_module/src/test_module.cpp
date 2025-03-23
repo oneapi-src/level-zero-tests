@@ -1744,7 +1744,7 @@ void zeModuleCreateTests::RunGivenModuleWithGlobalVariableWhenWritingGlobalData(
                                    memory_out, is_immediate);
 
   for (uint32_t i = 0; i < work_group_size; i++) {
-    ASSERT_EQ(output[i], input[i]);
+    ASSERT_EQ(output[i], expected_value);
   }
 
   lzt::free_memory(memory_in);
