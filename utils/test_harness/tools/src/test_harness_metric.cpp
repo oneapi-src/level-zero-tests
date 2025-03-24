@@ -1739,7 +1739,7 @@ size_t metric_tracer_read_data_size(
                                    metric_tracer_handle, &metric_size, nullptr))
       << "zetMetricTracerReadDataExp call failed when retrieving the raw data "
          "size";
-  EXPECT_NE(0, metric_size)
+  EXPECT_NE(0u, metric_size)
       << "zetMetricTracerReadDataExp reports that there are no "
          "metrics available to read";
   LOG_DEBUG << "raw data size = " << metric_size;
@@ -1751,7 +1751,7 @@ void metric_tracer_read_data(
     std::vector<uint8_t> *ptr_metric_data) {
   EXPECT_NE(nullptr, ptr_metric_data);
   size_t metric_size = metric_tracer_read_data_size(metric_tracer_handle);
-  EXPECT_GE(metric_size, ptr_metric_data->size());
+  EXPECT_NE(0u, metric_size);
   ptr_metric_data->resize(metric_size);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetMetricTracerReadDataExp(metric_tracer_handle, &metric_size,
@@ -1790,7 +1790,7 @@ uint32_t metric_decoder_get_decodable_metrics_count(
                 metric_decoder_handle, &decodable_metric_count, nullptr))
       << "zetMetricDecoderGetDecodableMetricsExp call failed when retrieving "
          "the number of decodable metrics";
-  EXPECT_NE(0, decodable_metric_count)
+  EXPECT_NE(0u, decodable_metric_count)
       << "zetMetricDecoderGetDecodableMetricsExp reports that there are no "
          "decodable metrics";
   LOG_DEBUG << "found " << decodable_metric_count << " decodable metrics";
@@ -1802,7 +1802,7 @@ void metric_decoder_get_decodable_metrics(
     std::vector<zet_metric_handle_t> *ptr_decodable_metric_handles) {
   uint32_t decodable_metric_count =
       metric_decoder_get_decodable_metrics_count(metric_decoder_handle);
-  EXPECT_GE(decodable_metric_count, ptr_decodable_metric_handles->size());
+  EXPECT_NE(0u, decodable_metric_count);
   ptr_decodable_metric_handles->resize(decodable_metric_count);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zetMetricDecoderGetDecodableMetricsExp(
@@ -1849,10 +1849,10 @@ void metric_tracer_decode(
   LOG_DEBUG << "raw data decoded: " << *ptr_raw_data_size << " bytes";
 }
 
-std::vector<zet_metric_group_handle_t> get_metric_groups_supporting_dma_buf(
+void get_metric_groups_supporting_dma_buf(
     const std::vector<zet_metric_group_handle_t> &metric_group_handles,
-    zet_metric_group_sampling_type_flags_t sampling_type) {
-  std::vector<zet_metric_group_handle_t> dma_buf_metric_group_handles;
+    zet_metric_group_sampling_type_flags_t sampling_type,
+    std::vector<zet_metric_group_handle_t> &dma_buf_metric_group_handles) {
   for (auto metric_group_handle : metric_group_handles) {
     zet_metric_group_type_exp_t metric_group_type{};
     metric_group_type.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_TYPE_EXP;
@@ -1860,7 +1860,7 @@ std::vector<zet_metric_group_handle_t> get_metric_groups_supporting_dma_buf(
     metric_group_type.type = ZET_METRIC_GROUP_TYPE_EXP_FLAG_FORCE_UINT32;
     zet_metric_group_properties_t metric_group_properties = {};
     metric_group_properties.pNext = &metric_group_type;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
+    ASSERT_EQ(ZE_RESULT_SUCCESS,
               zetMetricGroupGetProperties(metric_group_handle,
                                           &metric_group_properties));
     if (metric_group_properties.samplingType == sampling_type &&
@@ -1869,7 +1869,6 @@ std::vector<zet_metric_group_handle_t> get_metric_groups_supporting_dma_buf(
       dma_buf_metric_group_handles.push_back(metric_group_handle);
     }
   }
-  return dma_buf_metric_group_handles;
 }
 
 void metric_get_dma_buf_fd_and_size(

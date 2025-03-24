@@ -312,9 +312,10 @@ void metric_tracer_decode(
     uint32_t *ptr_metric_entries_count,
     std::vector<zet_metric_entry_exp_t> *ptr_metric_entries);
 
-std::vector<zet_metric_group_handle_t> get_metric_groups_supporting_dma_buf(
+void get_metric_groups_supporting_dma_buf(
     const std::vector<zet_metric_group_handle_t> &metric_group_handles,
-    zet_metric_group_sampling_type_flags_t sampling_type);
+    zet_metric_group_sampling_type_flags_t sampling_type,
+    std::vector<zet_metric_group_handle_t> &dma_buf_metric_group_handles);
 
 void metric_get_dma_buf_fd_and_size(
     zet_metric_group_handle_t metric_group_handle, int &fd, size_t &size);

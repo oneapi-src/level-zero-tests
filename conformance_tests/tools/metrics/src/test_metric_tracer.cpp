@@ -1126,11 +1126,11 @@ TEST_F(
     ASSERT_NE(0u, device_with_metric_group_handles
                       .activatable_metric_group_handle_list.size());
 
-    std::vector<zet_metric_group_handle_t> dma_buf_metric_group_handles =
-        lzt::get_metric_groups_supporting_dma_buf(
-            device_with_metric_group_handles
-                .activatable_metric_group_handle_list,
-            ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EXP_TRACER_BASED);
+    std::vector<zet_metric_group_handle_t> dma_buf_metric_group_handles;
+    lzt::get_metric_groups_supporting_dma_buf(
+        device_with_metric_group_handles.activatable_metric_group_handle_list,
+        ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EXP_TRACER_BASED,
+        dma_buf_metric_group_handles);
     ASSERT_NE(0u, dma_buf_metric_group_handles.size());
 
     uint32_t dma_buf_validation_count{};
@@ -1140,18 +1140,13 @@ TEST_F(
     auto kernel = lzt::create_function(module, "copy_data");
     uint8_t *src_buf, *dst_buf;
     const uint8_t src_buf_data = 0xab;
-    lzt::set_group_size(kernel, 1, 1, 1);
-    ze_group_count_t group_count = {1, 1, 1};
-    lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
-                                nullptr);
-    lzt::close_command_list(command_list);
 
     for (uint32_t i = 0; i < dma_buf_metric_group_handles.size(); ++i) {
       int fd;
       size_t size;
       lzt::metric_get_dma_buf_fd_and_size(dma_buf_metric_group_handles[i], fd,
                                           size);
-      size_t offset = size;
+      size_t offset = 0;
       lzt::activate_metric_groups(device, dma_buf_metric_group_handles.size(),
                                   dma_buf_metric_group_handles.data());
 
@@ -1164,6 +1159,11 @@ TEST_F(
       lzt::set_argument_value(kernel, 1, sizeof(dst_buf), &dst_buf);
       lzt::set_argument_value(kernel, 2, sizeof(int), &offset);
       lzt::set_argument_value(kernel, 3, sizeof(int), &size);
+      lzt::set_group_size(kernel, 1, 1, 1);
+      ze_group_count_t group_count = {1, 1, 1};
+      lzt::append_launch_function(command_list, kernel, &group_count, nullptr,
+                                  0, nullptr);
+      lzt::close_command_list(command_list);
 
       zet_metric_tracer_exp_handle_t metric_tracer_handle;
       lzt::metric_tracer_create(lzt::get_default_context(), device,
