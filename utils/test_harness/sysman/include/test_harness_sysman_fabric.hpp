@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2020 Intel Corporation
+ * Copyright (C) 2019-2024 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -36,6 +36,9 @@ get_fabric_port_throughput(zes_fabric_port_handle_t fabricPortHandle);
 
 zes_fabric_link_type_t
 get_fabric_port_link(zes_fabric_port_handle_t fabricPortHandle);
+
+zes_fabric_port_error_counters_t
+get_fabric_port_error_counters(zes_fabric_port_handle_t fabric_port_handle);
 
 } // namespace level_zero_tests
 
