@@ -25,14 +25,8 @@ int main(int argc, char **argv) {
     throw std::runtime_error("zeInit failed: " +
                              level_zero_tests::to_string(result));
   }
-#ifdef USE_RUNTIME_TRACING
-  zelEnableTracingLayer();
-#endif
   LOG_TRACE << "Driver initialized";
 
   auto ret = RUN_ALL_TESTS();
-#ifdef USE_RUNTIME_TRACING
-  zelDisableTracingLayer();
-#endif
   return ret;
 }

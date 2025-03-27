@@ -15,6 +15,7 @@
 #include "test_harness/test_harness.hpp"
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
+#include <level_zero/loader/ze_loader.h>
 
 namespace lzt = level_zero_tests;
 
@@ -57,6 +58,9 @@ void allocate_then_deallocate_device_memory() {
 class LTracingThreadTests : public ::testing::Test {
 protected:
   void SetUp() override {
+#ifdef USE_RUNTIME_TRACING
+    zelEnableTracingLayer();
+#endif
     callback_exit_invocations = 0;
     callback_enter_invocations = 0;
     ready = false;
@@ -80,6 +84,9 @@ protected:
   void TearDown() {
     lzt::disable_ltracer(tracer);
     lzt::destroy_ltracer_handle(tracer);
+#ifdef USE_RUNTIME_TRACING
+    zelDisableTracingLayer();
+#endif
   }
 
   zel_tracer_handle_t tracer;
@@ -175,7 +182,11 @@ TEST_F(
 
 class LTracingThreadTestsDisabling : public LTracingThreadTests {
 protected:
-  void TearDown() override {}
+  void TearDown() override {
+#ifdef USE_RUNTIME_TRACING
+    zelDisableTracingLayer();
+#endif
+  }
 };
 
 #ifdef USE_RUNTIME_TRACING
