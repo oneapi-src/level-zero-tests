@@ -98,37 +98,132 @@ TEST_F(zeVirtualMemoryTests,
   }
 }
 
-TEST_F(
-    zeVirtualMemoryTests,
-    GivenVirtualMemoryReservationThenSettingTheMemoryAccessAttributeReturnsSuccess) {
-  ze_memory_access_attribute_t access;
-  ze_memory_access_attribute_t previousAccess;
+void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
+    zeVirtualMemoryTests &test, bool is_host_memory, bool is_immediate) {
+  ze_memory_access_attribute_t access = ZE_MEMORY_ACCESS_ATTRIBUTE_FORCE_UINT32;
   size_t memorySize = 0;
-  lzt::query_page_size(context, device, allocationSize, &pageSize);
-  allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
-  lzt::virtual_memory_reservation(context, nullptr, allocationSize,
-                                  &reservedVirtualMemory);
-  EXPECT_NE(nullptr, reservedVirtualMemory);
-  lzt::virtual_memory_reservation_get_access(
-      context, reservedVirtualMemory, allocationSize, &access, &memorySize);
-  EXPECT_EQ(access, ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
-  EXPECT_GE(memorySize, allocationSize);
-
-  std::vector<ze_memory_access_attribute_t> memoryAccessFlags = {
-      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY,
-      ZE_MEMORY_ACCESS_ATTRIBUTE_NONE};
-
-  for (auto accessFlags : memoryAccessFlags) {
-    previousAccess = access;
-    lzt::virtual_memory_reservation_set_access(context, reservedVirtualMemory,
-                                               allocationSize, accessFlags);
-    lzt::virtual_memory_reservation_get_access(
-        context, reservedVirtualMemory, allocationSize, &access, &memorySize);
-    EXPECT_NE(previousAccess, access);
-    EXPECT_EQ(accessFlags, access);
+  lzt::query_page_size(test.context, test.device, test.allocationSize,
+                       &test.pageSize);
+  test.allocationSize =
+      lzt::create_page_aligned_size(test.allocationSize, test.pageSize);
+  lzt::virtual_memory_reservation(test.context, nullptr, test.allocationSize,
+                                  &test.reservedVirtualMemory);
+  ze_physical_mem_handle_t reservedPhysicalMemory = nullptr;
+  if (is_host_memory) {
+    lzt::physical_host_memory_allocation(test.context, test.allocationSize,
+                                         &reservedPhysicalMemory);
+  } else {
+    lzt::physical_device_memory_allocation(test.context, test.device,
+                                           test.allocationSize,
+                                           &reservedPhysicalMemory);
   }
 
-  lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
+  EXPECT_NE(nullptr, reservedPhysicalMemory);
+  EXPECT_NE(nullptr, test.reservedVirtualMemory);
+  lzt::virtual_memory_reservation_get_access(
+      test.context, test.reservedVirtualMemory, test.allocationSize, &access,
+      &memorySize);
+  EXPECT_EQ(access, ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+  EXPECT_GE(memorySize, test.allocationSize);
+
+  void *memory_in =
+      lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
+  void *memory_out =
+      lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
+
+  const uint32_t zero_pattern = 0;
+  const uint32_t input_pattern = 0x99999999;
+  const uint32_t output_pattern = 0x66666666;
+
+  auto bundle = lzt::create_command_bundle(test.device, is_immediate);
+  lzt::reset_command_list(bundle.list);
+
+  std::vector<ze_memory_access_attribute_t> memoryAccessFlags = {
+      ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE,
+      ZE_MEMORY_ACCESS_ATTRIBUTE_NONE};
+
+  lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
+                          test.allocationSize, reservedPhysicalMemory, 0,
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+
+  for (auto accessFlags : memoryAccessFlags) {
+    lzt::virtual_memory_reservation_set_access(
+        test.context, test.reservedVirtualMemory, test.allocationSize,
+        accessFlags);
+    lzt::virtual_memory_reservation_get_access(
+        test.context, test.reservedVirtualMemory, test.allocationSize, &access,
+        &memorySize);
+    EXPECT_EQ(accessFlags, access);
+
+    lzt::append_memory_fill(bundle.list, test.reservedVirtualMemory,
+                            &zero_pattern, sizeof(zero_pattern),
+                            test.allocationSize, nullptr);
+    lzt::append_memory_fill(bundle.list, memory_out, &output_pattern,
+                            sizeof(output_pattern), test.allocationSize,
+                            nullptr);
+    lzt::append_memory_fill(bundle.list, memory_in, &input_pattern,
+                            sizeof(input_pattern), test.allocationSize,
+                            nullptr);
+    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(bundle.list, test.reservedVirtualMemory, memory_in,
+                            test.allocationSize, nullptr);
+    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(bundle.list, memory_out, test.reservedVirtualMemory,
+                            test.allocationSize, nullptr);
+    lzt::close_command_list(bundle.list);
+    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+
+    uint32_t output_value = reinterpret_cast<uint32_t *>(memory_out)[0];
+
+    switch (accessFlags) {
+    case ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE:
+      EXPECT_EQ(output_value, input_pattern);
+      break;
+    case ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY:
+      EXPECT_EQ(output_value, zero_pattern);
+      break;
+    default:
+      EXPECT_EQ(output_value, ~input_pattern);
+      break;
+    };
+  }
+
+  lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                            test.allocationSize);
+
+  lzt::free_memory(memory_in);
+  lzt::free_memory(memory_out);
+  lzt::physical_memory_destroy(test.context, reservedPhysicalMemory);
+  lzt::virtual_memory_free(test.context, test.reservedVirtualMemory,
+                           test.allocationSize);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenHostVirtualMemoryReservationThenSettingTheMemoryAccessAttributeReturnsSuccess) {
+  RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
+      *this, true, false);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenHostVirtualMemoryReservationThenSettingTheMemoryAccessAttributeOnImmediateCmdListReturnsSuccess) {
+  RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
+      *this, true, true);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenDeviceVirtualMemoryReservationThenSettingTheMemoryAccessAttributeReturnsSuccess) {
+  RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
+      *this, false, false);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenDeviceVirtualMemoryReservationThenSettingTheMemoryAccessAttributeOnImmediateCmdListReturnsSuccess) {
+  RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
+      *this, false, true);
 }
 
 TEST_F(zeVirtualMemoryTests,
