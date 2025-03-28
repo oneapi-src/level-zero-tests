@@ -10,6 +10,7 @@
 #include <ctime>
 #include <thread>
 #include <atomic>
+#include <numeric>
 
 #include <boost/filesystem.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
@@ -116,6 +117,590 @@ TEST_F(
           << "zetMetricTracerDestroyExp failed";
       lzt::deactivate_metric_groups(device);
     }
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    WhenCreatingTracerIfNotificationEventHandleIsValidAndNotifyEveryNBytesIsZeroThenNotifyEveryNBytesIsSetToNearestPossibleValue) {
+  /* After the tracer notification event, notifyEveryNBytes will be set to a
+   * valid, hardware-supported, non-zero value. */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+
+    ze_event_pool_handle_t notification_event_pool;
+    notification_event_pool = lzt::create_event_pool(
+        lzt::get_default_context(), 1, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+    ze_event_handle_t notification_event;
+    ze_event_desc_t notification_event_descriptor = {
+        ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, ZE_EVENT_SCOPE_FLAG_HOST,
+        ZE_EVENT_SCOPE_FLAG_DEVICE};
+    notification_event = lzt::create_event(notification_event_pool,
+                                           notification_event_descriptor);
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+
+    tracer_descriptor.notifyEveryNBytes = 0;
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, notification_event,
+                              &metric_tracer_handle);
+    EXPECT_NE(0, tracer_descriptor.notifyEveryNBytes);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::destroy_event(notification_event);
+    lzt::destroy_event_pool(notification_event_pool);
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    WhenCreatingTracerIfNotificationEventHandleIsValidAndNotifyEveryNBytesIsUnsignedIntMaxThenNotifyEveryNBytesIsSetToNearestPossibleValue) {
+  /* After the tracer notification event, notifyEveryNBytes will be set to a
+   * valid, hardware-supported, non-zero value, but not to an excessively large
+   * value like UINT_MAX */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+
+    ze_event_pool_handle_t notification_event_pool;
+    notification_event_pool = lzt::create_event_pool(
+        lzt::get_default_context(), 1, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+    ze_event_handle_t notification_event;
+    ze_event_desc_t notification_event_descriptor = {
+        ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, ZE_EVENT_SCOPE_FLAG_HOST,
+        ZE_EVENT_SCOPE_FLAG_DEVICE};
+    notification_event = lzt::create_event(notification_event_pool,
+                                           notification_event_descriptor);
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+
+    tracer_descriptor.notifyEveryNBytes = UINT32_MAX;
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, notification_event,
+                              &metric_tracer_handle);
+    EXPECT_NE(UINT32_MAX, tracer_descriptor.notifyEveryNBytes);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::destroy_event(notification_event);
+    lzt::destroy_event_pool(notification_event_pool);
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    GivenNotificationEventHasHappenedThenEnsureAvailableRawDataSizeIsMoreThanNotifyEveryNBytes) {
+  /* While executing a workload, right after the tracer notification event, raw
+   * data greater than or equal to notifyEveryNBytes will be available */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 64);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+    ze_event_pool_handle_t notification_event_pool;
+    notification_event_pool = lzt::create_event_pool(
+        lzt::get_default_context(), 1, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+    ze_event_handle_t notification_event;
+    ze_event_desc_t notification_event_descriptor = {
+        ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, ZE_EVENT_SCOPE_FLAG_HOST,
+        ZE_EVENT_SCOPE_FLAG_DEVICE};
+    notification_event = lzt::create_event(notification_event_pool,
+                                           notification_event_descriptor);
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+
+    tracer_descriptor.notifyEveryNBytes = 8192;
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, notification_event,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+    LOG_DEBUG << "synchronize on the tracer notification event";
+    lzt::event_host_synchronize(notification_event,
+                                std::numeric_limits<uint64_t>::max());
+    size_t raw_data_size{};
+    raw_data_size = lzt::metric_tracer_read_data_size(metric_tracer_handle);
+    EXPECT_GE(raw_data_size, tracer_descriptor.notifyEveryNBytes)
+        << "raw data available should be greater than equal to "
+           "notifyEveryNBytes";
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::destroy_event(notification_event);
+    lzt::destroy_event_pool(notification_event_pool);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    GivenTracerIsCreatedAndEnabledThenTracerCannotBeDestroyedWithoutFirstBeingDisabled) {
+  /* A tracer still enabled cannot be destroyed */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    ze_result_t result;
+    lzt::display_device_properties(device);
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+    LOG_DEBUG << "destroy tracer";
+    result = zetMetricTracerDestroyExp(metric_tracer_handle);
+    EXPECT_EQ(ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE, result);
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+    result = zetMetricTracerDestroyExp(metric_tracer_handle);
+    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    lzt::deactivate_metric_groups(device);
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    GivenTracerIsCreatedWhenTracerIsNotEnabledThenExpectNoRawDataToBeAvailable) {
+  /* When the tracer is not enabled, no raw data is available to be read */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 128);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
+
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+
+    size_t raw_data_size{};
+    EXPECT_EQ(ZE_RESULT_NOT_READY,
+              zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                         nullptr))
+        << "tracer is not enabled, zetMetricTracerReadDataExp should return "
+           "ZE_RESULT_NOT_READY";
+    EXPECT_EQ(0, raw_data_size)
+        << "zetMetricTracerReadDataExp is not expected to read any useful "
+           "data, raw data size should be 0";
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    GivenTracerIsCreatedWhenTracerIsAsynchronouslyEnabledThenExpectValidRawDataToBeAvailableOnceTracerIsEnabled) {
+  /* When the tracer is asynchronously enabled, wait for the tracer to be
+   * enabled. Once enabled, zetMetricTracerReadDataExp returns ZE_RESULT_SUCCESS
+   * and valid raw data is available */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    ze_result_t result;
+    lzt::display_device_properties(device);
+
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 128);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, false);
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+    const char *value_string =
+        std::getenv("LZT_METRIC_ENABLE_TRACER_MAX_WAIT_TIME");
+    uint32_t max_wait_time_in_milliseconds = 10;
+    if (value_string != nullptr) {
+      uint32_t value = atoi(value_string);
+      max_wait_time_in_milliseconds =
+          value != 0 ? value : max_wait_time_in_milliseconds;
+      max_wait_time_in_milliseconds =
+          std::min(max_wait_time_in_milliseconds, 100u);
+    }
+
+    size_t raw_data_size{};
+    /* wait for the tracer to get enabled */
+    do {
+      result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                          nullptr);
+      if (result == ZE_RESULT_NOT_READY) {
+        LOG_INFO
+            << "Waiting for tracer to be enabled. zetMetricTracerReadDataExp "
+               "will be called again after sleep";
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        max_wait_time_in_milliseconds--;
+      }
+      if (max_wait_time_in_milliseconds == 0) {
+        FAIL() << "failed while trying to enable tracer asynchronously, waited "
+                  "for "
+               << max_wait_time_in_milliseconds << " ms";
+      }
+    } while (result == ZE_RESULT_NOT_READY);
+    EXPECT_EQ(ZE_RESULT_SUCCESS, result)
+        << "zetMetricTracerReadDataExp failed while retrieving the raw data "
+           "size";
+    EXPECT_NE(0, raw_data_size) << "zetMetricTracerReadDataExp reports that "
+                                   "there are no metrics available to read";
+    if (raw_data_size != 0) {
+      std::vector<uint8_t> raw_data(raw_data_size, 0);
+      result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                          raw_data.data());
+      EXPECT_EQ(ZE_RESULT_SUCCESS, result)
+          << "zetMetricTracerReadDataExp failed while retrieving the raw data";
+      uint64_t raw_data_accumulate =
+          std::accumulate(raw_data.begin(), raw_data.end(), 0ULL);
+      EXPECT_NE(0, raw_data_accumulate)
+          << "all raw data entries are zero, zetMetricTracerReadDataExp is "
+             "expected to read useful data";
+    }
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    GivenTracerIsEnabledWhenTracerIsAsynchronouslyDisabledThenNoFurtherRawDataIsAvailableToReadOnceTracerIsDisabled) {
+  /* If the tracer is asynchronously disabled, the test repeatedly calls
+   * zetMetricTracerReadDataExp until it returns ZE_RESULT_NOT_READY, confirming
+   * that the tracer has been fully disabled and no further data is available to
+   * read */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    ze_result_t result;
+    lzt::display_device_properties(device);
+
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 128);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+
+    size_t raw_data_size{};
+    std::vector<uint8_t> raw_data;
+    uint64_t raw_data_accumulate{};
+    result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                        nullptr);
+    ASSERT_EQ(ZE_RESULT_SUCCESS, result)
+        << "zetMetricTracerReadDataExp failed while retrieving the raw data "
+           "size";
+    ASSERT_NE(0, raw_data_size) << "zetMetricTracerReadDataExp reports that "
+                                   "there are no metrics available to read";
+    raw_data.resize(raw_data_size, 0);
+    result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                        raw_data.data());
+    ASSERT_EQ(ZE_RESULT_SUCCESS, result)
+        << "zetMetricTracerReadDataExp failed while retrieving the raw data";
+
+    raw_data_accumulate =
+        std::accumulate(raw_data.begin(), raw_data.end(), 0ULL);
+    ASSERT_NE(0, raw_data_accumulate)
+        << "all raw data entries are zero, zetMetricTracerReadDataExp is "
+           "expected to read useful data";
+
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+
+    lzt::metric_tracer_disable(metric_tracer_handle, false);
+
+    const char *value_string =
+        std::getenv("LZT_METRIC_DISABLE_TRACER_MAX_WAIT_TIME");
+    uint32_t max_wait_time_in_milliseconds = 10;
+    if (value_string != nullptr) {
+      uint32_t value = atoi(value_string);
+      max_wait_time_in_milliseconds =
+          value != 0 ? value : max_wait_time_in_milliseconds;
+      max_wait_time_in_milliseconds =
+          std::min(max_wait_time_in_milliseconds, 100u);
+    }
+    /* read raw data while API returns ZE_RESULT_SUCCESS and
+     * ZE_RESULT_NOT_READY(for the last piece of data) */
+    do {
+      raw_data_size = 0;
+      result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                          nullptr);
+      EXPECT_TRUE(ZE_RESULT_SUCCESS == result || ZE_RESULT_NOT_READY == result)
+          << "zetMetricTracerReadDataExp failed while retrieving the raw data "
+             "size";
+
+      if (raw_data_size != 0) {
+        raw_data.resize(raw_data_size, 0);
+        result = zetMetricTracerReadDataExp(metric_tracer_handle,
+                                            &raw_data_size, raw_data.data());
+        EXPECT_TRUE(ZE_RESULT_SUCCESS == result ||
+                    ZE_RESULT_NOT_READY == result)
+            << "zetMetricTracerReadDataExp failed while retrieving the raw "
+               "data";
+
+        raw_data_accumulate =
+            std::accumulate(raw_data.begin(), raw_data.end(), 0ULL);
+        EXPECT_NE(0, raw_data_accumulate)
+            << "all raw data entries are zero, zetMetricTracerReadDataExp is "
+               "expected to read useful data";
+      }
+      if (result == ZE_RESULT_SUCCESS) {
+        LOG_DEBUG
+            << "waiting for tracer to be disabled. zetMetricTracerReadDataExp "
+               "will be called again after sleep";
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        max_wait_time_in_milliseconds--;
+      }
+      if (max_wait_time_in_milliseconds == 0) {
+        FAIL() << "failed while trying to disable tracer asynchronously, "
+                  "waited for "
+               << max_wait_time_in_milliseconds << " ms";
+      }
+    } while (result == ZE_RESULT_SUCCESS);
+    raw_data_size = 0;
+    result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                        nullptr);
+    EXPECT_EQ(ZE_RESULT_NOT_READY, result);
+    EXPECT_EQ(0, raw_data_size);
+
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    GivenTracerIsEnabledWhenRequestingMoreRawDataThanAvailableThenReturnOnlyWhatIsAvailable) {
+  /* When allocating a larger buffer than needed, ensure that writes happen only
+   * for the size of the raw data available */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    ze_result_t result;
+    lzt::display_device_properties(device);
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 128);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+
+    size_t raw_data_size{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                         nullptr))
+        << "zetMetricTracerReadDataExp failed while retrieving the raw data "
+           "size";
+    EXPECT_NE(0, raw_data_size)
+        << "zetMetricTracerReadDataExp reports that there are no "
+           "metrics available to read";
+    if (raw_data_size != 0) {
+      const size_t extra_buffer_size = 24;
+      const uint8_t raw_data_init_val = 0xBE;
+      raw_data_size += extra_buffer_size;
+
+      std::vector<uint8_t> raw_data(raw_data_size, raw_data_init_val);
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                           raw_data.data()))
+          << "zetMetricTracerReadDataExp failed while retrieving the raw data";
+
+      uint64_t excess_buffer_raw_data_sum = std::accumulate(
+          raw_data.end() - extra_buffer_size, raw_data.end(), 0ULL);
+      EXPECT_EQ((raw_data_init_val * extra_buffer_size),
+                excess_buffer_raw_data_sum)
+          << "zetMetricTracerReadDataExp should not return more raw data than "
+             "what is available";
+    }
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
   }
 }
 
@@ -537,7 +1122,7 @@ INSTANTIATE_TEST_SUITE_P(ReadTestWithAsynchronousOrSynchronousEnableAndDisable,
                          ::testing::Values(true));
 
 TEST_F(zetMetricTracerTest,
-       GivenTracerIsCreatedThenDecoderCreateAndDeleteSucceed) {
+       GivenTracerIsCreatedThenDecoderCreateAndDestroySucceed) {
 
   ze_result_t result;
 
@@ -990,6 +1575,256 @@ TEST_F(zetMetricTracerTest,
   }
 }
 
+TEST_F(
+    zetMetricTracerTest,
+    GivenDecoderIsCreatedWhenRequestingMoreDecodableMetricsThanAvailableThenReturnOnlyWhatIsAvailable) {
+  /* When allocating a buffer for more decodable metrics than available,
+   * ensure that writes happen only for the actual number of available decodable
+   * metrics */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 128);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+    /* read data */
+    size_t raw_data_size = 0;
+    raw_data_size = lzt::metric_tracer_read_data_size(metric_tracer_handle);
+    std::vector<uint8_t> raw_data(raw_data_size, 0);
+    lzt::metric_tracer_read_data(metric_tracer_handle, &raw_data);
+    zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
+    lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
+
+    uint32_t decodable_metric_count{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricDecoderGetDecodableMetricsExp(
+                  metric_decoder_handle, &decodable_metric_count, nullptr))
+        << "zetMetricDecoderGetDecodableMetricsExp call failed when retrieving "
+           "the number of decodable metrics";
+    EXPECT_NE(0u, decodable_metric_count)
+        << "zetMetricDecoderGetDecodableMetricsExp reports that there are no "
+           "decodable metrics";
+
+    if (decodable_metric_count != 0) {
+      LOG_DEBUG << "found " << decodable_metric_count << " decodable metrics";
+      const uint32_t additional_count = 8;
+      const zet_metric_handle_t decodable_metric_init = nullptr;
+      decodable_metric_count += additional_count;
+
+      std::vector<zet_metric_handle_t> decodable_metric_handles(
+          decodable_metric_count, decodable_metric_init);
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zetMetricDecoderGetDecodableMetricsExp(
+                    metric_decoder_handle, &decodable_metric_count,
+                    decodable_metric_handles.data()))
+          << "zetMetricDecoderGetDecodableMetricsExp call failed when "
+             "retrieving "
+             "the decodable metric handles";
+
+      for (auto itr = decodable_metric_handles.size() - additional_count;
+           itr < decodable_metric_handles.size(); ++itr) {
+        EXPECT_EQ(nullptr, decodable_metric_handles[itr])
+            << "zetMetricDecoderGetDecodableMetricsExp should not return more "
+               "decodable metrics than are available";
+      }
+
+      /* decode data */
+      uint32_t set_count{};
+      uint32_t metric_entry_count{};
+      lzt::metric_tracer_decode_get_various_counts(
+          metric_decoder_handle, &raw_data_size, &raw_data,
+          decodable_metric_count, &decodable_metric_handles, &set_count,
+          &metric_entry_count);
+      EXPECT_NE(0u, metric_entry_count)
+          << "zetMetricTracerDecodeExp reports that there are no metric "
+             "entries to be decoded";
+
+      if (metric_entry_count != 0) {
+        std::vector<uint32_t> metric_entries_per_set_count(set_count);
+        std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
+        lzt::metric_tracer_decode(metric_decoder_handle, &raw_data_size,
+                                  &raw_data, decodable_metric_count,
+                                  &decodable_metric_handles, &set_count,
+                                  &metric_entries_per_set_count,
+                                  &metric_entry_count, &metric_entries);
+
+        uint32_t set_entry_start = 0;
+        for (uint32_t set_index = 0; set_index < set_count; set_index++) {
+          LOG_DEBUG << "Set number: " << set_index << " Entries in set: "
+                    << metric_entries_per_set_count[set_index] << "\n";
+
+          for (uint32_t index = set_entry_start;
+               index <
+               set_entry_start + metric_entries_per_set_count[set_index];
+               index++) {
+            auto &metric_entry = metric_entries[index];
+            EXPECT_LT(metric_entry.metricIndex, decodable_metric_count);
+            if (metric_entry.onSubdevice) {
+              EXPECT_EQ(metric_entry.subdeviceId, set_index);
+            }
+          }
+          set_entry_start += metric_entries_per_set_count[set_index];
+        }
+      }
+    }
+    lzt::metric_decoder_destroy(metric_decoder_handle);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::reset_command_list(command_list);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
+  }
+}
+
+TEST_F(
+    zetMetricTracerTest,
+    GivenDecoderIsCreatedWhenRequestingMoreMetricEntriesThanAvailableThenReturnOnlyWhatIsAvailable) {
+  /* When allocating a buffer for more metric entries than available, ensure
+   * that writes happen only for the actual number of available metric entries
+   */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 128);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+
+    ASSERT_GT(device_with_metric_group_handles
+                  .activatable_metric_group_handle_list.size(),
+              0u);
+    lzt::activate_metric_groups(
+        device,
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .size(),
+        device_with_metric_group_handles.activatable_metric_group_handle_list
+            .data());
+
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+    /* read data */
+    size_t raw_data_size = 0;
+    raw_data_size = lzt::metric_tracer_read_data_size(metric_tracer_handle);
+    std::vector<uint8_t> raw_data(raw_data_size, 0);
+    lzt::metric_tracer_read_data(metric_tracer_handle, &raw_data);
+    zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
+
+    lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
+    uint32_t decodable_metric_count =
+        lzt::metric_decoder_get_decodable_metrics_count(metric_decoder_handle);
+    std::vector<zet_metric_handle_t> decodable_metric_handles(
+        decodable_metric_count);
+    lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
+                                              &decodable_metric_handles);
+    decodable_metric_count = decodable_metric_handles.size();
+
+    /* decode data */
+    uint32_t set_count{};
+    uint32_t metric_entry_count{};
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetMetricTracerDecodeExp(
+                  metric_decoder_handle, &raw_data_size, raw_data.data(),
+                  decodable_metric_count, decodable_metric_handles.data(),
+                  &set_count, nullptr, &metric_entry_count, nullptr));
+    LOG_DEBUG << "decodable metric entry count: " << metric_entry_count;
+    LOG_DEBUG << "set count: " << set_count;
+    EXPECT_NE(0u, metric_entry_count)
+        << "zetMetricTracerDecodeExp reports that there are no metric entries "
+           "to be decoded";
+
+    if (metric_entry_count != 0) {
+      const uint32_t additional_entries = 8;
+      zet_metric_entry_exp_t metric_entries_init{};
+      metric_entries_init.metricIndex = 0xBEEF;
+      metric_entry_count += additional_entries;
+
+      std::vector<uint32_t> metric_entries_per_set_count(set_count, 0u);
+      std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count,
+                                                         metric_entries_init);
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zetMetricTracerDecodeExp(
+                    metric_decoder_handle, &raw_data_size, raw_data.data(),
+                    decodable_metric_count, decodable_metric_handles.data(),
+                    &set_count, metric_entries_per_set_count.data(),
+                    &metric_entry_count, metric_entries.data()));
+
+      for (auto itr = metric_entries.size() - additional_entries;
+           itr < metric_entries.size(); ++itr) {
+        EXPECT_EQ(metric_entries_init.metricIndex,
+                  metric_entries[itr].metricIndex)
+            << "zetMetricTracerDecodeExp should not return more metric entries "
+               "than are available";
+      }
+    }
+    lzt::metric_decoder_destroy(metric_decoder_handle);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::reset_command_list(command_list);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
+  }
+}
+
 TEST_F(zetMetricTracerTest,
        GivenDecoderIsCreatedThenEnsureAllMetricEntriesTimeStampsAreValid) {
 
@@ -1065,7 +1900,7 @@ TEST_F(zetMetricTracerTest,
     lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
                                               &decodable_metric_handles);
     decodable_metric_count = decodable_metric_handles.size();
-    /* Decode Data */
+    /* decode data */
     uint32_t metric_entry_count = 0;
     uint32_t set_count = 0;
     lzt::metric_tracer_decode_get_various_counts(
@@ -1078,6 +1913,9 @@ TEST_F(zetMetricTracerTest,
                               decodable_metric_count, &decodable_metric_handles,
                               &set_count, &metric_entries_per_set_count,
                               &metric_entry_count, &metric_entries);
+    EXPECT_NE(0u, metric_entry_count)
+        << "zetMetricTracerDecodeExp reports that there are no metric entries "
+           "to be decoded";
 
     if (metric_entry_count != 0) {
       uint64_t metric_entry_timestamp_start = 0;
@@ -1154,7 +1992,7 @@ TEST_F(
           static_cast<uint8_t *>(lzt::allocate_shared_memory(size, device));
       std::fill(src_buf, src_buf + (size / sizeof(src_buf_data)), src_buf_data);
       dst_buf = static_cast<uint8_t *>(lzt::metric_map_dma_buf_fd_to_memory(
-          device, context, fd, size, offset));
+          device, lzt::get_default_context(), fd, size, offset));
       lzt::set_argument_value(kernel, 0, sizeof(src_buf), &src_buf);
       lzt::set_argument_value(kernel, 1, sizeof(dst_buf), &dst_buf);
       lzt::set_argument_value(kernel, 2, sizeof(int), &offset);
@@ -1206,6 +2044,9 @@ TEST_F(
           metric_decoder_handle, &raw_data_size, &raw_data,
           decodable_metric_count, &decodable_metric_handles, &set_count,
           &metric_entries_per_set_count, &metric_entry_count, &metric_entries);
+      EXPECT_NE(0u, metric_entry_count)
+          << "zetMetricTracerDecodeExp reports that there are no metric "
+             "entries to be decoded";
 
       if (metric_entry_count != 0) {
         dma_buf_validation_count++;
