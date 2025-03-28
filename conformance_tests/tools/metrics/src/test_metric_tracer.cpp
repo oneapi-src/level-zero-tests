@@ -1635,7 +1635,7 @@ TEST_F(
                   metric_decoder_handle, &decodable_metric_count, nullptr))
         << "zetMetricDecoderGetDecodableMetricsExp call failed when retrieving "
            "the number of decodable metrics";
-    EXPECT_NE(0, decodable_metric_count)
+    EXPECT_NE(0u, decodable_metric_count)
         << "zetMetricDecoderGetDecodableMetricsExp reports that there are no "
            "decodable metrics";
 
@@ -1669,6 +1669,9 @@ TEST_F(
           metric_decoder_handle, &raw_data_size, &raw_data,
           decodable_metric_count, &decodable_metric_handles, &set_count,
           &metric_entry_count);
+      EXPECT_NE(0u, metric_entry_count)
+          << "zetMetricTracerDecodeExp reports that there are no metric "
+             "entries to be decoded";
 
       if (metric_entry_count != 0) {
         std::vector<uint32_t> metric_entries_per_set_count(set_count);
@@ -1782,6 +1785,9 @@ TEST_F(
                   &set_count, nullptr, &metric_entry_count, nullptr));
     LOG_DEBUG << "decodable metric entry count: " << metric_entry_count;
     LOG_DEBUG << "set count: " << set_count;
+    EXPECT_NE(0u, metric_entry_count)
+        << "zetMetricTracerDecodeExp reports that there are no metric entries "
+           "to be decoded";
 
     if (metric_entry_count != 0) {
       const uint32_t additional_entries = 8;
@@ -1907,6 +1913,9 @@ TEST_F(zetMetricTracerTest,
                               decodable_metric_count, &decodable_metric_handles,
                               &set_count, &metric_entries_per_set_count,
                               &metric_entry_count, &metric_entries);
+    EXPECT_NE(0u, metric_entry_count)
+        << "zetMetricTracerDecodeExp reports that there are no metric entries "
+           "to be decoded";
 
     if (metric_entry_count != 0) {
       uint64_t metric_entry_timestamp_start = 0;
@@ -2035,6 +2044,9 @@ TEST_F(
           metric_decoder_handle, &raw_data_size, &raw_data,
           decodable_metric_count, &decodable_metric_handles, &set_count,
           &metric_entries_per_set_count, &metric_entry_count, &metric_entries);
+      EXPECT_NE(0u, metric_entry_count)
+          << "zetMetricTracerDecodeExp reports that there are no metric "
+             "entries to be decoded";
 
       if (metric_entry_count != 0) {
         dma_buf_validation_count++;
