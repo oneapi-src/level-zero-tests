@@ -188,6 +188,42 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution', test_name, re.IGNORECASE)) or \
                     (re.search('GivenOutOfOrderRegularCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEvent', test_name, re.IGNORECASE)) or \
                     (re.search('GivenOutOfOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEvent', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidDeviceWhenExportingMemoryWithD3D12HeapOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidDeviceWhenExportingMemoryWithD3D12ResourceOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidDeviceWhenExportingMemoryWithD3DTextureKmtOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidDeviceWhenExportingMemoryWithD3DTextureOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryAsDMABufOnImmediateCmdListThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryWithD3D12HeapOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryWithD3D12HeapThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryWithD3D12ResourceOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryWithD3DTextureKmtOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryWithD3DTextureKmtThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryWithD3DTextureOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenExportingMemoryWithD3DTextureThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenImportingMemoryThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryAsDMABufOnImmediateCmdListThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryWithD3D12HeapOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryWithD3D12HeapThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryWithD3D12ResourceOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryWithD3DTextureKmtOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryWithD3DTextureKmtThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryWithD3DTextureOnImmediateCmdListThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenExportingMemoryWithD3DTextureThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenImportingMemoryThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidImageWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('GivenInOrderMixedCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution', test_name, re.IGNORECASE)) or \
                     (re.search('GivenModuleWithGlobalVariableWhenWritingGlobalDataThenValidKernelOutputIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('GivenModuleWithGlobalVariableWhenWritingGlobalDataOnImmediateCmdListThenValidKernelOutputIsReturned', test_name, re.IGNORECASE)) or \
