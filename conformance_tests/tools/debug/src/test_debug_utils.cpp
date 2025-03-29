@@ -577,18 +577,25 @@ bool find_multi_event_stopped_threads(
   uint8_t attempts = 0;
   uint16_t numEventsReceived = 0;
   uint16_t numEventsExpected = threadsToCheck.size();
+  uint8_t retryAttempts = 0;
 
   zet_debug_event_t debugEvent = {};
   stoppedThreadsFound.clear();
   bool foundAll = true;
 
+  std::vector<ze_device_thread_t> stoppedThreadsFromEvent;
   LOG_DEBUG << "[Debugger] Expecting " << threadsToCheck.size() << " events.";
-  for (auto threadToCheck : threadsToCheck) {
+  auto sleepTime = 30;
+  int numEvents = 0;
+  int numEventsExpectedDuringRetry = numEventsExpected;
+  std::vector<ze_device_thread_t> threadsToRetry;
+  while ((numEventsReceived < numEventsExpected) && (retryAttempts <= 5)) {
     do {
       lzt::debug_read_event(debugSession, debugEvent, eventsTimeoutMS / 10,
                             true);
       LOG_INFO << "[Debugger] received event: "
                << lzt::debuggerEventTypeString[debugEvent.type];
+      numEvents++;
 
       if (debugEvent.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED) {
         print_thread("[Debugger] Stopped thread event for ",
@@ -598,11 +605,47 @@ bool find_multi_event_stopped_threads(
           EXPECT_TRUE(is_thread_in_vector(debugEvent.info.thread.thread,
                                           threadsToCheck));
         }
+        stoppedThreadsFromEvent.push_back(debugEvent.info.thread.thread);
         numEventsReceived++;
         break;
+      } else if (debugEvent.type == ZET_DEBUG_EVENT_TYPE_THREAD_UNAVAILABLE) {
+        // there is a thread we need to retry interrupting
+        print_thread("[Debugger] Thread unavailable event for ",
+                     debugEvent.info.thread.thread, DEBUG);
+
+      } else {
+        LOG_WARNING << "[Debugger] Unexpected event received: "
+                    << lzt::debuggerEventTypeString[debugEvent.type];
       }
       attempts++;
     } while (attempts < 5);
+    attempts = 0;
+
+    if (numEvents >= numEventsExpectedDuringRetry && retryAttempts < 5) {
+      numEvents = 0;
+      for (auto &thread : threadsToCheck) {
+        if (is_thread_in_vector(thread, stoppedThreadsFromEvent))
+          continue;
+        threadsToRetry.push_back(thread);
+      }
+      if (threadsToRetry.empty()) {
+        break;
+      }
+      numEventsExpectedDuringRetry = threadsToRetry.size();
+      LOG_INFO << "[Debugger] Sleeping for " << sleepTime
+               << " seconds before retrying to interrupt threads";
+      std::this_thread::sleep_for(std::chrono::seconds(sleepTime));
+      LOG_INFO << "[Debugger] Trying to interrupt threads again";
+      for (auto &thread : threadsToRetry) {
+        print_thread("[Debugger] \t\tThread to interrupt: ", thread, INFO);
+      }
+      for (auto &thread : threadsToRetry) {
+        lzt::debug_interrupt(debugSession, thread, true);
+      }
+      retryAttempts++;
+      sleepTime += 10;
+      threadsToRetry.clear();
+    }
   }
 
   EXPECT_EQ(numEventsReceived, numEventsExpected);
