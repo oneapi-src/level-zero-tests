@@ -109,7 +109,7 @@ void destroy_ze_image(ze_image_handle_t image);
 ze_image_properties_t get_ze_image_properties(ze_image_desc_t image_descriptor);
 
 void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output);
-void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output);
+void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit &output);
 
 class zeImageCreateCommon {
 public:
