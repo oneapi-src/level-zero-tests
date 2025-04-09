@@ -42,6 +42,7 @@ int main(int argc, char **argv) {
   auto device = lzt::get_default_device(driver);
 
   bool is_immediate = (argv[2][0] != '0');
+  bool is_device = (argv[3][0] != '0');
 
 #ifdef __linux__
   const char *socket_path = "external_memory_socket";
@@ -59,15 +60,27 @@ int main(int argc, char **argv) {
   ze_external_memory_export_desc_t export_desc = {};
   export_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_DESC;
   export_desc.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF;
-  ze_device_mem_alloc_desc_t device_alloc_desc = {};
-  device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
-  device_alloc_desc.pNext = &export_desc;
 
-  result = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
-                            &exported_memory);
-  if (ZE_RESULT_SUCCESS != result) {
-    LOG_WARNING << "Error allocating device memory to be imported\n";
-    exit(1);
+  if (is_device) {
+    ze_device_mem_alloc_desc_t device_alloc_desc = {};
+    device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+    device_alloc_desc.pNext = &export_desc;
+    result = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
+                              &exported_memory);
+    if (ZE_RESULT_SUCCESS != result) {
+      LOG_WARNING << "Error allocating device memory to be imported\n";
+      exit(1);
+    }
+  } else {
+    ze_host_mem_alloc_desc_t host_alloc_desc = {};
+    host_alloc_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+    host_alloc_desc.pNext = &export_desc;
+    result =
+        zeMemAllocHost(context, &host_alloc_desc, size, 1, &exported_memory);
+    if (ZE_RESULT_SUCCESS != result) {
+      LOG_WARNING << "Error allocating host memory to be imported\n";
+      exit(1);
+    }
   }
 
   auto cmd_bundle = lzt::create_command_bundle(
@@ -227,9 +240,12 @@ int main(int argc, char **argv) {
   ze_device_mem_alloc_desc_t device_alloc_desc = {};
   device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_alloc_desc.pNext = &import_handle;
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
-                             &imported_memory));
+  result = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
+                            &imported_memory);
+  if (ZE_RESULT_SUCCESS != result) {
+    LOG_WARNING << "Error allocating device memory to be imported\n";
+    exit(1);
+  }
 
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
