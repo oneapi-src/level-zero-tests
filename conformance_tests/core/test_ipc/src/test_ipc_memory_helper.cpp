@@ -64,6 +64,85 @@ static void child_device_access_test(int size, ze_ipc_memory_flags_t flags,
   }
 }
 
+static void child_device_access_test_opaque(int size,
+                                            ze_ipc_memory_flags_t flags,
+                                            bool is_immediate,
+                                            ze_ipc_mem_handle_t ipc_handle) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  void *memory = nullptr;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
+
+  void *buffer = lzt::allocate_host_memory(size, 1, context);
+  memset(buffer, 0, size);
+  lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+  LOG_DEBUG << "[Child] Validating buffer received correctly";
+  lzt::validate_data_pattern(buffer, size, 1);
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
+  lzt::free_memory(context, buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
+  lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+
+static void child_subdevice_access_test_opaque(int size,
+                                               ze_ipc_memory_flags_t flags,
+                                               bool is_immediate,
+                                               ze_ipc_mem_handle_t ipc_handle) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+  auto sub_devices = lzt::get_ze_sub_devices(device);
+
+  auto sub_device_count = sub_devices.size();
+
+  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  void *memory = nullptr;
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
+
+  void *buffer = lzt::allocate_host_memory(size, 1, context);
+  memset(buffer, 0, size);
+  // For each sub device found, use IPC buffer in a copy operation and validate
+  for (auto i = 0; i < sub_device_count; i++) {
+    auto cmd_bundle =
+        lzt::create_command_bundle(context, sub_devices[i], is_immediate);
+
+    lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+    LOG_DEBUG << "[Child] Validating buffer received correctly";
+    lzt::validate_data_pattern(buffer, size, 1);
+    lzt::destroy_command_bundle(cmd_bundle);
+  }
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
+  lzt::free_memory(context, buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
+  lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+
 static void child_subdevice_access_test(int size, ze_ipc_memory_flags_t flags,
                                         bool is_immediate) {
   auto driver = lzt::get_default_driver();
@@ -148,12 +227,23 @@ int main() {
 
   switch (shared_data.test_type) {
   case TEST_DEVICE_ACCESS:
-    child_device_access_test(shared_data.size, shared_data.flags,
-                             shared_data.is_immediate);
+    if (shared_data.test_sock_type == TEST_NONSOCK) {
+      child_device_access_test_opaque(shared_data.size, shared_data.flags,
+                                      shared_data.is_immediate,
+                                      shared_data.ipc_handle);
+    } else {
+      child_device_access_test(shared_data.size, shared_data.flags,
+                               shared_data.is_immediate);
+    }
     break;
   case TEST_SUBDEVICE_ACCESS:
-    child_subdevice_access_test(shared_data.size, shared_data.flags,
-                                shared_data.is_immediate);
+    if (shared_data.test_sock_type == TEST_NONSOCK) {
+      child_subdevice_access_test_opaque(shared_data.size, shared_data.flags,
+                                         shared_data.is_immediate,
+                                         shared_data.ipc_handle);
+    } else {
+      break; // Currently supporting only device access test scenario
+    }
     break;
   default:
     LOG_DEBUG << "Unrecognized test case";
