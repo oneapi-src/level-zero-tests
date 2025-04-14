@@ -34,9 +34,9 @@ int main(int argc, char **argv) {
     LOG_DEBUG << "Child exit due to zeInit failure";
     exit(EXIT_FAILURE);
   }
-  #ifdef USE_RUNTIME_TRACING
+#ifdef USE_RUNTIME_TRACING
   zelEnableTracingLayer();
-  #endif
+#endif
 
   ze_ipc_event_pool_handle_t hIpcEventPool{};
   int ipc_descriptor =
@@ -93,9 +93,9 @@ int main(int argc, char **argv) {
 
   lzt::disable_ltracer(tracer_handle);
   lzt::destroy_ltracer_handle(tracer_handle);
-  #ifdef USE_RUNTIME_TRACING
+#ifdef USE_RUNTIME_TRACING
   zelDisableTracingLayer();
-  #endif
+#endif
 
   exit(EXIT_SUCCESS);
 }

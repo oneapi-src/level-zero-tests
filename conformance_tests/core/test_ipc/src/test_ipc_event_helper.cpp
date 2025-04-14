@@ -295,7 +295,8 @@ int main() {
 
   if (shared_data.parent_type == PARENT_TEST_HOST_LAUNCHES_KERNEL) {
     // Wait until the child is ready to query the time stamp
-    bipc::named_semaphore semaphore(bipc::open_only, "ipc_event_test_semaphore");
+    bipc::named_semaphore semaphore(bipc::open_only,
+                                    "ipc_event_test_semaphore");
     semaphore.wait();
   }
 

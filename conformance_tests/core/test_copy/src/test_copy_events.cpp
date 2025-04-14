@@ -224,7 +224,7 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
   // Allocation can be accessed (while being used by GPU) only concurrently
   if (lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-      EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+    EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
   }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
@@ -287,7 +287,7 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
   // Allocation can be accessed (while being used by GPU) only concurrently
   if (lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-      EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+    EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
   }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));
@@ -350,7 +350,7 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
   // Allocation can be accessed (while being used by GPU) only concurrently
   if (lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-      EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
+    EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
   }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent1));
@@ -414,7 +414,7 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
   // Allocation can be accessed (while being used by GPU) only concurrently
   if (lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-      EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
+    EXPECT_NE(0, memcmp(ref_buffer, dst_buffer, test.size));
   }
 
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));
@@ -485,7 +485,7 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
   // Allocation can be accessed (while being used by GPU) only concurrently
   if (lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-      EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+    EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
   }
 
   // Signal Event On Host
@@ -556,9 +556,8 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
   // Allocation can be accessed (while being used by GPU) only concurrently
   if (lzt::is_concurrent_memory_access_supported(
           lzt::get_default_device(lzt::get_default_driver()))) {
-      EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
+    EXPECT_NE(0, memcmp(src_buffer, dst_buffer, test.size));
   }
-
 
   // Signal Event On Host
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(test.hEvent));

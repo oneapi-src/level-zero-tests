@@ -463,14 +463,14 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   }
 
   ze_kernel_timestamp_result_t *time_result0 = nullptr;
-  time_result0 =
-      static_cast<ze_kernel_timestamp_result_t *>(lzt::allocate_shared_memory(
-          sizeof(ze_kernel_timestamp_result_t), alignment, 0, 0, device1, context));
+  time_result0 = static_cast<ze_kernel_timestamp_result_t *>(
+      lzt::allocate_shared_memory(sizeof(ze_kernel_timestamp_result_t),
+                                  alignment, 0, 0, device1, context));
 
   ze_kernel_timestamp_result_t *time_result1 = nullptr;
-  time_result1 =
-      static_cast<ze_kernel_timestamp_result_t *>(lzt::allocate_shared_memory(
-          sizeof(ze_kernel_timestamp_result_t), alignment, 0, 0, device1, context));
+  time_result1 = static_cast<ze_kernel_timestamp_result_t *>(
+      lzt::allocate_shared_memory(sizeof(ze_kernel_timestamp_result_t),
+                                  alignment, 0, 0, device1, context));
 
   // Verify kernel timestamp can be queried from other device
   // with accessibility to event

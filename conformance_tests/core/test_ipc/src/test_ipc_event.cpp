@@ -202,7 +202,8 @@ static void run_ipc_event_test(parent_test_t parent_test,
                                bool isImmediate) {
 #ifdef __linux__
   bipc::named_semaphore::remove("ipc_event_test_semaphore");
-  bipc::named_semaphore semaphore(bipc::create_only, "ipc_event_test_semaphore", 0);
+  bipc::named_semaphore semaphore(bipc::create_only, "ipc_event_test_semaphore",
+                                  0);
 
   bipc::shared_memory_object::remove("ipc_event_test");
   // launch child

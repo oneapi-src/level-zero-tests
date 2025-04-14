@@ -23,7 +23,9 @@ jobs:
           libboost-all-dev \
           libpapi-dev \
           libpng-dev \
-          libva-dev
+          libva-dev \
+          clang \
+          clang-format-14
     - uses: hendrikmuhs/ccache-action@v1
     - name: Build Loader
       working-directory: level-zero
@@ -46,6 +48,18 @@ jobs:
           -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -D CMAKE_BUILD_TYPE=Release \
           ..
+        ../clang-format-patch.sh .. > clang_format_results.txt
+        if [[ -s ./clang_format_results.txt ]]; then
+            echo "Clang Format Check failed"
+            cat ./clang_format_results.txt
+            echo "<h3>clang-format</h3>" >> ${GITHUB_STEP_SUMMARY}
+            echo \`\`\` >> ${GITHUB_STEP_SUMMARY}
+            cat ./clang_format_results.txt >> ${GITHUB_STEP_SUMMARY}
+            echo \`\`\` >> ${GITHUB_STEP_SUMMARY}
+            exit 1
+        else
+            echo "::notice::clang-format check succeeded"
+        fi
         make -j$(nproc) install
     - name: Check ./scripts/level_zero_report_utils.py
       env:

@@ -58,36 +58,36 @@ cd ../.. && `
 rm -rf zlib-1.3.1"
 
 RUN "`
-curl -OSL --ssl-no-revoke https://download.sourceforge.net/libpng/lpng1639.zip && `
-7z.exe x lpng1639.zip && `
-rm lpng1639.zip && `
-mkdir -p lpng1639/build && `
-cd lpng1639/build && `
+curl -OSL --ssl-no-revoke https://download.sourceforge.net/libpng/lpng1647.zip && `
+7z.exe x lpng1647.zip && `
+rm lpng1647.zip && `
+mkdir -p lpng1647/build && `
+cd lpng1647/build && `
 cmake .. -T host=x64 -A x64 && `
 cmake --build . --target INSTALL --config Release && `
 cd ../.. && `
-rm -rf lpng1639"
+rm -rf lpng1647"
 
 RUN "`
-curl -SL --ssl-no-revoke https://github.com/KhronosGroup/OpenCL-Headers/archive/refs/tags/v2022.09.30.zip -o OpenCL-Headers.zip && `
+curl -SL --ssl-no-revoke https://github.com/KhronosGroup/OpenCL-Headers/archive/refs/tags/v2024.10.24.zip -o OpenCL-Headers.zip && `
 7z.exe x OpenCL-Headers.zip && `
 rm OpenCL-Headers.zip && `
-mkdir OpenCL-Headers-2022.09.30/build && `
-cd OpenCL-Headers-2022.09.30/build && `
+mkdir OpenCL-Headers-2024.10.24/build && `
+cd OpenCL-Headers-2024.10.24/build && `
 cmake .. && `
 cmake --build . --target install && `
 cd ../.. && `
-rm -rf OpenCL-Headers-2022.09.30"
+rm -rf OpenCL-Headers-2024.10.24"
 RUN "`
-curl -SL --ssl-no-revoke https://github.com/KhronosGroup/OpenCL-ICD-Loader/archive/refs/tags/v2022.09.30.zip -o OpenCL-ICD-Loader.zip && `
+curl -SL --ssl-no-revoke https://github.com/KhronosGroup/OpenCL-ICD-Loader/archive/refs/tags/v2024.10.24.zip -o OpenCL-ICD-Loader.zip && `
 7z.exe x OpenCL-ICD-Loader.zip && `
 rm OpenCL-ICD-Loader.zip && `
-mkdir OpenCL-ICD-Loader-2022.09.30/build && `
-cd OpenCL-ICD-Loader-2022.09.30/build && `
+mkdir OpenCL-ICD-Loader-2024.10.24/build && `
+cd OpenCL-ICD-Loader-2024.10.24/build && `
 cmake .. -T host=x64 -A x64 && `
 cmake --build . --target install && `
 cd ../.. && `
-rm -rf OpenCL-ICD-Loader-2022.09.30"
+rm -rf OpenCL-ICD-Loader-2024.10.24"
 
 RUN "`
 curl -OSL --ssl-no-revoke https://archives.boost.io/release/1.73.0/source/boost_1_73_0.7z && `

@@ -1029,16 +1029,16 @@ TEST_P(zeCommandListAppendMemAdviseTests,
 INSTANTIATE_TEST_SUITE_P(
     MemAdviceFlags, zeCommandListAppendMemAdviseTests,
     ::testing::Combine(
-        ::testing::Values(ZE_MEMORY_ADVICE_SET_READ_MOSTLY,
-                          ZE_MEMORY_ADVICE_CLEAR_READ_MOSTLY,
-                          ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION,
-                          ZE_MEMORY_ADVICE_CLEAR_PREFERRED_LOCATION,
-                          ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION,
-                          ZE_MEMORY_ADVICE_CLEAR_SYSTEM_MEMORY_PREFERRED_LOCATION,
-                          ZE_MEMORY_ADVICE_SET_NON_ATOMIC_MOSTLY,
-                          ZE_MEMORY_ADVICE_CLEAR_NON_ATOMIC_MOSTLY,
-                          ZE_MEMORY_ADVICE_BIAS_CACHED,
-                          ZE_MEMORY_ADVICE_BIAS_UNCACHED),
+        ::testing::Values(
+            ZE_MEMORY_ADVICE_SET_READ_MOSTLY,
+            ZE_MEMORY_ADVICE_CLEAR_READ_MOSTLY,
+            ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION,
+            ZE_MEMORY_ADVICE_CLEAR_PREFERRED_LOCATION,
+            ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION,
+            ZE_MEMORY_ADVICE_CLEAR_SYSTEM_MEMORY_PREFERRED_LOCATION,
+            ZE_MEMORY_ADVICE_SET_NON_ATOMIC_MOSTLY,
+            ZE_MEMORY_ADVICE_CLEAR_NON_ATOMIC_MOSTLY,
+            ZE_MEMORY_ADVICE_BIAS_CACHED, ZE_MEMORY_ADVICE_BIAS_UNCACHED),
         ::testing::Bool()));
 
 class zeCommandListAppendMemoryCopyParameterizedTests

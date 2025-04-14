@@ -14,7 +14,8 @@ namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
-std::vector<uint32_t> get_compute_queue_group_ordinals(ze_device_handle_t device) {
+std::vector<uint32_t>
+get_compute_queue_group_ordinals(ze_device_handle_t device) {
   uint32_t num_queue_groups = 0;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCommandQueueGroupProperties(
                                    device, &num_queue_groups, nullptr));

@@ -13,7 +13,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_pair_targets(
     size_t buffer_size, bool divide_buffers) {
 
   size_t total_buffer_size = 0;
-  
+
   size_t num_engines = queues.size();
   size_t chunk = buffer_size / num_engines;
 
@@ -544,38 +544,38 @@ void ZePeer::perform_parallel_copy_to_pair_targets(
         auto local_device_id = pair_device_id.first;
         auto remote_device_id = pair_device_id.second;
 
-          if (local_device_id == remote_device_id) {
-            continue;
-          }
+        if (local_device_id == remote_device_id) {
+          continue;
+        }
 
-          uint32_t device_id = local_device_id;
-          if (use_queue_in_destination) {
-            device_id = remote_device_id;
-          }
+        uint32_t device_id = local_device_id;
+        if (use_queue_in_destination) {
+          device_id = remote_device_id;
+        }
 
-          if (divide_buffers) {
-            for (size_t e = 0; e < num_engines; e++) {
-              ze_command_queue_handle_t command_queue =
-                  ze_peer_devices[device_id].engines[queues[e]].first;
-              SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
-                  command_queue, std::numeric_limits<uint64_t>::max()));
-            }
-          } else {
-            uint32_t queue_index = queues[queue_index_iter++ %
-                                          static_cast<uint32_t>(queues.size())];
+        if (divide_buffers) {
+          for (size_t e = 0; e < num_engines; e++) {
             ze_command_queue_handle_t command_queue =
-                ze_peer_devices[device_id].engines[queue_index].first;
-
+                ze_peer_devices[device_id].engines[queues[e]].first;
             SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
                 command_queue, std::numeric_limits<uint64_t>::max()));
           }
+        } else {
+          uint32_t queue_index =
+              queues[queue_index_iter++ % static_cast<uint32_t>(queues.size())];
+          ze_command_queue_handle_t command_queue =
+              ze_peer_devices[device_id].engines[queue_index].first;
 
-          timer.end();
-
-          timers[local_device_id][remote_device_id].end();
-          times[local_device_id][remote_device_id] +=
-              timers[local_device_id][remote_device_id].period_minus_overhead();
+          SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
+              command_queue, std::numeric_limits<uint64_t>::max()));
         }
+
+        timer.end();
+
+        timers[local_device_id][remote_device_id].end();
+        times[local_device_id][remote_device_id] +=
+            timers[local_device_id][remote_device_id].period_minus_overhead();
+      }
       SUCCESS_OR_TERMINATE(zeEventHostReset(event));
     }
 
@@ -639,18 +639,18 @@ void ZePeer::bandwidth_latency_parallel_to_pair_targets(
   std::unordered_map<uint32_t, bool> remote_device_map;
 
   for (auto pair_device_id : pair_device_ids) {
-      auto local_device_id = pair_device_id.first;
-      auto remote_device_id = pair_device_id.second;
+    auto local_device_id = pair_device_id.first;
+    auto remote_device_id = pair_device_id.second;
 
-      if (local_device_map.find(local_device_id) == local_device_map.end()) {
-        local_device_ids.push_back(local_device_id);
-        local_device_map[local_device_id] = true;
-      }
+    if (local_device_map.find(local_device_id) == local_device_map.end()) {
+      local_device_ids.push_back(local_device_id);
+      local_device_map[local_device_id] = true;
+    }
 
-      if (remote_device_map.find(remote_device_id) == remote_device_map.end()) {
-        remote_device_ids.push_back(remote_device_id);
-        remote_device_map[remote_device_id] = true;
-      }
+    if (remote_device_map.find(remote_device_id) == remote_device_map.end()) {
+      remote_device_ids.push_back(remote_device_id);
+      remote_device_map[remote_device_id] = true;
+    }
   }
 
   set_up(number_buffer_elements, remote_device_ids, local_device_ids,

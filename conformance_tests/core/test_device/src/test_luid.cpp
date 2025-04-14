@@ -94,4 +94,4 @@ TEST(zeLuidTests, GivenValidDevicesWhenRetrievingLuidThenValidValuesReturned) {
 
 #else
 #warning "ZE_DEVICE_LUID_EXT support not found, not building tests for it"
-#endif //#ifdef ZE_DEVICE_LUID_EXT_NAME
+#endif // #ifdef ZE_DEVICE_LUID_EXT_NAME

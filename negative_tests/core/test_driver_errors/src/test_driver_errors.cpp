@@ -35,9 +35,8 @@ TEST(
             zeDriverGet(nullptr, nullptr));
 }
 #ifdef ZE_API_VERSION_CURRENT_M
-TEST(
-  zeInitDriversNegativeTests,
-  GivenCallToZeInitDriversWithNoFlagsThenExpectFailure) {
+TEST(zeInitDriversNegativeTests,
+     GivenCallToZeInitDriversWithNoFlagsThenExpectFailure) {
 
   uint32_t pCount = 0;
   ze_init_driver_type_desc_t desc = {ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC};
@@ -45,13 +44,13 @@ TEST(
 
   // Test with no flags
   desc.flags = 0;
-  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ENUMERATION, zeInitDrivers(&pCount, nullptr, &desc));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ENUMERATION,
+            zeInitDrivers(&pCount, nullptr, &desc));
   EXPECT_EQ(pCount, 0);
 }
 
-TEST(
-  zeInitDriversNegativeTests,
-  GivenCallToZeInitDriversWithNullPointerCountThenExpectFailure) {
+TEST(zeInitDriversNegativeTests,
+     GivenCallToZeInitDriversWithNullPointerCountThenExpectFailure) {
 
   uint32_t pCount = 0;
   ze_init_driver_type_desc_t desc = {ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC};
@@ -59,24 +58,28 @@ TEST(
 
   // Test with nullptr pCount
   desc.flags = UINT32_MAX;
-  // Check for multiple errors depending on if this is the first call to zeInitDrivers.
+  // Check for multiple errors depending on if this is the first call to
+  // zeInitDrivers.
   auto result = zeInitDrivers(nullptr, nullptr, &desc);
   EXPECT_TRUE(result == ZE_RESULT_ERROR_INVALID_ARGUMENT ||
-              result == ZE_RESULT_ERROR_INVALID_ENUMERATION || result == ZE_RESULT_ERROR_INVALID_NULL_POINTER);
-  // The second call will be deterministically ZE_RESULT_ERROR_INVALID_NULL_POINTER
-  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER, zeInitDrivers(nullptr, nullptr, &desc));
+              result == ZE_RESULT_ERROR_INVALID_ENUMERATION ||
+              result == ZE_RESULT_ERROR_INVALID_NULL_POINTER);
+  // The second call will be deterministically
+  // ZE_RESULT_ERROR_INVALID_NULL_POINTER
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+            zeInitDrivers(nullptr, nullptr, &desc));
 }
 
-TEST(
-  zeInitDriversNegativeTests,
-  GivenCallToZeInitDriversWithNullPointerDescThenExpectFailure) {
+TEST(zeInitDriversNegativeTests,
+     GivenCallToZeInitDriversWithNullPointerDescThenExpectFailure) {
 
   uint32_t pCount = 0;
   ze_init_driver_type_desc_t desc = {ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC};
   desc.pNext = nullptr;
 
   // Test with nullptr Desc
-  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER, zeInitDrivers(&pCount, nullptr, nullptr));
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
+            zeInitDrivers(&pCount, nullptr, nullptr));
   EXPECT_EQ(pCount, 0);
 }
 #endif

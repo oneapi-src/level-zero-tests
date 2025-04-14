@@ -20,6 +20,7 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/process.hpp>
+#include <level_zero/loader/ze_loader.h>
 
 namespace lzt = level_zero_tests;
 namespace bipc = boost::interprocess;
@@ -27,7 +28,12 @@ namespace bipc = boost::interprocess;
 namespace {
 
 #ifdef USE_RUNTIME_TRACING
-class LCDynamicTracingCreateTests : public ::testing::Test {};
+class LCDynamicTracingCreateTests : public ::testing::Test {
+protected:
+  void SetUp() override { zelEnableTracingLayer(); }
+
+  void TearDown() override { zelDisableTracingLayer(); }
+};
 #define LCTRACING_CREATE_TEST_NAME LCDynamicTracingCreateTests
 #else // USE Tracing ENV
 class LCTracingCreateTests : public ::testing::Test {};
@@ -54,7 +60,12 @@ class LCTracingCreateMultipleTests
 
 #ifdef USE_RUNTIME_TRACING
 class LCDynamicTracingCreateMultipleTests
-    : public LCTracingCreateMultipleTests {};
+    : public LCTracingCreateMultipleTests {
+protected:
+  void SetUp() override { zelEnableTracingLayer(); }
+
+  void TearDown() override { zelDisableTracingLayer(); }
+};
 #define LCTRACING_CREATE_MULTIPLE_TEST_NAME LCDynamicTracingCreateMultipleTests
 #else // USE Tracing ENV
 #define LCTRACING_CREATE_MULTIPLE_TEST_NAME LCTracingCreateMultipleTests
@@ -88,7 +99,12 @@ INSTANTIATE_TEST_CASE_P(LCCreateMultipleTracerTest,
                         ::testing::Values(1, 10, 100, 1000));
 
 #ifdef USE_RUNTIME_TRACING
-class LCDynamicTracingDestroyTests : public ::testing::Test {};
+class LCDynamicTracingDestroyTests : public ::testing::Test {
+protected:
+  void SetUp() override { zelEnableTracingLayer(); }
+
+  void TearDown() override { zelDisableTracingLayer(); }
+};
 #define LCTRACING_DESTROY_TEST_NAME LCDynamicTracingDestroyTests
 #else // USE Tracing ENV
 class LCTracingDestroyTests : public ::testing::Test {};
@@ -109,6 +125,9 @@ TEST(LCTRACING_DESTROY_TEST_NAME,
 class LCTracingPrologueEpilogueTests : public ::testing::Test {
 protected:
   void SetUp() override {
+#ifdef USE_RUNTIME_TRACING
+    zelEnableTracingLayer();
+#endif
     driver = lzt::get_default_driver();
     device = lzt::zeDevice::get_instance()->get_device();
     context = lzt::get_default_context();
@@ -288,6 +307,9 @@ protected:
       lzt::free_memory(memory);
     lzt::disable_ltracer(tracer_handle);
     lzt::destroy_ltracer_handle(tracer_handle);
+#ifdef USE_RUNTIME_TRACING
+    zelDisableTracingLayer();
+#endif
   }
 
   ze_context_handle_t context;
