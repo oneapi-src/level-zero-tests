@@ -63,7 +63,7 @@ class SysmanDeviceTest : public lzt::SysmanCtsClass {};
 #endif // USE_ZESINIT
 
 void run_device_hierarchy_child_process() {
-  fs::path helper_path(fs::current_path() / "sysman_device");
+  fs::path helper_path(fs::current_path());
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
   bp::ipstream child_output;
@@ -97,7 +97,7 @@ static void run_child_process(const std::string &device_hierarchy) {
   bp::environment child_env = env;
   child_env["ZE_FLAT_DEVICE_HIERARCHY"] = device_hierarchy;
 
-  fs::path helper_path(fs::current_path() / "sysman_device");
+  fs::path helper_path(fs::current_path());
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
   bp::ipstream child_output;
