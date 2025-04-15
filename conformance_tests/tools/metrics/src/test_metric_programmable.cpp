@@ -163,21 +163,6 @@ protected:
 
     LOG_DEBUG << "LEAVE generate_metric_groups_from_metrics";
   }
-
-  void destroy_metric_group_handles_list(
-      std::vector<zet_metric_group_handle_t> &metric_group_handles_list) {
-    LOG_DEBUG << "ENTER destroy_metric_group_handles_list of size "
-              << metric_group_handles_list.size();
-    for (auto metric_group_handle : metric_group_handles_list) {
-      ze_result_t result;
-
-      result = zetMetricGroupDestroyExp(metric_group_handle);
-      EXPECT_EQ(result, ZE_RESULT_SUCCESS)
-          << "metric group destroy on handle has failed";
-    }
-    metric_group_handles_list.resize(0);
-    LOG_DEBUG << "LEAVE destroy_metric_group_handles_list";
-  }
 };
 
 TEST_F(
@@ -562,7 +547,7 @@ TEST_F(
           device, metric_handles, "group_name_prefix", "group_description",
           metric_group_handles, metric_group_handles_limit);
 
-      destroy_metric_group_handles_list(metric_group_handles);
+      lzt::destroy_metric_group_handles_list(metric_group_handles);
 
       lzt::destroy_metric_handles_list(metric_handles);
     }

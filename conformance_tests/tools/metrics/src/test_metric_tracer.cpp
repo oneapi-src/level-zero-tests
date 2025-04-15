@@ -98,7 +98,10 @@ TEST_F(
           device_with_metric_group_handles.activatable_metric_group_handle_list
               .data(),
           &tracer_descriptor, nullptr, &metric_tracer_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricTracerCreateExp failed";
+      EXPECT_EQ(result, ZE_RESULT_SUCCESS)
+          << "zetMetricTracerCreateExp for the first time failed with "
+             "error code "
+          << result;
 
       zet_metric_tracer_exp_handle_t metric_tracer_handle1;
       result = zetMetricTracerCreateExp(
@@ -107,14 +110,11 @@ TEST_F(
               .data(),
           &tracer_descriptor, nullptr, &metric_tracer_handle1);
       EXPECT_NE(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerCreateExp of a second tracer handle failed "
-             "with "
+          << "zetMetricTracerCreateExp for the second time failed with "
              "error code "
           << result;
 
-      result = zetMetricTracerDestroyExp(metric_tracer_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDestroyExp failed";
+      lzt::metric_tracer_destroy(metric_tracer_handle);
       lzt::deactivate_metric_groups(device);
     }
   }
@@ -728,38 +728,21 @@ TEST_F(
               .data());
 
       zet_metric_tracer_exp_handle_t metric_tracer_handle0;
-      result = zetMetricTracerCreateExp(
+      lzt::metric_tracer_create(
           lzt::get_default_context(), device, i + 1,
           device_with_metric_group_handles.activatable_metric_group_handle_list
               .data(),
           &tracer_descriptor, nullptr, &metric_tracer_handle0);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerCreateExp failed creating the first tracer "
-             "for this "
-             "device";
 
-      result = zetMetricTracerEnableExp(metric_tracer_handle0, true);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerEnableExp synchronously failed for first "
-             "tracer on "
-             "this device";
+      lzt::metric_tracer_enable(metric_tracer_handle0, true);
 
       result = zetMetricTracerDestroyExp(metric_tracer_handle0);
       ASSERT_NE(result, ZE_RESULT_SUCCESS)
           << "zetMetricTracerDestroyExp succeeded on a tracer that is "
              "still enabled";
 
-      result = zetMetricTracerDisableExp(metric_tracer_handle0, true);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDisableExp synchronously failed for the "
-             "first tracer "
-             "handle for this device";
-
-      result = zetMetricTracerDestroyExp(metric_tracer_handle0);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDestroyExp failed the first tracer "
-             "handle for this device";
-
+      lzt::metric_tracer_disable(metric_tracer_handle0, true);
+      lzt::metric_tracer_destroy(metric_tracer_handle0);
       lzt::deactivate_metric_groups(device);
     }
   }
@@ -792,19 +775,13 @@ TEST_F(
               .data());
 
       zet_metric_tracer_exp_handle_t metric_tracer_handle;
-      result = zetMetricTracerCreateExp(
+      lzt::metric_tracer_create(
           lzt::get_default_context(), device, i + 1,
           device_with_metric_group_handles.activatable_metric_group_handle_list
               .data(),
           &tracer_descriptor, nullptr, &metric_tracer_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerCreateExp first tracer create failed";
 
-      result = zetMetricTracerEnableExp(metric_tracer_handle, false);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerEnableExp on the first tracer handle "
-             "asynchronously "
-             "failed";
+      lzt::metric_tracer_enable(metric_tracer_handle, true);
 
       int32_t j = 0;
       do {
@@ -833,9 +810,7 @@ TEST_F(
       ASSERT_EQ(result, ZE_RESULT_SUCCESS)
           << "zetMetricTracerReadDataExp has failed with error code " << result;
 
-      result = zetMetricTracerDisableExp(metric_tracer_handle, false);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDisableExp failed on first tracer handle";
+      lzt::metric_tracer_disable(metric_tracer_handle, false);
 
       int32_t k = 0;
       std::vector<uint8_t> raw_data_buffer;
@@ -884,11 +859,7 @@ TEST_F(
           << "zetMetricTracerReadDataExp() called on a disabled tracer did not "
              "transition to the disabled state";
 
-      result = zetMetricTracerDestroyExp(metric_tracer_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDestroyExp failed the first tracer handle "
-             "for "
-             "this device";
+      lzt::metric_tracer_destroy(metric_tracer_handle);
 
       lzt::deactivate_metric_groups(device);
     }
@@ -961,21 +932,13 @@ TEST_P(
               .data());
 
       zet_metric_tracer_exp_handle_t metric_tracer_handle;
-      result = zetMetricTracerCreateExp(
+      lzt::metric_tracer_create(
           lzt::get_default_context(), device, i + 1,
           device_with_metric_group_handles.activatable_metric_group_handle_list
               .data(),
           &tracer_descriptor, nullptr, &metric_tracer_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerCreateExp failed creating the first tracer "
-             "for this "
-             "device";
 
-      result =
-          zetMetricTracerEnableExp(metric_tracer_handle, test_is_synchronous);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerEnableExp in " << test_mode
-          << " mode failed for first tracer on this device";
+      lzt::metric_tracer_enable(metric_tracer_handle, test_is_synchronous);
 
       if (!test_is_synchronous) {
         int32_t j = 0;
@@ -1056,12 +1019,7 @@ TEST_P(
           << "zetMetricTracerReadDataExp on an enabled "
              "tracer returned zero data size";
 
-      result =
-          zetMetricTracerDisableExp(metric_tracer_handle, test_is_synchronous);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDisableExp synchronously failed for the "
-             "first tracer "
-             "handle for this device";
+      lzt::metric_tracer_disable(metric_tracer_handle, true);
 
       size_t disabled_read_data_size = raw_data_size - enabled_read_data_size;
       std::vector<uint8_t> disabled_raw_data(disabled_read_data_size);
@@ -1104,12 +1062,7 @@ TEST_P(
         } while (result == ZE_RESULT_SUCCESS);
       }
 
-      result = zetMetricTracerDestroyExp(metric_tracer_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDestroyExp failed the first tracer handle "
-             "for "
-             "this device";
-
+      lzt::metric_tracer_destroy(metric_tracer_handle);
       lzt::deactivate_metric_groups(device);
     }
     lzt::destroy_command_queue(commandQueue);
@@ -1142,27 +1095,18 @@ TEST_F(zetMetricTracerTest,
             .data());
 
     zet_metric_tracer_exp_handle_t metric_tracer_handle = nullptr;
-    result = zetMetricTracerCreateExp(
-        lzt::get_default_context(), device,
-        device_with_metric_group_handles.activatable_metric_group_handle_list
-            .size(),
-        device_with_metric_group_handles.activatable_metric_group_handle_list
-            .data(),
-        &tracer_descriptor, nullptr, &metric_tracer_handle);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricTracerCreateExp failed";
-    ASSERT_NE(metric_tracer_handle, nullptr);
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
 
     zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
-    result =
-        zetMetricDecoderCreateExp(metric_tracer_handle, &metric_decoder_handle);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricDecoderCreateExp failed";
-    ASSERT_NE(metric_decoder_handle, nullptr);
-
-    result = zetMetricDecoderDestroyExp(metric_decoder_handle);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricDecoderDestroyExp failed";
-
-    result = zetMetricTracerDestroyExp(metric_tracer_handle);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricTracerDestroyExp failed";
+    lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
+    lzt::metric_decoder_destroy(metric_decoder_handle);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
     lzt::deactivate_metric_groups(device);
   }
 }
@@ -1188,21 +1132,16 @@ TEST_F(zetMetricTracerTest,
             .data());
 
     zet_metric_tracer_exp_handle_t metric_tracer_handle = nullptr;
-    result = zetMetricTracerCreateExp(
-        lzt::get_default_context(), device,
-        device_with_metric_group_handles.activatable_metric_group_handle_list
-            .size(),
-        device_with_metric_group_handles.activatable_metric_group_handle_list
-            .data(),
-        &tracer_descriptor, nullptr, &metric_tracer_handle);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricTracerCreateExp failed";
-    ASSERT_NE(metric_tracer_handle, nullptr);
+    lzt::metric_tracer_create(lzt::get_default_context(), device,
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.size(),
+                              device_with_metric_group_handles
+                                  .activatable_metric_group_handle_list.data(),
+                              &tracer_descriptor, nullptr,
+                              &metric_tracer_handle);
 
     zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
-    result =
-        zetMetricDecoderCreateExp(metric_tracer_handle, &metric_decoder_handle);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricDecoderCreateExp failed";
-    ASSERT_NE(metric_decoder_handle, nullptr);
+    lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
 
     uint32_t num_decodable_metrics = 0;
     result = zetMetricDecoderGetDecodableMetricsExp(
@@ -1253,11 +1192,8 @@ TEST_F(zetMetricTracerTest,
           << metric_properties.metricType;
     }
 
-    result = zetMetricDecoderDestroyExp(metric_decoder_handle);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricDecoderDestroyExp failed";
-
-    result = zetMetricTracerDestroyExp(metric_tracer_handle);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS) << "zetMetricTracerDestroyExp failed";
+    lzt::metric_decoder_destroy(metric_decoder_handle);
+    lzt::metric_tracer_destroy(metric_tracer_handle);
     lzt::deactivate_metric_groups(device);
   }
 }
@@ -1301,55 +1237,28 @@ TEST_F(
           device_with_metric_group_handles.activatable_metric_group_handle_list
               .data());
 
-      LOG_DEBUG << "create tracer";
       zet_metric_tracer_exp_handle_t metric_tracer_handle;
-      result = zetMetricTracerCreateExp(
+      lzt::metric_tracer_create(
           lzt::get_default_context(), device, i + 1,
           device_with_metric_group_handles.activatable_metric_group_handle_list
               .data(),
           &tracer_descriptor, notification_event, &metric_tracer_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerCreateExp failed creating the tracer for "
-             "this "
-             "device";
 
-      LOG_DEBUG << "enable tracer synchronously";
-      result = zetMetricTracerEnableExp(metric_tracer_handle, true);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerEnableExp in synchronous "
-          << " mode failed for the tracer on this device";
+      lzt::metric_tracer_enable(metric_tracer_handle, true);
 
       LOG_DEBUG << "create tracer decoder";
       zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
-      result = zetMetricDecoderCreateExp(metric_tracer_handle,
-                                         &metric_decoder_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricDecoderCreateExp failed for this device";
-      ASSERT_NE(metric_decoder_handle, nullptr)
-          << "zetMetricDecoderCreateExp returned a NULL handle";
+      lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
 
-      uint32_t decodable_metric_count = 0;
-      result = zetMetricDecoderGetDecodableMetricsExp(
-          metric_decoder_handle, &decodable_metric_count, nullptr);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricDecoderGetDecodableMetricsExp call failed when "
-             "querying "
-             "for "
-             "the number of decodable metrics";
-      ASSERT_NE(decodable_metric_count, 0)
-          << "zetMetricDecoderGetDecodableMetricsExp reports there a NO "
-             "decodable metrics";
+      uint32_t decodable_metric_count =
+          lzt::metric_decoder_get_decodable_metrics_count(
+              metric_decoder_handle);
 
       std::vector<zet_metric_handle_t> decodable_metric_handles(
           decodable_metric_count);
-      result = zetMetricDecoderGetDecodableMetricsExp(
-          metric_decoder_handle, &decodable_metric_count,
-          decodable_metric_handles.data());
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricDecoderGetDecodableMetricsExp failed retrieving "
-             "the list "
-             "of "
-             "handles for decodable metrics";
+      lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
+                                                &decodable_metric_handles);
+      decodable_metric_count = decodable_metric_handles.size();
       LOG_DEBUG << "found " << decodable_metric_count << " decodable metrics";
 
       void *a_buffer, *b_buffer, *c_buffer;
@@ -1390,40 +1299,28 @@ TEST_F(
       }
 
       /* read data */
-      size_t raw_data_size = 0;
-      result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                          nullptr);
-      LOG_DEBUG << "tracer read for  Request Size: " << raw_data_size;
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS);
-      ASSERT_GT(raw_data_size, 0);
+      size_t raw_data_size{};
+      raw_data_size = lzt::metric_tracer_read_data_size(metric_tracer_handle);
       std::vector<uint8_t> raw_data(raw_data_size, 0);
+      lzt::metric_tracer_read_data(metric_tracer_handle, &raw_data);
 
-      result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                          raw_data.data());
-      LOG_DEBUG << "tracer read for data: result " << result;
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS);
-
-      /* Decode Data */
+      /* decode data */
       uint32_t metric_entry_count = 0;
       uint32_t set_count = 0;
-
-      result = zetMetricTracerDecodeExp(
-          metric_decoder_handle, &raw_data_size, raw_data.data(),
-          decodable_metric_count, decodable_metric_handles.data(), &set_count,
-          nullptr, &metric_entry_count, nullptr);
-
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS);
-      LOG_DEBUG << "Decoded Metric Entry Count: " << metric_entry_count;
-      LOG_DEBUG << "Set Count: " << set_count;
-
+      lzt::metric_tracer_decode_get_various_counts(
+          metric_decoder_handle, &raw_data_size, &raw_data,
+          decodable_metric_count, &decodable_metric_handles, &set_count,
+          &metric_entry_count);
+      EXPECT_NE(0u, metric_entry_count) << "zetMetricTracerDecodeExp reports "
+                                           "that there are no metric entries "
+                                           "to be decoded";
       std::vector<uint32_t> metric_entries_per_set_count(set_count);
       std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
 
-      result = zetMetricTracerDecodeExp(
-          metric_decoder_handle, &raw_data_size, raw_data.data(),
-          decodable_metric_count, decodable_metric_handles.data(), &set_count,
-          metric_entries_per_set_count.data(), &metric_entry_count,
-          metric_entries.data());
+      lzt::metric_tracer_decode(
+          metric_decoder_handle, &raw_data_size, &raw_data,
+          decodable_metric_count, &decodable_metric_handles, &set_count,
+          &metric_entries_per_set_count, &metric_entry_count, &metric_entries);
 
       LOG_DEBUG << "Actual Decoded Metric Entry Count: " << metric_entry_count
                 << "\n";
@@ -1483,22 +1380,9 @@ TEST_F(
       lzt::free_memory(c_buffer);
       lzt::reset_command_list(commandList);
 
-      result = zetMetricDecoderDestroyExp(metric_decoder_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricDecoderDestroyExp failed the first tracer "
-             "handle for this device";
-
-      result = zetMetricTracerDisableExp(metric_tracer_handle, true);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDisableExp synchronously failed for the "
-             "first tracer "
-             "handle for this device";
-
-      result = zetMetricTracerDestroyExp(metric_tracer_handle);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerDestroyExp failed the first tracer "
-             "handle for this device";
-
+      lzt::metric_decoder_destroy(metric_decoder_handle);
+      lzt::metric_tracer_disable(metric_tracer_handle, true);
+      lzt::metric_tracer_destroy(metric_tracer_handle);
       lzt::deactivate_metric_groups(device);
       lzt::destroy_event(notification_event);
       lzt::destroy_event_pool(notification_event_pool);
