@@ -684,17 +684,9 @@ TEST(
   const int pattern_size = 1;
   uint32_t num_iterations = 2;
 
-  auto cmd_list0 = lzt::create_command_list();
-  auto cmd_list1 = lzt::create_command_list();
   auto context = lzt::get_default_context();
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
-  std::vector<ze_command_queue_handle_t> cmd_queue;
-  cmd_queue.resize(num_iterations);
-  for (uint32_t i = 0; i < num_iterations; i++) {
-    ze_command_queue_handle_t queue_handle = lzt::create_command_queue();
-    cmd_queue[i] = queue_handle;
-  }
 
   ze_module_handle_t module_handle =
       lzt::create_module(device, "cmdlist_scratch.spv");
@@ -705,8 +697,21 @@ TEST(
   ze_kernel_properties_t kernelProperties = {};
   kernelProperties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
   zeKernelGetProperties(scratch_function, &kernelProperties);
-  EXPECT_NE(kernelProperties.spillMemSize, 0);
   std::cout << "Scratch size = " << kernelProperties.spillMemSize << "\n";
+  if (kernelProperties.spillMemSize == 0) {
+    lzt::destroy_function(scratch_function);
+    lzt::destroy_module(module_handle);
+    GTEST_SKIP() << "Kernel does not use scratch space\n";
+  }
+
+  auto cmd_list0 = lzt::create_command_list();
+  auto cmd_list1 = lzt::create_command_list();
+  std::vector<ze_command_queue_handle_t> cmd_queue;
+  cmd_queue.resize(num_iterations);
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    ze_command_queue_handle_t queue_handle = lzt::create_command_queue();
+    cmd_queue[i] = queue_handle;
+  }
 
   uint32_t groupSizeX, groupSizeY, groupSizeZ;
   lzt::suggest_group_size(scratch_function, arraySize, 1, 1, groupSizeX,
