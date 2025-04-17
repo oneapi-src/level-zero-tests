@@ -52,7 +52,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [
-          {name: ubuntu, vmaj: 20, vmin: '04'},
           {name: ubuntu, vmaj: 22, vmin: '04'},
           {name: ubuntu, vmaj: 24, vmin: '04'},
           {name: ubuntu, vmaj: 24, vmin: '10'},
@@ -63,9 +62,6 @@ jobs:
           {name: windows}
         ]
         arch: ['']
-        include: [
-          {os: {name: ubuntu, vmaj: 20, vmin: '04'}, arch: arm64}
-        ]
     env:
       TEST_GROUPS: ${{ join(fromJSON(needs.config.outputs.groups), ' ') }}
       MSYS_NO_PATHCONV: 1
@@ -147,11 +143,6 @@ jobs:
         	ccache --zero-stats
         	cmake \
         	  -G Ninja \
-        ${{ matrix.arch == 'arm64' && '	  \
-        	  -D CMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-        	  -D CMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-        	  -D CMAKE_SYSTEM_PROCESSOR=aarch64' || '	  '
-        }}\
         	  -D CMAKE_C_COMPILER_LAUNCHER=ccache \
         	  -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
         ${{ runner.os == 'Windows' && '	  \
@@ -181,17 +172,12 @@ jobs:
         }}\
           ${DOCKER_IMAGE}:${{ needs.config.outputs.ref-slug }} \
           bash -e -x <<-EOF
-        	
+
         	ccache --zero-stats
-        	
+
         	for group in ${TEST_GROUPS}; do
         	    cmake \
         	      -G Ninja \
-        ${{ matrix.arch == 'arm64' && '	      \
-        	      -D CMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-        	      -D CMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-        	      -D CMAKE_SYSTEM_PROCESSOR=aarch64 ' || '	      '
-        }}\
         	      -D CMAKE_C_COMPILER_LAUNCHER=ccache \
         	      -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
         ${{ runner.os == 'Windows' && '	      \
@@ -202,10 +188,7 @@ jobs:
         	      -D REQUIRE_OPENCL_BENCHMARKS=yes \
         	      -D CMAKE_INSTALL_PREFIX=${MOUNT_TARGET}/level-zero-tests-\${group} \
         	      ..
-        	
         	    cmake --build . -j --target install
         	done
-        	
         	ccache --show-stats
-        	
         	EOF
