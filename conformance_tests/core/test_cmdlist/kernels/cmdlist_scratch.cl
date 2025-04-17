@@ -13,7 +13,7 @@
  * implied warranties, other than those that are expressly stated in the License.
  */
 
-#define SIZE 128
+#define SIZE 256
 #define NO_TAIL()
 
 #define LEXP_0(eval_macro, tail_macro) tail_macro()
