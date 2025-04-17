@@ -1691,6 +1691,21 @@ void destroy_metric_handles_list(
   LOG_DEBUG << "LEAVE destroy_metric_handles_list";
 }
 
+void destroy_metric_group_handles_list(
+    std::vector<zet_metric_group_handle_t> &metric_group_handles_list) {
+  LOG_DEBUG << "ENTER destroy_metric_group_handles_list of size "
+            << metric_group_handles_list.size();
+  for (auto metric_group_handle : metric_group_handles_list) {
+    ze_result_t result;
+
+    result = zetMetricGroupDestroyExp(metric_group_handle);
+    EXPECT_EQ(result, ZE_RESULT_SUCCESS)
+        << "metric group destroy on handle has failed";
+  }
+  metric_group_handles_list.resize(0);
+  LOG_DEBUG << "LEAVE destroy_metric_group_handles_list";
+}
+
 void metric_tracer_create(
     zet_context_handle_t context_handle, zet_device_handle_t device_handle,
     uint32_t metric_group_count,
