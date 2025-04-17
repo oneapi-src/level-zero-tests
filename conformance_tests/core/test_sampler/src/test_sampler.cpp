@@ -118,12 +118,12 @@ static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image,
                                               int height, int width) {
   ze_image_desc_t image_description = {};
   image_description.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-  image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
+  image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8;
 
   image_description.pNext = nullptr;
   image_description.flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
   image_description.type = ZE_IMAGE_TYPE_2D;
-  image_description.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
+  image_description.format.type = ZE_IMAGE_FORMAT_TYPE_UNORM;
   image_description.format.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
   image_description.format.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
   image_description.format.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
@@ -242,12 +242,12 @@ TEST_P(
   args_inhost.push_back(arg);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name_inhost, 1, args_inhost,
-                                   is_immediate);
+                                   module, func_name_inhost, output_width,
+                                   output_height, args_inhost, is_immediate);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name_inkernel, 1, args_inkernel,
-                                   is_immediate);
+                                   module, func_name_inkernel, output_width,
+                                   output_height, args_inkernel, is_immediate);
 
   lzt::copy_image_to_mem(output_xeimage_host, output_inhost);
   lzt::copy_image_to_mem(output_xeimage_kernel, output_inkernel);
