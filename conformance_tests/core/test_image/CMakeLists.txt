@@ -16,6 +16,7 @@ add_lzt_test(
     level_zero_tests::logging
     level_zero_tests::utils
   KERNELS
+    image_format_layouts_tests
     image_formats_tests
     image_layout_tests
     image_media_layouts_tests
