@@ -1038,7 +1038,7 @@ TEST_F(
               power_limits_descriptors[i].limit * 2;
           power_peak_initial.limit = max_power_limit_second;
 
-          s if (power_limits_descriptors[i].limitValueLocked == false) {
+          if (power_limits_descriptors[i].limitValueLocked == false) {
             status = lzt::set_power_limits_ext(p_power_handle, &single_count,
                                                &power_peak_Max);
             if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
@@ -1084,8 +1084,7 @@ TEST_F(
                 EXPECT_LE(power_peak_get.limit, max_power_limit_second);
               }
             }
-          }
-          else {
+          } else {
             LOG_INFO << "Set limit not supported due to peak "
                         "limitValueLocked flag is true";
           }
