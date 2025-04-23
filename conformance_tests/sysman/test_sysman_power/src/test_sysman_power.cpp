@@ -84,6 +84,41 @@ TEST_F(
     }
   }
 }
+TEST_F(
+    POWER_TEST,
+    GivenSamePowerHandleWhenRequestingPowerPropertiesThenCheckPowerLimitsAreInRange) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      auto pProperties = lzt::get_power_properties(p_power_handle);
+      if (pProperties.maxLimit != -1) {
+        EXPECT_GT(pProperties.maxLimit, 0);
+        EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
+      } else {
+        LOG_INFO << "maxLimit unsupported: ";
+      }
+
+      if (pProperties.minLimit != -1) {
+        EXPECT_GE(pProperties.minLimit, 0);
+      } else {
+        LOG_INFO << "minlimit unsupported: ";
+      }
+
+      if (pProperties.defaultLimit != -1) {
+        EXPECT_GT(pProperties.defaultLimit, 0);
+      } else {
+        LOG_INFO << "defaultLimit unsupported: ";
+      }
+    }
+  }
+}
 
 TEST_F(
     POWER_TEST,
@@ -99,12 +134,19 @@ TEST_F(
     for (auto p_power_handle : p_power_handles) {
       EXPECT_NE(nullptr, p_power_handle);
       auto pproperties_initial = lzt::get_power_properties(p_power_handle);
+      if (pproperties_initial.maxLimit == -1) {
+        LOG_INFO << "maxlimit unsupported: ";
+      }
       auto pproperties_later = lzt::get_power_properties(p_power_handle);
       EXPECT_EQ(pproperties_initial.onSubdevice, pproperties_later.onSubdevice);
       EXPECT_EQ(pproperties_initial.subdeviceId, pproperties_later.subdeviceId);
       EXPECT_EQ(pproperties_initial.canControl, pproperties_later.canControl);
       EXPECT_EQ(pproperties_initial.isEnergyThresholdSupported,
                 pproperties_later.isEnergyThresholdSupported);
+      EXPECT_EQ(pproperties_initial.maxLimit, pproperties_later.maxLimit);
+      EXPECT_EQ(pproperties_initial.minLimit, pproperties_later.minLimit);
+      EXPECT_EQ(pproperties_initial.defaultLimit,
+                pproperties_later.defaultLimit);
     }
   }
 }
@@ -192,7 +234,6 @@ TEST_F(
       FAIL() << "No handles found: "
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-
     for (auto p_power_handle : p_power_handles) {
       EXPECT_NE(nullptr, p_power_handle);
       zes_power_sustained_limit_t pSustainedInitial = {};
@@ -205,7 +246,10 @@ TEST_F(
         continue;
       }
       EXPECT_EQ(status, ZE_RESULT_SUCCESS);
-
+      auto pProperties = lzt::get_power_properties(p_power_handle);
+      if (pProperties.maxLimit == -1) {
+        LOG_INFO << "maxlimit unsupported:";
+      }
       zes_power_sustained_limit_t pSustainedSet = {};
       zes_power_burst_limit_t pBurstSet = {};
       zes_power_peak_limit_t pPeakSet = {};
@@ -218,7 +262,11 @@ TEST_F(
         pBurstSet.enabled = 1;
       else
         pBurstSet.enabled = 0;
-
+      if (pProperties.maxLimit != -1) {
+        pSustainedSet.power = pProperties.maxLimit;
+        pBurstSet.power = pProperties.maxLimit;
+        pPeakSet.powerAC = pProperties.maxLimit;
+      }
       pPeakSet.powerDC = pPeakInitial.powerDC;
       if (pBurstSet.enabled && pSustainedSet.enabled) {
         status =
