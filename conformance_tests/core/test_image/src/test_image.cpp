@@ -657,7 +657,9 @@ TEST_P(
         if (img == nullptr) {
           continue;
         }
-        ze_image_memory_properties_exp_t image_mem_properties;
+        ze_image_memory_properties_exp_t image_mem_properties = {};
+        image_mem_properties.stype =
+            ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES;
         EXPECT_EQ(ZE_RESULT_SUCCESS,
                   zeImageGetMemoryPropertiesExp(img, &image_mem_properties));
         EXPECT_GE(0u, image_mem_properties.rowPitch);
