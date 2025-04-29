@@ -88,7 +88,7 @@ public:
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
-                           std::string module_name) {
+                           const char *module_name) {
     return launch_process(test_type, device, use_sub_devices, module_name, "",
                           0, false);
   }
