@@ -27,7 +27,7 @@ class ProcessLauncher {
 public:
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
-                           std::string module_name, std::string module_options,
+                           const char *module_name, std::string module_options,
                            uint64_t index, bool use_many_threads) {
 
     std::string device_id = " ";
@@ -51,7 +51,7 @@ public:
     };
 
     std::string module_name_option = " ";
-    if (!module_name.empty()) {
+    if (module_name && module_name[0] != '\0') {
       module_name_option = optionize(module_string, module_name);
     }
     std::string module_build_options = " ";
@@ -72,7 +72,7 @@ public:
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
-                           std::string module_name, uint64_t index,
+                           const char *module_name, uint64_t index,
                            bool use_many_threads) {
     return launch_process(test_type, device, use_sub_devices, module_name, "",
                           index, use_many_threads);
@@ -80,7 +80,7 @@ public:
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
-                           std::string module_name,
+                           const char *module_name,
                            std::string module_options) {
     return launch_process(test_type, device, use_sub_devices, module_name,
                           module_options, 0, false);
@@ -88,7 +88,7 @@ public:
 
   bp::child launch_process(debug_test_type_t test_type,
                            ze_device_handle_t device, bool use_sub_devices,
-                           std::string module_name) {
+                           const char *module_name) {
     return launch_process(test_type, device, use_sub_devices, module_name, "",
                           0, false);
   }
