@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 - 2024 Intel Corporation
+ * Copyright (C) 2019 - 2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -479,6 +479,19 @@ size_t create_page_aligned_size(size_t requested_size, size_t page_size) {
     return page_size;
   } else {
     return (requested_size / page_size) * page_size;
+  }
+}
+
+void gtest_skip_if_shared_system_alloc_unsupported(bool is_shared_system) {
+  if (is_shared_system) {
+    const auto memory_access_properties = lzt::get_memory_access_properties(
+        lzt::get_default_device(lzt::get_default_driver()));
+
+    if ((memory_access_properties.sharedSystemAllocCapabilities &
+         ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
+      GTEST_SKIP() << "device does not support shared system allocation, "
+                      "skipping the test";
+    }
   }
 }
 

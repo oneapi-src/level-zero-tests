@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -98,6 +98,9 @@ class zeImmediateCommandListExecutionTests
           std::tuple<ze_command_queue_mode_t, bool>> {
 
 protected:
+  void RunGivenImmediateCommandListWhenAppendLaunchKernelInstructionTest(
+      bool is_shared_system);
+
   void SetUp() override {
     mode = std::get<0>(GetParam());
     useEventsToSynchronize = std::get<1>(GetParam());
@@ -194,14 +197,22 @@ TEST_F(
                                     ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS);
 }
 
-TEST_P(
-    zeImmediateCommandListExecutionTests,
-    GivenImmediateCommandListWhenAppendLaunchKernelInstructionThenVerifyImmediateExecution) {
+void zeImmediateCommandListExecutionTests::
+    RunGivenImmediateCommandListWhenAppendLaunchKernelInstructionTest(
+        bool is_shared_system) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+
   const size_t size = 16;
   const int addval = 10;
   const int addval2 = 15;
 
-  void *buffer = lzt::allocate_shared_memory(size * sizeof(int));
+  void *buffer{};
+  if (is_shared_system) {
+    buffer = malloc(size * sizeof(int));
+    ASSERT_NE(nullptr, buffer);
+  } else {
+    buffer = lzt::allocate_shared_memory(size * sizeof(int));
+  }
   memset(buffer, 0x0, size * sizeof(int));
 
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event0));
@@ -245,17 +256,42 @@ TEST_P(
   }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  lzt::free_memory(buffer);
+  if (is_shared_system) {
+    free(buffer);
+  } else {
+    lzt::free_memory(buffer);
+  }
+}
+
+TEST_P(
+    zeImmediateCommandListExecutionTests,
+    GivenImmediateCommandListWhenAppendLaunchKernelInstructionThenVerifyImmediateExecution) {
+  RunGivenImmediateCommandListWhenAppendLaunchKernelInstructionTest(false);
+}
+
+TEST_P(
+    zeImmediateCommandListExecutionTests,
+    GivenImmediateCommandListWhenAppendLaunchKernelInstructionThenVerifyImmediateExecutionWithSharedSystemAllocator) {
+  RunGivenImmediateCommandListWhenAppendLaunchKernelInstructionTest(true);
 }
 
 static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
-                                  ze_command_queue_mode_t mode) {
+                                  ze_command_queue_mode_t mode,
+                                  bool is_shared_system) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+
   const size_t size = 16;
   const int addval = 10;
   int addval2 = 15;
   const uint64_t timeout = UINT64_MAX - 1;
 
-  void *buffer = lzt::allocate_shared_memory(size * sizeof(int));
+  void *buffer{};
+  if (is_shared_system) {
+    buffer = malloc(size * sizeof(int));
+    ASSERT_NE(nullptr, buffer);
+  } else {
+    buffer = lzt::allocate_shared_memory(size * sizeof(int));
+  }
   memset(buffer, 0x0, size * sizeof(int));
 
   ze_module_handle_t module = lzt::create_module(
@@ -295,30 +331,54 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
   }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  lzt::free_memory(buffer);
+  if (is_shared_system) {
+    free(buffer);
+  } else {
+    lzt::free_memory(buffer);
+  }
 }
 
 TEST_F(
     zeImmediateCommandListInOrderExecutionTests,
     GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionThenVerifyImmediateExecution) {
   RunAppendLaunchKernel(cmdlist_immediate_default_mode,
-                        ZE_COMMAND_QUEUE_MODE_DEFAULT);
+                        ZE_COMMAND_QUEUE_MODE_DEFAULT, false);
   RunAppendLaunchKernel(cmdlist_immediate_sync_mode,
-                        ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS);
+                        ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS, false);
   RunAppendLaunchKernel(cmdlist_immediate_async_mode,
-                        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS);
+                        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, false);
+}
+
+TEST_F(
+    zeImmediateCommandListInOrderExecutionTests,
+    GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionThenVerifyImmediateExecutionWithSharedSystemAllocator) {
+  RunAppendLaunchKernel(cmdlist_immediate_default_mode,
+                        ZE_COMMAND_QUEUE_MODE_DEFAULT, true);
+  RunAppendLaunchKernel(cmdlist_immediate_sync_mode,
+                        ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS, true);
+  RunAppendLaunchKernel(cmdlist_immediate_async_mode,
+                        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, true);
 }
 
 static void
 RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
-                           ze_event_handle_t event, int num_cmdlist) {
+                           ze_event_handle_t event, int num_cmdlist,
+                           bool is_shared_system) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+
   const size_t size = 16;
   const int addval = 10;
   const int num_iterations = 100;
   int addval2 = 0;
   const uint64_t timeout = UINT64_MAX - 1;
 
-  void *buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
+  void *buffer{};
+  if (is_shared_system) {
+    buffer = malloc(num_cmdlist * size * sizeof(int));
+    ASSERT_NE(nullptr, buffer);
+  } else {
+    buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
+  }
 
   ze_module_handle_t module = lzt::create_module(
       lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
@@ -372,7 +432,11 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
   }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  lzt::free_memory(buffer);
+  if (is_shared_system) {
+    free(buffer);
+  } else {
+    lzt::free_memory(buffer);
+  }
 }
 
 TEST_F(
@@ -384,7 +448,20 @@ TEST_F(
   EXPECT_TRUE(event_pool_ext_found);
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
-    RunAppendLaunchKernelEvent(cmdlist, event0, i);
+    RunAppendLaunchKernelEvent(cmdlist, event0, i, false);
+  }
+}
+
+TEST_F(
+    zeImmediateCommandListEventCounterTests,
+    GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocator) {
+
+  bool event_pool_ext_found = lzt::check_if_extension_supported(
+      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
+  EXPECT_TRUE(event_pool_ext_found);
+  for (int i = 1; i <= cmdlist.size(); i++) {
+    LOG_INFO << "Running " << i << " command list(s)";
+    RunAppendLaunchKernelEvent(cmdlist, event0, i, true);
   }
 }
 

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019 - 2024 Intel Corporation
+ * Copyright (C) 2019 - 2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -166,5 +166,8 @@ void *reserve_allocate_and_map_device_memory(
 void unmap_and_free_reserved_memory(
     ze_context_handle_t context, void *reservedMemory,
     ze_physical_mem_handle_t reservedPhysicalMemory, size_t allocSize);
+
+void gtest_skip_if_shared_system_alloc_unsupported(bool is_shared_system);
+
 }; // namespace level_zero_tests
 #endif
