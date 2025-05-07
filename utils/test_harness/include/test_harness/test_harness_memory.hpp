@@ -124,7 +124,7 @@ void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
                   ze_context_handle_t context, bool is_system_shared = false);
 
 void aligned_free(const void *ptr);
-void free_memory(const void *ptr, bool is_system_shared=false);
+void free_memory(const void *ptr, bool is_system_shared = false);
 void free_memory(ze_context_handle_t context, const void *ptr);
 
 void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
