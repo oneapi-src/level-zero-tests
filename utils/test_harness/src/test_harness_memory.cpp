@@ -23,6 +23,9 @@ void *aligned_malloc(size_t size, size_t alignment) {
   void *memory = nullptr;
 
 #ifdef __linux__
+  if (size % alignment != 0) {
+    size = ((size + alignment - 1) / alignment) * alignment;
+  }
   memory = aligned_alloc(alignment, size);
 #else // Windows
   memory = _aligned_malloc(size, alignment);
@@ -47,6 +50,9 @@ void *aligned_malloc_no_check(size_t size, size_t alignment,
   void *memory = nullptr;
 
 #ifdef __linux__
+  if (size % alignment != 0) {
+    size = ((size + alignment - 1) / alignment) * alignment;
+  }
   memory = aligned_alloc(alignment, size);
 #else // Windows
   memory = _aligned_malloc(size, alignment);
