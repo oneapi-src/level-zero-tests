@@ -63,14 +63,9 @@ void CooperativeKernelTests::
   // Set up input vector data
   const size_t data_size = 4096;
   uint64_t kernel_data[data_size] = {0};
-  void *input_data{};
-  if (is_shared_system) {
-    input_data = malloc(sizeof(uint64_t) * data_size);
-    ASSERT_NE(nullptr, input_data);
-  } else {
-    input_data = lzt::allocate_shared_memory(sizeof(uint64_t) * data_size, 1, 0,
-                                             0, device, context);
-  }
+  void *input_data = lzt::allocate_shared_memory_with_allocator_selector(
+      sizeof(uint64_t) * data_size, 1, 0, 0, device, context, is_shared_system);
+
   memcpy(input_data, kernel_data, data_size * sizeof(uint64_t));
 
   auto row_num = std::get<0>(GetParam());
@@ -111,11 +106,9 @@ void CooperativeKernelTests::
     val = i + row_num;
     ASSERT_EQ(static_cast<uint64_t *>(input_data)[i], val);
   }
-  if (is_shared_system) {
-    free(input_data);
-  } else {
-    lzt::free_memory(context, input_data);
-  }
+
+  lzt::free_memory_with_allocator_selector(context, input_data, is_shared_system);
+
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
 }

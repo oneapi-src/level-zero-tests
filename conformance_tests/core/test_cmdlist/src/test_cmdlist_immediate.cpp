@@ -206,13 +206,9 @@ void zeImmediateCommandListExecutionTests::
   const int addval = 10;
   const int addval2 = 15;
 
-  void *buffer{};
-  if (is_shared_system) {
-    buffer = malloc(size * sizeof(int));
-    ASSERT_NE(nullptr, buffer);
-  } else {
-    buffer = lzt::allocate_shared_memory(size * sizeof(int));
-  }
+  void *buffer = lzt::allocate_shared_memory_with_allocator_selector(
+      size * sizeof(int), is_shared_system);
+
   memset(buffer, 0x0, size * sizeof(int));
 
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event0));
@@ -256,11 +252,8 @@ void zeImmediateCommandListExecutionTests::
   }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  if (is_shared_system) {
-    free(buffer);
-  } else {
-    lzt::free_memory(buffer);
-  }
+
+  lzt::free_memory_with_allocator_selector(buffer, is_shared_system);
 }
 
 TEST_P(
@@ -285,13 +278,9 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
   int addval2 = 15;
   const uint64_t timeout = UINT64_MAX - 1;
 
-  void *buffer{};
-  if (is_shared_system) {
-    buffer = malloc(size * sizeof(int));
-    ASSERT_NE(nullptr, buffer);
-  } else {
-    buffer = lzt::allocate_shared_memory(size * sizeof(int));
-  }
+  void *buffer = lzt::allocate_shared_memory_with_allocator_selector(
+      size * sizeof(int), is_shared_system);
+
   memset(buffer, 0x0, size * sizeof(int));
 
   ze_module_handle_t module = lzt::create_module(
@@ -331,11 +320,8 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
   }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  if (is_shared_system) {
-    free(buffer);
-  } else {
-    lzt::free_memory(buffer);
-  }
+
+  lzt::free_memory_with_allocator_selector(buffer, is_shared_system);
 }
 
 TEST_F(
@@ -372,13 +358,8 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
   int addval2 = 0;
   const uint64_t timeout = UINT64_MAX - 1;
 
-  void *buffer{};
-  if (is_shared_system) {
-    buffer = malloc(num_cmdlist * size * sizeof(int));
-    ASSERT_NE(nullptr, buffer);
-  } else {
-    buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
-  }
+  void *buffer = lzt::allocate_shared_memory_with_allocator_selector(
+      num_cmdlist * size * sizeof(int), is_shared_system);
 
   ze_module_handle_t module = lzt::create_module(
       lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
@@ -432,11 +413,8 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
   }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  if (is_shared_system) {
-    free(buffer);
-  } else {
-    lzt::free_memory(buffer);
-  }
+
+  lzt::free_memory_with_allocator_selector(buffer, is_shared_system);
 }
 
 TEST_F(

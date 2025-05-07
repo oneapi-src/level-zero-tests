@@ -228,6 +228,14 @@ void *allocate_shared_memory(const size_t size) {
   return allocate_shared_memory(size, 1);
 }
 
+void *allocate_shared_memory_with_allocator_selector(const size_t size,
+                                                     bool is_shared_system) {
+  if (is_shared_system) {
+    return aligned_malloc(size, 1);
+  }
+  return allocate_shared_memory(size, 1);
+}
+
 void *allocate_shared_memory(const size_t size, ze_device_handle_t device) {
   return allocate_shared_memory(size, 1, 0, 0, device);
 }
@@ -281,6 +289,20 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_host_mem_alloc_flags_t host_flags,
                              ze_device_handle_t device,
                              ze_context_handle_t context) {
+
+  return allocate_shared_memory(size, alignment, dev_flags, nullptr, host_flags,
+                                nullptr, device, context);
+}
+
+void *allocate_shared_memory_with_allocator_selector(
+    const size_t size, const size_t alignment,
+    const ze_device_mem_alloc_flags_t dev_flags,
+    const ze_host_mem_alloc_flags_t host_flags, ze_device_handle_t device,
+    ze_context_handle_t context, bool is_shared_system) {
+
+  if (is_shared_system) {
+    return aligned_malloc(size, alignment);
+  }
 
   return allocate_shared_memory(size, alignment, dev_flags, nullptr, host_flags,
                                 nullptr, device, context);
@@ -382,6 +404,18 @@ void free_memory(ze_context_handle_t context, const void *ptr) {
   auto context_initial = context;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
   EXPECT_EQ(context, context_initial);
+}
+
+void free_memory_with_allocator_selector(ze_context_handle_t context,
+                                         const void *ptr,
+                                         bool is_shared_system) {
+  if (is_shared_system) {
+    aligned_free((void *)ptr);
+  } else {
+    auto context_initial = context;
+    EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
+    EXPECT_EQ(context, context_initial);
+  }
 }
 
 void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
