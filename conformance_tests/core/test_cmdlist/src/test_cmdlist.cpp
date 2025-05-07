@@ -973,8 +973,8 @@ TEST_F(
 }
 
 TEST_F(
-  zeCommandListEventCounterTests,
-  GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocatorNew) {
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocatorNew) {
 
   bool event_pool_ext_found = lzt::check_if_extension_supported(
       lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
