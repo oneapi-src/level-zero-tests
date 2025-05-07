@@ -985,9 +985,10 @@ TEST_F(
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
     const size_t size = 16;
-    void *buffer = reinterpret_cast<void *>(new int[i * size]);
+    int *buffer = new int[i * size];
     ASSERT_NE(nullptr, buffer);
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, buffer, size);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
+                               reinterpret_cast<void *>(buffer), size);
     delete[] buffer;
   }
 }
@@ -1009,7 +1010,6 @@ TEST_F(
     ASSERT_NE(nullptr, buffer);
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
                                reinterpret_cast<void *>(buffer.get()), size);
-    delete[] buffer;
   }
 }
 
