@@ -59,6 +59,14 @@ void *aligned_malloc_no_check(size_t size, size_t alignment,
   return memory;
 }
 
+void aligned_free(const void *ptr) {
+#ifdef __linux__
+  free((void *)ptr);
+#else // Windows
+  _aligned_free((void *)ptr);
+#endif
+}
+
 void *allocate_host_memory(const size_t size, bool is_system_shared) {
   return allocate_host_memory(size, 1, is_system_shared);
 }
@@ -364,18 +372,19 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
 }
 
 void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
-                  ze_context_handle_t context) {
+                  ze_context_handle_t context, bool is_system_shared) {
   switch (mem_type) {
   case ZE_MEMORY_TYPE_HOST:
-    *memory = allocate_host_memory(size, 1, context);
+    *memory = allocate_host_memory(size, 1, context, is_system_shared);
     break;
   case ZE_MEMORY_TYPE_DEVICE: {
     auto device = zeDevice::get_instance()->get_device();
-    *memory = allocate_device_memory(size, 1, 0, 0, device, context);
+    *memory = allocate_device_memory(size, 1, 0, 0, device, context,
+                                     is_system_shared);
     break;
   }
   case ZE_MEMORY_TYPE_SHARED:
-    *memory = allocate_shared_memory(size, 1, context);
+    *memory = allocate_shared_memory(size, 1, context, is_system_shared);
     break;
   case ZE_MEMORY_TYPE_UNKNOWN:
   default:
@@ -383,8 +392,13 @@ void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
   }
 }
 
-void free_memory(const void *ptr) {
-  free_memory(lzt::get_default_context(), ptr);
+void free_memory(const void *ptr, bool is_system_shared) {
+
+  if (is_system_shared) {
+    aligned_free(ptr);
+  } else {
+    free_memory(lzt::get_default_context(), ptr);
+  }
 }
 
 void free_memory(ze_context_handle_t context, const void *ptr) {

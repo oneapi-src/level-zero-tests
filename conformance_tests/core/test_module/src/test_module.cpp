@@ -973,17 +973,12 @@ protected:
     }
     lzt::destroy_command_bundle(bundle);
     lzt::destroy_function(function);
-    if (is_shared_system) {
-      free(host_buff);
-      free(mult_in);
-      free(mult_out);
-      free(input_a);
-    } else {
-      lzt::free_memory(host_buff);
-      lzt::free_memory(mult_in);
-      lzt::free_memory(mult_out);
-      lzt::free_memory(input_a);
-    }
+
+    lzt::free_memory(host_buff, is_shared_system);
+    lzt::free_memory(mult_in, is_shared_system);
+    lzt::free_memory(mult_out, is_shared_system);
+    lzt::free_memory(input_a, is_shared_system);
+
     lzt::free_memory(actual_launch);
     lzt::free_memory(args_buff);
     if (signal_to_host) {
