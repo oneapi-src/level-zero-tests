@@ -107,7 +107,8 @@ void CooperativeKernelTests::
     ASSERT_EQ(static_cast<uint64_t *>(input_data)[i], val);
   }
 
-  lzt::free_memory_with_allocator_selector(context, input_data, is_shared_system);
+  lzt::free_memory_with_allocator_selector(context, input_data,
+                                           is_shared_system);
 
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
