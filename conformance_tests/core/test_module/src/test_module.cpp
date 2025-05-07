@@ -814,7 +814,7 @@ protected:
                                            is_shared_system);
     mult_in = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_,
                                           is_shared_system);
-    host_buff = lzt::allocate_host_memory(sizeof(int));
+    host_buff = lzt::allocate_host_memory(sizeof(int), is_shared_system);
 
     int *host_addval_offset = static_cast<int *>(host_buff);
 

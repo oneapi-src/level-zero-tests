@@ -23,7 +23,10 @@ void *aligned_malloc(size_t size, size_t alignment) {
   void *memory = nullptr;
 
 #ifdef __linux__
-  memory = aligned_alloc(alignment, size);
+
+  memory = malloc(size); // aligned_alloc(alignment, size);
+  std::cout << "aligned_malloc called malloc with: " << size << ", "
+            << alignment << ", memory = " << memory << std::endl;
 #else // Windows
   memory = _aligned_malloc(size, alignment);
 #endif
@@ -59,9 +62,10 @@ void *aligned_malloc_no_check(size_t size, size_t alignment,
   return memory;
 }
 
-void aligned_free(const void *ptr) {
+void aligned_free(void *ptr) {
 #ifdef __linux__
-  free((void *)ptr);
+  std::cout << "aligned_free, ptr = " << ptr << std::endl;
+  free(ptr);
 #else // Windows
   _aligned_free((void *)ptr);
 #endif
@@ -254,8 +258,9 @@ void *allocate_shared_memory(const size_t size) {
   return allocate_shared_memory(size, 1, false);
 }
 
-void *allocate_shared_memory(const size_t size, ze_device_handle_t device) {
-  return allocate_shared_memory(size, 1, 0, 0, device, false);
+void *allocate_shared_memory(const size_t size, ze_device_handle_t device,
+                             bool is_shared_system) {
+  return allocate_shared_memory(size, 1, 0, 0, device, is_shared_system);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
@@ -395,14 +400,20 @@ void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
 void free_memory(const void *ptr, bool is_shared_system) {
 
   if (is_shared_system) {
-    aligned_free(ptr);
+    std::cout << "free_memory going to call aligned_free, ptr = " << ptr
+              << std::endl;
+    aligned_free((void *)ptr);
   } else {
+    std::cout << "free_memory going to call free_memory, ptr = " << ptr
+              << std::endl;
     free_memory(lzt::get_default_context(), ptr);
   }
 }
 
-void free_memory(ze_context_handle_t context, const void *ptr, bool /* is_shared_system */) {
+void free_memory(ze_context_handle_t context, const void *ptr,
+                 bool /* is_shared_system */) {
   auto context_initial = context;
+  std::cout << "zeMemFree going to call, ptr = " << ptr << std::endl;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
   EXPECT_EQ(context, context_initial);
 }
