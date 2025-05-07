@@ -808,13 +808,14 @@ protected:
 
     void *input_a{}, *mult_out{}, *mult_in{}, *host_buff{};
 
-    input_a = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_,
-                                          is_shared_system);
-    mult_out = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_,
-                                           is_shared_system);
-    mult_in = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_,
-                                          is_shared_system);
-    host_buff = lzt::allocate_host_memory(sizeof(int), is_shared_system);
+    input_a = lzt::allocate_shared_memory_with_allocator_selector(
+        16 * sizeof(int), 1, 0, 0, device_, is_shared_system);
+    mult_out = lzt::allocate_shared_memory_with_allocator_selector(
+        16 * sizeof(int), 1, 0, 0, device_, is_shared_system);
+    mult_in = lzt::allocate_shared_memory_with_allocator_selector(
+        16 * sizeof(int), 1, 0, 0, device_, is_shared_system);
+    host_buff = lzt::allocate_host_memory_with_allocator_selector(
+        sizeof(int), is_shared_system);
 
     int *host_addval_offset = static_cast<int *>(host_buff);
 
@@ -974,10 +975,10 @@ protected:
     lzt::destroy_command_bundle(bundle);
     lzt::destroy_function(function);
 
-    lzt::free_memory(host_buff, is_shared_system);
-    lzt::free_memory(mult_in, is_shared_system);
-    lzt::free_memory(mult_out, is_shared_system);
-    lzt::free_memory(input_a, is_shared_system);
+    lzt::free_memory_with_allocator_selector(host_buff, is_shared_system);
+    lzt::free_memory_with_allocator_selector(mult_in, is_shared_system);
+    lzt::free_memory_with_allocator_selector(mult_out, is_shared_system);
+    lzt::free_memory_with_allocator_selector(input_a, is_shared_system);
 
     lzt::free_memory(actual_launch);
     lzt::free_memory(args_buff);
