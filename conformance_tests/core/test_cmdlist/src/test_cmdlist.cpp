@@ -1007,7 +1007,8 @@ TEST_F(
     const size_t size = 16;
     std::unique_ptr<int[]> buffer(new int[i * size]);
     ASSERT_NE(nullptr, buffer);
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, buffer, size);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
+                               reinterpret_cast<void *>(buffer.get()), size);
     delete[] buffer;
   }
 }
@@ -1027,7 +1028,8 @@ TEST_F(
     const size_t size = 16;
     std::shared_ptr<int[]> buffer(new int[i * size]);
     ASSERT_NE(nullptr, buffer);
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, reinterpret_cast<void *>(buffer.get()), size);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
+                               reinterpret_cast<void *>(buffer.get()), size);
   }
 }
 
