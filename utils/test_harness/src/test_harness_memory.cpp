@@ -67,23 +67,23 @@ void aligned_free(const void *ptr) {
 #endif
 }
 
-void *allocate_host_memory(const size_t size, bool is_system_shared) {
-  return allocate_host_memory(size, 1, is_system_shared);
+void *allocate_host_memory(const size_t size, bool is_shared_system) {
+  return allocate_host_memory(size, 1, is_shared_system);
 }
 
 void *allocate_host_memory(const size_t size, const size_t alignment,
-                           bool is_system_shared) {
+                           bool is_shared_system) {
   auto context = lzt::get_default_context();
 
-  return allocate_host_memory(size, alignment, context, is_system_shared);
+  return allocate_host_memory(size, alignment, context, is_shared_system);
 }
 
 void *allocate_host_memory_no_check(const size_t size, const size_t alignment,
                                     ze_context_handle_t context,
                                     ze_result_t *result,
-                                    bool is_system_shared) {
+                                    bool is_shared_system) {
 
-  if (is_system_shared) {
+  if (is_shared_system) {
     return aligned_malloc_no_check(size, alignment, result);
   }
 
@@ -100,9 +100,9 @@ void *allocate_host_memory_no_check(const size_t size, const size_t alignment,
 }
 
 void *allocate_host_memory(const size_t size, const size_t alignment,
-                           ze_context_handle_t context, bool is_system_shared) {
+                           ze_context_handle_t context, bool is_shared_system) {
 
-  if (is_system_shared) {
+  if (is_shared_system) {
     return aligned_malloc(size, alignment);
   }
 
@@ -124,9 +124,9 @@ void *allocate_host_memory(const size_t size, const size_t alignment,
 
 void *allocate_host_memory(const size_t size, const size_t alignment,
                            const ze_host_mem_alloc_flags_t flags, void *pNext,
-                           ze_context_handle_t context, bool is_system_shared) {
+                           ze_context_handle_t context, bool is_shared_system) {
 
-  if (is_system_shared) {
+  if (is_shared_system) {
     return aligned_malloc(size, alignment);
   }
 
@@ -145,43 +145,43 @@ void *allocate_host_memory(const size_t size, const size_t alignment,
   return memory;
 }
 
-void *allocate_device_memory(const size_t size, bool is_system_shared) {
-  return allocate_device_memory(size, 1, is_system_shared);
+void *allocate_device_memory(const size_t size, bool is_shared_system) {
+  return allocate_device_memory(size, 1, is_shared_system);
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
-                             bool is_system_shared) {
-  return allocate_device_memory(size, alignment, 0, is_system_shared);
+                             bool is_shared_system) {
+  return allocate_device_memory(size, alignment, 0, is_shared_system);
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t flags,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
 
   auto context = lzt::get_default_context();
   auto device = zeDevice::get_instance()->get_device();
   return allocate_device_memory(size, alignment, flags, device, context,
-                                is_system_shared);
+                                is_shared_system);
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t flags,
                              ze_context_handle_t context,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
 
   auto device = zeDevice::get_instance()->get_device();
   return allocate_device_memory(size, alignment, flags, device, context,
-                                is_system_shared);
+                                is_shared_system);
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t flags,
                              ze_device_handle_t device,
                              ze_context_handle_t context,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
 
   return allocate_device_memory(size, alignment, flags, 0, device, context,
-                                is_system_shared);
+                                is_shared_system);
 }
 
 void *allocate_device_memory(const size_t size, const size_t alignment,
@@ -189,10 +189,10 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
                              const uint32_t ordinal,
                              ze_device_handle_t device_handle,
                              ze_context_handle_t context,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
 
   return lzt::allocate_device_memory(size, alignment, flags, nullptr, ordinal,
-                                     device_handle, context, is_system_shared);
+                                     device_handle, context, is_shared_system);
 }
 
 void *allocate_device_memory_no_check(const size_t size, const size_t alignment,
@@ -201,9 +201,9 @@ void *allocate_device_memory_no_check(const size_t size, const size_t alignment,
                                       ze_device_handle_t device_handle,
                                       ze_context_handle_t context,
                                       ze_result_t *result,
-                                      bool is_system_shared) {
+                                      bool is_shared_system) {
 
-  if (is_system_shared) {
+  if (is_shared_system) {
     return aligned_malloc_no_check(size, alignment, result);
   }
 
@@ -225,9 +225,9 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
                              void *pNext, const uint32_t ordinal,
                              ze_device_handle_t device_handle,
                              ze_context_handle_t context,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
 
-  if (is_system_shared) {
+  if (is_shared_system) {
     return aligned_malloc(size, alignment);
   }
 
@@ -259,37 +259,37 @@ void *allocate_shared_memory(const size_t size, ze_device_handle_t device) {
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
-                             bool is_system_shared) {
-  return allocate_shared_memory(size, alignment, 0, 0, is_system_shared);
+                             bool is_shared_system) {
+  return allocate_shared_memory(size, alignment, 0, 0, is_shared_system);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
                              ze_context_handle_t context,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
   return allocate_shared_memory(size, alignment, 0, 0, device, context,
-                                is_system_shared);
+                                is_shared_system);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t dev_flags,
                              const ze_host_mem_alloc_flags_t host_flags,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
 
   ze_device_handle_t device = zeDevice::get_instance()->get_device();
 
   return allocate_shared_memory(size, alignment, dev_flags, host_flags, device,
-                                is_system_shared);
+                                is_shared_system);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t dev_flags,
                              const ze_host_mem_alloc_flags_t host_flags,
-                             ze_device_handle_t device, bool is_system_shared) {
+                             ze_device_handle_t device, bool is_shared_system) {
 
   auto context = lzt::get_default_context();
   return allocate_shared_memory(size, alignment, dev_flags, host_flags, device,
-                                context, is_system_shared);
+                                context, is_shared_system);
 }
 
 void *allocate_shared_memory(const size_t size, const size_t alignment,
@@ -297,10 +297,10 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_host_mem_alloc_flags_t host_flags,
                              ze_device_handle_t device,
                              ze_context_handle_t context,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
 
   return allocate_shared_memory(size, alignment, dev_flags, nullptr, host_flags,
-                                nullptr, device, context, is_system_shared);
+                                nullptr, device, context, is_shared_system);
 }
 
 void *allocate_shared_memory_no_check(
@@ -308,9 +308,9 @@ void *allocate_shared_memory_no_check(
     const ze_device_mem_alloc_flags_t device_flags, void *device_pNext,
     const ze_host_mem_alloc_flags_t host_flags, void *host_pNext,
     ze_device_handle_t device, ze_context_handle_t context, ze_result_t *result,
-    bool is_system_shared) {
+    bool is_shared_system) {
 
-  if (is_system_shared) {
+  if (is_shared_system) {
     return aligned_malloc_no_check(size, alignment, result);
   }
 
@@ -339,9 +339,9 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_host_mem_alloc_flags_t host_flags,
                              void *host_pNext, ze_device_handle_t device,
                              ze_context_handle_t context,
-                             bool is_system_shared) {
+                             bool is_shared_system) {
 
-  if (is_system_shared) {
+  if (is_shared_system) {
     return aligned_malloc(size, alignment);
   }
 
@@ -372,19 +372,19 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
 }
 
 void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
-                  ze_context_handle_t context, bool is_system_shared) {
+                  ze_context_handle_t context, bool is_shared_system) {
   switch (mem_type) {
   case ZE_MEMORY_TYPE_HOST:
-    *memory = allocate_host_memory(size, 1, context, is_system_shared);
+    *memory = allocate_host_memory(size, 1, context, is_shared_system);
     break;
   case ZE_MEMORY_TYPE_DEVICE: {
     auto device = zeDevice::get_instance()->get_device();
     *memory = allocate_device_memory(size, 1, 0, 0, device, context,
-                                     is_system_shared);
+                                     is_shared_system);
     break;
   }
   case ZE_MEMORY_TYPE_SHARED:
-    *memory = allocate_shared_memory(size, 1, context, is_system_shared);
+    *memory = allocate_shared_memory(size, 1, context, is_shared_system);
     break;
   case ZE_MEMORY_TYPE_UNKNOWN:
   default:
@@ -392,16 +392,16 @@ void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
   }
 }
 
-void free_memory(const void *ptr, bool is_system_shared) {
+void free_memory(const void *ptr, bool is_shared_system) {
 
-  if (is_system_shared) {
+  if (is_shared_system) {
     aligned_free(ptr);
   } else {
     free_memory(lzt::get_default_context(), ptr);
   }
 }
 
-void free_memory(ze_context_handle_t context, const void *ptr, bool /* is_system_shared */) {
+void free_memory(ze_context_handle_t context, const void *ptr, bool /* is_shared_system */) {
   auto context_initial = context;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
   EXPECT_EQ(context, context_initial);
