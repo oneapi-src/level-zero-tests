@@ -988,7 +988,7 @@ TEST_F(
     void *buffer = reinterpret_cast<void *>(new int[i * size]);
     ASSERT_NE(nullptr, buffer);
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, buffer, size);
-    delete [] buffer;
+    delete[] buffer;
   }
 }
 
