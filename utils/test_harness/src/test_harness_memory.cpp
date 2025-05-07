@@ -34,7 +34,6 @@ void *aligned_malloc(size_t size, size_t alignment) {
 
 void *aligned_malloc_no_check(size_t size, size_t alignment,
                               ze_result_t *result) {
-
   if (size == 0) {
     *result = ZE_RESULT_ERROR_UNSUPPORTED_SIZE;
     return nullptr;
@@ -187,14 +186,13 @@ void *allocate_device_memory_no_check(const size_t size, const size_t alignment,
                                       ze_device_handle_t device_handle,
                                       ze_context_handle_t context,
                                       ze_result_t *result) {
-
-  void *memory = nullptr;
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_desc.ordinal = ordinal;
   device_desc.flags = flags;
   device_desc.pNext = pNext;
 
+  void *memory = nullptr;
   *result = zeMemAllocDevice(context, &device_desc, size, alignment,
                              device_handle, &memory);
 
@@ -206,8 +204,6 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
                              void *pNext, const uint32_t ordinal,
                              ze_device_handle_t device_handle,
                              ze_context_handle_t context) {
-
-  void *memory = nullptr;
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
   device_desc.ordinal = ordinal;
@@ -216,6 +212,8 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
 
   auto context_initial = context;
   auto device_initial = device_handle;
+
+  void *memory = nullptr;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeMemAllocDevice(context, &device_desc, size, alignment,
                              device_handle, &memory));
