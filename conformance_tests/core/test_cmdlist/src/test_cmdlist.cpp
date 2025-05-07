@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -869,14 +869,13 @@ protected:
 static void
 RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
                            std::vector<ze_command_queue_handle_t> cmdqueue,
-                           ze_event_handle_t event, int num_cmdlist) {
-  const size_t size = 16;
+                           ze_event_handle_t event, int num_cmdlist,
+                           void *buffer, const size_t size) {
+
   const int addval = 10;
   const int num_iterations = 100;
   int addval2 = 0;
   const uint64_t timeout = UINT64_MAX - 1;
-
-  void *buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
 
   ze_module_handle_t module = lzt::create_module(
       lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
@@ -934,7 +933,6 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
   }
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
-  lzt::free_memory(buffer);
 }
 
 TEST_F(
@@ -947,7 +945,30 @@ TEST_F(
 
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i);
+    const size_t size = 16;
+    void *buffer = lzt::allocate_shared_memory(i * size * sizeof(int));
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, buffer, size);
+    lzt::free_memory(buffer);
+  }
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocator) {
+
+  bool event_pool_ext_found = lzt::check_if_extension_supported(
+      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
+  EXPECT_TRUE(event_pool_ext_found);
+
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
+
+  for (int i = 1; i <= cmdlist.size(); i++) {
+    LOG_INFO << "Testing " << i << " command list(s)";
+    const size_t size = 16;
+    void *buffer = malloc(i * size * sizeof(int));
+    ASSERT_NE(nullptr, buffer);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, buffer, size);
+    free(buffer);
   }
 }
 

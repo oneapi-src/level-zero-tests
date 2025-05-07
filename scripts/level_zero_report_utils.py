@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2021-2024 Intel Corporation
+# Copyright (C) 2021-2025 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 import re
@@ -108,6 +108,8 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyWithDataVerificationTests_GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyWithDataVerificationTests_GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_SyncTimeoutParams_zeCommandQueueSynchronizeTimeoutTests_GivenTimeoutWhenWaitingForCommandQueueThenWaitForSpecifiedTime', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeKernelLaunchTests_GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecutionWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeKernelLaunchTests_GivenValidFunctionWhenAppendLaunchKernelOnImmediateCmdListThenReturnSuccessfulAndVerifyExecutionWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeKernelLaunchTests_GivenBufferLargerThan4GBWhenExecutingFunctionOnImmediateCmdListThenFunctionExecutesSuccessfully', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListEventTests_GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully', test_name, re.IGNORECASE)) or \

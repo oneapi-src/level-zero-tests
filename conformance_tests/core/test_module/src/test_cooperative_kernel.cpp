@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -20,11 +20,17 @@ namespace {
 
 class CooperativeKernelTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<int, bool>> {};
+      public ::testing::WithParamInterface<std::tuple<int, bool>> {
+protected:
+  void RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(
+      bool is_shared_system);
+};
 
-TEST_P(
-    CooperativeKernelTests,
-    GivenCooperativeKernelWhenAppendingLaunchCooperativeKernelThenSuccessIsReturnedAndOutputIsCorrect) {
+void CooperativeKernelTests::
+    RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(
+        bool is_shared_system) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+
   uint32_t max_group_count = 0;
   ze_module_handle_t module = nullptr;
   ze_kernel_handle_t kernel = nullptr;
@@ -57,8 +63,14 @@ TEST_P(
   // Set up input vector data
   const size_t data_size = 4096;
   uint64_t kernel_data[data_size] = {0};
-  auto input_data = lzt::allocate_shared_memory(sizeof(uint64_t) * data_size, 1,
-                                                0, 0, device, context);
+  void *input_data{};
+  if (is_shared_system) {
+    input_data = malloc(sizeof(uint64_t) * data_size);
+    ASSERT_NE(nullptr, input_data);
+  } else {
+    input_data = lzt::allocate_shared_memory(sizeof(uint64_t) * data_size, 1, 0,
+                                             0, device, context);
+  }
   memcpy(input_data, kernel_data, data_size * sizeof(uint64_t));
 
   auto row_num = std::get<0>(GetParam());
@@ -99,10 +111,25 @@ TEST_P(
     val = i + row_num;
     ASSERT_EQ(static_cast<uint64_t *>(input_data)[i], val);
   }
-
-  lzt::free_memory(context, input_data);
+  if (is_shared_system) {
+    free(input_data);
+  } else {
+    lzt::free_memory(context, input_data);
+  }
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
+}
+
+TEST_P(
+    CooperativeKernelTests,
+    GivenCooperativeKernelWhenAppendingLaunchCooperativeKernelThenSuccessIsReturnedAndOutputIsCorrect) {
+  RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(false);
+}
+
+TEST_P(
+    CooperativeKernelTests,
+    GivenCooperativeKernelWhenAppendingLaunchCooperativeKernelThenSuccessIsReturnedAndOutputIsCorrectWithSharedSystemAllocator) {
+  RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(true);
 }
 
 INSTANTIATE_TEST_SUITE_P(

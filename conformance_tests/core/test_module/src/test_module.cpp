@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2024 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -789,7 +789,8 @@ protected:
   void run_test(ze_module_handle_t mod, ze_group_count_t th_group_dim,
                 uint32_t group_size_x, uint32_t group_size_y,
                 uint32_t group_size_z, bool signal_to_host,
-                bool signal_from_host, enum TestType type, bool is_immediate) {
+                bool signal_from_host, enum TestType type, bool is_immediate,
+                bool is_shared_system) {
     uint32_t num_events = std::min(group_size_x, static_cast<uint32_t>(6));
     ze_event_handle_t event_kernel_to_host = nullptr;
     ze_kernel_handle_t function;
@@ -799,17 +800,28 @@ protected:
                              8, 9, 10, 11, 12, 13, 14, 15};
     std::vector<int> inpb = {1, 2,  3,  4,  5,  6,  7,  8,
                              9, 10, 11, 12, 13, 14, 15, 16};
+
     void *args_buff = lzt::allocate_shared_memory(2 * sizeof(ze_group_count_t),
                                                   sizeof(int), 0, 0, device_);
     void *actual_launch = lzt::allocate_shared_memory(
         sizeof(uint32_t), sizeof(uint32_t), 0, 0, device_);
-    void *input_a =
-        lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
-    void *mult_out =
-        lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
-    void *mult_in =
-        lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
-    void *host_buff = lzt::allocate_host_memory(sizeof(int));
+    void *input_a{}, *mult_out{}, *mult_in{}, *host_buff{};
+    if (is_shared_system) {
+      input_a = malloc(16 * sizeof(int));
+      ASSERT_NE(nullptr, input_a);
+      mult_out = malloc(16 * sizeof(int));
+      ASSERT_NE(nullptr, mult_out);
+      mult_in = malloc(16 * sizeof(int));
+      ASSERT_NE(nullptr, mult_in);
+      host_buff = malloc(sizeof(int));
+      ASSERT_NE(nullptr, host_buff);
+    } else {
+      input_a = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
+      mult_out =
+          lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
+      mult_in = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
+      host_buff = lzt::allocate_host_memory(sizeof(int));
+    }
     int *host_addval_offset = static_cast<int *>(host_buff);
 
     const int addval = 10;
@@ -967,10 +979,17 @@ protected:
     }
     lzt::destroy_command_bundle(bundle);
     lzt::destroy_function(function);
-    lzt::free_memory(host_buff);
-    lzt::free_memory(mult_in);
-    lzt::free_memory(mult_out);
-    lzt::free_memory(input_a);
+    if (is_shared_system) {
+      free(host_buff);
+      free(mult_in);
+      free(mult_out);
+      free(input_a);
+    } else {
+      lzt::free_memory(host_buff);
+      lzt::free_memory(mult_in);
+      lzt::free_memory(mult_out);
+      lzt::free_memory(input_a);
+    }
     lzt::free_memory(actual_launch);
     lzt::free_memory(args_buff);
     if (signal_to_host) {
@@ -1198,11 +1217,16 @@ class zeKernelLaunchTests
     : public ::zeKernelCreateTests,
       public ::testing::WithParamInterface<std::tuple<enum TestType, bool>> {
 protected:
-  void test_kernel_execution();
+  void test_kernel_execution(enum TestType test_type, const bool is_immediate,
+                             bool is_shared_system);
   void RunGivenBufferLargerThan4GBWhenExecutingFunction(bool is_immediate);
 };
 
-void zeKernelLaunchTests::test_kernel_execution() {
+void zeKernelLaunchTests::test_kernel_execution(enum TestType test_type,
+                                                const bool is_immediate,
+                                                bool is_shared_system) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+
   ze_device_compute_properties_t dev_compute_properties = {};
   dev_compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
   dev_compute_properties.pNext = nullptr;
@@ -1213,9 +1237,6 @@ void zeKernelLaunchTests::test_kernel_execution() {
   uint32_t group_size_y;
   uint32_t group_size_z;
   ze_group_count_t thread_group_dimensions;
-
-  enum TestType test_type = std::get<0>(GetParam());
-  const bool is_immediate = std::get<1>(GetParam());
 
   std::vector<int> dim = {1, 2, 3};
   std::vector<uint32_t> tg_count = {1, 2, 3, 4};
@@ -1249,7 +1270,8 @@ void zeKernelLaunchTests::test_kernel_execution() {
           for (auto sig1 : sig_to_host) {
             for (auto sig2 : sig_from_host) {
               run_test(mod, thread_group_dimensions, group_size_x, group_size_y,
-                       group_size_z, sig1, sig2, test_type, is_immediate);
+                       group_size_z, sig1, sig2, test_type, is_immediate,
+                       is_shared_system);
             }
           }
         }
@@ -1261,10 +1283,24 @@ void zeKernelLaunchTests::test_kernel_execution() {
 TEST_P(
     zeKernelLaunchTests,
     GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecution) {
-  if (std::get<1>(GetParam())) {
+  enum TestType test_type = std::get<0>(GetParam());
+  const bool is_immediate = std::get<1>(GetParam());
+  if (is_immediate) {
     GTEST_SKIP() << "Immediate command lists are unsupported at the moment";
   }
-  test_kernel_execution();
+  test_kernel_execution(test_type, is_immediate, false);
+}
+
+TEST_F(
+    zeKernelLaunchTests,
+    GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecutionWithSharedSystemAllocator) {
+  test_kernel_execution(FUNCTION, false, true);
+}
+
+TEST_F(
+    zeKernelLaunchTests,
+    GivenValidFunctionWhenAppendLaunchKernelOnImmediateCmdListThenReturnSuccessfulAndVerifyExecutionWithSharedSystemAllocator) {
+  test_kernel_execution(FUNCTION, true, true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1631,15 +1667,16 @@ protected:
 TEST_P(
     zeKernelLaunchSubDeviceTests,
     GivenValidFunctionWhenAppendLaunchKernelOnSubDeviceThenReturnSuccessfulAndVerifyExecution) {
-
+  enum TestType test_type = std::get<0>(GetParam());
+  const bool is_immediate = std::get<1>(GetParam());
   if (!device_) {
     LOG_WARNING << "No sub-device for kernel execution test";
     GTEST_SKIP();
   }
-  if (std::get<1>(GetParam())) {
+  if (is_immediate) {
     GTEST_SKIP() << "Immediate command lists are unsupported at the moment";
   }
-  test_kernel_execution();
+  test_kernel_execution(test_type, is_immediate, false);
 }
 
 INSTANTIATE_TEST_SUITE_P(
