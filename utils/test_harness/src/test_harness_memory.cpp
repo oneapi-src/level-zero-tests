@@ -401,7 +401,7 @@ void free_memory(const void *ptr, bool is_system_shared) {
   }
 }
 
-void free_memory(ze_context_handle_t context, const void *ptr) {
+void free_memory(ze_context_handle_t context, const void *ptr, bool /* is_system_shared */) {
   auto context_initial = context;
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
   EXPECT_EQ(context, context_initial);
