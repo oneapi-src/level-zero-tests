@@ -806,7 +806,7 @@ protected:
     void *actual_launch = lzt::allocate_shared_memory(
         sizeof(uint32_t), sizeof(uint32_t), 0, 0, device_);
     void *input_a{}, *mult_out{}, *mult_in{}, *host_buff{};
-    if (is_shared_system) {
+    /* if (is_shared_system) {
       input_a = malloc(16 * sizeof(int));
       ASSERT_NE(nullptr, input_a);
       mult_out = malloc(16 * sizeof(int));
@@ -821,7 +821,17 @@ protected:
           lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
       mult_in = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
       host_buff = lzt::allocate_host_memory(sizeof(int));
-    }
+    } */
+
+    input_a = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_,
+                                          is_shared_system);
+    mult_out = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_,
+                                           is_shared_system);
+    mult_in = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_,
+                                          is_shared_system);
+    //host_buff = lzt::allocate_host_memory(sizeof(int), is_shared_system);
+    host_buff = lzt::allocate_host_memory(sizeof(int));
+
     int *host_addval_offset = static_cast<int *>(host_buff);
 
     const int addval = 10;
