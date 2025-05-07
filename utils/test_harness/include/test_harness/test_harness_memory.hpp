@@ -74,32 +74,37 @@ void *allocate_device_memory_no_check(const size_t size, const size_t alignment,
 void *allocate_shared_memory(const size_t size);
 void *allocate_shared_memory(const size_t size, ze_device_handle_t device);
 void *allocate_shared_memory(const size_t size, const size_t alignment,
-                             ze_context_handle_t context);
-void *allocate_shared_memory(const size_t size, const size_t alignment);
+                             ze_context_handle_t context,
+                             bool is_system_shared);
 void *allocate_shared_memory(const size_t size, const size_t alignment,
-                             const ze_device_mem_alloc_flags_t dev_flags,
-                             const ze_host_mem_alloc_flags_t host_flags);
+                             bool is_system_shared = false);
 void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t dev_flags,
                              const ze_host_mem_alloc_flags_t host_flags,
-                             ze_device_handle_t device);
+                             bool is_system_shared);
+void *allocate_shared_memory(const size_t size, const size_t alignment,
+                             const ze_device_mem_alloc_flags_t dev_flags,
+                             const ze_host_mem_alloc_flags_t host_flags,
+                             ze_device_handle_t device, bool is_system_shared);
 void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t dev_flags,
                              const ze_host_mem_alloc_flags_t host_flags,
                              ze_device_handle_t device,
-                             ze_context_handle_t context);
+                             ze_context_handle_t context,
+                             bool is_system_shared);
 void *allocate_shared_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t device_flags,
                              void *device_pNext,
                              const ze_host_mem_alloc_flags_t host_flags,
                              void *host_pNext, ze_device_handle_t device,
-                             ze_context_handle_t context);
+                             ze_context_handle_t context,
+                             bool is_system_shared=false);
 void *allocate_shared_memory_no_check(
     const size_t size, const size_t alignment,
     const ze_device_mem_alloc_flags_t device_flags, void *device_pNext,
     const ze_host_mem_alloc_flags_t host_flags, void *host_pNext,
-    ze_device_handle_t device, ze_context_handle_t context,
-    ze_result_t *result);
+    ze_device_handle_t device, ze_context_handle_t context, ze_result_t *result,
+    bool is_system_shared = false);
 void allocate_mem(void **memory, ze_memory_type_t mem_type, size_t size,
                   ze_context_handle_t context);
 
