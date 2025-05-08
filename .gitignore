@@ -5,3 +5,4 @@
 # Editor temporary files
 *~
 .*.sw?
+/.vscode
