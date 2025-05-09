@@ -805,23 +805,18 @@ protected:
                                                   sizeof(int), 0, 0, device_);
     void *actual_launch = lzt::allocate_shared_memory(
         sizeof(uint32_t), sizeof(uint32_t), 0, 0, device_);
+
     void *input_a{}, *mult_out{}, *mult_in{}, *host_buff{};
-    if (is_shared_system) {
-      input_a = malloc(16 * sizeof(int));
-      ASSERT_NE(nullptr, input_a);
-      mult_out = malloc(16 * sizeof(int));
-      ASSERT_NE(nullptr, mult_out);
-      mult_in = malloc(16 * sizeof(int));
-      ASSERT_NE(nullptr, mult_in);
-      host_buff = malloc(sizeof(int));
-      ASSERT_NE(nullptr, host_buff);
-    } else {
-      input_a = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
-      mult_out =
-          lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
-      mult_in = lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device_);
-      host_buff = lzt::allocate_host_memory(sizeof(int));
-    }
+
+    input_a = lzt::allocate_shared_memory_with_allocator_selector(
+        16 * sizeof(int), 1, 0, 0, device_, is_shared_system);
+    mult_out = lzt::allocate_shared_memory_with_allocator_selector(
+        16 * sizeof(int), 1, 0, 0, device_, is_shared_system);
+    mult_in = lzt::allocate_shared_memory_with_allocator_selector(
+        16 * sizeof(int), 1, 0, 0, device_, is_shared_system);
+    host_buff = lzt::allocate_host_memory_with_allocator_selector(
+        sizeof(int), is_shared_system);
+
     int *host_addval_offset = static_cast<int *>(host_buff);
 
     const int addval = 10;
@@ -979,17 +974,12 @@ protected:
     }
     lzt::destroy_command_bundle(bundle);
     lzt::destroy_function(function);
-    if (is_shared_system) {
-      free(host_buff);
-      free(mult_in);
-      free(mult_out);
-      free(input_a);
-    } else {
-      lzt::free_memory(host_buff);
-      lzt::free_memory(mult_in);
-      lzt::free_memory(mult_out);
-      lzt::free_memory(input_a);
-    }
+
+    lzt::free_memory_with_allocator_selector(host_buff, is_shared_system);
+    lzt::free_memory_with_allocator_selector(mult_in, is_shared_system);
+    lzt::free_memory_with_allocator_selector(mult_out, is_shared_system);
+    lzt::free_memory_with_allocator_selector(input_a, is_shared_system);
+
     lzt::free_memory(actual_launch);
     lzt::free_memory(args_buff);
     if (signal_to_host) {
