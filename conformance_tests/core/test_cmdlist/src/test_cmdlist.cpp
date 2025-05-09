@@ -954,7 +954,7 @@ TEST_F(
 
 TEST_F(
     zeCommandListEventCounterTests,
-    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocator) {
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingMallocWithSharedSystemAllocator) {
 
   bool event_pool_ext_found = lzt::check_if_extension_supported(
       lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
@@ -969,6 +969,67 @@ TEST_F(
     ASSERT_NE(nullptr, buffer);
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, buffer, size);
     free(buffer);
+  }
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingNewWithSharedSystemAllocator) {
+
+  bool event_pool_ext_found = lzt::check_if_extension_supported(
+      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
+  EXPECT_TRUE(event_pool_ext_found);
+
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
+
+  for (int i = 1; i <= cmdlist.size(); i++) {
+    LOG_INFO << "Testing " << i << " command list(s)";
+    const size_t size = 16;
+    int *buffer = new int[i * size];
+    ASSERT_NE(nullptr, buffer);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
+                               reinterpret_cast<void *>(buffer), size);
+    delete[] buffer;
+  }
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingUniquePtrWithSharedSystemAllocator) {
+
+  bool event_pool_ext_found = lzt::check_if_extension_supported(
+      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
+  EXPECT_TRUE(event_pool_ext_found);
+
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
+
+  for (int i = 1; i <= cmdlist.size(); i++) {
+    LOG_INFO << "Testing " << i << " command list(s)";
+    const size_t size = 16;
+    std::unique_ptr<int[]> buffer(new int[i * size]);
+    ASSERT_NE(nullptr, buffer);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
+                               reinterpret_cast<void *>(buffer.get()), size);
+  }
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingSharedPtrWithSharedSystemAllocator) {
+
+  bool event_pool_ext_found = lzt::check_if_extension_supported(
+      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
+  EXPECT_TRUE(event_pool_ext_found);
+
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
+
+  for (int i = 1; i <= cmdlist.size(); i++) {
+    LOG_INFO << "Testing " << i << " command list(s)";
+    const size_t size = 16;
+    std::shared_ptr<int[]> buffer(new int[i * size]);
+    ASSERT_NE(nullptr, buffer);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
+                               reinterpret_cast<void *>(buffer.get()), size);
   }
 }
 
