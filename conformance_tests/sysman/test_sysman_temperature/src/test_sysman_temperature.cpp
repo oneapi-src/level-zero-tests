@@ -18,10 +18,16 @@ namespace lzt = level_zero_tests;
 namespace {
 
 #ifdef USE_ZESINIT
-class TempModuleZesTest : public lzt::ZesSysmanCtsClass {};
+class TempModuleZesTest : public lzt::ZesSysmanCtsClass {
+public:
+  bool is_temp_supported = false;
+};
 #define TEMPERATURE_TEST TempModuleZesTest
 #else // USE_ZESINIT
-class TempModuleTest : public lzt::SysmanCtsClass {};
+class TempModuleTest : public lzt::SysmanCtsClass {
+public:
+  bool is_temp_supported = false;
+};
 #define TEMPERATURE_TEST TempModuleTest
 #endif // USE_ZESINIT
 
@@ -154,92 +160,128 @@ TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempConfigurationThenValidTempConfigurationIsReturned) {
   for (auto device : devices) {
-    uint32_t count = 0;
-    auto temp_handles = lzt::get_temp_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
+    uint32_t count = lzt::get_temp_handle_count(device);
+    if (count > 0) {
+      is_temp_supported = true;
+      auto temp_handles = lzt::get_temp_handles(device, count);
 
-    for (auto temp_handle : temp_handles) {
-      ASSERT_NE(nullptr, temp_handle);
-      auto config = lzt::get_temp_config(temp_handle);
-      auto properties = lzt::get_temp_properties(temp_handle);
-      if (properties.isCriticalTempSupported == false) {
-        ASSERT_EQ(config.enableCritical, false);
+      for (const auto &temp_handle : temp_handles) {
+        EXPECT_NE(temp_handle, nullptr);
+
+        auto properties = lzt::get_temp_properties(temp_handle);
+        if (!properties.isCriticalTempSupported &&
+            !properties.isThreshold1Supported &&
+            !properties.isThreshold2Supported) {
+          FAIL() << "No handles found: "
+                 << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+        }
+
+        auto config = lzt::get_temp_config(temp_handle);
+
+        if (!properties.isCriticalTempSupported) {
+          EXPECT_EQ(config.enableCritical, false);
+        }
+        if (!properties.isThreshold1Supported) {
+          EXPECT_EQ(config.threshold1.enableLowToHigh, false);
+          EXPECT_EQ(config.threshold1.enableHighToLow, false);
+        }
+        if (!properties.isThreshold2Supported) {
+          EXPECT_EQ(config.threshold2.enableLowToHigh, false);
+          EXPECT_EQ(config.threshold2.enableHighToLow, false);
+        }
       }
-      if (properties.isThreshold1Supported == false) {
-        ASSERT_EQ(config.threshold1.enableLowToHigh, false);
-        ASSERT_EQ(config.threshold1.enableHighToLow, false);
-      }
-      if (properties.isThreshold2Supported == false) {
-        ASSERT_EQ(config.threshold2.enableLowToHigh, false);
-        ASSERT_EQ(config.threshold2.enableHighToLow, false);
-      }
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
   }
+
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
+  }
 }
+
 TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenSettingTempConfigurationThenExpectzesSysmanTemperatureSetConfigFollowedByzesSysmanTemperatureGetConfigToMatch) {
-  for (auto device : devices) {
-    uint32_t count = 0;
-    auto temp_handles = lzt::get_temp_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
+  bool is_temp_supported = false;
 
-    for (auto temp_handle : temp_handles) {
-      ASSERT_NE(nullptr, temp_handle);
-      auto properties = lzt::get_temp_properties(temp_handle);
-      auto initial_config = lzt::get_temp_config(temp_handle);
-      auto temp = lzt::get_temp_state(temp_handle);
-      zes_temp_config_t setConfig = {};
-      if (properties.isCriticalTempSupported == true) {
-        setConfig.enableCritical = true;
-        lzt::set_temp_config(temp_handle, setConfig);
-        auto get_config = lzt::get_temp_config(temp_handle);
-        EXPECT_EQ(get_config.enableCritical, setConfig.enableCritical);
-        EXPECT_EQ(get_config.threshold1.enableLowToHigh, false);
-        EXPECT_EQ(get_config.threshold1.enableHighToLow, false);
-        EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
-        EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
+  for (auto device : devices) {
+    uint32_t count = lzt::get_temp_handle_count(device);
+    if (count > 0) {
+      is_temp_supported = true;
+      auto temp_handles = lzt::get_temp_handles(device, count);
+
+      for (const auto &temp_handle : temp_handles) {
+        EXPECT_NE(temp_handle, nullptr);
+
+        auto properties = lzt::get_temp_properties(temp_handle);
+
+        if (!properties.isCriticalTempSupported &&
+            !properties.isThreshold1Supported &&
+            !properties.isThreshold2Supported) {
+          LOG_INFO
+              << "Temperature configuration is not supported for this handle.";
+          FAIL() << "No handles found: "
+                 << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+        }
+
+        auto initial_config = lzt::get_temp_config(temp_handle);
+        auto temp = lzt::get_temp_state(temp_handle);
+        zes_temp_config_t setConfig = {};
+
+        if (properties.isCriticalTempSupported) {
+          setConfig.enableCritical = true;
+          lzt::set_temp_config(temp_handle, setConfig);
+          auto get_config = lzt::get_temp_config(temp_handle);
+          EXPECT_EQ(get_config.enableCritical, setConfig.enableCritical);
+          EXPECT_EQ(get_config.threshold1.enableLowToHigh, false);
+          EXPECT_EQ(get_config.threshold1.enableHighToLow, false);
+          EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
+          EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
+        }
+
+        if (properties.isThreshold1Supported) {
+          setConfig.threshold1.enableLowToHigh = true;
+          setConfig.threshold1.enableHighToLow = false;
+          setConfig.threshold1.threshold = temp;
+          lzt::set_temp_config(temp_handle, setConfig);
+          auto get_config = lzt::get_temp_config(temp_handle);
+          EXPECT_EQ(get_config.threshold1.enableLowToHigh,
+                    setConfig.threshold1.enableLowToHigh);
+          EXPECT_EQ(get_config.threshold1.enableHighToLow,
+                    setConfig.threshold1.enableHighToLow);
+          EXPECT_EQ(get_config.threshold1.threshold,
+                    setConfig.threshold1.threshold);
+          EXPECT_EQ(get_config.enableCritical, false);
+          EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
+          EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
+        }
+
+        if (properties.isThreshold2Supported) {
+          setConfig.threshold2.enableLowToHigh = true;
+          setConfig.threshold2.enableHighToLow = false;
+          setConfig.threshold2.threshold = temp;
+          lzt::set_temp_config(temp_handle, setConfig);
+          auto get_config = lzt::get_temp_config(temp_handle);
+          EXPECT_EQ(get_config.threshold2.enableLowToHigh,
+                    setConfig.threshold2.enableLowToHigh);
+          EXPECT_EQ(get_config.threshold2.enableHighToLow,
+                    setConfig.threshold2.enableHighToLow);
+          EXPECT_EQ(get_config.threshold2.threshold,
+                    setConfig.threshold2.threshold);
+          EXPECT_EQ(get_config.enableCritical, false);
+          EXPECT_EQ(get_config.threshold1.enableLowToHigh, false);
+          EXPECT_EQ(get_config.threshold1.enableHighToLow, false);
+        }
+        lzt::set_temp_config(temp_handle, initial_config);
       }
-      if (properties.isThreshold1Supported == true) {
-        setConfig.threshold1.enableLowToHigh = true;
-        setConfig.threshold1.enableHighToLow = false;
-        setConfig.threshold1.threshold = temp;
-        lzt::set_temp_config(temp_handle, setConfig);
-        auto get_config = lzt::get_temp_config(temp_handle);
-        EXPECT_EQ(get_config.threshold1.enableLowToHigh,
-                  setConfig.threshold1.enableLowToHigh);
-        EXPECT_EQ(get_config.threshold1.enableHighToLow,
-                  setConfig.threshold1.enableHighToLow);
-        EXPECT_EQ(get_config.threshold1.threshold,
-                  setConfig.threshold1.threshold);
-        EXPECT_EQ(get_config.enableCritical, false);
-        EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
-        EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
-      }
-      if (properties.isThreshold1Supported == true) {
-        setConfig.threshold2.enableLowToHigh = true;
-        setConfig.threshold2.enableHighToLow = false;
-        setConfig.threshold2.threshold = temp;
-        lzt::set_temp_config(temp_handle, setConfig);
-        auto get_config = lzt::get_temp_config(temp_handle);
-        EXPECT_EQ(get_config.threshold2.enableLowToHigh,
-                  setConfig.threshold2.enableLowToHigh);
-        EXPECT_EQ(get_config.threshold2.enableHighToLow,
-                  setConfig.threshold2.enableHighToLow);
-        EXPECT_EQ(get_config.threshold2.threshold,
-                  setConfig.threshold2.threshold);
-        EXPECT_EQ(get_config.enableCritical, false);
-        EXPECT_EQ(get_config.threshold1.enableLowToHigh, false);
-        EXPECT_EQ(get_config.threshold1.enableHighToLow, false);
-      }
-      lzt::set_temp_config(temp_handle, initial_config);
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
+  }
+
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
   }
 }
 
