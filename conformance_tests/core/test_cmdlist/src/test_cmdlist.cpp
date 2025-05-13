@@ -963,7 +963,6 @@ static void RunAppendLaunchKernelEventHostMalloc(cmd_list_vec cmdlist,
   free(buffer);
 }
 
-
 static void RunAppendLaunchKernelEventHostNew(cmd_list_vec cmdlist,
                                               cmd_queue_vec cmdqueue,
                                               ze_event_handle_t event,
