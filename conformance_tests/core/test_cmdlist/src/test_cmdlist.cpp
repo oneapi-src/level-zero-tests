@@ -938,8 +938,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 static void
 RunAppendLaunchKernelEvent_L0SharedAlloc(std::vector<ze_command_list_handle_t> cmdlist,
                                          std::vector<ze_command_queue_handle_t> cmdqueue,
-                                         ze_event_handle_t event, int num_cmdlist,
-                                         const size_t size) {
+                                         ze_event_handle_t event, int num_cmdlist, const size_t size) {
     LOG_INFO << "Testing " << num_cmdlist << " command list(s) using L0 shared alloc";
     void *buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist, buffer, size);
@@ -949,8 +948,7 @@ RunAppendLaunchKernelEvent_L0SharedAlloc(std::vector<ze_command_list_handle_t> c
 static void
 RunAppendLaunchKernelEvent_HostMalloc(std::vector<ze_command_list_handle_t> cmdlist,
                                       std::vector<ze_command_queue_handle_t> cmdqueue,
-                                      ze_event_handle_t event, int num_cmdlist,
-                                      const size_t size) {
+                                      ze_event_handle_t event, int num_cmdlist, const size_t size) {
     LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host malloc";
     void *buffer = malloc(num_cmdlist * size * sizeof(int));
     ASSERT_NE(nullptr, buffer);
@@ -961,8 +959,7 @@ RunAppendLaunchKernelEvent_HostMalloc(std::vector<ze_command_list_handle_t> cmdl
 static void
 RunAppendLaunchKernelEvent_HostNew(std::vector<ze_command_list_handle_t> cmdlist,
                                    std::vector<ze_command_queue_handle_t> cmdqueue,
-                                   ze_event_handle_t event, int num_cmdlist,
-                                   const size_t size) {
+                                   ze_event_handle_t event, int num_cmdlist, const size_t size) {
     LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host new";
     int *buffer = new int[num_cmdlist * size];
     ASSERT_NE(nullptr, buffer);
@@ -974,8 +971,7 @@ RunAppendLaunchKernelEvent_HostNew(std::vector<ze_command_list_handle_t> cmdlist
 static void
 RunAppendLaunchKernelEvent_HostUniquePtr(std::vector<ze_command_list_handle_t> cmdlist,
                                          std::vector<ze_command_queue_handle_t> cmdqueue,
-                                         ze_event_handle_t event, int num_cmdlist,
-                                         const size_t size) {
+                                         ze_event_handle_t event, int num_cmdlist, const size_t size) {
     LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host unique_ptr";
     std::unique_ptr<int[]> buffer(new int[num_cmdlist * size]);
     ASSERT_NE(nullptr, buffer);
@@ -986,8 +982,7 @@ RunAppendLaunchKernelEvent_HostUniquePtr(std::vector<ze_command_list_handle_t> c
 static void
 RunAppendLaunchKernelEvent_HostSharedPtr(std::vector<ze_command_list_handle_t> cmdlist,
                                          std::vector<ze_command_queue_handle_t> cmdqueue,
-                                         ze_event_handle_t event, int num_cmdlist,
-                                         const size_t size) {
+                                         ze_event_handle_t event, int num_cmdlist, const size_t size) {
     LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host shared_ptr";
     std::shared_ptr<int[]> buffer(new int[num_cmdlist * size]);
     ASSERT_NE(nullptr, buffer);
@@ -998,6 +993,8 @@ RunAppendLaunchKernelEvent_HostSharedPtr(std::vector<ze_command_list_handle_t> c
 typedef void (*RunAppendLaunchKernelEventFunc)(std::vector<ze_command_list_handle_t>,
                                                std::vector<ze_command_queue_handle_t>,
                                                ze_event_handle_t, int, const size_t);
+                                              
+
 
 static void
 RunAppendLaunchKernelEventLoop(std::vector<ze_command_list_handle_t> cmdlist,
