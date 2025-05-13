@@ -935,6 +935,121 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
   lzt::destroy_module(module);
 }
 
+static void
+RunAppendLaunchKernelEvent_L0SharedAlloc(std::vector<ze_command_list_handle_t> cmdlist,
+                                         std::vector<ze_command_queue_handle_t> cmdqueue,
+                                         ze_event_handle_t event, int num_cmdlist,
+                                         const size_t size) {
+    LOG_INFO << "Testing " << num_cmdlist << " command list(s) using L0 shared alloc";
+    void *buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist, buffer, size);
+    lzt::free_memory(buffer);
+}
+
+static void
+RunAppendLaunchKernelEvent_HostMalloc(std::vector<ze_command_list_handle_t> cmdlist,
+                                      std::vector<ze_command_queue_handle_t> cmdqueue,
+                                      ze_event_handle_t event, int num_cmdlist,
+                                      const size_t size) {
+    LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host malloc";
+    void *buffer = malloc(num_cmdlist * size * sizeof(int));
+    ASSERT_NE(nullptr, buffer);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist, buffer, size);
+    free(buffer);
+}
+
+static void
+RunAppendLaunchKernelEvent_HostNew(std::vector<ze_command_list_handle_t> cmdlist,
+                                   std::vector<ze_command_queue_handle_t> cmdqueue,
+                                   ze_event_handle_t event, int num_cmdlist,
+                                   const size_t size) {
+    LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host new";
+    int *buffer = new int[num_cmdlist * size];
+    ASSERT_NE(nullptr, buffer);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
+                               reinterpret_cast<void *>(buffer), size);
+    delete[] buffer;
+}
+
+static void
+RunAppendLaunchKernelEvent_HostUniquePtr(std::vector<ze_command_list_handle_t> cmdlist,
+                                         std::vector<ze_command_queue_handle_t> cmdqueue,
+                                         ze_event_handle_t event, int num_cmdlist,
+                                         const size_t size) {
+    LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host unique_ptr";
+    std::unique_ptr<int[]> buffer(new int[num_cmdlist * size]);
+    ASSERT_NE(nullptr, buffer);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
+                               reinterpret_cast<void *>(buffer.get()), size);
+}
+
+static void
+RunAppendLaunchKernelEvent_HostSharedPtr(std::vector<ze_command_list_handle_t> cmdlist,
+                                         std::vector<ze_command_queue_handle_t> cmdqueue,
+                                         ze_event_handle_t event, int num_cmdlist,
+                                         const size_t size) {
+    LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host shared_ptr";
+    std::shared_ptr<int[]> buffer(new int[num_cmdlist * size]);
+    ASSERT_NE(nullptr, buffer);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
+                               reinterpret_cast<void *>(buffer.get()), size);
+}
+
+typedef void (*RunAppendLaunchKernelEventFunc)(std::vector<ze_command_list_handle_t>,
+                                               std::vector<ze_command_queue_handle_t>,
+                                               ze_event_handle_t, int, const size_t);
+
+static void
+RunAppendLaunchKernelEventLoop(std::vector<ze_command_list_handle_t> cmdlist,
+                               std::vector<ze_command_queue_handle_t> cmdqueue,
+                               ze_event_handle_t event,
+                               RunAppendLaunchKernelEventFunc func) {
+  bool event_pool_ext_found = lzt::check_if_extension_supported(
+      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
+  EXPECT_TRUE(event_pool_ext_found);
+
+  constexpr size_t size = 16;
+  for (int i = 1; i <= cmdlist.size(); i++) {
+    func(cmdlist, cmdqueue, event, i, size);
+  }
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEvent_L0SharedAlloc);
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingMallocWithSharedSystemAllocator) {
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEvent_HostMalloc);
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingNewWithSharedSystemAllocator) {
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEvent_HostNew);
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingUniquePtrWithSharedSystemAllocator) {
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEvent_HostUniquePtr);
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingSharedPtrWithSharedSystemAllocator) {
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEvent_HostSharedPtr);
+}
+
+/*
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
@@ -1032,5 +1147,6 @@ TEST_F(
                                reinterpret_cast<void *>(buffer.get()), size);
   }
 }
+*/
 
 } // namespace
