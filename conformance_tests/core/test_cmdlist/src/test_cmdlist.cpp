@@ -1005,10 +1005,6 @@ RunAppendLaunchKernelEventLoop(cmdListVec cmdlist, cmdQueueVec cmdqueue,
       lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
   EXPECT_TRUE(event_pool_ext_found);
 
-  if (func != RunAppendLaunchKernelEventL0SharedAlloc) {
-    lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
-  }
-
   constexpr size_t size = 16;
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
@@ -1026,6 +1022,7 @@ TEST_F(
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingMallocWithSharedSystemAllocator) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventHostMalloc);
 }
@@ -1033,6 +1030,7 @@ TEST_F(
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingNewWithSharedSystemAllocator) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventHostNew);
 }
@@ -1040,6 +1038,7 @@ TEST_F(
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingUniquePtrWithSharedSystemAllocator) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventHostUniquePtr);
 }
@@ -1047,6 +1046,7 @@ TEST_F(
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingSharedPtrWithSharedSystemAllocator) {
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventHostSharedPtr);
 }
