@@ -1021,35 +1021,35 @@ TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEvent_L0SharedAlloc);
+                                 RunAppendLaunchKernelEventL0SharedAlloc);
 }
 
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingMallocWithSharedSystemAllocator) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEvent_HostMalloc);
+                                 RunAppendLaunchKernelEventHostMalloc);
 }
 
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingNewWithSharedSystemAllocator) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEvent_HostNew);
+                                 RunAppendLaunchKernelEventHostNew);
 }
 
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingUniquePtrWithSharedSystemAllocator) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEvent_HostUniquePtr);
+                                 RunAppendLaunchKernelEventHostUniquePtr);
 }
 
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingSharedPtrWithSharedSystemAllocator) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEvent_HostSharedPtr);
+                                 RunAppendLaunchKernelEventHostSharedPtr);
 }
 
 } // namespace
