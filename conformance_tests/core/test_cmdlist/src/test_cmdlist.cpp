@@ -18,8 +18,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-using cmd_list_vec = std::vector<ze_command_list_handle_t>;
-using cmd_queue_vec = std::vector<ze_command_queue_handle_t>;
+using cmdListVec = std::vector<ze_command_list_handle_t>;
+using cmdQueueVec = std::vector<ze_command_queue_handle_t>;
 
 class zeCommandListCreateTests : public ::testing::Test,
                                  public ::testing::WithParamInterface<
@@ -709,7 +709,7 @@ TEST(
 
   auto cmd_list0 = lzt::create_command_list();
   auto cmd_list1 = lzt::create_command_list();
-  cmd_queue_vec cmd_queue;
+  cmdQueueVec cmd_queue;
   cmd_queue.resize(num_iterations);
   for (uint32_t i = 0; i < num_iterations; i++) {
     ze_command_queue_handle_t queue_handle = lzt::create_command_queue();
@@ -864,13 +864,12 @@ protected:
       lzt::destroy_command_queue(cq);
     }
   }
-  cmd_list_vec cmdlist;
-  cmd_queue_vec cmdqueue;
+  cmdListVec cmdlist;
+  cmdQueueVec cmdqueue;
   ze_event_handle_t event0 = nullptr;
 };
 
-static void RunAppendLaunchKernelEvent(cmd_list_vec cmdlist,
-                                       cmd_queue_vec cmdqueue,
+static void RunAppendLaunchKernelEvent(cmdListVec cmdlist, cmdQueueVec cmdqueue,
                                        ze_event_handle_t event, int num_cmdlist,
                                        void *buffer, const size_t size) {
 
@@ -937,8 +936,8 @@ static void RunAppendLaunchKernelEvent(cmd_list_vec cmdlist,
   lzt::destroy_module(module);
 }
 
-static void RunAppendLaunchKernelEventL0SharedAlloc(cmd_list_vec cmdlist,
-                                                    cmd_queue_vec cmdqueue,
+static void RunAppendLaunchKernelEventL0SharedAlloc(cmdListVec cmdlist,
+                                                    cmdQueueVec cmdqueue,
                                                     ze_event_handle_t event,
                                                     int num_cmdlist,
                                                     const size_t size) {
@@ -948,8 +947,8 @@ static void RunAppendLaunchKernelEventL0SharedAlloc(cmd_list_vec cmdlist,
   lzt::free_memory(buffer);
 }
 
-static void RunAppendLaunchKernelEventHostMalloc(cmd_list_vec cmdlist,
-                                                 cmd_queue_vec cmdqueue,
+static void RunAppendLaunchKernelEventHostMalloc(cmdListVec cmdlist,
+                                                 cmdQueueVec cmdqueue,
                                                  ze_event_handle_t event,
                                                  int num_cmdlist,
                                                  const size_t size) {
@@ -960,8 +959,8 @@ static void RunAppendLaunchKernelEventHostMalloc(cmd_list_vec cmdlist,
   free(buffer);
 }
 
-static void RunAppendLaunchKernelEventHostNew(cmd_list_vec cmdlist,
-                                              cmd_queue_vec cmdqueue,
+static void RunAppendLaunchKernelEventHostNew(cmdListVec cmdlist,
+                                              cmdQueueVec cmdqueue,
                                               ze_event_handle_t event,
                                               int num_cmdlist,
                                               const size_t size) {
@@ -972,8 +971,8 @@ static void RunAppendLaunchKernelEventHostNew(cmd_list_vec cmdlist,
   delete[] buffer;
 }
 
-static void RunAppendLaunchKernelEventHostUniquePtr(cmd_list_vec cmdlist,
-                                                    cmd_queue_vec cmdqueue,
+static void RunAppendLaunchKernelEventHostUniquePtr(cmdListVec cmdlist,
+                                                    cmdQueueVec cmdqueue,
                                                     ze_event_handle_t event,
                                                     int num_cmdlist,
                                                     const size_t size) {
@@ -983,8 +982,8 @@ static void RunAppendLaunchKernelEventHostUniquePtr(cmd_list_vec cmdlist,
                              reinterpret_cast<void *>(buffer.get()), size);
 }
 
-static void RunAppendLaunchKernelEventHostSharedPtr(cmd_list_vec cmdlist,
-                                                    cmd_queue_vec cmdqueue,
+static void RunAppendLaunchKernelEventHostSharedPtr(cmdListVec cmdlist,
+                                                    cmdQueueVec cmdqueue,
                                                     ze_event_handle_t event,
                                                     int num_cmdlist,
                                                     const size_t size) {
@@ -994,20 +993,21 @@ static void RunAppendLaunchKernelEventHostSharedPtr(cmd_list_vec cmdlist,
                              reinterpret_cast<void *>(buffer.get()), size);
 }
 
-typedef void (*RunAppendLaunchKernelEventFunc)(cmd_list_vec, cmd_queue_vec,
+typedef void (*RunAppendLaunchKernelEventFunc)(cmdListVec, cmdQueueVec,
                                                ze_event_handle_t, int,
                                                const size_t);
 
-static void RunAppendLaunchKernelEventLoop(cmd_list_vec cmdlist,
-                                           cmd_queue_vec cmdqueue,
-                                           ze_event_handle_t event,
-                                           RunAppendLaunchKernelEventFunc func,
-                                           bool shared = true) {
+static void
+RunAppendLaunchKernelEventLoop(cmdListVec cmdlist, cmdQueueVec cmdqueue,
+                               ze_event_handle_t event,
+                               RunAppendLaunchKernelEventFunc func) {
   bool event_pool_ext_found = lzt::check_if_extension_supported(
       lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
   EXPECT_TRUE(event_pool_ext_found);
 
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(shared);
+  if (func != RunAppendLaunchKernelEventL0SharedAlloc) {
+    lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
+  }
 
   constexpr size_t size = 16;
   for (int i = 1; i <= cmdlist.size(); i++) {
@@ -1020,8 +1020,7 @@ TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEventL0SharedAlloc,
-                                 false);
+                                 RunAppendLaunchKernelEventL0SharedAlloc);
 }
 
 TEST_F(
