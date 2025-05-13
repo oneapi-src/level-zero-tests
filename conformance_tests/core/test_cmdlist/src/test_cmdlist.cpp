@@ -1020,7 +1020,8 @@ TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEventL0SharedAlloc, false);
+                                 RunAppendLaunchKernelEventL0SharedAlloc,
+                                 false);
 }
 
 TEST_F(
