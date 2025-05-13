@@ -936,7 +936,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 }
 
 static void
-RunAppendLaunchKernelEvent_L0SharedAlloc(
+RunAppendLaunchKernelEventL0SharedAlloc(
     std::vector<ze_command_list_handle_t> cmdlist,
     std::vector<ze_command_queue_handle_t> cmdqueue,
     ze_event_handle_t event, int num_cmdlist, const size_t size) {
@@ -947,7 +947,7 @@ RunAppendLaunchKernelEvent_L0SharedAlloc(
 }
 
 static void
-RunAppendLaunchKernelEvent_HostMalloc(
+RunAppendLaunchKernelEventHostMalloc(
     std::vector<ze_command_list_handle_t> cmdlist,
     std::vector<ze_command_queue_handle_t> cmdqueue,
     ze_event_handle_t event, int num_cmdlist, const size_t size) {
@@ -959,7 +959,7 @@ RunAppendLaunchKernelEvent_HostMalloc(
 }
 
 static void
-RunAppendLaunchKernelEvent_HostNew(
+RunAppendLaunchKernelEventHostNew(
     std::vector<ze_command_list_handle_t> cmdlist,
     std::vector<ze_command_queue_handle_t> cmdqueue,
     ze_event_handle_t event, int num_cmdlist, const size_t size) {
@@ -972,7 +972,7 @@ RunAppendLaunchKernelEvent_HostNew(
 }
 
 static void
-RunAppendLaunchKernelEvent_HostUniquePtr(
+RunAppendLaunchKernelEventHostUniquePtr(
     std::vector<ze_command_list_handle_t> cmdlist,
     std::vector<ze_command_queue_handle_t> cmdqueue,
     ze_event_handle_t event, int num_cmdlist, const size_t size) {
@@ -984,7 +984,7 @@ RunAppendLaunchKernelEvent_HostUniquePtr(
 }
 
 static void
-RunAppendLaunchKernelEvent_HostSharedPtr(
+RunAppendLaunchKernelEventHostSharedPtr(
     std::vector<ze_command_list_handle_t> cmdlist,
     std::vector<ze_command_queue_handle_t> cmdqueue,
     ze_event_handle_t event, int num_cmdlist, const size_t size) {
