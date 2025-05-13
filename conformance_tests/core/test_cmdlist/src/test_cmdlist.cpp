@@ -983,7 +983,8 @@ static void RunAppendLaunchKernelEventHostUniquePtr(cmd_list_vec cmdlist,
                                                     const size_t size) {
   LOG_INFO << "Testing " << num_cmdlist
            << " command list(s) using host unique_ptr";
-  std::unique_ptr<int[]> buffer(new int[num_cmdlist * size]);
+  // std::unique_ptr<int[]> buffer(new int[num_cmdlist * size]);
+  std::unique_ptr<int[]> buffer = std::make_unique<int[]>(num_cmdlist * size);
   ASSERT_NE(nullptr, buffer);
   RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
                              reinterpret_cast<void *>(buffer.get()), size);
@@ -1009,10 +1010,12 @@ typedef void (*RunAppendLaunchKernelEventFunc)(cmd_list_vec, cmd_queue_vec,
 static void
 RunAppendLaunchKernelEventLoop(cmd_list_vec cmdlist, cmd_queue_vec cmdqueue,
                                ze_event_handle_t event,
-                               RunAppendLaunchKernelEventFunc func) {
+                               RunAppendLaunchKernelEventFunc func, bool shared=true) {
   bool event_pool_ext_found = lzt::check_if_extension_supported(
       lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
   EXPECT_TRUE(event_pool_ext_found);
+
+  lzt::gtest_skip_if_shared_system_alloc_unsupported(shared);
 
   constexpr size_t size = 16;
   for (int i = 1; i <= cmdlist.size(); i++) {
@@ -1024,7 +1027,7 @@ TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEventL0SharedAlloc);
+                                 RunAppendLaunchKernelEventL0SharedAlloc, false);
 }
 
 TEST_F(
