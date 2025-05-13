@@ -942,8 +942,6 @@ static void RunAppendLaunchKernelEventL0SharedAlloc(cmd_list_vec cmdlist,
                                                     ze_event_handle_t event,
                                                     int num_cmdlist,
                                                     const size_t size) {
-  LOG_INFO << "Testing " << num_cmdlist
-           << " command list(s) using L0 shared alloc";
   void *buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
   RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist, buffer,
                              size);
@@ -955,7 +953,6 @@ static void RunAppendLaunchKernelEventHostMalloc(cmd_list_vec cmdlist,
                                                  ze_event_handle_t event,
                                                  int num_cmdlist,
                                                  const size_t size) {
-  LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host malloc";
   void *buffer = malloc(num_cmdlist * size * sizeof(int));
   ASSERT_NE(nullptr, buffer);
   RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist, buffer,
@@ -968,7 +965,6 @@ static void RunAppendLaunchKernelEventHostNew(cmd_list_vec cmdlist,
                                               ze_event_handle_t event,
                                               int num_cmdlist,
                                               const size_t size) {
-  LOG_INFO << "Testing " << num_cmdlist << " command list(s) using host new";
   int *buffer = new int[num_cmdlist * size];
   ASSERT_NE(nullptr, buffer);
   RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
@@ -981,10 +977,7 @@ static void RunAppendLaunchKernelEventHostUniquePtr(cmd_list_vec cmdlist,
                                                     ze_event_handle_t event,
                                                     int num_cmdlist,
                                                     const size_t size) {
-  LOG_INFO << "Testing " << num_cmdlist
-           << " command list(s) using host unique_ptr";
-  // std::unique_ptr<int[]> buffer(new int[num_cmdlist * size]);
-  std::unique_ptr<int[]> buffer = std::make_unique<int[]>(num_cmdlist * size);
+  std::unique_ptr<int[]> buffer(new int[num_cmdlist * size]);
   ASSERT_NE(nullptr, buffer);
   RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
                              reinterpret_cast<void *>(buffer.get()), size);
@@ -995,8 +988,6 @@ static void RunAppendLaunchKernelEventHostSharedPtr(cmd_list_vec cmdlist,
                                                     ze_event_handle_t event,
                                                     int num_cmdlist,
                                                     const size_t size) {
-  LOG_INFO << "Testing " << num_cmdlist
-           << " command list(s) using host shared_ptr";
   std::shared_ptr<int[]> buffer(new int[num_cmdlist * size]);
   ASSERT_NE(nullptr, buffer);
   RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
@@ -1007,10 +998,11 @@ typedef void (*RunAppendLaunchKernelEventFunc)(cmd_list_vec, cmd_queue_vec,
                                                ze_event_handle_t, int,
                                                const size_t);
 
-static void
-RunAppendLaunchKernelEventLoop(cmd_list_vec cmdlist, cmd_queue_vec cmdqueue,
-                               ze_event_handle_t event,
-                               RunAppendLaunchKernelEventFunc func, bool shared=true) {
+static void RunAppendLaunchKernelEventLoop(cmd_list_vec cmdlist,
+                                           cmd_queue_vec cmdqueue,
+                                           ze_event_handle_t event,
+                                           RunAppendLaunchKernelEventFunc func,
+                                           bool shared = true) {
   bool event_pool_ext_found = lzt::check_if_extension_supported(
       lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
   EXPECT_TRUE(event_pool_ext_found);
@@ -1019,6 +1011,7 @@ RunAppendLaunchKernelEventLoop(cmd_list_vec cmdlist, cmd_queue_vec cmdqueue,
 
   constexpr size_t size = 16;
   for (int i = 1; i <= cmdlist.size(); i++) {
+    LOG_INFO << "Testing " << i << " command list(s)";
     func(cmdlist, cmdqueue, event, i, size);
   }
 }
@@ -1027,7 +1020,8 @@ TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
-                                 RunAppendLaunchKernelEventL0SharedAlloc, false);
+                                 RunAppendLaunchKernelEventL0SharedAlloc,
+                                 false);
 }
 
 TEST_F(
