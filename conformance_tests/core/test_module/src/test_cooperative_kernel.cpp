@@ -29,8 +29,6 @@ protected:
 void CooperativeKernelTests::
     RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(
         bool is_shared_system) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
-
   uint32_t max_group_count = 0;
   ze_module_handle_t module = nullptr;
   ze_kernel_handle_t kernel = nullptr;
@@ -123,6 +121,7 @@ TEST_P(
 TEST_P(
     CooperativeKernelTests,
     GivenCooperativeKernelWhenAppendingLaunchCooperativeKernelThenSuccessIsReturnedAndOutputIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(true);
 }
 

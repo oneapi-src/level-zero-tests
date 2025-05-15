@@ -200,8 +200,6 @@ TEST_F(
 void zeImmediateCommandListExecutionTests::
     RunGivenImmediateCommandListWhenAppendLaunchKernelInstructionTest(
         bool is_shared_system) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
-
   const size_t size = 16;
   const int addval = 10;
   const int addval2 = 15;
@@ -265,14 +263,13 @@ TEST_P(
 TEST_P(
     zeImmediateCommandListExecutionTests,
     GivenImmediateCommandListWhenAppendLaunchKernelInstructionThenVerifyImmediateExecutionWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenImmediateCommandListWhenAppendLaunchKernelInstructionTest(true);
 }
 
 static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
                                   ze_command_queue_mode_t mode,
                                   bool is_shared_system) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
-
   const size_t size = 16;
   const int addval = 10;
   int addval2 = 15;
@@ -338,6 +335,7 @@ TEST_F(
 TEST_F(
     zeImmediateCommandListInOrderExecutionTests,
     GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionThenVerifyImmediateExecutionWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunAppendLaunchKernel(cmdlist_immediate_default_mode,
                         ZE_COMMAND_QUEUE_MODE_DEFAULT, true);
   RunAppendLaunchKernel(cmdlist_immediate_sync_mode,
@@ -350,8 +348,6 @@ static void
 RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
                            ze_event_handle_t event, int num_cmdlist,
                            bool is_shared_system) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
-
   const size_t size = 16;
   const int addval = 10;
   const int num_iterations = 100;
@@ -433,6 +429,7 @@ TEST_F(
 TEST_F(
     zeImmediateCommandListEventCounterTests,
     GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
 
   bool event_pool_ext_found = lzt::check_if_extension_supported(
       lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");

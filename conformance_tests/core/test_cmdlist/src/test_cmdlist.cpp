@@ -1022,7 +1022,7 @@ TEST_F(
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingMallocWithSharedSystemAllocator) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(true);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventHostMalloc);
 }
@@ -1030,7 +1030,7 @@ TEST_F(
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingNewWithSharedSystemAllocator) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(true);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventHostNew);
 }
@@ -1038,7 +1038,7 @@ TEST_F(
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingUniquePtrWithSharedSystemAllocator) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(true);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventHostUniquePtr);
 }
@@ -1046,7 +1046,7 @@ TEST_F(
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingSharedPtrWithSharedSystemAllocator) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(true);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventHostSharedPtr);
 }
