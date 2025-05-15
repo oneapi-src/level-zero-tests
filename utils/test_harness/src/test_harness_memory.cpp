@@ -607,44 +607,4 @@ size_t create_page_aligned_size(size_t requested_size, size_t page_size) {
   }
 }
 
-// bool supports_shared_system_alloc(const ze_device_memory_access_properties_t &access) {
-//   const auto alloc_cap = access.sharedSystemAllocCapabilities;
-//   return (alloc_cap & ZE_MEMORY_ACCESS_CAP_FLAG_RW) != 0;
-// }
-
-// bool supports_shared_system_alloc(const ze_device_handle_t device) {
-//   return supports_shared_system_alloc(get_memory_access_properties(device));
-// }
-
-// bool supports_shared_system_alloc(const ze_driver_handle_t driver) {
-//   return supports_shared_system_alloc(get_default_device(driver));
-// }
-
-// bool supports_shared_system_alloc() {
-//   return supports_shared_system_alloc(get_default_driver());
-// }
-
-// bool supports_shared_system_alloc(bool is_shared_system) {
-//   return (is_shared_system && supports_shared_system_alloc());
-// }
-
-// bool supports_shared_system_alloc() {
-//   const auto device = lzt::get_default_device(lzt::get_default_driver());
-//   const auto access = lzt::get_memory_access_properties(device);
-//   return (access.sharedSystemAllocCapabilities & ZE_MEMORY_ACCESS_CAP_FLAG_RW) != 0;
-// }
-
-// void gtest_skip_if_shared_system_alloc_unsupported(bool is_shared_system) {
-//   if (is_shared_system) {
-//     const auto memory_access_properties = lzt::get_memory_access_properties(
-//         lzt::get_default_device(lzt::get_default_driver()));
-
-//     if ((memory_access_properties.sharedSystemAllocCapabilities &
-//          ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
-//       GTEST_SKIP() << "device does not support shared system allocation, "
-//                       "skipping the test";
-//     }
-//   }
-// }
-
 }; // namespace level_zero_tests
