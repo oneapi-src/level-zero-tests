@@ -1193,10 +1193,7 @@ class zeSharedSystemMemoryCopyTests
           std::tuple<ze_memory_type_t, size_t, size_t>> {
 protected:
   void SetUp() override {
-    const auto memory_access_properties = lzt::get_memory_access_properties(
-        lzt::get_default_device(lzt::get_default_driver()));
-    if ((memory_access_properties.sharedSystemAllocCapabilities &
-         ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
+    if (!lzt::supports_shared_system_alloc()) {
       GTEST_SKIP() << "Device does not support accessing shared system memory";
     }
   }

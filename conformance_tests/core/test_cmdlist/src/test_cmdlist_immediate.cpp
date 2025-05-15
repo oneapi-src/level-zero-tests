@@ -200,7 +200,7 @@ TEST_F(
 void zeImmediateCommandListExecutionTests::
     RunGivenImmediateCommandListWhenAppendLaunchKernelInstructionTest(
         bool is_shared_system) {
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
 
   const size_t size = 16;
   const int addval = 10;
@@ -271,7 +271,7 @@ TEST_P(
 static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
                                   ze_command_queue_mode_t mode,
                                   bool is_shared_system) {
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
 
   const size_t size = 16;
   const int addval = 10;
@@ -350,7 +350,7 @@ static void
 RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
                            ze_event_handle_t event, int num_cmdlist,
                            bool is_shared_system) {
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
 
   const size_t size = 16;
   const int addval = 10;

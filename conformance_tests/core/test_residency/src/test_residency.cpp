@@ -188,10 +188,7 @@ TEST_F(
       GTEST_SKIP();
     }
 
-    auto mem_access_props = lzt::get_memory_access_properties(device);
-    auto systemMemSupported = mem_access_props.sharedSystemAllocCapabilities &
-                              ZE_MEMORY_ACCESS_CAP_FLAG_RW;
-    if (!systemMemSupported) {
+    if (!lzt::supports_shared_system_alloc(device)) {
       FAIL() << "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE - Device does not support "
                 "system memory";
     }
@@ -363,10 +360,7 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
       GTEST_SKIP();
     }
 
-    auto mem_access_props = lzt::get_memory_access_properties(device);
-    auto systemMemSupported = mem_access_props.sharedSystemAllocCapabilities &
-                              ZE_MEMORY_ACCESS_CAP_FLAG_RW;
-    if (!systemMemSupported) {
+    if (!lzt::supports_shared_system_alloc(device)) {
       FAIL() << "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE - Device does not support "
                 "system memory";
     }

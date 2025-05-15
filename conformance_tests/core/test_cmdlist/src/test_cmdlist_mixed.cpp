@@ -1608,7 +1608,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
                            std::vector<ze_command_queue_handle_t> cmdqueue,
                            ze_event_handle_t event, int num_cmdlist,
                            bool is_shared_system) {
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
 
   const size_t size = 16;
   const int addval = 10;
@@ -1789,7 +1789,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
     std::vector<ze_command_queue_handle_t> cmdqueue,
     ze_event_handle_t counter_event, ze_event_handle_t event, bool is_immediate,
     bool is_shared_system) {
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(is_shared_system);
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system);
 
   int num_cmdlist = 2;
   const size_t size = 16;

@@ -375,9 +375,7 @@ protected:
             (uint64_t *)level_zero_tests::allocate_shared_memory(
                 output_size_, 8, 0u, 0u, device_handle, context);
       } else if (shr_mem_type == SHARED_SYSTEM) { // system allocation
-        auto memory_access_cap =
-            device_properties.sharedSystemAllocCapabilities;
-        if ((memory_access_cap & ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
+        if (!lzt::supports_shared_system_alloc(device_properties)) {
           LOG_INFO
               << "WARNING: Unable to allocate shared system memory, skipping";
           free_drivers_info();

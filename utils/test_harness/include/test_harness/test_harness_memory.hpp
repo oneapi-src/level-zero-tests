@@ -10,7 +10,14 @@
 #define level_zero_tests_ZE_TEST_HARNESS_MEMORY_HPP
 
 #include <level_zero/ze_api.h>
+#include "utils/utils.hpp"
 #include "gtest/gtest.h"
+
+#define SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED(is_shared_system)              \
+  if (!level_zero_tests::supports_shared_system_alloc(is_shared_system)) {     \
+    GTEST_SKIP() << "Device does not support shared system "                   \
+                    "allocation, skipping the test";                           \
+  }
 
 namespace level_zero_tests {
 
@@ -194,7 +201,29 @@ void unmap_and_free_reserved_memory(
     ze_context_handle_t context, void *reservedMemory,
     ze_physical_mem_handle_t reservedPhysicalMemory, size_t allocSize);
 
-void gtest_skip_if_shared_system_alloc_unsupported(bool is_shared_system);
+inline bool supports_shared_system_alloc(
+    const ze_device_memory_access_properties_t &access) {
+  const auto alloc_cap = access.sharedSystemAllocCapabilities;
+  return (alloc_cap & ZE_MEMORY_ACCESS_CAP_FLAG_RW) != 0;
+}
+
+inline bool supports_shared_system_alloc(const ze_device_handle_t device) {
+  return supports_shared_system_alloc(get_memory_access_properties(device));
+}
+
+inline bool supports_shared_system_alloc(const ze_driver_handle_t driver) {
+  return supports_shared_system_alloc(get_default_device(driver));
+}
+
+inline bool supports_shared_system_alloc() {
+  return supports_shared_system_alloc(get_default_driver());
+}
+
+inline bool supports_shared_system_alloc(bool is_shared_system) {
+  return (is_shared_system && supports_shared_system_alloc());
+}
+
+// void gtest_skip_if_shared_system_alloc_unsupported(bool is_shared_system);
 
 }; // namespace level_zero_tests
 #endif
