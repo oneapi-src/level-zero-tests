@@ -13,11 +13,13 @@
 #include "utils/utils.hpp"
 #include "gtest/gtest.h"
 
-#define SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED()              \
-  if (!level_zero_tests::supports_shared_system_alloc()) {     \
-    GTEST_SKIP() << "Device does not support shared system "                   \
-                    "allocation, skipping the test";                           \
-  }
+#define SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED()                              \
+  do {                                                                         \
+    if (!level_zero_tests::supports_shared_system_alloc()) {                   \
+      GTEST_SKIP() << "Device does not support shared system "                 \
+                      "allocation, skipping the test";                         \
+    }                                                                          \
+  } while (0)
 
 namespace level_zero_tests {
 
