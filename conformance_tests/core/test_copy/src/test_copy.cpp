@@ -1,12 +1,10 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
-
-#include <array>
 
 #include "gtest/gtest.h"
 
@@ -17,9 +15,12 @@
 
 namespace lzt = level_zero_tests;
 
+#include <level_zero/ze_api.h>
+
 #include <algorithm>
 #include <cstdlib>
-#include <level_zero/ze_api.h>
+#include <array>
+#include <string>
 
 using namespace level_zero_tests;
 
@@ -803,26 +804,26 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::Bool()));
 class zeCommandListAppendMemoryCopyTests : public ::testing::Test {
 protected:
-  void RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyTest(
-      bool is_immediate);
   void
-  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
-      bool is_immediate);
-  void
-  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
-      bool is_immediate);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(bool is_immediate,
+                                                       bool is_shared_system);
+  void RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
+      bool is_immediate, bool is_shared_system);
+  void RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
+      bool is_immediate, bool is_shared_system);
   void
   RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
       bool is_immediate);
 };
 
 void zeCommandListAppendMemoryCopyTests::
-    RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyTest(
-        bool is_immediate) {
+    RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(
+        bool is_immediate, bool is_shared_system) {
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
-  void *memory = allocate_device_memory(size_in_bytes(host_memory));
+  void *memory = lzt::allocate_device_memory_with_allocator_selector(
+      size_in_bytes(host_memory), is_shared_system);
 
   append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
                      size_in_bytes(host_memory), nullptr);
@@ -830,29 +831,44 @@ void zeCommandListAppendMemoryCopyTests::
     lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
   }
   lzt::destroy_command_bundle(cmd_bundle);
-  free_memory(memory);
+  lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturned) {
-  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyTest(false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(false, false);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyTest(true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(true, false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(false, true);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(true, true);
 }
 
 void zeCommandListAppendMemoryCopyTests::
-    RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
-        bool is_immediate) {
+    RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
+        bool is_immediate, bool is_shared_system) {
   lzt::zeEventPool ep;
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
-  void *memory = allocate_device_memory(size_in_bytes(host_memory));
+  void *memory = lzt::allocate_device_memory_with_allocator_selector(
+      size_in_bytes(host_memory), is_shared_system);
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
@@ -863,31 +879,44 @@ void zeCommandListAppendMemoryCopyTests::
   }
   ep.destroy_event(hEvent);
   lzt::destroy_command_bundle(cmd_bundle);
-  free_memory(memory);
+  lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventThenSuccessIsReturned) {
-  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
-      false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(false, false);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
-      true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(true, false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(false, true);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(true, true);
 }
 
 void zeCommandListAppendMemoryCopyTests::
-    RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
-        bool is_immediate) {
+    RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
+        bool is_immediate, bool is_shared_system) {
   lzt::zeEventPool ep;
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
-  void *memory = allocate_device_memory(size_in_bytes(host_memory));
+  void *memory = lzt::allocate_device_memory_with_allocator_selector(
+      size_in_bytes(host_memory), is_shared_system);
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
@@ -901,21 +930,36 @@ void zeCommandListAppendMemoryCopyTests::
   }
   ep.destroy_event(hEvent);
   lzt::destroy_command_bundle(cmd_bundle);
-  free_memory(memory);
+  lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned) {
-  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
-      false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(false,
+                                                                    false);
 }
 
 TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
-      true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(true,
+                                                                    false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(false,
+                                                                    true);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(true, true);
 }
 
 void zeCommandListAppendMemoryCopyTests::
@@ -1170,6 +1214,185 @@ INSTANTIATE_TEST_SUITE_P(ParamAppendMemCopy,
                          zeCommandListAppendMemoryCopyParameterizedTests,
                          ::testing::Combine(memory_types, memory_types,
                                             ::testing::Bool()));
+
+enum MemoryType {
+  MEMORY_TYPE_DEVICE,
+  MEMORY_TYPE_HOST,
+  MEMORY_TYPE_SHARED,
+  MEMORY_TYPE_SHARED_SYSTEM
+};
+
+static std::string MemoryTypeString(MemoryType type) {
+  switch (type) {
+  case MEMORY_TYPE_DEVICE:
+    return "MEMORY_TYPE_DEVICE";
+  case MEMORY_TYPE_HOST:
+    return "MEMORY_TYPE_HOST";
+  case MEMORY_TYPE_SHARED:
+    return "MEMORY_TYPE_SHARED";
+  case MEMORY_TYPE_SHARED_SYSTEM:
+    return "MEMORY_TYPE_SHARED_SYSTEM";
+  default:
+    return "UNKNOWN_MEMORY_TYPE";
+  }
+}
+
+class zeCommandListAppendMemoryCopyParameterizedTestsWithSharedSystem
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<MemoryType, MemoryType, bool>> {
+public:
+  void launchAppendMemCopy(ze_device_handle_t device, int *src_memory,
+                           int *dst_memory, size_t size, bool is_immediate) {
+    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+    const int8_t src_pattern = 1;
+    const int8_t dst_pattern = 0;
+
+    int *expected_data =
+        static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
+    int *verify_data =
+        static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
+
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(expected_data),
+                            static_cast<const void *>(&src_pattern),
+                            sizeof(int), size * sizeof(int), nullptr);
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(verify_data),
+                            static_cast<const void *>(&dst_pattern),
+                            sizeof(int), size * sizeof(int), nullptr);
+
+    EXPECT_NE(expected_data, nullptr);
+    EXPECT_NE(verify_data, nullptr);
+
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(src_memory),
+                            static_cast<const void *>(&src_pattern),
+                            sizeof(uint8_t), size * sizeof(int), nullptr);
+
+    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(dst_memory),
+                            static_cast<const void *>(&dst_pattern),
+                            sizeof(uint8_t), size * sizeof(int), nullptr);
+
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_memory),
+                            static_cast<void *>(src_memory),
+                            size * sizeof(int));
+
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.list, verify_data,
+                            static_cast<void *>(dst_memory),
+                            size * sizeof(int));
+    lzt::append_memory_copy(cmd_bundle.list, expected_data,
+                            static_cast<void *>(src_memory),
+                            size * sizeof(int));
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+    EXPECT_EQ(0, memcmp(expected_data, verify_data, size * sizeof(int)));
+
+    lzt::destroy_command_bundle(cmd_bundle);
+    lzt::free_memory(expected_data);
+    lzt::free_memory(verify_data);
+  }
+};
+
+TEST_P(
+    zeCommandListAppendMemoryCopyParameterizedTestsWithSharedSystem,
+    GivenParameterizedSourceAndDestinationMemAllocTypesWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+
+  MemoryType src_memory_type = std::get<0>(GetParam());
+  MemoryType dst_memory_type = std::get<1>(GetParam());
+  bool is_immediate = std::get<2>(GetParam());
+
+  auto context = lzt::get_default_context();
+  const size_t size = 16;
+
+  for (auto driver : lzt::get_all_driver_handles()) {
+    for (auto device : lzt::get_devices(driver)) {
+      if (!lzt::supports_shared_system_alloc(device)) {
+        LOG_WARNING << "Device does not support shared system allocation";
+        continue;
+      }
+      int *src_memory = nullptr;
+      int *dst_memory = nullptr;
+
+      switch (src_memory_type) {
+      case MEMORY_TYPE_DEVICE:
+        src_memory = static_cast<int *>(lzt::allocate_device_memory(
+            size * sizeof(int), 1, 0u, device, context));
+        break;
+      case MEMORY_TYPE_HOST:
+        src_memory = static_cast<int *>(
+            lzt::allocate_host_memory(size * sizeof(int), 1, context));
+        break;
+      case MEMORY_TYPE_SHARED:
+        src_memory = static_cast<int *>(lzt::allocate_shared_memory(
+            size * sizeof(int), 1, 0, 0, device, context));
+        break;
+      case MEMORY_TYPE_SHARED_SYSTEM:
+        src_memory =
+            static_cast<int *>(lzt::aligned_malloc(size * sizeof(int), 1));
+        break;
+      default:
+        LOG_WARNING << "Unhandled memory type for parameterized append memory "
+                       "copy test: "
+                    << MemoryTypeString(src_memory_type);
+      }
+      switch (dst_memory_type) {
+      case MEMORY_TYPE_DEVICE:
+        dst_memory = static_cast<int *>(lzt::allocate_device_memory(
+            size * sizeof(int), 1, 0u, device, context));
+        break;
+      case MEMORY_TYPE_HOST:
+        dst_memory = static_cast<int *>(
+            lzt::allocate_host_memory(size * sizeof(int), 1, context));
+        break;
+      case MEMORY_TYPE_SHARED:
+        dst_memory = static_cast<int *>(lzt::allocate_shared_memory(
+            size * sizeof(int), 1, 0, 0, device, context));
+        break;
+      case MEMORY_TYPE_SHARED_SYSTEM:
+        dst_memory = static_cast<int *>(malloc(size * sizeof(int)));
+        break;
+      default:
+        LOG_WARNING << "Unhandled memory type for parameterized append memory "
+                       "copy test: "
+                    << MemoryTypeString(dst_memory_type);
+      }
+
+      EXPECT_NE(src_memory, nullptr);
+      EXPECT_NE(dst_memory, nullptr);
+
+      launchAppendMemCopy(device, src_memory, dst_memory, size, is_immediate);
+
+      const bool is_shared_system_src =
+          src_memory_type == MEMORY_TYPE_SHARED_SYSTEM;
+      lzt::free_memory_with_allocator_selector(context, src_memory,
+                                               is_shared_system_src);
+
+      const bool is_shared_system_dst =
+          dst_memory_type == MEMORY_TYPE_SHARED_SYSTEM;
+      lzt::free_memory_with_allocator_selector(context, dst_memory,
+                                               is_shared_system_dst);
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ParamAppendMemCopyWithSourceAsSharedSystem,
+    zeCommandListAppendMemoryCopyParameterizedTestsWithSharedSystem,
+    ::testing::Combine(::testing::Values(MEMORY_TYPE_SHARED_SYSTEM),
+                       ::testing::Values(MEMORY_TYPE_DEVICE, MEMORY_TYPE_HOST,
+                                         MEMORY_TYPE_SHARED,
+                                         MEMORY_TYPE_SHARED_SYSTEM),
+                       ::testing::Bool()));
+
+INSTANTIATE_TEST_SUITE_P(
+    ParamAppendMemCopyWithDestinationAsSharedSystem,
+    zeCommandListAppendMemoryCopyParameterizedTestsWithSharedSystem,
+    ::testing::Combine(::testing::Values(MEMORY_TYPE_DEVICE, MEMORY_TYPE_HOST,
+                                         MEMORY_TYPE_SHARED,
+                                         MEMORY_TYPE_SHARED_SYSTEM),
+                       ::testing::Values(MEMORY_TYPE_SHARED_SYSTEM),
+                       ::testing::Bool()));
 
 void *malloc_aligned(size_t alignment, size_t size) {
 #ifdef __linux__
