@@ -60,6 +60,8 @@ void *allocate_host_memory_no_check(const size_t size, const size_t alignment,
                                     ze_context_handle_t context,
                                     ze_result_t *result);
 void *allocate_device_memory(const size_t size);
+void *allocate_device_memory_with_allocator_selector(const size_t size,
+                                                     bool is_shared_system);
 void *allocate_device_memory(const size_t size, const size_t alignment);
 void *allocate_device_memory(const size_t size, const size_t alignment,
                              const ze_device_mem_alloc_flags_t flags,

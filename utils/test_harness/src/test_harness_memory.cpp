@@ -148,6 +148,15 @@ void *allocate_device_memory(const size_t size) {
   return allocate_device_memory(size, 1);
 }
 
+void *allocate_device_memory_with_allocator_selector(const size_t size,
+                                                     bool is_shared_system) {
+  if (is_shared_system) {
+    return aligned_malloc(size, 1);
+  }
+
+  return allocate_device_memory(size, 1);
+}
+
 void *allocate_device_memory(const size_t size, const size_t alignment) {
   return allocate_device_memory(size, alignment, 0);
 }
