@@ -11,10 +11,13 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
-#include <chrono>
+
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
+
+#include <chrono>
+#include <bitset>
 
 namespace {
 
@@ -548,17 +551,19 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY),
         ::testing::Bool()));
 
-TEST(
-    zeCommandListAppendMemoryCopyTest,
-    GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned) {
+static void
+RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
+    bool is_shared_system_src, bool is_shared_system_dst) {
   auto cq = lzt::create_command_queue();
   auto cmd_list = lzt::create_command_list();
   const int transfer_size = 1;
   const int num_iteration = 3;
   const uint8_t max_copy_count = 100;
   const size_t copy_size = 100;
-  auto host_memory_src = lzt::allocate_host_memory(copy_size);
-  auto host_memory_dst = lzt::allocate_host_memory(copy_size);
+  auto host_memory_src = lzt::allocate_host_memory_with_allocator_selector(
+      copy_size, is_shared_system_src);
+  auto host_memory_dst = lzt::allocate_host_memory_with_allocator_selector(
+      copy_size, is_shared_system_dst);
 
   auto temp = static_cast<uint8_t *>(host_memory_src);
   for (uint8_t i = 0; i < max_copy_count; i++) {
@@ -609,8 +614,28 @@ TEST(
 
   lzt::destroy_command_list(cmd_list);
   lzt::destroy_command_queue(cq);
-  lzt::free_memory(host_memory_src);
-  lzt::free_memory(host_memory_dst);
+  lzt::free_memory_with_allocator_selector(host_memory_src,
+                                           is_shared_system_src);
+  lzt::free_memory_with_allocator_selector(host_memory_dst,
+                                           is_shared_system_dst);
+}
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned) {
+  RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
+      false, false);
+}
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  for (int i = 1; i < 4; ++i) {
+    std::bitset<2> bits(i);
+    RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
+        bits[1], bits[0]);
+  }
 }
 
 void RunAppendingWriteGlobalTimestampThenSuccessIsReturned(bool is_immediate) {
