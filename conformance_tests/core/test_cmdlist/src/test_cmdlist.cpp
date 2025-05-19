@@ -681,9 +681,10 @@ TEST(
   RunAppendingWriteGlobalTimestampThenSuccessIsReturned(true);
 }
 
-TEST(
-    zeCommandListAppendMemoryCopyTest,
-    GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned) {
+static void
+RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
+    bool is_shared_system_scratch_kernel, bool is_shared_system_src,
+    bool is_shared_system_dst) {
   // Create buffers for scratch kernel
   uint32_t arraySize = 32;
   uint32_t typeSize = sizeof(uint32_t);
@@ -699,15 +700,23 @@ TEST(
   ze_host_mem_alloc_desc_t hostDesc = {};
   hostDesc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
   hostDesc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
-  void *srcBuffer = lzt::allocate_host_memory(inMemorySize);
-  void *dstBuffer = lzt::allocate_host_memory(outMemorySize);
-  void *offsetBuffer = lzt::allocate_host_memory(offsetMemorySize);
-  void *expectedMemory = lzt::allocate_host_memory(expectedMemorySize);
+
+  void *srcBuffer = lzt::allocate_host_memory_with_allocator_selector(
+      inMemorySize, is_shared_system_scratch_kernel);
+  void *dstBuffer = lzt::allocate_host_memory_with_allocator_selector(
+      outMemorySize, is_shared_system_scratch_kernel);
+  void *offsetBuffer = lzt::allocate_host_memory_with_allocator_selector(
+      offsetMemorySize, is_shared_system_scratch_kernel);
+  void *expectedMemory = lzt::allocate_host_memory_with_allocator_selector(
+      expectedMemorySize, is_shared_system_scratch_kernel);
 
   // create two buffers for append fill/ copy kernel
   size_t size = 1024;
-  auto device_memory = lzt::allocate_device_memory(size);
-  auto host_memory = lzt::allocate_host_memory(size);
+  void *device_memory = lzt::allocate_device_memory_with_allocator_selector(
+      size, is_shared_system_src);
+  void *host_memory = lzt::allocate_host_memory_with_allocator_selector(
+      size, is_shared_system_dst);
+
   uint8_t pattern = 0xAB;
   const int pattern_size = 1;
   uint32_t num_iterations = 2;
@@ -827,12 +836,34 @@ TEST(
     lzt::destroy_command_queue(cmd_queue[i]);
   }
   cmd_queue.clear();
-  lzt::free_memory(host_memory);
-  lzt::free_memory(device_memory);
-  lzt::free_memory(dstBuffer);
-  lzt::free_memory(srcBuffer);
-  lzt::free_memory(offsetBuffer);
-  lzt::free_memory(expectedMemory);
+  lzt::free_memory_with_allocator_selector(dstBuffer,
+                                           is_shared_system_scratch_kernel);
+  lzt::free_memory_with_allocator_selector(srcBuffer,
+                                           is_shared_system_scratch_kernel);
+  lzt::free_memory_with_allocator_selector(offsetBuffer,
+                                           is_shared_system_scratch_kernel);
+  lzt::free_memory_with_allocator_selector(expectedMemory,
+                                           is_shared_system_scratch_kernel);
+  lzt::free_memory_with_allocator_selector(device_memory, is_shared_system_src);
+  lzt::free_memory_with_allocator_selector(host_memory, is_shared_system_dst);
+}
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned) {
+  RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
+      false, false, false);
+}
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  for (int i = 1; i < 8; ++i) {
+    std::bitset<3> bits(i);
+    RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
+        bits[2], bits[1], bits[0]);
+  }
 }
 
 class zeCommandListEventCounterTests : public lzt::zeEventPoolTests {

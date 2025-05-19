@@ -69,6 +69,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryCopyTest_GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillVerificationTests_GivenHostMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillVerificationTests_GivenDeviceMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendWriteGlobalTimestampTest_GivenCommandListWhenAppendingWriteGlobalTimestampThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
@@ -100,6 +101,15 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillVerificationTests_GivenSharedSystemMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectlyWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillVerificationTests_GivenSharedSystemMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectlyWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_VaryPatternSize_zeCommandListAppendMemoryFillPatternVerificationTests_GivenPatternSizeWhenExecutingAMemoryFillThenMemoryIsSetCorrectlyWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeCommandListAppendMemoryCopyTests_GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventOnImmediateCmdListThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
@@ -202,6 +212,8 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenValidDeviceWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
                     (re.search('GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
                     (re.search('SetAndGetAccessTypeForSharedAllocation', test_name, re.IGNORECASE)) or \
                     (re.search('GivenMultipleProcessesUsingMultipleSubDevicesThenKernelIsStressedAndExecuteSuccessfull', test_name, re.IGNORECASE)) or \
                     (re.search('GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution', test_name, re.IGNORECASE)) or \
