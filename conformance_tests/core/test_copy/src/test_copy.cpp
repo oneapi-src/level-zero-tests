@@ -920,8 +920,7 @@ INSTANTIATE_TEST_SUITE_P(
                        memory_types,                // Source Memory Type
                        memory_types,                // Destination Memory Type
                        ::testing::Bool()));
-class
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem
+class AppendMemoryCopyRegionWithSharedSystem
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<size_t, size_t, size_t, bool>> {
@@ -1019,7 +1018,7 @@ protected:
 };
 
 TEST_P(
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToHostMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   rows = std::get<0>(GetParam());
@@ -1034,7 +1033,7 @@ TEST_P(
 }
 
 TEST_P(
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToSharedMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   rows = std::get<0>(GetParam());
@@ -1049,7 +1048,7 @@ TEST_P(
 }
 
 TEST_P(
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToDeviceMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   rows = std::get<0>(GetParam());
@@ -1064,7 +1063,7 @@ TEST_P(
 }
 
 TEST_P(
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   rows = std::get<0>(GetParam());
@@ -1079,7 +1078,7 @@ TEST_P(
 }
 
 TEST_P(
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyRegionWithSharedSystem,
     GivenValidHostMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   rows = std::get<0>(GetParam());
@@ -1094,7 +1093,7 @@ TEST_P(
 }
 
 TEST_P(
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   rows = std::get<0>(GetParam());
@@ -1109,7 +1108,7 @@ TEST_P(
 }
 
 TEST_P(
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyRegionWithSharedSystem,
     GivenValidDeviceMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   rows = std::get<0>(GetParam());
@@ -1123,13 +1122,12 @@ TEST_P(
   lzt::aligned_free(destination_memory);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    MemoryCopies,
-    zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTestsWithSharedSystem,
-    ::testing::Combine(::testing::Values(8, 64),    // Rows
-                       ::testing::Values(8, 64),    // Cols
-                       ::testing::Values(1, 8, 64), // Slices
-                       ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(MemoryCopies, AppendMemoryCopyRegionWithSharedSystem,
+                         ::testing::Combine(::testing::Values(8, 64), // Rows
+                                            ::testing::Values(8, 64), // Cols
+                                            ::testing::Values(1, 8,
+                                                              64), // Slices
+                                            ::testing::Bool()));
 
 class zeCommandListAppendMemoryCopyTests : public ::testing::Test {
 protected:
@@ -1583,7 +1581,7 @@ static std::string MemoryTypeString(MemoryType type) {
   }
 }
 
-class zeCommandListAppendMemoryCopyParameterizedTestsWithSharedSystem
+class AppendMemoryCopyWithSharedSystem
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<MemoryType, MemoryType, bool>> {
@@ -1641,7 +1639,7 @@ public:
 };
 
 TEST_P(
-    zeCommandListAppendMemoryCopyParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyWithSharedSystem,
     GivenParameterizedSourceAndDestinationMemAllocTypesWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
 
   MemoryType src_memory_type = std::get<0>(GetParam());
@@ -1724,7 +1722,7 @@ TEST_P(
 
 INSTANTIATE_TEST_SUITE_P(
     ParamAppendMemCopyWithSourceAsSharedSystem,
-    zeCommandListAppendMemoryCopyParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyWithSharedSystem,
     ::testing::Combine(::testing::Values(MEMORY_TYPE_SHARED_SYSTEM),
                        ::testing::Values(MEMORY_TYPE_DEVICE, MEMORY_TYPE_HOST,
                                          MEMORY_TYPE_SHARED,
@@ -1733,7 +1731,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     ParamAppendMemCopyWithDestinationAsSharedSystem,
-    zeCommandListAppendMemoryCopyParameterizedTestsWithSharedSystem,
+    AppendMemoryCopyWithSharedSystem,
     ::testing::Combine(::testing::Values(MEMORY_TYPE_DEVICE, MEMORY_TYPE_HOST,
                                          MEMORY_TYPE_SHARED,
                                          MEMORY_TYPE_SHARED_SYSTEM),
