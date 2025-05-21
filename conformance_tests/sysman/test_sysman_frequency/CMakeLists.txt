@@ -26,3 +26,5 @@ add_lzt_test(
     sysman_matrix_multiplication
   DEFINES USE_ZESINIT  
 )
+
+add_definitions(-DMATRIX_MUL_SPV_PATH="${CMAKE_SOURCE_DIR}/conformance_tests/sysman/test_sysman_frequency/kernels/sysman_matrix_multiplication.spv")
