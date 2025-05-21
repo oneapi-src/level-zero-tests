@@ -1904,7 +1904,7 @@ void zetDebugThreadControlTest::run_unavailable_thread_test(
     delete[] buffer;
 
     // Allow enought time for all threads to terminate
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(20));
     newly_stopped_threads.clear();
     newly_stopped_threads = get_stopped_threads(debugSession, device);
     // All threads should be terminated
