@@ -895,10 +895,7 @@ TEST_F(
 class zeHostSystemMemoryDeviceTests : public ::testing::Test {
 protected:
   void SetUp() override {
-    auto mem_access_props = lzt::get_memory_access_properties(
-        lzt::get_default_device(lzt::get_default_driver()));
-    systemMemSupported = mem_access_props.sharedSystemAllocCapabilities &
-                         ZE_MEMORY_ACCESS_CAP_FLAG_RW;
+    systemMemSupported = lzt::supports_shared_system_alloc();
     memory_ = new uint8_t[size_];
   }
   void TearDown() override { delete[] memory_; }

@@ -301,6 +301,8 @@ def generate_test_case(binary_and_path: str,
                     exclude_regex: str
                     ):
         test_name, test_section = create_test_name(suite_name, test_binary, case_name)
+        if len(test_name) > (255 - len(".json")):
+            raise ValueError("Test name is too long: " + test_name)
         if test_name.find("DISABLED") != -1:
             return
         suffix = ""

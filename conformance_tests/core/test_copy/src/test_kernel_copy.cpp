@@ -277,9 +277,7 @@ protected:
                                                   device, context, &result);
     } else { // shared
       if (shr_type == SHARED_SYSTEM) {
-        auto memory_access_cap =
-            mem_access_properties.sharedSystemAllocCapabilities;
-        if ((memory_access_cap & ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
+        if (!lzt::supports_shared_system_alloc(mem_access_properties)) {
           LOG_INFO
               << "WARNING: Unable to allocate shared system memory, skipping";
           return nullptr;

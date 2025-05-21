@@ -11,12 +11,18 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
-#include <chrono>
+
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 
+#include <chrono>
+#include <bitset>
+
 namespace {
+
+using cmdListVec = std::vector<ze_command_list_handle_t>;
+using cmdQueueVec = std::vector<ze_command_queue_handle_t>;
 
 class zeCommandListCreateTests : public ::testing::Test,
                                  public ::testing::WithParamInterface<
@@ -545,17 +551,19 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY),
         ::testing::Bool()));
 
-TEST(
-    zeCommandListAppendMemoryCopyTest,
-    GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned) {
+static void
+RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
+    bool is_shared_system_src, bool is_shared_system_dst) {
   auto cq = lzt::create_command_queue();
   auto cmd_list = lzt::create_command_list();
   const int transfer_size = 1;
   const int num_iteration = 3;
   const uint8_t max_copy_count = 100;
   const size_t copy_size = 100;
-  auto host_memory_src = lzt::allocate_host_memory(copy_size);
-  auto host_memory_dst = lzt::allocate_host_memory(copy_size);
+  auto host_memory_src = lzt::allocate_host_memory_with_allocator_selector(
+      copy_size, is_shared_system_src);
+  auto host_memory_dst = lzt::allocate_host_memory_with_allocator_selector(
+      copy_size, is_shared_system_dst);
 
   auto temp = static_cast<uint8_t *>(host_memory_src);
   for (uint8_t i = 0; i < max_copy_count; i++) {
@@ -606,8 +614,28 @@ TEST(
 
   lzt::destroy_command_list(cmd_list);
   lzt::destroy_command_queue(cq);
-  lzt::free_memory(host_memory_src);
-  lzt::free_memory(host_memory_dst);
+  lzt::free_memory_with_allocator_selector(host_memory_src,
+                                           is_shared_system_src);
+  lzt::free_memory_with_allocator_selector(host_memory_dst,
+                                           is_shared_system_dst);
+}
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned) {
+  RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
+      false, false);
+}
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  for (int i = 1; i < 4; ++i) {
+    std::bitset<2> bits(i);
+    RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
+        bits[1], bits[0]);
+  }
 }
 
 void RunAppendingWriteGlobalTimestampThenSuccessIsReturned(bool is_immediate) {
@@ -653,9 +681,10 @@ TEST(
   RunAppendingWriteGlobalTimestampThenSuccessIsReturned(true);
 }
 
-TEST(
-    zeCommandListAppendMemoryCopyTest,
-    GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned) {
+static void
+RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
+    bool is_shared_system_scratch_kernel, bool is_shared_system_src,
+    bool is_shared_system_dst) {
   // Create buffers for scratch kernel
   uint32_t arraySize = 32;
   uint32_t typeSize = sizeof(uint32_t);
@@ -671,15 +700,23 @@ TEST(
   ze_host_mem_alloc_desc_t hostDesc = {};
   hostDesc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
   hostDesc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
-  void *srcBuffer = lzt::allocate_host_memory(inMemorySize);
-  void *dstBuffer = lzt::allocate_host_memory(outMemorySize);
-  void *offsetBuffer = lzt::allocate_host_memory(offsetMemorySize);
-  void *expectedMemory = lzt::allocate_host_memory(expectedMemorySize);
+
+  void *srcBuffer = lzt::allocate_host_memory_with_allocator_selector(
+      inMemorySize, is_shared_system_scratch_kernel);
+  void *dstBuffer = lzt::allocate_host_memory_with_allocator_selector(
+      outMemorySize, is_shared_system_scratch_kernel);
+  void *offsetBuffer = lzt::allocate_host_memory_with_allocator_selector(
+      offsetMemorySize, is_shared_system_scratch_kernel);
+  void *expectedMemory = lzt::allocate_host_memory_with_allocator_selector(
+      expectedMemorySize, is_shared_system_scratch_kernel);
 
   // create two buffers for append fill/ copy kernel
   size_t size = 1024;
-  auto device_memory = lzt::allocate_device_memory(size);
-  auto host_memory = lzt::allocate_host_memory(size);
+  void *device_memory = lzt::allocate_device_memory_with_allocator_selector(
+      size, is_shared_system_src);
+  void *host_memory = lzt::allocate_host_memory_with_allocator_selector(
+      size, is_shared_system_dst);
+
   uint8_t pattern = 0xAB;
   const int pattern_size = 1;
   uint32_t num_iterations = 2;
@@ -706,7 +743,7 @@ TEST(
 
   auto cmd_list0 = lzt::create_command_list();
   auto cmd_list1 = lzt::create_command_list();
-  std::vector<ze_command_queue_handle_t> cmd_queue;
+  cmdQueueVec cmd_queue;
   cmd_queue.resize(num_iterations);
   for (uint32_t i = 0; i < num_iterations; i++) {
     ze_command_queue_handle_t queue_handle = lzt::create_command_queue();
@@ -799,12 +836,34 @@ TEST(
     lzt::destroy_command_queue(cmd_queue[i]);
   }
   cmd_queue.clear();
-  lzt::free_memory(host_memory);
-  lzt::free_memory(device_memory);
-  lzt::free_memory(dstBuffer);
-  lzt::free_memory(srcBuffer);
-  lzt::free_memory(offsetBuffer);
-  lzt::free_memory(expectedMemory);
+  lzt::free_memory_with_allocator_selector(dstBuffer,
+                                           is_shared_system_scratch_kernel);
+  lzt::free_memory_with_allocator_selector(srcBuffer,
+                                           is_shared_system_scratch_kernel);
+  lzt::free_memory_with_allocator_selector(offsetBuffer,
+                                           is_shared_system_scratch_kernel);
+  lzt::free_memory_with_allocator_selector(expectedMemory,
+                                           is_shared_system_scratch_kernel);
+  lzt::free_memory_with_allocator_selector(device_memory, is_shared_system_src);
+  lzt::free_memory_with_allocator_selector(host_memory, is_shared_system_dst);
+}
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned) {
+  RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
+      false, false, false);
+}
+
+TEST(
+    zeCommandListAppendMemoryCopyTest,
+    GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  for (int i = 1; i < 8; ++i) {
+    std::bitset<3> bits(i);
+    RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
+        bits[2], bits[1], bits[0]);
+  }
 }
 
 class zeCommandListEventCounterTests : public lzt::zeEventPoolTests {
@@ -861,16 +920,14 @@ protected:
       lzt::destroy_command_queue(cq);
     }
   }
-  std::vector<ze_command_list_handle_t> cmdlist;
-  std::vector<ze_command_queue_handle_t> cmdqueue;
+  cmdListVec cmdlist;
+  cmdQueueVec cmdqueue;
   ze_event_handle_t event0 = nullptr;
 };
 
-static void
-RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
-                           std::vector<ze_command_queue_handle_t> cmdqueue,
-                           ze_event_handle_t event, int num_cmdlist,
-                           void *buffer, const size_t size) {
+static void RunAppendLaunchKernelEvent(cmdListVec cmdlist, cmdQueueVec cmdqueue,
+                                       ze_event_handle_t event, int num_cmdlist,
+                                       void *buffer, const size_t size) {
 
   const int addval = 10;
   const int num_iterations = 100;
@@ -935,102 +992,119 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
   lzt::destroy_module(module);
 }
 
-TEST_F(
-    zeCommandListEventCounterTests,
-    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
+static void RunAppendLaunchKernelEventL0SharedAlloc(cmdListVec cmdlist,
+                                                    cmdQueueVec cmdqueue,
+                                                    ze_event_handle_t event,
+                                                    int num_cmdlist,
+                                                    const size_t size) {
+  void *buffer = lzt::allocate_shared_memory(num_cmdlist * size * sizeof(int));
+  RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist, buffer,
+                             size);
+  lzt::free_memory(buffer);
+}
 
+static void RunAppendLaunchKernelEventHostMalloc(cmdListVec cmdlist,
+                                                 cmdQueueVec cmdqueue,
+                                                 ze_event_handle_t event,
+                                                 int num_cmdlist,
+                                                 const size_t size) {
+  void *buffer = malloc(num_cmdlist * size * sizeof(int));
+  ASSERT_NE(nullptr, buffer);
+  RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist, buffer,
+                             size);
+  free(buffer);
+}
+
+static void RunAppendLaunchKernelEventHostNew(cmdListVec cmdlist,
+                                              cmdQueueVec cmdqueue,
+                                              ze_event_handle_t event,
+                                              int num_cmdlist,
+                                              const size_t size) {
+  int *buffer = new int[num_cmdlist * size];
+  ASSERT_NE(nullptr, buffer);
+  RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
+                             reinterpret_cast<void *>(buffer), size);
+  delete[] buffer;
+}
+
+static void RunAppendLaunchKernelEventHostUniquePtr(cmdListVec cmdlist,
+                                                    cmdQueueVec cmdqueue,
+                                                    ze_event_handle_t event,
+                                                    int num_cmdlist,
+                                                    const size_t size) {
+  std::unique_ptr<int[]> buffer(new int[num_cmdlist * size]);
+  ASSERT_NE(nullptr, buffer);
+  RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
+                             reinterpret_cast<void *>(buffer.get()), size);
+}
+
+static void RunAppendLaunchKernelEventHostSharedPtr(cmdListVec cmdlist,
+                                                    cmdQueueVec cmdqueue,
+                                                    ze_event_handle_t event,
+                                                    int num_cmdlist,
+                                                    const size_t size) {
+  std::shared_ptr<int[]> buffer(new int[num_cmdlist * size]);
+  ASSERT_NE(nullptr, buffer);
+  RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event, num_cmdlist,
+                             reinterpret_cast<void *>(buffer.get()), size);
+}
+
+typedef void (*RunAppendLaunchKernelEventFunc)(cmdListVec, cmdQueueVec,
+                                               ze_event_handle_t, int,
+                                               const size_t);
+
+static void
+RunAppendLaunchKernelEventLoop(cmdListVec cmdlist, cmdQueueVec cmdqueue,
+                               ze_event_handle_t event,
+                               RunAppendLaunchKernelEventFunc func) {
   bool event_pool_ext_found = lzt::check_if_extension_supported(
       lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
   EXPECT_TRUE(event_pool_ext_found);
 
+  constexpr size_t size = 16;
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
-    const size_t size = 16;
-    void *buffer = lzt::allocate_shared_memory(i * size * sizeof(int));
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, buffer, size);
-    lzt::free_memory(buffer);
+    func(cmdlist, cmdqueue, event, i, size);
   }
+}
+
+TEST_F(
+    zeCommandListEventCounterTests,
+    GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEventL0SharedAlloc);
 }
 
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingMallocWithSharedSystemAllocator) {
-
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
-
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
-
-  for (int i = 1; i <= cmdlist.size(); i++) {
-    LOG_INFO << "Testing " << i << " command list(s)";
-    const size_t size = 16;
-    void *buffer = malloc(i * size * sizeof(int));
-    ASSERT_NE(nullptr, buffer);
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, buffer, size);
-    free(buffer);
-  }
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEventHostMalloc);
 }
 
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingNewWithSharedSystemAllocator) {
-
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
-
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
-
-  for (int i = 1; i <= cmdlist.size(); i++) {
-    LOG_INFO << "Testing " << i << " command list(s)";
-    const size_t size = 16;
-    int *buffer = new int[i * size];
-    ASSERT_NE(nullptr, buffer);
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
-                               reinterpret_cast<void *>(buffer), size);
-    delete[] buffer;
-  }
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEventHostNew);
 }
 
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingUniquePtrWithSharedSystemAllocator) {
-
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
-
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
-
-  for (int i = 1; i <= cmdlist.size(); i++) {
-    LOG_INFO << "Testing " << i << " command list(s)";
-    const size_t size = 16;
-    std::unique_ptr<int[]> buffer(new int[i * size]);
-    ASSERT_NE(nullptr, buffer);
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
-                               reinterpret_cast<void *>(buffer.get()), size);
-  }
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEventHostUniquePtr);
 }
 
 TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingSharedPtrWithSharedSystemAllocator) {
-
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
-
-  lzt::gtest_skip_if_shared_system_alloc_unsupported(true);
-
-  for (int i = 1; i <= cmdlist.size(); i++) {
-    LOG_INFO << "Testing " << i << " command list(s)";
-    const size_t size = 16;
-    std::shared_ptr<int[]> buffer(new int[i * size]);
-    ASSERT_NE(nullptr, buffer);
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i,
-                               reinterpret_cast<void *>(buffer.get()), size);
-  }
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
+                                 RunAppendLaunchKernelEventHostSharedPtr);
 }
 
 } // namespace

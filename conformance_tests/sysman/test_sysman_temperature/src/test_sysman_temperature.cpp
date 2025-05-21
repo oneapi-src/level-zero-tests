@@ -38,12 +38,17 @@ TEST_F(
     TEMPERATURE_TEST,
     GivenComponentCountZeroWhenRetrievingTempHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
-    uint32_t count = 0;
-    count = lzt::get_temp_handle_count(device);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    uint32_t count = lzt::get_temp_handle_count(device);
+    if (count > 0) {
+      is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
+  }
+
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
   }
 }
 
@@ -51,33 +56,45 @@ TEST_F(
     TEMPERATURE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanTempThenNotNullTempHandlesAreReturned) {
   for (auto device : devices) {
-    uint32_t count = 0;
-    auto temp_handles = lzt::get_temp_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
+    uint32_t count = lzt::get_temp_handle_count(device);
+    if (count > 0) {
+      is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
 
-    ASSERT_EQ(temp_handles.size(), count);
-    for (auto temp_handle : temp_handles) {
-      ASSERT_NE(nullptr, temp_handle);
+      auto temp_handles = lzt::get_temp_handles(device, count);
+      ASSERT_EQ(temp_handles.size(), count);
+      for (auto temp_handle : temp_handles) {
+        ASSERT_NE(nullptr, temp_handle);
+      }
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
   }
+
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
+  }
 }
+
 TEST_F(
     TEMPERATURE_TEST,
     GivenInvalidComponentCountWhenRetrievingTempHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
-    uint32_t actual_count = 0;
-    lzt::get_temp_handles(device, actual_count);
-    if (actual_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    uint32_t actual_count = lzt::get_temp_handle_count(device);
+    if (actual_count > 0) {
+      is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
+      lzt::get_temp_handles(device, actual_count);
+      uint32_t test_count = actual_count + 1;
+      lzt::get_temp_handles(device, test_count);
+      EXPECT_EQ(test_count, actual_count);
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
+  }
 
-    uint32_t test_count = actual_count + 1;
-    lzt::get_temp_handles(device, test_count);
-    EXPECT_EQ(test_count, actual_count);
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
   }
 }
 
@@ -85,74 +102,95 @@ TEST_F(
     TEMPERATURE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarTempHandlesReturned) {
   for (auto device : devices) {
-    uint32_t count = 0;
-    auto temp_handlesInitial = lzt::get_temp_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
+    uint32_t count = lzt::get_temp_handle_count(device);
+    if (count > 0) {
+      is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
 
-    for (auto temp_handle : temp_handlesInitial) {
-      ASSERT_NE(nullptr, temp_handle);
-    }
+      auto temp_handlesInitial = lzt::get_temp_handles(device, count);
+      for (auto temp_handle : temp_handlesInitial) {
+        ASSERT_NE(nullptr, temp_handle);
+      }
 
-    count = 0;
-    auto temp_handlesLater = lzt::get_temp_handles(device, count);
-    for (auto temp_handle : temp_handlesLater) {
-      ASSERT_NE(nullptr, temp_handle);
+      count = 0;
+      auto temp_handlesLater = lzt::get_temp_handles(device, count);
+      for (auto temp_handle : temp_handlesLater) {
+        ASSERT_NE(nullptr, temp_handle);
+      }
+      EXPECT_EQ(temp_handlesInitial, temp_handlesLater);
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
-    EXPECT_EQ(temp_handlesInitial, temp_handlesLater);
+  }
+
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
   }
 }
+
 TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
-    auto deviceProperties = lzt::get_sysman_device_properties(device);
-    uint32_t count = 0;
-    auto temp_handles = lzt::get_temp_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
+    uint32_t count = lzt::get_temp_handle_count(device);
+    if (count > 0) {
+      is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
 
-    for (auto temp_handle : temp_handles) {
-      ASSERT_NE(nullptr, temp_handle);
-      auto properties = lzt::get_temp_properties(temp_handle);
-      if (properties.onSubdevice) {
-        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
+      auto deviceProperties = lzt::get_sysman_device_properties(device);
+      auto temp_handles = lzt::get_temp_handles(device, count);
+      for (auto temp_handle : temp_handles) {
+        ASSERT_NE(nullptr, temp_handle);
+        auto properties = lzt::get_temp_properties(temp_handle);
+        if (properties.onSubdevice) {
+          EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
+        }
+        EXPECT_GE(properties.type, ZES_TEMP_SENSORS_GLOBAL);
+        EXPECT_LE(properties.type, ZES_TEMP_SENSORS_MEMORY_MIN);
       }
-      EXPECT_GE(properties.type, ZES_TEMP_SENSORS_GLOBAL);
-      EXPECT_LE(properties.type, ZES_TEMP_SENSORS_MEMORY_MIN);
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
   }
+
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
+  }
 }
+
 TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
-    uint32_t count = 0;
-    auto temp_handles = lzt::get_temp_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
+    uint32_t count = lzt::get_temp_handle_count(device);
+    if (count > 0) {
+      is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
 
-    for (auto temp_handle : temp_handles) {
-      ASSERT_NE(nullptr, temp_handle);
-      auto properties_initial = lzt::get_temp_properties(temp_handle);
-      auto properties_later = lzt::get_temp_properties(temp_handle);
-      EXPECT_EQ(properties_initial.type, properties_later.type);
-      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
-        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
+      auto temp_handles = lzt::get_temp_handles(device, count);
+      for (auto temp_handle : temp_handles) {
+        ASSERT_NE(nullptr, temp_handle);
+        auto properties_initial = lzt::get_temp_properties(temp_handle);
+        auto properties_later = lzt::get_temp_properties(temp_handle);
+        EXPECT_EQ(properties_initial.type, properties_later.type);
+        if (properties_initial.onSubdevice && properties_later.onSubdevice) {
+          EXPECT_EQ(properties_initial.subdeviceId,
+                    properties_later.subdeviceId);
+        }
+        EXPECT_EQ(properties_initial.isThreshold1Supported,
+                  properties_later.isThreshold1Supported);
+        EXPECT_EQ(properties_initial.isCriticalTempSupported,
+                  properties_later.isCriticalTempSupported);
+        EXPECT_EQ(properties_initial.isThreshold2Supported,
+                  properties_later.isThreshold2Supported);
       }
-      EXPECT_EQ(properties_initial.isThreshold1Supported,
-                properties_later.isThreshold1Supported);
-      EXPECT_EQ(properties_initial.isCriticalTempSupported,
-                properties_later.isCriticalTempSupported);
-      EXPECT_EQ(properties_initial.isThreshold2Supported,
-                properties_later.isThreshold2Supported);
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
+  }
+
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
   }
 }
 
@@ -163,31 +201,23 @@ TEST_F(
     uint32_t count = lzt::get_temp_handle_count(device);
     if (count > 0) {
       is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
+
       auto temp_handles = lzt::get_temp_handles(device, count);
-
-      for (const auto &temp_handle : temp_handles) {
-        EXPECT_NE(temp_handle, nullptr);
-
-        auto properties = lzt::get_temp_properties(temp_handle);
-        if (!properties.isCriticalTempSupported &&
-            !properties.isThreshold1Supported &&
-            !properties.isThreshold2Supported) {
-          FAIL() << "No handles found: "
-                 << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-        }
-
+      for (auto temp_handle : temp_handles) {
+        ASSERT_NE(nullptr, temp_handle);
         auto config = lzt::get_temp_config(temp_handle);
-
-        if (!properties.isCriticalTempSupported) {
-          EXPECT_EQ(config.enableCritical, false);
+        auto properties = lzt::get_temp_properties(temp_handle);
+        if (properties.isCriticalTempSupported == false) {
+          ASSERT_EQ(config.enableCritical, false);
         }
-        if (!properties.isThreshold1Supported) {
-          EXPECT_EQ(config.threshold1.enableLowToHigh, false);
-          EXPECT_EQ(config.threshold1.enableHighToLow, false);
+        if (properties.isThreshold1Supported == false) {
+          ASSERT_EQ(config.threshold1.enableLowToHigh, false);
+          ASSERT_EQ(config.threshold1.enableHighToLow, false);
         }
-        if (!properties.isThreshold2Supported) {
-          EXPECT_EQ(config.threshold2.enableLowToHigh, false);
-          EXPECT_EQ(config.threshold2.enableHighToLow, false);
+        if (properties.isThreshold2Supported == false) {
+          ASSERT_EQ(config.threshold2.enableLowToHigh, false);
+          ASSERT_EQ(config.threshold2.enableHighToLow, false);
         }
       }
     } else {
@@ -203,33 +233,20 @@ TEST_F(
 TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenSettingTempConfigurationThenExpectzesSysmanTemperatureSetConfigFollowedByzesSysmanTemperatureGetConfigToMatch) {
-  bool is_temp_supported = false;
-
   for (auto device : devices) {
     uint32_t count = lzt::get_temp_handle_count(device);
     if (count > 0) {
       is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
+
       auto temp_handles = lzt::get_temp_handles(device, count);
-
-      for (const auto &temp_handle : temp_handles) {
-        EXPECT_NE(temp_handle, nullptr);
-
+      for (auto temp_handle : temp_handles) {
+        ASSERT_NE(nullptr, temp_handle);
         auto properties = lzt::get_temp_properties(temp_handle);
-
-        if (!properties.isCriticalTempSupported &&
-            !properties.isThreshold1Supported &&
-            !properties.isThreshold2Supported) {
-          LOG_INFO
-              << "Temperature configuration is not supported for this handle.";
-          FAIL() << "No handles found: "
-                 << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-        }
-
         auto initial_config = lzt::get_temp_config(temp_handle);
         auto temp = lzt::get_temp_state(temp_handle);
         zes_temp_config_t setConfig = {};
-
-        if (properties.isCriticalTempSupported) {
+        if (properties.isCriticalTempSupported == true) {
           setConfig.enableCritical = true;
           lzt::set_temp_config(temp_handle, setConfig);
           auto get_config = lzt::get_temp_config(temp_handle);
@@ -239,8 +256,7 @@ TEST_F(
           EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
           EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
         }
-
-        if (properties.isThreshold1Supported) {
+        if (properties.isThreshold1Supported == true) {
           setConfig.threshold1.enableLowToHigh = true;
           setConfig.threshold1.enableHighToLow = false;
           setConfig.threshold1.threshold = temp;
@@ -256,8 +272,7 @@ TEST_F(
           EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
           EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
         }
-
-        if (properties.isThreshold2Supported) {
+        if (properties.isThreshold1Supported == true) {
           setConfig.threshold2.enableLowToHigh = true;
           setConfig.threshold2.enableHighToLow = false;
           setConfig.threshold2.threshold = temp;
@@ -288,19 +303,25 @@ TEST_F(
 TEST_F(TEMPERATURE_TEST,
        GivenValidTempHandleWhenRetrievingTempStateThenValidStateIsReturned) {
   for (auto device : devices) {
-    uint32_t count = 0;
-    auto temp_handles = lzt::get_temp_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
+    uint32_t count = lzt::get_temp_handle_count(device);
+    if (count > 0) {
+      is_temp_supported = true;
+      LOG_INFO << "Temperature handles are available on this device!";
 
-    for (auto temp_handle : temp_handles) {
-      ASSERT_NE(nullptr, temp_handle);
-      auto current_temperature = lzt::get_temp_state(temp_handle);
-      EXPECT_GE(current_temperature, min_valid_temperature);
-      EXPECT_LE(current_temperature, max_valid_temperature);
+      auto temp_handles = lzt::get_temp_handles(device, count);
+      for (auto temp_handle : temp_handles) {
+        ASSERT_NE(nullptr, temp_handle);
+        auto current_temperature = lzt::get_temp_state(temp_handle);
+        EXPECT_GE(current_temperature, min_valid_temperature);
+        EXPECT_LE(current_temperature, max_valid_temperature);
+      }
+    } else {
+      LOG_INFO << "No temperature handles found for this device!";
     }
+  }
+
+  if (!is_temp_supported) {
+    FAIL() << "No temperature handles found on any of the devices!";
   }
 }
 

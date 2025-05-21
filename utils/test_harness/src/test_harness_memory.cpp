@@ -148,6 +148,15 @@ void *allocate_device_memory(const size_t size) {
   return allocate_device_memory(size, 1);
 }
 
+void *allocate_device_memory_with_allocator_selector(const size_t size,
+                                                     bool is_shared_system) {
+  if (is_shared_system) {
+    return aligned_malloc(size, 1);
+  }
+
+  return allocate_device_memory(size, 1);
+}
+
 void *allocate_device_memory(const size_t size, const size_t alignment) {
   return allocate_device_memory(size, alignment, 0);
 }
@@ -604,19 +613,6 @@ size_t create_page_aligned_size(size_t requested_size, size_t page_size) {
     return page_size;
   } else {
     return (requested_size / page_size) * page_size;
-  }
-}
-
-void gtest_skip_if_shared_system_alloc_unsupported(bool is_shared_system) {
-  if (is_shared_system) {
-    const auto memory_access_properties = lzt::get_memory_access_properties(
-        lzt::get_default_device(lzt::get_default_driver()));
-
-    if ((memory_access_properties.sharedSystemAllocCapabilities &
-         ZE_MEMORY_ACCESS_CAP_FLAG_RW) == 0) {
-      GTEST_SKIP() << "device does not support shared system allocation, "
-                      "skipping the test";
-    }
   }
 }
 
