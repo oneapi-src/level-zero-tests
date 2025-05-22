@@ -711,7 +711,7 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
       expectedMemorySize, is_shared_system_scratch_kernel);
 
   // create two buffers for append fill/ copy kernel
-  size_t size = 1024;
+  size_t size = 1280;
   void *device_memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system_src);
   void *host_memory = lzt::allocate_host_memory_with_allocator_selector(
