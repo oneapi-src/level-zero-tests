@@ -794,6 +794,8 @@ protected:
     ev_desc.wait = std::get<0>(GetParam());
     for (int i = 0; i < n_events; i++) {
       ev_desc.index = i;
+      if (i == n_events - 1)
+        ev_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
       ev[i] = lzt::create_event(ep, ev_desc);
     }
   }
