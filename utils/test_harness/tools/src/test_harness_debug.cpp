@@ -131,9 +131,21 @@ void debug_ack_event(const zet_debug_session_handle_t &debug_session,
 }
 
 void debug_interrupt(const zet_debug_session_handle_t &debug_session,
-                     const ze_device_thread_t &device_thread) {
+                     const ze_device_thread_t &device_thread, bool retry) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugInterrupt(debug_session, device_thread));
+  if (!retry) {
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zetDebugInterrupt(debug_session, device_thread));
+  } else {
+    auto result = zetDebugInterrupt(debug_session, device_thread);
+    if (result != ZE_RESULT_SUCCESS) {
+      LOG_WARNING << "[Debugger] Interrupt failed: " << result
+                  << " SLICE:" << device_thread.slice
+                  << " SUBSLICE: " << device_thread.subslice
+                  << " EU: " << device_thread.eu
+                  << " THREAD: " << device_thread.thread;
+    }
+  }
 }
 
 void debug_resume(const zet_debug_session_handle_t &debug_session,
