@@ -566,7 +566,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No query metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -665,7 +665,7 @@ void run_test(const ze_device_handle_t &device,
     commandList = lzt::create_command_list(device);
   }
   auto metricGroupInfo = lzt::get_metric_group_info(
-      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false, true);
   ASSERT_GT(metricGroupInfo.size(), 0u) << "No query metric groups found";
   metricGroupInfo =
       lzt::optimize_metric_group_info_list(metricGroupInfo, reset ? 1 : 20);
@@ -844,11 +844,11 @@ void run_multi_device_query_load_test(
   auto command_list_1 = lzt::create_command_list(device_1);
 
   auto metric_group_info_0 = lzt::get_metric_group_info(
-      device_0, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true);
+      device_0, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true, true);
   ASSERT_GT(metric_group_info_0.size(), 0u)
       << "No query metric groups found on device 0";
   auto metric_group_info_1 = lzt::get_metric_group_info(
-      device_1, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true);
+      device_1, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true, true);
   ASSERT_GT(metric_group_info_1.size(), 0u)
       << "No query metric groups found on device 1";
 
@@ -1024,7 +1024,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, false, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No query metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo, 1);
 
@@ -1128,7 +1128,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -1201,7 +1201,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -1297,7 +1297,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -1394,7 +1394,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -1503,7 +1503,7 @@ TEST_F(
     }
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -2066,7 +2066,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -2179,7 +2179,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -2363,7 +2363,7 @@ TEST_F(
     zet_command_list_handle_t commandList = lzt::create_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo, 1);
 
@@ -2464,7 +2464,7 @@ TEST(
 
   // setup monitor
   auto metricGroupInfo = lzt::get_metric_group_info(
-      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
   ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
   metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -2548,7 +2548,7 @@ TEST(
 
   // setup monitor
   auto metricGroupInfo = lzt::get_metric_group_info(
-      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+      device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
   ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
   metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
 
@@ -2655,7 +2655,7 @@ TEST_F(
         lzt::create_immediate_command_list(device);
 
     auto metricGroupInfo = lzt::get_metric_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false);
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, false, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
     metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo, 1);
 
@@ -2783,11 +2783,11 @@ void run_multi_device_streamer_test(
   auto command_list_1 = lzt::create_command_list(device_1);
 
   auto metric_group_info_0 = lzt::get_metric_group_info(
-      device_0, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+      device_0, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
   ASSERT_GT(metric_group_info_0.size(), 0u)
       << "No metric groups found on device 0";
   auto metric_group_info_1 = lzt::get_metric_group_info(
-      device_1, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+      device_1, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
   ASSERT_GT(metric_group_info_1.size(), 0u)
       << "No metric groups found on device 1";
 
