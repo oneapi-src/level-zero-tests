@@ -43,7 +43,7 @@ template <typename T> void send_ipc_handle(const T &ipc_handle);
 
 // definition
 template <typename T> int receive_ipc_handle(char *data) {
-  const char *socket_path = "ipc_socket";
+  const char *socket_path = "/tmp/lzt_ipc_socket";
 
   struct sockaddr_un local_addr, remote_addr;
   local_addr.sun_family = AF_UNIX;
@@ -95,7 +95,7 @@ template <typename T> int receive_ipc_handle(char *data) {
 }
 
 template <typename T> void send_ipc_handle(const T &ipc_handle) {
-  const char *socket_path = "ipc_socket";
+  const char *socket_path = "/tmp/lzt_ipc_socket";
 
   struct sockaddr_un remote_addr;
   remote_addr.sun_family = AF_UNIX;

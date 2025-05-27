@@ -17,8 +17,6 @@
 namespace level_zero_tests {
 
 #ifdef __linux__
-const char *socket_path = "ipc_socket";
-
 int read_fd_from_socket(int unix_socket, char *data) {
   // call recvmsg to receive the descriptor on the unix_socket
   int fd = -1;
