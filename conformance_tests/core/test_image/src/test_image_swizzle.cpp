@@ -44,7 +44,8 @@ protected:
   void create_in_out_images(ze_image_type_t image_type);
 
 public:
-  void run_test(ze_image_type_t image_type, bool is_immediate);
+  void run_test(ze_image_type_t image_type, bool is_immediate,
+                bool is_shared_system);
 
   static const bool skip_array_type = false;
   static const bool skip_buffer_type = true;
@@ -57,7 +58,7 @@ public:
 };
 
 void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
-    ze_image_type_t image_type, bool is_immediate) {
+    ze_image_type_t image_type, bool is_immediate, bool is_shared_system) {
   LOG_INFO << "TYPE - " << image_type;
 
   std::string kernel_name = "swizzle_test_" + shortened_string(image_type);
@@ -69,9 +70,11 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   create_in_out_images(image_type);
 
   uint32_t *inbuff =
-      (uint32_t *)lzt::allocate_host_memory(image_size * sizeof(uint32_t));
+      (uint32_t *)lzt::allocate_host_memory_with_allocator_selector(
+          image_size * sizeof(uint32_t), is_shared_system);
   uint32_t *outbuff =
-      (uint32_t *)lzt::allocate_host_memory(image_size * sizeof(uint32_t));
+      (uint32_t *)lzt::allocate_host_memory_with_allocator_selector(
+          image_size * sizeof(uint32_t), is_shared_system);
 
   for (int i = 0; i < image_size; i++) {
     inbuff[i] = 0x12345678;
@@ -107,8 +110,8 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
                                        // 34 56 78 -> 78 56 34 12
   }
 
-  lzt::free_memory(outbuff);
-  lzt::free_memory(inbuff);
+  lzt::free_memory_with_allocator_selector(outbuff, is_shared_system);
+  lzt::free_memory_with_allocator_selector(inbuff, is_shared_system);
   lzt::destroy_function(kernel);
   lzt::destroy_command_bundle(bundle);
 
@@ -169,7 +172,20 @@ TEST_P(
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  run_test(image_type, is_immediate);
+  run_test(image_type, is_immediate, false);
+}
+
+TEST_P(
+    zeCommandListAppendImageCopyWithSwizzleTests,
+    GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto is_immediate = std::get<1>(GetParam());
+  run_test(image_type, is_immediate, true);
 }
 
 INSTANTIATE_TEST_SUITE_P(

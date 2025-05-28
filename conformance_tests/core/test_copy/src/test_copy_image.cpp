@@ -685,6 +685,72 @@ TEST_F(
   lzt::free_memory(buff_out);
 }
 
+TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingSharedSystemMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::aligned_malloc(image_size, 1);
+  void *buff_out_bot = lzt::aligned_malloc(image_size, 1);
+  void *buff_in_bot = lzt::aligned_malloc(image_size, 1);
+  void *buff_out_top = lzt::aligned_malloc(image_size, 1);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, false);
+  lzt::aligned_free(buff_in_bot);
+  lzt::aligned_free(buff_in_top);
+  lzt::aligned_free(buff_out_bot);
+  lzt::aligned_free(buff_out_top);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingSharedSystemMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::aligned_malloc(image_size, 1);
+  void *buff_out_bot = lzt::aligned_malloc(image_size, 1);
+  void *buff_in_bot = lzt::aligned_malloc(image_size, 1);
+  void *buff_out_top = lzt::aligned_malloc(image_size, 1);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, true);
+  lzt::aligned_free(buff_in_bot);
+  lzt::aligned_free(buff_in_top);
+  lzt::aligned_free(buff_out_bot);
+  lzt::aligned_free(buff_out_top);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingSharedSystemMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::aligned_malloc(image_size, 1);
+  void *buff_out = lzt::aligned_malloc(image_size, 1);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false);
+  lzt::aligned_free(buff_in);
+  lzt::aligned_free(buff_out);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyToImmediateCmdListFromMemoryUsingSharedSystemMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::aligned_malloc(image_size, 1);
+  void *buff_out = lzt::aligned_malloc(image_size, 1);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true);
+  lzt::aligned_free(buff_in);
+  lzt::aligned_free(buff_out);
+}
+
 void RunGivenDeviceImageWhenAppendingImageCopyTest(
     zeCommandListAppendImageCopyTests &test, bool is_immediate) {
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
@@ -1138,18 +1204,19 @@ class zeCommandListAppendImageCopyToMemoryTests
     : public zeCommandListAppendImageCopyFromMemoryTests {};
 
 void RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(
-    zeCommandListAppendImageCopyToMemoryTests &test, bool is_immediate) {
+    zeCommandListAppendImageCopyToMemoryTests &test, bool is_immediate,
+    bool is_shared_system) {
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   test.img_ptr = new zeImageCreateCommon;
-  void *device_memory =
-      allocate_device_memory(size_in_bytes(test.img_ptr->dflt_host_image_));
+  void *device_memory = lzt::allocate_device_memory_with_allocator_selector(
+      size_in_bytes(test.img_ptr->dflt_host_image_), is_shared_system);
 
   lzt::append_image_copy_to_mem(cmd_bundle.list, device_memory,
                                 test.img_ptr->dflt_device_image_, nullptr);
   if (is_immediate) {
     lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
   }
-  free_memory(device_memory);
+  lzt::free_memory_with_allocator_selector(device_memory, is_shared_system);
   delete test.img_ptr;
   lzt::destroy_command_bundle(cmd_bundle);
 }
@@ -1159,7 +1226,7 @@ TEST_F(zeCommandListAppendImageCopyToMemoryTests,
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
-  RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, false);
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, false, false);
 }
 
 TEST_F(
@@ -1168,15 +1235,36 @@ TEST_F(
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
-  RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, true);
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, true, false);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyToMemoryTests,
+    GivenDeviceImageWhenAppendingImageCopyToMemoryThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, false, true);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyToMemoryTests,
+    GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListThenSuccessIsReturnedWithAllocatorWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, true, true);
 }
 
 void RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(
-    zeCommandListAppendImageCopyToMemoryTests &test, bool is_immediate) {
+    zeCommandListAppendImageCopyToMemoryTests &test, bool is_immediate,
+    bool is_shared_system) {
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   test.img_ptr = new zeImageCreateCommon;
-  void *device_memory =
-      allocate_device_memory(size_in_bytes(test.img_ptr->dflt_host_image_));
+  void *device_memory = lzt::allocate_device_memory_with_allocator_selector(
+      size_in_bytes(test.img_ptr->dflt_host_image_), is_shared_system);
   ze_event_handle_t hEvent = nullptr;
 
   test.ep.create_event(hEvent);
@@ -1186,7 +1274,7 @@ void RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(
     lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
   }
   test.ep.destroy_event(hEvent);
-  free_memory(device_memory);
+  lzt::free_memory_with_allocator_selector(device_memory, is_shared_system);
   delete test.img_ptr;
   lzt::destroy_command_bundle(cmd_bundle);
 }
@@ -1197,7 +1285,8 @@ TEST_F(
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
-  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(*this, false);
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(*this, false,
+                                                                  false);
 }
 
 TEST_F(
@@ -1206,15 +1295,39 @@ TEST_F(
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
-  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(*this, true);
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(*this, true,
+                                                                  false);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyToMemoryTests,
+    GivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(*this, false,
+                                                                  true);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyToMemoryTests,
+    GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(*this, true,
+                                                                  true);
 }
 
 void RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(
-    zeCommandListAppendImageCopyToMemoryTests &test, bool is_immediate) {
+    zeCommandListAppendImageCopyToMemoryTests &test, bool is_immediate,
+    bool is_shared_system) {
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   test.img_ptr = new zeImageCreateCommon;
-  void *device_memory =
-      allocate_device_memory(size_in_bytes(test.img_ptr->dflt_host_image_));
+  void *device_memory = lzt::allocate_device_memory_with_allocator_selector(
+      size_in_bytes(test.img_ptr->dflt_host_image_), is_shared_system);
   ze_event_handle_t hEvent = nullptr;
 
   test.ep.create_event(hEvent);
@@ -1228,7 +1341,7 @@ void RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(
     lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
   }
   test.ep.destroy_event(hEvent);
-  free_memory(device_memory);
+  lzt::free_memory_with_allocator_selector(device_memory, is_shared_system);
   delete test.img_ptr;
   lzt::destroy_command_bundle(cmd_bundle);
 }
@@ -1239,8 +1352,8 @@ TEST_F(
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
-  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(*this,
-                                                                     false);
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(
+      *this, false, false);
 }
 
 TEST_F(
@@ -1249,8 +1362,30 @@ TEST_F(
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
-  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(*this,
-                                                                     true);
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(
+      *this, true, false);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyToMemoryTests,
+    GivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(
+      *this, false, true);
+}
+
+TEST_F(
+    zeCommandListAppendImageCopyToMemoryTests,
+    GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(
+      *this, true, true);
 }
 
 } // namespace
