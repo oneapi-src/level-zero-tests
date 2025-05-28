@@ -49,10 +49,11 @@ public:
                            ze_image_format_type_t format_type,
                            ze_image_format_layout_t layout) = 0;
 
-  void run_test(void (*buffer_setup_f)(ImageFormatFixture &),
+  void run_test(void (*buffer_setup_f)(ImageFormatFixture &, bool),
                 void (*buffer_verify_f)(ImageFormatFixture &),
                 ze_image_type_t image_type, ze_image_format_type_t format_type,
-                ze_image_format_layout_t layout, bool is_immediate);
+                ze_image_format_layout_t layout, bool is_immediate,
+                bool is_shared_system);
 
   virtual void get_kernel(ze_image_type_t image_type,
                           ze_image_format_type_t format_type,
@@ -71,12 +72,11 @@ public:
   std::string kernel_name;
 };
 
-void ImageFormatFixture::run_test(void (*buffer_setup_f)(ImageFormatFixture &),
-                                  void (*buffer_verify_f)(ImageFormatFixture &),
-                                  ze_image_type_t image_type,
-                                  ze_image_format_type_t format_type,
-                                  ze_image_format_layout_t layout,
-                                  bool is_immediate) {
+void ImageFormatFixture::run_test(
+    void (*buffer_setup_f)(ImageFormatFixture &, bool),
+    void (*buffer_verify_f)(ImageFormatFixture &), ze_image_type_t image_type,
+    ze_image_format_type_t format_type, ze_image_format_layout_t layout,
+    bool is_immediate, bool is_shared_system) {
   uint32_t group_size_x, group_size_y, group_size_z;
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   get_kernel(image_type, format_type, layout);
@@ -89,7 +89,7 @@ void ImageFormatFixture::run_test(void (*buffer_setup_f)(ImageFormatFixture &),
   img_in = create_image_desc_format(image_type, format_type, layout);
   img_out = create_image_desc_format(image_type, format_type, layout);
 
-  buffer_setup_f(*this);
+  buffer_setup_f(*this, is_shared_system);
 
   lzt::append_image_copy_from_mem(cmd_bundle.list, img_in, inbuff, nullptr);
   lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
@@ -118,8 +118,8 @@ void ImageFormatFixture::run_test(void (*buffer_setup_f)(ImageFormatFixture &),
 
   lzt::destroy_function(kernel);
   lzt::destroy_command_bundle(cmd_bundle);
-  lzt::free_memory(outbuff);
-  lzt::free_memory(inbuff);
+  lzt::free_memory_with_allocator_selector(outbuff, is_shared_system);
+  lzt::free_memory_with_allocator_selector(inbuff, is_shared_system);
 }
 
 class zeImageFormatTypeTests
@@ -127,9 +127,10 @@ class zeImageFormatTypeTests
       public ::testing::WithParamInterface<std::tuple<ze_image_type_t, bool>> {
 public:
   template <typename T, T value = static_cast<T>(1)>
-  static void setup_buffers(ImageFormatFixture &test);
+  static void setup_buffers(ImageFormatFixture &test, bool is_shared_system);
 
-  static void setup_buffers_float(ImageFormatFixture &test);
+  static void setup_buffers_float(ImageFormatFixture &test,
+                                  bool is_shared_system);
 
   template <typename T, T value = static_cast<T>(1)>
   static void verify_outbuffer(ImageFormatFixture &test);
@@ -152,18 +153,24 @@ public:
 };
 
 template <typename T, T value>
-void zeImageFormatTypeTests::setup_buffers(ImageFormatFixture &test) {
-  test.inbuff = lzt::allocate_host_memory(test.image_size * sizeof(T));
-  test.outbuff = lzt::allocate_host_memory(test.image_size * sizeof(T));
+void zeImageFormatTypeTests::setup_buffers(ImageFormatFixture &test,
+                                           bool is_shared_system) {
+  test.inbuff = lzt::allocate_host_memory_with_allocator_selector(
+      test.image_size * sizeof(T), is_shared_system);
+  test.outbuff = lzt::allocate_host_memory_with_allocator_selector(
+      test.image_size * sizeof(T), is_shared_system);
   T *in_ptr = static_cast<T *>(test.inbuff);
   for (int i = 0; i < test.image_size; i++) {
     in_ptr[i] = value;
   }
 }
 
-void zeImageFormatTypeTests::setup_buffers_float(ImageFormatFixture &test) {
-  test.inbuff = lzt::allocate_host_memory(test.image_size * sizeof(float));
-  test.outbuff = lzt::allocate_host_memory(test.image_size * sizeof(float));
+void zeImageFormatTypeTests::setup_buffers_float(ImageFormatFixture &test,
+                                                 bool is_shared_system) {
+  test.inbuff = lzt::allocate_host_memory_with_allocator_selector(
+      test.image_size * sizeof(float), is_shared_system);
+  test.outbuff = lzt::allocate_host_memory_with_allocator_selector(
+      test.image_size * sizeof(float), is_shared_system);
   float *in_ptr = static_cast<float *>(test.inbuff);
   for (int i = 0; i < test.image_size; i++) {
     in_ptr[i] = float_pixel_input;
@@ -261,7 +268,8 @@ TEST_P(zeImageFormatTypeTests,
   LOG_INFO << "TYPE - " << image_type;
   run_test(zeImageFormatTypeTests::setup_buffers<uint32_t, 1>,
            zeImageFormatTypeTests::verify_outbuffer<uint32_t, 2>, image_type,
-           ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate);
+           ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
+           false);
 }
 
 TEST_P(zeImageFormatTypeTests,
@@ -275,7 +283,8 @@ TEST_P(zeImageFormatTypeTests,
   LOG_INFO << "TYPE - " << image_type;
   run_test(zeImageFormatTypeTests::setup_buffers<int32_t, -1>,
            zeImageFormatTypeTests::verify_outbuffer<int32_t, -2>, image_type,
-           ZE_IMAGE_FORMAT_TYPE_SINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate);
+           ZE_IMAGE_FORMAT_TYPE_SINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
+           false);
 }
 
 TEST_P(zeImageFormatTypeTests,
@@ -289,7 +298,8 @@ TEST_P(zeImageFormatTypeTests,
   LOG_INFO << "TYPE - " << image_type;
   run_test(zeImageFormatTypeTests::setup_buffers_float,
            zeImageFormatTypeTests::verify_outbuffer_float, image_type,
-           ZE_IMAGE_FORMAT_TYPE_FLOAT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate);
+           ZE_IMAGE_FORMAT_TYPE_FLOAT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
+           false);
 }
 
 TEST_P(zeImageFormatTypeTests,
@@ -304,7 +314,7 @@ TEST_P(zeImageFormatTypeTests,
   run_test(zeImageFormatTypeTests::setup_buffers<uint16_t, 0>,
            zeImageFormatTypeTests::verify_outbuffer<uint16_t, 65535>,
            image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_LAYOUT_16,
-           is_immediate);
+           is_immediate, false);
 }
 
 TEST_P(zeImageFormatTypeTests,
@@ -318,7 +328,93 @@ TEST_P(zeImageFormatTypeTests,
   LOG_INFO << "TYPE - " << image_type;
   run_test(zeImageFormatTypeTests::setup_buffers<int16_t, -32768>,
            zeImageFormatTypeTests::verify_outbuffer<int16_t, 32767>, image_type,
-           ZE_IMAGE_FORMAT_TYPE_SNORM, ZE_IMAGE_FORMAT_LAYOUT_16, is_immediate);
+           ZE_IMAGE_FORMAT_TYPE_SNORM, ZE_IMAGE_FORMAT_LAYOUT_16, is_immediate,
+           false);
+}
+
+TEST_P(
+    zeImageFormatTypeTests,
+    GivenImageFormatUintWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto is_immediate = std::get<1>(GetParam());
+  LOG_INFO << "TYPE - " << image_type;
+  run_test(zeImageFormatTypeTests::setup_buffers<uint32_t, 1>,
+           zeImageFormatTypeTests::verify_outbuffer<uint32_t, 2>, image_type,
+           ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
+           true);
+}
+
+TEST_P(
+    zeImageFormatTypeTests,
+    GivenImageFormatIntWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto is_immediate = std::get<1>(GetParam());
+  LOG_INFO << "TYPE - " << image_type;
+  run_test(zeImageFormatTypeTests::setup_buffers<int32_t, -1>,
+           zeImageFormatTypeTests::verify_outbuffer<int32_t, -2>, image_type,
+           ZE_IMAGE_FORMAT_TYPE_SINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
+           true);
+}
+
+TEST_P(
+    zeImageFormatTypeTests,
+    GivenImageFormatFloatWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto is_immediate = std::get<1>(GetParam());
+  LOG_INFO << "TYPE - " << image_type;
+  run_test(zeImageFormatTypeTests::setup_buffers_float,
+           zeImageFormatTypeTests::verify_outbuffer_float, image_type,
+           ZE_IMAGE_FORMAT_TYPE_FLOAT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
+           true);
+}
+
+TEST_P(
+    zeImageFormatTypeTests,
+    GivenImageFormatUnormWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto is_immediate = std::get<1>(GetParam());
+  LOG_INFO << "TYPE - " << image_type;
+  run_test(zeImageFormatTypeTests::setup_buffers<uint16_t, 0>,
+           zeImageFormatTypeTests::verify_outbuffer<uint16_t, 65535>,
+           image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_LAYOUT_16,
+           is_immediate, true);
+}
+
+TEST_P(
+    zeImageFormatTypeTests,
+    GivenImageFormatSnormWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto is_immediate = std::get<1>(GetParam());
+  LOG_INFO << "TYPE - " << image_type;
+  run_test(zeImageFormatTypeTests::setup_buffers<int16_t, -32768>,
+           zeImageFormatTypeTests::verify_outbuffer<int16_t, 32767>, image_type,
+           ZE_IMAGE_FORMAT_TYPE_SNORM, ZE_IMAGE_FORMAT_LAYOUT_16, is_immediate,
+           true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -332,7 +428,7 @@ class zeImageFormatLayoutTests
           std::tuple<ze_image_type_t, ze_image_format_layout_t, bool>> {
 public:
   template <typename T, int size_multiplier = 1>
-  static void set_up_buffers(ImageFormatFixture &test);
+  static void set_up_buffers(ImageFormatFixture &test, bool is_shared_system);
   template <typename T, bool saturates = true, int size_multiplier = 1>
   static void verify_buffer(ImageFormatFixture &test);
   template <typename T, bool saturates = true>
@@ -419,11 +515,12 @@ void zeImageFormatLayoutTests::get_kernel(ze_image_type_t image_type,
 }
 
 template <typename T, int size_multiplier>
-void zeImageFormatLayoutTests::set_up_buffers(ImageFormatFixture &test) {
-  test.inbuff =
-      lzt::allocate_host_memory(test.image_size * sizeof(T) * size_multiplier);
-  test.outbuff =
-      lzt::allocate_host_memory(test.image_size * sizeof(T) * size_multiplier);
+void zeImageFormatLayoutTests::set_up_buffers(ImageFormatFixture &test,
+                                              bool is_shared_system) {
+  test.inbuff = lzt::allocate_host_memory_with_allocator_selector(
+      (test.image_size * sizeof(T) * size_multiplier), is_shared_system);
+  test.outbuff = lzt::allocate_host_memory_with_allocator_selector(
+      (test.image_size * sizeof(T) * size_multiplier), is_shared_system);
   T *in_ptr = static_cast<T *>(test.inbuff);
   for (int i = 0; i < (test.image_size * size_multiplier); i++) {
     // set pixel value to 1 less than max for data type so
@@ -479,59 +576,148 @@ TEST_P(zeImageFormatLayoutTests,
   switch (layout) {
   case ZE_IMAGE_FORMAT_LAYOUT_8:
     run_test(set_up_buffers<uint8_t>, verify_buffer<uint8_t>, image_type,
-             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_16:
     run_test(set_up_buffers<uint16_t>, verify_buffer<uint16_t>, image_type,
-             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_32:
     run_test(set_up_buffers<uint32_t>, verify_buffer<uint32_t, false>,
-             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate,
+             false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_8_8:
     run_test(set_up_buffers<uint16_t>, verify_buffer<uint16_t>, image_type,
-             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_16_16:
     run_test(set_up_buffers<uint32_t>, verify_buffer<uint32_t>, image_type,
-             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_32_32:
     run_test(set_up_buffers<uint64_t>, verify_buffer<uint64_t, false>,
-             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate,
+             false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_5_6_5:
     run_test(set_up_buffers<uint16_t>, verify_buffer_float<uint16_t>,
-             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate);
+             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate,
+             false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_11_11_10:
     run_test(set_up_buffers<uint32_t>, verify_buffer_float<uint32_t, false>,
-             image_type, ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, is_immediate);
+             image_type, ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, is_immediate,
+             false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4:
     run_test(set_up_buffers<uint16_t>, verify_buffer_float<uint16_t>,
-             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate);
+             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate,
+             false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1:
     run_test(set_up_buffers<uint16_t>, verify_buffer_float<uint16_t>,
-             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate);
+             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate,
+             false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8:
     run_test(set_up_buffers<uint32_t>, verify_buffer<uint32_t>, image_type,
-             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2:
     run_test(set_up_buffers<uint32_t>, verify_buffer<uint32_t>, image_type,
-             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16:
     run_test(set_up_buffers<uint64_t>, verify_buffer<uint64_t>, image_type,
-             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, false);
     break;
   case ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32:
     run_test(set_up_buffers<uint64_t, 2>, verify_buffer<uint64_t, false, 2>,
-             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate);
+             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate,
+             false);
+    break;
+  default:
+    LOG_INFO << "Unhandled image format layout: " << layout;
+    break;
+  }
+}
+
+TEST_P(
+    zeImageFormatLayoutTests,
+    GivenImageFormatLayoutWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  auto layout = std::get<1>(GetParam());
+  auto is_immediate = std::get<2>(GetParam());
+
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << image_type;
+  }
+
+  LOG_INFO << "TYPE - " << image_type << "LAYOUT - " << layout;
+
+  switch (layout) {
+  case ZE_IMAGE_FORMAT_LAYOUT_8:
+    run_test(set_up_buffers<uint8_t>, verify_buffer<uint8_t>, image_type,
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_16:
+    run_test(set_up_buffers<uint16_t>, verify_buffer<uint16_t>, image_type,
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_32:
+    run_test(set_up_buffers<uint32_t>, verify_buffer<uint32_t, false>,
+             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8:
+    run_test(set_up_buffers<uint16_t>, verify_buffer<uint16_t>, image_type,
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16:
+    run_test(set_up_buffers<uint32_t>, verify_buffer<uint32_t>, image_type,
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32:
+    run_test(set_up_buffers<uint64_t>, verify_buffer<uint64_t, false>,
+             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_5_6_5:
+    run_test(set_up_buffers<uint16_t>, verify_buffer_float<uint16_t>,
+             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate,
+             true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_11_11_10:
+    run_test(set_up_buffers<uint32_t>, verify_buffer_float<uint32_t, false>,
+             image_type, ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, is_immediate,
+             true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4:
+    run_test(set_up_buffers<uint16_t>, verify_buffer_float<uint16_t>,
+             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate,
+             true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1:
+    run_test(set_up_buffers<uint16_t>, verify_buffer_float<uint16_t>,
+             image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, layout, is_immediate,
+             true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8:
+    run_test(set_up_buffers<uint32_t>, verify_buffer<uint32_t>, image_type,
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2:
+    run_test(set_up_buffers<uint32_t>, verify_buffer<uint32_t>, image_type,
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16:
+    run_test(set_up_buffers<uint64_t>, verify_buffer<uint64_t>, image_type,
+             ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32:
+    run_test(set_up_buffers<uint64_t, 2>, verify_buffer<uint64_t, false, 2>,
+             image_type, ZE_IMAGE_FORMAT_TYPE_UINT, layout, is_immediate, true);
     break;
   default:
     LOG_INFO << "Unhandled image format layout: " << layout;

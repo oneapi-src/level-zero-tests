@@ -40,7 +40,7 @@ public:
                 ze_image_format_layout_t base_layout,
                 ze_image_format_layout_t convert_layout,
                 ze_image_format_type_t format_type, enum TestType test,
-                bool is_immediate) {
+                bool is_immediate, bool is_shared_system) {
     LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format_type;
     LOG_INFO << "LAYOUT: BASE - " << base_layout << " CONVERT - "
              << convert_layout;
@@ -60,8 +60,10 @@ public:
         create_image_desc_layout(convert_layout, image_type, format_type);
 
     size_t buffer_size = image_size * get_pixel_bytes(base_layout);
-    auto buffer_in = lzt::allocate_host_memory(buffer_size);
-    auto buffer_out = lzt::allocate_host_memory(buffer_size);
+    auto buffer_in = lzt::allocate_host_memory_with_allocator_selector(
+        buffer_size, is_shared_system);
+    auto buffer_out = lzt::allocate_host_memory_with_allocator_selector(
+        buffer_size, is_shared_system);
 
     if (format_type == ZE_IMAGE_FORMAT_TYPE_FLOAT) {
       float *ptr1 = static_cast<float *>(buffer_in);
@@ -153,8 +155,8 @@ public:
 
     // compare results
     EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
-    lzt::free_memory(buffer_in);
-    lzt::free_memory(buffer_out);
+    lzt::free_memory_with_allocator_selector(buffer_in, is_shared_system);
+    lzt::free_memory_with_allocator_selector(buffer_out, is_shared_system);
     lzt::destroy_command_bundle(cmd_bundle);
   }
 
@@ -303,7 +305,8 @@ TEST_P(zeImageLayoutOneOrNoKernelTests,
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
   auto is_immediate = std::get<3>(GetParam());
-  run_test(image_type, layout, layout, format, IMAGE_OBJECT_ONLY, is_immediate);
+  run_test(image_type, layout, layout, format, IMAGE_OBJECT_ONLY, is_immediate,
+           false);
 }
 
 TEST_P(
@@ -317,7 +320,39 @@ TEST_P(
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
   auto is_immediate = std::get<3>(GetParam());
-  run_test(image_type, layout, layout, format, ONE_KERNEL_ONLY, is_immediate);
+  run_test(image_type, layout, layout, format, ONE_KERNEL_ONLY, is_immediate,
+           false);
+}
+
+TEST_P(zeImageLayoutOneOrNoKernelTests,
+       GivenImageLayoutWhenConvertingImageToMemoryWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto format = std::get<1>(GetParam());
+  auto layout = std::get<2>(GetParam());
+  auto is_immediate = std::get<3>(GetParam());
+  run_test(image_type, layout, layout, format, IMAGE_OBJECT_ONLY, is_immediate,
+           true);
+}
+
+TEST_P(
+    zeImageLayoutOneOrNoKernelTests,
+    GivenImageLayoutWhenPassingImageThroughKernelAndConvertingImageToMemoryWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto format = std::get<1>(GetParam());
+  auto layout = std::get<2>(GetParam());
+  auto is_immediate = std::get<3>(GetParam());
+  run_test(image_type, layout, layout, format, ONE_KERNEL_ONLY, is_immediate,
+           true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -375,39 +410,94 @@ TEST_P(zeImageLayoutTwoKernelsTests,
   case ZE_IMAGE_FORMAT_TYPE_UNORM:
   case ZE_IMAGE_FORMAT_TYPE_SNORM:
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
-             format, TWO_KERNEL_CONVERT, is_immediate);
+             format, TWO_KERNEL_CONVERT, is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_32,
-             format, TWO_KERNEL_CONVERT, is_immediate);
+             format, TWO_KERNEL_CONVERT, is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8,
              ZE_IMAGE_FORMAT_LAYOUT_16_16, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8,
              ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
              ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
              ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
              ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
   case ZE_IMAGE_FORMAT_TYPE_FLOAT:
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
              ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_16, ZE_IMAGE_FORMAT_LAYOUT_32,
-             format, TWO_KERNEL_CONVERT, is_immediate);
+             format, TWO_KERNEL_CONVERT, is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_16_16,
              ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
              ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
     run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
              ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT,
-             is_immediate);
+             is_immediate, false);
+    break;
+  default:
+    throw std::runtime_error("Unhandled format");
+  }
+}
+
+TEST_P(zeImageLayoutTwoKernelsTests,
+       GivenImageLayoutWhenKernelConvertingImageWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto format = std::get<1>(GetParam());
+  auto is_immediate = std::get<2>(GetParam());
+  switch (format) {
+  case ZE_IMAGE_FORMAT_TYPE_UINT:
+  case ZE_IMAGE_FORMAT_TYPE_SINT:
+  case ZE_IMAGE_FORMAT_TYPE_UNORM:
+  case ZE_IMAGE_FORMAT_TYPE_SNORM:
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
+             format, TWO_KERNEL_CONVERT, is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_32,
+             format, TWO_KERNEL_CONVERT, is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8,
+             ZE_IMAGE_FORMAT_LAYOUT_16_16, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8,
+             ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
+             ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
+             ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
+             ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
+  case ZE_IMAGE_FORMAT_TYPE_FLOAT:
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+             ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_16, ZE_IMAGE_FORMAT_LAYOUT_32,
+             format, TWO_KERNEL_CONVERT, is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_16_16,
+             ZE_IMAGE_FORMAT_LAYOUT_32_32, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+             ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
+    run_test(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
+             ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format, TWO_KERNEL_CONVERT,
+             is_immediate, true);
     break;
   default:
     throw std::runtime_error("Unhandled format");
