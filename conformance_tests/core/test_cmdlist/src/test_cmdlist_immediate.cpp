@@ -971,24 +971,49 @@ TEST_P(zeImmediateCommandListExecutionTests,
   lzt::free_memory(memory);
 }
 
-static void RunAppendMemoryPrefetch(ze_command_list_handle_t cmdlist_immediate,
-                                    const uint64_t timeout) {
+TEST_P(
+    zeImmediateCommandListExecutionTests,
+    GivenImmediateCommandListWhenAppendMemoryPrefetchThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   size_t size = 4096;
-  void *memory = lzt::allocate_shared_memory(size);
+  void *memory = lzt::aligned_malloc(size, 1);
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListAppendMemoryPrefetch(cmdlist_immediate, memory, size));
   EXPECT_EQ(ZE_RESULT_SUCCESS,
             zeCommandListHostSynchronize(cmdlist_immediate, timeout));
-  lzt::free_memory(memory);
+  lzt::aligned_free(memory);
+}
+
+static void RunAppendMemoryPrefetch(ze_command_list_handle_t cmdlist_immediate,
+                                    const uint64_t timeout,
+                                    bool is_shared_system) {
+  size_t size = 4096;
+  void *memory = lzt::allocate_shared_memory_with_allocator_selector(
+      size, is_shared_system);
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListAppendMemoryPrefetch(cmdlist_immediate, memory, size));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+  lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
 TEST_F(
     zeImmediateCommandListInOrderExecutionTests,
     GivenInOrderImmediateCommandListWhenAppendMemoryPrefetchThenSuccessIsReturned) {
   const uint64_t timeout = UINT64_MAX - 1;
-  RunAppendMemoryPrefetch(cmdlist_immediate_default_mode, timeout);
-  RunAppendMemoryPrefetch(cmdlist_immediate_sync_mode, 0);
-  RunAppendMemoryPrefetch(cmdlist_immediate_async_mode, timeout);
+  RunAppendMemoryPrefetch(cmdlist_immediate_default_mode, timeout, false);
+  RunAppendMemoryPrefetch(cmdlist_immediate_sync_mode, 0, false);
+  RunAppendMemoryPrefetch(cmdlist_immediate_async_mode, timeout, false);
+}
+
+TEST_F(
+    zeImmediateCommandListInOrderExecutionTests,
+    GivenInOrderImmediateCommandListWhenAppendMemoryPrefetchThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  const uint64_t timeout = UINT64_MAX - 1;
+  RunAppendMemoryPrefetch(cmdlist_immediate_default_mode, timeout, true);
+  RunAppendMemoryPrefetch(cmdlist_immediate_sync_mode, 0, true);
+  RunAppendMemoryPrefetch(cmdlist_immediate_async_mode, timeout, true);
 }
 
 TEST_P(zeImmediateCommandListExecutionTests,
