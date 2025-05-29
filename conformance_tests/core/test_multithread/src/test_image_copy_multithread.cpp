@@ -110,7 +110,7 @@ void image_copy_thread(const ze_command_queue_handle_t &command_queue) {
 
 class zeImageCreateDestroyThreadTest : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeImageCreateDestroyThreadTests,
     GivenMultipleThreadsWhenCreatingImagesThenImagesCreatedAndDestroyedSuccessfully) {
 
@@ -134,7 +134,7 @@ TEST(
 
 class zeImageCopyThreadTest : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeImageCopyThreadTests,
     GivenMultipleThreadsUsingSingleCommandQueueWhenCopyingImagesThenCopiedImagesAreCorrect) {
   if (!(lzt::image_support())) {

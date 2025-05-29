@@ -8,8 +8,9 @@
 
 #include "image/image.hpp"
 #include "gtest/gtest.h"
+#include "utils/utils.hpp"
 
-TEST(ImagePNG32Bit, GetPixel) {
+LZT_TEST(ImagePNG32Bit, GetPixel) {
   const std::vector<uint32_t> pixels = {
       0xFF0000FF, //
       0x00FF00FF, //
@@ -27,7 +28,7 @@ TEST(ImagePNG32Bit, GetPixel) {
   EXPECT_EQ(image.get_pixel(2, 1), pixels[5]);
 }
 
-TEST(ImagePNG32Bit, SetPixel) {
+LZT_TEST(ImagePNG32Bit, SetPixel) {
   const std::vector<uint32_t> pixels = {
       0xFF0000FF, //
       0x00FF00FF, //
@@ -46,7 +47,7 @@ TEST(ImagePNG32Bit, SetPixel) {
   EXPECT_EQ(pixels, image.get_pixels());
 }
 
-TEST(ImageBMP32Bit, GetPixel) {
+LZT_TEST(ImageBMP32Bit, GetPixel) {
   const std::vector<uint32_t> pixels = {
       0xFF0000FF, //
       0x00FF00FF, //
@@ -64,7 +65,7 @@ TEST(ImageBMP32Bit, GetPixel) {
   EXPECT_EQ(image.get_pixel(2, 1), pixels[5]);
 }
 
-TEST(ImageBMP32Bit, SetPixel) {
+LZT_TEST(ImageBMP32Bit, SetPixel) {
   const std::vector<uint32_t> pixels = {
       0xFF0000FF, //
       0x00FF00FF, //
@@ -83,7 +84,7 @@ TEST(ImageBMP32Bit, SetPixel) {
   EXPECT_EQ(pixels, image.get_pixels());
 }
 
-TEST(ImageBMP8Bit, GetPixel) {
+LZT_TEST(ImageBMP8Bit, GetPixel) {
   const std::vector<uint8_t> pixels = {
       0x00, //
       0xFF, //
@@ -101,7 +102,7 @@ TEST(ImageBMP8Bit, GetPixel) {
   EXPECT_EQ(image.get_pixel(2, 1), pixels[5]);
 }
 
-TEST(ImageBMP8Bit, SetPixel) {
+LZT_TEST(ImageBMP8Bit, SetPixel) {
   const std::vector<uint8_t> pixels = {
       0x00, //
       0xFF, //

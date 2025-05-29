@@ -295,8 +295,8 @@ class zeImageLayoutOneOrNoKernelTests
           std::tuple<ze_image_type_t, ze_image_format_type_t,
                      ze_image_format_layout_t, bool>> {};
 
-TEST_P(zeImageLayoutOneOrNoKernelTests,
-       GivenImageLayoutWhenConvertingImageToMemory) {
+LZT_TEST_P(zeImageLayoutOneOrNoKernelTests,
+           GivenImageLayoutWhenConvertingImageToMemory) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -309,7 +309,7 @@ TEST_P(zeImageLayoutOneOrNoKernelTests,
            false);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeImageLayoutOneOrNoKernelTests,
     GivenImageLayoutWhenPassingImageThroughKernelAndConvertingImageToMemory) {
   auto image_type = std::get<0>(GetParam());
@@ -324,8 +324,9 @@ TEST_P(
            false);
 }
 
-TEST_P(zeImageLayoutOneOrNoKernelTests,
-       GivenImageLayoutWhenConvertingImageToMemoryWithSharedSystemAllocator) {
+LZT_TEST_P(
+    zeImageLayoutOneOrNoKernelTests,
+    GivenImageLayoutWhenConvertingImageToMemoryWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
@@ -339,7 +340,7 @@ TEST_P(zeImageLayoutOneOrNoKernelTests,
            true);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeImageLayoutOneOrNoKernelTests,
     GivenImageLayoutWhenPassingImageThroughKernelAndConvertingImageToMemoryWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -395,8 +396,8 @@ class zeImageLayoutTwoKernelsTests
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_type_t, bool>> {};
 
-TEST_P(zeImageLayoutTwoKernelsTests,
-       GivenImageLayoutWhenKernelConvertingImage) {
+LZT_TEST_P(zeImageLayoutTwoKernelsTests,
+           GivenImageLayoutWhenKernelConvertingImage) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -449,8 +450,8 @@ TEST_P(zeImageLayoutTwoKernelsTests,
   }
 }
 
-TEST_P(zeImageLayoutTwoKernelsTests,
-       GivenImageLayoutWhenKernelConvertingImageWithSharedSystemAllocator) {
+LZT_TEST_P(zeImageLayoutTwoKernelsTests,
+           GivenImageLayoutWhenKernelConvertingImageWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),

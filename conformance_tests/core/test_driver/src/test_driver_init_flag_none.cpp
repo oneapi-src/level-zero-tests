@@ -16,7 +16,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(zeInitTests, GivenNoneFlagWhenInitializingDriverThenSuccessIsReturned) {
+LZT_TEST(zeInitTests,
+         GivenNoneFlagWhenInitializingDriverThenSuccessIsReturned) {
   lzt::ze_init(0);
 }
 

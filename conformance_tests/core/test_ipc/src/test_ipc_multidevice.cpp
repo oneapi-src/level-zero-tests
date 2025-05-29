@@ -164,8 +164,8 @@ void multi_device_receiver(size_t size, bool is_immediate) {
          sizeof(ipc_descriptor));
 
   void *memory = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemOpenIpcHandle(context, device, ipc_handle, 0, &memory));
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
@@ -175,7 +175,7 @@ void multi_device_receiver(size_t size, bool is_immediate) {
 
   lzt::validate_data_pattern(buffer, size, 1);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
   lzt::free_memory(context, buffer);
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
@@ -222,28 +222,28 @@ void RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest
   }
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCThenChildProcessReadsMemoryCorrectly) {
   RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(
       false, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
   RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(
       false, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingMultipleDevicesWithIPCThenChildProcessReadsMemoryCorrectly) {
   RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(
       true, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingMultipleDevicesWithIPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
   RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(

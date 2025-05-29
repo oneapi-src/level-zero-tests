@@ -22,10 +22,9 @@ ze_sampler_handle_t create_sampler(ze_sampler_address_mode_t addrmode,
   descriptor.isNormalized = normalized;
 
   ze_sampler_handle_t sampler = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeSamplerCreate(lzt::get_default_context(),
-                            zeDevice::get_instance()->get_device(), &descriptor,
-                            &sampler));
+  EXPECT_ZE_RESULT_SUCCESS(zeSamplerCreate(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(),
+      &descriptor, &sampler));
   EXPECT_NE(nullptr, sampler);
   return sampler;
 }
@@ -37,7 +36,7 @@ ze_sampler_handle_t create_sampler() {
 
 void destroy_sampler(ze_sampler_handle_t sampler) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
+  EXPECT_ZE_RESULT_SUCCESS(zeSamplerDestroy(sampler));
 }
 
 }; // namespace level_zero_tests

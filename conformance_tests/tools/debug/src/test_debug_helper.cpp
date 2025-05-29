@@ -43,8 +43,7 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   auto size = 256;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetProperties(kernel, &kernel_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
 
   LOG_INFO << "[Application] Problem size: " << size
@@ -135,8 +134,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
   auto size = 8192;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetProperties(kernel, &kernel_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
 
   LOG_INFO << "[Application] Problem size: " << size
@@ -230,8 +228,7 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
   auto size = 8192;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetProperties(kernel, &kernel_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
 
   LOG_INFO << "[Application] Problem size: " << size
@@ -339,8 +336,7 @@ void multiple_modules_created_test(ze_context_handle_t context,
   auto size = 8192;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetProperties(kernel, &kernel_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
 
   LOG_INFO << "[Application] Problem size: " << size
@@ -421,8 +417,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   bool slm = false;
   ze_device_properties_t device_properties = {
       ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetProperties(device, &device_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &device_properties));
 
   size_t slm_buffer_size =
       512; // NOTE: Not all SKUs have same SLM so can go too big.
@@ -448,8 +443,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetProperties(kernel, &kernel_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
 
   LOG_INFO << "[Application] Problem size: " << size
@@ -757,8 +751,7 @@ void Job::set_up_work(debug_options &options) {
   kernel = lzt::create_function(module, kernel_name);
 
   ze_kernel_properties_t kernel_properties = {};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetProperties(kernel, &kernel_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
   int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
 
   LOG_INFO << "[Application] Problem size: " << size
@@ -934,9 +927,8 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
   command_list_desc.flags = 0;
 
   ze_command_list_handle_t command_list;
-  result =
-      zeCommandListCreate(context, device_0, &command_list_desc, &command_list);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListCreate(
+      context, device_0, &command_list_desc, &command_list));
   auto fence = lzt::create_fence(command_queue);
 
   std::vector<ze_device_handle_t> devices = {device_0, device_1};

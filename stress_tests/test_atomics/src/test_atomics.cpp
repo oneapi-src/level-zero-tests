@@ -43,7 +43,7 @@ protected:
   uint32_t init_value_1_ = 1;
 }; // namespace
 
-TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
+LZT_TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
 
   AtomicsTestArguments_t test_arguments = {
       std::get<0>(GetParam()), // total memory size limit

@@ -163,7 +163,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::create_in_out_images(
   img_out = lzt::create_ze_image(image_descriptor_dest);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeCommandListAppendImageCopyWithSwizzleTests,
     GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturned) {
   auto image_type = std::get<0>(GetParam());
@@ -175,7 +175,7 @@ TEST_P(
   run_test(image_type, is_immediate, false);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeCommandListAppendImageCopyWithSwizzleTests,
     GivenDeviceImageAndHostImagesWithDifferentSwizzleWhenLaunchingCopyFromKernelThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();

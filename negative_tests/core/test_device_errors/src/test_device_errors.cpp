@@ -18,7 +18,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(
+LZT_TEST(
     DeviceGetNegativeTests,
     GivenInvalidDriverHandleWhileCallingzeDeviceGetThenInvalidHandleIsReturned) {
   uint32_t pCount = 0;
@@ -26,7 +26,7 @@ TEST(
             zeDeviceGet(nullptr, &pCount, nullptr));
 }
 
-TEST(
+LZT_TEST(
     DeviceGetNegativeTests,
     GivenInvalidOutputCountPointerWhileCallingzeDeviceGetThenInvalidNullPointerIsReturned) {
   auto drivers = lzt::get_all_driver_handles();
@@ -50,7 +50,7 @@ TEST(
 
 //   ze_device_properties_t props0 = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
 //                                    nullptr};
-//   ASSERT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &props0));
+//   ASSERT_ZE_RESULT_SUCCESS( zeDeviceGetProperties(device, &props0));
 
 //   ze_device_properties_t props1 = {(ze_structure_type_t)0xaaaa, nullptr};
 //   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
@@ -62,7 +62,7 @@ TEST(
 
 //   ze_device_properties_t props2 = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2,
 //                                    nullptr};
-//   ASSERT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &props2));
+//   ASSERT_ZE_RESULT_SUCCESS( zeDeviceGetProperties(device, &props2));
 
 //   props2.pNext = &props0;
 //   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
@@ -82,7 +82,7 @@ TEST(
 //   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
 //             zeDeviceGetCacheProperties(device, nullptr, nullptr));
 
-//   ASSERT_EQ(ZE_RESULT_SUCCESS,
+//   ASSERT_ZE_RESULT_SUCCESS(
 //             zeDeviceGetCacheProperties(device, &count, nullptr));
 
 //   std::vector<ze_device_cache_properties_t> cacheProperties(count);
@@ -90,7 +90,7 @@ TEST(
 //     properties = {ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES, nullptr};
 //   }
 
-//   ASSERT_EQ(ZE_RESULT_SUCCESS,
+//   ASSERT_ZE_RESULT_SUCCESS(
 //             zeDeviceGetCacheProperties(device, &count,
 //             cacheProperties.data()));
 

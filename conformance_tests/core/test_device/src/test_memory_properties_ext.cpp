@@ -39,7 +39,7 @@ bool check_ext_version() {
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetMemoryPropertiesTests,
     GivenValidDeviceWhenRetrievingMemoryPropertiesThenValidExtPropertiesAreReturned) {
   if (!check_ext_version())
@@ -97,7 +97,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceP2PBandwidthExpProperties,
     GivenMultipleDevicesWhenRetrievingP2PBandwidthPropertiesThenValidPropertiesAreReturned) {
   auto drivers = lzt::get_all_driver_handles();
@@ -126,9 +126,8 @@ TEST(
 
   for (uint32_t dev_1 = 0; dev_1 < devices.size(); ++dev_1) {
     for (uint32_t dev_2 = 0; dev_2 < devices.size(); ++dev_2) {
-      ASSERT_EQ(
-          zeDeviceGetP2PProperties(devices[dev_1], devices[dev_2], &P2PProps),
-          ZE_RESULT_SUCCESS);
+      ASSERT_ZE_RESULT_SUCCESS(
+          zeDeviceGetP2PProperties(devices[dev_1], devices[dev_2], &P2PProps));
       ASSERT_GE((((ze_device_p2p_bandwidth_exp_properties_t *)(P2PProps.pNext))
                      ->logicalBandwidth),
                 0);

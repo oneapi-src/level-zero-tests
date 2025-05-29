@@ -26,7 +26,7 @@ class EccModuleTest : public lzt::SysmanCtsClass {};
 #define ECC_TEST EccModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     ECC_TEST,
     GivenValidDeviceHandleIfEccIsConfigurableThenExpectEccShouldBeAvailable) {
   for (const auto &device : devices) {
@@ -40,8 +40,8 @@ TEST_F(
   }
 }
 
-TEST_F(ECC_TEST,
-       GivenValidDeviceHandleIfEccIsAvailableThenExpectValidEccProperties) {
+LZT_TEST_F(ECC_TEST,
+           GivenValidDeviceHandleIfEccIsAvailableThenExpectValidEccProperties) {
   for (const auto &device : devices) {
     auto available = lzt::get_ecc_available(device);
     if (available == static_cast<ze_bool_t>(true)) {
@@ -58,8 +58,9 @@ TEST_F(ECC_TEST,
   }
 }
 
-TEST_F(ECC_TEST,
-       GivenValidDeviceHandleIfEccIsAvailableThenExpectSameEccPropertiesTwice) {
+LZT_TEST_F(
+    ECC_TEST,
+    GivenValidDeviceHandleIfEccIsAvailableThenExpectSameEccPropertiesTwice) {
   for (const auto &device : devices) {
     auto available = lzt::get_ecc_available(device);
     if (available == static_cast<ze_bool_t>(true)) {
@@ -74,7 +75,7 @@ TEST_F(ECC_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ECC_TEST,
     GivenValidDeviceHandleIfEccIsConfigurableSetTheEccStateSameAsCurrentStateThenExpectNoPendingActionIsRequired) {
   for (const auto &device : devices) {
@@ -93,7 +94,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ECC_TEST,
     GivenValidDeviceHandleIfEccIsConfigurableSetTheEccStateDifferentFromCurrentStateThenExpectPendingActionIsRequired) {
   for (const auto &device : devices) {
@@ -117,7 +118,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ECC_TEST,
     GivenValidDeviceHandleIfEccIsNotAvailableThenGetStateIsInvokedThenExpectEccIsNotAvailable) {
   for (const auto &device : devices) {
@@ -131,7 +132,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ECC_TEST,
     GivenValidDeviceHandleIfEccIsAvailableButNotConfigurableThenGetStateIsInvokedThenExpectEccUnSupportedFeature) {
   for (const auto &device : devices) {
@@ -148,7 +149,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ECC_TEST,
     GivenValidDeviceHandleIfEccIsNotAvailableThenSetStateIsInvokedThenExpectEccIsNotAvailable) {
   for (const auto &device : devices) {
@@ -165,7 +166,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ECC_TEST,
     GivenValidDeviceHandleIfEccIsAvailableButNotConfigurableThenSetStateIsInvokedThenExpectEccUnSupportedFeature) {
   for (const auto &device : devices) {

@@ -26,7 +26,7 @@ class SchedulerTest : public lzt::SysmanCtsClass {};
 #define SCHEDULER_TEST SchedulerTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenComponentCountZeroWhenRetrievingSchedulerHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -39,7 +39,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenComponentCountZeroWhenRetrievingSchedulerHandlesThenNotNullSchedulerHandlesAreReturned) {
   for (auto device : devices) {
@@ -56,7 +56,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenComponentCountWhenRetrievingSchedulerHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -73,7 +73,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarSchedulerHandlesReturned) {
   for (auto device : devices) {
@@ -96,8 +96,9 @@ TEST_F(
   }
 }
 
-TEST_F(SCHEDULER_TEST,
-       GivenValidSchedulerHandleWhenRetrievinCurrentModeThenSuccessIsReturned) {
+LZT_TEST_F(
+    SCHEDULER_TEST,
+    GivenValidSchedulerHandleWhenRetrievinCurrentModeThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
     auto p_sched_handles = lzt::get_scheduler_handles(device, p_count);
@@ -114,7 +115,7 @@ TEST_F(SCHEDULER_TEST,
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingCurrentModeTwiceThenSameModeIsReturned) {
   for (auto device : devices) {
@@ -134,7 +135,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeOutPropertiesThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -156,7 +157,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeOutPropertiesTwiceThenSamePropertiesAreReturned) {
   for (auto device : devices) {
@@ -181,7 +182,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeSlicePropertiesThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -204,7 +205,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerTimeSlicePropertiesTwiceThenSamePropertiesAreReturned) {
   for (auto device : devices) {
@@ -231,7 +232,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenSettingSchedulerTimeOutModeThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -264,7 +265,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenSettingSchedulerTimeSliceModeThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -296,7 +297,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenSettingSchedulerExclusiveModeThenSuccesseReturned) {
   for (auto device : devices) {
@@ -327,7 +328,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -354,7 +355,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SCHEDULER_TEST,
     GivenValidSchedulerHandleWhenRetrievingSchedulerPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
