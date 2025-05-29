@@ -26,8 +26,7 @@ UUID get_sysman_device_uuid(zes_device_handle_t sysman_device) {
   zes_device_ext_properties_t ext_properties = {
       ZES_STRUCTURE_TYPE_DEVICE_EXT_PROPERTIES};
   properties.pNext = &ext_properties;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceGetProperties(sysman_device, &properties));
+  EXPECT_ZE_RESULT_SUCCESS(zesDeviceGetProperties(sysman_device, &properties));
   auto sysman_device_uuid = ext_properties.uuid;
   return TO_STD_ARRAY(sysman_device_uuid.id);
 }

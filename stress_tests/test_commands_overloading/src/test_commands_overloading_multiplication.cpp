@@ -125,8 +125,8 @@ protected:
   uint32_t number_of_kernels_in_source_ = 1;
 }; // namespace
 
-TEST_P(zeDriverMultiplyObjectsStressTest,
-       MultiplyKernelsModulsCommandsListsAndCommandQueues) {
+LZT_TEST_P(zeDriverMultiplyObjectsStressTest,
+           MultiplyKernelsModulsCommandsListsAndCommandQueues) {
 
   OverloadingMTestArguments_t test_arguments = {
       std::get<0>(GetParam()), // total memory size limit

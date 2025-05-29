@@ -22,14 +22,14 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 
 namespace {
-TEST(
+LZT_TEST(
     ModuleCreateNegativeTests,
     GivenInvalidDeviceHandleWhileCallingzeModuleCreateThenInvalidNullHandleIsReturned) {
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeModuleCreate(lzt::get_default_context(), nullptr, nullptr,
                            nullptr, nullptr));
 }
-TEST(
+LZT_TEST(
     ModuleCreateNegativeTests,
     GivenInvalidModuleDescriptionOrModulePointerwhileCallingzeModuleCreateThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -52,7 +52,7 @@ TEST(
                            &module_description, nullptr,
                            nullptr)); // Invalid module pointer
 }
-TEST(
+LZT_TEST(
     ModuleCreateNegativeTests,
     GivenInvalidFileFormatwhileCallingzeModuleCreateThenInvalidEnumerationIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -73,13 +73,13 @@ TEST(
             zeModuleCreate(lzt::get_default_context(), device,
                            &module_description, &module, nullptr));
 }
-TEST(
+LZT_TEST(
     ModuleDestroyNegativeTests,
     GivenInvalidModuleHandleWhileCallingzeModuleDestroyThenInvalidNullHandleIsReturned) {
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE, zeModuleDestroy(nullptr));
 }
 
-TEST(
+LZT_TEST(
     ModuleCreateNegativeTests,
     GivenNonSPIRVModuleFormatWhenUsingModuleCreateExtendedDescriptorThenInvalidArgumentIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -140,7 +140,7 @@ protected:
   ze_command_queue_handle_t cmd_queue_;
 };
 
-TEST_F(
+LZT_TEST_F(
     ModuleNegativeLocalMemoryTests,
     GivenKernelWithSharedLocalMemoryLargerThanMaxSharedLocalMemorySizeThenOutOfMemoryErrorIsReturned) {
   std::string kernel_name = "single_local";
@@ -167,18 +167,17 @@ TEST_F(
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestGroupSize(function, 1, 1, 1, &group_size_x,
-                                     &group_size_y, &group_size_z));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSuggestGroupSize(
+      function, 1, 1, 1, &group_size_x, &group_size_y, &group_size_z));
 
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
+  EXPECT_ZE_RESULT_SUCCESS(
+
       zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
 
   int i = 0;
   for (auto arg : args) {
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
+    EXPECT_ZE_RESULT_SUCCESS(
+
         zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));
   }
 

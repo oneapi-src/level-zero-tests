@@ -100,7 +100,7 @@ static void run_child_process(uint32_t num_devices,
   }
 }
 
-TEST(
+LZT_TEST(
     TestDeviceHierarchy,
     GivenDeviceHierarchyFlatThenWhenGettingDevicesThenCorrectNumberOfDevicesReturnedFromRootAndSubDevices) {
   auto device_count = lzt::get_ze_device_count();
@@ -120,7 +120,7 @@ TEST(
   run_child_process(total_expected_devices, "FLAT");
 }
 
-TEST(
+LZT_TEST(
     TestDeviceHierarchy,
     GivenDeviceHierarchyCombinedThenWhenGettingDevicesThenCorrectNumberOfDevicesReturnedFromRootAndSubDevices) {
   auto device_count = lzt::get_ze_device_count();
@@ -140,7 +140,7 @@ TEST(
   run_child_process(total_expected_devices, "COMBINED");
 }
 
-TEST(
+LZT_TEST(
     TestDeviceHierarchy,
     GivenDeviceHierarchyCompositeThenWhenGettingDevicesThenCorrectNumberOfDevicesReturnedFromRootAndSubDevices) {
   auto device_count = lzt::get_ze_device_count();

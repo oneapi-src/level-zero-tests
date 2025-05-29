@@ -6,7 +6,7 @@
  *
  */
 
-#include "test_harness/test_harness_driver_info.hpp"
+#include "test_harness/test_harness.hpp"
 #include <level_zero/ze_api.h>
 #include "logging/logging.hpp"
 #include "gtest/gtest.h"
@@ -20,11 +20,11 @@ driverInfo_t *collect_driver_info(uint32_t &driverInfoCount_) {
   LOG_INFO << "collect driver information";
 
   ze_driver_handle_t *driver_handles;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&driver_count, NULL));
+  EXPECT_ZE_RESULT_SUCCESS(zeDriverGet(&driver_count, NULL));
   EXPECT_NE(0, driver_count);
 
   driver_handles = new ze_driver_handle_t[driver_count];
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&driver_count, driver_handles));
+  EXPECT_ZE_RESULT_SUCCESS(zeDriverGet(&driver_count, driver_handles));
 
   LOG_INFO << "number of drivers " << driver_count;
 
@@ -36,12 +36,12 @@ driverInfo_t *collect_driver_info(uint32_t &driverInfoCount_) {
     driver_info[i].driver_handle = driver_handles[i];
 
     uint32_t device_count = 0;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGet(driver_handles[i], &device_count, NULL));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeDeviceGet(driver_handles[i], &device_count, NULL));
     EXPECT_NE(0, device_count);
     driver_info[i].device_handles = new ze_device_handle_t[device_count];
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGet(driver_handles[i], &device_count,
-                                             driver_info[i].device_handles));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGet(driver_handles[i], &device_count,
+                                         driver_info[i].device_handles));
     driver_info[i].number_device_handles = device_count;
 
     LOG_INFO << "there are " << device_count << " devices in driver " << i;
@@ -55,9 +55,9 @@ driverInfo_t *collect_driver_info(uint32_t &driverInfoCount_) {
     }
 
     for (uint32_t j = 0; j < device_count; j++) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDeviceGetProperties(driver_info[i].device_handles[j],
-                                      &driver_info[i].device_properties[j]));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeDeviceGetProperties(driver_info[i].device_handles[j],
+                                &driver_info[i].device_properties[j]));
       LOG_INFO << "zeDeviceGetProperties device " << j;
       LOG_INFO << " name " << driver_info[i].device_properties[j].name;
     }
@@ -71,11 +71,9 @@ driverInfo_t *collect_driver_info(uint32_t &driverInfoCount_) {
       driver_info[i].device_memory_properties[j].pNext = nullptr;
       driver_info[i].device_memory_properties[j].stype =
           ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDeviceGetMemoryProperties(
-                    driver_info[i].device_handles[j],
-                    &device_memory_properties_count,
-                    &driver_info[i].device_memory_properties[j]));
+      EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetMemoryProperties(
+          driver_info[i].device_handles[j], &device_memory_properties_count,
+          &driver_info[i].device_memory_properties[j]));
       LOG_INFO << "ze_device_memory_properties_t device " << j;
       LOG_INFO << "totalSize "
                << driver_info[i].device_memory_properties[j].totalSize;

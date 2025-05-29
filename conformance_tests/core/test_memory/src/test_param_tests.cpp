@@ -41,8 +41,9 @@ protected:
   memory_test_type mtt_;
 };
 
-TEST_P(zeMemAccessTests,
-       GivenMemAllocationWhenWritingAndReadingBackOnHostThenCorrectDataIsRead) {
+LZT_TEST_P(
+    zeMemAccessTests,
+    GivenMemAllocationWhenWritingAndReadingBackOnHostThenCorrectDataIsRead) {
   lzt::write_data_pattern(memory_, size_, 1);
   lzt::validate_data_pattern(memory_, size_, 1);
 }
@@ -52,7 +53,7 @@ protected:
   lzt::zeCommandBundle cmd_bundle_;
 };
 
-TEST_P(
+LZT_TEST_P(
     zeMemAccessCommandListTests,
     GivenMemoryAllocationWhenCopyingAndReadingBackOnHostThenCorrectDataIsRead) {
   lzt::write_data_pattern(memory_, size_, 1);
@@ -73,8 +74,8 @@ TEST_P(
   lzt::destroy_command_bundle(cmd_bundle_);
 }
 
-TEST_P(zeMemAccessCommandListTests,
-       GivenAllocationSettingAndReadingBackOnHostThenCorrectDataIsRead) {
+LZT_TEST_P(zeMemAccessCommandListTests,
+           GivenAllocationSettingAndReadingBackOnHostThenCorrectDataIsRead) {
   bool is_immediate = std::get<2>(GetParam());
   cmd_bundle_ = lzt::create_command_bundle(is_immediate);
   const uint8_t value = 0x55;
@@ -90,8 +91,9 @@ TEST_P(zeMemAccessCommandListTests,
   lzt::destroy_command_bundle(cmd_bundle_);
 }
 
-TEST_P(zeMemAccessTests,
-       GivenAllocationWhenWritingAndReadingBackOnDeviceThenCorrectDataIsRead) {
+LZT_TEST_P(
+    zeMemAccessTests,
+    GivenAllocationWhenWritingAndReadingBackOnDeviceThenCorrectDataIsRead) {
   bool is_immediate = std::get<2>(GetParam());
   lzt::write_data_pattern(memory_, size_, 1);
   std::string module_name = "unified_mem_test.spv";

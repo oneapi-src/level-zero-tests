@@ -16,8 +16,8 @@ namespace lzt = level_zero_tests;
 namespace level_zero_tests {
 uint32_t get_power_handle_count(zes_device_handle_t device) {
   uint32_t p_count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumPowerDomains(device, &p_count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesDeviceEnumPowerDomains(device, &p_count, nullptr));
   EXPECT_GE(p_count, 0);
   return p_count;
 }
@@ -26,22 +26,21 @@ std::vector<zes_pwr_handle_t> get_power_handles(zes_device_handle_t device,
   if (p_count == 0)
     p_count = get_power_handle_count(device);
   std::vector<zes_pwr_handle_t> p_power_handles(p_count);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumPowerDomains(
-                                   device, &p_count, p_power_handles.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesDeviceEnumPowerDomains(device, &p_count, p_power_handles.data()));
   return p_power_handles;
 }
 zes_pwr_handle_t get_card_power_handle(zes_device_handle_t device) {
   zes_pwr_handle_t p_powerdomain_handle = {};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceGetCardPowerDomain(device, &p_powerdomain_handle));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesDeviceGetCardPowerDomain(device, &p_powerdomain_handle));
   EXPECT_NE(nullptr, p_powerdomain_handle);
   return p_powerdomain_handle;
 }
 zes_power_properties_t get_power_properties(zes_pwr_handle_t pPowerHandle) {
   zes_power_properties_t pProperties = {ZES_STRUCTURE_TYPE_POWER_PROPERTIES,
                                         nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesPowerGetProperties(pPowerHandle, &pProperties));
+  EXPECT_ZE_RESULT_SUCCESS(zesPowerGetProperties(pPowerHandle, &pProperties));
   return pProperties;
 }
 ze_result_t get_power_limit_count(zes_pwr_handle_t hPower, uint32_t *pCount) {
@@ -106,7 +105,7 @@ ze_result_t set_power_limits(zes_pwr_handle_t pPowerHandle,
 }
 void get_power_energy_counter(zes_pwr_handle_t pPowerHandle,
                               zes_power_energy_counter_t *pEnergy) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesPowerGetEnergyCounter(pPowerHandle, pEnergy));
+  EXPECT_ZE_RESULT_SUCCESS(zesPowerGetEnergyCounter(pPowerHandle, pEnergy));
 }
 std::vector<zes_power_energy_counter_t>
 get_power_energy_counter(std::vector<zes_pwr_handle_t> &power_handles) {
@@ -126,7 +125,6 @@ ze_result_t get_power_energy_threshold(zes_pwr_handle_t pPowerHandle,
 }
 void set_power_energy_threshold(zes_pwr_handle_t pPowerHandle,
                                 double threshold) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesPowerSetEnergyThreshold(pPowerHandle, threshold));
+  EXPECT_ZE_RESULT_SUCCESS(zesPowerSetEnergyThreshold(pPowerHandle, threshold));
 }
 } // namespace level_zero_tests

@@ -23,23 +23,21 @@ protected:
   void SetUp() override { memory_ = lzt::allocate_device_memory(size_); }
 
   void TearDown() override {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemFree(lzt::get_default_context(), memory_));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemFree(lzt::get_default_context(), memory_));
   }
 
   void *memory_ = nullptr;
   const size_t size_ = 1024;
 };
 
-TEST_F(zeContextMakeResidentTests,
-       GivenDeviceMemoryWhenMakingMemoryResidentThenSuccessIsReturned) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeContextMakeMemoryResident(
-                lzt::get_default_context(),
-                lzt::zeDevice::get_instance()->get_device(), memory_, size_));
+LZT_TEST_F(zeContextMakeResidentTests,
+           GivenDeviceMemoryWhenMakingMemoryResidentThenSuccessIsReturned) {
+  EXPECT_ZE_RESULT_SUCCESS(zeContextMakeMemoryResident(
+      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+      memory_, size_));
 }
 
-TEST(
+LZT_TEST(
     zeContextMakeResidentMultiDeviceTests,
     GivenDeviceMemoryWhenMakingMemoryResidentOnMultipleDevicesWithP2PSupportThenSuccessIsReturned) {
   auto devices = lzt::get_ze_devices(lzt::get_default_driver());
@@ -62,15 +60,13 @@ TEST(
       } else {
         void *memory = lzt::allocate_device_memory(size, 1, 0, devices[j],
                                                    lzt::get_default_context());
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeContextMakeMemoryResident(lzt::get_default_context(),
-                                              devices[i], memory, size));
+        EXPECT_ZE_RESULT_SUCCESS(zeContextMakeMemoryResident(
+            lzt::get_default_context(), devices[i], memory, size));
         lzt::free_memory(memory);
         memory = lzt::allocate_device_memory(size, 1, 0, devices[i],
                                              lzt::get_default_context());
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeContextMakeMemoryResident(lzt::get_default_context(),
-                                              devices[j], memory, size));
+        EXPECT_ZE_RESULT_SUCCESS(zeContextMakeMemoryResident(
+            lzt::get_default_context(), devices[j], memory, size));
         lzt::free_memory(memory);
       }
     }
@@ -82,7 +78,7 @@ typedef struct _node {
   struct _node *next;
 } node;
 
-TEST_F(
+LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedMemoryWhenMakingMemoryResidentUsingAPIThenMemoryIsMadeResidentAndUpdatedCorrectly) {
 
@@ -170,7 +166,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedSystemMemoryWhenMakingMemoryResidentUsingAPIThenMemoryIsMadeResidentAndUpdatedCorrectly) {
 
@@ -332,13 +328,13 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagThenMemoryIsMadeResidentAndUpdatedCorrectly) {
   RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagOnImmediateCmdListThenMemoryIsMadeResidentAndUpdatedCorrectly) {
   RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(true);
@@ -418,13 +414,13 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagThenMemoryIsMadeResidentAndUpdatedCorrectly) {
   RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagOnImmediateCmdListThenMemoryIsMadeResidentAndUpdatedCorrectly) {
   RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(true);
@@ -432,51 +428,47 @@ TEST_F(
 
 class zeContextEvictMemoryTests : public zeContextMakeResidentTests {};
 
-TEST_F(
+LZT_TEST_F(
     zeContextEvictMemoryTests,
     GivenResidentDeviceMemoryWhenEvictingResidentMemoryThenSuccessIsReturned) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeContextMakeMemoryResident(
-                lzt::get_default_context(),
-                lzt::zeDevice::get_instance()->get_device(), memory_, size_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeContextEvictMemory(lzt::get_default_context(),
-                                 lzt::zeDevice::get_instance()->get_device(),
-                                 memory_, size_));
+  EXPECT_ZE_RESULT_SUCCESS(zeContextMakeMemoryResident(
+      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+      memory_, size_));
+  EXPECT_ZE_RESULT_SUCCESS(zeContextEvictMemory(
+      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+      memory_, size_));
 }
 
 class zeDeviceMakeImageResidentTests : public testing::Test {};
 
-TEST_F(zeDeviceMakeImageResidentTests,
-       GivenDeviceImageWhenMakingImageResidentThenSuccessIsReturned) {
+LZT_TEST_F(zeDeviceMakeImageResidentTests,
+           GivenDeviceImageWhenMakingImageResidentThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
   lzt::zeImageCreateCommon img;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextMakeImageResident(
-                                   lzt::get_default_context(),
-                                   lzt::zeDevice::get_instance()->get_device(),
-                                   img.dflt_device_image_));
+  EXPECT_ZE_RESULT_SUCCESS(zeContextMakeImageResident(
+      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+      img.dflt_device_image_));
 }
 
 class zeContextEvictImageTests : public zeDeviceMakeImageResidentTests {};
 
-TEST_F(zeContextEvictImageTests,
-       GivenResidentDeviceImageWhenEvictingResidentImageThenSuccessIsReturned) {
+LZT_TEST_F(
+    zeContextEvictImageTests,
+    GivenResidentDeviceImageWhenEvictingResidentImageThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
   lzt::zeImageCreateCommon img;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextMakeImageResident(
-                                   lzt::get_default_context(),
-                                   lzt::zeDevice::get_instance()->get_device(),
-                                   img.dflt_device_image_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeContextEvictImage(lzt::get_default_context(),
-                                lzt::zeDevice::get_instance()->get_device(),
-                                img.dflt_device_image_));
+  EXPECT_ZE_RESULT_SUCCESS(zeContextMakeImageResident(
+      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+      img.dflt_device_image_));
+  EXPECT_ZE_RESULT_SUCCESS(zeContextEvictImage(
+      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+      img.dflt_device_image_));
 }
 
 } // namespace

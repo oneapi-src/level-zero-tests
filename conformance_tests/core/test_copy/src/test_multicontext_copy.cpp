@@ -21,7 +21,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(
+LZT_TEST(
     zeP2PContextCopyTests,
     GivenMultipleDevicesInDifferentContextsWhenAttemptingToUseMemoryThenMemoryIsAccessible) {
 
