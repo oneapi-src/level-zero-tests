@@ -1349,10 +1349,12 @@ TEST_F(
 
 class zeCommandListAppendMemoryPrefetchTests : public ::testing::Test {
 protected:
-  void RunGivenMemoryPrefetchWhenWritingFromDeviceTest(bool is_immediate) {
+  void RunGivenMemoryPrefetchWhenWritingFromDeviceTest(bool is_immediate,
+                                                       bool is_shared_system) {
     const size_t size = 16;
     const uint8_t value = 0x55;
-    void *memory = allocate_shared_memory(size);
+    void *memory = lzt::allocate_shared_memory_with_allocator_selector(
+        size, is_shared_system);
     memset(memory, 0xaa, size);
     auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
@@ -1366,20 +1368,34 @@ protected:
       ASSERT_EQ(value, ((uint8_t *)memory)[i]);
     }
 
-    free_memory(memory);
+    free_memory_with_allocator_selector(memory, is_shared_system);
     lzt::destroy_command_bundle(cmd_bundle);
   }
 };
 
 TEST_F(zeCommandListAppendMemoryPrefetchTests,
        GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHost) {
-  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(false);
+  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(false, false);
 }
 
 TEST_F(
     zeCommandListAppendMemoryPrefetchTests,
     GivenMemoryPrefetchWhenWritingFromDeviceOnImmediateCmdListThenDataisCorrectFromHost) {
-  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(true);
+  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(true, false);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryPrefetchTests,
+    GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHostWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(false, true);
+}
+
+TEST_F(
+    zeCommandListAppendMemoryPrefetchTests,
+    GivenMemoryPrefetchWhenWritingFromDeviceOnImmediateCmdListThenDataisCorrectFromHostWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(true, true);
 }
 
 class zeCommandListAppendMemAdviseTests
