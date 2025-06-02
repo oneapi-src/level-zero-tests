@@ -408,4 +408,75 @@ TEST_F(
     memoryThread.join();
   }
 }
+
+TEST_F(MEMORY_TEST,
+       GivenWorkloadWhenQueryingMemoryBandwidthCountersThenCountersIncrease) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto mem_handles = lzt::get_mem_handles(device, count);
+
+    if (count == 0) {
+      LOG_WARNING << "No memory handles found on this device!";
+      continue;
+    }
+
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    device = core_device;
+#endif // USE_ZESINIT
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetProperties(device, &deviceProperties));
+    std::cout << "test device name " << deviceProperties.name << " uuid "
+              << lzt::to_string(deviceProperties.uuid);
+
+    // Allocate device memory for workload
+    const size_t buffer_size = 32 * 1024 * 1024;
+    ze_device_mem_alloc_desc_t device_desc = {};
+    device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+    device_desc.ordinal = 0;
+    device_desc.flags = 0;
+
+    void *src_ptr = lzt::allocate_device_memory(buffer_size, 1, 0, device,
+                                                lzt::get_default_context());
+    void *dst_ptr = lzt::allocate_device_memory(buffer_size, 1, 0, device,
+                                                lzt::get_default_context());
+
+    ASSERT_NE(src_ptr, nullptr);
+    ASSERT_NE(dst_ptr, nullptr);
+
+    for (auto mem_handle : mem_handles) {
+      ASSERT_NE(nullptr, mem_handle);
+
+      // Get initial bandwidth counters
+      zes_mem_bandwidth_t bandwidth_before = {};
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zesMemoryGetBandwidth(mem_handle, &bandwidth_before));
+
+      // Run the workload
+      ze_result_t result = copy_workload(device, &device_desc, src_ptr, dst_ptr,
+                                         static_cast<int32_t>(buffer_size));
+      EXPECT_EQ(result, ZE_RESULT_SUCCESS);
+
+      // Get bandwidth counters after workload
+      zes_mem_bandwidth_t bandwidth_after = {};
+      EXPECT_EQ(ZE_RESULT_SUCCESS,
+                zesMemoryGetBandwidth(mem_handle, &bandwidth_after));
+
+      // Validate that read/write counters have increased
+      EXPECT_GE(bandwidth_after.readCounter, bandwidth_before.readCounter)
+          << "Read counter did not increase after workload";
+      EXPECT_GE(bandwidth_after.writeCounter, bandwidth_before.writeCounter)
+          << "Write counter did not increase after workload";
+    }
+
+    // Free device memory
+    lzt::free_memory(src_ptr);
+    lzt::free_memory(dst_ptr);
+  }
+}
 } // namespace
