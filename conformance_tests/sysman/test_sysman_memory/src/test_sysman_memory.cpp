@@ -27,6 +27,58 @@ class MemoryModuleTest : public lzt::SysmanCtsClass {};
 #define MEMORY_TEST MemoryModuleTest
 #endif // USE_ZESINIT
 
+ze_result_t copy_workload(ze_device_handle_t device,
+                          ze_device_mem_alloc_desc_t *device_desc,
+                          void *src_ptr, void *dst_ptr, int32_t local_size) {
+
+  ze_result_t result = ZE_RESULT_SUCCESS;
+  void *src_buffer = src_ptr;
+  void *dst_buffer = dst_ptr;
+  int32_t offset = 0;
+
+  ze_module_handle_t module = lzt::create_module(
+      device, "copy_module.spv", ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_kernel_handle_t function = lzt::create_function(module, "copy_data");
+
+  lzt::set_group_size(function, 1, 1, 1);
+  lzt::set_argument_value(function, 0, sizeof(src_buffer), &src_buffer);
+  lzt::set_argument_value(function, 1, sizeof(dst_buffer), &dst_buffer);
+  lzt::set_argument_value(function, 2, sizeof(int32_t), &offset);
+  lzt::set_argument_value(function, 3, sizeof(int32_t), &local_size);
+
+  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
+
+  const int32_t group_count_x = 1;
+  const int32_t group_count_y = 1;
+  ze_group_count_t tg;
+  tg.groupCountX = group_count_x;
+  tg.groupCountY = group_count_y;
+  tg.groupCountZ = 1;
+
+  result = zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0,
+                                           nullptr);
+  if (result != ZE_RESULT_SUCCESS) {
+    return result;
+  }
+
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+
+  result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_list, nullptr);
+  if (result != ZE_RESULT_SUCCESS) {
+    return result;
+  }
+
+  lzt::synchronize(cmd_q, UINT64_MAX);
+  lzt::destroy_command_queue(cmd_q);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_function(function);
+  lzt::destroy_module(module);
+
+  return result;
+}
+
 TEST_F(
     MEMORY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
