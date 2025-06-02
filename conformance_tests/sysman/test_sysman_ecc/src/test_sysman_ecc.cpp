@@ -185,4 +185,61 @@ TEST_F(
   }
 }
 
+TEST_F(
+    ECC_TEST,
+    GIvenValidDeviceHandleWhenEccGetDefaultStateIsQueriedThenValidValuesAreReturned) {
+  for (const auto &device : devices) {
+    auto available = lzt::get_ecc_available(device);
+    auto configurable = lzt::get_ecc_configurable(device);
+    if (available == static_cast<ze_bool_t>(true) && configurable == static_cast<ze_bool_t>(true)) {
+      zes_device_ecc_properties_t eccState = {
+          ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceGetEccState(device, &eccState));
+      EXPECT_GE(eccState.currentState, ZES_DEVICE_ECC_STATE_UNAVAILABLE);
+      EXPECT_LE(eccState.currentState, ZES_DEVICE_ECC_STATE_DISABLED);
+      EXPECT_GE(eccState.pendingState, ZES_DEVICE_ECC_STATE_UNAVAILABLE);
+      EXPECT_LE(eccState.pendingState, ZES_DEVICE_ECC_STATE_DISABLED);
+      EXPECT_GE(eccState.pendingAction, ZES_DEVICE_ACTION_NONE);
+      EXPECT_LE(eccState.pendingAction, ZES_DEVICE_ACTION_COLD_SYSTEM_REBOOT);
+    } else {
+      LOG_INFO << "ECC is not available or not configurable";
+   }
+ }
+}
+
+TEST_F(
+    ECC_TEST,
+    GIvenValidDeviceHandleAndECCAvailableWhenEccGetDefaultStateIsQueriedAndSetThenDefaultValuesAreReturnedFromGetEccAPI) {
+  for (const auto &device : devices) {
+    //Check if ECC is available and configurable
+    auto available = lzt::get_ecc_available(device);
+    auto configurable = lzt::get_ecc_configurable(device);
+    if (available == static_cast<ze_bool_t>(true) && configurable == static_cast<ze_bool_t>(true)) {
+      //Get ECC state with defaults
+      zes_device_ecc_properties_t eccState = {
+          ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceGetEccState(device, &eccState));
+
+      //Set ECC state with default settings
+      zes_device_ecc_desc_t newState = {ZES_STRUCTURE_TYPE_DEVICE_ECC_DESC, nullptr};
+      newState.state = eccState.currentState;
+      zes_device_ecc_properties_t setState = {
+          ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceSetEccState(device, &newState, &setState));
+
+      //Get ECC state without defaults
+      zes_device_ecc_properties_t eccStateAfterSet = {
+          ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, nullptr};
+      EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceGetEccState(device, &eccStateAfterSet));
+
+      //Check that returned values match defaults
+      EXPECT_EQ(eccStateAfterSet.currentState, eccState.currentState);
+      EXPECT_EQ(eccStateAfterSet.pendingState, eccState.pendingState);
+      EXPECT_EQ(eccStateAfterSet.pendingAction, eccState.pendingAction);
+    } else {
+      LOG_INFO << "ECC is not available or not configurable";
+    }
+  }
+}
+
 } // namespace
