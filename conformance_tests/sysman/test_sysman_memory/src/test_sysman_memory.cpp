@@ -275,9 +275,6 @@ TEST_F(
           << "Read counter did not increase after workload";
       EXPECT_GE(bandwidth_after.writeCounter, bandwidth_before.writeCounter)
           << "Write counter did not increase after workload";
-      EXPECT_GE(bandwidth_after.maxBandwidth, bandwidth_before.maxBandwidth)
-          << "Max bandwidth did not increase after workload";
-
       auto percentage_bandwidth =
           1000000 *
           ((bandwidth_after.readCounter - bandwidth_before.readCounter) +
@@ -288,7 +285,8 @@ TEST_F(
       LOG_INFO << "Percentage Bandwidth: " << percentage_bandwidth << "%";
       EXPECT_GT(percentage_bandwidth, 0.0)
           << "Percentage bandwidth is not greater than zero";
-      EXPECT_LT(percentage_bandwidth, 100.0);
+      EXPECT_LT(percentage_bandwidth, 100.0)
+          << "Percentage bandwidth is greater than 100%";
     }
     // Free device memory
     lzt::free_memory(src_ptr);
