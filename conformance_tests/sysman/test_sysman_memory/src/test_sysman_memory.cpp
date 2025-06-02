@@ -233,9 +233,9 @@ TEST_F(
     EXPECT_EQ(ZE_RESULT_SUCCESS,
               zeDeviceGetProperties(device, &deviceProperties));
     if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
-      std::cout << "test subdevice id " << deviceProperties.subdeviceId;
+      LOG_DEBUG << "test sub-device id: " << deviceProperties.subdeviceId;
     } else {
-      std::cout << "test device is a root device" << std::endl;
+      LOG_DEBUG << "test device is a root device";
     }
 
     // Allocate device memory for workload
@@ -258,10 +258,10 @@ TEST_F(
 
       // Get initial bandwidth counters
       auto bandwidth_before = lzt::get_mem_bandwidth(mem_handle);
-      EXPECT_LT(bandwidth_before.readCounter, UINT64_MAX);
-      EXPECT_LT(bandwidth_before.writeCounter, UINT64_MAX);
-      EXPECT_LT(bandwidth_before.maxBandwidth, UINT64_MAX);
-      EXPECT_LT(bandwidth_before.timestamp, UINT64_MAX);
+      EXPECT_GT(bandwidth_before.maxBandwidth, 0)
+          << "Max bandwidth is not greater than zero";
+      EXPECT_GT(bandwidth_before.timestamp, 0)
+          << "Timestamp is not greater than zero";
       // Run the workload
       ze_result_t result = copy_workload(device, &device_desc, src_ptr, dst_ptr,
                                          static_cast<int32_t>(buffer_size));
@@ -271,24 +271,25 @@ TEST_F(
       auto bandwidth_after = lzt::get_mem_bandwidth(mem_handle);
 
       // Validate that read/write counters have increased after workload
-      EXPECT_GE(bandwidth_after.readCounter, bandwidth_before.readCounter)
+      EXPECT_GT(bandwidth_after.readCounter, bandwidth_before.readCounter)
           << "Read counter did not increase after workload";
-      EXPECT_GE(bandwidth_after.writeCounter, bandwidth_before.writeCounter)
+      EXPECT_GT(bandwidth_after.writeCounter, bandwidth_before.writeCounter)
           << "Write counter did not increase after workload";
-      EXPECT_GE(bandwidth_after.maxBandwidth, bandwidth_before.maxBandwidth)
-          << "Max bandwidth did not increase after workload";
-
-      auto percentage_bandwidth =
-          1000000 *
+      EXPECT_GT(bandwidth_after.timestamp, bandwidth_before.timestamp)
+          << "Timestamp did not increase after workload";
+      double percentage_bandwidth =
+          1000000.0 *
           ((bandwidth_after.readCounter - bandwidth_before.readCounter) +
            (bandwidth_after.writeCounter - bandwidth_before.writeCounter)) /
-          (bandwidth_after.maxBandwidth *
-           (bandwidth_after.timestamp - bandwidth_before.timestamp));
+          (static_cast<double>(bandwidth_after.maxBandwidth) *
+           (static_cast<double>(bandwidth_after.timestamp) -
+            static_cast<double>(bandwidth_before.timestamp)));
       // Validate that percentage bandwidth is greater than zero
       LOG_INFO << "Percentage Bandwidth: " << percentage_bandwidth << "%";
       EXPECT_GT(percentage_bandwidth, 0.0)
           << "Percentage bandwidth is not greater than zero";
-      EXPECT_LT(percentage_bandwidth, 100.0);
+      EXPECT_LE(percentage_bandwidth, 100.0)
+          << "Percentage bandwidth is greater than 100%";
     }
     // Free device memory
     lzt::free_memory(src_ptr);
