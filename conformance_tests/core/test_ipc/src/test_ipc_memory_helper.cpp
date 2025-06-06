@@ -64,6 +64,60 @@ static void child_device_access_test(int size, ze_ipc_memory_flags_t flags,
   }
 }
 
+static void child_subdevice_access_test(int size, ze_ipc_memory_flags_t flags,
+                                        bool is_immediate) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+  auto sub_devices = lzt::get_ze_sub_devices(device);
+
+  auto sub_device_count = sub_devices.size();
+
+  ze_ipc_mem_handle_t ipc_handle;
+  void *memory = nullptr;
+
+  bipc::named_semaphore semaphore(bipc::open_only, "ipc_memory_test_semaphore");
+  // Signal parent to send IPC handle
+  semaphore.post();
+
+  int ipc_descriptor =
+      lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
+  memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
+         sizeof(ipc_descriptor));
+
+  // Open IPC buffer with root device
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
+
+  void *buffer = lzt::allocate_host_memory(size, 1, context);
+  memset(buffer, 0, size);
+
+  // For each sub device found, use IPC buffer in a copy operation and validate
+  for (auto i = 0; i < sub_device_count; i++) {
+    auto cmd_bundle =
+        lzt::create_command_bundle(context, sub_devices[i], is_immediate);
+
+    lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+    LOG_DEBUG << "[Child] Validating buffer received correctly";
+    lzt::validate_data_pattern(buffer, size, 1);
+    lzt::destroy_command_bundle(cmd_bundle);
+  }
+
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
+  lzt::free_memory(context, buffer);
+  lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+#endif
+
 static void child_device_access_test_opaque(int size,
                                             ze_ipc_memory_flags_t flags,
                                             bool is_immediate,
@@ -143,59 +197,6 @@ static void child_subdevice_access_test_opaque(int size,
   }
 }
 
-static void child_subdevice_access_test(int size, ze_ipc_memory_flags_t flags,
-                                        bool is_immediate) {
-  auto driver = lzt::get_default_driver();
-  auto context = lzt::create_context(driver);
-  auto device = lzt::zeDevice::get_instance()->get_device();
-  auto sub_devices = lzt::get_ze_sub_devices(device);
-
-  auto sub_device_count = sub_devices.size();
-
-  ze_ipc_mem_handle_t ipc_handle;
-  void *memory = nullptr;
-
-  bipc::named_semaphore semaphore(bipc::open_only, "ipc_memory_test_semaphore");
-  // Signal parent to send IPC handle
-  semaphore.post();
-
-  int ipc_descriptor =
-      lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
-  memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
-         sizeof(ipc_descriptor));
-
-  // Open IPC buffer with root device
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
-
-  void *buffer = lzt::allocate_host_memory(size, 1, context);
-  memset(buffer, 0, size);
-
-  // For each sub device found, use IPC buffer in a copy operation and validate
-  for (auto i = 0; i < sub_device_count; i++) {
-    auto cmd_bundle =
-        lzt::create_command_bundle(context, sub_devices[i], is_immediate);
-
-    lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
-
-    LOG_DEBUG << "[Child] Validating buffer received correctly";
-    lzt::validate_data_pattern(buffer, size, 1);
-    lzt::destroy_command_bundle(cmd_bundle);
-  }
-
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
-  lzt::free_memory(context, buffer);
-  lzt::destroy_context(context);
-
-  if (::testing::Test::HasFailure()) {
-    exit(1);
-  } else {
-    exit(0);
-  }
-}
-
 int main() {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -214,8 +215,8 @@ int main() {
                                        bipc::read_write);
       break;
     } catch (const bipc::interprocess_exception &ex) {
-      sched_yield();
-      sleep(1);
+      std::this_thread::yield();
+      std::this_thread::sleep_for(std::chrono::seconds(1));
       if (++count == retries)
         throw ex;
     }
@@ -232,8 +233,10 @@ int main() {
                                       shared_data.is_immediate,
                                       shared_data.ipc_handle);
     } else {
+#ifdef __linux__
       child_device_access_test(shared_data.size, shared_data.flags,
                                shared_data.is_immediate);
+#endif
     }
     break;
   case TEST_SUBDEVICE_ACCESS:
@@ -256,6 +259,3 @@ int main() {
   }
   exit(0);
 }
-#else // Windows
-int main() { exit(0); }
-#endif
