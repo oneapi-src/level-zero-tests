@@ -7,11 +7,11 @@
  */
 #ifdef __linux__
 #include <unistd.h>
+#endif
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/sync/named_semaphore.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/process.hpp>
-#endif
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -23,12 +23,11 @@
 
 #include <level_zero/ze_api.h>
 
-#ifdef __linux__
-
 namespace bipc = boost::interprocess;
 
 namespace {
 
+#ifdef __linux__
 static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
                                     bool reserved, ze_ipc_memory_flags_t flags,
                                     bool is_immediate) {
@@ -105,6 +104,7 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
 }
+#endif // __linux__
 
 static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
                                            int size, bool reserved,
@@ -120,7 +120,18 @@ static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
 
   bipc::shared_memory_object::remove("ipc_memory_test");
   // launch child
-  boost::process::child c("./ipc/test_ipc_memory_helper");
+#ifdef _WIN32
+  std::string helper_path = ".\\ipc\\test_ipc_memory_helper.exe";
+#else
+  std::string helper_path = "./ipc/test_ipc_memory_helper";
+#endif
+  boost::process::child c;
+  try {
+    c = boost::process::child(helper_path);
+  } catch (const boost::process::process_error &e) {
+    std::cerr << "Failed to launch child process: " << e.what() << std::endl;
+    throw;
+  }
 
   ze_ipc_mem_handle_t ipc_handle = {};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_memory_test",
@@ -177,6 +188,7 @@ static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
   lzt::destroy_context(context);
 }
 
+#ifdef __linux__
 TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
@@ -246,6 +258,7 @@ TEST(
   run_ipc_mem_access_test(TEST_SUBDEVICE_ACCESS, 4096, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
+#endif // __linux__
 
 TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
@@ -318,8 +331,6 @@ TEST(
 }
 
 } // namespace
-
-#endif // __linux__
 
 // We put the main here because L0 doesn't currently specify how
 // zeInit should be handled with fork(), so each process must call
