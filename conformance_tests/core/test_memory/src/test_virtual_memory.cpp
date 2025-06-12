@@ -77,23 +77,33 @@ TEST_F(
   size_t firstAllocSize = allocationSize * 8;
   lzt::query_page_size(context, device, firstAllocSize, &pageSize);
   firstAllocSize = lzt::create_page_aligned_size(firstAllocSize, pageSize);
+  std::cout << "First allocation size: " << firstAllocSize
+            << ", pageSize: " << pageSize << std::endl;
 
-  uint64_t *pStart = nullptr;
+  void *pStart = nullptr;
   void *firstReservedVirtualMemory = nullptr;
   lzt::virtual_memory_reservation(context, pStart, firstAllocSize,
                                   &firstReservedVirtualMemory);
   EXPECT_NE(nullptr, firstReservedVirtualMemory);
+  std::cout << "First reserved virtual memory: "
+            << reinterpret_cast<size_t>(firstReservedVirtualMemory)
+            << std::endl;
 
-  size_t actualAllocSize = allocationSize * 6;
+  size_t actualAllocSize = allocationSize * 1;
   lzt::query_page_size(context, device, actualAllocSize, &pageSize);
   actualAllocSize = lzt::create_page_aligned_size(actualAllocSize, pageSize);
+  std::cout << "Actual allocation size: " << actualAllocSize
+            << ", pageSize: " << pageSize << std::endl;
 
-  pStart = reinterpret_cast<uint64_t *>(
-      reinterpret_cast<size_t>(firstReservedVirtualMemory) + firstAllocSize);
+  pStart = reinterpret_cast<void *>(
+      reinterpret_cast<size_t>(firstReservedVirtualMemory) + 0*2*firstAllocSize);
   void *actualReservedVirtualMemory = nullptr;
   lzt::virtual_memory_reservation(context, pStart, actualAllocSize,
                                   &actualReservedVirtualMemory);
   EXPECT_NE(nullptr, actualReservedVirtualMemory);
+  std::cout << "Actual reserved virtual memory: "
+            << reinterpret_cast<size_t>(actualReservedVirtualMemory)
+            << ", pStart: " << reinterpret_cast<size_t>(pStart) << std::endl;
 
   auto difference =
       std::abs(reinterpret_cast<int64_t>(actualReservedVirtualMemory) -
