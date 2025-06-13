@@ -489,7 +489,7 @@ void ZeBandwidth::test_device2host(void) {
     }
 
     for (auto device_id : device_ids) {
-      benchmark->memoryAlloc(size, &device_buffers[device_id]);
+      benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
       benchmark->memoryAllocHost(size, &host_buffers[device_id]);
     }
 
