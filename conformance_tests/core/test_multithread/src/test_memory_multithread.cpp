@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 #include <thread>
 #include <array>
 
@@ -93,7 +94,7 @@ void all_memory_create_destroy_submissions_thread(
   void *shared_ptr = nullptr;
 
   for (uint32_t i = 0; i < thread_iters; i++) {
-    const uint8_t pattern_base = std::rand() % 0xFF;
+    const uint8_t pattern_base = lzt::generate_value<uint8_t>();
     const int pattern_size = 1;
 
     ze_fence_handle_t fence_ = lzt::create_fence(cq);
@@ -144,7 +145,7 @@ void perform_memory_manipulation() {
   void *host_ptr = nullptr;
   void *shared_ptr = nullptr;
 
-  const uint8_t pattern_base = std::rand() % 0xFF;
+  const uint8_t pattern_base = lzt::generate_value<uint8_t>();
   const int pattern_size = 1;
 
   lzt::zeEventPool ep;

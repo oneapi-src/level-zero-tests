@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "random/random.hpp"
 #include "logging/logging.hpp"
 #include <algorithm>
 #include <iostream>
@@ -45,7 +46,8 @@ std::vector<ze_module_handle_t> create_module_vector_and_log(
         std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
             .count());
   std::string filename_native =
-      filename_prefix + std::to_string(rand()) + ".native";
+      filename_prefix + std::to_string(lzt::generate_value<uint16_t>()) +
+      ".native";
   std::string filename_spirv = filename_prefix + ".spv";
 
   if (build_log) {
@@ -671,7 +673,8 @@ TEST_F(
         std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
             .count());
   std::string filename_native =
-      "module_add" + std::to_string(rand()) + ".native";
+      "module_add" + std::to_string(lzt::generate_value<uint16_t>()) +
+      ".native";
   std::string filename_spirv = "module_add.spv";
 
   ze_module_handle_t module =

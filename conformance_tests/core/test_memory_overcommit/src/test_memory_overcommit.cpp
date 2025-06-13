@@ -12,6 +12,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -443,7 +444,7 @@ protected:
     std::fill(host_found_output_buffer,
               host_found_output_buffer + output_count_, 0);
 
-    uint16_t pattern_base = std::rand() % 0xFFFF;
+    uint16_t pattern_base = lzt::generate_value<uint16_t>();
 
     LOG_INFO << "PREPARE TO RUN START";
     LOG_INFO << "totalSize " << totalSize;

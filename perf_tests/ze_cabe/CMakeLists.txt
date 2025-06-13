@@ -58,6 +58,8 @@ add_lzt_test(
    OpenCL::OpenCL
    level_zero_tests::logging
    level_zero_tests::image
+   level_zero_tests::utils
+   level_zero_tests::random
   KERNELS
    ze_cabe_simpleadd
    ze_cabe_mandelbrot

@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 
 namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
@@ -209,8 +210,8 @@ public:
       std::fill(host_found_output_buffer,
                 host_found_output_buffer + output_count_, 0);
 
-      uint16_t pattern_base = std::rand() % 0xFFFF;
-      uint16_t pattern_base_1 = std::rand() % 0xFFFF;
+      uint16_t pattern_base = lzt::generate_value<uint16_t>();
+      uint16_t pattern_base_1 = lzt::generate_value<uint16_t>();
 
       LOG_DEBUG << "PREPARE TO RUN START for device " << i;
       LOG_DEBUG << "totalSize " << totalSize;
@@ -365,7 +366,7 @@ public:
 
       LOG_DEBUG << "host touches pattern_buffer with new pattern";
       // host will touch the pattern buffer,
-      uint16_t pattern_base_2 = std::rand() % 0xFFFF;
+      uint16_t pattern_base_2 = lzt::generate_value<uint16_t>();
       LOG_DEBUG << "pattern_base " << pattern_base_1;
       for (uint32_t i = 0; i < pattern_memory_count; i++)
         gpu_pattern_buffer[i] = (i << (sizeof(uint16_t) * 8)) + pattern_base_2;
@@ -461,8 +462,8 @@ public:
       std::fill(host_found_output_buffer,
                 host_found_output_buffer + output_count_, 0);
 
-      uint16_t pattern_base = std::rand() % 0xFFFF;
-      uint16_t pattern_base_1 = std::rand() % 0xFFFF;
+      uint16_t pattern_base = lzt::generate_value<uint16_t>();
+      uint16_t pattern_base_1 = lzt::generate_value<uint16_t>();
 
       LOG_DEBUG << "PREPARE TO RUN START for device " << i;
       LOG_DEBUG << "totalSize " << totalSize;

@@ -14,6 +14,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -744,7 +745,7 @@ TEST_P(
         dev_copy_buf[i] = static_cast<uint8_t *>(lzt::allocate_device_memory(
             size, alignment, 0, 0, device, context));
         EXPECT_NE(nullptr, dev_copy_buf[i]);
-        pattern[i] = rand() & 0xff;
+        pattern[i] = lzt::generate_value<uint8_t>();
         host_verify_buf[i] = new uint8_t[size]();
         EXPECT_NE(nullptr, host_verify_buf[i]);
       }
