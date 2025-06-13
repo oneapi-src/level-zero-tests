@@ -1554,22 +1554,21 @@ void generate_param_value_info_list_from_param_info(
   std::vector<zet_metric_programmable_param_value_info_exp_t> value_info_desc(
       value_info_count);
 
-  uint32_t count = value_info_count;
-  uint32_t index;
-  for (index = 0; index < count; index++) {
-    zet_metric_programmable_param_value_info_exp_t *info = &value_info[index];
-    info->stype = ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
-    info->pNext = nullptr;
-
-    zet_metric_programmable_param_value_info_exp_t *desc =
-        &value_info_desc[index];
-    desc->stype = static_cast<zet_structure_type_t>(
-        ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP);
-    desc->pNext = nullptr;
-
-    if (include_value_info_desc) {
-      info->pNext = desc;
+  auto count = value_info_count;
+  uint32_t index = 0;
+  if (include_value_info_desc) {
+    for (auto &value : value_info_desc) {
+      value.stype = ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
+      value.pNext = nullptr;
     }
+  }
+  assert(value_info.size() == value_info_desc.size());
+  assert(count == value_info.size());
+  for (auto i = 0; i < static_cast<int>(count); i++) {
+    value_info[i].stype =
+        ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
+    value_info[i].pNext =
+        include_value_info_desc ? &value_info_desc[i] : nullptr;
   }
 
   result = zetMetricProgrammableGetParamValueInfoExp(
@@ -1586,17 +1585,17 @@ void generate_param_value_info_list_from_param_info(
   LOG_DEBUG << "param_info valueInfoCount is " << value_info_count;
 
   for (index = 0; index < count; index++) {
-    zet_metric_programmable_param_value_info_exp_t *info = &value_info[index];
-    print_value_info(value_info_type, info->valueInfo);
+    print_value_info(value_info_type, value_info[index].valueInfo);
     if (include_value_info_desc) {
       zet_metric_programmable_param_value_info_exp_t *desc =
           &value_info_desc[index];
-      size_t description_len;
-      description_len = strnlen(
-          desc->description, ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
+      const auto description_len =
+          strnlen(value_info_desc[index].description,
+                  ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
       EXPECT_LT(description_len,
                 ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
-      LOG_DEBUG << "value info description: " << desc->description;
+      LOG_DEBUG << "value info description: "
+                << value_info_desc[index].description;
     }
   }
   LOG_DEBUG << "LEAVE generate_param_value_info_list_from_param_info";
