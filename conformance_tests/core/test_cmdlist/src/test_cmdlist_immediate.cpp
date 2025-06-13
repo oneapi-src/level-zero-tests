@@ -10,6 +10,7 @@
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "random/random.hpp"
 #include "logging/logging.hpp"
 
 namespace lzt = level_zero_tests;
@@ -383,14 +384,14 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
     totalVal[n] = 0;
 
     for (int i = 0; i < (num_iterations - 1); i++) {
-      addval2 = rand() & 0xFFFF;
+      addval2 = lzt::generate_value<int>() & 0xFFFF;
       totalVal[n] += addval2;
       lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
 
       lzt::append_launch_function(cmdlist[n], kernel, &tg, nullptr, 0, nullptr);
     }
-    addval2 = rand() & 0xFFFF;
-    ;
+    addval2 = lzt::generate_value<int>() & 0xFFFF;
+
     totalVal[n] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
     if (n == 0) {

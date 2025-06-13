@@ -30,7 +30,7 @@ add_lzt_test(
     LINK_LIBRARIES
       level_zero_tests::logging
       level_zero_tests::utils
-      level_zero_tests::utils
+      level_zero_tests::random
     KERNELS
       test_fill_device_memory_usm
       test_usm_atomic)

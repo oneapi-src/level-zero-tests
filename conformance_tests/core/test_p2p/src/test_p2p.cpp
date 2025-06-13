@@ -9,10 +9,12 @@
 #include <array>
 
 #include "gtest/gtest.h"
+#include <cstdint>
 
 #include "utils/utils.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "random/random.hpp"
 #include "logging/logging.hpp"
 #include "../headers/test_p2p_common.hpp"
 
@@ -482,8 +484,8 @@ TEST_P(
     }
     uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
         mem_size_ + offset_, 1, 0, 0, dev_instance_[i].dev));
-    uint8_t value_before = rand() & 0xff;
-    uint8_t value_after = rand() & 0xff;
+    uint8_t value_before = lzt::generate_value<uint8_t>();
+    uint8_t value_after = lzt::generate_value<uint8_t>();
 
     // Set memory region on device i - 1 and copy to device i
 
@@ -544,8 +546,8 @@ TEST_P(
       }
       uint8_t *shr_mem = static_cast<uint8_t *>(lzt::allocate_shared_memory(
           mem_size_ + offset_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
-      uint8_t value_before = rand() & 0xff;
-      uint8_t value_after = rand() & 0xff;
+      uint8_t value_before = lzt::generate_value<uint8_t>();
+      uint8_t value_after = lzt::generate_value<uint8_t>();
       // Set memory region on device i - 1 and copy to device i
 
       lzt::append_memory_set(
@@ -1019,8 +1021,8 @@ TEST_P(
         lzt::allocate_shared_memory(mem_size_, 1, 0, 0, dev_instance_[i].dev));
 
     // random memory region on device i. Allow "space" for increment.
-    uint8_t value_before = rand() & 0x7f;
-    uint8_t value_after = rand() & 0x7f;
+    uint8_t value_before = lzt::generate_value<uint8_t>() & 0x7f;
+    uint8_t value_after = lzt::generate_value<uint8_t>() & 0x7f;
 
     lzt::append_memory_set(
         dev_instance_[i].cmd_bundle.list,
@@ -1092,8 +1094,8 @@ TEST_P(
           mem_size_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
 
       // random memory region on device i. Allow "space" for increment.
-      uint8_t value_before = rand() & 0x7f;
-      uint8_t value_after = rand() & 0x7f;
+      uint8_t value_before = lzt::generate_value<uint8_t>() & 0x7f;
+      uint8_t value_after = lzt::generate_value<uint8_t>() & 0x7f;
 
       lzt::append_memory_set(
           dev_instance_[i].sub_devices[j].cmd_bundle.list,
@@ -1166,8 +1168,8 @@ TEST_P(
         mem_size_ + offset_, 1, 0, 0, dev_instance_[i].dev));
 
     // random memory region on device i. Allow "space" for increment.
-    uint8_t value_before = rand() & 0x7f;
-    uint8_t value_after = rand() & 0x7f;
+    uint8_t value_before = lzt::generate_value<uint8_t>() & 0x7f;
+    uint8_t value_after = lzt::generate_value<uint8_t>() & 0x7f;
 
     lzt::append_memory_set(
         dev_instance_[i].cmd_bundle.list,
@@ -1247,8 +1249,8 @@ TEST_P(
           mem_size_ + offset_, 1, 0, 0, dev_instance_[i].sub_devices[j].dev));
 
       // random memory region on device i. Allow "space" for increment.
-      uint8_t value_before = rand() & 0x7f;
-      uint8_t value_after = rand() & 0x7f;
+      uint8_t value_before = lzt::generate_value<uint8_t>() & 0x7f;
+      uint8_t value_after = lzt::generate_value<uint8_t>() & 0x7f;
 
       lzt::append_memory_set(
           dev_instance_[i].sub_devices[j].cmd_bundle.list,

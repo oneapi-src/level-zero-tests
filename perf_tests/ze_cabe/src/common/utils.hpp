@@ -19,6 +19,7 @@
 #include <algorithm>
 #include "logging/logging.hpp"
 #include "image/image.hpp"
+#include "random/random.hpp"
 
 namespace compute_api_bench {
 
@@ -57,7 +58,7 @@ public:
   ~BlackScholesData(){};
 
   inline T get_random(T low, T high) {
-    T t = (T)rand() / (T)RAND_MAX;
+    T t = level_zero_tests::generate_value<T>() / std::numeric_limits<T>::max();
     return (1.0f - t) * low + t * high;
   }
 

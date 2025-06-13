@@ -12,6 +12,7 @@
 #include "test_harness/test_harness.hpp"
 #include "test_harness/test_harness_fence.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 #include <chrono>
 #include <thread>
 
@@ -35,7 +36,7 @@ void thread_func(const ze_command_queue_handle_t cq) {
   for (int i = 0; i < num_iterations; i++) {
     ze_fence_handle_t fence_ = lzt::create_fence(cq);
 
-    const uint8_t pattern_base = std::rand() % 0xFF;
+    const uint8_t pattern_base = lzt::generate_value<uint8_t>();
     const int pattern_size = 1;
 
     EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence_));

@@ -10,6 +10,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 #include <thread>
 #include <array>
 
@@ -72,7 +73,7 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle,
               0);
     // Access to pattern buffer from host.
     std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count, 0);
-    uint16_t pattern_base = std::rand() % 0xFFFF;
+    uint16_t pattern_base = lzt::generate_value<uint16_t>();
     run_functions(cmd_bundle, is_immediate, fill_function, test_function,
                   gpu_pattern_buffer, pattern_base, host_expected_output_buffer,
                   gpu_expected_output_buffer, host_found_output_buffer,
