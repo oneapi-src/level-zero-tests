@@ -17,8 +17,12 @@ namespace level_zero_tests {
 
 void *aligned_malloc(size_t size, size_t alignment) {
 
-  EXPECT_NE(0u, size);
-  EXPECT_FALSE(alignment != 0 && (alignment & (alignment - 1)) != 0);
+  if (size <= 0) {
+    throw std::invalid_argument("Size must be greater than 0");
+  }
+  if (alignment == 0 || (alignment & (alignment - 1)) != 0) {
+    throw std::invalid_argument("Alignment must be a power of 2");
+  }
 
   void *memory = nullptr;
 
@@ -42,7 +46,7 @@ void *aligned_malloc_no_check(size_t size, size_t alignment,
     return nullptr;
   }
 
-  if (alignment != 0 && (alignment & (alignment - 1)) != 0) {
+  if (alignment == 0 || (alignment & (alignment - 1)) != 0) {
     *result = ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT;
     return nullptr;
   }
