@@ -1548,22 +1548,23 @@ void generate_param_value_info_list_from_param_info(
 
   ze_result_t result;
 
-  std::vector<zet_metric_programmable_param_value_info_exp_t> value_info(
-      value_info_count);
+  auto value_info =
+      std::make_unique<zet_metric_programmable_param_value_info_exp_t[]>(
+          value_info_count);
 
-  std::vector<zet_metric_programmable_param_value_info_exp_t> value_info_desc(
-      value_info_count);
+  auto value_info_desc =
+      std::make_unique<zet_metric_programmable_param_value_info_exp_t[]>(
+          value_info_count);
 
   auto count = value_info_count;
   uint32_t index = 0;
   if (include_value_info_desc) {
-    for (auto &value : value_info_desc) {
-      value.stype = ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
-      value.pNext = nullptr;
+    for (auto i = 0; i < static_cast<int>(count); i++) {
+      value_info_desc[i].stype =
+          ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
+      value_info_desc[i].pNext = nullptr;
     }
   }
-  assert(value_info.size() == value_info_desc.size());
-  assert(count == value_info.size());
   for (auto i = 0; i < static_cast<int>(count); i++) {
     value_info[i].stype =
         ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
@@ -1572,7 +1573,7 @@ void generate_param_value_info_list_from_param_info(
   }
 
   result = zetMetricProgrammableGetParamValueInfoExp(
-      programmable_handle, ordinal, &count, value_info.data());
+      programmable_handle, ordinal, &count, value_info.get());
   EXPECT_EQ(result, ZE_RESULT_SUCCESS)
       << "an error occurred in the zetMetricProgrammableGetParamValueInfoExp() "
          "call, error code "
@@ -1587,8 +1588,6 @@ void generate_param_value_info_list_from_param_info(
   for (index = 0; index < count; index++) {
     print_value_info(value_info_type, value_info[index].valueInfo);
     if (include_value_info_desc) {
-      zet_metric_programmable_param_value_info_exp_t *desc =
-          &value_info_desc[index];
       const auto description_len =
           strnlen(value_info_desc[index].description,
                   ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
