@@ -70,6 +70,145 @@ TEST_F(
   lzt::virtual_memory_free(context, reservedVirtualMemory, smallerAllocSize);
 }
 
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenStartAddressAheadOfPreviousVirtualReservationAddressThenStartAddressIsReserved) {
+
+  size_t firstAllocSize = allocationSize * 8;
+  lzt::query_page_size(context, device, firstAllocSize, &pageSize);
+  firstAllocSize = lzt::create_page_aligned_size(firstAllocSize, pageSize);
+
+  uint64_t *pStart = nullptr;
+  void *firstReservedVirtualMemory = nullptr;
+  lzt::virtual_memory_reservation(context, pStart, firstAllocSize,
+                                  &firstReservedVirtualMemory);
+  EXPECT_NE(nullptr, firstReservedVirtualMemory);
+
+  size_t actualAllocSize = allocationSize * 6;
+  lzt::query_page_size(context, device, actualAllocSize, &pageSize);
+  actualAllocSize = lzt::create_page_aligned_size(actualAllocSize, pageSize);
+
+  pStart = reinterpret_cast<uint64_t *>(
+      reinterpret_cast<size_t>(firstReservedVirtualMemory) + firstAllocSize);
+  void *actualReservedVirtualMemory = nullptr;
+  lzt::virtual_memory_reservation(context, pStart, actualAllocSize,
+                                  &actualReservedVirtualMemory);
+  EXPECT_NE(nullptr, actualReservedVirtualMemory);
+
+  auto difference =
+      std::abs(reinterpret_cast<int64_t>(actualReservedVirtualMemory) -
+               reinterpret_cast<int64_t>(pStart));
+
+  EXPECT_EQ(difference, 0);
+
+  lzt::virtual_memory_free(context, firstReservedVirtualMemory, firstAllocSize);
+
+  lzt::virtual_memory_free(context, actualReservedVirtualMemory,
+                           actualAllocSize);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenStartAddressInPreviouslyFreedVirtualReservationAddressThenStartAddressIsReserved) {
+
+  size_t firstAllocSize = allocationSize * 8;
+  lzt::query_page_size(context, device, firstAllocSize, &pageSize);
+  firstAllocSize = lzt::create_page_aligned_size(firstAllocSize, pageSize);
+
+  uint64_t *pStart = nullptr;
+  void *firstReservedVirtualMemory = nullptr;
+  lzt::virtual_memory_reservation(context, pStart, firstAllocSize,
+                                  &firstReservedVirtualMemory);
+  EXPECT_NE(nullptr, firstReservedVirtualMemory);
+  lzt::virtual_memory_free(context, firstReservedVirtualMemory, firstAllocSize);
+
+  size_t actualAllocSize = allocationSize * 6;
+  lzt::query_page_size(context, device, actualAllocSize, &pageSize);
+  actualAllocSize = lzt::create_page_aligned_size(actualAllocSize, pageSize);
+
+  pStart = reinterpret_cast<uint64_t *>(
+      reinterpret_cast<size_t>(firstReservedVirtualMemory));
+  void *actualReservedVirtualMemory = nullptr;
+  lzt::virtual_memory_reservation(context, pStart, actualAllocSize,
+                                  &actualReservedVirtualMemory);
+  EXPECT_NE(nullptr, actualReservedVirtualMemory);
+
+  auto difference =
+      std::abs(reinterpret_cast<int64_t>(actualReservedVirtualMemory) -
+               reinterpret_cast<int64_t>(pStart));
+  EXPECT_EQ(difference, 0);
+
+  lzt::virtual_memory_free(context, actualReservedVirtualMemory,
+                           actualAllocSize);
+}
+
+TEST_F(
+    zeVirtualMemoryTests,
+    GivenStartAddressSpanningMultipleLargeAllocationFragmentsThenStartAddressIsReserved) {
+
+  // Create larger fragments
+  size_t sizeThreshold = allocationSize * 4;
+  std::vector<size_t> allocSizes = {sizeThreshold * 2, sizeThreshold * 5,
+                                    sizeThreshold * 2, sizeThreshold * 2};
+
+  std::vector<std::pair<void *, size_t>> allocatedMemory;
+
+  for (size_t i = 0; i < allocSizes.size(); i++) {
+    size_t currentAllocSize = allocSizes[i];
+    lzt::query_page_size(context, device, currentAllocSize, &pageSize);
+    currentAllocSize =
+        lzt::create_page_aligned_size(currentAllocSize, pageSize);
+
+    void *reservedVirtualMemory = nullptr;
+    lzt::virtual_memory_reservation(context, nullptr, currentAllocSize,
+                                    &reservedVirtualMemory);
+    EXPECT_NE(nullptr, reservedVirtualMemory);
+
+    allocatedMemory.push_back({reservedVirtualMemory, currentAllocSize});
+  }
+
+  // Define indices of allocations to free
+  std::vector<uint32_t> allocsToFree{1, 2};
+
+  // Only free allocations with indices in allocsToFree
+  for (auto index : allocsToFree) {
+    if (index < allocatedMemory.size()) {
+      lzt::virtual_memory_free(context, allocatedMemory[index].first,
+                               allocatedMemory[index].second);
+    }
+  }
+
+  // Try to reserve memory spanning across where multiple fragments
+  void *pStart = reinterpret_cast<void *>(
+      reinterpret_cast<uint64_t>(allocatedMemory[1].first) + sizeThreshold);
+  size_t largeAllocSize = allocSizes[1] + allocSizes[2] - sizeThreshold;
+
+  lzt::query_page_size(context, device, largeAllocSize, &pageSize);
+  largeAllocSize = lzt::create_page_aligned_size(largeAllocSize, pageSize);
+
+  void *newReservedMemory = nullptr;
+  lzt::virtual_memory_reservation(context, pStart, largeAllocSize,
+                                  &newReservedMemory);
+
+  EXPECT_NE(nullptr, newReservedMemory);
+
+  // If the memory was successfully reserved at the exact requested address,
+  // the addresses should be equal
+  EXPECT_EQ(newReservedMemory, pStart);
+
+  // Clean up
+  lzt::virtual_memory_free(context, newReservedMemory, largeAllocSize);
+
+  // Free remaining allocations that weren't already freed
+  std::set<uint32_t> freed_indices(allocsToFree.begin(), allocsToFree.end());
+  for (size_t i = 0; i < allocatedMemory.size(); i++) {
+    if (freed_indices.find(i) == freed_indices.end()) {
+      lzt::virtual_memory_free(context, allocatedMemory[i].first,
+                               allocatedMemory[i].second);
+    }
+  }
+}
+
 TEST_F(zeVirtualMemoryTests,
        GivenVirtualReservationWithCustomStartAddressThenResizedPtrAllocated) {
 
