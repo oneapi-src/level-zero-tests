@@ -237,14 +237,26 @@ int main(int argc, char **argv) {
 
   import_handle.handle = reinterpret_cast<void *>(targetHandle);
 
-  ze_device_mem_alloc_desc_t device_alloc_desc = {};
-  device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
-  device_alloc_desc.pNext = &import_handle;
-  result = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
-                            &imported_memory);
-  if (ZE_RESULT_SUCCESS != result) {
-    LOG_WARNING << "Error allocating device memory to be imported\n";
-    exit(1);
+  if (is_device) {
+    ze_device_mem_alloc_desc_t device_alloc_desc = {};
+    device_alloc_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+    device_alloc_desc.pNext = &import_handle;
+    result = zeMemAllocDevice(context, &device_alloc_desc, size, 1, device,
+                              &imported_memory);
+    if (ZE_RESULT_SUCCESS != result) {
+      LOG_WARNING << "Error allocating device memory to be imported\n";
+      exit(1);
+    }
+  } else {
+    ze_host_mem_alloc_desc_t host_alloc_desc = {};
+    host_alloc_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+    host_alloc_desc.pNext = &import_handle;
+    result =
+        zeMemAllocHost(context, &host_alloc_desc, size, 1, &imported_memory);
+    if (ZE_RESULT_SUCCESS != result) {
+      LOG_WARNING << "Error allocating host memory to be imported\n";
+      exit(1);
+    }
   }
 
   auto verification_memory =
