@@ -408,4 +408,44 @@ TEST_F(
     memoryThread.join();
   }
 }
+
+TEST_F(MEMORY_TEST,
+       GivenDeviceWhenRetrievingMemoryPropertiesThenLocationIsAsExpected) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto mem_handles = lzt::get_mem_handles(device, count);
+
+    if (count == 0) {
+      FAIL() << "No memory handles found on this device!";
+      continue;
+    }
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    device = core_device;
+#endif // USE_ZESINIT
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetProperties(device, &deviceProperties));
+    bool is_integrated =
+        (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED);
+
+    for (auto mem_handle : mem_handles) {
+      ASSERT_NE(nullptr, mem_handle);
+
+      auto mem_properties = lzt::get_mem_properties(mem_handle);
+      if (is_integrated) {
+        EXPECT_EQ(mem_properties.location, ZES_MEM_LOC_SYSTEM)
+            << "Integrated device should have system memory location";
+      } else {
+        EXPECT_EQ(mem_properties.location, ZES_MEM_LOC_DEVICE)
+            << "Discrete device should have device memory location";
+      }
+    }
+  }
+}
+
 } // namespace
