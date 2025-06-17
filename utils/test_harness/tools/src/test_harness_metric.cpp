@@ -1765,19 +1765,6 @@ size_t metric_tracer_read_data_size(
   return metric_size;
 }
 
-ze_result_t metric_tracer_read_data_size_result(
-    zet_metric_tracer_exp_handle_t metric_tracer_handle,
-    size_t *ptr_metric_size) {
-  ze_result_t result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                                  ptr_metric_size, nullptr);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, result)
-      << "zetMetricTracerReadDataExp call failed when retrieving the raw data "
-         "size";
-  EXPECT_NE(0u, *ptr_metric_size);
-  LOG_DEBUG << "raw data size = " << *ptr_metric_size;
-  return result;
-}
-
 void metric_tracer_read_data(
     zet_metric_tracer_exp_handle_t metric_tracer_handle,
     std::vector<uint8_t> *ptr_metric_data) {
