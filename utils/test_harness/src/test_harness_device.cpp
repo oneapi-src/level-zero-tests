@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2024 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -429,17 +429,27 @@ void set_kernel_cache_config(ze_kernel_handle_t kernel,
 
 void make_memory_resident(ze_device_handle_t device, void *memory,
                           const size_t size) {
+  make_memory_resident(get_default_context(), device, memory, size);
+}
+
+void make_memory_resident(ze_context_handle_t context,
+                          ze_device_handle_t device, void *memory,
+                          const size_t size) {
   auto device_initial = device;
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
-      zeContextMakeMemoryResident(get_default_context(), device, memory, size));
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeContextMakeMemoryResident(context, device, memory, size));
   EXPECT_EQ(device, device_initial);
 }
 
 void evict_memory(ze_device_handle_t device, void *memory, const size_t size) {
+  evict_memory(get_default_context(), device, memory, size);
+}
+
+void evict_memory(ze_context_handle_t context, ze_device_handle_t device,
+                  void *memory, const size_t size) {
   auto device_initial = device;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeContextEvictMemory(get_default_context(), device, memory, size));
+            zeContextEvictMemory(context, device, memory, size));
   EXPECT_EQ(device, device_initial);
 }
 
