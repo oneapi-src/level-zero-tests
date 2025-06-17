@@ -893,7 +893,8 @@ TEST_F(
   constexpr int32_t number_of_retries = 5;
   constexpr int32_t retry_wait_milliseconds = 5;
   ze_result_t result;
-  LOG_INFO << "testing zetMetricTracerReadDataExp with Asynchronous tracer Enable and Disable";
+  LOG_INFO << "testing zetMetricTracerReadDataExp with Asynchronous tracer "
+              "Enable and Disable";
 
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
@@ -1053,10 +1054,12 @@ TEST_F(
 
 TEST_F(
     zetMetricTracerTest,
-    GivenSynchronouslyEnabledAndDisabledTracerWithOneOrMoreMetricsGroupsAndWorkloadExecutionThenExpectTracerReadsToSucceed) {  constexpr int32_t number_of_retries = 5;
+    GivenSynchronouslyEnabledAndDisabledTracerWithOneOrMoreMetricsGroupsAndWorkloadExecutionThenExpectTracerReadsToSucceed) {
+  constexpr int32_t number_of_retries = 5;
   constexpr int32_t retry_wait_milliseconds = 5;
   ze_result_t result;
-  LOG_INFO << "testing zetMetricTracerReadDataExp with Synchronous tracer Enable and Disable";
+  LOG_INFO << "testing zetMetricTracerReadDataExp with Synchronous tracer "
+              "Enable and Disable";
 
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
@@ -1086,8 +1089,6 @@ TEST_F(
           &tracer_descriptor, nullptr, &metric_tracer_handle);
 
       lzt::metric_tracer_enable(metric_tracer_handle, true);
-
-
 
       executeMatrixMultiplyWorkload(device, commandQueue, commandList);
 
