@@ -280,18 +280,9 @@ void metric_tracer_disable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
 size_t metric_tracer_read_data_size(
     zet_metric_tracer_exp_handle_t metric_tracer_handle);
 
-ze_result_t metric_tracer_read_data_size_result(
-    zet_metric_tracer_exp_handle_t metric_tracer_handle,
-    size_t *ptr_metric_size);
-
 void metric_tracer_read_data(
     zet_metric_tracer_exp_handle_t metric_tracer_handle,
     std::vector<uint8_t> *ptr_metric_data);
-
-ze_result_t
-metric_tracer_read_data(zet_metric_tracer_exp_handle_t metric_tracer_handle,
-                        std::vector<uint8_t> *ptr_metric_data,
-                        size_t *enabled_read_data_size);
 
 void metric_decoder_create(
     zet_metric_tracer_exp_handle_t metric_tracer_handle,

@@ -887,16 +887,16 @@ executeMatrixMultiplyWorkload(ze_device_handle_t device,
   lzt::reset_command_list(commandList);
 }
 
-void RunMetricTracerReadTest(
+void run_metric_tracer_read_test(
     ze_device_handle_t &device,
     std::vector<lzt::activatable_metric_group_handle_list_for_device_t>
         &tracer_supporting_devices_list,
-    zet_metric_tracer_exp_desc_t &tracer_descriptor, bool test_is_synchronous) {
+    zet_metric_tracer_exp_desc_t &tracer_descriptor, bool synchronous) {
   constexpr int32_t number_of_retries = 5;
   constexpr int32_t retry_wait_milliseconds = 5;
   ze_result_t result;
 
-  std::string test_mode = test_is_synchronous ? "Synchronous" : "Asynchronous";
+  std::string test_mode = synchronous ? "Synchronous" : "Asynchronous";
 
   LOG_INFO << "testing zetMetricTracerReadDataExp with " << test_mode
            << " tracer Enable and Disable";
@@ -929,14 +929,14 @@ void RunMetricTracerReadTest(
               .data(),
           &tracer_descriptor, nullptr, &metric_tracer_handle);
 
-      lzt::metric_tracer_enable(metric_tracer_handle, test_is_synchronous);
+      lzt::metric_tracer_enable(metric_tracer_handle, synchronous);
 
-      if (!test_is_synchronous) {
+      if (!synchronous) {
         int32_t j = 0;
         size_t raw_data_size = 0;
         do {
-          raw_data_size =
-              lzt::metric_tracer_read_data_size(metric_tracer_handle);
+          result = zetMetricTracerReadDataExp(metric_tracer_handle,
+                                              &raw_data_size, nullptr);
           if (result == ZE_RESULT_NOT_READY) {
             if (j == number_of_retries) {
               FAIL() << "Exceeded limit of retries of "
@@ -965,7 +965,19 @@ void RunMetricTracerReadTest(
           size_t new_raw_data_size;
           new_raw_data_size = raw_data_size;
           std::vector<uint8_t> raw_data_buffer(raw_data_size);
-          lzt::metric_tracer_read_data(metric_tracer_handle, &raw_data_buffer);
+          result = zetMetricTracerReadDataExp(
+              metric_tracer_handle, &new_raw_data_size, raw_data_buffer.data());
+          ASSERT_EQ(result, ZE_RESULT_SUCCESS)
+              << "zetMetricTracerReadDataExp called with non-zero "
+                 "rawDataSize "
+                 "and a properly sized data buffer failed with error code "
+              << result;
+          ASSERT_EQ(raw_data_size, new_raw_data_size)
+              << "zetMetricTracerReadDataExp called with non-zero "
+                 "rawDataSize "
+                 "value "
+              << raw_data_size << "returned a different data size "
+              << new_raw_data_size;
         }
       }
 
@@ -981,8 +993,9 @@ void RunMetricTracerReadTest(
       size_t enabled_read_data_size = raw_data_size / 2;
       std::vector<uint8_t> enabled_raw_data(enabled_read_data_size);
 
-      result = lzt::metric_tracer_read_data(
-          metric_tracer_handle, &enabled_raw_data, &enabled_read_data_size);
+      result = zetMetricTracerReadDataExp(metric_tracer_handle,
+                                          &enabled_read_data_size,
+                                          enabled_raw_data.data());
       ASSERT_EQ(result, ZE_RESULT_SUCCESS)
           << "zetMetricTracerReadDataExp with non-null data buffer on an "
              "enabled "
@@ -996,8 +1009,9 @@ void RunMetricTracerReadTest(
       size_t disabled_read_data_size = raw_data_size - enabled_read_data_size;
       std::vector<uint8_t> disabled_raw_data(disabled_read_data_size);
 
-      result = lzt::metric_tracer_read_data(
-          metric_tracer_handle, &disabled_raw_data, &disabled_read_data_size);
+      result = zetMetricTracerReadDataExp(metric_tracer_handle,
+                                          &disabled_read_data_size,
+                                          disabled_raw_data.data());
       ASSERT_EQ(result, ZE_RESULT_SUCCESS)
           << "zetMetricTracerReadDataExp with non-null data buffer and "
              "disabled "
@@ -1006,12 +1020,12 @@ void RunMetricTracerReadTest(
           << "zetMetricTracerReadDataExp with "
              "non-null data buffer and disabled "
              "tracer has returned no data";
-      if (!test_is_synchronous) {
+      if (!synchronous) {
         int32_t k = 0;
         do {
           size_t raw_data_size = 0;
-          result = lzt::metric_tracer_read_data_size_result(
-              metric_tracer_handle, &raw_data_size);
+          result = zetMetricTracerReadDataExp(metric_tracer_handle,
+                                              &raw_data_size, nullptr);
           if (result == ZE_RESULT_SUCCESS) {
             if (k == number_of_retries) {
               FAIL() << "Exceeded limit of retries of "
@@ -1044,14 +1058,14 @@ void RunMetricTracerReadTest(
 TEST_F(
     zetMetricTracerTest,
     GivenSynchronouslyEnabledTracerWithOneOrMoreMetricsGroupsAndWorkloadExecutionThenExpectTracerReadsToSucceed) {
-  RunMetricTracerReadTest(device, tracer_supporting_devices_list,
+  run_metric_tracer_read_test(device, tracer_supporting_devices_list,
                           tracer_descriptor, true);
 }
 
 TEST_F(
     zetMetricTracerTest,
     GivenSynchronouslyDisabledTracerWithOneOrMoreMetricsGroupsAndWorkloadExecutionThenExpectTracerReadsToSucceed) {
-  RunMetricTracerReadTest(device, tracer_supporting_devices_list,
+  run_metric_tracer_read_test(device, tracer_supporting_devices_list,
                           tracer_descriptor, false);
 }
 
