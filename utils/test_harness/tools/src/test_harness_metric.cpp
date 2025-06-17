@@ -1765,6 +1765,19 @@ size_t metric_tracer_read_data_size(
   return metric_size;
 }
 
+ze_result_t metric_tracer_read_data_size_result(
+    zet_metric_tracer_exp_handle_t metric_tracer_handle,
+    size_t *ptr_metric_size) {
+  ze_result_t result = zetMetricTracerReadDataExp(metric_tracer_handle,
+                                                  ptr_metric_size, nullptr);
+  EXPECT_EQ(ZE_RESULT_SUCCESS, result)
+      << "zetMetricTracerReadDataExp call failed when retrieving the raw data "
+         "size";
+  EXPECT_NE(0u, *ptr_metric_size);
+  LOG_DEBUG << "raw data size = " << *ptr_metric_size;
+  return result;
+}
+
 void metric_tracer_read_data(
     zet_metric_tracer_exp_handle_t metric_tracer_handle,
     std::vector<uint8_t> *ptr_metric_data) {
@@ -1772,10 +1785,30 @@ void metric_tracer_read_data(
   size_t metric_size = metric_tracer_read_data_size(metric_tracer_handle);
   EXPECT_NE(0u, metric_size);
   ptr_metric_data->resize(metric_size);
+  size_t new_metric_size = metric_size;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerReadDataExp(metric_tracer_handle, &metric_size,
+            zetMetricTracerReadDataExp(metric_tracer_handle, &new_metric_size,
                                        ptr_metric_data->data()))
       << "zetMetricTracerReadDataExp call failed when retrieving the raw data";
+  ASSERT_EQ(metric_size, new_metric_size)
+      << "zetMetricTracerReadDataExp called with non-zero "
+         "rawDataSize "
+         "value "
+      << metric_size << "returned a different data size " << new_metric_size;
+}
+
+ze_result_t
+metric_tracer_read_data(zet_metric_tracer_exp_handle_t metric_tracer_handle,
+                        std::vector<uint8_t> *ptr_metric_data,
+                        size_t *enabled_read_data_size) {
+  EXPECT_NE(nullptr, ptr_metric_data);
+
+  ze_result_t result = zetMetricTracerReadDataExp(
+      metric_tracer_handle, enabled_read_data_size, ptr_metric_data->data());
+  EXPECT_EQ(result, ZE_RESULT_SUCCESS)
+      << "zetMetricTracerReadDataExp with non-null data buffer "
+         "has failed";
+  return result;
 }
 
 void metric_decoder_create(
