@@ -1064,7 +1064,7 @@ TEST_F(
 
 TEST_F(
     zetMetricTracerTest,
-    GivenAsynchronouslyEnabledAndDisabledTracedThenExpectTracerReadsToSucceed) {
+    GivenAsynchronouslyEnabledAndDisabledTracerThenExpectTracerReadsToSucceed) {
   run_metric_tracer_read_test(device, tracer_supporting_devices_list,
                           tracer_descriptor, false);
 }
