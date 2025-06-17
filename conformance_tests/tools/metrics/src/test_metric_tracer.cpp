@@ -1004,7 +1004,7 @@ void run_metric_tracer_read_test(
           << "zetMetricTracerReadDataExp on an enabled "
              "tracer returned zero data size";
 
-      lzt::metric_tracer_disable(metric_tracer_handle, true);
+      lzt::metric_tracer_disable(metric_tracer_handle, synchronous);
 
       size_t disabled_read_data_size = raw_data_size - enabled_read_data_size;
       std::vector<uint8_t> disabled_raw_data(disabled_read_data_size);
@@ -1057,14 +1057,14 @@ void run_metric_tracer_read_test(
 
 TEST_F(
     zetMetricTracerTest,
-    GivenSynchronouslyEnabledTracerWithOneOrMoreMetricsGroupsAndWorkloadExecutionThenExpectTracerReadsToSucceed) {
+    GivenSynchronouslyEnabledAndDisabledTracerThenExpectTracerReadsToSucceed) {
   run_metric_tracer_read_test(device, tracer_supporting_devices_list,
                           tracer_descriptor, true);
 }
 
 TEST_F(
     zetMetricTracerTest,
-    GivenSynchronouslyDisabledTracerWithOneOrMoreMetricsGroupsAndWorkloadExecutionThenExpectTracerReadsToSucceed) {
+    GivenAsynchronouslyEnabledAndDisabledTracedThenExpectTracerReadsToSucceed) {
   run_metric_tracer_read_test(device, tracer_supporting_devices_list,
                           tracer_descriptor, false);
 }
