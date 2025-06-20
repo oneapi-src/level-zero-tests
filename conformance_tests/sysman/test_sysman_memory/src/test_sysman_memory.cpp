@@ -27,6 +27,58 @@ class MemoryModuleTest : public lzt::SysmanCtsClass {};
 #define MEMORY_TEST MemoryModuleTest
 #endif // USE_ZESINIT
 
+ze_result_t copy_workload(ze_device_handle_t device,
+                          ze_device_mem_alloc_desc_t *device_desc,
+                          void *src_ptr, void *dst_ptr, int32_t local_size) {
+
+  ze_result_t result = ZE_RESULT_SUCCESS;
+  void *src_buffer = src_ptr;
+  void *dst_buffer = dst_ptr;
+  int32_t offset = 0;
+
+  ze_module_handle_t module = lzt::create_module(
+      device, "copy_module.spv", ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_kernel_handle_t function = lzt::create_function(module, "copy_data");
+
+  lzt::set_group_size(function, 1, 1, 1);
+  lzt::set_argument_value(function, 0, sizeof(src_buffer), &src_buffer);
+  lzt::set_argument_value(function, 1, sizeof(dst_buffer), &dst_buffer);
+  lzt::set_argument_value(function, 2, sizeof(int32_t), &offset);
+  lzt::set_argument_value(function, 3, sizeof(int32_t), &local_size);
+
+  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
+
+  const int32_t group_count_x = 1;
+  const int32_t group_count_y = 1;
+  ze_group_count_t tg;
+  tg.groupCountX = group_count_x;
+  tg.groupCountY = group_count_y;
+  tg.groupCountZ = 1;
+
+  result = zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0,
+                                           nullptr);
+  if (result != ZE_RESULT_SUCCESS) {
+    return result;
+  }
+
+  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_list);
+  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
+
+  result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_list, nullptr);
+  if (result != ZE_RESULT_SUCCESS) {
+    return result;
+  }
+
+  lzt::synchronize(cmd_q, UINT64_MAX);
+  lzt::destroy_command_queue(cmd_q);
+  lzt::destroy_command_list(cmd_list);
+  lzt::destroy_function(function);
+  lzt::destroy_module(module);
+
+  return result;
+}
+
 TEST_F(
     MEMORY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
@@ -160,7 +212,7 @@ TEST_F(
 
 TEST_F(
     MEMORY_TEST,
-    GivenValidMemHandleWhenRetrievingMemBandWidthThenValidBandWidthCountersAreReturned) {
+    GivenValidMemHandleAndWorkloadWhenRetrievingMemBandWidthThenBandWidthCountersAreValidAndIncreaseAfterWorkload) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto mem_handles = lzt::get_mem_handles(device, count);
@@ -169,14 +221,79 @@ TEST_F(
              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
 
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    device = core_device;
+#endif // USE_ZESINIT
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeDeviceGetProperties(device, &deviceProperties));
+    if (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_DEBUG << "test sub-device id: " << deviceProperties.subdeviceId;
+    } else {
+      LOG_DEBUG << "test device is a root device";
+    }
+
+    // Allocate device memory for workload
+    const size_t buffer_size = 32 * 1024 * 1024;
+    ze_device_mem_alloc_desc_t device_desc = {};
+    device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+    device_desc.ordinal = 0;
+    device_desc.flags = 0;
+
+    void *src_ptr = lzt::allocate_device_memory(buffer_size, 1, 0, device,
+                                                lzt::get_default_context());
+    void *dst_ptr = lzt::allocate_device_memory(buffer_size, 1, 0, device,
+                                                lzt::get_default_context());
+
+    ASSERT_NE(src_ptr, nullptr);
+    ASSERT_NE(dst_ptr, nullptr);
+
     for (auto mem_handle : mem_handles) {
       ASSERT_NE(nullptr, mem_handle);
-      auto bandwidth = lzt::get_mem_bandwidth(mem_handle);
-      EXPECT_LT(bandwidth.readCounter, UINT64_MAX);
-      EXPECT_LT(bandwidth.writeCounter, UINT64_MAX);
-      EXPECT_LT(bandwidth.maxBandwidth, UINT64_MAX);
-      EXPECT_LT(bandwidth.timestamp, UINT64_MAX);
+
+      // Get initial bandwidth counters
+      auto bandwidth_before = lzt::get_mem_bandwidth(mem_handle);
+      EXPECT_GT(bandwidth_before.maxBandwidth, 0)
+          << "Max bandwidth is not greater than zero";
+      EXPECT_GT(bandwidth_before.timestamp, 0)
+          << "Timestamp is not greater than zero";
+      // Run the workload
+      ze_result_t result = copy_workload(device, &device_desc, src_ptr, dst_ptr,
+                                         static_cast<int32_t>(buffer_size));
+      EXPECT_EQ(result, ZE_RESULT_SUCCESS);
+
+      // Get bandwidth counters after workload
+      auto bandwidth_after = lzt::get_mem_bandwidth(mem_handle);
+
+      // Validate that read/write counters have increased after workload
+      EXPECT_GT(bandwidth_after.readCounter, bandwidth_before.readCounter)
+          << "Read counter did not increase after workload";
+      EXPECT_GT(bandwidth_after.writeCounter, bandwidth_before.writeCounter)
+          << "Write counter did not increase after workload";
+      EXPECT_GT(bandwidth_after.timestamp, bandwidth_before.timestamp)
+          << "Timestamp did not increase after workload";
+      double percentage_bandwidth =
+          1000000.0 *
+          ((bandwidth_after.readCounter - bandwidth_before.readCounter) +
+           (bandwidth_after.writeCounter - bandwidth_before.writeCounter)) /
+          (static_cast<double>(bandwidth_after.maxBandwidth) *
+           (static_cast<double>(bandwidth_after.timestamp) -
+            static_cast<double>(bandwidth_before.timestamp)));
+      // Validate that percentage bandwidth is greater than zero
+      LOG_INFO << "Percentage Bandwidth: " << percentage_bandwidth << "%";
+      EXPECT_GT(percentage_bandwidth, 0.0)
+          << "Percentage bandwidth is not greater than zero";
+      EXPECT_LE(percentage_bandwidth, 100.0)
+          << "Percentage bandwidth is greater than 100%";
     }
+    // Free device memory
+    lzt::free_memory(src_ptr);
+    lzt::free_memory(dst_ptr);
   }
 }
 
@@ -222,58 +339,6 @@ uint64_t get_free_memory_state(ze_device_handle_t device) {
   }
 
   return total_free_memory;
-}
-
-ze_result_t copy_workload(ze_device_handle_t device,
-                          ze_device_mem_alloc_desc_t *device_desc,
-                          void *src_ptr, void *dst_ptr, int32_t local_size) {
-
-  ze_result_t result = ZE_RESULT_SUCCESS;
-  void *src_buffer = src_ptr;
-  void *dst_buffer = dst_ptr;
-  int32_t offset = 0;
-
-  ze_module_handle_t module = lzt::create_module(
-      device, "copy_module.spv", ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
-  ze_kernel_handle_t function = lzt::create_function(module, "copy_data");
-
-  lzt::set_group_size(function, 1, 1, 1);
-  lzt::set_argument_value(function, 0, sizeof(src_buffer), &src_buffer);
-  lzt::set_argument_value(function, 1, sizeof(dst_buffer), &dst_buffer);
-  lzt::set_argument_value(function, 2, sizeof(int32_t), &offset);
-  lzt::set_argument_value(function, 3, sizeof(int32_t), &local_size);
-
-  ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
-
-  const int32_t group_count_x = 1;
-  const int32_t group_count_y = 1;
-  ze_group_count_t tg;
-  tg.groupCountX = group_count_x;
-  tg.groupCountY = group_count_y;
-  tg.groupCountZ = 1;
-
-  result = zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0,
-                                           nullptr);
-  if (result != ZE_RESULT_SUCCESS) {
-    return result;
-  }
-
-  lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
-  lzt::close_command_list(cmd_list);
-  ze_command_queue_handle_t cmd_q = lzt::create_command_queue(device);
-
-  result = zeCommandQueueExecuteCommandLists(cmd_q, 1, &cmd_list, nullptr);
-  if (result != ZE_RESULT_SUCCESS) {
-    return result;
-  }
-
-  lzt::synchronize(cmd_q, UINT64_MAX);
-  lzt::destroy_command_queue(cmd_q);
-  lzt::destroy_command_list(cmd_list);
-  lzt::destroy_function(function);
-  lzt::destroy_module(module);
-
-  return result;
 }
 
 TEST_F(
