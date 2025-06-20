@@ -36,6 +36,88 @@ jobs:
         groups=${{ env.TEST_GROUPS_ARRAY }}
         EOF
 
+  build-quick:
+    if: github.repository_owner == 'oneapi-src'
+    runs-on: [ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check ./scripts/lzt_gtest_scan.py
+      run: |
+        python3 scripts/lzt_gtest_scan.py \
+          --workspace_dir .
+    - uses: actions/checkout@v4
+      with:
+        repository: oneapi-src/level-zero
+        path: level-zero
+    - run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libboost-all-dev \
+          libpapi-dev \
+          libpng-dev \
+          libva-dev \
+          clang \
+          clang-format-14
+    - uses: hendrikmuhs/ccache-action@v1
+    - name: Build Loader
+      working-directory: level-zero
+      run: |
+        mkdir build
+        cd build
+        cmake \
+          -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+          -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -D CMAKE_BUILD_TYPE=Release \
+          ..
+        make -j$(nproc)
+        sudo make install
+    - name: Build Tests
+      run: |
+        mkdir build
+        cd build
+        cmake \
+          -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+          -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -D CMAKE_BUILD_TYPE=Release \
+          ..
+        ../clang-format-patch.sh .. > clang_format_results.txt
+        if [[ -s ./clang_format_results.txt ]]; then
+            echo "Clang Format Check failed"
+            cat ./clang_format_results.txt
+            echo "<h3>clang-format</h3>" >> ${GITHUB_STEP_SUMMARY}
+            echo \`\`\` >> ${GITHUB_STEP_SUMMARY}
+            cat ./clang_format_results.txt >> ${GITHUB_STEP_SUMMARY}
+            echo \`\`\` >> ${GITHUB_STEP_SUMMARY}
+            exit 1
+        else
+            echo "::notice::clang-format check succeeded"
+        fi
+        make -j$(nproc) install
+    - name: Check ./scripts/level_zero_report_utils.py
+      env:
+        ZE_ENABLE_NULL_DRIVER: 1
+        LD_LIBRARY_PATH: ${{ github.workspace }}/level-zero/build/lib
+      run: |
+        python3 scripts/run_test_report.py \
+          --run_test_sections all \
+          --binary_dir ./build/out \
+          --export_test_plan plan.csv
+        echo "::group::Test Plan"
+        cat plan.csv
+        echo "::endgroup::"
+    - name: Check that basic feature tests haven't changed
+      env:
+        ZE_ENABLE_NULL_DRIVER: 1
+        LD_LIBRARY_PATH: ${{ github.workspace }}/level-zero/build/lib
+      run: |
+        python3 scripts/run_test_report.py \
+          --run_test_features basic \
+          --binary_dir ./build/out \
+          --export_test_plan basic_features.csv
+        git diff --no-index --exit-code \
+          <(sort basic_features_freeze.csv) \
+          <(sort basic_features.csv)
+
   build:
     # Notes on formatting:
     #
@@ -46,7 +128,7 @@ jobs:
     # entry for <<- in the Here Documents section. This allows generated code to
     # be indented for readability in the workflow output.
     if: github.repository_owner == 'oneapi-src'
-    needs: [config]
+    needs: [config, build-quick]
     runs-on: ${{ matrix.os.name == 'windows' && 'windows-latest' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
