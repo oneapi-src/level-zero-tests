@@ -69,9 +69,8 @@ bool image_support() {
 void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output) {
 
   auto command_list = lzt::create_command_list();
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyFromMemory(
-                                   command_list, output, input.raw_data(),
-                                   nullptr, nullptr, 0, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyFromMemory(
+      command_list, output, input.raw_data(), nullptr, nullptr, 0, nullptr));
   lzt::append_barrier(command_list, nullptr, 0, nullptr);
   lzt::close_command_list(command_list);
   auto command_queue = lzt::create_command_queue();
@@ -84,9 +83,8 @@ void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output) {
 void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output) {
 
   auto command_list = lzt::create_command_list();
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyToMemory(
-                                   command_list, output.raw_data(), input,
-                                   nullptr, nullptr, 0, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyToMemory(
+      command_list, output.raw_data(), input, nullptr, nullptr, 0, nullptr));
   lzt::append_barrier(command_list, nullptr, 0, nullptr);
   lzt::close_command_list(command_list);
   auto command_queue = lzt::create_command_queue();
@@ -137,7 +135,7 @@ ze_image_handle_t create_ze_image() {
 }
 
 void destroy_ze_image(ze_image_handle_t image) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(image));
+  EXPECT_ZE_RESULT_SUCCESS(zeImageDestroy(image));
 }
 
 #define DEFAULT_WIDTH 128
@@ -206,9 +204,9 @@ ze_image_properties_t
 get_ze_image_properties(ze_image_desc_t image_descriptor) {
 
   ze_image_properties_t image_properties = {ZE_STRUCTURE_TYPE_IMAGE_PROPERTIES};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageGetProperties(lzt::zeDevice::get_instance()->get_device(),
-                                 &image_descriptor, &image_properties));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeImageGetProperties(lzt::zeDevice::get_instance()->get_device(),
+                           &image_descriptor, &image_properties));
 
   return image_properties;
 }

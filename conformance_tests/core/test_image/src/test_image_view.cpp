@@ -185,30 +185,31 @@ ze_image_handle_t zeImageViewCreateExtTests::create_image_view(
   }
 
   ze_image_handle_t img_view = nullptr;
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
+  EXPECT_ZE_RESULT_SUCCESS(
+
       zeImageViewCreateExt(lzt::get_default_context(),
                            lzt::get_default_device(lzt::get_default_driver()),
                            &img_desc_view, img, &img_view));
   return img_view;
 }
 
-TEST_F(zeImageViewCreateExtTests,
-       GivenPlanarNV12ImageThenImageViewCreateExtReturnsSuccess) {
+LZT_TEST_F(zeImageViewCreateExtTests,
+           GivenPlanarNV12ImageThenImageViewCreateExtReturnsSuccess) {
   std::vector<ze_image_type_t> tested_types = {ZE_IMAGE_TYPE_2D,
                                                ZE_IMAGE_TYPE_2DARRAY};
   RunGivenImageLayoutAndType(ZE_IMAGE_FORMAT_LAYOUT_NV12, tested_types);
 }
 
-TEST_F(zeImageViewCreateExtTests,
-       GivenPlanarRGBPImageThenImageViewCreateExtReturnsSuccess) {
+LZT_TEST_F(zeImageViewCreateExtTests,
+           GivenPlanarRGBPImageThenImageViewCreateExtReturnsSuccess) {
   std::vector<ze_image_type_t> tested_types = {ZE_IMAGE_TYPE_2D,
                                                ZE_IMAGE_TYPE_2DARRAY};
   RunGivenImageLayoutAndType(ZE_IMAGE_FORMAT_LAYOUT_RGBP, tested_types);
 }
 
-TEST_F(zeImageViewCreateExtTests,
-       GivenOneComponent8ByteUintImageThenImageViewCreateExtReturnsSuccess) {
+LZT_TEST_F(
+    zeImageViewCreateExtTests,
+    GivenOneComponent8ByteUintImageThenImageViewCreateExtReturnsSuccess) {
   std::vector<ze_image_type_t> tested_types = {
       ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_1DARRAY, ZE_IMAGE_TYPE_2D,
       ZE_IMAGE_TYPE_2DARRAY, ZE_IMAGE_TYPE_3D};
@@ -253,30 +254,31 @@ ze_image_handle_t zeImageViewCreateExpTests::create_image_view(
   }
 
   ze_image_handle_t img_view = nullptr;
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
+  EXPECT_ZE_RESULT_SUCCESS(
+
       zeImageViewCreateExp(lzt::get_default_context(),
                            lzt::get_default_device(lzt::get_default_driver()),
                            &img_desc_view, img, &img_view));
   return img_view;
 }
 
-TEST_F(zeImageViewCreateExpTests,
-       GivenPlanarNV12ImageThenImageViewCreateExpReturnsSuccess) {
+LZT_TEST_F(zeImageViewCreateExpTests,
+           GivenPlanarNV12ImageThenImageViewCreateExpReturnsSuccess) {
   std::vector<ze_image_type_t> tested_types = {ZE_IMAGE_TYPE_2D,
                                                ZE_IMAGE_TYPE_2DARRAY};
   RunGivenImageLayoutAndType(ZE_IMAGE_FORMAT_LAYOUT_NV12, tested_types);
 }
 
-TEST_F(zeImageViewCreateExpTests,
-       GivenPlanarRGBPImageThenImageViewCreateExpReturnsSuccess) {
+LZT_TEST_F(zeImageViewCreateExpTests,
+           GivenPlanarRGBPImageThenImageViewCreateExpReturnsSuccess) {
   std::vector<ze_image_type_t> tested_types = {ZE_IMAGE_TYPE_2D,
                                                ZE_IMAGE_TYPE_2DARRAY};
   RunGivenImageLayoutAndType(ZE_IMAGE_FORMAT_LAYOUT_RGBP, tested_types);
 }
 
-TEST_F(zeImageViewCreateExpTests,
-       GivenOneComponent8ByteUintImageThenImageViewCreateExpReturnsSuccess) {
+LZT_TEST_F(
+    zeImageViewCreateExpTests,
+    GivenOneComponent8ByteUintImageThenImageViewCreateExpReturnsSuccess) {
   std::vector<ze_image_type_t> tested_types = {
       ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_1DARRAY, ZE_IMAGE_TYPE_2D,
       ZE_IMAGE_TYPE_2DARRAY, ZE_IMAGE_TYPE_3D};

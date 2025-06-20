@@ -26,7 +26,7 @@ class FanModuleTest : public lzt::SysmanCtsClass {};
 #define FANMODULE_TEST FanModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -39,7 +39,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFanHandlesAreReturned) {
   for (auto device : devices) {
@@ -57,7 +57,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -74,7 +74,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFanHandlesReturned) {
   for (auto device : devices) {
@@ -98,7 +98,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenValidFanHandleWhenRetrievingFanPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -136,7 +136,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenValidFanHandleWhenRetrievingFanPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -163,7 +163,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenValidFanHandleWhenRetrievingFanConfigurationThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
@@ -195,8 +195,8 @@ TEST_F(
 }
 } // namespace
 
-TEST_F(FANMODULE_TEST,
-       GivenValidFanHandleWhenRetrievingFanStateThenValidStateIsReturned) {
+LZT_TEST_F(FANMODULE_TEST,
+           GivenValidFanHandleWhenRetrievingFanStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto fan_handles = lzt::get_fan_handles(device, count);
@@ -221,7 +221,7 @@ TEST_F(FANMODULE_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenValidFanHandleWhenSettingFanToDefaultModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
@@ -241,7 +241,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenValidFanHandleWhenSettingFanToFixedSpeedModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {
@@ -266,7 +266,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FANMODULE_TEST,
     GivenValidFanHandleWhenSettingFanToSpeedTableModeThenValidFanConfigurationIsReturned) {
   for (auto device : devices) {

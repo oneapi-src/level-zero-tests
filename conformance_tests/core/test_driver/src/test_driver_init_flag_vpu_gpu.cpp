@@ -16,7 +16,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(
+LZT_TEST(
     zeInitTests,
     GivenVpuOnlyFlagThenGpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturnedAndAtLeastOneDriverHandleIsReturned) {
   ze_result_t result = zeInit(ZE_INIT_FLAG_VPU_ONLY);
@@ -43,7 +43,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeInitTests,
     GivenGpuOnlyFlagThenVpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturnedAndAtLeastOneDriverHandleIsReturned) {
   ze_result_t result = zeInit(ZE_INIT_FLAG_GPU_ONLY);

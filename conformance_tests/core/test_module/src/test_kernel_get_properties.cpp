@@ -12,7 +12,7 @@
 
 namespace lzt = level_zero_tests;
 
-TEST(zeKernelGetNameTests, GivenKernelGetNameCorrectNameIsReturned) {
+LZT_TEST(zeKernelGetNameTests, GivenKernelGetNameCorrectNameIsReturned) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -30,7 +30,7 @@ TEST(zeKernelGetNameTests, GivenKernelGetNameCorrectNameIsReturned) {
   lzt::destroy_context(context);
 }
 
-TEST(zeKernelMaxGroupSize, GivenKernelGetMaxGroupSize) {
+LZT_TEST(zeKernelMaxGroupSize, GivenKernelGetMaxGroupSize) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -50,15 +50,14 @@ TEST(zeKernelMaxGroupSize, GivenKernelGetMaxGroupSize) {
   kernelProperties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
   kernelProperties.pNext = &workGroupProperties;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetProperties(kernel, &kernelProperties));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernelProperties));
 
   LOG_INFO << "workGroupProperties.maxGroupSize = "
            << workGroupProperties.maxGroupSize;
 
   ze_device_compute_properties_t computeProperties = {};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetComputeProperties(device, &computeProperties));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceGetComputeProperties(device, &computeProperties));
 
   LOG_INFO << "computeProperties.maxTotalGroupSize = "
            << computeProperties.maxTotalGroupSize;

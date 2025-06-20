@@ -257,8 +257,8 @@ ze_image_handle_t zeImageFormatTypeTests::create_image_desc_format(
   return image;
 }
 
-TEST_P(zeImageFormatTypeTests,
-       GivenImageFormatUintWhenCopyingImageThenFormatIsCorrect) {
+LZT_TEST_P(zeImageFormatTypeTests,
+           GivenImageFormatUintWhenCopyingImageThenFormatIsCorrect) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -272,8 +272,8 @@ TEST_P(zeImageFormatTypeTests,
            false);
 }
 
-TEST_P(zeImageFormatTypeTests,
-       GivenImageFormatIntWhenCopyingImageThenFormatIsCorrect) {
+LZT_TEST_P(zeImageFormatTypeTests,
+           GivenImageFormatIntWhenCopyingImageThenFormatIsCorrect) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -287,8 +287,8 @@ TEST_P(zeImageFormatTypeTests,
            false);
 }
 
-TEST_P(zeImageFormatTypeTests,
-       GivenImageFormatFloatWhenCopyingImageThenFormatIsCorrect) {
+LZT_TEST_P(zeImageFormatTypeTests,
+           GivenImageFormatFloatWhenCopyingImageThenFormatIsCorrect) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -302,8 +302,8 @@ TEST_P(zeImageFormatTypeTests,
            false);
 }
 
-TEST_P(zeImageFormatTypeTests,
-       GivenImageFormatUnormWhenCopyingImageThenFormatIsCorrect) {
+LZT_TEST_P(zeImageFormatTypeTests,
+           GivenImageFormatUnormWhenCopyingImageThenFormatIsCorrect) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -317,8 +317,8 @@ TEST_P(zeImageFormatTypeTests,
            is_immediate, false);
 }
 
-TEST_P(zeImageFormatTypeTests,
-       GivenImageFormatSnormWhenCopyingImageThenFormatIsCorrect) {
+LZT_TEST_P(zeImageFormatTypeTests,
+           GivenImageFormatSnormWhenCopyingImageThenFormatIsCorrect) {
   auto image_type = std::get<0>(GetParam());
   if (std::find(supported_image_types.begin(), supported_image_types.end(),
                 image_type) == supported_image_types.end()) {
@@ -332,7 +332,7 @@ TEST_P(zeImageFormatTypeTests,
            false);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeImageFormatTypeTests,
     GivenImageFormatUintWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -349,7 +349,7 @@ TEST_P(
            true);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeImageFormatTypeTests,
     GivenImageFormatIntWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -366,7 +366,7 @@ TEST_P(
            true);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeImageFormatTypeTests,
     GivenImageFormatFloatWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -383,7 +383,7 @@ TEST_P(
            true);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeImageFormatTypeTests,
     GivenImageFormatUnormWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -400,7 +400,7 @@ TEST_P(
            is_immediate, true);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeImageFormatTypeTests,
     GivenImageFormatSnormWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -560,8 +560,8 @@ void zeImageFormatLayoutTests::verify_buffer_float(ImageFormatFixture &test) {
   }
 }
 
-TEST_P(zeImageFormatLayoutTests,
-       GivenImageFormatLayoutWhenCopyingImageThenFormatIsCorrect) {
+LZT_TEST_P(zeImageFormatLayoutTests,
+           GivenImageFormatLayoutWhenCopyingImageThenFormatIsCorrect) {
   auto image_type = std::get<0>(GetParam());
   auto layout = std::get<1>(GetParam());
   auto is_immediate = std::get<2>(GetParam());
@@ -643,7 +643,7 @@ TEST_P(zeImageFormatLayoutTests,
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     zeImageFormatLayoutTests,
     GivenImageFormatLayoutWhenCopyingImageThenFormatIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();

@@ -69,14 +69,14 @@ protected:
                                         &instance.dst_region);
         EXPECT_NE(nullptr, instance.dst_region);
 
-        ASSERT_EQ(zeVirtualMemMap(context, instance.src_region, mem_size_,
-                                  instance.src_physical_region, 0,
-                                  ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-                  ZE_RESULT_SUCCESS);
-        ASSERT_EQ(zeVirtualMemMap(context, instance.dst_region, mem_size_,
-                                  instance.dst_physical_region, 0,
-                                  ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-                  ZE_RESULT_SUCCESS);
+        ASSERT_ZE_RESULT_SUCCESS(
+            zeVirtualMemMap(context, instance.src_region, mem_size_,
+                            instance.src_physical_region, 0,
+                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+        ASSERT_ZE_RESULT_SUCCESS(
+            zeVirtualMemMap(context, instance.dst_region, mem_size_,
+                            instance.dst_physical_region, 0,
+                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
       } else {
         FAIL() << "Unexpected memory type";
       }
@@ -118,16 +118,14 @@ protected:
                                           &sub_device_instance.dst_region);
           EXPECT_NE(nullptr, sub_device_instance.dst_region);
 
-          ASSERT_EQ(zeVirtualMemMap(context, sub_device_instance.src_region,
-                                    mem_size_,
-                                    sub_device_instance.src_physical_region, 0,
-                                    ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-                    ZE_RESULT_SUCCESS);
-          ASSERT_EQ(zeVirtualMemMap(context, sub_device_instance.dst_region,
-                                    mem_size_,
-                                    sub_device_instance.dst_physical_region, 0,
-                                    ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-                    ZE_RESULT_SUCCESS);
+          ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
+              context, sub_device_instance.src_region, mem_size_,
+              sub_device_instance.src_physical_region, 0,
+              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+          ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
+              context, sub_device_instance.dst_region, mem_size_,
+              sub_device_instance.dst_physical_region, 0,
+              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
         } else {
           FAIL() << "Unexpected memory type";
         }
@@ -202,7 +200,7 @@ protected:
   bool is_immediate_ = false;
 };
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenMultipleDevicesWithP2PWhenCopyingDeviceMemoryToAndFromRemoteDeviceThenSuccessIsReturned) {
 
@@ -322,7 +320,7 @@ TEST_P(
   lzt::free_memory(initial_pattern_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenP2PSubDevicesWhenCopyingDeviceMemoryToAndFromRemoteSubDeviceThenSuccessIsReturned) {
 
@@ -468,7 +466,7 @@ TEST_P(
   lzt::free_memory(initial_pattern_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenMultipleDevicesWithP2PWhenSettingAndCopyingMemoryToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
 
@@ -528,7 +526,7 @@ TEST_P(
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenP2PSubDevicesWhenSettingAndCopyingMemoryToRemoteSubDeviceThenRemoteSubDeviceGetsCorrectMemory) {
 
@@ -599,7 +597,7 @@ TEST_P(
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenMultipleDevicesWithP2PWhenCopyingMemoryRegionToRemoteDeviceThenRemoteDeviceGetsCorrectMemory) {
 
@@ -728,7 +726,7 @@ TEST_P(
   lzt::free_memory(initial_pattern_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenP2PSubDevicesWhenCopyingMemoryRegionToSubDeviceOnSameDeviceThenRemoteSubDeviceGetsCorrectMemory) {
 
@@ -861,7 +859,7 @@ TEST_P(
   lzt::free_memory(initial_pattern_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenP2PSubDevicesWhenCopyingMemoryRegionToSubDeviceOnDifferentDeviceThenRemoteSubDeviceGetsCorrectMemory) {
 
@@ -996,7 +994,7 @@ TEST_P(
   lzt::free_memory(initial_pattern_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenMultipleDevicesWithP2PWhenKernelReadsRemoteDeviceMemoryWithDevicePointerOffsetThenCorrectDataIsRead) {
 
@@ -1064,7 +1062,7 @@ TEST_P(
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenP2PSubDevicesWhenKernelReadsRemoteSubDeviceMemoryWithSubDevicePointerOffsetThenCorrectDataIsRead) {
 
@@ -1143,7 +1141,7 @@ TEST_P(
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenMultipleDevicesWithP2PWhenKernelReadsRemoteDeviceMemoryThenCorrectDataIsRead) {
 
@@ -1219,7 +1217,7 @@ TEST_P(
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     zeP2PTests,
     GivenP2PSubDevicesWhenKernelReadsRemoteSubDeviceMemoryThenCorrectDataIsRead) {
 

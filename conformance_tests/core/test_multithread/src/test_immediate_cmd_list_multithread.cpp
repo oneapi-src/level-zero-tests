@@ -105,7 +105,7 @@ void thread_append_memory_copy() {
 
 class zeImmediateCommandListMultiThreadTest : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeImmediateCommandListMultiTthreadTest,
     GivenMultipleThreadsWhenCreateCloseAndDestroyImmediateCommandListsThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -121,7 +121,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeImmediateCommandListMultiThreadTest,
     GivenMultipleThreadsUseImmediateCommandListsForAppendMemoryCopyThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;

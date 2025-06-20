@@ -49,7 +49,8 @@ bool luid_equal(
   return true;
 }
 
-TEST(zeLuidTests, GivenValidDevicesWhenRetrievingLuidThenValidValuesReturned) {
+LZT_TEST(zeLuidTests,
+         GivenValidDevicesWhenRetrievingLuidThenValidValuesReturned) {
   if (!check_ext_version())
     GTEST_SKIP();
 
@@ -66,7 +67,7 @@ TEST(zeLuidTests, GivenValidDevicesWhenRetrievingLuidThenValidValuesReturned) {
     extProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_LUID_EXT_PROPERTIES;
 
     properties.pNext = &extProperties;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &properties));
 
     ze_device_luid_ext_properties_t *propExt =
         static_cast<ze_device_luid_ext_properties_t *>(properties.pNext);

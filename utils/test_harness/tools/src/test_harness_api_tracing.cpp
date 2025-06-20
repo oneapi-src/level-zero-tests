@@ -26,34 +26,32 @@ create_tracer_handle(const zet_context_handle_t context,
                      const zet_tracer_exp_desc_t tracer_desc) {
   zet_tracer_exp_handle_t tracer_handle;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetTracerExpCreate(context, &tracer_desc, &tracer_handle));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetTracerExpCreate(context, &tracer_desc, &tracer_handle));
 
   return tracer_handle;
 }
 
 void destroy_tracer_handle(zet_tracer_exp_handle_t tracer_handle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetTracerExpDestroy(tracer_handle));
+  EXPECT_ZE_RESULT_SUCCESS(zetTracerExpDestroy(tracer_handle));
 }
 
 void set_tracer_prologues(zet_tracer_exp_handle_t tracer_handle,
                           zet_core_callbacks_t prologues) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetTracerExpSetPrologues(tracer_handle, &prologues));
+  EXPECT_ZE_RESULT_SUCCESS(zetTracerExpSetPrologues(tracer_handle, &prologues));
 }
 
 void set_tracer_epilogues(const zet_tracer_exp_handle_t tracer_handle,
                           zet_core_callbacks_t epilogues) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetTracerExpSetEpilogues(tracer_handle, &epilogues));
+  EXPECT_ZE_RESULT_SUCCESS(zetTracerExpSetEpilogues(tracer_handle, &epilogues));
 }
 
 void enable_tracer(zet_tracer_exp_handle_t tracer_handle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetTracerExpSetEnabled(tracer_handle, true));
+  EXPECT_ZE_RESULT_SUCCESS(zetTracerExpSetEnabled(tracer_handle, true));
 }
 
 void disable_tracer(zet_tracer_exp_handle_t tracer_handle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetTracerExpSetEnabled(tracer_handle, false));
+  EXPECT_ZE_RESULT_SUCCESS(zetTracerExpSetEnabled(tracer_handle, false));
 }
 
 } // namespace level_zero_tests

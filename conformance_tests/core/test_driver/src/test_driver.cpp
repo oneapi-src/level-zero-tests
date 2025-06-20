@@ -11,12 +11,13 @@
 #include "logging/logging.hpp"
 #include <level_zero/ze_api.h>
 #include "test_harness/test_harness.hpp"
+#include "utils/utils.hpp"
 
 namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(
+LZT_TEST(
     zeInitTests,
     GivenDriverWasAlreadyInitializedWhenInitializingDriverThenSuccessIsReturned) {
   for (int i = 0; i < 5; ++i) {
@@ -24,8 +25,8 @@ TEST(
   }
 }
 
-TEST(zeDriverGetDriverVersionTests,
-     GivenZeroVersionWhenGettingDriverVersionThenNonZeroVersionIsReturned) {
+LZT_TEST(zeDriverGetDriverVersionTests,
+         GivenZeroVersionWhenGettingDriverVersionThenNonZeroVersionIsReturned) {
 
   lzt::ze_init();
 
@@ -36,8 +37,9 @@ TEST(zeDriverGetDriverVersionTests,
   }
 }
 
-TEST(zeDriverGetApiVersionTests,
-     GivenValidDriverWhenRetrievingApiVersionThenValidApiVersionIsReturned) {
+LZT_TEST(
+    zeDriverGetApiVersionTests,
+    GivenValidDriverWhenRetrievingApiVersionThenValidApiVersionIsReturned) {
   lzt::ze_init();
 
   auto drivers = lzt::get_all_driver_handles();
@@ -47,8 +49,9 @@ TEST(zeDriverGetApiVersionTests,
   }
 }
 
-TEST(zeDriverGetIPCPropertiesTests,
-     GivenValidDriverWhenRetrievingIPCPropertiesThenValidPropertiesAreRetured) {
+LZT_TEST(
+    zeDriverGetIPCPropertiesTests,
+    GivenValidDriverWhenRetrievingIPCPropertiesThenValidPropertiesAreRetured) {
   lzt::ze_init();
   auto drivers = lzt::get_all_driver_handles();
   ASSERT_GT(drivers.size(), 0);
@@ -57,18 +60,21 @@ TEST(zeDriverGetIPCPropertiesTests,
   }
 }
 
-TEST(zeDriverGetLastErrorDescription,
-     GivenValidDriverWhenRetreivingErrorDescriptionThenValidStringIsReturned) {
+LZT_TEST(
+    zeDriverGetLastErrorDescription,
+    GivenValidDriverWhenRetreivingErrorDescriptionThenValidStringIsReturned) {
   lzt::ze_init();
-
+  lzt::print_platform_overview();
   auto drivers = lzt::get_all_driver_handles();
   for (auto driver : drivers) {
-    lzt::get_last_error_description(driver);
+    const char *pStr = nullptr;
+    EXPECT_ZE_RESULT_SUCCESS(zeDriverGetLastErrorDescription(driver, &pStr));
+    EXPECT_NE(nullptr, pStr);
   }
 }
 
 #ifdef ZE_API_VERSION_CURRENT_M
-TEST(
+LZT_TEST(
     zeInitDrivers,
     GivenCallToZeInitDriversWithAllCombinationsOfFlagsThenExpectAtLeastOneValidDriverHandle) {
 
@@ -78,7 +84,7 @@ TEST(
 
   // Test with GPU only
   desc.flags = ZE_INIT_DRIVER_TYPE_FLAG_GPU;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInitDrivers(&pCount, nullptr, &desc));
+  EXPECT_ZE_RESULT_SUCCESS(zeInitDrivers(&pCount, nullptr, &desc));
   EXPECT_GE(pCount, 0);
 
   // Test with NPU only
@@ -92,17 +98,17 @@ TEST(
   // Test with GPU and NPU
   pCount = 0;
   desc.flags = ZE_INIT_DRIVER_TYPE_FLAG_GPU | ZE_INIT_DRIVER_TYPE_FLAG_NPU;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInitDrivers(&pCount, nullptr, &desc));
+  EXPECT_ZE_RESULT_SUCCESS(zeInitDrivers(&pCount, nullptr, &desc));
   EXPECT_GT(pCount, 0);
 
   // Test with all flags
   pCount = 0;
   desc.flags = UINT32_MAX;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInitDrivers(&pCount, nullptr, &desc));
+  EXPECT_ZE_RESULT_SUCCESS(zeInitDrivers(&pCount, nullptr, &desc));
   EXPECT_GT(pCount, 0);
 }
 
-TEST(
+LZT_TEST(
     zeInitDrivers,
     GivenCallToZeInitDriversAndZeInitWithAllCombinationsOfFlagsThenExpectAtLeastOneValidDriverHandle) {
 
@@ -112,7 +118,7 @@ TEST(
 
   // Test with GPU only
   desc.flags = ZE_INIT_DRIVER_TYPE_FLAG_GPU;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInitDrivers(&pCount, nullptr, &desc));
+  EXPECT_ZE_RESULT_SUCCESS(zeInitDrivers(&pCount, nullptr, &desc));
   EXPECT_GE(pCount, 0);
   lzt::ze_init(ZE_INIT_FLAG_GPU_ONLY);
   auto drivers = lzt::get_all_driver_handles();
@@ -132,7 +138,7 @@ TEST(
   // Test with GPU and NPU
   pCount = 0;
   desc.flags = ZE_INIT_DRIVER_TYPE_FLAG_GPU | ZE_INIT_DRIVER_TYPE_FLAG_NPU;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInitDrivers(&pCount, nullptr, &desc));
+  EXPECT_ZE_RESULT_SUCCESS(zeInitDrivers(&pCount, nullptr, &desc));
   EXPECT_GT(pCount, 0);
   lzt::ze_init(ZE_INIT_FLAG_GPU_ONLY | ZE_INIT_FLAG_VPU_ONLY);
   drivers = lzt::get_all_driver_handles();
@@ -141,7 +147,7 @@ TEST(
   // Test with all flags
   pCount = 0;
   desc.flags = UINT32_MAX;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInitDrivers(&pCount, nullptr, &desc));
+  EXPECT_ZE_RESULT_SUCCESS(zeInitDrivers(&pCount, nullptr, &desc));
   EXPECT_GT(pCount, 0);
   lzt::ze_init(0);
   drivers = lzt::get_all_driver_handles();

@@ -29,7 +29,7 @@ class PciModuleTest : public lzt::SysmanCtsClass {};
 #define PCI_TEST PciModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingStateThenStateIsReturned) {
+LZT_TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingStateThenStateIsReturned) {
   for (auto device : devices) {
     zes_pci_properties_t pciProps = {};
     pciProps = lzt::get_pci_properties(device);
@@ -54,8 +54,9 @@ TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingStateThenStateIsReturned) {
     }
   }
 }
-TEST_F(PCI_TEST,
-       GivenSysmanHandleWhenRetrievingPCIPropertiesThenpropertiesIsReturned) {
+LZT_TEST_F(
+    PCI_TEST,
+    GivenSysmanHandleWhenRetrievingPCIPropertiesThenpropertiesIsReturned) {
   for (auto device : devices) {
     zes_pci_properties_t pciProps = {};
     pciProps = lzt::get_pci_properties(device);
@@ -75,7 +76,7 @@ TEST_F(PCI_TEST,
     EXPECT_LE(pciProps.maxSpeed.maxBandwidth, UINT64_MAX);
   }
 }
-TEST_F(
+LZT_TEST_F(
     PCI_TEST,
     GivenSysmanHandleWhenRetrievingPCIStatsPropertiesThenStatspropertiesIsReturned) {
   for (auto device : devices) {
@@ -94,13 +95,14 @@ TEST_F(
     }
   }
 }
-TEST_F(PCI_TEST,
-       GivenSysmanHandleWhenRetrievingPCIBarsThenNonZeroCountValueIsReturned) {
+LZT_TEST_F(
+    PCI_TEST,
+    GivenSysmanHandleWhenRetrievingPCIBarsThenNonZeroCountValueIsReturned) {
   for (auto device : devices) {
     auto p_count = lzt::get_pci_bar_count(device);
   }
 }
-TEST_F(
+LZT_TEST_F(
     PCI_TEST,
     GivenSysmanHandleWhenRetrievingPCIBarsThenValidBarPropertiesAreReturned) {
   for (auto device : devices) {
@@ -116,7 +118,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     PCI_TEST,
     GivenSysmanHandleWhenRetrievingPCIBarsExtensionThenValidBarPropertiesAreReturned) {
   for (auto device : devices) {
@@ -138,7 +140,8 @@ TEST_F(
     }
   }
 }
-TEST_F(PCI_TEST, GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
+LZT_TEST_F(PCI_TEST,
+           GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
   for (auto device : devices) {
     auto pciProps = lzt::get_pci_properties(device);
     auto pci_stats_initial = lzt::get_pci_stats(device);

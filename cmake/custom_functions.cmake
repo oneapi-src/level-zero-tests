@@ -23,6 +23,7 @@ function(add_core_library_test project_name)
         PUBLIC
         level_zero_tests::${project_name}
         GTest::GTest
+        level_zero_tests::utils
     )
 
     target_include_directories(${name}

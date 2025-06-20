@@ -17,7 +17,7 @@ namespace lzt = level_zero_tests;
 namespace level_zero_tests {
 
 void register_event(zes_device_handle_t device, zes_event_type_flags_t events) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEventRegister(device, events));
+  EXPECT_ZE_RESULT_SUCCESS(zesDeviceEventRegister(device, events));
 }
 
 ze_result_t listen_event(ze_driver_handle_t hDriver, uint32_t timeout,
@@ -26,7 +26,7 @@ ze_result_t listen_event(ze_driver_handle_t hDriver, uint32_t timeout,
                          zes_event_type_flags_t *events) {
   ze_result_t result = zesDriverEventListen(hDriver, timeout, count, devices,
                                             numDeviceEvents, events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+  EXPECT_ZE_RESULT_SUCCESS(result);
   return result;
 }
 
@@ -36,7 +36,7 @@ ze_result_t listen_eventEx(ze_driver_handle_t hDriver, uint64_t timeoutEx,
                            zes_event_type_flags_t *events) {
   ze_result_t result = zesDriverEventListenEx(hDriver, timeoutEx, count,
                                               devices, numDeviceEvents, events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+  EXPECT_ZE_RESULT_SUCCESS(result);
   return result;
 }
 

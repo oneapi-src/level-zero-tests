@@ -58,21 +58,21 @@ protected:
   std::vector<ze_device_handle_t> devices;
 };
 
-TEST_F(ContextExCreateTests,
-       GivenContextOnAllDevicesWhenUsingContextThenSuccess) {
+LZT_TEST_F(ContextExCreateTests,
+           GivenContextOnAllDevicesWhenUsingContextThenSuccess) {
   auto context = lzt::create_context_ex(driver);
   run_test(context, devices, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     ContextExCreateTests,
     GivenContextOnAllDevicesWhenUsingContextWithImmediateCmdListThenSuccess) {
   auto context = lzt::create_context_ex(driver);
   run_test(context, devices, true);
 }
 
-TEST_F(ContextExCreateTests,
-       GivenContextOnMultipleDevicesWhenUsingContextThenSuccess) {
+LZT_TEST_F(ContextExCreateTests,
+           GivenContextOnMultipleDevicesWhenUsingContextThenSuccess) {
   // This test requires two or more devices
   if (devices.size() < 2) {
     GTEST_SKIP() << "Less than two devices, skipping test";
@@ -84,7 +84,7 @@ TEST_F(ContextExCreateTests,
   run_test(context, devices, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     ContextExCreateTests,
     GivenContextOnMultipleDevicesWhenUsingContextWithImmediateCmdListThenSuccess) {
   // This test requires two or more devices
@@ -98,10 +98,11 @@ TEST_F(
   run_test(context, devices, true);
 }
 
-TEST(ContextStatusTest,
-     GivenContextCreateWhenUsingValidHandleThenContextGetStatusReturnsSuccess) {
+LZT_TEST(
+    ContextStatusTest,
+    GivenContextCreateWhenUsingValidHandleThenContextGetStatusReturnsSuccess) {
   auto context = lzt::get_default_context();
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeContextGetStatus(context));
+  ASSERT_ZE_RESULT_SUCCESS(zeContextGetStatus(context));
 }
 
 } // namespace
