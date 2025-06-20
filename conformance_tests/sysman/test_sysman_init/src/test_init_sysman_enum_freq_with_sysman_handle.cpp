@@ -16,14 +16,14 @@
 
 namespace {
 
-TEST(
+LZT_TEST(
     SysmanInitTests,
     GivenZesInitAndZeInitWithSysmanEnabledWhenSysmanApiIsCalledWithZesDeviceThenSuccessIsReturned) {
   static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
   putenv(sys_env);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+  ASSERT_ZE_RESULT_SUCCESS(zesInit(0));
+  ASSERT_ZE_RESULT_SUCCESS(zeInit(0));
 
   std::vector<zes_driver_handle_t> zes_drivers =
       lzt::get_all_zes_driver_handles();
@@ -33,8 +33,8 @@ TEST(
   EXPECT_FALSE(zes_devices.empty());
 
   uint32_t count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumFrequencyDomains(zes_devices[0], &count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesDeviceEnumFrequencyDomains(zes_devices[0], &count, nullptr));
 }
 
 } // namespace

@@ -57,26 +57,26 @@ void zeCommandListAppendMemoryFillTests::
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturned) {
   RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -116,26 +116,26 @@ void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned) {
   RunMaxMemoryFillTest(false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned) {
   RunMaxMemoryFillTest(true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunMaxMemoryFillTest(false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -165,26 +165,26 @@ void zeCommandListAppendMemoryFillTests::
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
   RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -217,21 +217,21 @@ void zeCommandListAppendMemoryFillTests::
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned) {
   RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(false,
                                                                      false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(true,
                                                                      false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -239,7 +239,7 @@ TEST_F(
                                                                      true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -279,12 +279,12 @@ void zeCommandListAppendMemoryFillVerificationTests::
   free_memory(memory);
 }
 
-TEST_F(zeCommandListAppendMemoryFillVerificationTests,
-       GivenHostMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
+LZT_TEST_F(zeCommandListAppendMemoryFillVerificationTests,
+           GivenHostMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
   RunGivenHostMemoryWhenExecutingAMemoryFillTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenHostMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly) {
   RunGivenHostMemoryWhenExecutingAMemoryFillTest(true);
@@ -313,12 +313,12 @@ void zeCommandListAppendMemoryFillVerificationTests::
   free_memory(memory);
 }
 
-TEST_F(zeCommandListAppendMemoryFillVerificationTests,
-       GivenSharedMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
+LZT_TEST_F(zeCommandListAppendMemoryFillVerificationTests,
+           GivenSharedMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
   RunGivenSharedMemoryWhenExecutingAMemoryFillTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenSharedMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly) {
   RunGivenSharedMemoryWhenExecutingAMemoryFillTest(true);
@@ -338,7 +338,7 @@ void zeCommandListAppendMemoryFillVerificationTests::
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
   close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(cmd_bundle.list));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListReset(cmd_bundle.list));
   append_memory_copy(cmd_bundle.list, local_mem, memory, size, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
   close_command_list(cmd_bundle.list);
@@ -354,12 +354,12 @@ void zeCommandListAppendMemoryFillVerificationTests::
   free_memory(local_mem);
 }
 
-TEST_F(zeCommandListAppendMemoryFillVerificationTests,
-       GivenDeviceMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
+LZT_TEST_F(zeCommandListAppendMemoryFillVerificationTests,
+           GivenDeviceMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
   RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenDeviceMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly) {
   RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(true);
@@ -389,14 +389,14 @@ void zeCommandListAppendMemoryFillVerificationTests::
   free(memory);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenSharedSystemMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenSharedSystemMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -407,7 +407,7 @@ class zeCommandListAppendMemoryFillSubDeviceVerificationTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<ze_memory_type_t, bool>> {
 };
-TEST_P(
+LZT_TEST_P(
     zeCommandListAppendMemoryFillSubDeviceVerificationTests,
     GivenMemoryAllocationWhenExecutingAMemoryFillWithSubDeviceThenMemoryIsSetCorrectly) {
 
@@ -515,12 +515,12 @@ void zeCommandListAppendMemoryFillPatternVerificationTests::
   lzt::free_memory_with_allocator_selector(target_memory, is_shared_system);
 }
 
-TEST_P(zeCommandListAppendMemoryFillPatternVerificationTests,
-       GivenPatternSizeWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
+LZT_TEST_P(zeCommandListAppendMemoryFillPatternVerificationTests,
+           GivenPatternSizeWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
   RunGivenPatternSizeWhenExecutingAMemoryFillTest(false);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeCommandListAppendMemoryFillPatternVerificationTests,
     GivenPatternSizeWhenExecutingAMemoryFillThenMemoryIsSetCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -568,13 +568,13 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
     GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
   RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
     GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
   RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(true);
@@ -619,13 +619,13 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
     GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
   RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
     GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
   RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(true);
@@ -691,14 +691,14 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
     GivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
   RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
       false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
     GivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
   RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
@@ -749,14 +749,14 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
     GivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsThenSuccessIsReturnedAndCopyIsCorrect) {
   RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
       false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
     GivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
   RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
@@ -903,7 +903,7 @@ protected:
   size_t memory_size;
 };
 
-TEST_P(
+LZT_TEST_P(
     zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests,
     GivenValidMemoryWhenAppendingMemoryCopyWithRegionThenSuccessIsReturnedAndCopyIsCorrect) {
   test_copy_region();
@@ -1017,7 +1017,7 @@ protected:
   size_t memory_size;
 };
 
-TEST_P(
+LZT_TEST_P(
     AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToHostMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1032,7 +1032,7 @@ TEST_P(
   lzt::free_memory(destination_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToSharedMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1047,7 +1047,7 @@ TEST_P(
   lzt::free_memory(destination_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToDeviceMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1062,7 +1062,7 @@ TEST_P(
   lzt::free_memory(destination_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1077,7 +1077,7 @@ TEST_P(
   lzt::aligned_free(destination_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     AppendMemoryCopyRegionWithSharedSystem,
     GivenValidHostMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1092,7 +1092,7 @@ TEST_P(
   lzt::aligned_free(destination_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     AppendMemoryCopyRegionWithSharedSystem,
     GivenValidSharedMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1107,7 +1107,7 @@ TEST_P(
   lzt::aligned_free(destination_memory);
 }
 
-TEST_P(
+LZT_TEST_P(
     AppendMemoryCopyRegionWithSharedSystem,
     GivenValidDeviceMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1160,26 +1160,26 @@ void zeCommandListAppendMemoryCopyTests::
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturned) {
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1208,26 +1208,26 @@ void zeCommandListAppendMemoryCopyTests::
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventThenSuccessIsReturned) {
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1259,21 +1259,21 @@ void zeCommandListAppendMemoryCopyTests::
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned) {
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(false,
                                                                     false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(true,
                                                                     false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1281,7 +1281,7 @@ TEST_F(
                                                                     true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1317,21 +1317,21 @@ void zeCommandListAppendMemoryCopyTests::
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned) {
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
       false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
       true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionToSharedSystemMemoryWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1339,7 +1339,7 @@ TEST_F(
                                                                           true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionToSharedSystemMemoryWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1358,8 +1358,8 @@ protected:
     memset(memory, 0xaa, size);
     auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendMemoryPrefetch(cmd_bundle.list, memory, size));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandListAppendMemoryPrefetch(cmd_bundle.list, memory, size));
     lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
     lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -1373,25 +1373,25 @@ protected:
   }
 };
 
-TEST_F(zeCommandListAppendMemoryPrefetchTests,
-       GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHost) {
+LZT_TEST_F(zeCommandListAppendMemoryPrefetchTests,
+           GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHost) {
   RunGivenMemoryPrefetchWhenWritingFromDeviceTest(false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryPrefetchTests,
     GivenMemoryPrefetchWhenWritingFromDeviceOnImmediateCmdListThenDataisCorrectFromHost) {
   RunGivenMemoryPrefetchWhenWritingFromDeviceTest(true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryPrefetchTests,
     GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHostWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenMemoryPrefetchWhenWritingFromDeviceTest(false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendMemoryPrefetchTests,
     GivenMemoryPrefetchWhenWritingFromDeviceOnImmediateCmdListThenDataisCorrectFromHostWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1403,8 +1403,8 @@ class zeCommandListAppendMemAdviseTests
       public ::testing::WithParamInterface<
           std::tuple<ze_memory_advice_t, bool>> {};
 
-TEST_P(zeCommandListAppendMemAdviseTests,
-       GivenMemAdviseWhenWritingFromDeviceThenDataIsCorrectFromHost) {
+LZT_TEST_P(zeCommandListAppendMemAdviseTests,
+           GivenMemAdviseWhenWritingFromDeviceThenDataIsCorrectFromHost) {
   const size_t size = 16;
   const uint8_t value = 0x55;
   void *memory = allocate_shared_memory(size);
@@ -1413,10 +1413,9 @@ TEST_P(zeCommandListAppendMemAdviseTests,
   bool is_immediate = std::get<1>(GetParam());
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendMemAdvise(cmd_bundle.list,
-                                         zeDevice::get_instance()->get_device(),
-                                         memory, size, mem_advice));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemAdvise(
+      cmd_bundle.list, zeDevice::get_instance()->get_device(), memory, size,
+      mem_advice));
 
   lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
   lzt::close_command_list(cmd_bundle.list);
@@ -1503,7 +1502,7 @@ public:
   }
 };
 
-TEST_P(
+LZT_TEST_P(
     zeCommandListAppendMemoryCopyParameterizedTests,
     GivenParameterizedSourceAndDestinationMemAllocTypesWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
   ze_memory_type_t src_memory_type = std::get<0>(GetParam());
@@ -1654,7 +1653,7 @@ public:
   }
 };
 
-TEST_P(
+LZT_TEST_P(
     AppendMemoryCopyWithSharedSystem,
     GivenParameterizedSourceAndDestinationMemAllocTypesWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
 
@@ -1849,37 +1848,37 @@ protected:
   const int n_iters = 1000;
 };
 
-TEST_P(
+LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryThenSuccessIsReturned) {
   this->run(true, false, false);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryThenSuccessIsReturned) {
   this->run(false, false, false);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryOnImmediateCmdListWithCloseAndResetThenSuccessIsReturned) {
   this->run(true, true, true);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryOnImmediateCmdListWithCloseAndResetThenSuccessIsReturned) {
   this->run(false, true, true);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryOnImmediateCmdListWithoutCloseAndResetThenSuccessIsReturned) {
   this->run(true, true, false);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryOnImmediateCmdListWithoutCloseAndResetThenSuccessIsReturned) {
   this->run(false, true, false);

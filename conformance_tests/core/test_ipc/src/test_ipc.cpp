@@ -34,7 +34,7 @@ protected:
   ze_context_handle_t context_;
 };
 
-TEST_F(
+LZT_TEST_F(
     zeIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenGettingIpcMemHandleThenSuccessIsReturned) {
   ze_result_t result = zeInit(0);
@@ -47,13 +47,13 @@ TEST_F(
   context_ = lzt::create_context();
   memory_ = lzt::allocate_device_memory(1, 1, 0, context_);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeIpcMemHandleTests,
     GivenSameIpcMemoryHandleWhenOpeningIpcMemHandleMultipleTimesThenUniquePointersAreReturned) {
   ze_result_t result = zeInit(0);
@@ -69,16 +69,15 @@ TEST_F(
   context_ = lzt::create_context();
   memory_ = lzt::allocate_device_memory(1, 1, 0, device, context_);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
 
   const int numIters = 2000;
   std::vector<void *> ipcPointers(numIters);
   ze_ipc_memory_flags_t ipcMemFlags;
   for (int i = 0; i < numIters; i++) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemOpenIpcHandle(context_, device, ipc_mem_handle_, 0,
-                                 &ipcPointers[i]));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemOpenIpcHandle(
+        context_, device, ipc_mem_handle_, 0, &ipcPointers[i]));
     EXPECT_NE(nullptr, ipcPointers[i]);
   }
 
@@ -111,25 +110,22 @@ protected:
   }
 };
 
-TEST_F(
+LZT_TEST_F(
     zeIpcMemHandleCloseTests,
     GivenValidPointerToDeviceMemoryAllocationWhenClosingIpcHandleThenSuccessIsReturned) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context_,
-                               lzt::zeDevice::get_instance()->get_device(),
-                               ipc_mem_handle_,
-                               ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, &ipc_memory_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context_, ipc_memory_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemOpenIpcHandle(
+      context_, lzt::zeDevice::get_instance()->get_device(), ipc_mem_handle_,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, &ipc_memory_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context_, ipc_memory_));
 }
 
-TEST_F(
+LZT_TEST_F(
     zeIpcMemHandleCloseTests,
     GivenValidPointerToDeviceMemoryAllocationBiasCachedWhenClosingIpcHandleThenSuccessIsReturned) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(
-                context_, lzt::zeDevice::get_instance()->get_device(),
-                ipc_mem_handle_, ZE_IPC_MEMORY_FLAG_BIAS_CACHED, &ipc_memory_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context_, ipc_memory_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemOpenIpcHandle(
+      context_, lzt::zeDevice::get_instance()->get_device(), ipc_mem_handle_,
+      ZE_IPC_MEMORY_FLAG_BIAS_CACHED, &ipc_memory_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context_, ipc_memory_));
 }
 
 } // namespace

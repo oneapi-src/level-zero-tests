@@ -7,6 +7,7 @@
  */
 
 #include "test_harness/test_harness.hpp"
+#include "utils/utils.hpp"
 #include "gtest/gtest.h"
 
 namespace lzt = level_zero_tests;
@@ -121,8 +122,8 @@ void *allocate_host_memory(const size_t size, const size_t alignment,
 
   void *memory = nullptr;
   auto context_initial = context;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocHost(context, &host_desc, size, alignment, &memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemAllocHost(context, &host_desc, size, alignment, &memory));
   EXPECT_EQ(context, context_initial);
   EXPECT_NE(nullptr, memory);
 
@@ -140,8 +141,8 @@ void *allocate_host_memory(const size_t size, const size_t alignment,
 
   void *memory = nullptr;
   auto context_initial = context;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocHost(context, &host_desc, size, alignment, &memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemAllocHost(context, &host_desc, size, alignment, &memory));
   EXPECT_EQ(context, context_initial);
   EXPECT_NE(nullptr, memory);
 
@@ -233,9 +234,8 @@ void *allocate_device_memory(const size_t size, const size_t alignment,
   auto device_initial = device_handle;
 
   void *memory = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocDevice(context, &device_desc, size, alignment,
-                             device_handle, &memory));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemAllocDevice(context, &device_desc, size,
+                                            alignment, device_handle, &memory));
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device_handle, device_initial);
   EXPECT_NE(nullptr, memory);
@@ -376,9 +376,8 @@ void *allocate_shared_memory(const size_t size, const size_t alignment,
   auto device_initial = device;
 
   void *memory = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocShared(context, &device_desc, &host_desc, size, alignment,
-                             device, &memory));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemAllocShared(context, &device_desc, &host_desc,
+                                            size, alignment, device, &memory));
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
   EXPECT_NE(nullptr, memory);
@@ -421,7 +420,7 @@ void free_memory_with_allocator_selector(const void *ptr,
 
 void free_memory(ze_context_handle_t context, const void *ptr) {
   auto context_initial = context;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemFree(context, (void *)ptr));
   EXPECT_EQ(context, context_initial);
 }
 
@@ -432,7 +431,7 @@ void free_memory_with_allocator_selector(ze_context_handle_t context,
     aligned_free((void *)ptr);
   } else {
     auto context_initial = context;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, (void *)ptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemFree(context, (void *)ptr));
     EXPECT_EQ(context, context_initial);
   }
 }
@@ -453,22 +452,22 @@ void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
 
 void get_ipc_handle(ze_context_handle_t context,
                     ze_ipc_mem_handle_t *mem_handle, void *memory) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, mem_handle));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, mem_handle));
 }
 
 void put_ipc_handle(ze_context_handle_t context,
                     ze_ipc_mem_handle_t mem_handle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context, mem_handle));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context, mem_handle));
 }
 
 void open_ipc_handle(ze_context_handle_t context, ze_device_handle_t device,
                      ze_ipc_mem_handle_t mem_handle, void **memory) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context, device, mem_handle, 0, memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemOpenIpcHandle(context, device, mem_handle, 0, memory));
 }
 
 void close_ipc_handle(ze_context_handle_t context, void **memory) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
 }
 
 void write_data_pattern(void *buff, size_t size, int8_t data_pattern) {
@@ -498,8 +497,8 @@ void get_mem_alloc_properties(
     ze_memory_allocation_properties_t *memory_properties,
     ze_device_handle_t *device) {
   auto context_initial = context;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAllocProperties(
-                                   context, memory, memory_properties, device));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAllocProperties(context, memory, memory_properties, device));
   EXPECT_EQ(context, context_initial);
 }
 
@@ -514,10 +513,9 @@ void *reserve_allocate_and_map_device_memory(
                                          reservedPhysicalMemory);
   lzt::virtual_memory_reservation(context, nullptr, allocSize, &reservedMemory);
   EXPECT_NE(nullptr, reservedMemory);
-  EXPECT_EQ(zeVirtualMemMap(context, reservedMemory, allocSize,
-                            *reservedPhysicalMemory, 0,
-                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-            ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
+      context, reservedMemory, allocSize, *reservedPhysicalMemory, 0,
+      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
   return reservedMemory;
 }
 
@@ -531,35 +529,34 @@ void unmap_and_free_reserved_memory(
 
 void query_page_size(ze_context_handle_t context, ze_device_handle_t device,
                      size_t alloc_size, size_t *page_size) {
-  EXPECT_EQ(zeVirtualMemQueryPageSize(context, device, alloc_size, page_size),
-            ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeVirtualMemQueryPageSize(context, device, alloc_size, page_size));
   EXPECT_GT(*page_size, 0);
 }
 
 void virtual_memory_reservation(ze_context_handle_t context, const void *pStart,
                                 size_t size, void **memory) {
-  ASSERT_EQ(zeVirtualMemReserve(context, pStart, size, memory),
-            ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemReserve(context, pStart, size, memory));
 }
 
 void virtual_memory_reservation_set_access(
     ze_context_handle_t context, const void *ptr, size_t size,
     ze_memory_access_attribute_t access) {
-  EXPECT_EQ(zeVirtualMemSetAccessAttribute(context, ptr, size, access),
-            ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeVirtualMemSetAccessAttribute(context, ptr, size, access));
 }
 
 void virtual_memory_reservation_get_access(ze_context_handle_t context,
                                            const void *ptr, size_t size,
                                            ze_memory_access_attribute_t *access,
                                            size_t *outSize) {
-  EXPECT_EQ(zeVirtualMemGetAccessAttribute(context, ptr, size, access, outSize),
-            ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeVirtualMemGetAccessAttribute(context, ptr, size, access, outSize));
 }
 
 void virtual_memory_free(ze_context_handle_t context, void *memory,
                          size_t alloc_size) {
-  EXPECT_EQ(zeVirtualMemFree(context, memory, alloc_size), ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(zeVirtualMemFree(context, memory, alloc_size));
 }
 
 void physical_device_memory_allocation(ze_context_handle_t context,
@@ -587,29 +584,27 @@ void physical_memory_allocation(ze_context_handle_t context,
                                 ze_device_handle_t device,
                                 ze_physical_mem_desc_t *desc,
                                 ze_physical_mem_handle_t *memory) {
-  EXPECT_EQ(zePhysicalMemCreate(context, device, desc, memory),
-            ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(zePhysicalMemCreate(context, device, desc, memory));
   EXPECT_NE(nullptr, memory);
 }
 
 void physical_memory_destroy(ze_context_handle_t context,
                              ze_physical_mem_handle_t memory) {
-  EXPECT_EQ(zePhysicalMemDestroy(context, memory), ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(zePhysicalMemDestroy(context, memory));
 }
 
 void virtual_memory_map(ze_context_handle_t context,
                         const void *reservedVirtualMemory, size_t size,
                         ze_physical_mem_handle_t physical_memory, size_t offset,
                         ze_memory_access_attribute_t access) {
-  EXPECT_EQ(zeVirtualMemMap(context, reservedVirtualMemory, size,
-                            physical_memory, offset, access),
-            ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(zeVirtualMemMap(context, reservedVirtualMemory, size,
+                                           physical_memory, offset, access));
 }
 
 void virtual_memory_unmap(ze_context_handle_t context,
                           const void *reservedVirtualMemory, size_t size) {
-  EXPECT_EQ(zeVirtualMemUnmap(context, reservedVirtualMemory, size),
-            ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeVirtualMemUnmap(context, reservedVirtualMemory, size));
 }
 
 size_t create_page_aligned_size(size_t requested_size, size_t page_size) {

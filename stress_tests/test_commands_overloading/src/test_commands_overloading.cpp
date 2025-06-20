@@ -231,7 +231,7 @@ protected:
   uint32_t number_of_kernels_in_module_ = 1;
 }; // namespace
 
-TEST_P(
+LZT_TEST_P(
     zeDriverSpreadKernelsStressTest,
     MultiplyKernelDispatchesSpreadAmongModulesCommandsListsAndCommandQueues) {
 

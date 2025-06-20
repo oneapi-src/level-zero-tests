@@ -33,7 +33,7 @@ public:
 #define FREQUENCY_TEST FrequencyModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -41,7 +41,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFrequencyHandlesAreReturned) {
   for (auto device : devices) {
@@ -58,7 +58,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -75,7 +75,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFrequencyHandlesReturned) {
   for (auto device : devices) {
@@ -98,8 +98,9 @@ TEST_F(
   }
 }
 
-TEST_F(FREQUENCY_TEST,
-       GivenValidDeviceWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
+LZT_TEST_F(
+    FREQUENCY_TEST,
+    GivenValidDeviceWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pfreq_handles = lzt::get_freq_handles(device, count);
@@ -116,7 +117,7 @@ TEST_F(FREQUENCY_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFreqRangeWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
   for (auto device : devices) {
@@ -153,7 +154,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRetrievingAvailableClocksThenSuccessAndSameValuesAreReturnedTwice) {
   for (auto device : devices) {
@@ -175,7 +176,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRetrievingAvailableClocksThenPositiveAndValidValuesAreReturned) {
   for (auto device : devices) {
@@ -208,8 +209,9 @@ TEST_F(
     }
   }
 }
-TEST_F(FREQUENCY_TEST,
-       GivenClocksCountWhenRetrievingAvailableClocksThenActualCountIsUpdated) {
+LZT_TEST_F(
+    FREQUENCY_TEST,
+    GivenClocksCountWhenRetrievingAvailableClocksThenActualCountIsUpdated) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pfreq_handles = lzt::get_freq_handles(device, count);
@@ -229,7 +231,7 @@ TEST_F(FREQUENCY_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRequestingDeviceGPUTypeThenExpectCanControlPropertyToBeTrue) {
   for (auto device : devices) {
@@ -258,7 +260,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectPositiveFrequencyRange) {
   for (auto device : devices) {
@@ -283,7 +285,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenSameFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectSamePropertiesOnMultipleCalls) {
   for (auto device : devices) {
@@ -317,7 +319,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnSuccessOnMultipleCalls) {
   for (auto device : devices) {
@@ -337,7 +339,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenSameFrequencyHandleWhenRequestingFrequencyRangeThenExpectSameRangeOnMultipleCalls) {
   for (auto device : devices) {
@@ -362,7 +364,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnValidFrequencyRanges) {
   for (auto device : devices) {
@@ -379,7 +381,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectUpdatedFrequencyInGetFrequencyCall) {
   for (auto device : devices) {
@@ -435,7 +437,7 @@ std::string get_freq_domain(zes_freq_domain_t domain) {
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyHandleWhenRequestingSetFrequencyWithInvalidRangeThenExpectMinAndMaxFrequencyAreClampedToHardwareLimits) {
   for (auto device : devices) {
@@ -538,7 +540,7 @@ void get_throttle_time_init(zes_freq_handle_t pfreq_handle,
   EXPECT_GT(throttletime.timestamp, 0);
 }
 
-TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
+LZT_TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto pfreq_handles = lzt::get_freq_handles(device, count);
@@ -564,7 +566,7 @@ TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
-          EXPECT_EQ(status, ZE_RESULT_SUCCESS);
+          EXPECT_ZE_RESULT_SUCCESS(status);
           zes_power_sustained_limit_t power_sustained_limit_set;
           power_sustained_limit_set.power = 0;
           status = lzt::set_power_limits(
@@ -572,7 +574,7 @@ TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
-          EXPECT_EQ(status, ZE_RESULT_SUCCESS);
+          EXPECT_ZE_RESULT_SUCCESS(status);
           auto before_throttletime = lzt::get_throttle_time(pfreq_handle);
           zes_freq_throttle_time_t throttletime;
 #ifdef USE_ZESINIT
@@ -599,7 +601,7 @@ TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
-          EXPECT_EQ(status, ZE_RESULT_SUCCESS);
+          EXPECT_ZE_RESULT_SUCCESS(status);
         }
       }
     }
@@ -687,7 +689,7 @@ void loadForGpuMaxFreqTest(ze_device_handle_t target_device) {
   lzt::destroy_module(module);
 }
 
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectRequestFrequencyStaysInRangeDuringGpuLoad) {
   for (auto device : devices) {
@@ -747,7 +749,7 @@ TEST_F(
 }
 
 #ifdef __linux__
-TEST_F(
+LZT_TEST_F(
     FREQUENCY_TEST,
     GivenValidDeviceWhenCallingFrequencyGetStateMultipleTimesThenExpectFirstCallIsSlowerThanSubsequentCalls) {
   for (auto device : devices) {

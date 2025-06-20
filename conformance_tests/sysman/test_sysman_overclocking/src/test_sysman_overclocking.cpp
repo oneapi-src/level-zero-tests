@@ -25,7 +25,7 @@ class OverclockingTest : public lzt::SysmanCtsClass {};
 #define OVERCLOCK_TEST OverclockingTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingOverclockingCapabilitiesThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -46,7 +46,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenCallingApiTwiceThenSimilarOverclockingCapabilitiesAreReturned) {
   for (auto device : devices) {
@@ -90,7 +90,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingOverclockingFrequencyTargetThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -115,7 +115,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingOverclockingFrequencyTargetExpectzesFrequencyOcSetFrequencyTargetFollowedByzesFrequencyOcGetFrequencyTargetToMatch) {
   for (auto device : devices) {
@@ -144,7 +144,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingOverclockingVoltageTargetThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -176,7 +176,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingOverclockingVoltageTargetThenExpectzesFrequencyOcSetVoltageTargetFollowedByzesFrequencyOcGetVoltageTargetToMatch) {
   for (auto device : devices) {
@@ -211,7 +211,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingOverclockingModeThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -234,7 +234,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingOverclockingModeThenExpectzesFrequencyOcSetModeFollowedByzesFrequencyOcGetModeToMatch) {
   for (auto device : devices) {
@@ -267,8 +267,9 @@ TEST_F(
   }
 }
 
-TEST_F(OVERCLOCK_TEST,
-       GivenValidFrequencyHandlesWhenGettingCurrentLimitThenSuccessIsReturned) {
+LZT_TEST_F(
+    OVERCLOCK_TEST,
+    GivenValidFrequencyHandlesWhenGettingCurrentLimitThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
     auto freq_handles = lzt::get_freq_handles(device, p_count);
@@ -288,7 +289,7 @@ TEST_F(OVERCLOCK_TEST,
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingCurrentLimitThenExpectzesSysmanFrequencyOcSetIccMaxFollowedByzesSysmanFrequencyOcGetIccMaxToReturnSuccess) {
   for (auto device : devices) {
@@ -313,7 +314,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenGettingTemperaturetLimitThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -335,7 +336,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     OVERCLOCK_TEST,
     GivenValidFrequencyHandlesWhenSettingCurrentLimitThenExpectzesSysmanFrequencyOcSetTjMaxFollowedByzesSysmanFrequencyOcGetTjMaxToMatch) {
   for (auto device : devices) {

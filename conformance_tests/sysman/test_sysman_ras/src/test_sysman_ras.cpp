@@ -83,8 +83,8 @@ class RASOperationsTest : public lzt::SysmanCtsClass {};
 #define RAS_TEST RASOperationsTest
 #endif // USE_ZESINIT
 
-TEST_F(RAS_TEST,
-       GivenValidRASHandleWhenRetrievingConfigThenUpdatedConfigIsReturned) {
+LZT_TEST_F(RAS_TEST,
+           GivenValidRASHandleWhenRetrievingConfigThenUpdatedConfigIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto ras_handles = lzt::get_ras_handles(device, count);
@@ -101,7 +101,7 @@ TEST_F(RAS_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     RAS_TEST,
     GivenValidRASHandleAndSettingNewConfigWhenRetrievingConfigThenUpdatedConfigIsReturned) {
   for (auto device : devices) {
@@ -170,8 +170,8 @@ TEST_F(
   }
 }
 
-TEST_F(RAS_TEST,
-       GivenValidRASHandleWhenRetrievingStateThenValidStateIsReturned) {
+LZT_TEST_F(RAS_TEST,
+           GivenValidRASHandleWhenRetrievingStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto ras_handles = lzt::get_ras_handles(device, count);
@@ -189,7 +189,7 @@ TEST_F(RAS_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     RAS_TEST,
     GivenValidRASHandleWhenRetrievingStateAfterClearThenUpdatedStateIsReturned) {
   for (auto device : devices) {
@@ -216,7 +216,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     RAS_TEST,
     GivenValidRASHandleWhenRetrievingRASPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -243,7 +243,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     RAS_TEST,
     GivenComponentCountZeroWhenRetrievingRASHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -260,8 +260,9 @@ TEST_F(
   }
 }
 
-TEST_F(RAS_TEST,
-       GivenValidRASHandleWhenRetrievingStateExpThenValidStateExpIsReturned) {
+LZT_TEST_F(
+    RAS_TEST,
+    GivenValidRASHandleWhenRetrievingStateExpThenValidStateExpIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto ras_handles = lzt::get_ras_handles(device, count);
@@ -280,7 +281,7 @@ TEST_F(RAS_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     RAS_TEST,
     GivenValidRASHandleWhenRetrievingStateExpAfterInvokingClearstateExpThenUpdatedStateExpIsReturned) {
   for (auto device : devices) {

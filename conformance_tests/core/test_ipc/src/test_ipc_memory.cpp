@@ -77,7 +77,7 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, &ipc_handle));
   ze_ipc_mem_handle_t ipc_handle_zero{};
   ASSERT_NE(0, memcmp((void *)&ipc_handle, (void *)&ipc_handle_zero,
                       sizeof(ipc_handle)));
@@ -91,7 +91,7 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   c.wait();
   EXPECT_EQ(c.exit_code(), 0);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context, ipc_handle));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context, ipc_handle));
   bipc::shared_memory_object::remove("ipc_memory_test");
 
   if (reserved) {
@@ -160,7 +160,7 @@ static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
   lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandle(context, memory, &ipc_handle));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, &ipc_handle));
   // copy ipc handle data to shm
   shared_data_t test_data = {test_type, TEST_NONSOCK, size,
                              flags,     is_immediate, ipc_handle};
@@ -174,7 +174,7 @@ static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
   c.wait();
   EXPECT_EQ(c.exit_code(), 0);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context, ipc_handle));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context, ipc_handle));
   bipc::shared_memory_object::remove("ipc_memory_test");
 
   if (reserved) {
@@ -189,70 +189,70 @@ static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
 }
 
 #ifdef __linux__
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test(TEST_DEVICE_ACCESS, 4096, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCOnImmediateCmdListThenParentProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test(TEST_DEVICE_ACCESS, 4096, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test(TEST_DEVICE_ACCESS, 4096, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenParentProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test(TEST_DEVICE_ACCESS, 4096, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test(TEST_DEVICE_ACCESS, 4096, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test(TEST_DEVICE_ACCESS, 4096, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test(TEST_DEVICE_ACCESS, 4096, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test(TEST_DEVICE_ACCESS, 4096, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
   run_ipc_mem_access_test(TEST_SUBDEVICE_ACCESS, 4096, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
   run_ipc_mem_access_test(TEST_SUBDEVICE_ACCESS, 4096, true,
@@ -260,70 +260,70 @@ TEST(
 }
 #endif // __linux__
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
                                  ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCOnImmediateCmdListThenParentProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
                                  ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
                                  ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenParentProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
                                  ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
                                  ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
                                  ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
                                  ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
   run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
                                  ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleSubDevice,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
   run_ipc_mem_access_test_opaque(TEST_SUBDEVICE_ACCESS, 4096, true,
                                  ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleSubDevice,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
   run_ipc_mem_access_test_opaque(TEST_SUBDEVICE_ACCESS, 4096, true,

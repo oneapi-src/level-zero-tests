@@ -43,7 +43,7 @@ public:
 #define DIAGNOSTICS_TEST DiagnosticsTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenComponentCountZeroWhenRetrievingDiagnosticsHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -56,7 +56,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenComponentCountZeroWhenRetrievingDiagnosticsHandlesThenNotNullDiagnosticsHandlesAreReturned) {
   for (auto device : devices) {
@@ -74,7 +74,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenInvalidComponentCountWhenRetrievingDiagnosticsHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -91,7 +91,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarDiagHandlesReturned) {
   for (auto device : devices) {
@@ -115,7 +115,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenValidDiagHandleWhenRetrievingDiagPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -138,7 +138,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenValidDiagHandleWhenRetrievingDiagPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -165,7 +165,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenValidDiagHandleWhenRetrievingDiagTestsThenExpectValidTestsToBeReturned) {
   for (auto device : devices) {
@@ -189,8 +189,8 @@ TEST_F(
   }
 }
 
-TEST_F(DIAGNOSTICS_TEST,
-       GivenValidDiagTestsWhenRunningAllDiagTestsThenExpectTestsToRunFine) {
+LZT_TEST_F(DIAGNOSTICS_TEST,
+           GivenValidDiagTestsWhenRunningAllDiagTestsThenExpectTestsToRunFine) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto diag_handles = lzt::get_diag_handles(device, count);
@@ -209,7 +209,7 @@ TEST_F(DIAGNOSTICS_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenValidDiagTestsWhenRunningIndividualDiagTestsThenExpectTestsToRunFine) {
   for (auto device : devices) {
@@ -245,7 +245,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     DIAGNOSTICS_TEST,
     GivenValidDeviceWhenMemoryDiagnosticsIsRunAndMemoryGetStateIsCalledThenExpectSuccessIsReturned) {
   for (auto &device : devices) {

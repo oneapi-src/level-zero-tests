@@ -25,7 +25,7 @@ class PerformanceModuleTest : public lzt::SysmanCtsClass {};
 #define PERFORMANCE_TEST PerformanceModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenComponentCountZeroWhenRetrievingPerformanceHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -38,7 +38,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanPerformanceThenNotNullPerformanceHandlesAreReturned) {
   for (auto device : devices) {
@@ -56,7 +56,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenInvalidComponentCountWhenRetrievingPerformanceHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -73,7 +73,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarPerformanceHandlesReturned) {
   for (auto device : devices) {
@@ -99,7 +99,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenRetrievingPerformancePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -127,7 +127,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenRetrievingPerformancePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -153,7 +153,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenSettingPerformanceConfigurationThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -184,7 +184,7 @@ static double set_performance_factor(zes_perf_handle_t pHandle,
   return getFactor;
 }
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenSettingMultiplePerformanceConfigurationsForMediaThenValidPerformanceFactorIsReturned) {
   for (auto device : devices) {
@@ -229,7 +229,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PERFORMANCE_TEST,
     GivenValidPerformanceHandleWhenGettingPerformanceConfigurationThenValidPerformanceFactorIsReturned) {
   for (auto device : devices) {
@@ -263,7 +263,7 @@ class PerformanceModuleParamComputePerformanceFactorTest
   PerformanceModuleParamComputePerformanceFactorTest
 #endif // USE_ZESINIT
 
-TEST_P(
+LZT_TEST_P(
     PERFORMANCE_COMPUTE_TEST,
     GivenValidPerformanceHandleWhenSettingMultiplePerformanceFactorForComputeThenValidPerformanceFactorIsReturned) {
   for (auto device : devices) {

@@ -177,27 +177,27 @@ void perform_memory_manipulation() {
   EXPECT_EQ(ZE_MEMORY_TYPE_SHARED, memory_properties.type);
 
   void *pBase = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAddressRange(context, device_ptr, &pBase, NULL));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(context, device_ptr, &pBase, NULL));
   EXPECT_EQ(pBase, device_ptr);
   size_t addr_range_size = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAddressRange(context, device_ptr, NULL, &addr_range_size));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(context, device_ptr, NULL, &addr_range_size));
   // Get device mem size rounds size up to nearest page size
   EXPECT_GE(addr_range_size, alloc_size);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAddressRange(context, host_ptr, &pBase, NULL));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(context, host_ptr, &pBase, NULL));
   EXPECT_EQ(pBase, host_ptr);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAddressRange(context, host_ptr, NULL, &addr_range_size));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(context, host_ptr, NULL, &addr_range_size));
   EXPECT_GE(addr_range_size, alloc_size);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAddressRange(context, shared_ptr, &pBase, NULL));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(context, shared_ptr, &pBase, NULL));
   EXPECT_EQ(pBase, shared_ptr);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAddressRange(context, shared_ptr, NULL, &addr_range_size));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(context, shared_ptr, NULL, &addr_range_size));
   EXPECT_GE(addr_range_size, alloc_size);
 
   std::vector<int> inpa = {0, 1, 2,  3,  4,  5,  6,  7,
@@ -262,7 +262,7 @@ void perform_memory_manipulation() {
 
 class zeMemoryCreateDestroyMultithreadTest : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeMemoryCreateDestroyMultithreadTest,
     GivenMultipleThreadsWhenCreatingHostMemoryThenMemoryCreatedAndDestroyedSuccessfully) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -279,7 +279,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeMemoryCreateDestroyMultithreadTest,
     GivenMultipleThreadsWhenCreatingSharedMemoryThenMemoryCreatedAndDestroyedSuccessfully) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -296,7 +296,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeMemoryCreateDestroyMultithreadTest,
     GivenMultipleThreadsWhenCreatingDeviceMemoryThenMemoryCreatedAndDestroyedSuccessfully) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -313,7 +313,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeMemoryCreateDestroyMultithreadTest,
     GivenMultipleThreadsWhenUsingAllMemoryTypesThenMemoryCreatedAndDestroyedSuccessfully) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -334,7 +334,7 @@ TEST(
   lzt::destroy_command_queue(cq);
 }
 
-TEST(
+LZT_TEST(
     zeMemoryCreateDestroyMultithreadTest,
     GivenMultipleThreadsWhenUsingAllMemoryTypesAlongWithSubmissionsThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -355,7 +355,7 @@ TEST(
   lzt::destroy_command_queue(cq);
 }
 
-TEST(
+LZT_TEST(
     zeMemoryCreateDestroyMultithreadTest,
     GivenMultipleThreadsWhenPerformingMemoryManipulationsAlongWithSubmissionsThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;

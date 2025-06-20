@@ -59,8 +59,7 @@ create_program_module(ze_context_handle_t context, ze_device_handle_t device,
   auto context_initial = context;
 
   ze_module_handle_t module;
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
+  EXPECT_ZE_RESULT_SUCCESS(
       zeModuleCreate(context, device, &module_description, &module, nullptr));
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
@@ -127,7 +126,7 @@ ze_module_handle_t create_module(ze_context_handle_t context,
   auto device_initial = device;
   *build_result = zeModuleCreate(context, device, &module_description, &module,
                                  p_build_log);
-  EXPECT_EQ(*build_result, ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(*build_result);
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
 
@@ -137,8 +136,8 @@ ze_module_handle_t create_module(ze_context_handle_t context,
 size_t get_build_log_size(ze_module_build_log_handle_t build_log) {
   size_t build_log_size = 0;
   auto build_log_initial = build_log;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleBuildLogGetString(build_log, &build_log_size, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeModuleBuildLogGetString(build_log, &build_log_size, nullptr));
   EXPECT_EQ(build_log, build_log_initial);
   EXPECT_GT(build_log_size, 0);
   return build_log_size;
@@ -146,23 +145,22 @@ size_t get_build_log_size(ze_module_build_log_handle_t build_log) {
 
 std::string get_build_log_string(ze_module_build_log_handle_t build_log) {
   size_t build_log_size = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleBuildLogGetString(build_log, &build_log_size, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeModuleBuildLogGetString(build_log, &build_log_size, nullptr));
 
   EXPECT_GT(build_log_size, 0);
 
   std::vector<char> build_log_c_string(build_log_size);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleBuildLogGetString(build_log, &build_log_size,
-                                      build_log_c_string.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zeModuleBuildLogGetString(
+      build_log, &build_log_size, build_log_c_string.data()));
   return std::string(build_log_c_string.begin(), build_log_c_string.end());
 }
 
 size_t get_native_binary_size(ze_module_handle_t module) {
   size_t native_binary_size = 0;
   auto module_initial = module;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module, &native_binary_size, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeModuleGetNativeBinary(module, &native_binary_size, nullptr));
   EXPECT_EQ(module, module_initial);
   EXPECT_GT(native_binary_size, 0);
   return native_binary_size;
@@ -171,34 +169,33 @@ size_t get_native_binary_size(ze_module_handle_t module) {
 void save_native_binary_file(ze_module_handle_t module,
                              const std::string filename) {
   size_t native_binary_size = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module, &native_binary_size, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeModuleGetNativeBinary(module, &native_binary_size, nullptr));
   EXPECT_GT(native_binary_size, 0);
 
   std::vector<uint8_t> native_binary(native_binary_size);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetNativeBinary(module, &native_binary_size,
-                                    native_binary.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zeModuleGetNativeBinary(module, &native_binary_size,
+                                                   native_binary.data()));
   level_zero_tests::save_binary_file(native_binary, filename);
 }
 
 void destroy_build_log(ze_module_build_log_handle_t build_log) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleBuildLogDestroy(build_log));
+  EXPECT_ZE_RESULT_SUCCESS(zeModuleBuildLogDestroy(build_log));
 }
 
 void set_argument_value(ze_kernel_handle_t hFunction, uint32_t argIndex,
                         size_t argSize, const void *pArgValue) {
   auto function_initial = hFunction;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetArgumentValue(hFunction, argIndex, argSize, pArgValue));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelSetArgumentValue(hFunction, argIndex, argSize, pArgValue));
   EXPECT_EQ(hFunction, function_initial);
 }
 
 void set_group_size(ze_kernel_handle_t hFunction, uint32_t groupSizeX,
                     uint32_t groupSizeY, uint32_t groupSizeZ) {
   auto function_initial = hFunction;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelSetGroupSize(hFunction, groupSizeX,
-                                                    groupSizeY, groupSizeZ));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelSetGroupSize(hFunction, groupSizeX, groupSizeY, groupSizeZ));
   EXPECT_EQ(hFunction, function_initial);
 }
 
@@ -207,15 +204,14 @@ void suggest_group_size(ze_kernel_handle_t hFunction, uint32_t globalSizeX,
                         uint32_t &groupSizeX, uint32_t &groupSizeY,
                         uint32_t &groupSizeZ) {
   auto function_initial = hFunction;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestGroupSize(hFunction, globalSizeX, globalSizeY,
-                                     globalSizeZ, &groupSizeX, &groupSizeY,
-                                     &groupSizeZ));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelSuggestGroupSize(hFunction, globalSizeX, globalSizeY, globalSizeZ,
+                               &groupSizeX, &groupSizeY, &groupSizeZ));
   EXPECT_EQ(hFunction, function_initial);
 }
 
 void destroy_module(ze_module_handle_t module) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module));
+  EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module));
 }
 
 ze_kernel_handle_t create_function(ze_module_handle_t module,
@@ -234,22 +230,22 @@ ze_kernel_handle_t create_function(ze_module_handle_t module,
   kernel_description.flags = flag;
   kernel_description.pKernelName = func_name.c_str();
   auto module_initial = module;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelCreate(module, &kernel_description, &kernel));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelCreate(module, &kernel_description, &kernel));
   EXPECT_EQ(module, module_initial);
   return kernel;
 }
 
 void destroy_function(ze_kernel_handle_t kernel) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(kernel));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelDestroy(kernel));
 }
 
 ze_kernel_properties_t get_kernel_properties(ze_kernel_handle_t kernel) {
   ze_kernel_properties_t properties{};
   properties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
   properties.pNext = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelGetProperties(kernel, &properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &properties));
   return properties;
 }
 
@@ -279,12 +275,10 @@ void create_and_execute_function(ze_device_handle_t device,
   uint32_t group_size_x = group_size;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestGroupSize(function, group_size, 1, 1, &group_size_x,
-                                     &group_size_y, &group_size_z));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSuggestGroupSize(
+      function, group_size, 1, 1, &group_size_x, &group_size_y, &group_size_z));
 
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
+  EXPECT_ZE_RESULT_SUCCESS(
       zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
 
   ze_kernel_properties_t function_properties = get_kernel_properties(function);
@@ -292,8 +286,7 @@ void create_and_execute_function(ze_device_handle_t device,
 
   int i = 0;
   for (auto arg : args) {
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
+    EXPECT_ZE_RESULT_SUCCESS(
         zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));
   }
 
@@ -302,25 +295,23 @@ void create_and_execute_function(ze_device_handle_t device,
   thread_group_dimensions.groupCountY = 1;
   thread_group_dimensions.groupCountZ = 1;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendLaunchKernel(cmd_bundle.list, function,
-                                            &thread_group_dimensions, nullptr,
-                                            0, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
+      cmd_bundle.list, function, &thread_group_dimensions, nullptr, 0,
+      nullptr));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
   if (is_immediate) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cmd_bundle.list, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandListHostSynchronize(cmd_bundle.list, UINT64_MAX));
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmd_bundle.list));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListClose(cmd_bundle.list));
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueExecuteCommandLists(cmd_bundle.queue, 1,
-                                                &cmd_bundle.list, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueExecuteCommandLists(
+        cmd_bundle.queue, 1, &cmd_bundle.list, nullptr));
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(cmd_bundle.queue, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandQueueSynchronize(cmd_bundle.queue, UINT64_MAX));
   }
 
   destroy_function(function);
@@ -330,26 +321,26 @@ void create_and_execute_function(ze_device_handle_t device,
 void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
                                 ze_kernel_indirect_access_flags_t flags) {
   auto kernel_initial = hKernel;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelSetIndirectAccess(hKernel, flags));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSetIndirectAccess(hKernel, flags));
   EXPECT_EQ(hKernel, kernel_initial);
 }
 
 void kernel_get_indirect_access(ze_kernel_handle_t hKernel,
                                 ze_kernel_indirect_access_flags_t *flags) {
   auto kernel_initial = hKernel;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelGetIndirectAccess(hKernel, flags));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetIndirectAccess(hKernel, flags));
   EXPECT_EQ(hKernel, kernel_initial);
 }
 
 std::string kernel_get_name_string(ze_kernel_handle_t hKernel) {
   size_t kernel_name_size = 0;
   auto kernel_initial = hKernel;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetName(hKernel, &kernel_name_size, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelGetName(hKernel, &kernel_name_size, nullptr));
 
   char *kernel_name = new char[kernel_name_size];
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetName(hKernel, &kernel_name_size, kernel_name));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelGetName(hKernel, &kernel_name_size, kernel_name));
   EXPECT_EQ(hKernel, kernel_initial);
 
   std::string kernel_name_str(kernel_name, kernel_name_size - 1);
@@ -360,12 +351,12 @@ std::string kernel_get_name_string(ze_kernel_handle_t hKernel) {
 std::string kernel_get_source_attribute(ze_kernel_handle_t hKernel) {
   uint32_t size = 0;
   auto kernel_initial = hKernel;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetSourceAttributes(hKernel, &size, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelGetSourceAttributes(hKernel, &size, nullptr));
 
   char *source_string = new char[size];
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetSourceAttributes(hKernel, &size, &source_string));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelGetSourceAttributes(hKernel, &size, &source_string));
   EXPECT_EQ(hKernel, kernel_initial);
 
   std::string source_string_str(source_string, size - 1);
@@ -380,7 +371,7 @@ void set_kernel_scheduling_hint(ze_kernel_handle_t kernel,
   desc.flags = hints;
   desc.stype = ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_DESC;
   auto kernel_initial = kernel;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelSchedulingHintExp(kernel, &desc));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSchedulingHintExp(kernel, &desc));
   EXPECT_EQ(kernel, kernel_initial);
 }
 #endif

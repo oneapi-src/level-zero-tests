@@ -31,14 +31,14 @@ protected:
     context = lzt::create_context(driver);
     device = lzt::get_default_device(driver);
     queue = lzt::create_command_queue(context, device);
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
+    EXPECT_ZE_RESULT_SUCCESS(
+
         zeCommandListCreate(context, device, &cmdListDesc, &mutableCmdList));
 
     module = lzt::create_module(device, "test_mutable_cmdlist.spv");
 
     deviceProps.pNext = &mutableCmdListProps;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &deviceProps));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &deviceProps));
     kernelArgumentsSupport = mutableCmdListProps.mutableCommandFlags &
                              ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_ARGUMENTS;
     groupCountSupport = mutableCmdListProps.mutableCommandFlags &
@@ -118,7 +118,7 @@ protected:
       ZE_STRUCTURE_TYPE_MUTABLE_COMMAND_ID_EXP_DESC};
 };
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfKernelArgumentsWhenCommandListIsClosedThenArgumentsWereReplaced) {
   if (!kernelArgumentsSupport) {
@@ -153,8 +153,8 @@ TEST_F(
 
   uint64_t commandId = 0;
   commandIdDesc.flags = ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_ARGUMENTS;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListGetNextCommandIdExp(
-                                   mutableCmdList, &commandIdDesc, &commandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdExp(
+      mutableCmdList, &commandIdDesc, &commandId));
 
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, nullptr,
@@ -181,8 +181,8 @@ TEST_F(
   mutateScalarKernelArg.argSize = sizeof(mutatedAddVal);
   mutateScalarKernelArg.pArgValue = &mutatedAddVal;
   mutableCmdDesc.pNext = &mutateScalarKernelArg;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
@@ -197,7 +197,7 @@ TEST_F(
   lzt::destroy_function(addKernel);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfGroupCountWhenCommandListIsClosedThenGlobalWorkSizeIsUpdated) {
   if (!groupCountSupport) {
@@ -239,8 +239,8 @@ TEST_F(
 
   uint64_t commandId = 0;
   commandIdDesc.flags = ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_COUNT;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListGetNextCommandIdExp(
-                                   mutableCmdList, &commandIdDesc, &commandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdExp(
+      mutableCmdList, &commandIdDesc, &commandId));
 
   ze_group_count_t groupCount{bufferSizeX / groupSizeX,
                               bufferSizeY / groupSizeY,
@@ -264,8 +264,8 @@ TEST_F(
   mutateGroupCount.commandId = commandId;
   mutateGroupCount.pGroupCount = &mutatedGroupCount;
   mutableCmdDesc.pNext = &mutateGroupCount;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
@@ -287,7 +287,7 @@ TEST_F(
   lzt::destroy_function(testGlobalSizesKernel);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfGroupSizeWhenCommandListIsClosedThenLocalWorkSizeIsUpdated) {
   if (!groupSizeSupport) {
@@ -328,8 +328,8 @@ TEST_F(
 
   uint64_t commandId = 0;
   commandIdDesc.flags = ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListGetNextCommandIdExp(
-                                   mutableCmdList, &commandIdDesc, &commandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdExp(
+      mutableCmdList, &commandIdDesc, &commandId));
 
   ze_group_count_t groupCount{bufferSizeX / groupSizeX,
                               bufferSizeY / groupSizeY,
@@ -354,8 +354,8 @@ TEST_F(
   mutateGroupSize.groupSizeY = groupSizeY;
   mutateGroupSize.groupSizeZ = groupSizeZ;
   mutableCmdDesc.pNext = &mutateGroupSize;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
@@ -376,7 +376,7 @@ TEST_F(
   lzt::destroy_function(testLocalSizesKernel);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfGlobalOffsetWhenCommandListIsClosedThenGlobalOffsetIsUpdated) {
   if (!globalOffsetSupport) {
@@ -397,17 +397,16 @@ TEST_F(
   uint32_t offsetX = 1;
   uint32_t offsetY = 2;
   uint32_t offsetZ = 3;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetGlobalOffsetExp(testGlobalOffsetKernel, offsetX, offsetY,
-                                       offsetZ));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSetGlobalOffsetExp(
+      testGlobalOffsetKernel, offsetX, offsetY, offsetZ));
   lzt::set_group_size(testGlobalOffsetKernel, 1, 1, 1);
   lzt::set_argument_value(testGlobalOffsetKernel, 0, sizeof(void *),
                           &globalOffsetsBuffer);
 
   uint64_t commandId = 0;
   commandIdDesc.flags = ZE_MUTABLE_COMMAND_EXP_FLAG_GLOBAL_OFFSET;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListGetNextCommandIdExp(
-                                   mutableCmdList, &commandIdDesc, &commandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdExp(
+      mutableCmdList, &commandIdDesc, &commandId));
 
   ze_group_count_t groupCount{1, 1, 1};
   lzt::append_launch_function(mutableCmdList, testGlobalOffsetKernel,
@@ -430,8 +429,8 @@ TEST_F(
   mutateGlobalOffset.offsetY = mutatedOffsetY;
   mutateGlobalOffset.offsetZ = mutatedOffsetZ;
   mutableCmdDesc.pNext = &mutateGlobalOffset;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
@@ -445,7 +444,7 @@ TEST_F(
   lzt::destroy_function(testGlobalOffsetKernel);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfKernelInstructionWhenCommandListIsClosedThenKernelIsReplaced) {
   if (!CheckExtensionSupport(ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_1_1) ||
@@ -480,10 +479,9 @@ TEST_F(
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_COUNT |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &mutableKernelCommandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &mutableKernelCommandId));
 
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, nullptr,
@@ -497,9 +495,8 @@ TEST_F(
   }
 
   // Mutate kernel
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandKernelsExp(
-                mutableCmdList, 1, &mutableKernelCommandId, &mulKernel));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandKernelsExp(
+      mutableCmdList, 1, &mutableKernelCommandId, &mulKernel));
 
   // Mutate all invalidated data
   ze_mutable_group_count_exp_desc_t mutateGroupCount{
@@ -528,8 +525,8 @@ TEST_F(
   mutateScalarKernelArg.pArgValue = &scalarVal;
   mutateScalarKernelArg.pNext = &mutateBufferKernelArg;
   mutableCmdDesc.pNext = &mutateScalarKernelArg;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
@@ -543,7 +540,7 @@ TEST_F(
   lzt::destroy_function(mulKernel);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfKernelInstructionWithSignalEventWhenCommandListIsClosedThenKernelIsReplacedAndEventRemainsUnchanged) {
   if (!CheckExtensionSupport(ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_1_1) ||
@@ -586,10 +583,9 @@ TEST_F(
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_COUNT |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &mutableKernelCommandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &mutableKernelCommandId));
 
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, events[0],
@@ -598,17 +594,16 @@ TEST_F(
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[0]));
   for (size_t i = 0; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer[i], initBufferVal + scalarVal);
   }
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[0]));
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[0]));
 
   // Mutate kernel
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandKernelsExp(
-                mutableCmdList, 1, &mutableKernelCommandId, &mulKernel));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandKernelsExp(
+      mutableCmdList, 1, &mutableKernelCommandId, &mulKernel));
 
   // Mutate all invalidated data
   ze_mutable_group_count_exp_desc_t mutateGroupCount{
@@ -637,13 +632,13 @@ TEST_F(
   mutateScalarKernelArg.pArgValue = &scalarVal;
   mutateScalarKernelArg.pNext = &mutateBufferKernelArg;
   mutableCmdDesc.pNext = &mutateScalarKernelArg;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[0]));
   for (size_t i = 0; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer[i], (initBufferVal + scalarVal) * scalarVal);
   }
@@ -653,7 +648,7 @@ TEST_F(
   lzt::destroy_function(mulKernel);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfKernelInstructionWithWaitListWhenCommandListIsClosedThenKernelIsReplacedAndWaitListRemainsUnchanged) {
   if (!CheckExtensionSupport(ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_1_1) ||
@@ -695,7 +690,7 @@ TEST_F(
   lzt::set_argument_value(addKernel, 0, sizeof(void *), &inOutBuffer);
   lzt::set_argument_value(addKernel, 1, sizeof(addVal), &addVal);
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(events[0]));
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, events[1],
                               0, nullptr);
 
@@ -708,10 +703,9 @@ TEST_F(
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_COUNT |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &mutableKernelCommandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &mutableKernelCommandId));
 
   lzt::append_launch_function(mutableCmdList, mulKernel, &groupCount, nullptr,
                               2, events.data());
@@ -719,19 +713,18 @@ TEST_F(
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[0]));
   const uint32_t firstResult = (initBufferVal + addVal) * mulVal;
   for (size_t i = 0; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer[i], firstResult);
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[1]));
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[1]));
 
   // Mutate kernel
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandKernelsExp(
-                mutableCmdList, 1, &mutableKernelCommandId, &subKernel));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandKernelsExp(
+      mutableCmdList, 1, &mutableKernelCommandId, &subKernel));
 
   // Mutate all invalidated data
   ze_mutable_group_count_exp_desc_t mutateGroupCount{
@@ -760,13 +753,13 @@ TEST_F(
   mutateScalarKernelArg.pArgValue = &subVal;
   mutateScalarKernelArg.pNext = &mutateBufferKernelArg;
   mutableCmdDesc.pNext = &mutateScalarKernelArg;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[1]));
   const uint32_t secondResult = firstResult + addVal - subVal;
   for (size_t i = 0; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer[i], secondResult);
@@ -778,7 +771,7 @@ TEST_F(
   lzt::destroy_function(subKernel);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfMultipleKernelInstructionsAndEventsWhenCommandListIsClosedThenEverythingIsUpdatedCorrectly) {
   if (!CheckExtensionSupport(ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_1_1) ||
@@ -838,10 +831,9 @@ TEST_F(
   lzt::set_group_size(addKernel, groupSizeX, groupSizeY, groupSizeZ);
   lzt::set_argument_value(addKernel, 0, sizeof(void *), &inOutBuffer1);
   lzt::set_argument_value(addKernel, 1, sizeof(addVal), &addVal);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &kernelCommandId1));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &kernelCommandId1));
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, events[0],
                               0, nullptr);
   // 2 mulKernel
@@ -849,10 +841,9 @@ TEST_F(
   lzt::set_argument_value(mulKernel, 0, sizeof(void *), &inOutBuffer1);
   lzt::set_argument_value(mulKernel, 1, sizeof(mulVal), &mulVal);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &kernelCommandId2));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &kernelCommandId2));
   lzt::append_launch_function(mutableCmdList, mulKernel, &groupCount, events[1],
                               1, &events[0]);
   // 3 subKernel
@@ -860,10 +851,9 @@ TEST_F(
   lzt::set_argument_value(subKernel, 0, sizeof(void *), &inOutBuffer1);
   lzt::set_argument_value(subKernel, 1, sizeof(subVal), &subVal);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &kernelCommandId3));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &kernelCommandId3));
   lzt::append_launch_function(mutableCmdList, subKernel, &groupCount, nullptr,
                               2, &events[0]);
 
@@ -871,28 +861,24 @@ TEST_F(
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[0]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[1]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events[0]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[1]));
   const uint32_t firstResult = ((initBufferVal + addVal) * mulVal) - subVal;
   for (size_t i = 0; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer1[i], firstResult);
   }
 
   // Update events
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandSignalEventExp(
-                mutableCmdList, kernelCommandId1, events[2]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandSignalEventExp(
-                mutableCmdList, kernelCommandId2, events[3]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandWaitEventsExp(
-                mutableCmdList, kernelCommandId2, 1, &events[2]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandWaitEventsExp(
-                mutableCmdList, kernelCommandId3, 2, &events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandSignalEventExp(
+      mutableCmdList, kernelCommandId1, events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandSignalEventExp(
+      mutableCmdList, kernelCommandId2, events[3]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandWaitEventsExp(
+      mutableCmdList, kernelCommandId2, 1, &events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandWaitEventsExp(
+      mutableCmdList, kernelCommandId3, 2, &events[2]));
 
   // Change kernels sequence from add, mul, sub to mul, sub, div
   std::vector<uint64_t> commandIds{kernelCommandId1, kernelCommandId2,
@@ -900,9 +886,8 @@ TEST_F(
   std::vector<ze_kernel_handle_t> newSequenceOfKenrels{mulKernel, subKernel,
                                                        divKernel};
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandKernelsExp(
-                                   mutableCmdList, 3, commandIds.data(),
-                                   newSequenceOfKenrels.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandKernelsExp(
+      mutableCmdList, 3, commandIds.data(), newSequenceOfKenrels.data()));
 
   // Mutate invalidated data for kernel 1
   ze_mutable_group_count_exp_desc_t mutateGroupCount{
@@ -988,8 +973,8 @@ TEST_F(
   mutateScalarKernelArg3.pNext = &mutateBufferKernelArg3;
 
   mutableCmdDesc.pNext = &mutateScalarKernelArg3;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
@@ -997,8 +982,8 @@ TEST_F(
 
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[0]));
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[1]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[2]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[3]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[3]));
   const uint32_t secondResult = ((initBufferVal * mulVal) - subVal) / divVal;
   for (size_t i = 0; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer2[i], secondResult);
@@ -1026,14 +1011,14 @@ protected:
   }
   void verifyKernelTimestamp(ze_event_handle_t eventHandle) {
     ze_kernel_timestamp_result_t kernelTimestamp{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeEventQueryKernelTimestamp(eventHandle, &kernelTimestamp));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeEventQueryKernelTimestamp(eventHandle, &kernelTimestamp));
     EXPECT_GT(kernelTimestamp.context.kernelEnd,
               kernelTimestamp.context.kernelStart);
   }
 };
 
-TEST_P(
+LZT_TEST_P(
     zeMutableCommandListTestsEvents,
     GivenMutationOfSignalEventWhenCommandListIsClosedThenSignalEventIsReplaced) {
   if (!signalEventSupport) {
@@ -1069,8 +1054,8 @@ TEST_P(
 
   uint64_t commandId = 0;
   commandIdDesc.flags = ZE_MUTABLE_COMMAND_EXP_FLAG_SIGNAL_EVENT;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListGetNextCommandIdExp(
-                                   mutableCmdList, &commandIdDesc, &commandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdExp(
+      mutableCmdList, &commandIdDesc, &commandId));
 
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, events[0],
@@ -1079,7 +1064,7 @@ TEST_P(
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[0]));
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[1]));
   if (isTimestampEvent(eventPoolFlags)) {
     verifyKernelTimestamp(events[0]);
@@ -1089,18 +1074,18 @@ TEST_P(
   }
 
   for (size_t i = 0; i < events.size(); i++) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events[i]));
+    EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[i]));
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandSignalEventExp(
-                                   mutableCmdList, commandId, events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandSignalEventExp(
+      mutableCmdList, commandId, events[1]));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[0]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[1]));
   if (isTimestampEvent(eventPoolFlags)) {
     verifyKernelTimestamp(events[1]);
   }
@@ -1113,7 +1098,7 @@ TEST_P(
   lzt::destroy_function(addKernel);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeMutableCommandListTestsEvents,
     GivenMutationOfWaitListToNullPointerWhenCommandListIsClosedThenWaitListIsRemoved) {
   if (!waitEventsSupport) {
@@ -1149,13 +1134,13 @@ TEST_P(
 
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
   for (size_t i = 0; i < events.size(); i++) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(events[i]));
+    EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(events[i]));
   }
 
   uint64_t commandId = 0;
   commandIdDesc.flags = ZE_MUTABLE_COMMAND_EXP_FLAG_WAIT_EVENTS;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListGetNextCommandIdExp(
-                                   mutableCmdList, &commandIdDesc, &commandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdExp(
+      mutableCmdList, &commandIdDesc, &commandId));
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, nullptr,
                               eventsNumber, &events[0]);
   lzt::close_command_list(mutableCmdList);
@@ -1166,13 +1151,12 @@ TEST_P(
     EXPECT_EQ(inOutBuffer[i], initBufferVal + addVal);
   }
   for (size_t i = 0; i < events.size(); i++) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events[i]));
+    EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[i]));
   }
 
   std::vector<ze_event_handle_t> nullEvents(eventsNumber, nullptr);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandWaitEventsExp(
-                mutableCmdList, commandId, 3, &nullEvents[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandWaitEventsExp(
+      mutableCmdList, commandId, 3, &nullEvents[0]));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
@@ -1189,7 +1173,7 @@ TEST_P(
   lzt::destroy_function(addKernel);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeMutableCommandListTestsEvents,
     GivenMutationOfWaitListWithEventWhenCommandListIsClosedThenSignalEventInWaitListIsReplaced) {
   if (!waitEventsSupport) {
@@ -1236,8 +1220,8 @@ TEST_P(
 
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeEventHostSignal(events[0])); // signal event 0 manually
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSignal(events[0])); // signal event 0 manually
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount,
                               events[2], // kernel event 2
                               0, nullptr);
@@ -1246,8 +1230,8 @@ TEST_P(
                               0, nullptr);
   uint64_t commandId = 0;
   commandIdDesc.flags = ZE_MUTABLE_COMMAND_EXP_FLAG_WAIT_EVENTS;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListGetNextCommandIdExp(
-                                   mutableCmdList, &commandIdDesc, &commandId));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdExp(
+      mutableCmdList, &commandIdDesc, &commandId));
   lzt::append_launch_function(mutableCmdList, mulKernel, &groupCount, nullptr,
                               2, &events[0]); // wait for 0 and 1
   lzt::close_command_list(mutableCmdList);
@@ -1255,7 +1239,7 @@ TEST_P(
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
   for (size_t i = 0; i < events.size(); i++) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[i]));
+    EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[i]));
   }
 
   int32_t addResult = initBufferVal + addVal;
@@ -1266,21 +1250,20 @@ TEST_P(
   }
 
   for (size_t i = 0; i < events.size(); i++) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeEventHostReset(events[i])); // reset all events
+    EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[i])); // reset all events
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandWaitEventsExp(
-                                   mutableCmdList, commandId, 2,
-                                   &events[1])); // wait for 1 and 2 instead
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandWaitEventsExp(
+      mutableCmdList, commandId, 2,
+      &events[1])); // wait for 1 and 2 instead
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[0]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[1]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[2]));
   for (size_t i = 0; i < bufferSize; i++) {
     EXPECT_EQ(inOutAddBuffer[i], addResult + addVal);
     EXPECT_EQ(inOutMulBuffer[i], mulResult * mulVal * mulVal);
@@ -1293,7 +1276,7 @@ TEST_P(
   lzt::destroy_function(mulKernel);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMutableCommandListTests,
     GivenMutationOfMultipleKernelCapabilitiesAndEventsWhenCommandListIsClosedThenEverythingIsUpdatedCorrectly) {
   if (!CheckExtensionSupport(ZE_MUTABLE_COMMAND_LIST_EXP_VERSION_1_1) ||
@@ -1364,41 +1347,38 @@ TEST_F(
       buffer_size / mutated_group_size_x / part_of_buffer_to_fill_2, 1, 1};
 
   // 1 add_kernel
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetGlobalOffsetExp(add_kernel, global_offset_x, 0, 0));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelSetGlobalOffsetExp(add_kernel, global_offset_x, 0, 0));
   lzt::set_group_size(add_kernel, group_size_x, group_size_y, group_size_z);
   lzt::set_argument_value(add_kernel, 0, sizeof(void *), &in_out_buffer_1);
   lzt::set_argument_value(add_kernel, 1, sizeof(add_val), &add_val);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &kernel_command_id_1));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &kernel_command_id_1));
   lzt::append_launch_function(mutableCmdList, add_kernel, &group_count,
                               events[0], 0, nullptr);
   // 2 mul_kernel
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetGlobalOffsetExp(mul_kernel, global_offset_x, 0, 0));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelSetGlobalOffsetExp(mul_kernel, global_offset_x, 0, 0));
   lzt::set_group_size(mul_kernel, group_size_x, group_size_y, group_size_z);
   lzt::set_argument_value(mul_kernel, 0, sizeof(void *), &in_out_buffer_1);
   lzt::set_argument_value(mul_kernel, 1, sizeof(mul_val), &mul_val);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &kernel_command_id_2));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &kernel_command_id_2));
   lzt::append_launch_function(mutableCmdList, mul_kernel, &group_count,
                               events[1], 1, &events[0]);
   // 3 sub_kernel
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetGlobalOffsetExp(sub_kernel, global_offset_x, 0, 0));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelSetGlobalOffsetExp(sub_kernel, global_offset_x, 0, 0));
   lzt::set_group_size(sub_kernel, group_size_x, group_size_y, group_size_z);
   lzt::set_argument_value(sub_kernel, 0, sizeof(void *), &in_out_buffer_1);
   lzt::set_argument_value(sub_kernel, 1, sizeof(sub_val), &sub_val);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListGetNextCommandIdWithKernelsExp(
-                mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-                &kernel_command_id_3));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
+      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      &kernel_command_id_3));
   lzt::append_launch_function(mutableCmdList, sub_kernel, &group_count, nullptr,
                               2, &events[0]);
 
@@ -1406,10 +1386,10 @@ TEST_F(
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[0]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[1]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events[0]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[1]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[0]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events[1]));
   const uint32_t first_result =
       ((init_buffer_val + add_val) * mul_val) - sub_val;
   for (size_t i = 0; i < global_offset_x; i++) {
@@ -1425,18 +1405,14 @@ TEST_F(
   }
 
   // Update events
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandSignalEventExp(
-                mutableCmdList, kernel_command_id_1, events[2]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandSignalEventExp(
-                mutableCmdList, kernel_command_id_2, events[3]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandWaitEventsExp(
-                mutableCmdList, kernel_command_id_2, 1, &events[2]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListUpdateMutableCommandWaitEventsExp(
-                mutableCmdList, kernel_command_id_3, 2, &events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandSignalEventExp(
+      mutableCmdList, kernel_command_id_1, events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandSignalEventExp(
+      mutableCmdList, kernel_command_id_2, events[3]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandWaitEventsExp(
+      mutableCmdList, kernel_command_id_2, 1, &events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandWaitEventsExp(
+      mutableCmdList, kernel_command_id_3, 2, &events[2]));
 
   // Change kernels sequence from add, mul, sub to mul, sub, div
   std::vector<uint64_t> commandIds{kernel_command_id_1, kernel_command_id_2,
@@ -1444,9 +1420,8 @@ TEST_F(
   std::vector<ze_kernel_handle_t> newSequenceOfKernels{mul_kernel, sub_kernel,
                                                        div_kernel};
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandKernelsExp(
-                                   mutableCmdList, 3, commandIds.data(),
-                                   newSequenceOfKernels.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListUpdateMutableCommandKernelsExp(
+      mutableCmdList, 3, commandIds.data(), newSequenceOfKernels.data()));
 
   // Mutate invalidated data for kernel 1
   ze_mutable_global_offset_exp_desc_t mutate_global_offset = {
@@ -1554,8 +1529,8 @@ TEST_F(
   mutate_scalar_kernel_arg_3.pNext = &mutate_buffer_kernel_arg_3;
 
   mutableCmdDesc.pNext = &mutate_scalar_kernel_arg_3;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListUpdateMutableCommandsExp(
-                                   mutableCmdList, &mutableCmdDesc));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListUpdateMutableCommandsExp(mutableCmdList, &mutableCmdDesc));
 
   lzt::close_command_list(mutableCmdList);
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
@@ -1563,8 +1538,8 @@ TEST_F(
 
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[0]));
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(events[1]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[2]));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(events[3]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[2]));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events[3]));
   const uint32_t second_result =
       ((init_buffer_val * mutated_mul_val) - mutated_sub_val) / div_val;
   for (size_t i = 0; i < mutated_global_offset_x; i++) {
