@@ -81,8 +81,7 @@ void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output) {
   lzt::destroy_command_list(command_list);
 }
 
-void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output) {
-
+void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit &output) {
   auto command_list = lzt::create_command_list();
   EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyToMemory(
                                    command_list, output.raw_data(), input,

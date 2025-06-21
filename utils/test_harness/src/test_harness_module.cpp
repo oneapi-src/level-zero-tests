@@ -257,30 +257,29 @@ ze_kernel_properties_t get_kernel_properties(ze_kernel_handle_t kernel) {
 // Expand as needed.
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
-                                 std::string func_name, int group_size,
+                                 std::string func_name, uint32_t group_size_x,
                                  void *arg, bool is_immediate) {
   std::vector<FunctionArg> args;
   if (arg != nullptr) {
     FunctionArg func_arg{sizeof(arg), &arg};
     args.push_back(func_arg);
   }
-  create_and_execute_function(device, module, func_name, group_size, args,
+  create_and_execute_function(device, module, func_name, group_size_x, args,
                               is_immediate);
 }
 
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
-                                 std::string func_name, int group_size,
+                                 std::string func_name, uint32_t group_size_x,
                                  const std::vector<FunctionArg> &args,
                                  bool is_immediate) {
 
   ze_kernel_handle_t function = create_function(module, func_name);
   zeCommandBundle cmd_bundle = create_command_bundle(device, is_immediate);
-  uint32_t group_size_x = group_size;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
   EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestGroupSize(function, group_size, 1, 1, &group_size_x,
+            zeKernelSuggestGroupSize(function, group_size_x, 1, 1, &group_size_x,
                                      &group_size_y, &group_size_z));
 
   EXPECT_EQ(
@@ -325,6 +324,73 @@ void create_and_execute_function(ze_device_handle_t device,
 
   destroy_function(function);
   destroy_command_bundle(cmd_bundle);
+}
+
+void create_and_execute_function(ze_device_handle_t device,
+                                 ze_module_handle_t module,
+                                 std::string func_name, uint32_t group_size_x,
+                                 uint32_t group_size_y, void *arg,
+                                 bool is_immediate) {
+    std::vector<FunctionArg> args;
+    if (arg != nullptr) {
+        FunctionArg func_arg{sizeof(arg), &arg};
+        args.push_back(func_arg);
+    }
+    create_and_execute_function(device, module, func_name, group_size_x, group_size_y, args, is_immediate);
+}
+
+void create_and_execute_function(ze_device_handle_t device,
+                                 ze_module_handle_t module,
+                                 std::string func_name, uint32_t group_size_x,
+                                 uint32_t group_size_y, const std::vector<FunctionArg> &args,
+                                 bool is_immediate) {
+
+    ze_kernel_handle_t function = create_function(module, func_name);
+    zeCommandBundle cmd_bundle = create_command_bundle(device, is_immediate);
+
+    uint32_t group_size_z = 1;
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeKernelSuggestGroupSize(function, group_size_x, group_size_y, group_size_z, &group_size_x, &group_size_y, &group_size_z));
+
+    EXPECT_EQ(
+        ZE_RESULT_SUCCESS,
+        zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
+
+    ze_kernel_properties_t function_properties = get_kernel_properties(function);
+    EXPECT_EQ(function_properties.numKernelArgs, args.size());
+
+    int i = 0;
+    for (auto arg : args) {
+        EXPECT_EQ(
+            ZE_RESULT_SUCCESS,
+            zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));
+    }
+
+    ze_group_count_t thread_group_dimensions;
+    thread_group_dimensions.groupCountX = group_size_x;
+    thread_group_dimensions.groupCountY = group_size_y;
+    thread_group_dimensions.groupCountZ = 1;
+
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListAppendLaunchKernel(cmd_bundle.list, function,
+                                              &thread_group_dimensions, nullptr,
+                                              0, nullptr));
+
+    EXPECT_EQ(ZE_RESULT_SUCCESS,
+              zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
+    if (is_immediate) {
+        EXPECT_EQ(ZE_RESULT_SUCCESS,
+                  zeCommandListHostSynchronize(cmd_bundle.list, UINT64_MAX));
+    } else {
+        EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cmd_bundle.list));
+
+        EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr));
+
+        EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cmd_bundle.queue, UINT64_MAX));
+    }
+
+    destroy_function(function);
+    destroy_command_bundle(cmd_bundle);
 }
 
 void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
