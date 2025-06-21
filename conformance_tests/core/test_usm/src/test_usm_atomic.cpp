@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022-2023 Intel Corporation
+ * Copyright (C) 2022-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -218,14 +218,19 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(shared_memory_types),
                        ::testing::Bool()));
 
-class AtomicAccessTests : public ::testing::Test {};
+class AtomicAccessTests : public ::testing::Test {
+protected:
+  void RunSetAndGetAtomicAccessTypeTest(bool is_shared_system);
+};
 
-TEST_F(AtomicAccessTests, SetAndGetAccessTypeForSharedAllocation) {
+void AtomicAccessTests::RunSetAndGetAtomicAccessTypeTest(
+    bool is_shared_system) {
   auto context = lzt::get_default_context();
   auto device = lzt::get_default_device(lzt::get_default_driver());
 
-  auto alloc_data = static_cast<int *>(lzt::allocate_shared_memory(
-      size * sizeof(int), 1, 0, 0, device, context));
+  auto alloc_data =
+      static_cast<int *>(lzt::allocate_shared_memory_with_allocator_selector(
+          size * sizeof(int), 1, 0, 0, device, context, is_shared_system));
 
   auto memory_access_properties = lzt::get_memory_access_properties(device);
   ze_memory_atomic_attr_exp_flags_t access_type;
@@ -314,7 +319,16 @@ TEST_F(AtomicAccessTests, SetAndGetAccessTypeForSharedAllocation) {
                                                size, &access_type));
     EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_SYSTEM_ATOMICS, access_type);
   }
-  lzt::free_memory(context, alloc_data);
-} // namespace
+  lzt::free_memory_with_allocator_selector(context, alloc_data,
+                                           is_shared_system);
+}
+
+TEST_F(AtomicAccessTests, SetAndGetAccessTypeForSharedAllocation) {
+  RunSetAndGetAtomicAccessTypeTest(false);
+}
+
+TEST_F(AtomicAccessTests, SetAndGetAccessTypeForSharedSystemAllocator) {
+  RunSetAndGetAtomicAccessTypeTest(true);
+}
 
 } // namespace
