@@ -20,16 +20,24 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
 }
 } // namespace
 #define ASSERT_ZE_RESULT_SUCCESS(val)                                          \
-  if (val == ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                            \
-    throw LztGtestSkipExectuionException("Unsupported API version");           \
-  }                                                                            \
-  ASSERT_EQ(ZE_RESULT_SUCCESS, val);
+  {                                                                            \
+    const auto lzt_assert_ze_result_success_macro = val;                       \
+    if (lzt_assert_ze_result_success_macro ==                                  \
+        ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                                 \
+      throw LztGtestSkipExectuionException("Unsupported API version");         \
+    }                                                                          \
+    ASSERT_EQ(ZE_RESULT_SUCCESS, lzt_assert_ze_result_success_macro);          \
+  }
 
 #define EXPECT_ZE_RESULT_SUCCESS(val)                                          \
-  if (val == ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                            \
-    throw LztGtestSkipExectuionException("Unsupported API version");           \
-  }                                                                            \
-  EXPECT_EQ(ZE_RESULT_SUCCESS, val);
+  {                                                                            \
+    const auto lzt_expect_ze_result_success_macro = val;                       \
+    if (lzt_expect_ze_result_success_macro ==                                  \
+        ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                                 \
+      throw LztGtestSkipExectuionException("Unsupported API version");         \
+    }                                                                          \
+    EXPECT_EQ(ZE_RESULT_SUCCESS, lzt_expect_ze_result_success_macro);          \
+  }
 
 #define LZT_NAME_STATIC_VALIDATION(test_suite_name, test_name)                 \
   static_assert(sizeof(GTEST_STRINGIFY_(test_suite_name)) > 1,                 \
