@@ -71,7 +71,7 @@ void thread_func(const ze_command_queue_handle_t cq) {
 
 class zeFenceSynchronizeTests : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeFenceSynchronizeTests,
     GivenMultipleThreadsUsingSingleCommandQueueAndSynchronizingThenSuccessIsReturned) {
 

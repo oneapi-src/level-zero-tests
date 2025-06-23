@@ -213,7 +213,7 @@ void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
 
 class zeContextMakeResidentTests : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeContextMakeResidentTests,
     GivenMultipleThreadsWhenMakingTheDeviceMemoryResidentFollowedByFreeThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -230,7 +230,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeContextMakeResidentTests,
     GivenMultipleThreadsWhenMakingTheDeviceMemoryResidentFollowedByEvictAndFreeThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -247,7 +247,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeContextMakeResidentTests,
     GivenMultipleThreadsWhenMakingTheSharedMemoryResidentFollowedByEvictUsingAPIThenSuccessIsReturned) {
 
@@ -272,7 +272,7 @@ TEST(
   lzt::destroy_module(module);
 }
 
-TEST(
+LZT_TEST(
     zeContextMakeResidentTests,
     GivenMultipleThreadsWhenMakingTheSharedMemoryResidentFollowedByEvictUsingIndirectAccessThroughKernelThenSuccessIsReturned) {
 
@@ -297,7 +297,7 @@ TEST(
   lzt::destroy_module(module);
 }
 
-TEST(
+LZT_TEST(
     zeContextMakeResidentTests,
     GivenMultipleThreadsWhenMakingTheSharedMemoryResidentFollowedByEvictUsingIndirectAccessThroughKernelOnImmediateCmdListThenSuccessIsReturned) {
 
@@ -327,22 +327,21 @@ void image_make_resident_evict(ze_image_handle_t dflt_device_image_) {
 
   for (uint32_t i = 0; i < thread_iters; i++) {
     memory_ = lzt::allocate_device_memory(size_);
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
+    EXPECT_ZE_RESULT_SUCCESS(
+
         zeContextMakeImageResident(lzt::get_default_context(),
                                    lzt::zeDevice::get_instance()->get_device(),
                                    dflt_device_image_));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeContextEvictImage(lzt::get_default_context(),
-                                  lzt::zeDevice::get_instance()->get_device(),
-                                  dflt_device_image_));
+    EXPECT_ZE_RESULT_SUCCESS(zeContextEvictImage(
+        lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+        dflt_device_image_));
     lzt::free_memory(memory_);
   }
 }
 
 class zeDeviceMakeImageResidentTests : public testing::Test {};
 
-TEST_F(
+LZT_TEST_F(
     zeDeviceMakeImageResidentTests,
     GivenMultipleThreadsWhenMakingImageResidentFollowedByEvictThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;

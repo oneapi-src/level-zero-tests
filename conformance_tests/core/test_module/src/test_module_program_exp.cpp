@@ -88,14 +88,14 @@ void RunGivenModulesWithLinkageDependenciesWhenCreatingTest(bool is_immediate) {
   lzt::destroy_context(context);
 }
 
-TEST(zeModuleProgramTests,
-     GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned) {
+LZT_TEST(zeModuleProgramTests,
+         GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned) {
   if (!check_ext_version())
     GTEST_SKIP();
   RunGivenModulesWithLinkageDependenciesWhenCreatingTest(false);
 }
 
-TEST(
+LZT_TEST(
     zeModuleProgramTests,
     GivenModulesWithLinkageDependenciesWhenCreatingOnImmediateCmdListThenSuccessIsReturned) {
   if (!check_ext_version())

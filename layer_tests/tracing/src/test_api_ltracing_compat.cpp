@@ -12,6 +12,7 @@
 #include "test_harness/test_harness.hpp"
 #include "test_harness/test_harness_memory.hpp"
 #include "test_harness/test_harness_driver.hpp"
+#include "utils/utils.hpp"
 #include "net/test_ipc_comm.hpp"
 #include <boost/process.hpp>
 #include <level_zero/ze_api.h>
@@ -40,7 +41,7 @@ class LCTracingCreateTests : public ::testing::Test {};
 #define LCTRACING_CREATE_TEST_NAME LCTracingCreateTests
 #endif
 
-TEST(
+LZT_TEST(
     LCTRACING_CREATE_TEST_NAME,
     GivenValidDeviceAndTracerDescriptionWhenCreatingTracerThenTracerIsNotNull) {
   uint32_t user_data;
@@ -71,8 +72,8 @@ protected:
 #define LCTRACING_CREATE_MULTIPLE_TEST_NAME LCTracingCreateMultipleTests
 #endif
 
-TEST_P(LCTRACING_CREATE_MULTIPLE_TEST_NAME,
-       GivenExistingTracersWhenCreatingNewTracerThenSuccesIsReturned) {
+LZT_TEST_P(LCTRACING_CREATE_MULTIPLE_TEST_NAME,
+           GivenExistingTracersWhenCreatingNewTracerThenSuccesIsReturned) {
 
   std::vector<zel_tracer_handle_t> tracers(GetParam());
   std::vector<zel_tracer_desc_t> descs(GetParam());
@@ -111,8 +112,8 @@ class LCTracingDestroyTests : public ::testing::Test {};
 #define LCTRACING_DESTROY_TEST_NAME LCTracingDestroyTests
 #endif
 
-TEST(LCTRACING_DESTROY_TEST_NAME,
-     GivenSingleDisabledTracerWhenDestroyingTracerThenSuccessIsReturned) {
+LZT_TEST(LCTRACING_DESTROY_TEST_NAME,
+         GivenSingleDisabledTracerWhenDestroyingTracerThenSuccessIsReturned) {
   uint32_t user_data;
 
   zel_tracer_desc_t tracer_desc = {ZEL_STRUCTURE_TYPE_TRACER_EXP_DESC, nullptr,
@@ -219,46 +220,42 @@ protected:
   }
 
   void init_command_queue() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueCreate(context, device, &command_queue_desc,
-                                   &command_queue));
+    ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueCreate(
+        context, device, &command_queue_desc, &command_queue));
   }
 
   void init_command_list() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListCreate(context, device, &command_list_desc,
-                                  &command_list));
+    ASSERT_ZE_RESULT_SUCCESS(zeCommandListCreate(
+        context, device, &command_list_desc, &command_list));
   }
 
   void init_fence() {
     init_command_queue();
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeFenceCreate(command_queue, &fence_desc, &fence));
+    ASSERT_ZE_RESULT_SUCCESS(zeFenceCreate(command_queue, &fence_desc, &fence));
   }
 
   void init_event_pool() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCreate(context, &event_pool_desc, 1,
-                                                   &device, &event_pool));
+    ASSERT_ZE_RESULT_SUCCESS(
+        zeEventPoolCreate(context, &event_pool_desc, 1, &device, &event_pool));
   }
 
   void init_event() {
     init_event_pool();
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeEventCreate(event_pool, &event_desc, &event));
+    ASSERT_ZE_RESULT_SUCCESS(zeEventCreate(event_pool, &event_desc, &event));
   }
 
   void init_module() {
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleCreate(context, device, &module_desc,
-                                                &module, &build_log));
+    ASSERT_ZE_RESULT_SUCCESS(
+        zeModuleCreate(context, device, &module_desc, &module, &build_log));
   }
 
   void init_kernel() {
     init_module();
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelCreate(module, &kernel_desc, &kernel));
+    ASSERT_ZE_RESULT_SUCCESS(zeKernelCreate(module, &kernel_desc, &kernel));
   }
 
   bool init_image() {
@@ -277,8 +274,7 @@ protected:
   void init_ipc() {
     init_memory();
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetIpcHandle(context, memory, &ipc_handle));
+    ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, &ipc_handle));
   }
 
   void TearDown() override {
@@ -433,7 +429,7 @@ class LCDynamicTracingPrologueEpilogueTests
 #define LCTRACING_TEST_NAME LCTracingPrologueEpilogueTests
 #endif
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetCallbacksWhenCallingzeDeviceGetThenUserDataIsSetAndResultUnchanged) {
 
@@ -450,7 +446,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceGet(driver, &num, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithZeDeviceGetSubDevicesCallbacksWhenCallingzeDeviceGetSubDevicesThenUserDataIsSetAndResultUnchanged) {
 
@@ -467,7 +463,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceGetSubDevices(device, &num, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetPropertiesCallbacksWhenCallingzeDeviceGetPropertiesThenUserDataIsSetAndResultUnchanged) {
 
@@ -483,7 +479,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceGetProperties(device, &properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetComputePropertiesCallbacksWhenCallingzeDeviceGetComputePropertiesThenUserDataIsSetAndResultUnchanged) {
 
@@ -501,7 +497,7 @@ TEST_F(
             zeDeviceGetComputeProperties(device, &compute_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetModulePropertiesCallbacksWhenCallingzeDeviceGetModulePropertiesThenUserDataIsSetAndResultUnchanged) {
 
@@ -515,12 +511,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeDeviceGetModuleProperties(device, &moduleProperties);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeDeviceGetModuleProperties(device, &moduleProperties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetCommandQueueGroupPropertieszeDeviceGetCommandQueueGroupPropertiesThenUserDataIsSetAndResultUnchanged) {
 
@@ -533,13 +528,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeDeviceGetCommandQueueGroupProperties(device, &count, nullptr);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeDeviceGetCommandQueueGroupProperties(device, &count, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetMemoryPropertiesCallbacksWhenCallingzeDeviceGetMemoryPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceGetMemoryPropertiesRegisterCallback(
@@ -556,7 +549,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceGetMemoryProperties(device, &num, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetMemoryAccessPropertiesCallbacksWhenCallingzeDeviceGetMemoryAccessPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceGetMemoryAccessPropertiesRegisterCallback(
@@ -573,7 +566,7 @@ TEST_F(
                                 device, &memory_access_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetCachePropertiesCallbacksWhenCallingzeDeviceGetCachePropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceGetCachePropertiesRegisterCallback(
@@ -591,7 +584,7 @@ TEST_F(
             zeDeviceGetCacheProperties(device, &count, &cache_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetImagePropertiesCallbacksWhenCallingzeDeviceGetImagePropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceGetImagePropertiesRegisterCallback(
@@ -608,7 +601,7 @@ TEST_F(
             zeDeviceGetImageProperties(device, &device_image_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetExternalMemoryPropertiesCallbacksWhenCallingzeDeviceGetExternalMemoryPropertiesThenUserDataIsSetAndResultUnchanged) {
 
@@ -622,13 +615,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeDeviceGetExternalMemoryProperties(device, &externalMemoryProperties);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeDeviceGetExternalMemoryProperties(device, &externalMemoryProperties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetP2PPropertiesCallbacksWhenCallingzeDeviceGetP2PPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceGetP2PPropertiesRegisterCallback(
@@ -645,7 +636,7 @@ TEST_F(
             zeDeviceGetP2PProperties(device, device, &p2p_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceCanAccessPeerCallbacksWhenCallingzeDeviceCanAccessPeerThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceCanAccessPeerRegisterCallback(
@@ -661,7 +652,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceCanAccessPeer(device, device, &can_access));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetStatusCallbacksWhenCallingzeDeviceGetStatusThenUserDataIsSetAndResultUnchanged) {
 
@@ -678,7 +669,7 @@ TEST_F(
               (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetGlobalTimestampsCallbacksWhenCallingzeDeviceGetGlobalTimestampsThenUserDataIsSetAndResultUnchanged) {
 
@@ -691,13 +682,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeDeviceGetGlobalTimestamps(device, &hostTimestamp, &deviceTimestamp);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeDeviceGetGlobalTimestamps(device, &hostTimestamp, &deviceTimestamp));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingzeDeviceGetFabricVertexExpThenUserDataIsSetAndResultUnchanged) {
   zelTracerDeviceGetFabricVertexExpRegisterCallback(
@@ -709,11 +698,12 @@ TEST_F(
   ze_result_t initial_result = zeDeviceGetFabricVertexExp(device, &vertex);
 
   lzt::enable_ltracer(tracer_handle);
-
+  // EXPECT_EQ\([?s|.]*SUCCESS.*\)\;
   EXPECT_EQ(initial_result, zeDeviceGetFabricVertexExp(device, &vertex));
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetFabricVertexExp(device, &vertex));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceReserveCacheExtCallbacksWhenCallingzeDeviceReserveCacheExtThenUserDataIsSetAndResultUnchanged) {
 
@@ -739,7 +729,7 @@ TEST_F(
               (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceSetCacheAdviceExtCallbacksWhenCallingzeDeviceSetCacheAdviceExtThenUserDataIsSetAndResultUnchanged) {
 
@@ -774,7 +764,7 @@ TEST_F(
   lzt::free_memory(memoryRegion);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDevicePciGetPropertiesExtCallbacksWhenCallingzeDevicePciGetPropertiesExtThenUserDataIsSetAndResultUnchanged) {
 
@@ -797,13 +787,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeDevicePciGetPropertiesExt(device, &devicePciProperties);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeDevicePciGetPropertiesExt(device, &devicePciProperties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeContextCreateCallbacksWhenCallingzeContextCreateThenUserDataIsSetAndResultUnchanged) {
 
@@ -818,14 +806,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeContextCreate(driver, &contextDescriptor, &context);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeContextCreate(driver, &contextDescriptor, &context));
 
-  result = zeContextDestroy(context);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeContextDestroy(context));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeContextCreateExCallbacksWhenCallingzeContextCreateExThenUserDataIsSetAndResultUnchanged) {
 
@@ -840,16 +827,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeContextCreateEx(driver, &contextDescriptor, 0, nullptr, &context);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeContextCreateEx(driver, &contextDescriptor, 0, nullptr, &context));
 
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
-
-  result = zeContextDestroy(context);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeContextDestroy(context));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeContextDestroyCallbacksWhenCallingzeContextDestroyThenUserDataIsSetAndResultUnchanged) {
 
@@ -862,16 +846,15 @@ TEST_F(
                                          nullptr, 0};
   ze_context_handle_t context;
 
-  ze_result_t result = zeContextCreate(driver, &contextDescriptor, &context);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeContextCreate(driver, &contextDescriptor, &context));
 
   lzt::enable_ltracer(tracer_handle);
 
-  result = zeContextDestroy(context);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeContextDestroy(context));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeContextGetStatusCallbacksWhenCallingzeContextGetStatusThenUserDataIsSetAndResultUnchanged) {
 
@@ -884,19 +867,15 @@ TEST_F(
                                          nullptr, 0};
   ze_context_handle_t context;
 
-  ze_result_t result = zeContextCreate(driver, &contextDescriptor, &context);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
-
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeContextCreate(driver, &contextDescriptor, &context));
   lzt::enable_ltracer(tracer_handle);
 
-  result = zeContextGetStatus(context);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
-
-  result = zeContextDestroy(context);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeContextGetStatus(context));
+  ASSERT_ZE_RESULT_SUCCESS(zeContextDestroy(context));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceSystemBarrierCallbacksWhenCallingzeDeviceSystemBarrierThenUserDataIsSetAndResultUnchanged) {
   zelTracerContextSystemBarrierRegisterCallback(
@@ -911,7 +890,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeContextSystemBarrier(context, device));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceMakeMemoryResidentCallbacksWhenCallingzeDeviceMakeMemoryResidentThenUserDataIsSetAndResultUnchanged) {
   zelTracerContextMakeMemoryResidentRegisterCallback(
@@ -928,7 +907,7 @@ TEST_F(
             zeContextMakeMemoryResident(context, device, memory, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceEvictMemoryCallbacksWhenCallingzeDeviceEvictMemoryThenUserDataIsSetAndResultUnchanged) {
   zelTracerContextEvictMemoryRegisterCallback(
@@ -945,7 +924,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeContextEvictMemory(context, device, memory, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceMakeImageResidentCallbacksWhenCallingzeDeviceMakeImageResidentThenUserDataIsSetAndResultUnchangedAndResultUnchanged) {
   zelTracerContextMakeImageResidentRegisterCallback(
@@ -964,10 +943,10 @@ TEST_F(
   lzt::enable_ltracer(tracer_handle);
 
   ze_result_t result = zeContextMakeImageResident(context, device, image);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+  EXPECT_ZE_RESULT_SUCCESS(result);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceEvictImageCallbacksWhenCallingzeDeviceEvictImageThenUserDataIsSetAndResultUnchanged) {
   zelTracerContextEvictImageRegisterCallback(
@@ -990,7 +969,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeContextEvictImage(context, device, image));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetCallbacksWhenCallingzeDriverGetThenUserDataIsSetAndResultUnchanged) {
   zelTracerDriverGetRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -1006,7 +985,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDriverGet(&num, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetApiVersionCallbacksWhenCallingzeDriverGetApiVersionThenUserDataIsSetAndResultUnchanged) {
   zelTracerDriverGetApiVersionRegisterCallback(
@@ -1021,7 +1000,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDriverGetApiVersion(driver, &api_version));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetPropertiesCallbacksWhenCallingzeDriverGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDriverGetPropertiesRegisterCallback(
@@ -1037,7 +1016,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDriverGetProperties(driver, &driver_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetIPCPropertiesCallbacksWhenCallingzeDriverGetIPCPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDriverGetIpcPropertiesRegisterCallback(
@@ -1053,7 +1032,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDriverGetIpcProperties(driver, &ipc_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverzeDriverGetExtensionPropertiesCallbacksWhenCallingzeDriverGetExtensionPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerDriverGetExtensionPropertiesRegisterCallback(
@@ -1065,12 +1044,11 @@ TEST_F(
 
   uint32_t count = 0;
 
-  ze_result_t result = zeDriverGetExtensionProperties(driver, &count, nullptr);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeDriverGetExtensionProperties(driver, &count, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverzeDriverGetExtensionFunctionAddressCallbacksWhenCallingzeDriverGetExtensionFunctionAddressThenUserDataIsSetAndResultUnchanged) {
   zelTracerDriverGetExtensionFunctionAddressRegisterCallback(
@@ -1084,14 +1062,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeDriverGetExtensionFunctionAddress(
+  ASSERT_ZE_RESULT_SUCCESS(zeDriverGetExtensionFunctionAddress(
       driver, "zexDriverImportExternalPointer",
-      reinterpret_cast<void **>(&zexDriverImportExternalPointer));
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+      reinterpret_cast<void **>(&zexDriverImportExternalPointer)));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocSharedMemCallbacksWhenCallingzeDriverAllocSharedMemThenUserDataIsSetAndResultUnchanged) {
   zelTracerMemAllocSharedRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -1119,10 +1095,10 @@ TEST_F(
   ASSERT_EQ(initial_result, zeMemAllocShared(context, &device_desc, &host_desc,
                                              1, 0, device, &shared_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, shared_memory));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFree(context, shared_memory));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocDeviceMemCallbacksWhenCallingzeDriverAllocDeviceMemThenUserDataIsSetAndResultUnchanged) {
   zelTracerMemAllocDeviceRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -1145,10 +1121,10 @@ TEST_F(
   ASSERT_EQ(initial_result, zeMemAllocDevice(context, &device_desc, 1, 1,
                                              device, &device_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, device_memory));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFree(context, device_memory));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocHostMemCallbacksWhenCallingzeDriverAllocHostMemThenUserDataIsSetAndResultUnchanged) {
   zelTracerMemAllocHostRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -1169,10 +1145,10 @@ TEST_F(
   ASSERT_EQ(initial_result,
             zeMemAllocHost(context, &host_desc, 1, 1, &host_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, host_memory));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFree(context, host_memory));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverFreeMemCallbacksWhenCallingzeDriverFreeMemThenUserDataIsSetAndResultUnchanged) {
   zelTracerMemFreeRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -1190,12 +1166,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocHost(context, &host_desc, 1, 0, &host_memory));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeMemAllocHost(context, &host_desc, 1, 0, &host_memory));
   ASSERT_EQ(initial_result, zeMemFree(context, host_memory));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeMemFreeExtCallbacksWhenCallingzeMemFreeExtThenUserDataIsSetAndResultUnchanged) {
 
@@ -1221,14 +1197,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeMemFreeExt(context, &memFreeDesc, memory);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFreeExt(context, &memFreeDesc, memory));
 
   memory = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemAllocPropertiesCallbacksWhenCallingzeDriverGetMemAllocPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerMemGetAllocPropertiesRegisterCallback(
@@ -1251,7 +1225,7 @@ TEST_F(
       zeMemGetAllocProperties(context, memory, &mem_alloc_properties, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemAddressRangeCallbacksWhenCallingzeDriverGetMemAddressRangeThenUserDataIsSetAndResultUnchanged) {
 
@@ -1271,7 +1245,7 @@ TEST_F(
             zeMemGetAddressRange(context, memory, nullptr, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemIpcHandleCallbacksWhenCallingzeDriverGetMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
   zelTracerMemGetIpcHandleRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -1288,7 +1262,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeMemGetIpcHandle(context, memory, &ipc_handle));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverOpenMemIpcHandleCallbacksWhenCallingzeDriverOpenMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
   zelTracerMemOpenIpcHandleRegisterCallback(
@@ -1309,7 +1283,7 @@ TEST_F(
             zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueCreateCallbacksWhenCallingzeCommandQueueCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandQueueCreateRegisterCallback(
@@ -1322,13 +1296,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(command_queue));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueDestroy(command_queue));
   ASSERT_EQ(initial_result,
             zeCommandQueueCreate(context, device, &command_queue_desc,
                                  &command_queue));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueDestroyCallbacksWhenCallingzeCommandQueueDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandQueueDestroyRegisterCallback(
@@ -1342,14 +1316,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueCreate(context, device, &command_queue_desc,
-                                 &command_queue));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueCreate(
+      context, device, &command_queue_desc, &command_queue));
   ASSERT_EQ(initial_result, zeCommandQueueDestroy(command_queue));
   command_queue = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueExecuteCommandListsCallbacksWhenCallingzeCommandQueueExecuteCommandListsThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandQueueExecuteCommandListsRegisterCallback(
@@ -1360,7 +1333,7 @@ TEST_F(
   init_command_list();
   init_command_queue();
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(command_list));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(command_list));
 
   ze_result_t initial_result = zeCommandQueueExecuteCommandLists(
       command_queue, 1, &command_list, nullptr);
@@ -1371,7 +1344,7 @@ TEST_F(
                                 command_queue, 1, &command_list, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueSynchronizeCallbacksWhenCallingzeCommandQueueSynchronizeThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandQueueSynchronizeRegisterCallback(
@@ -1388,7 +1361,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandQueueSynchronize(command_queue, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCreateCallbacksWhenCallingzeCommandListCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListCreateRegisterCallback(
@@ -1401,13 +1374,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListDestroy(command_list));
   ASSERT_EQ(
       initial_result,
       zeCommandListCreate(context, device, &command_list_desc, &command_list));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListResetCallbacksWhenCallingzeCommandListResetThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListResetRegisterCallback(
@@ -1424,7 +1397,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandListReset(command_list));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyFromContextCallbacksWhenCallingzeCommandListAppendMemoryCopyFromContextThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendMemoryCopyFromContextRegisterCallback(
@@ -1457,7 +1430,7 @@ TEST_F(
   lzt::destroy_context(src_context);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendQueryKernelTimestampsCallbacksWhenCallingzeCommandListAppendQueryKernelTimestampsThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendQueryKernelTimestampsRegisterCallback(
@@ -1486,7 +1459,7 @@ TEST_F(
   lzt::free_memory(timestamp_buffer);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCloseCallbacksWhenCallingzeCommandListCloseThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListCloseRegisterCallback(
@@ -1503,7 +1476,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandListClose(command_list));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListDestroyCallbacksWhenCallingzeCommandListDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListDestroyRegisterCallback(
@@ -1523,7 +1496,7 @@ TEST_F(
   command_list = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCreateImmediateCallbacksWhenCallingzeCommandListCreateImmediateThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListCreateImmediateRegisterCallback(
@@ -1536,13 +1509,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListDestroy(command_list));
   ASSERT_EQ(initial_result,
             zeCommandListCreateImmediate(context, device, &command_queue_desc,
                                          &command_list));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendBarrierCallbacksWhenCallingzeCommandListAppendBarrierThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendBarrierRegisterCallback(
@@ -1561,7 +1534,7 @@ TEST_F(
             zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryRangesBarrierCallbacksWhenCallingzeCommandListAppendMemoryRangesBarrierThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendMemoryRangesBarrierRegisterCallback(
@@ -1592,7 +1565,7 @@ TEST_F(
     lzt::free_memory(range);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyCallbacksWhenCallingzeCommandListAppendMemoryCopyThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendMemoryCopyRegisterCallback(
@@ -1617,7 +1590,7 @@ TEST_F(
   lzt::free_memory(dst);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryFillCallbacksWhenCallingzeCommandListAppendMemoryFillThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendMemoryFillRegisterCallback(
@@ -1641,7 +1614,7 @@ TEST_F(
                                 nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyRegionCallbacksWhenCallingzeCommandListAppendMemoryCopyRegionThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendMemoryCopyRegionRegisterCallback(
@@ -1671,7 +1644,7 @@ TEST_F(
   lzt::free_memory(dst);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListappendWriteGlobalTImestampCallbacksWhenCallingzeCommandListappendWriteGlobalTImestampThenUserDataIsSetAndResultUnchanged) {
 
@@ -1697,16 +1670,15 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeCommandListAppendWriteGlobalTimestamp(
-      command_list, &dst_timestamp, nullptr, 1, &event);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendWriteGlobalTimestamp(
+      command_list, &dst_timestamp, nullptr, 1, &event));
   ASSERT_EQ(event, wait_event_initial);
 
   ep.destroy_event(event);
   lzt::destroy_command_list(command_list);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyCallbacksWhenCallingzeCommandListAppendImageCopyThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendImageCopyRegisterCallback(
@@ -1729,9 +1701,9 @@ TEST_F(
     GTEST_SKIP();
   }
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, result);
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, device, &image_desc, &dst_image));
+  ASSERT_ZE_RESULT_SUCCESS(result);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeImageCreate(context, device, &image_desc, &dst_image));
 
   ze_result_t initial_result = zeCommandListAppendImageCopy(
       command_list, dst_image, src_image, nullptr, 0, nullptr);
@@ -1742,11 +1714,11 @@ TEST_F(
             zeCommandListAppendImageCopy(command_list, dst_image, src_image,
                                          nullptr, 0, nullptr));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(src_image));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(dst_image));
+  ASSERT_ZE_RESULT_SUCCESS(zeImageDestroy(src_image));
+  ASSERT_ZE_RESULT_SUCCESS(zeImageDestroy(dst_image));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyRegionCallbacksWhenCallingzeCommandListAppendImageCopyRegionThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendImageCopyRegionRegisterCallback(
@@ -1769,8 +1741,8 @@ TEST_F(
     GTEST_SKIP();
   }
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, device, &image_desc, &dst_image));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeImageCreate(context, device, &image_desc, &dst_image));
 
   ze_result_t initial_result =
       zeCommandListAppendImageCopyRegion(command_list, dst_image, src_image,
@@ -1783,11 +1755,11 @@ TEST_F(
                                 command_list, dst_image, src_image, nullptr,
                                 nullptr, nullptr, 0, nullptr));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(src_image));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(dst_image));
+  ASSERT_ZE_RESULT_SUCCESS(zeImageDestroy(src_image));
+  ASSERT_ZE_RESULT_SUCCESS(zeImageDestroy(dst_image));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyFromMemoryCallbacksWhenCallingzeCommandListAppendImageCopyFromMemoryThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendImageCopyFromMemoryRegisterCallback(
@@ -1816,7 +1788,7 @@ TEST_F(
                 command_list, image, memory, nullptr, nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyToMemoryCallbacksWhenCallingzeCommandListAppendImageCopyToMemoryThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendImageCopyToMemoryRegisterCallback(
@@ -1845,7 +1817,7 @@ TEST_F(
                                                  nullptr, nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyToMemoryExtCallbacksWhenCallingzezeCommandListAppendImageCopyToMemoryExtThenUserDataIsSetAndResultUnchanged) {
 
@@ -1877,14 +1849,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeCommandListAppendImageCopyToMemoryExt(
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyToMemoryExt(
       command_list, memory, image, nullptr, destRowPitch, destSlicePitch,
-      nullptr, 0, 0);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+      nullptr, 0, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyFromMemoryExtCallbacksWhenCallingzeCommandListAppendImageCopyFromMemoryExtThenUserDataIsSetAndResultUnchanged) {
 
@@ -1916,14 +1886,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeCommandListAppendImageCopyFromMemoryExt(
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyFromMemoryExt(
       command_list, image, memory, nullptr, srcRowPitch, srcSlicePitch, nullptr,
-      0, nullptr);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+      0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageGetAllocPropertiesExtCallbacksWhenCallingzeDriverGetApiVersionThenUserDataIsSetAndResultUnchanged) {
 
@@ -1957,13 +1925,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeImageGetAllocPropertiesExt(context, image, &imageAllocProperties);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeImageGetAllocPropertiesExt(context, image, &imageAllocProperties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageGetMemoryPropertiesExpCallbacksWhenCallingzeImageGetMemoryPropertiesExpThenUserDataIsSetAndResultUnchanged) {
 
@@ -1985,13 +1951,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeImageGetMemoryPropertiesExp(image, &imageMemoryProperties);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeImageGetMemoryPropertiesExp(image, &imageMemoryProperties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageViewCreateExtCallbacksWhenCallingzeImageViewCreateExtThenUserDataIsSetAndResultUnchanged) {
 
@@ -2020,15 +1984,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeImageViewCreateExt(context, device, &image_desc, image, &imageView);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
-
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeImageViewCreateExt(context, device, &image_desc, image, &imageView));
   zeImageDestroy(imageView);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageViewCreateExpCallbacksWhenCallingzeImageViewCreateExpThenUserDataIsSetAndResultUnchanged) {
 
@@ -2049,15 +2010,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeImageViewCreateExp(context, device, &image_desc, image, &imageView);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeImageViewCreateExp(context, device, &image_desc, image, &imageView));
 
   zeImageDestroy(imageView);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryPrefetchCallbacksWhenCallingzeCommandListAppendMemoryPrefetchThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendMemoryPrefetchRegisterCallback(
@@ -2081,7 +2040,7 @@ TEST_F(
   lzt::free_memory(shared_memory);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemAdviseCallbacksWhenCallingzeCommandListAppendMemAdviseThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendMemAdviseRegisterCallback(
@@ -2107,7 +2066,7 @@ TEST_F(
                                 ZE_MEMORY_ADVICE_SET_READ_MOSTLY));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendSignalEventCallbacksWhenCallingzeCommandListAppendSignalEventThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendSignalEventRegisterCallback(
@@ -2127,7 +2086,7 @@ TEST_F(
             zeCommandListAppendSignalEvent(command_list, event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendWaitOnEventsCallbacksWhenCallingzeCommandListAppendWaitOnEventsThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendWaitOnEventsRegisterCallback(
@@ -2147,7 +2106,7 @@ TEST_F(
             zeCommandListAppendWaitOnEvents(command_list, 1, &event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendEventResetCallbacksWhenCallingzeCommandListAppendEventResetThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendEventResetRegisterCallback(
@@ -2166,7 +2125,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandListAppendEventReset(command_list, event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchKernelCallbacksWhenCallingzeCommandListAppendLaunchKernelThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendLaunchKernelRegisterCallback(
@@ -2189,7 +2148,7 @@ TEST_F(
                                             nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchMultipleKernelsIndirectCallbacksWhenCallingzeCommandListAppendLaunchMultipleKernelsIndirectThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendLaunchMultipleKernelsIndirectRegisterCallback(
@@ -2217,7 +2176,7 @@ TEST_F(
   lzt::free_memory(args);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceCreateCallbacksWhenCallingzeFenceCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerFenceCreateRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2232,11 +2191,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeFenceDestroy(fence));
+  ASSERT_ZE_RESULT_SUCCESS(zeFenceDestroy(fence));
   ASSERT_EQ(initial_result, zeFenceCreate(command_queue, &fence_desc, &fence));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceDestroyCallbacksWhenCallingzeFenceDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerFenceDestroyRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2250,14 +2209,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeFenceCreate(command_queue, &fence_desc, &fence));
+  ASSERT_ZE_RESULT_SUCCESS(zeFenceCreate(command_queue, &fence_desc, &fence));
 
   ASSERT_EQ(initial_result, zeFenceDestroy(fence));
   fence = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceHostSynchronizeCallbacksWhenCallingzeFenceHostSynchronizeThenUserDataIsSetAndResultUnchanged) {
   zelTracerFenceHostSynchronizeRegisterCallback(
@@ -2274,7 +2232,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeFenceHostSynchronize(fence, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceQueryStatusCallbacksWhenCallingzeFenceQueryStatusThenUserDataIsSetAndResultUnchanged) {
   zelTracerFenceQueryStatusRegisterCallback(
@@ -2291,7 +2249,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeFenceQueryStatus(fence));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceResetCallbacksWhenCallingzeFenceResetThenUserDataIsSetAndResultUnchanged) {
   zelTracerFenceResetRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2308,7 +2266,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeFenceReset(fence));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolCreateCallbacksWhenCallingzeEventPoolCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventPoolCreateRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2321,12 +2279,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolDestroy(event_pool));
+  ASSERT_ZE_RESULT_SUCCESS(zeEventPoolDestroy(event_pool));
   ASSERT_EQ(initial_result, zeEventPoolCreate(context, &event_pool_desc, 1,
                                               &device, &event_pool));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolDestroyCallbacksWhenCallingzeEventPoolDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventPoolDestroyRegisterCallback(
@@ -2346,7 +2304,7 @@ TEST_F(
   event_pool = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventCreateCallbacksWhenCallingzeEventCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventCreateRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2360,11 +2318,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(event));
+  ASSERT_ZE_RESULT_SUCCESS(zeEventDestroy(event));
   ASSERT_EQ(initial_result, zeEventCreate(event_pool, &event_desc, &event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventDestroyCallbacksWhenCallingzeEventDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventDestroyRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2378,12 +2336,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventCreate(event_pool, &event_desc, &event));
+  ASSERT_ZE_RESULT_SUCCESS(zeEventCreate(event_pool, &event_desc, &event));
   ASSERT_EQ(initial_result, zeEventDestroy(event));
   event = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolGetIpcHandleCallbacksWhenCallingzeEventPoolGetIpcHandleThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventPoolGetIpcHandleRegisterCallback(
@@ -2400,21 +2358,21 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolOpenIpcHandleCallbacksWhenCallingzeEventPoolOpenIpcHandleThenUserDataIsSetAndResultUnchanged) {
 
   run_ltracing_compat_ipc_event_test("TEST_OPEN_IPC_EVENT");
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultUnchanged) {
 
   run_ltracing_compat_ipc_event_test("TEST_CLOSE_IPC_EVENT");
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostSignalCallbacksWhenCallingzeEventHostSignalThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventHostSignalRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2431,7 +2389,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventHostSignal(event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostSynchronizeCallbacksWhenCallingzeEventHostSynchronizeThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventHostSynchronizeRegisterCallback(
@@ -2448,7 +2406,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventHostSynchronize(event, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventQueryStatusCallbacksWhenCallingzeEventQueryStatusThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventQueryStatusRegisterCallback(
@@ -2465,7 +2423,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventQueryStatus(event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostResetCallbacksWhenCallingzeEventHostResetThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventHostResetRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2482,7 +2440,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventHostReset(event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageCreateCallbacksWhenCallingzeImageCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerImageCreateRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2497,7 +2455,7 @@ TEST_F(
               (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageGetPropertiesCallbacksWhenCallingzeImageGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerImageGetPropertiesRegisterCallback(
@@ -2514,7 +2472,7 @@ TEST_F(
             zeImageGetProperties(device, &image_desc, &image_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageDestroyCallbacksWhenCallingzeImageDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerImageDestroyRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2538,7 +2496,7 @@ TEST_F(
   image = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleCreateCallbacksWhenCallingzeModuleCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleCreateRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2551,12 +2509,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module));
+  ASSERT_ZE_RESULT_SUCCESS(zeModuleDestroy(module));
   ASSERT_EQ(initial_result,
             zeModuleCreate(context, device, &module_desc, &module, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleDestroyCallbacksWhenCallingzeModuleDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleDestroyRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2575,7 +2533,7 @@ TEST_F(
   module = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetNativeBinaryCallbacksWhenCallingzeModuleGetNativeBinaryThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleGetNativeBinaryRegisterCallback(
@@ -2596,7 +2554,7 @@ TEST_F(
             zeModuleGetNativeBinary(module, &binary_size, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetGlobalPointerCallbacksWhenCallingzeModuleGetGlobalPointerThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleGetGlobalPointerRegisterCallback(
@@ -2617,7 +2575,7 @@ TEST_F(
             zeModuleGetGlobalPointer(module, "xid", nullptr, &pointer));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetFunctionPointerCallbacksWhenCallingzeModuleGetFunctionPointerThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleGetFunctionPointerRegisterCallback(
@@ -2638,7 +2596,7 @@ TEST_F(
                                        &function_pointer));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleBuildLogDestroyCallbacksWhenCallingzeModuleBuildLogDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleBuildLogDestroyRegisterCallback(
@@ -2653,14 +2611,14 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleCreate(context, device, &module_desc,
-                                              &module2, &build_log));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeModuleCreate(context, device, &module_desc, &module2, &build_log));
   ASSERT_EQ(initial_result, zeModuleBuildLogDestroy(build_log));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module2));
+  ASSERT_ZE_RESULT_SUCCESS(zeModuleDestroy(module2));
   build_log = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleBuildLogGetStringCallbacksWhenCallingzeModuleBuildLogGetStringThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleBuildLogGetStringRegisterCallback(
@@ -2680,7 +2638,7 @@ TEST_F(
             zeModuleBuildLogGetString(build_log, &log_size, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleInspectLinkageExtCallbacksWhenCallingzeModuleInspectLinkageExtThenUserDataIsSetAndResultUnchanged) {
 
@@ -2706,13 +2664,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeModuleInspectLinkageExt(
-      &linkageInspectDesc, numModules, &module, &build_log);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeModuleInspectLinkageExt(
+      &linkageInspectDesc, numModules, &module, &build_log));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelCreateCallbacksWhenCallingzeKernelCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelCreateRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2727,11 +2683,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(kernel));
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelDestroy(kernel));
   ASSERT_EQ(initial_result, zeKernelCreate(module, &kernel_desc, &kernel));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelDestroyCallbacksWhenCallingzeKernelDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelDestroyRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2745,13 +2701,13 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelCreate(module, &kernel_desc, &kernel));
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelCreate(module, &kernel_desc, &kernel));
 
   ASSERT_EQ(initial_result, zeKernelDestroy(kernel));
   kernel = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchKernelIndirectCallbacksWhenCallingzeCommandListAppendLaunchKernelIndirectThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendLaunchKernelIndirectRegisterCallback(
@@ -2774,7 +2730,7 @@ TEST_F(
                                                     nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSetGroupSizeCallbacksWhenCallingzeKernelSetGroupSizeThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelSetGroupSizeRegisterCallback(
@@ -2791,7 +2747,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeKernelSetGroupSize(kernel, 1, 1, 1));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSetGlobalOffsetExpCallbacksWhenCallingzeKernelSetGlobalOffsetExpThenUserDataIsSetAndResultUnchanged) {
 
@@ -2807,13 +2763,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result =
-      zeKernelSetGlobalOffsetExp(kernel, offsetX, offsetY, offsetZ);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeKernelSetGlobalOffsetExp(kernel, offsetX, offsetY, offsetZ));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSchedulingHintExpCallbacksWhenCallingzeKernelSchedulingHintExpThenUserDataIsSetAndResultUnchanged) {
 
@@ -2830,12 +2784,10 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ze_result_t result = zeKernelSchedulingHintExp(kernel, &schedulingHint);
-
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelSchedulingHintExp(kernel, &schedulingHint));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSuggestGroupSizeCallbacksWhenCallingzeKernelSuggestGroupSizeThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelSuggestGroupSizeRegisterCallback(
@@ -2856,7 +2808,7 @@ TEST_F(
             zeKernelSuggestGroupSize(kernel, 1, 1, 1, &x, &y, &z));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSetArgumentValueCallbacksWhenCallingzeKernelSetArgumentValueThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelSetArgumentValueRegisterCallback(
@@ -2876,7 +2828,7 @@ TEST_F(
             zeKernelSetArgumentValue(kernel, 1, sizeof(int), &val));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelGetPropertiesCallbacksWhenCallingzeKernelGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelGetPropertiesRegisterCallback(
@@ -2896,7 +2848,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeKernelGetProperties(kernel, &kernel_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeSamplerCreateCallbacksWhenCallingzeSamplerCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerSamplerCreateRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2914,7 +2866,7 @@ TEST_F(
               (result == ZE_RESULT_ERROR_UNINITIALIZED));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeSamplerDestroyCallbacksWhenCallingzeSamplerDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerSamplerDestroyRegisterCallback(tracer_handle, ZEL_REGISTER_PROLOGUE,
@@ -2935,10 +2887,10 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
+  ASSERT_ZE_RESULT_SUCCESS(zeSamplerDestroy(sampler));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingzeFabricVertexGetDeviceExpThenUserDataIsSetAndResultUnchanged) {
 
@@ -2961,11 +2913,10 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeFabricVertexGetDeviceExp(vertex, &device_vertex));
+  EXPECT_ZE_RESULT_SUCCESS(zeFabricVertexGetDeviceExp(vertex, &device_vertex));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingzeFabricVertexGetExpThenUserDataIsSetAndResultUnchanged) {
   zelTracerFabricVertexGetExpRegisterCallback(
@@ -2986,7 +2937,7 @@ TEST_F(
             zeFabricVertexGetExp(driverHandle, &count, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingzeFabricVertexGetPropertiesExpThenUserDataIsSetAndResultUnchanged) {
 
@@ -3009,11 +2960,11 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeFabricVertexGetPropertiesExp(vertices[0], &vertexProperties));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeFabricVertexGetPropertiesExp(vertices[0], &vertexProperties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingzeFabricVertexGetSubVerticesExpThenUserDataIsSetAndResultUnchanged) {
   zelTracerFabricVertexGetSubVerticesExpRegisterCallback(
@@ -3033,11 +2984,11 @@ TEST_F(
 
   uint32_t count;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeFabricVertexGetSubVerticesExp(vertices[0], &count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeFabricVertexGetSubVerticesExp(vertices[0], &count, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingzeFabricEdgeGetExpThenUserDataIsSetAndResultUnchanged) {
   zelTracerFabricEdgeGetExpRegisterCallback(
@@ -3056,11 +3007,11 @@ TEST_F(
   lzt::enable_ltracer(tracer_handle);
 
   uint32_t count;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeFabricEdgeGetExp(vertices[0], vertices[0], &count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeFabricEdgeGetExp(vertices[0], vertices[0], &count, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingzeFabricEdgeGetPropertiesExpThenUserDataIsSetAndResultUnchanged) {
   zelTracerFabricEdgeGetPropertiesExpRegisterCallback(
@@ -3077,8 +3028,8 @@ TEST_F(
   }
 
   uint32_t edgeCount;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeFabricEdgeGetExp(vertices[0], vertices[0], &edgeCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeFabricEdgeGetExp(vertices[0], vertices[0], &edgeCount, nullptr));
 
   if (edgeCount == 0) {
     LOG_WARNING << "Test not executed due to not enough edges";
@@ -3089,20 +3040,19 @@ TEST_F(
 
   std::vector<ze_fabric_edge_handle_t> edgeHandles(edgeCount);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeFabricEdgeGetExp(vertices[0], vertices[0], &edgeCount,
-                               edgeHandles.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zeFabricEdgeGetExp(vertices[0], vertices[0],
+                                              &edgeCount, edgeHandles.data()));
 
   lzt::enable_ltracer(tracer_handle);
 
   ze_fabric_edge_exp_properties_t edgeProperties = {
       ZE_STRUCTURE_TYPE_FABRIC_EDGE_EXP_PROPERTIES, nullptr};
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeFabricEdgeGetPropertiesExp(edgeHandles[0], &edgeProperties));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeFabricEdgeGetPropertiesExp(edgeHandles[0], &edgeProperties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingEventQueryKernelTimestampThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventQueryKernelTimestampRegisterCallback(
@@ -3121,7 +3071,7 @@ TEST_F(
             zeEventQueryKernelTimestamp(event, &kernelTimestamps));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingEventQueryTimestampsExpThenUserDataIsSetAndResultUnchanged) {
   zelTracerEventQueryTimestampsExpRegisterCallback(
@@ -3136,11 +3086,11 @@ TEST_F(
 
   uint32_t count = 0;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeEventQueryTimestampsExp(event, device, &count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventQueryTimestampsExp(event, device, &count, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingKernelSetIndirectAccessThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelSetIndirectAccessRegisterCallback(
@@ -3152,12 +3102,12 @@ TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  EXPECT_EQ(
-      ZE_RESULT_SUCCESS,
+  EXPECT_ZE_RESULT_SUCCESS(
+
       zeKernelSetIndirectAccess(kernel, ZE_KERNEL_INDIRECT_ACCESS_FLAG_HOST));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingKernelGetSourceAttributesThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelGetSourceAttributesRegisterCallback(
@@ -3171,11 +3121,10 @@ TEST_F(
 
   uint32_t size = 0;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetSourceAttributes(kernel, &size, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelGetSourceAttributes(kernel, &size, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingKernelSuggestMaxCooperativeGroupCountThenUserDataIsSetAndResultUnchanged) {
   zelTracerKernelSuggestMaxCooperativeGroupCountRegisterCallback(
@@ -3189,11 +3138,11 @@ TEST_F(
 
   uint32_t groups_x;
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestMaxCooperativeGroupCount(kernel, &groups_x));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeKernelSuggestMaxCooperativeGroupCount(kernel, &groups_x));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingMemCloseIpcHandleThenUserDataIsSetAndResultUnchanged) {
   zelTracerMemCloseIpcHandleRegisterCallback(
@@ -3205,15 +3154,15 @@ TEST_F(
 
   void *mem = nullptr;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
 
   lzt::enable_ltracer(tracer_handle);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, mem));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, mem));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingModuleGetKernelNamesThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleGetKernelNamesRegisterCallback(
@@ -3227,11 +3176,11 @@ TEST_F(
 
   uint32_t kernel_count = 0;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetKernelNames(module, &kernel_count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeModuleGetKernelNames(module, &kernel_count, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingModuleGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   zelTracerModuleGetPropertiesRegisterCallback(
@@ -3248,11 +3197,10 @@ TEST_F(
   moduleProperties.pNext = nullptr;
   moduleProperties.flags = ZE_MODULE_PROPERTY_FLAG_FORCE_UINT32;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleGetProperties(module, &moduleProperties));
+  EXPECT_ZE_RESULT_SUCCESS(zeModuleGetProperties(module, &moduleProperties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingPhysicalMemCreateThenUserDataIsSetAndResultUnchanged) {
   zelTracerPhysicalMemCreateRegisterCallback(
@@ -3274,7 +3222,7 @@ TEST_F(
   lzt::physical_memory_destroy(context, reservedPhysicalMemory);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingPhysicalMemDestroyThenUserDataIsSetAndResultUnchanged) {
   zelTracerPhysicalMemDestroyRegisterCallback(
@@ -3297,7 +3245,7 @@ TEST_F(
   lzt::physical_memory_destroy(context, reservedPhysicalMemory);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingVirtualMemoryReserveThenUserDataIsSetAndResultUnchanged) {
 
@@ -3322,7 +3270,7 @@ TEST_F(
   lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingVirtualMemoryFreeThenUserDataIsSetAndResultUnchanged) {
 
@@ -3347,7 +3295,7 @@ TEST_F(
   lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingVirtualMemoryGetAccessAttributesThenUserDataIsSetAndResultUnchanged) {
 
@@ -3381,7 +3329,7 @@ TEST_F(
   lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingVirtualMemoryQueryPageSizeThenUserDataIsSetAndResultUnchanged) {
   zelTracerVirtualMemQueryPageSizeRegisterCallback(
@@ -3402,7 +3350,7 @@ TEST_F(
   lzt::physical_memory_destroy(context, reservedPhysicalMemory);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingVirtualMemorySetAccessAttributesThenUserDataIsSetAndResultUnchanged) {
   zelTracerVirtualMemSetAccessAttributeRegisterCallback(
@@ -3430,7 +3378,7 @@ TEST_F(
   lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingVirtualMemoryMapThenUserDataIsSetAndResultUnchanged) {
 
@@ -3467,7 +3415,7 @@ TEST_F(
   lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
 }
 
-TEST_F(
+LZT_TEST_F(
     LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCallbacksWhenCallingVirtualMemoryUnmapThenUserDataIsSetAndResultUnchanged) {
 

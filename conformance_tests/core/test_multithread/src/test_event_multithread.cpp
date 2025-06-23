@@ -444,7 +444,7 @@ void ThreadSharedEventSync(const ze_command_queue_handle_t cmd_queue,
 
 class zeEventSynchronizeTests : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeEventSynchronizeTests,
     GivenMultipleThreadsCreateEventPoolAndEventsSimultaneouslyThenSuccessIsReturned) {
 
@@ -464,7 +464,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeEventSynchronizeTests,
     GivenMultipleThreadsUsingSharedCommandQueueAndHavingTheirOwnCommandListAndEventsToSynchronizeThenSuccessIsReturned) {
 
@@ -511,7 +511,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeEventSynchronizeTests,
     GivenMultipleThreadsUsingSharedCommandQueueAndSharedEventPoolAndHavingTheirOwnCommandListThenSynchronizeProperlyAndSuccessIsReturned) {
 

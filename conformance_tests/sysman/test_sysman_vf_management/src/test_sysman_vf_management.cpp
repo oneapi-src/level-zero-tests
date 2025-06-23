@@ -57,7 +57,7 @@ void compare_vf_capabilities(zes_vf_exp2_capabilities_t &vf_capability_initial,
   EXPECT_EQ(vf_capability_initial.vfID, vf_capability_later.vfID);
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenCallingEnumEnabledVFExpThenValidVFHandlesAreReturned) {
   for (auto device : devices) {
@@ -80,7 +80,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVFHandlesTwiceThenSimilarHandlesAreReturned) {
   for (auto device : devices) {
@@ -112,7 +112,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVFHandlesWithCountGreaterThanActualThenExpectActualCountAndHandlesAreReturned) {
   for (auto device : devices) {
@@ -133,7 +133,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVFHandlesWithCountLessThanActualThenExpectReducedCountAndHandlesAreReturned) {
   for (auto device : devices) {
@@ -161,7 +161,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfCapabilitiesThenValidCapabilitiesAreReturned) {
   for (auto device : devices) {
@@ -185,7 +185,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfCapabilitiesTwiceThenSimilarCapabilitiesAreReturned) {
   for (auto device : devices) {
@@ -210,8 +210,8 @@ TEST_F(
   }
 }
 
-TEST_F(VF_MANAGEMENT_TEST,
-       GivenValidDeviceWhenRetrievingVFCapabilitiesThenExpectVfIdIsUnique) {
+LZT_TEST_F(VF_MANAGEMENT_TEST,
+           GivenValidDeviceWhenRetrievingVFCapabilitiesThenExpectVfIdIsUnique) {
   for (auto device : devices) {
     uint32_t count = lzt::get_vf_handles_count(device);
     if (count > 1) {
@@ -240,7 +240,7 @@ TEST_F(VF_MANAGEMENT_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfMemoryUtilizationThenExpectValidUtilization) {
   for (auto device : devices) {
@@ -273,7 +273,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfMemoryUtilizationWithCountGreaterThanActualThenExpectActualCountIsReturned) {
   for (auto device : devices) {
@@ -300,7 +300,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfMemoryUtilizationWithCountLessThanActualThenExpectReducedCountIsReturned) {
   for (auto device : devices) {
@@ -333,7 +333,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfEngineUtilizationThenExpectValidUtilization) {
   for (auto device : devices) {
@@ -367,7 +367,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfEngineUtilizationWithCountGreaterThanActualThenExpectActualCountIsReturned) {
   for (auto device : devices) {
@@ -394,7 +394,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     VF_MANAGEMENT_TEST,
     GivenValidDeviceWhenRetrievingVfEngineUtilizationWithCountLessThanActualThenExpectReducedCountIsReturned) {
   for (auto device : devices) {

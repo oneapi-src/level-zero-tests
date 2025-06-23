@@ -51,8 +51,8 @@ ze_command_list_handle_t create_command_list(ze_context_handle_t context,
   ze_command_list_handle_t command_list = nullptr;
   auto context_initial = context;
   auto device_initial = device;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListCreate(context, device, &descriptor, &command_list));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListCreate(context, device, &descriptor, &command_list));
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
   EXPECT_NE(nullptr, command_list);
@@ -94,9 +94,8 @@ ze_command_list_handle_t create_immediate_command_list(
   ze_command_list_handle_t command_list = nullptr;
   auto context_initial = context;
   auto device_initial = device;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListCreateImmediate(context, device, &descriptor,
-                                         &command_list));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListCreateImmediate(
+      context, device, &descriptor, &command_list));
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
   EXPECT_NE(nullptr, command_list);
@@ -129,10 +128,9 @@ void append_command_lists_immediate_exp(
   std::vector<ze_event_handle_t> wait_events_initial(numWaitEvents);
   std::memcpy(wait_events_initial.data(), phWaitEvents,
               sizeof(ze_event_handle_t) * numWaitEvents);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListImmediateAppendCommandListsExp(
-                hCommandList, numCommandLists, phCommandLists, hSignalEvent,
-                numWaitEvents, phWaitEvents));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListImmediateAppendCommandListsExp(
+      hCommandList, numCommandLists, phCommandLists, hSignalEvent,
+      numWaitEvents, phWaitEvents));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
   for (int i = 0; i < numCommandLists; i++) {
@@ -217,12 +215,12 @@ zeCommandBundle create_command_bundle(
   ze_command_list_handle_t list = nullptr;
 
   if (isImmediate) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListCreateImmediate(context, device, &queueDesc, &list));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandListCreateImmediate(context, device, &queueDesc, &list));
     EXPECT_NE(nullptr, list);
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueCreate(context, device, &queueDesc, &queue));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandQueueCreate(context, device, &queueDesc, &queue));
     EXPECT_NE(nullptr, queue);
 
     ze_command_list_desc_t listDesc = {};
@@ -230,8 +228,8 @@ zeCommandBundle create_command_bundle(
     listDesc.pNext = nullptr;
     listDesc.commandQueueGroupOrdinal = ordinal;
     listDesc.flags = listFlags;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListCreate(context, device, &listDesc, &list));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandListCreate(context, device, &listDesc, &list));
     EXPECT_NE(nullptr, list);
   }
 
@@ -270,9 +268,9 @@ void append_memory_fill(ze_command_list_handle_t cl, void *dstptr,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendMemoryFill(
-                                   cl, dstptr, pattern, pattern_size, size,
-                                   hSignalEvent, num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemoryFill(
+      cl, dstptr, pattern, pattern_size, size, hSignalEvent, num_wait_events,
+      wait_events));
   EXPECT_EQ(cl, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
   for (int i = 0; i < num_wait_events; i++) {
@@ -302,9 +300,8 @@ void append_memory_copy(ze_command_list_handle_t cl, void *dstptr,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendMemoryCopy(
-                                   cl, dstptr, srcptr, size, hSignalEvent,
-                                   num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemoryCopy(
+      cl, dstptr, srcptr, size, hSignalEvent, num_wait_events, wait_events));
 
   EXPECT_EQ(cl, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
@@ -325,9 +322,9 @@ void append_memory_copy(ze_context_handle_t src_context,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendMemoryCopyFromContext(
-                                   cl, dstptr, src_context, srcptr, size,
-                                   hSignalEvent, num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemoryCopyFromContext(
+      cl, dstptr, src_context, srcptr, size, hSignalEvent, num_wait_events,
+      wait_events));
 
   EXPECT_EQ(cl, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
@@ -362,11 +359,10 @@ void append_memory_copy_region(ze_command_list_handle_t hCommandList,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendMemoryCopyRegion(
-                hCommandList, dstptr, dstRegion, dstPitch, dstSlicePitch,
-                srcptr, srcRegion, srcPitch, srcSlicePitch, hSignalEvent,
-                num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemoryCopyRegion(
+      hCommandList, dstptr, dstRegion, dstPitch, dstSlicePitch, srcptr,
+      srcRegion, srcPitch, srcSlicePitch, hSignalEvent, num_wait_events,
+      wait_events));
 
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
@@ -382,9 +378,8 @@ void append_barrier(ze_command_list_handle_t cl, ze_event_handle_t hSignalEvent,
   std::vector<ze_event_handle_t> wait_events_initial(numWaitEvents);
   std::memcpy(wait_events_initial.data(), phWaitEvents,
               sizeof(ze_event_handle_t) * numWaitEvents);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(cl, hSignalEvent, numWaitEvents,
-                                       phWaitEvents));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(
+      cl, hSignalEvent, numWaitEvents, phWaitEvents));
   EXPECT_EQ(cl, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
   for (int i = 0; i < numWaitEvents; i++) {
@@ -412,10 +407,9 @@ void append_memory_ranges_barrier(ze_command_list_handle_t hCommandList,
   std::vector<ze_event_handle_t> wait_events_initial(numWaitEvents);
   std::memcpy(wait_events_initial.data(), phWaitEvents,
               sizeof(ze_event_handle_t) * numWaitEvents);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendMemoryRangesBarrier(
-                hCommandList, numRanges, pRangeSizes, pRanges, hSignalEvent,
-                numWaitEvents, phWaitEvents));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemoryRangesBarrier(
+      hCommandList, numRanges, pRangeSizes, pRanges, hSignalEvent,
+      numWaitEvents, phWaitEvents));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
   for (int i = 0; i < numWaitEvents; i++) {
@@ -437,9 +431,9 @@ void append_launch_function(ze_command_list_handle_t hCommandList,
     std::memcpy(wait_events_initial.data(), phWaitEvents,
                 sizeof(ze_event_handle_t) * numWaitEvents);
   }
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendLaunchKernel(
-                                   hCommandList, hFunction, pLaunchFuncArgs,
-                                   hSignalEvent, numWaitEvents, phWaitEvents));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
+      hCommandList, hFunction, pLaunchFuncArgs, hSignalEvent, numWaitEvents,
+      phWaitEvents));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hFunction, function_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
@@ -452,8 +446,8 @@ void append_signal_event(ze_command_list_handle_t hCommandList,
                          ze_event_handle_t hEvent) {
   auto command_list_initial = hCommandList;
   auto event_initial = hEvent;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendSignalEvent(hCommandList, hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListAppendSignalEvent(hCommandList, hEvent));
 
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hEvent, event_initial);
@@ -465,8 +459,8 @@ void append_wait_on_events(ze_command_list_handle_t hCommandList,
   std::vector<ze_event_handle_t> events_initial(numEvents);
   std::memcpy(events_initial.data(), phEvents,
               sizeof(ze_event_handle_t) * numEvents);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendWaitOnEvents(hCommandList, numEvents, phEvents));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListAppendWaitOnEvents(hCommandList, numEvents, phEvents));
   EXPECT_EQ(hCommandList, command_list_initial);
   for (int i = 0; i < numEvents; i++) {
     EXPECT_EQ(phEvents[i], events_initial[i]);
@@ -483,8 +477,7 @@ void append_reset_event(ze_command_list_handle_t hCommandList,
                         ze_event_handle_t hEvent) {
   auto command_list_initial = hCommandList;
   auto event_initial = hEvent;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendEventReset(hCommandList, hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendEventReset(hCommandList, hEvent));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hEvent, event_initial);
 }
@@ -507,9 +500,8 @@ void append_image_copy(ze_command_list_handle_t hCommandList,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopy(hCommandList, dst, src, hEvent,
-                                         num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopy(
+      hCommandList, dst, src, hEvent, num_wait_events, wait_events));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
   EXPECT_EQ(dst, dst_initial);
@@ -536,9 +528,8 @@ void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyToMemory(
-                                   hCommandList, dst, src, nullptr, hEvent,
-                                   num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyToMemory(
+      hCommandList, dst, src, nullptr, hEvent, num_wait_events, wait_events));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(src, src_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
@@ -564,9 +555,8 @@ void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyToMemory(
-                                   hCommandList, dst, src, &region, hEvent,
-                                   num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyToMemory(
+      hCommandList, dst, src, &region, hEvent, num_wait_events, wait_events));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(src, src_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
@@ -603,9 +593,8 @@ void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyFromMemory(
-                                   hCommandList, dst, src, nullptr, hEvent,
-                                   num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyFromMemory(
+      hCommandList, dst, src, nullptr, hEvent, num_wait_events, wait_events));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(dst, dst_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
@@ -626,9 +615,8 @@ void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyFromMemory(
-                                   hCommandList, dst, src, &region, hEvent,
-                                   num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyFromMemory(
+      hCommandList, dst, src, &region, hEvent, num_wait_events, wait_events));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(dst, dst_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
@@ -669,10 +657,9 @@ void append_image_copy_to_mem_ext(
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyToMemoryExt(
-                hCommandList, dst, src, nullptr, destRowPitch, destSlicePitch,
-                hEvent, num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyToMemoryExt(
+      hCommandList, dst, src, nullptr, destRowPitch, destSlicePitch, hEvent,
+      num_wait_events, wait_events));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(src, src_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
@@ -693,10 +680,9 @@ void append_image_copy_to_mem_ext(
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyToMemoryExt(
-                hCommandList, dst, src, &region, destRowPitch, destSlicePitch,
-                hEvent, num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyToMemoryExt(
+      hCommandList, dst, src, &region, destRowPitch, destSlicePitch, hEvent,
+      num_wait_events, wait_events));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(src, src_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
@@ -726,10 +712,9 @@ void append_image_copy_from_mem_ext(
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyFromMemoryExt(
-                hCommandList, dst, src, nullptr, srcRowPitch, srcSlicePitch,
-                hEvent, num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyFromMemoryExt(
+      hCommandList, dst, src, nullptr, srcRowPitch, srcSlicePitch, hEvent,
+      num_wait_events, wait_events));
 
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(dst, dst_initial);
@@ -762,10 +747,9 @@ void append_image_copy_from_mem_ext(
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyFromMemoryExt(
-                hCommandList, dst, src, &region, srcRowPitch, srcSlicePitch,
-                hEvent, num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyFromMemoryExt(
+      hCommandList, dst, src, &region, srcRowPitch, srcSlicePitch, hEvent,
+      num_wait_events, wait_events));
 
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(dst, dst_initial);
@@ -786,9 +770,8 @@ void append_image_copy_region(ze_command_list_handle_t hCommandList,
   auto src_initial = src;
   auto signal_event_initial = hEvent;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyRegion(
-                                   hCommandList, dst, src, dst_region,
-                                   src_region, hEvent, 0, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyRegion(
+      hCommandList, dst, src, dst_region, src_region, hEvent, 0, nullptr));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
   EXPECT_EQ(dst, dst_initial);
@@ -810,10 +793,9 @@ void append_image_copy_region(ze_command_list_handle_t hCommandList,
   std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
   std::memcpy(wait_events_initial.data(), wait_events,
               sizeof(ze_event_handle_t) * num_wait_events);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyRegion(hCommandList, dst, src,
-                                               dst_region, src_region, hEvent,
-                                               num_wait_events, wait_events));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyRegion(
+      hCommandList, dst, src, dst_region, src_region, hEvent, num_wait_events,
+      wait_events));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
   EXPECT_EQ(dst, dst_initial);
@@ -826,50 +808,49 @@ void append_image_copy_region(ze_command_list_handle_t hCommandList,
 void synchronize_command_list_host(ze_command_list_handle_t cl,
                                    uint64_t timeout) {
   auto cl_initial = cl;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListHostSynchronize(cl, timeout));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListHostSynchronize(cl, timeout));
   EXPECT_EQ(cl_initial, cl);
 }
 
 void close_command_list(ze_command_list_handle_t cl) {
   auto command_list_initial = cl;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(cl));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListClose(cl));
   EXPECT_EQ(cl, command_list_initial);
 }
 
 void reset_command_list(ze_command_list_handle_t cl) {
   auto command_list_initial = cl;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(cl));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListReset(cl));
   EXPECT_EQ(cl, command_list_initial);
 }
 
 void destroy_command_list(ze_command_list_handle_t cl) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(cl));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListDestroy(cl));
 }
 
 void execute_and_sync_command_bundle(zeCommandBundle bundle, uint64_t timeout) {
   if (bundle.queue != nullptr) {
     auto command_queue_initial = bundle.queue;
     auto command_list_initial = bundle.list;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
-                                     bundle.queue, 1, &bundle.list, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueExecuteCommandLists(
+        bundle.queue, 1, &bundle.list, nullptr));
     EXPECT_EQ(bundle.queue, command_queue_initial);
     EXPECT_EQ(bundle.list, command_list_initial);
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueSynchronize(bundle.queue, timeout));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueSynchronize(bundle.queue, timeout));
     EXPECT_EQ(bundle.queue, command_queue_initial);
   } else {
     auto command_list_initial = bundle.list;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(bundle.list, timeout));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandListHostSynchronize(bundle.list, timeout));
     EXPECT_EQ(bundle.list, command_list_initial);
   }
 }
 
 void destroy_command_bundle(zeCommandBundle bundle) {
   if (bundle.queue != nullptr) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(bundle.queue));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueDestroy(bundle.queue));
   }
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(bundle.list));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListDestroy(bundle.list));
 }
 }; // namespace level_zero_tests

@@ -136,7 +136,7 @@ ze_context_handle_t create_context() {
 ze_context_handle_t create_context(ze_driver_handle_t driver) {
   ze_context_handle_t context;
   ze_context_desc_t ctxtDesc = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextCreate(driver, &ctxtDesc, &context));
+  EXPECT_ZE_RESULT_SUCCESS(zeContextCreate(driver, &ctxtDesc, &context));
   return context;
 }
 
@@ -144,9 +144,8 @@ ze_context_handle_t create_context_ex(ze_driver_handle_t driver,
                                       std::vector<ze_device_handle_t> devices) {
   ze_context_handle_t context;
   ze_context_desc_t ctxtDesc = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeContextCreateEx(driver, &ctxtDesc, devices.size(), devices.data(),
-                              &context));
+  EXPECT_ZE_RESULT_SUCCESS(zeContextCreateEx(driver, &ctxtDesc, devices.size(),
+                                             devices.data(), &context));
   return context;
 }
 
@@ -155,13 +154,13 @@ ze_context_handle_t create_context_ex(ze_driver_handle_t driver,
 ze_context_handle_t create_context_ex(ze_driver_handle_t driver) {
   ze_context_handle_t context;
   ze_context_desc_t ctxtDesc = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeContextCreateEx(driver, &ctxtDesc, 0, nullptr, &context));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeContextCreateEx(driver, &ctxtDesc, 0, nullptr, &context));
   return context;
 }
 
 void destroy_context(ze_context_handle_t context) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeContextDestroy(context));
+  EXPECT_ZE_RESULT_SUCCESS(zeContextDestroy(context));
 }
 
 ze_device_handle_t get_default_device(ze_driver_handle_t driver) {

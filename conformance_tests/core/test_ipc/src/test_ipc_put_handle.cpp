@@ -82,11 +82,10 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
     alloc_props.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
     alloc_props.pNext = &export_fd;
     lzt::get_mem_alloc_properties(context, memory, &alloc_props);
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandleFromFileDescriptorExp(
-                                     context, export_fd.fd, &ipc_handle));
+    ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandleFromFileDescriptorExp(
+        context, export_fd.fd, &ipc_handle));
   } else {
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetIpcHandle(context, memory, &ipc_handle));
+    ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, &ipc_handle));
   }
   ze_ipc_mem_handle_t ipc_handle_zero{};
   ASSERT_NE(0, memcmp((void *)&ipc_handle, (void *)&ipc_handle_zero,
@@ -107,7 +106,7 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
     }
   }
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context, ipc_handle));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context, ipc_handle));
   bipc::shared_memory_object::remove("ipc_put_handle_test");
 
   if (reserved) {
@@ -121,140 +120,140 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
   lzt::destroy_context(context);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_SUBDEVICE_ACCESS, 4096, true, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithPutIpcHandle) {
   run_ipc_put_handle_test(TEST_PUT_SUBDEVICE_ACCESS, 4096, true, false,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_SUBDEVICE_ACCESS, 4096, true, true,
                           ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
-TEST(
+LZT_TEST(
     PutIpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithGetHandleFromFd) {
   run_ipc_put_handle_test(TEST_PUT_SUBDEVICE_ACCESS, 4096, true, true,
@@ -271,7 +270,7 @@ protected:
   ze_context_handle_t context_;
 };
 
-TEST_F(
+LZT_TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenGettingIpcMemoryHandleThenReleasingHandleWithPutThenSuccessIsReturned) {
   ze_result_t result = zeInit(0);
@@ -284,14 +283,14 @@ TEST_F(
   context_ = lzt::create_context();
   memory_ = lzt::allocate_device_memory(1, 1, 0, context_);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
 }
 
-TEST_F(
+LZT_TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithMuliplePutsThenSuccessIsReturned) {
   ze_result_t result = zeInit(0);
@@ -304,17 +303,17 @@ TEST_F(
   context_ = lzt::create_context();
   memory_ = lzt::allocate_device_memory(1, 1, 0, context_);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
 }
 
-TEST_F(
+LZT_TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithMuliplePutsThenTrailingGetSuccessIsReturned) {
   ze_result_t result = zeInit(0);
@@ -327,19 +326,19 @@ TEST_F(
   context_ = lzt::create_context();
   memory_ = lzt::allocate_device_memory(1, 1, 0, context_);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
 }
 
-TEST_F(
+LZT_TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingIpcMemoryHandleMultipleTimesThenReleasingHandleWithSinglePutThenSuccessIsReturned) {
   ze_result_t result = zeInit(0);
@@ -352,16 +351,16 @@ TEST_F(
   context_ = lzt::create_context();
   memory_ = lzt::allocate_device_memory(1, 1, 0, context_);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
 }
 
-TEST_F(
+LZT_TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingPutIpcMemoryWithDifferentContextsReturnsSuccess) {
   ze_result_t result = zeInit(0);
@@ -375,16 +374,16 @@ TEST_F(
   auto context2 = lzt::create_context();
   memory_ = lzt::allocate_device_memory(1, 1, 0, context_);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context2, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context2, ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
   lzt::destroy_context(context2);
 }
 
-TEST_F(
+LZT_TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingFileDescriptorFromIpcHandleThenFileDescriptorReturnedMatchingAllocation) {
   ze_result_t result = zeInit(0);
@@ -419,17 +418,17 @@ TEST_F(
   lzt::get_mem_alloc_properties(context_, memory_, &alloc_props);
 
   uint64_t fd_handle = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetFileDescriptorFromIpcHandleExp(
-                                   context_, ipc_mem_handle_, &fd_handle));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandle(context_, memory_, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetFileDescriptorFromIpcHandleExp(
+      context_, ipc_mem_handle_, &fd_handle));
   EXPECT_EQ(export_fd.fd, fd_handle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
 }
 
-TEST_F(
+LZT_TEST_F(
     zePutIpcMemHandleTests,
     GivenDeviceMemoryAllocationWhenCallingGettingIpcHandleFromFileDescriptorThenOpenIpcHandleIsSuccessfull) {
   ze_result_t result = zeInit(0);
@@ -464,23 +463,23 @@ TEST_F(
   lzt::get_mem_alloc_properties(context_, memory_, &alloc_props);
 
   uint64_t fd_handle = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetIpcHandleFromFileDescriptorExp(
-                                   context_, export_fd.fd, &ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetIpcHandleFromFileDescriptorExp(
+      context_, export_fd.fd, &ipc_mem_handle_));
   void *memory = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemOpenIpcHandle(context_, device, ipc_mem_handle_,
-                               ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, &memory));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemOpenIpcHandle(context_, device, ipc_mem_handle_,
+                                              ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
+                                              &memory));
   EXPECT_NE(nullptr, memory);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context_, memory));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemPutIpcHandle(context_, ipc_mem_handle_));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context_, memory));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context_, ipc_mem_handle_));
   lzt::free_memory(context_, memory_);
   lzt::destroy_context(context_);
 }
 
-TEST(
+LZT_TEST(
     zePutIpcMemHandleMultiThreadedTests,
     GivenMultipleThreadsWhenGettingAndPuttingIpcHandlesThenOperationsAreSuccessful) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+  EXPECT_ZE_RESULT_SUCCESS(zeInit(0));
 
   auto ipc_flags = lzt::get_ipc_properties(lzt::get_default_driver()).flags;
   if ((ipc_flags & ZE_IPC_PROPERTY_FLAG_MEMORY) == 0) {

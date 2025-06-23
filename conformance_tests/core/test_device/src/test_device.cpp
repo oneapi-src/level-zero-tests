@@ -100,13 +100,13 @@ static void run_child_process(uint32_t device_count,
   }
 }
 
-TEST(zeDeviceGetTests,
-     GivenZeroCountWhenRetrievingDevicesThenValidCountReturned) {
+LZT_TEST(zeDeviceGetTests,
+         GivenZeroCountWhenRetrievingDevicesThenValidCountReturned) {
   lzt::get_ze_device_count();
 }
 
-TEST(zeDeviceGetTests,
-     GivenValidCountWhenRetrievingDevicesThenNotNullDevicesAreReturned) {
+LZT_TEST(zeDeviceGetTests,
+         GivenValidCountWhenRetrievingDevicesThenNotNullDevicesAreReturned) {
 
   auto device_count = lzt::get_ze_device_count();
 
@@ -118,7 +118,7 @@ TEST(zeDeviceGetTests,
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceOrderingTests,
     GivenPCIOrderingForcedWhenEnumeratingDevicesThenDevicesAreEnumeratedInIncreasingOrderOfTheirBDFAddresses) {
   auto device_count = lzt::get_ze_device_count();
@@ -132,8 +132,9 @@ TEST(
   run_child_process(device_count, "1");
 }
 
-TEST(zeDeviceGetDevicePropertiesTests,
-     GivenValidDeviceWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
+LZT_TEST(
+    zeDeviceGetDevicePropertiesTests,
+    GivenValidDeviceWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
 
   auto devices = lzt::get_ze_devices();
   ze_structure_type_t stype;
@@ -163,7 +164,7 @@ TEST(zeDeviceGetDevicePropertiesTests,
   }
 }
 
-TEST(
+LZT_TEST(
     zeDevicePciGetPropertiesTests,
     GivenValidDeviceWhenRetrievingPciSpeedPropertiesThenValidPropertiesAreReturned) {
 
@@ -206,7 +207,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetComputePropertiesTests,
     GivenValidDeviceWhenRetrievingComputePropertiesThenValidPropertiesAreReturned) {
 
@@ -231,7 +232,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetMemoryPropertiesTests,
     GivenValidCountPointerWhenRetrievingMemoryPropertiesThenValidCountReturned) {
   auto devices = lzt::get_ze_devices();
@@ -241,7 +242,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetMemoryPropertiesTests,
     GivenValidDeviceWhenRetrievingMemoryPropertiesThenValidPropertiesAreReturned) {
 
@@ -264,7 +265,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetExternalMemoryPropertiesTests,
     GivenValidDeviceWhenRetrievingExternalMemoryPropertiesThenValidPropertiesAreReturned) {
 
@@ -276,7 +277,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetMemoryAccessTests,
     GivenValidDeviceWhenRetrievingMemoryAccessPropertiesThenValidPropertiesReturned) {
   auto devices = lzt::get_ze_devices();
@@ -287,7 +288,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetCachePropertiesTests,
     GivenValidDeviceWhenRetrievingCachePropertiesThenValidPropertiesAreReturned) {
   auto devices = lzt::get_ze_devices();
@@ -301,7 +302,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetCachePropertiesTests,
     GivenValidSubDeviceWhenRetrievingCachePropertiesThenValidPropertiesAreReturned) {
   auto devices = lzt::get_ze_devices();
@@ -318,7 +319,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetImagePropertiesTests,
     GivenValidDeviceWhenRetrievingImagePropertiesThenValidPropertiesAreReturned) {
   auto devices = lzt::get_ze_devices();
@@ -329,7 +330,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetP2PPropertiesTests,
     GivenMultipleDevicesThatAreValidWhenRetrievingP2PThenValidPropertiesAreReturned) {
   auto drivers = lzt::get_all_driver_handles();
@@ -353,8 +354,9 @@ TEST(
   lzt::get_p2p_properties(devices[0], devices[1]);
 }
 
-TEST(zeDeviceCanAccessPeerTests,
-     GivenTwoDevicesWhenRetrievingCanAccessPropertyThenCapabilityIsReturned) {
+LZT_TEST(
+    zeDeviceCanAccessPeerTests,
+    GivenTwoDevicesWhenRetrievingCanAccessPropertyThenCapabilityIsReturned) {
   auto drivers = lzt::get_all_driver_handles();
   ASSERT_GT(drivers.size(), 0)
       << "no drivers found for peer to peer device test";
@@ -380,7 +382,7 @@ TEST(zeDeviceCanAccessPeerTests,
   EXPECT_EQ(a2b, b2a);
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetModulePropertiesTests,
     GivenValidDeviceWhenRetrievingModulePropertiesThenValidPropertiesReturned) {
 
@@ -430,7 +432,7 @@ TEST(
 #endif
 }
 
-TEST(
+LZT_TEST(
     zeDeviceGetModulePropertiesTests,
     GivenValidDeviceWhenRetrievingFloatAtomicPropertiesThenValidPropertiesReturned) {
 
@@ -529,8 +531,8 @@ void DevicePropertiesTest::freeDevicesBySku() {
   }
 }
 
-TEST_F(DevicePropertiesTest,
-       GivenMultipleRootDevicesWhenSKUsMatcheThenDevicePropertiesMatch) {
+LZT_TEST_F(DevicePropertiesTest,
+           GivenMultipleRootDevicesWhenSKUsMatcheThenDevicePropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
@@ -584,8 +586,8 @@ TEST_F(DevicePropertiesTest,
   }
 }
 
-TEST_F(DevicePropertiesTest,
-       GivenMultipleRootDevicesWhenSKUsMatchThenComputePropertiesMatch) {
+LZT_TEST_F(DevicePropertiesTest,
+           GivenMultipleRootDevicesWhenSKUsMatchThenComputePropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
@@ -643,8 +645,8 @@ TEST_F(DevicePropertiesTest,
   }
 }
 
-TEST_F(DevicePropertiesTest,
-       GivenMultipleRootDevicesWhenSKUsMatchThenMemoryPropertiesMatch) {
+LZT_TEST_F(DevicePropertiesTest,
+           GivenMultipleRootDevicesWhenSKUsMatchThenMemoryPropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
@@ -688,8 +690,9 @@ TEST_F(DevicePropertiesTest,
   }
 }
 
-TEST_F(DevicePropertiesTest,
-       GivenMultipleRootDevicesWhenSKUsMatchThenMemoryAccessPropertiesMatch) {
+LZT_TEST_F(
+    DevicePropertiesTest,
+    GivenMultipleRootDevicesWhenSKUsMatchThenMemoryAccessPropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
@@ -721,8 +724,8 @@ TEST_F(DevicePropertiesTest,
   }
 }
 
-TEST_F(DevicePropertiesTest,
-       GivenMultipleRootDevicesWhenSKUsMatchThenCachePropertiesMatch) {
+LZT_TEST_F(DevicePropertiesTest,
+           GivenMultipleRootDevicesWhenSKUsMatchThenCachePropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
@@ -748,8 +751,8 @@ TEST_F(DevicePropertiesTest,
   }
 }
 
-TEST_F(DevicePropertiesTest,
-       GivenMultipleRootDevicesWhenSKUsMatchThenPeerAccessPropertiesMatch) {
+LZT_TEST_F(DevicePropertiesTest,
+           GivenMultipleRootDevicesWhenSKUsMatchThenPeerAccessPropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
@@ -774,8 +777,8 @@ TEST_F(DevicePropertiesTest,
   }
 }
 
-TEST_F(DevicePropertiesTest,
-       GivenMultipleRootDevicesWhenSKUsMatchThenSubDeviceCountsMatch) {
+LZT_TEST_F(DevicePropertiesTest,
+           GivenMultipleRootDevicesWhenSKUsMatchThenSubDeviceCountsMatch) {
   if (lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
@@ -806,8 +809,8 @@ bool areNativeKernelUuidsEqual(ze_native_kernel_uuid_t *uuid1,
   return true;
 }
 
-TEST_F(DevicePropertiesTest,
-       GivenMultipleRootDevicesWhenSKUsMatchThenKernelPropertiesMatch) {
+LZT_TEST_F(DevicePropertiesTest,
+           GivenMultipleRootDevicesWhenSKUsMatchThenKernelPropertiesMatch) {
   if (lzt::get_ze_device_count() < 2) {
     LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
     GTEST_SKIP();
@@ -850,7 +853,7 @@ TEST_F(DevicePropertiesTest,
   }
 }
 
-TEST(
+LZT_TEST(
     SubDeviceEnumeration,
     GivenRootDeviceWhenGettingSubdevicesThenAllSubdevicesHaveCorrectProperties) {
 
@@ -965,32 +968,32 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   lzt::destroy_context(context);
 }
 
-TEST(
+LZT_TEST(
     TimestampsTest,
     GivenExecutedKernelWhenGettingGlobalTimestampsThenDeviceAndHostTimestampDurationsAreClose) {
   RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(false);
 }
 
-TEST(
+LZT_TEST(
     TimestampsTest,
     GivenExecutedKernelWhenGettingGlobalTimestampsOnImmediateCmdListThenDeviceAndHostTimestampDurationsAreClose) {
   RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(true);
 }
 
-TEST(DeviceStatusTest,
-     GivenValidDeviceHandlesWhenRequestingStatusThenSuccessReturned) {
+LZT_TEST(DeviceStatusTest,
+         GivenValidDeviceHandlesWhenRequestingStatusThenSuccessReturned) {
 
   for (auto device : lzt::get_ze_devices()) {
     ze_result_t ret = lzt::get_device_status(device);
     if (lzt::check_unsupported(ret)) {
       return;
     }
-    EXPECT_EQ(ZE_RESULT_SUCCESS, ret);
+    EXPECT_ZE_RESULT_SUCCESS(ret);
   }
 }
 
-TEST(DeviceStatusTest,
-     GivenValidSubDeviceHandlesWhenRequestingStatusThenSuccessReturned) {
+LZT_TEST(DeviceStatusTest,
+         GivenValidSubDeviceHandlesWhenRequestingStatusThenSuccessReturned) {
 
   for (auto device : lzt::get_ze_devices()) {
     std::vector<ze_device_handle_t> sub_devices =
@@ -1001,12 +1004,12 @@ TEST(DeviceStatusTest,
       if (lzt::check_unsupported(ret)) {
         return;
       }
-      EXPECT_EQ(ZE_RESULT_SUCCESS, ret);
+      EXPECT_ZE_RESULT_SUCCESS(ret);
     }
   }
 }
 
-TEST(
+LZT_TEST(
     DeviceCommandQueueGroupsTest,
     GivenValidDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder) {
 
@@ -1029,7 +1032,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     DeviceCommandQueueGroupsTest,
     GivenValidSubDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder) {
 

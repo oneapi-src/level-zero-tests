@@ -97,8 +97,8 @@ void device_thread_test(ze_driver_handle_t driver) {
 
 class zeDeviceMultithreadTests : public ::testing::Test {};
 
-TEST(zeDeviceMultithreadTests,
-     GivenMultipleThreadsWhenUsingDriverAPIsThenResultsAreConsistent) {
+LZT_TEST(zeDeviceMultithreadTests,
+         GivenMultipleThreadsWhenUsingDriverAPIsThenResultsAreConsistent) {
   std::vector<std::thread *> threads;
 
   for (int i = 0; i < num_threads; i++)
@@ -113,8 +113,8 @@ TEST(zeDeviceMultithreadTests,
   }
 }
 
-TEST(zeDeviceMultithreadTests,
-     GivenMultipleThreadsWhenUsingDeviceAPIsThenResultsAreConsistent) {
+LZT_TEST(zeDeviceMultithreadTests,
+         GivenMultipleThreadsWhenUsingDeviceAPIsThenResultsAreConsistent) {
   std::vector<std::thread *> threads;
   auto driver = lzt::get_default_driver();
   for (int i = 0; i < num_threads; i++)

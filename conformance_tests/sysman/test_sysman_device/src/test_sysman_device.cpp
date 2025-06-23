@@ -118,7 +118,7 @@ static void run_child_process(const std::string &device_hierarchy) {
   ASSERT_EQ(validate_deviceUUID_process.exit_code(), 0);
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenHierarchyModeCombindedAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
   auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
@@ -134,7 +134,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenHierarchyModeCompositeAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
   auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
@@ -150,7 +150,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenHierarchyModeFlatAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
   auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
@@ -167,14 +167,14 @@ TEST_F(
 }
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenDeviceHierarchyModesFlatAndCombinedWhenRetrievingSysmanDevicesThenValidDevicesAreReturned) {
   run_device_hierarchy_child_process();
 }
 
 #ifdef USE_ZESINIT
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSubDevicePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -196,7 +196,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSubDevicesThenEnsureNoSubDeviceUUIDMatchesDeviceUUID) {
   for (auto device : devices) {
@@ -217,7 +217,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDriverWhenRetrievingDeviceHandleFromUUIDThenReturnedDeviceHandleShouldMatchCurrentDeviceHandle) {
   zes_driver_handle_t driver = lzt::get_default_zes_driver();
@@ -237,7 +237,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDriverWhenRetrievingDeviceHandleFromUUIDThenEnsureFetchedOnSubDeviceAndSubDeviceIdAreValid) {
   zes_driver_handle_t driver = lzt::get_default_zes_driver();
@@ -268,7 +268,7 @@ TEST_F(
 }
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -302,7 +302,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSysmanDevicePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -357,7 +357,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenProcessesCountZeroWhenRetrievingProcessesStateThenSuccessIsReturned) {
   for (auto device : devices) {
@@ -365,7 +365,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenProcessesCountZeroWhenRetrievingProcessesStateThenValidProcessesStateAreReturned) {
   for (auto device : devices) {
@@ -383,7 +383,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceHandleWhenRetrievingProcessesStateThenProcessIdOfCallingProcessIsPresent) {
   for (auto device : devices) {
@@ -403,7 +403,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -415,7 +415,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingSysmanDeviceStateThenValidStateIsReturned) {
   for (auto device : devices) {
@@ -428,14 +428,15 @@ TEST_F(
   }
 }
 
-TEST_F(SYSMAN_DEVICE_TEST,
-       GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetSucceeds) {
+LZT_TEST_F(
+    SYSMAN_DEVICE_TEST,
+    GivenValidDeviceWhenResettingSysmanDeviceThenSysmanDeviceResetSucceeds) {
   for (auto device : devices) {
     lzt::sysman_device_reset(device);
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenResettingSysmanDeviceNnumberOfTimesThenSysmanDeviceResetAlwaysSucceeds) {
   int number_iterations = 2;
@@ -652,7 +653,7 @@ bool compute_workload_and_validate(device_handles_t device) {
   return is_compute_engine;
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingProcessesStateAndDeviceMemoryIsAllocatedThenMemorySizeIsReturnedCorrectly) {
 
@@ -704,7 +705,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingProcessesStateAndComputeWorkloadIsExecutedThenEngineTypeUsedByProcessIsCorrect) {
 
@@ -728,7 +729,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenWorkingDeviceHandleWhenResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterReset) {
   uint32_t n = 512;
@@ -768,7 +769,7 @@ TEST_F(
     c.clear();
   }
 }
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenWorkingDeviceHandleWhenResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetInMultipleIterations) {
   uint32_t n = 512;
@@ -820,28 +821,28 @@ TEST_F(
   }
 }
 
-TEST_F(SYSMAN_DEVICE_TEST,
-       GivenValidDeviceWhenWarmResettingDeviceThenDeviceResetExtSucceeds) {
+LZT_TEST_F(SYSMAN_DEVICE_TEST,
+           GivenValidDeviceWhenWarmResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
     lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_WARM);
   }
 }
 
-TEST_F(SYSMAN_DEVICE_TEST,
-       GivenValidDeviceWhenColdResettingDeviceThenDeviceResetExtSucceeds) {
+LZT_TEST_F(SYSMAN_DEVICE_TEST,
+           GivenValidDeviceWhenColdResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
     lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_COLD);
   }
 }
 
-TEST_F(SYSMAN_DEVICE_TEST,
-       GivenValidDeviceWhenFlrResettingDeviceThenDeviceResetExtSucceeds) {
+LZT_TEST_F(SYSMAN_DEVICE_TEST,
+           GivenValidDeviceWhenFlrResettingDeviceThenDeviceResetExtSucceeds) {
   for (auto device : devices) {
     lzt::sysman_device_reset_ext(device, false, ZES_RESET_TYPE_FLR);
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenWorkingDeviceHandleWhenWarmResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetExt) {
   uint32_t n = 512;
@@ -882,7 +883,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenWorkingDeviceHandleWhenColdResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetExt) {
   uint32_t n = 512;
@@ -923,7 +924,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenWorkingDeviceHandleWhenFlrResettingSysmanDeviceThenWorkloadExecutionAlwaysSucceedsAfterResetExt) {
   uint32_t n = 512;

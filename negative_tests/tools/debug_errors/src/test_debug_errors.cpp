@@ -47,16 +47,17 @@ void run_invalid_pid_test(std::vector<ze_device_handle_t> &devices,
   }
 }
 
-TEST(zetDebugAttachErrorsTest,
-     GivenInvalidPIDWhenCreatingDebugSessionOnDeviceThenNoSessionCreated) {
+LZT_TEST(zetDebugAttachErrorsTest,
+         GivenInvalidPIDWhenCreatingDebugSessionOnDeviceThenNoSessionCreated) {
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
   run_invalid_pid_test(devices, false);
 }
 
-TEST(zetDebugAttachErrorsTest,
-     GivenInvalidPIDWhenCreatingDebugSessionOnSubDeviceThenNoSessionCreated) {
+LZT_TEST(
+    zetDebugAttachErrorsTest,
+    GivenInvalidPIDWhenCreatingDebugSessionOnSubDeviceThenNoSessionCreated) {
   auto all_sub_devices = lzt::get_all_sub_devices();
   run_invalid_pid_test(all_sub_devices, true);
 }
@@ -70,7 +71,7 @@ protected:
 };
 class zetDebugDetachErrorsTest : public zetDebugErrorsBaseSetup {};
 
-TEST_F(
+LZT_TEST_F(
     zetDebugDetachErrorsTest,
     GivenUnConfiguredUnattachedDebuggerWhenCallingDetachThenNotSuccessReturned) {
   zet_debug_session_handle_t debug_session = {};

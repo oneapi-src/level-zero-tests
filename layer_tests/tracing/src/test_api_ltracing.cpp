@@ -11,6 +11,7 @@
 #include "logging/logging.hpp"
 #include "test_harness/test_harness.hpp"
 #include "net/test_ipc_comm.hpp"
+#include "utils/utils.hpp"
 #include <boost/process.hpp>
 #include <level_zero/ze_api.h>
 #include <level_zero/layers/zel_tracing_api.h>
@@ -37,7 +38,7 @@ class LTracingCreateTests : public ::testing::Test {};
 #define LTRACING_CREATE_TEST_NAME LTracingCreateTests
 #endif
 
-TEST(
+LZT_TEST(
     LTRACING_CREATE_TEST_NAME,
     GivenValidDeviceAndTracerDescriptionWhenCreatingTracerThenTracerIsNotNull) {
   uint32_t user_data;
@@ -67,8 +68,8 @@ protected:
 #define LTRACING_CREATE_MULTIPLE_TEST_NAME LTracingCreateMultipleTests
 #endif
 
-TEST_P(LTRACING_CREATE_MULTIPLE_TEST_NAME,
-       GivenExistingTracersWhenCreatingNewTracerThenSuccesIsReturned) {
+LZT_TEST_P(LTRACING_CREATE_MULTIPLE_TEST_NAME,
+           GivenExistingTracersWhenCreatingNewTracerThenSuccesIsReturned) {
 
   std::vector<zel_tracer_handle_t> tracers(GetParam());
   std::vector<zel_tracer_desc_t> descs(GetParam());
@@ -107,8 +108,8 @@ class LTracingDestroyTests : public ::testing::Test {};
 #define LTRACING_DESTROY_TEST_NAME LTracingDestroyTests
 #endif
 
-TEST(LTRACING_DESTROY_TEST_NAME,
-     GivenSingleDisabledTracerWhenDestroyingTracerThenSuccessIsReturned) {
+LZT_TEST(LTRACING_DESTROY_TEST_NAME,
+         GivenSingleDisabledTracerWhenDestroyingTracerThenSuccessIsReturned) {
   uint32_t user_data;
 
   zel_tracer_desc_t tracer_desc = {ZEL_STRUCTURE_TYPE_TRACER_EXP_DESC, nullptr,
@@ -211,46 +212,42 @@ protected:
   }
 
   void init_command_queue() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandQueueCreate(context, device, &command_queue_desc,
-                                   &command_queue));
+    ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueCreate(
+        context, device, &command_queue_desc, &command_queue));
   }
 
   void init_command_list() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListCreate(context, device, &command_list_desc,
-                                  &command_list));
+    ASSERT_ZE_RESULT_SUCCESS(zeCommandListCreate(
+        context, device, &command_list_desc, &command_list));
   }
 
   void init_fence() {
     init_command_queue();
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeFenceCreate(command_queue, &fence_desc, &fence));
+    ASSERT_ZE_RESULT_SUCCESS(zeFenceCreate(command_queue, &fence_desc, &fence));
   }
 
   void init_event_pool() {
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolCreate(context, &event_pool_desc, 1,
-                                                   &device, &event_pool));
+    ASSERT_ZE_RESULT_SUCCESS(
+        zeEventPoolCreate(context, &event_pool_desc, 1, &device, &event_pool));
   }
 
   void init_event() {
     init_event_pool();
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeEventCreate(event_pool, &event_desc, &event));
+    ASSERT_ZE_RESULT_SUCCESS(zeEventCreate(event_pool, &event_desc, &event));
   }
 
   void init_module() {
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleCreate(context, device, &module_desc,
-                                                &module, &build_log));
+    ASSERT_ZE_RESULT_SUCCESS(
+        zeModuleCreate(context, device, &module_desc, &module, &build_log));
   }
 
   void init_kernel() {
     init_module();
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelCreate(module, &kernel_desc, &kernel));
+    ASSERT_ZE_RESULT_SUCCESS(zeKernelCreate(module, &kernel_desc, &kernel));
   }
 
   bool init_image() {
@@ -269,8 +266,7 @@ protected:
   void init_ipc() {
     init_memory();
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetIpcHandle(context, memory, &ipc_handle));
+    ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, &ipc_handle));
   }
 
   void TearDown() override {
@@ -434,7 +430,7 @@ class LDynamicTracingPrologueEpilogueTests
 #define LTRACING_TEST_NAME LTracingPrologueEpilogueTests
 #endif
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetCallbacksWhenCallingzeDeviceGetThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetCb = lzt::lprologue_callback;
@@ -446,7 +442,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceGet(driver, &num, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithZeDeviceGetSubDevicesCallbacksWhenCallingzeDeviceGetSubDevicesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetSubDevicesCb = lzt::lprologue_callback;
@@ -458,7 +454,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceGetSubDevices(device, &num, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetPropertiesCallbacksWhenCallingzeDeviceGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetPropertiesCb = lzt::lprologue_callback;
@@ -470,7 +466,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceGetProperties(device, &properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetComputePropertiesCallbacksWhenCallingzeDeviceGetComputePropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetComputePropertiesCb = lzt::lprologue_callback;
@@ -484,7 +480,7 @@ TEST_F(
             zeDeviceGetComputeProperties(device, &compute_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetMemoryPropertiesCallbacksWhenCallingzeDeviceGetMemoryPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetMemoryPropertiesCb = lzt::lprologue_callback;
@@ -497,7 +493,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceGetMemoryProperties(device, &num, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetMemoryAccessPropertiesCallbacksWhenCallingzeDeviceGetMemoryAccessPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetMemoryAccessPropertiesCb = lzt::lprologue_callback;
@@ -511,7 +507,7 @@ TEST_F(
                                 device, &memory_access_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetCachePropertiesCallbacksWhenCallingzeDeviceGetCachePropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetCachePropertiesCb = lzt::lprologue_callback;
@@ -525,7 +521,7 @@ TEST_F(
             zeDeviceGetCacheProperties(device, &count, &cache_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetImagePropertiesCallbacksWhenCallingzeDeviceGetImagePropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetImagePropertiesCb = lzt::lprologue_callback;
@@ -540,7 +536,7 @@ TEST_F(
             zeDeviceGetImageProperties(device, &device_image_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceGetP2PPropertiesCallbacksWhenCallingzeDeviceGetP2PPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnGetP2PPropertiesCb = lzt::lprologue_callback;
@@ -554,7 +550,7 @@ TEST_F(
             zeDeviceGetP2PProperties(device, device, &p2p_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceCanAccessPeerCallbacksWhenCallingzeDeviceCanAccessPeerThenUserDataIsSetAndResultUnchanged) {
   prologues.Device.pfnCanAccessPeerCb = lzt::lprologue_callback;
@@ -567,7 +563,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDeviceCanAccessPeer(device, device, &can_access));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceSystemBarrierCallbacksWhenCallingzeDeviceSystemBarrierThenUserDataIsSetAndResultUnchanged) {
   prologues.Context.pfnSystemBarrierCb = lzt::lprologue_callback;
@@ -579,7 +575,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeContextSystemBarrier(context, device));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceMakeMemoryResidentCallbacksWhenCallingzeDeviceMakeMemoryResidentThenUserDataIsSetAndResultUnchanged) {
   prologues.Context.pfnMakeMemoryResidentCb = lzt::lprologue_callback;
@@ -593,7 +589,7 @@ TEST_F(
             zeContextMakeMemoryResident(context, device, memory, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceEvictMemoryCallbacksWhenCallingzeDeviceEvictMemoryThenUserDataIsSetAndResultUnchanged) {
   prologues.Context.pfnEvictMemoryCb = lzt::lprologue_callback;
@@ -607,7 +603,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeContextEvictMemory(context, device, memory, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceMakeImageResidentCallbacksWhenCallingzeDeviceMakeImageResidentThenUserDataIsSetAndResultUnchangedAndResultUnchanged) {
   prologues.Context.pfnMakeImageResidentCb = lzt::lprologue_callback;
@@ -623,11 +619,10 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeContextMakeImageResident(context, device, image));
+  ASSERT_ZE_RESULT_SUCCESS(zeContextMakeImageResident(context, device, image));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDeviceEvictImageCallbacksWhenCallingzeDeviceEvictImageThenUserDataIsSetAndResultUnchanged) {
   prologues.Context.pfnEvictImageCb = lzt::lprologue_callback;
@@ -643,10 +638,10 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeContextEvictImage(context, device, image));
+  ASSERT_ZE_RESULT_SUCCESS(zeContextEvictImage(context, device, image));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetCallbacksWhenCallingzeDriverGetThenUserDataIsSetAndResultUnchanged) {
   prologues.Driver.pfnGetCb = lzt::lprologue_callback;
@@ -658,7 +653,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDriverGet(&num, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetPropertiesCallbacksWhenCallingzeDriverGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Driver.pfnGetPropertiesCb = lzt::lprologue_callback;
@@ -671,7 +666,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDriverGetProperties(driver, &driver_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetApiVersionCallbacksWhenCallingzeDriverGetApiVersionThenUserDataIsSetAndResultUnchanged) {
   prologues.Driver.pfnGetApiVersionCb = lzt::lprologue_callback;
@@ -683,7 +678,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDriverGetApiVersion(driver, &api_version));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetIPCPropertiesCallbacksWhenCallingzeDriverGetIPCPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Driver.pfnGetIpcPropertiesCb = lzt::lprologue_callback;
@@ -696,7 +691,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeDriverGetIpcProperties(driver, &ipc_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocSharedMemCallbacksWhenCallingzeDriverAllocSharedMemThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnAllocSharedCb = lzt::lprologue_callback;
@@ -723,10 +718,10 @@ TEST_F(
   ASSERT_EQ(initial_result, zeMemAllocShared(context, &device_desc, &host_desc,
                                              1, 0, device, &shared_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, shared_memory));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFree(context, shared_memory));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocDeviceMemCallbacksWhenCallingzeDriverAllocDeviceMemThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnAllocDeviceCb = lzt::lprologue_callback;
@@ -748,10 +743,10 @@ TEST_F(
   ASSERT_EQ(initial_result, zeMemAllocDevice(context, &device_desc, 1, 1,
                                              device, &device_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, device_memory));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFree(context, device_memory));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverAllocHostMemCallbacksWhenCallingzeDriverAllocHostMemThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnAllocHostCb = lzt::lprologue_callback;
@@ -771,10 +766,10 @@ TEST_F(
   ASSERT_EQ(initial_result,
             zeMemAllocHost(context, &host_desc, 1, 1, &host_memory));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, host_memory));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFree(context, host_memory));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverFreeMemCallbacksWhenCallingzeDriverFreeMemThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnFreeCb = lzt::lprologue_callback;
@@ -791,12 +786,12 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocHost(context, &host_desc, 1, 0, &host_memory));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeMemAllocHost(context, &host_desc, 1, 0, &host_memory));
   ASSERT_EQ(initial_result, zeMemFree(context, host_memory));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemAllocPropertiesCallbacksWhenCallingzeDriverGetMemAllocPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnGetAllocPropertiesCb = lzt::lprologue_callback;
@@ -817,7 +812,7 @@ TEST_F(
       zeMemGetAllocProperties(context, memory, &mem_alloc_properties, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemAddressRangeCallbacksWhenCallingzeDriverGetMemAddressRangeThenUserDataIsSetAndResultUnchanged) {
 
@@ -834,7 +829,7 @@ TEST_F(
             zeMemGetAddressRange(context, memory, nullptr, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverGetMemIpcHandleCallbacksWhenCallingzeDriverGetMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnGetIpcHandleCb = lzt::lprologue_callback;
@@ -848,7 +843,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeMemGetIpcHandle(context, memory, &ipc_handle));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeDriverOpenMemIpcHandleCallbacksWhenCallingzeDriverOpenMemIpcHandleThenUserDataIsSetAndResultUnchanged) {
   prologues.Mem.pfnOpenIpcHandleCb = lzt::lprologue_callback;
@@ -867,7 +862,7 @@ TEST_F(
             zeMemOpenIpcHandle(context, device, ipc_handle, 0, &mem));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueCreateCallbacksWhenCallingzeCommandQueueCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandQueue.pfnCreateCb = lzt::lprologue_callback;
@@ -878,13 +873,13 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(command_queue));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueDestroy(command_queue));
   ASSERT_EQ(initial_result,
             zeCommandQueueCreate(context, device, &command_queue_desc,
                                  &command_queue));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueDestroyCallbacksWhenCallingzeCommandQueueDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandQueue.pfnDestroyCb = lzt::lprologue_callback;
@@ -895,14 +890,13 @@ TEST_F(
   ze_result_t initial_result = zeCommandQueueDestroy(command_queue);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueCreate(context, device, &command_queue_desc,
-                                 &command_queue));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueCreate(
+      context, device, &command_queue_desc, &command_queue));
   ASSERT_EQ(initial_result, zeCommandQueueDestroy(command_queue));
   command_queue = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueExecuteCommandListsCallbacksWhenCallingzeCommandQueueExecuteCommandListsThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandQueue.pfnExecuteCommandListsCb = lzt::lprologue_callback;
@@ -911,7 +905,7 @@ TEST_F(
   init_command_list();
   init_command_queue();
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(command_list));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(command_list));
 
   ze_result_t initial_result = zeCommandQueueExecuteCommandLists(
       command_queue, 1, &command_list, nullptr);
@@ -922,7 +916,7 @@ TEST_F(
                                 command_queue, 1, &command_list, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandQueueSynchronizeCallbacksWhenCallingzeCommandQueueSynchronizeThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandQueue.pfnSynchronizeCb = lzt::lprologue_callback;
@@ -936,7 +930,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandQueueSynchronize(command_queue, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCreateCallbacksWhenCallingzeCommandListCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnCreateCb = lzt::lprologue_callback;
@@ -947,13 +941,13 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListDestroy(command_list));
   ASSERT_EQ(
       initial_result,
       zeCommandListCreate(context, device, &command_list_desc, &command_list));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListResetCallbacksWhenCallingzeCommandListResetThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnResetCb = lzt::lprologue_callback;
@@ -967,8 +961,9 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandListReset(command_list));
 }
 
-TEST_F(LTRACING_TEST_NAME,
-       GivenWhenTracerEnabledWithCalltoZetAPIThenSuccessIsReturnedFromZetAPI) {
+LZT_TEST_F(
+    LTRACING_TEST_NAME,
+    GivenWhenTracerEnabledWithCalltoZetAPIThenSuccessIsReturnedFromZetAPI) {
   prologues.CommandList.pfnResetCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnResetCb = lzt::lepilogue_callback;
 
@@ -979,12 +974,13 @@ TEST_F(LTRACING_TEST_NAME,
 
   ASSERT_EQ(initial_result, zeCommandListReset(command_list));
   uint32_t metricGroupCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupGet(device, &metricGroupCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricGroupGet(device, &metricGroupCount, nullptr));
 }
 
-TEST_F(LTRACING_TEST_NAME,
-       GivenWhenTracerEnabledWithCalltoZesAPIThenSuccessIsReturnedFromZesAPI) {
+LZT_TEST_F(
+    LTRACING_TEST_NAME,
+    GivenWhenTracerEnabledWithCalltoZesAPIThenSuccessIsReturnedFromZesAPI) {
   prologues.CommandList.pfnResetCb = lzt::lprologue_callback;
   epilogues.CommandList.pfnResetCb = lzt::lepilogue_callback;
 
@@ -994,12 +990,12 @@ TEST_F(LTRACING_TEST_NAME,
   ready_ltracer(tracer_handle, prologues, epilogues);
 
   ASSERT_EQ(initial_result, zeCommandListReset(command_list));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
+  EXPECT_ZE_RESULT_SUCCESS(zesInit(0));
   uint32_t zesCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&zesCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zesDriverGet(&zesCount, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCloseCallbacksWhenCallingzeCommandListCloseThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnCloseCb = lzt::lprologue_callback;
@@ -1013,7 +1009,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandListClose(command_list));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListDestroyCallbacksWhenCallingzeCommandListDestroyThenUserDataIsSetAndResultUnchanged) {
 
@@ -1030,7 +1026,7 @@ TEST_F(
   command_list = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListCreateImmediateCallbacksWhenCallingzeCommandListCreateImmediateThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnCreateImmediateCb = lzt::lprologue_callback;
@@ -1041,13 +1037,13 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListDestroy(command_list));
   ASSERT_EQ(initial_result,
             zeCommandListCreateImmediate(context, device, &command_queue_desc,
                                          &command_list));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendBarrierCallbacksWhenCallingzeCommandListAppendBarrierThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendBarrierCb = lzt::lprologue_callback;
@@ -1063,7 +1059,7 @@ TEST_F(
             zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryRangesBarrierCallbacksWhenCallingzeCommandListAppendMemoryRangesBarrierThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryRangesBarrierCb =
@@ -1093,7 +1089,7 @@ TEST_F(
     lzt::free_memory(range);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyCallbacksWhenCallingzeCommandListAppendMemoryCopyThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryCopyCb = lzt::lprologue_callback;
@@ -1116,7 +1112,7 @@ TEST_F(
   lzt::free_memory(dst);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryFillCallbacksWhenCallingzeCommandListAppendMemoryFillThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryFillCb = lzt::lprologue_callback;
@@ -1138,7 +1134,7 @@ TEST_F(
                                 nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyFromContextCallbacksWhenCallingzeCommandListAppendMemoryCopyFromContextThenUserDataIsSetAndResultUnchanged) {
 
@@ -1174,7 +1170,7 @@ TEST_F(
   lzt::destroy_context(src_context);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendQueryKernelTimestampsCallbacksWhenCallingzeCommandListAppendQueryKernelTimestampsThenUserDataIsSetAndResultUnchanged) {
 
@@ -1204,7 +1200,7 @@ TEST_F(
   lzt::free_memory(timestamp_buffer);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryCopyRegionCallbacksWhenCallingzeCommandListAppendMemoryCopyRegionThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryCopyRegionCb = lzt::lprologue_callback;
@@ -1232,7 +1228,7 @@ TEST_F(
   lzt::free_memory(dst);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyCallbacksWhenCallingzeCommandListAppendImageCopyThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendImageCopyCb = lzt::lprologue_callback;
@@ -1251,22 +1247,21 @@ TEST_F(
     user_data.epilogue_called = true;
     GTEST_SKIP();
   }
-  ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+  ASSERT_ZE_RESULT_SUCCESS(result);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, device, &image_desc, &dst_image));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeImageCreate(context, device, &image_desc, &dst_image));
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopy(command_list, dst_image, src_image,
-                                         nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopy(
+      command_list, dst_image, src_image, nullptr, 0, nullptr));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(src_image));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(dst_image));
+  ASSERT_ZE_RESULT_SUCCESS(zeImageDestroy(src_image));
+  ASSERT_ZE_RESULT_SUCCESS(zeImageDestroy(dst_image));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyRegionCallbacksWhenCallingzeCommandListAppendImageCopyRegionThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendImageCopyRegionCb = lzt::lprologue_callback;
@@ -1284,21 +1279,21 @@ TEST_F(
     user_data.epilogue_called = true;
     GTEST_SKIP();
   }
-  ASSERT_EQ(ZE_RESULT_SUCCESS, result);
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(context, device, &image_desc, &dst_image));
+  ASSERT_ZE_RESULT_SUCCESS(result);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeImageCreate(context, device, &image_desc, &dst_image));
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendImageCopyRegion(
-                                   command_list, dst_image, src_image, nullptr,
-                                   nullptr, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyRegion(
+      command_list, dst_image, src_image, nullptr, nullptr, nullptr, 0,
+      nullptr));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(src_image));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeImageDestroy(dst_image));
+  ASSERT_ZE_RESULT_SUCCESS(zeImageDestroy(src_image));
+  ASSERT_ZE_RESULT_SUCCESS(zeImageDestroy(dst_image));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyFromMemoryCallbacksWhenCallingzeCommandListAppendImageCopyFromMemoryThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendImageCopyFromMemoryCb =
@@ -1318,12 +1313,11 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyFromMemory(
-                command_list, image, memory, nullptr, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyFromMemory(
+      command_list, image, memory, nullptr, nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendImageCopyToMemoryCallbacksWhenCallingzeCommandListAppendImageCopyToMemoryThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendImageCopyToMemoryCb = lzt::lprologue_callback;
@@ -1341,12 +1335,11 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendImageCopyToMemory(command_list, memory, image,
-                                                 nullptr, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyToMemory(
+      command_list, memory, image, nullptr, nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryPrefetchCallbacksWhenCallingzeCommandListAppendMemoryPrefetchThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemoryPrefetchCb = lzt::lprologue_callback;
@@ -1368,7 +1361,7 @@ TEST_F(
   lzt::free_memory(shared_memory);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemAdviseCallbacksWhenCallingzeCommandListAppendMemAdviseThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendMemAdviseCb = lzt::lprologue_callback;
@@ -1392,7 +1385,7 @@ TEST_F(
                                 ZE_MEMORY_ADVICE_SET_READ_MOSTLY));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendSignalEventCallbacksWhenCallingzeCommandListAppendSignalEventThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendSignalEventCb = lzt::lprologue_callback;
@@ -1409,7 +1402,7 @@ TEST_F(
             zeCommandListAppendSignalEvent(command_list, event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendWaitOnEventsCallbacksWhenCallingzeCommandListAppendWaitOnEventsThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendWaitOnEventsCb = lzt::lprologue_callback;
@@ -1426,7 +1419,7 @@ TEST_F(
             zeCommandListAppendWaitOnEvents(command_list, 1, &event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendEventResetCallbacksWhenCallingzeCommandListAppendEventResetThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendEventResetCb = lzt::lprologue_callback;
@@ -1442,7 +1435,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeCommandListAppendEventReset(command_list, event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchKernelCallbacksWhenCallingzeCommandListAppendLaunchKernelThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendLaunchKernelCb = lzt::lprologue_callback;
@@ -1463,7 +1456,7 @@ TEST_F(
                                             nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchMultipleKernelsIndirectCallbacksWhenCallingzeCommandListAppendLaunchMultipleKernelsIndirectThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendLaunchMultipleKernelsIndirectCb =
@@ -1491,7 +1484,7 @@ TEST_F(
   lzt::free_memory(args);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceCreateCallbacksWhenCallingzeFenceCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnCreateCb = lzt::lprologue_callback;
@@ -1504,11 +1497,11 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeFenceDestroy(fence));
+  ASSERT_ZE_RESULT_SUCCESS(zeFenceDestroy(fence));
   ASSERT_EQ(initial_result, zeFenceCreate(command_queue, &fence_desc, &fence));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceDestroyCallbacksWhenCallingzeFenceDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnDestroyCb = lzt::lprologue_callback;
@@ -1518,14 +1511,13 @@ TEST_F(
 
   ze_result_t initial_result = zeFenceDestroy(fence);
   ready_ltracer(tracer_handle, prologues, epilogues);
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeFenceCreate(command_queue, &fence_desc, &fence));
+  ASSERT_ZE_RESULT_SUCCESS(zeFenceCreate(command_queue, &fence_desc, &fence));
 
   ASSERT_EQ(initial_result, zeFenceDestroy(fence));
   fence = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceHostSynchronizeCallbacksWhenCallingzeFenceHostSynchronizeThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnHostSynchronizeCb = lzt::lprologue_callback;
@@ -1539,7 +1531,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeFenceHostSynchronize(fence, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceQueryStatusCallbacksWhenCallingzeFenceQueryStatusThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnQueryStatusCb = lzt::lprologue_callback;
@@ -1553,7 +1545,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeFenceQueryStatus(fence));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeFenceResetCallbacksWhenCallingzeFenceResetThenUserDataIsSetAndResultUnchanged) {
   prologues.Fence.pfnResetCb = lzt::lprologue_callback;
@@ -1567,7 +1559,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeFenceReset(fence));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolCreateCallbacksWhenCallingzeEventPoolCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.EventPool.pfnCreateCb = lzt::lprologue_callback;
@@ -1578,12 +1570,12 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventPoolDestroy(event_pool));
+  ASSERT_ZE_RESULT_SUCCESS(zeEventPoolDestroy(event_pool));
   ASSERT_EQ(initial_result, zeEventPoolCreate(context, &event_pool_desc, 1,
                                               &device, &event_pool));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolDestroyCallbacksWhenCallingzeEventPoolDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.EventPool.pfnDestroyCb = lzt::lprologue_callback;
@@ -1599,7 +1591,7 @@ TEST_F(
   event_pool = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventCreateCallbacksWhenCallingzeEventCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnCreateCb = lzt::lprologue_callback;
@@ -1610,11 +1602,11 @@ TEST_F(
   ze_result_t initial_result = zeEventCreate(event_pool, &event_desc, &event);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(event));
+  ASSERT_ZE_RESULT_SUCCESS(zeEventDestroy(event));
   ASSERT_EQ(initial_result, zeEventCreate(event_pool, &event_desc, &event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventDestroyCallbacksWhenCallingzeEventDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnDestroyCb = lzt::lprologue_callback;
@@ -1625,12 +1617,12 @@ TEST_F(
   ze_result_t initial_result = zeEventDestroy(event);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeEventCreate(event_pool, &event_desc, &event));
+  ASSERT_ZE_RESULT_SUCCESS(zeEventCreate(event_pool, &event_desc, &event));
   ASSERT_EQ(initial_result, zeEventDestroy(event));
   event = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolGetIpcHandleCallbacksWhenCallingzeEventPoolGetIpcHandleThenUserDataIsSetAndResultUnchanged) {
   prologues.EventPool.pfnGetIpcHandleCb = lzt::lprologue_callback;
@@ -1644,21 +1636,21 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventPoolGetIpcHandle(event_pool, &ipc_event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolOpenIpcHandleCallbacksWhenCallingzeEventPoolOpenIpcHandleThenUserDataIsSetAndResultUnchanged) {
 
   run_ltracing_ipc_event_test("TEST_OPEN_IPC_EVENT");
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventPoolCloseIpcHandleCallbacksWhenCallingzeEventPoolCloseIpcHandleThenUserDataIsSetAndResultUnchanged) {
 
   run_ltracing_ipc_event_test("TEST_CLOSE_IPC_EVENT");
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostSignalCallbacksWhenCallingzeEventHostSignalThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnHostSignalCb = lzt::lprologue_callback;
@@ -1672,7 +1664,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventHostSignal(event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostSynchronizeCallbacksWhenCallingzeEventHostSynchronizeThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnHostSynchronizeCb = lzt::lprologue_callback;
@@ -1686,7 +1678,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventHostSynchronize(event, 0));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventQueryStatusCallbacksWhenCallingzeEventQueryStatusThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnQueryStatusCb = lzt::lprologue_callback;
@@ -1700,7 +1692,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventQueryStatus(event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeEventHostResetCallbacksWhenCallingzeEventHostResetThenUserDataIsSetAndResultUnchanged) {
   prologues.Event.pfnHostResetCb = lzt::lprologue_callback;
@@ -1714,7 +1706,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeEventHostReset(event));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageCreateCallbacksWhenCallingzeImageCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Image.pfnCreateCb = lzt::lprologue_callback;
@@ -1727,7 +1719,7 @@ TEST_F(
               (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageGetPropertiesCallbacksWhenCallingzeImageGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Image.pfnGetPropertiesCb = lzt::lprologue_callback;
@@ -1741,7 +1733,7 @@ TEST_F(
               (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeImageDestroyCallbacksWhenCallingzeImageDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Image.pfnDestroyCb = lzt::lprologue_callback;
@@ -1761,7 +1753,7 @@ TEST_F(
   image = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleCreateCallbacksWhenCallingzeModuleCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnCreateCb = lzt::lprologue_callback;
@@ -1772,12 +1764,12 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module));
+  ASSERT_ZE_RESULT_SUCCESS(zeModuleDestroy(module));
   ASSERT_EQ(initial_result,
             zeModuleCreate(context, device, &module_desc, &module, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleDestroyCallbacksWhenCallingzeModuleDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnDestroyCb = lzt::lprologue_callback;
@@ -1792,7 +1784,7 @@ TEST_F(
   module = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetNativeBinaryCallbacksWhenCallingzeModuleGetNativeBinaryThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnGetNativeBinaryCb = lzt::lprologue_callback;
@@ -1811,7 +1803,7 @@ TEST_F(
             zeModuleGetNativeBinary(module, &binary_size, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetGlobalPointerCallbacksWhenCallingzeModuleGetGlobalPointerThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnGetGlobalPointerCb = lzt::lprologue_callback;
@@ -1830,7 +1822,7 @@ TEST_F(
             zeModuleGetGlobalPointer(module, "xid", nullptr, &pointer));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleGetFunctionPointerCallbacksWhenCallingzeModuleGetFunctionPointerThenUserDataIsSetAndResultUnchanged) {
   prologues.Module.pfnGetFunctionPointerCb = lzt::lprologue_callback;
@@ -1849,7 +1841,7 @@ TEST_F(
                                        &function_pointer));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleBuildLogDestroyCallbacksWhenCallingzeModuleBuildLogDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.ModuleBuildLog.pfnDestroyCb = lzt::lprologue_callback;
@@ -1860,14 +1852,14 @@ TEST_F(
   ze_result_t initial_result = zeModuleBuildLogDestroy(build_log);
   ze_module_handle_t module2;
   ready_ltracer(tracer_handle, prologues, epilogues);
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleCreate(context, device, &module_desc,
-                                              &module2, &build_log));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeModuleCreate(context, device, &module_desc, &module2, &build_log));
   ASSERT_EQ(initial_result, zeModuleBuildLogDestroy(build_log));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module2));
+  ASSERT_ZE_RESULT_SUCCESS(zeModuleDestroy(module2));
   build_log = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeModuleBuildLogGetStringCallbacksWhenCallingzeModuleBuildLogGetStringThenUserDataIsSetAndResultUnchanged) {
   prologues.ModuleBuildLog.pfnGetStringCb = lzt::lprologue_callback;
@@ -1885,7 +1877,7 @@ TEST_F(
             zeModuleBuildLogGetString(build_log, &log_size, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelCreateCallbacksWhenCallingzeKernelCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnCreateCb = lzt::lprologue_callback;
@@ -1898,11 +1890,11 @@ TEST_F(
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(kernel));
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelDestroy(kernel));
   ASSERT_EQ(initial_result, zeKernelCreate(module, &kernel_desc, &kernel));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelDestroyCallbacksWhenCallingzeKernelDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnDestroyCb = lzt::lprologue_callback;
@@ -1912,13 +1904,13 @@ TEST_F(
 
   ze_result_t initial_result = zeKernelDestroy(kernel);
   ready_ltracer(tracer_handle, prologues, epilogues);
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelCreate(module, &kernel_desc, &kernel));
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelCreate(module, &kernel_desc, &kernel));
 
   ASSERT_EQ(initial_result, zeKernelDestroy(kernel));
   kernel = nullptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendLaunchKernelIndirectCallbacksWhenCallingzeCommandListAppendLaunchKernelIndirectThenUserDataIsSetAndResultUnchanged) {
   prologues.CommandList.pfnAppendLaunchKernelIndirectCb =
@@ -1941,7 +1933,7 @@ TEST_F(
                                                     nullptr, 0, nullptr));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSetGroupSizeCallbacksWhenCallingzeKernelSetGroupSizeThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnSetGroupSizeCb = lzt::lprologue_callback;
@@ -1955,7 +1947,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeKernelSetGroupSize(kernel, 1, 1, 1));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSuggestGroupSizeCallbacksWhenCallingzeKernelSuggestGroupSizeThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnSuggestGroupSizeCb = lzt::lprologue_callback;
@@ -1973,7 +1965,7 @@ TEST_F(
             zeKernelSuggestGroupSize(kernel, 1, 1, 1, &x, &y, &z));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelSetArgumentValueCallbacksWhenCallingzeKernelSetArgumentValueThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnSetArgumentValueCb = lzt::lprologue_callback;
@@ -1990,7 +1982,7 @@ TEST_F(
             zeKernelSetArgumentValue(kernel, 1, sizeof(int), &val));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeKernelGetPropertiesCallbacksWhenCallingzeKernelGetPropertiesThenUserDataIsSetAndResultUnchanged) {
   prologues.Kernel.pfnGetPropertiesCb = lzt::lprologue_callback;
@@ -2007,7 +1999,7 @@ TEST_F(
   ASSERT_EQ(initial_result, zeKernelGetProperties(kernel, &kernel_properties));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeSamplerCreateCallbacksWhenCallingzeSamplerCreateThenUserDataIsSetAndResultUnchanged) {
   prologues.Sampler.pfnCreateCb = lzt::lprologue_callback;
@@ -2022,7 +2014,7 @@ TEST_F(
               (result == ZE_RESULT_ERROR_UNINITIALIZED));
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_TEST_NAME,
     GivenEnabledTracerWithzeSamplerDestroyCallbacksWhenCallingzeSamplerDestroyThenUserDataIsSetAndResultUnchanged) {
   prologues.Sampler.pfnDestroyCb = lzt::lprologue_callback;
@@ -2038,11 +2030,11 @@ TEST_F(
     user_data.epilogue_called = true;
     GTEST_SKIP();
   }
-  EXPECT_EQ(result, ZE_RESULT_SUCCESS);
+  EXPECT_ZE_RESULT_SUCCESS(result);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
+  ASSERT_ZE_RESULT_SUCCESS(zeSamplerDestroy(sampler));
 }
 
 } // namespace

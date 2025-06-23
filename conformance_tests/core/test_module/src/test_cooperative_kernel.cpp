@@ -76,8 +76,8 @@ void CooperativeKernelTests::
   // Use a small group size in order to use more groups
   // in order to stress cooperation
   zeKernelSetGroupSize(kernel, 1, 1, 1);
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestMaxCooperativeGroupCount(kernel, &groups_x));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeKernelSuggestMaxCooperativeGroupCount(kernel, &groups_x));
   ASSERT_GT(groups_x, 0);
   // We've set the number of workgroups to the max
   // so check that it is sufficient for the input,
@@ -85,15 +85,14 @@ void CooperativeKernelTests::
   if (groups_x < row_num) {
     row_num = groups_x;
   }
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelSetArgumentValue(
-                                   kernel, 0, sizeof(input_data), &input_data));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetArgumentValue(kernel, 1, sizeof(row_num), &row_num));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeKernelSetArgumentValue(kernel, 0, sizeof(input_data), &input_data));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeKernelSetArgumentValue(kernel, 1, sizeof(row_num), &row_num));
 
   ze_group_count_t args = {groups_x, 1, 1};
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendLaunchCooperativeKernel(
-                cmd_bundle.list, kernel, &args, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchCooperativeKernel(
+      cmd_bundle.list, kernel, &args, nullptr, 0, nullptr));
 
   lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -112,13 +111,13 @@ void CooperativeKernelTests::
   lzt::destroy_context(context);
 }
 
-TEST_P(
+LZT_TEST_P(
     CooperativeKernelTests,
     GivenCooperativeKernelWhenAppendingLaunchCooperativeKernelThenSuccessIsReturnedAndOutputIsCorrect) {
   RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(false);
 }
 
-TEST_P(
+LZT_TEST_P(
     CooperativeKernelTests,
     GivenCooperativeKernelWhenAppendingLaunchCooperativeKernelThenSuccessIsReturnedAndOutputIsCorrectWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();

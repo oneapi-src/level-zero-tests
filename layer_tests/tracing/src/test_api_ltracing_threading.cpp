@@ -101,7 +101,7 @@ class LDynamicTracingThreadTests : public LTracingThreadTests {};
 #define LTRACING_THREAD_TEST_NAME LTracingThreadTests
 #endif
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_THREAD_TEST_NAME,
     GivenSingleTracingEnabledThreadWhenCallingDifferentAPIFunctionThenCallbacksCalledOnce) {
 
@@ -116,7 +116,7 @@ TEST_F(
   EXPECT_EQ(callback_exit_invocations, 1);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_THREAD_TEST_NAME,
     GivenSingleTracingEnabledThreadWhenCallingSameAPIFunctionThenCallbackCalledTwice) {
 
@@ -146,7 +146,7 @@ void trace_memory_allocation_then_deallocate(ze_memory_type_t memory_type) {
   lzt::free_memory(memory);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_THREAD_TEST_NAME,
     GivenTwoThreadsWhenTracingEnabledCallingDifferentAPIFunctionThenCallbackCalledOnce) {
 
@@ -163,7 +163,7 @@ TEST_F(
   EXPECT_EQ(1, callback_exit_invocations);
 }
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_THREAD_TEST_NAME,
     GivenTwoThreadsWhenTracingEnabledCallingSameAPIFunctionThenCallbacksCalledTwice) {
 
@@ -197,7 +197,7 @@ class LDynamicTracingThreadTestsDisabling
 #define LTRACING_THREAD_DISABLING_TEST_NAME LTracingThreadTestsDisabling
 #endif
 
-TEST_F(
+LZT_TEST_F(
     LTRACING_THREAD_DISABLING_TEST_NAME,
     GivenInvokedPrologueWhenDisablingTracerInSeparateThreadThenEpilogueIsCalled) {
 

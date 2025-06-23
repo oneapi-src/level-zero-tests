@@ -57,7 +57,7 @@ protected:
   uint32_t set_value_ = 0xFFFEFEFF;
 }; // namespace
 
-TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
+LZT_TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
   TestArguments_t test_arguments = {
       std::get<0>(GetParam()), // total memory size limit
       std::get<1>(GetParam()), // one allocation size limit
@@ -244,7 +244,7 @@ TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
   EXPECT_EQ(false, memory_test_failure);
 }
 
-TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
+LZT_TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
 
   TestArguments_t test_arguments = {
       std::get<0>(GetParam()), // total memory size limit

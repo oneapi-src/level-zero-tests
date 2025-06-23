@@ -13,6 +13,6 @@
 
 namespace {
 
-// TEST(TestName, TestCaseName) {}
+// LZT_TEST(TestName, TestCaseName) {}
 
 } // namespace

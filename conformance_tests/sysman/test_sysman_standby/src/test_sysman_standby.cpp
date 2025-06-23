@@ -26,7 +26,7 @@ class StandbyModuleTest : public lzt::SysmanCtsClass {};
 #define STANDBY_TEST StandbyModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     STANDBY_TEST,
     GivenValidDeviceWhenRetrievingStandbyHandlesThenNonZeroCountAndValidStandbyHandlesAreReturned) {
   for (auto device : devices) {
@@ -37,7 +37,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     STANDBY_TEST,
     GivenValidDeviceWhenRetrievingStandbyHandlesThenSimilarHandlesAreReturnedTwice) {
   for (auto device : devices) {
@@ -48,7 +48,7 @@ TEST_F(
     EXPECT_EQ(p_standby_handles_initial, p_standby_handles_later);
   }
 }
-TEST_F(
+LZT_TEST_F(
     STANDBY_TEST,
     GivenValidDeviceWhenRetrievingStandbyHandlesThenActualHandleCountIsUpdated) {
   for (auto device : devices) {
@@ -59,7 +59,7 @@ TEST_F(
     EXPECT_EQ(tCount, p_count);
   }
 }
-TEST_F(
+LZT_TEST_F(
     STANDBY_TEST,
     GivenValidDeviceWhenRequestingModeThenExpectzesSysmanStandbyGetModeToReturnValidStandbyMode) {
   for (auto device : devices) {
@@ -82,7 +82,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     STANDBY_TEST,
     GivenValidDeviceWhenSettingModeThenExpectzesSysmanStandbySetModeFollowedByzesSysmanStandbyGetModeToMatch) {
   for (auto device : devices) {
@@ -104,7 +104,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     STANDBY_TEST,
     GivenValidStandbyHandleWhenRetrievingStandbyPropertiesThenValidStandbyPropertiesIsReturned) {
   for (auto device : devices) {
@@ -121,7 +121,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     STANDBY_TEST,
     GivenValidStandbyHandleWhenRetrievingStandbyPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {

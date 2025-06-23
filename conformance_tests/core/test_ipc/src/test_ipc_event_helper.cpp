@@ -35,21 +35,21 @@ static const ze_event_desc_t defaultDeviceEventDesc = {
 
 static void child_host_reads(ze_event_pool_handle_t hEventPool) {
   ze_event_handle_t hEvent;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent, UINT64_MAX));
   // cleanup
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
 static void child_query_event_status(ze_event_pool_handle_t hEventPool) {
   ze_event_handle_t hEvent = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(hEvent));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(hEvent));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
 static void child_device_reads(ze_event_pool_handle_t hEventPool,
@@ -57,11 +57,11 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool,
                                bool isImmediate) {
   ze_event_handle_t hEvent;
   if (device_events) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent));
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   }
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
@@ -72,14 +72,14 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool,
 
   // cleanup
   lzt::destroy_command_bundle(cmdbundle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
 static void child_device2_reads(ze_event_pool_handle_t hEventPool,
                                 ze_context_handle_t context, bool isImmediate) {
   ze_event_handle_t hEvent;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   auto devices = lzt::get_ze_devices();
   auto cmdbundle = lzt::create_command_bundle(context, devices[1], isImmediate);
   lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
@@ -90,15 +90,15 @@ static void child_device2_reads(ze_event_pool_handle_t hEventPool,
   // cleanup
   lzt::reset_command_list(cmdbundle.list);
   lzt::destroy_command_bundle(cmdbundle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
 static void child_multi_device_reads(ze_event_pool_handle_t hEventPool,
                                      ze_context_handle_t context,
                                      bool isImmediate) {
   ze_event_handle_t hEvent;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   auto devices = lzt::get_ze_devices();
   auto cmdbundle1 =
       lzt::create_command_bundle(context, devices[0], isImmediate);
@@ -118,7 +118,7 @@ static void child_multi_device_reads(ze_event_pool_handle_t hEventPool,
   lzt::reset_command_list(cmdbundle2.list);
   lzt::destroy_command_bundle(cmdbundle1);
   lzt::destroy_command_bundle(cmdbundle2);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
 static void child_host_query_timestamp(const ze_event_pool_handle_t &hEventPool,
@@ -129,9 +129,9 @@ static void child_host_query_timestamp(const ze_event_pool_handle_t &hEventPool,
   auto device = lzt::get_default_device(driver);
 
   ze_event_handle_t hEvent;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(hEvent, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent, UINT64_MAX));
 
   ze_kernel_timestamp_result_t tsResult;
   if (mapped_timestamp) {
@@ -184,7 +184,7 @@ static void child_host_query_timestamp(const ze_event_pool_handle_t &hEventPool,
   }
 
   // cleanup
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
 static void
@@ -195,11 +195,11 @@ child_device_query_timestamp(const ze_event_pool_handle_t &hEventPool,
 
   ze_event_handle_t hEvent;
   if (device_events) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeEventCreate(hEventPool, &defaultDeviceEventDesc, &hEvent));
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   }
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_devices(driver)[0];
@@ -210,9 +210,8 @@ child_device_query_timestamp(const ze_event_pool_handle_t &hEventPool,
       static_cast<ze_kernel_timestamp_result_t *>(lzt::allocate_host_memory(
           sizeof(ze_kernel_timestamp_result_t), 1, context));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendQueryKernelTimestamps(
-                                   cmdbundle.list, 1, &hEvent, tsResult,
-                                   nullptr, nullptr, 1, &hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendQueryKernelTimestamps(
+      cmdbundle.list, 1, &hEvent, tsResult, nullptr, nullptr, 1, &hEvent));
 
   lzt::close_command_list(cmdbundle.list);
   lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
@@ -230,7 +229,7 @@ child_device_query_timestamp(const ze_event_pool_handle_t &hEventPool,
   // cleanup
   lzt::free_memory(context, tsResult);
   lzt::destroy_command_bundle(cmdbundle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventDestroy(hEvent));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
 int main() {
