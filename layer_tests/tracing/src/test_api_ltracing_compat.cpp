@@ -3060,6 +3060,7 @@ LZT_TEST_F(
   zelTracerEventQueryKernelTimestampRegisterCallback(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
+  event_pool_desc.flags |= ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP;
   init_event_pool();
   init_event();
 
