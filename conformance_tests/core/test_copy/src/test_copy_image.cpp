@@ -341,7 +341,7 @@ public:
   }
 };
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -350,7 +350,7 @@ TEST_F(
   test_image_copy(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyOnImmediateCmdListThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -359,7 +359,7 @@ TEST_F(
   test_image_copy(true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyWithCopyExtThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -368,7 +368,7 @@ TEST_F(
   test_image_copy_ext(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyWithCopyExtOnImmediateCmdListThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -477,7 +477,7 @@ void RunGivenDeviceImageAndHostImageWhenAppendingImageCopyRegionWithVariousRegio
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyRegionWithVariousRegionsThenImageIsCorrectAndSuccessIsReturned) {
   //  (C 1)
@@ -488,7 +488,7 @@ TEST_F(
       *this, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyRegionWithVariousRegionsOnImmediateCmdListThenImageIsCorrectAndSuccessIsReturned) {
   //  (C 1)
@@ -499,7 +499,7 @@ TEST_F(
       *this, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingHostMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -517,7 +517,7 @@ TEST_F(
   lzt::free_memory(buff_out_top);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingHostMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -535,7 +535,7 @@ TEST_F(
   lzt::free_memory(buff_out_top);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingHostMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -548,7 +548,7 @@ TEST_F(
   lzt::free_memory(buff_out);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyToImmediateCmdListFromMemoryUsingHostMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -561,7 +561,7 @@ TEST_F(
   lzt::free_memory(buff_out);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingDeviceMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -579,7 +579,7 @@ TEST_F(
   lzt::free_memory(buff_out_top);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingDeviceMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -597,7 +597,7 @@ TEST_F(
   lzt::free_memory(buff_out_top);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingDeviceMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -610,7 +610,7 @@ TEST_F(
   lzt::free_memory(buff_out);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingDeviceMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -623,7 +623,7 @@ TEST_F(
   lzt::free_memory(buff_out);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingSharedMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -641,7 +641,7 @@ TEST_F(
   lzt::free_memory(buff_out_top);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingSharedMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -659,7 +659,7 @@ TEST_F(
   lzt::free_memory(buff_out_top);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingSharedMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -672,7 +672,7 @@ TEST_F(
   lzt::free_memory(buff_out);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingSharedMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -685,7 +685,7 @@ TEST_F(
   lzt::free_memory(buff_out);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingSharedSystemMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -704,7 +704,7 @@ TEST_F(
   lzt::aligned_free(buff_out_top);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingSharedSystemMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -723,7 +723,7 @@ TEST_F(
   lzt::aligned_free(buff_out_top);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingSharedSystemMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -737,7 +737,7 @@ TEST_F(
   lzt::aligned_free(buff_out);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyToImmediateCmdListFromMemoryUsingSharedSystemMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -764,15 +764,15 @@ void RunGivenDeviceImageWhenAppendingImageCopyTest(
   delete test.img_ptr;
 }
 
-TEST_F(zeCommandListAppendImageCopyTests,
-       GivenDeviceImageWhenAppendingImageCopyThenSuccessIsReturned) {
+LZT_TEST_F(zeCommandListAppendImageCopyTests,
+           GivenDeviceImageWhenAppendingImageCopyThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
   RunGivenDeviceImageWhenAppendingImageCopyTest(*this, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyToImmediateCmdListThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -803,15 +803,16 @@ void RunGivenDeviceImageWhenAppendingImageCopyWithHEventTest(
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(zeCommandListAppendImageCopyTests,
-       GivenDeviceImageWhenAppendingImageCopyWithHEventThenSuccessIsReturned) {
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageWhenAppendingImageCopyWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
   RunGivenDeviceImageWhenAppendingImageCopyWithHEventTest(*this, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyToImmediateCmdListWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -847,7 +848,7 @@ void RunGivenDeviceImageWhenAppendingImageCopyWithWaitEventTest(
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -856,7 +857,7 @@ TEST_F(
   RunGivenDeviceImageWhenAppendingImageCopyWithWaitEventTest(*this, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyToImmediateCmdListWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -865,7 +866,7 @@ TEST_F(
   RunGivenDeviceImageWhenAppendingImageCopyWithWaitEventTest(*this, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryAndFromMemoryWithOffsetsImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -890,7 +891,7 @@ TEST_F(
   delete img_ptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryAndFromMemoryToImmediateCmdListWithOffsetsImageIsCorrectAndSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -935,7 +936,7 @@ void RunGivenDeviceImageAndHostImageWhenAppendingImageCopyTest(
   delete test.img_ptr;
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -944,7 +945,7 @@ TEST_F(
   RunGivenDeviceImageAndHostImageWhenAppendingImageCopyTest(*this, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyToImmediateCmdListThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -972,7 +973,7 @@ void RunGivenDeviceImageAndHostImageWhenAppendingImageCopyWithHEventTest(
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -982,7 +983,7 @@ TEST_F(
                                                                       false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyToImmediateCmdListWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1014,7 +1015,7 @@ void RunGivenDeviceImageAndHostImageWhenAppendingImageCopyWithWaitEventTest(
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1024,7 +1025,7 @@ TEST_F(
                                                                          false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyFromMemoryTests,
     GivenDeviceImageAndHostImageWhenAppendingImageCopyToImmediateCmdListWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1068,7 +1069,7 @@ void RunGivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionTest(
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1078,7 +1079,7 @@ TEST_F(
                                                                     false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionToImmediateCmdListThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1122,7 +1123,7 @@ void RunGivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithHEventTest
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1132,7 +1133,7 @@ TEST_F(
       *this, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionToImmediateCmdListWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1180,7 +1181,7 @@ void RunGivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithWaitEventT
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1190,7 +1191,7 @@ TEST_F(
       *this, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyRegionTests,
     GivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionToImmediateCmdListWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1221,15 +1222,16 @@ void RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(zeCommandListAppendImageCopyToMemoryTests,
-       GivenDeviceImageWhenAppendingImageCopyToMemoryThenSuccessIsReturned) {
+LZT_TEST_F(
+    zeCommandListAppendImageCopyToMemoryTests,
+    GivenDeviceImageWhenAppendingImageCopyToMemoryThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
     GTEST_SKIP();
   }
   RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1238,7 +1240,7 @@ TEST_F(
   RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1248,7 +1250,7 @@ TEST_F(
   RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(*this, false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListThenSuccessIsReturnedWithAllocatorWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1279,7 +1281,7 @@ void RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1289,7 +1291,7 @@ TEST_F(
                                                                   false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListWithHEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1299,7 +1301,7 @@ TEST_F(
                                                                   false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1310,7 +1312,7 @@ TEST_F(
                                                                   true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1346,7 +1348,7 @@ void RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1356,7 +1358,7 @@ TEST_F(
       *this, false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListWithWaitEventThenSuccessIsReturned) {
   if (!(lzt::image_support())) {
@@ -1366,7 +1368,7 @@ TEST_F(
       *this, true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1377,7 +1379,7 @@ TEST_F(
       *this, false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListAppendImageCopyToMemoryTests,
     GivenDeviceImageWhenAppendingImageCopyToMemoryOnImmediateCmdListWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();

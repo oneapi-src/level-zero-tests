@@ -6,6 +6,8 @@
 
 `level_zero_report_utils.py` is as python module which provides utility functions used by the `run_test_report.py` script for processing each test into categories of features and test types for oneAPI Level Zero.
 
+`lzt_gtest_scan.py` is a python script that scans a workspace directory for C/C++ source files and detects deprecated usage of certain test macros. If such usage is found, it logs a warning and returns an error code, advising developers to use updated macros instead.
+
 **Prerequisites:**
  * python 3
  * oneAPI Level Zero Loader

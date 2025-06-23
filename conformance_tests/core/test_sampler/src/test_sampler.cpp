@@ -46,8 +46,9 @@ class zeDeviceCreateSamplerTests
           std::tuple<ze_sampler_address_mode_t, ze_sampler_filter_mode_t,
                      ze_bool_t, bool>> {};
 
-TEST_P(zeDeviceCreateSamplerTests,
-       GivenSamplerDescriptorWhenCreatingSamplerThenNotNullSamplerIsReturned) {
+LZT_TEST_P(
+    zeDeviceCreateSamplerTests,
+    GivenSamplerDescriptorWhenCreatingSamplerThenNotNullSamplerIsReturned) {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
@@ -61,14 +62,13 @@ TEST_P(zeDeviceCreateSamplerTests,
   descriptor.isNormalized = std::get<2>(GetParam());
 
   ze_sampler_handle_t sampler = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeSamplerCreate(lzt::get_default_context(),
-                            lzt::zeDevice::get_instance()->get_device(),
-                            &descriptor, &sampler));
+  EXPECT_ZE_RESULT_SUCCESS(zeSamplerCreate(
+      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+      &descriptor, &sampler));
 
   EXPECT_NE(nullptr, sampler);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
+  EXPECT_ZE_RESULT_SUCCESS(zeSamplerDestroy(sampler));
 }
 
 INSTANTIATE_TEST_SUITE_P(SamplerCreationCombinations,
@@ -103,12 +103,12 @@ void RunGivenSamplerWhenPassingAsFunctionArgumentTest(bool is_immediate) {
   lzt::destroy_sampler(sampler);
 }
 
-TEST(zeSamplerTests,
-     GivenSamplerWhenPassingAsFunctionArgumentThenSuccessIsReturned) {
+LZT_TEST(zeSamplerTests,
+         GivenSamplerWhenPassingAsFunctionArgumentThenSuccessIsReturned) {
   RunGivenSamplerWhenPassingAsFunctionArgumentTest(false);
 }
 
-TEST(
+LZT_TEST(
     zeSamplerTests,
     GivenSamplerWhenPassingAsFunctionArgumentOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenSamplerWhenPassingAsFunctionArgumentTest(true);
@@ -141,7 +141,7 @@ static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image) {
 }
 
 class zeDeviceExecuteSamplerTests : public zeDeviceCreateSamplerTests {};
-TEST_P(
+LZT_TEST_P(
     zeDeviceExecuteSamplerTests,
     GivenSamplerWhenPassingAsFunctionArgumentThenOutputMatchesInKernelSampler) {
   if (!(sampler_support())) {
@@ -256,7 +256,7 @@ TEST_P(
   EXPECT_EQ(0, memcmp(output_inhost.raw_data(), output_inkernel.raw_data(),
                       output_inhost.size_in_bytes()));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeSamplerDestroy(sampler));
+  EXPECT_ZE_RESULT_SUCCESS(zeSamplerDestroy(sampler));
   lzt::destroy_module(module);
   lzt::destroy_ze_image(input_xeimage);
   lzt::destroy_ze_image(output_xeimage_host);

@@ -84,8 +84,8 @@ protected:
       instance.kernel_add_val = 0;
       dev_compute_properties.stype =
           ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDeviceGetComputeProperties(device, &dev_compute_properties));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeDeviceGetComputeProperties(device, &dev_compute_properties));
       instance.group_size_x = std::min(
           static_cast<uint32_t>(128), dev_compute_properties.maxTotalGroupSize);
       instance.group_count_x = 1;
@@ -93,15 +93,13 @@ protected:
       instance.dev_mem_properties.stype =
           ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
       uint32_t num_mem_properties = 1;
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDeviceGetMemoryProperties(device, &num_mem_properties,
-                                            &instance.dev_mem_properties));
+      EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetMemoryProperties(
+          device, &num_mem_properties, &instance.dev_mem_properties));
       instance.dev_mem_access_properties.stype =
           ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES;
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDeviceGetMemoryAccessProperties(
-                    device, &instance.dev_mem_access_properties));
+      EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetMemoryAccessProperties(
+          device, &instance.dev_mem_access_properties));
 
       dev_access_scan_.push_back(instance);
     }
@@ -119,17 +117,17 @@ protected:
     function_description.flags = 0;
     function_description.pKernelName = name.c_str();
     ze_kernel_handle_t function = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeKernelCreate(module, &function_description, &function));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeKernelCreate(module, &function_description, &function));
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeKernelSetGroupSize(function, group_size_x, 1, 1));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeKernelSetGroupSize(function, group_size_x, 1, 1));
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeKernelSetArgumentValue(function, 0, sizeof(arg1), &arg1));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeKernelSetArgumentValue(function, 0, sizeof(arg1), &arg1));
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeKernelSetArgumentValue(function, 1, sizeof(arg2), &arg2));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeKernelSetArgumentValue(function, 1, sizeof(arg2), &arg2));
 
     return function;
   }
@@ -155,42 +153,35 @@ protected:
 
     if (sync) {
       if (i == 0) {
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeCommandListAppendSignalEvent(dev_access_[i].cmd_list,
-                                                 event_sync_start));
+        EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendSignalEvent(
+            dev_access_[i].cmd_list, event_sync_start));
       } else {
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeCommandListAppendWaitOnEvents(dev_access_[i].cmd_list, 1,
-                                                  &event_sync_start));
+        EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendWaitOnEvents(
+            dev_access_[i].cmd_list, 1, &event_sync_start));
       }
     }
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendBarrier(dev_access_[i].cmd_list, nullptr, 0,
-                                         nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(dev_access_[i].cmd_list,
+                                                        nullptr, 0, nullptr));
 
     ze_group_count_t thread_group_dimensions;
     thread_group_dimensions.groupCountX = dev_access_[i].group_count_x;
     thread_group_dimensions.groupCountY = 1;
     thread_group_dimensions.groupCountZ = 1;
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendLaunchKernel(
-                  dev_access_[i].cmd_list, dev_access_[i].function,
-                  &thread_group_dimensions, nullptr, 0, nullptr));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListAppendBarrier(dev_access_[i].cmd_list, nullptr, 0,
-                                         nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
+        dev_access_[i].cmd_list, dev_access_[i].function,
+        &thread_group_dimensions, nullptr, 0, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(dev_access_[i].cmd_list,
+                                                        nullptr, 0, nullptr));
 
     if (sync) {
       if (i == 0) {
-        EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListAppendWaitOnEvents(
-                                         dev_access_[i].cmd_list, num - 1,
-                                         events_sync_end.data()));
+        EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendWaitOnEvents(
+            dev_access_[i].cmd_list, num - 1, events_sync_end.data()));
       } else {
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeCommandListAppendSignalEvent(dev_access_[i].cmd_list,
-                                                 events_sync_end[i - 1]));
+        EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendSignalEvent(
+            dev_access_[i].cmd_list, events_sync_end[i - 1]));
       }
     }
     if (i == 0) {
@@ -198,16 +189,15 @@ protected:
           dev_access_[i].cmd_list, dev_access_[i].device_mem_validation,
           dev_access_[i].device_mem_remote, num * sizeof(int), nullptr);
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListAppendBarrier(dev_access_[i].cmd_list, nullptr, 0,
-                                           nullptr));
+      EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(
+          dev_access_[i].cmd_list, nullptr, 0, nullptr));
 
       lzt::append_memory_copy(dev_access_[i].cmd_list, host_mem_validation,
                               dev_access_[i].device_mem_validation,
                               num * sizeof(int), nullptr);
     }
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(dev_access_[i].cmd_list));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListClose(dev_access_[i].cmd_list));
   }
 
   void run_test(uint32_t num, bool sync, enum MemAccessTestType type) {
@@ -258,11 +248,10 @@ protected:
                                       &dev_access_[0].device_mem_remote);
       EXPECT_NE(nullptr, dev_access_[0].device_mem_remote);
 
-      ASSERT_EQ(zeVirtualMemMap(lzt::get_default_context(),
-                                dev_access_[0].device_mem_remote, mem_size_,
-                                dev_access_[0].device_mem_remote_physical, 0,
-                                ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE),
-                ZE_RESULT_SUCCESS);
+      ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
+          lzt::get_default_context(), dev_access_[0].device_mem_remote,
+          mem_size_, dev_access_[0].device_mem_remote_physical, 0,
+          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
     } else {
       FAIL() << "Unexpected memory type";
     }
@@ -319,15 +308,14 @@ protected:
           0);
     }
     for (uint32_t i = 0; i < num; i++) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
-                                       dev_access_[i].cmd_q, 1,
-                                       &dev_access_[i].cmd_list, nullptr));
+      EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueExecuteCommandLists(
+          dev_access_[i].cmd_q, 1, &dev_access_[i].cmd_list, nullptr));
     }
 
     for (uint32_t i = 0; i < num; i++) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandQueueSynchronize(dev_access_[i].cmd_q, UINT64_MAX));
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(dev_access_[i].cmd_list));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeCommandQueueSynchronize(dev_access_[i].cmd_q, UINT64_MAX));
+      EXPECT_ZE_RESULT_SUCCESS(zeCommandListReset(dev_access_[i].cmd_list));
     }
 
     if (sync) {
@@ -347,10 +335,9 @@ protected:
 
     for (uint32_t i = 0; i < num; i++) {
       lzt::destroy_command_queue(dev_access_[i].cmd_q);
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListDestroy(dev_access_[i].cmd_list));
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(dev_access_[i].function));
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(dev_access_[i].module));
+      EXPECT_ZE_RESULT_SUCCESS(zeCommandListDestroy(dev_access_[i].cmd_list));
+      EXPECT_ZE_RESULT_SUCCESS(zeKernelDestroy(dev_access_[i].function));
+      EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(dev_access_[i].module));
     }
   }
 
@@ -387,7 +374,7 @@ protected:
 
 class zeP2PMemAccessTestsAtomicAccess : public zeP2PMemAccessTests {};
 
-TEST_P(
+LZT_TEST_P(
     zeP2PMemAccessTestsAtomicAccess,
     GivenMultipleDevicesWithP2PWhenAtomicAccessOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {
@@ -461,7 +448,7 @@ INSTANTIATE_TEST_CASE_P(
 
 class zeP2PMemAccessTestsConcurrentAccess : public zeP2PMemAccessTests {};
 
-TEST_P(
+LZT_TEST_P(
     zeP2PMemAccessTestsConcurrentAccess,
     GivenMultipleDevicesWithP2PWhenConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {
@@ -544,7 +531,7 @@ INSTANTIATE_TEST_CASE_P(
 class zeP2PMemAccessTestsAtomicAndConcurrentAccess
     : public zeP2PMemAccessTests {};
 
-TEST_P(
+LZT_TEST_P(
     zeP2PMemAccessTestsAtomicAndConcurrentAccess,
     GivenMultipleDevicesWithP2PWhenAtomicAndConcurrentAccessesOfPeerMemoryThenSuccessIsReturned) {
   if (skip) {

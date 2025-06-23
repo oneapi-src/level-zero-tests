@@ -20,8 +20,8 @@ namespace level_zero_tests {
 
 uint32_t get_freq_handle_count(zes_device_handle_t device) {
   uint32_t p_count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesDeviceEnumFrequencyDomains(device, &p_count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesDeviceEnumFrequencyDomains(device, &p_count, nullptr));
   EXPECT_GE(p_count, 0);
   return p_count;
 }
@@ -31,14 +31,14 @@ std::vector<zes_freq_handle_t> get_freq_handles(zes_device_handle_t device,
   if (p_count == 0)
     p_count = get_freq_handle_count(device);
   std::vector<zes_freq_handle_t> pFreqHandles(p_count);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDeviceEnumFrequencyDomains(
-                                   device, &p_count, pFreqHandles.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesDeviceEnumFrequencyDomains(device, &p_count, pFreqHandles.data()));
   return pFreqHandles;
 }
 
 zes_freq_state_t get_freq_state(zes_freq_handle_t pFreqHandle) {
   zes_freq_state_t pState = {ZES_STRUCTURE_TYPE_FREQ_STATE, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesFrequencyGetState(pFreqHandle, &pState));
+  EXPECT_ZE_RESULT_SUCCESS(zesFrequencyGetState(pFreqHandle, &pState));
   return pState;
 }
 
@@ -55,12 +55,12 @@ get_freq_state(std::vector<zes_freq_handle_t> &freq_handles) {
 
 zes_freq_range_t get_freq_range(zes_freq_handle_t pFreqHandle) {
   zes_freq_range_t pLimits = {};
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesFrequencyGetRange(pFreqHandle, &pLimits));
+  EXPECT_ZE_RESULT_SUCCESS(zesFrequencyGetRange(pFreqHandle, &pLimits));
   return pLimits;
 }
 
 void set_freq_range(zes_freq_handle_t pFreqHandle, zes_freq_range_t &pLimits) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesFrequencySetRange(pFreqHandle, &pLimits));
+  EXPECT_ZE_RESULT_SUCCESS(zesFrequencySetRange(pFreqHandle, &pLimits));
 }
 
 void set_freq_range(zes_freq_handle_t pFreqHandle, zes_freq_range_t &pLimits,
@@ -97,8 +97,8 @@ zes_freq_range_t get_and_validate_freq_range(zes_freq_handle_t pFreqHandle) {
 
 uint32_t get_available_clock_count(zes_freq_handle_t pFreqHandle) {
   uint32_t count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesFrequencyGetAvailableClocks(pFreqHandle, &count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesFrequencyGetAvailableClocks(pFreqHandle, &count, nullptr));
   EXPECT_GT(count, 0);
   return count;
 }
@@ -108,8 +108,8 @@ std::vector<double> get_available_clocks(zes_freq_handle_t pFreqHandle,
   if (count == 0)
     count = get_available_clock_count(pFreqHandle);
   std::vector<double> frequency(count);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesFrequencyGetAvailableClocks(
-                                   pFreqHandle, &count, frequency.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesFrequencyGetAvailableClocks(pFreqHandle, &count, frequency.data()));
   return frequency;
 }
 
@@ -181,8 +181,8 @@ bool check_for_throttling(zes_freq_handle_t pFreqHandle) {
 }
 zes_freq_throttle_time_t get_throttle_time(zes_freq_handle_t pFreqHandle) {
   zes_freq_throttle_time_t pThrottletime = {};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zesFrequencyGetThrottleTime(pFreqHandle, &pThrottletime));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zesFrequencyGetThrottleTime(pFreqHandle, &pThrottletime));
   return pThrottletime;
 }
 

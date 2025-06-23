@@ -16,14 +16,14 @@
 
 namespace {
 
-TEST(SysmanInitTests, GivenZesInitWhenZeInitIsCalledThenSuccessIsReturned) {
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
+LZT_TEST(SysmanInitTests, GivenZesInitWhenZeInitIsCalledThenSuccessIsReturned) {
+  ASSERT_ZE_RESULT_SUCCESS(zesInit(0));
   uint32_t zes_driver_count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeInit(0));
+  EXPECT_ZE_RESULT_SUCCESS(zeInit(0));
   uint32_t ze_driver_count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&zes_driver_count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zesDriverGet(&zes_driver_count, nullptr));
   EXPECT_GT(zes_driver_count, 0);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGet(&ze_driver_count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zeDriverGet(&ze_driver_count, nullptr));
   EXPECT_GT(ze_driver_count, 0);
 }
 

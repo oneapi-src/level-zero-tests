@@ -53,18 +53,18 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
   }
 }
 
-TEST(MultiProcessTests,
-     GivenMultipleProcessesUsingMultipleDevicesKernelsExecuteCorrectly) {
+LZT_TEST(MultiProcessTests,
+         GivenMultipleProcessesUsingMultipleDevicesKernelsExecuteCorrectly) {
   RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(0, 0);
 }
 
-TEST(
+LZT_TEST(
     MultiProcessTests,
     GivenMultipleProcessesUsingMultipleDevicesKernelsExecuteOnImmediateCmdListCorrectly) {
   RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(1, 0);
 }
 
-TEST(
+LZT_TEST(
     MultiProcessTests,
     GivenMultipleProcessesUsingMultipleSubDevicesThenKernelIsStressedAndExecuteSuccessfully) {
   RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(0, 1);

@@ -17,6 +17,7 @@
 #include <level_zero/zes_api.h>
 
 #include "utils/utils_string.hpp"
+#include "utils/utils_gtest_helper.hpp"
 
 namespace level_zero_tests {
 

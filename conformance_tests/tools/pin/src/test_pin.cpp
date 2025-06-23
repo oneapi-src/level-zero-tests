@@ -19,7 +19,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(
+LZT_TEST(
     PINTests,
     GivenModuleCreatedWithProfileFlagsWhenGettingKernelProfileInfoThenValidPropertiesAreReturned) {
   std::vector<uint32_t> profileFlags = {
@@ -44,8 +44,8 @@ TEST(
 
     zet_profile_properties_t kernel_profile_properties = {
         ZET_STRUCTURE_TYPE_PROFILE_PROPERTIES, nullptr};
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zetKernelGetProfileInfo(kernel, &kernel_profile_properties));
+    ASSERT_ZE_RESULT_SUCCESS(
+        zetKernelGetProfileInfo(kernel, &kernel_profile_properties));
 
     EXPECT_EQ(kernel_profile_properties.flags, flag);
 
@@ -55,7 +55,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     PINTests,
     GivenModuleCreatedWithInvalidProfileFlagsWhenGettingKernelProfileInfoThenDefaultPropertiesAreReturned) {
   std::vector<std::string> invalidBuildStrings = {"", "-zet-profile-flags",
@@ -74,8 +74,8 @@ TEST(
 
     zet_profile_properties_t kernel_profile_properties = {
         ZET_STRUCTURE_TYPE_PROFILE_PROPERTIES, nullptr};
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zetKernelGetProfileInfo(kernel, &kernel_profile_properties));
+    ASSERT_ZE_RESULT_SUCCESS(
+        zetKernelGetProfileInfo(kernel, &kernel_profile_properties));
 
     EXPECT_EQ(kernel_profile_properties.flags, 0);
 

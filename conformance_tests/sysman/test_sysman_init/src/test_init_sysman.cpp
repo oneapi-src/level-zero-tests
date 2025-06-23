@@ -16,11 +16,11 @@
 
 namespace {
 
-TEST(SysmanInitTests,
-     GivenZesInitWhenZesDriverGetIsCalledThenSuccessIsReturned) {
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zesInit(0));
+LZT_TEST(SysmanInitTests,
+         GivenZesInitWhenZesDriverGetIsCalledThenSuccessIsReturned) {
+  ASSERT_ZE_RESULT_SUCCESS(zesInit(0));
   uint32_t count = 0;
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zesDriverGet(&count, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zesDriverGet(&count, nullptr));
   ASSERT_GT(count, 0);
 }
 

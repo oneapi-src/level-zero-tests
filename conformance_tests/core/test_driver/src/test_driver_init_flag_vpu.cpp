@@ -16,8 +16,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(zeInitTests,
-     GivenVpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturned) {
+LZT_TEST(zeInitTests,
+         GivenVpuOnlyFlagWhenInitializingDriverThenSuccessOrUninitIsReturned) {
   ze_result_t result = zeInit(ZE_INIT_FLAG_VPU_ONLY);
   EXPECT_TRUE(result == ZE_RESULT_SUCCESS ||
               result == ZE_RESULT_ERROR_UNINITIALIZED);

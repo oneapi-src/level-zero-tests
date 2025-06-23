@@ -17,7 +17,7 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 
 namespace {
-TEST(
+LZT_TEST(
     CommandListCreateNegativeTests,
     GivenInvalidDeviceHandleWhileCreatingCommandListThenInvalidNullHandleIsReturned) {
   ze_command_list_desc_t descriptor = {};
@@ -30,7 +30,7 @@ TEST(
             zeCommandListCreate(lzt::get_default_context(), nullptr,
                                 &descriptor, &cmdlist));
 }
-TEST(
+LZT_TEST(
     CommandListCreateNegativeTests,
     GivenInvalidCommandQueueDescriptiorWhileCreatingCommandListThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -39,7 +39,7 @@ TEST(
             zeCommandListCreate(lzt::get_default_context(), device, nullptr,
                                 &cmdlist));
 }
-TEST(
+LZT_TEST(
     CommandListCreateNegativeTests,
     GivenInvalidOutPointerToTheCommandListWhileCreatingCommandListThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -52,7 +52,7 @@ TEST(
             zeCommandListCreate(lzt::get_default_context(), device, &descriptor,
                                 nullptr));
 }
-TEST(
+LZT_TEST(
     CommandListCreateImmediateNegativeTests,
     GivenInvalidDeviceHandleWhileCreatingCommandListImmediateThenInvalidNullHandleIsReturned) {
   ze_command_queue_desc_t descriptor = {};
@@ -67,7 +67,7 @@ TEST(
             zeCommandListCreateImmediate(lzt::get_default_context(), nullptr,
                                          &descriptor, &cmdlist_immediate));
 }
-TEST(
+LZT_TEST(
     CommandListCreateImmediateNegativeTests,
     GivenInvalidCommandQueueDescriptionWhileCreatingCommandListImmediateThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -76,7 +76,7 @@ TEST(
             zeCommandListCreateImmediate(lzt::get_default_context(), device,
                                          nullptr, &cmdlist_immediate));
 }
-TEST(
+LZT_TEST(
     CommandListCreateImmediateNegativeTests,
     GivenInvalidOutPointerToTheCommandListWhileCreatingCommandListImmediateThenInvalidNullPointerIsReturned) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();

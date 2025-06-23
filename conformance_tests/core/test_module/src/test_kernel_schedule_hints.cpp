@@ -88,14 +88,14 @@ void RunGivenKernelScheduleHintWhenRunningKernelTest(bool is_immediate) {
   lzt::destroy_context(context);
 }
 
-TEST(zeKernelScheduleHintsTests,
-     GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect) {
+LZT_TEST(zeKernelScheduleHintsTests,
+         GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect) {
   if (!check_ext_version())
     GTEST_SKIP();
   RunGivenKernelScheduleHintWhenRunningKernelTest(false);
 }
 
-TEST(
+LZT_TEST(
     zeKernelScheduleHintsTests,
     GivenKernelScheduleHintWhenRunningKernelOnImmediateCmdListThenResultIsCorrect) {
   if (!check_ext_version())

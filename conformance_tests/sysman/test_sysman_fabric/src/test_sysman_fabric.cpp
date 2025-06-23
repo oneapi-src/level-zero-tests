@@ -38,7 +38,7 @@ void validate_fabric_port_speed(zes_fabric_port_speed_t speed) {
   EXPECT_LT(speed.width, INT32_MAX);
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -51,7 +51,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFabricPortHandlesAreReturned) {
   for (auto device : devices) {
@@ -69,7 +69,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -86,7 +86,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFabricPortHandlesReturned) {
   for (auto device : devices) {
@@ -112,7 +112,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenRetrievingFabricPortPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -145,7 +145,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenRetrievingFabricPortPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -191,8 +191,9 @@ TEST_F(
   }
 }
 
-TEST_F(FABRICPORT_TEST,
-       GivenValidFabricPortHandleWhenSettingPortConfigThenGetSamePortConfig) {
+LZT_TEST_F(
+    FABRICPORT_TEST,
+    GivenValidFabricPortHandleWhenSettingPortConfigThenGetSamePortConfig) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
@@ -217,7 +218,7 @@ TEST_F(FABRICPORT_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenGettingPortStateThenValidStatesAreReturned) {
   for (auto device : devices) {
@@ -268,7 +269,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenGettingPortThroughputThenValidThroughputAreReturned) {
   for (auto device : devices) {
@@ -289,8 +290,8 @@ TEST_F(
   }
 }
 
-TEST_F(FABRICPORT_TEST,
-       GivenValidFabricPortHandleWhenGettingPortLinkThenSuccessIsReturned) {
+LZT_TEST_F(FABRICPORT_TEST,
+           GivenValidFabricPortHandleWhenGettingPortLinkThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto fabric_port_handles = lzt::get_fabric_port_handles(device, count);
@@ -314,7 +315,7 @@ TEST_F(FABRICPORT_TEST,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FABRICPORT_TEST,
     GivenValidFabricPortHandleWhenGettingPortLinkTwiceThenSameValueIsReturnedTwice) {
   for (auto device : devices) {

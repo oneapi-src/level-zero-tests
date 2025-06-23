@@ -96,7 +96,7 @@ protected:
   zes_overclock_handle_t invalid_zes_overclock = (zes_overclock_handle_t)0xaaaa;
 };
 
-TEST_F(
+LZT_TEST_F(
     HandleTests,
     GivenUninitializedDriverHandleWhenCreatingContextThenHandleTrackingReturnsInvalidNullHandle) {
 
@@ -108,7 +108,7 @@ TEST_F(
             zeContextCreate(driver, &desc, &context));
 }
 
-TEST_F(
+LZT_TEST_F(
     HandleTests,
     GivenCompleteApplicationWhenHandleTrackingEnabledThenHandleTrackingCatchesCoreErrors) {
 
@@ -121,9 +121,9 @@ TEST_F(
   uint32_t count = 0;
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeDeviceGet(invalid_driver, &count, nullptr));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDeviceGet(driver, &count, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeDeviceGet(driver, &count, nullptr));
   std::vector<ze_device_handle_t> devices(count);
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeDeviceGet(driver, &count, devices.data()));
+  ASSERT_ZE_RESULT_SUCCESS(zeDeviceGet(driver, &count, devices.data()));
 
   auto device = devices[0];
 
@@ -139,9 +139,8 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandQueueCreate(context, invalid_device, &command_queue_desc,
                                  &command_queue));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueCreate(context, device, &command_queue_desc,
-                                 &command_queue));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueCreate(
+      context, device, &command_queue_desc, &command_queue));
 
   ze_command_list_desc_t command_list_desc = {};
   command_list_desc.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
@@ -155,8 +154,8 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandListCreate(context, invalid_device, &command_list_desc,
                                 &command_list));
-  ASSERT_EQ(
-      ZE_RESULT_SUCCESS,
+  ASSERT_ZE_RESULT_SUCCESS(
+
       zeCommandListCreate(context, device, &command_list_desc, &command_list));
 
   auto module_name = "handle_tracking_add.spv";
@@ -175,8 +174,8 @@ TEST_F(
   ASSERT_EQ(
       ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
       zeModuleCreate(context, invalid_device, &module_desc, &module, nullptr));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeModuleCreate(context, device, &module_desc, &module, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeModuleCreate(context, device, &module_desc, &module, nullptr));
 
   auto kernel_name = "add_constant_2";
   ze_kernel_desc_t kernel_desc = {};
@@ -186,15 +185,14 @@ TEST_F(
   ze_kernel_handle_t kernel;
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeKernelCreate(invalid_module, &kernel_desc, &kernel));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelCreate(module, &kernel_desc, &kernel));
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelCreate(module, &kernel_desc, &kernel));
 
   auto size = 8192;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeKernelGetProperties(invalid_kernel, &kernel_properties));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelGetProperties(kernel, &kernel_properties));
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
 
   ze_device_mem_alloc_desc_t device_desc = {};
   device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
@@ -208,9 +206,8 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeMemAllocShared(context, &device_desc, &host_desc, size, 1,
                              invalid_device, &buffer_a));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocShared(context, &device_desc, &host_desc, size, 1, device,
-                             &buffer_a));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemAllocShared(context, &device_desc, &host_desc,
+                                            size, 1, device, &buffer_a));
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeMemAllocDevice(invalid_context, &device_desc, size, 1, device,
@@ -218,8 +215,8 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeMemAllocDevice(context, &device_desc, size, 1, invalid_device,
                              &buffer_b));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemAllocDevice(context, &device_desc, size, 1,
-                                                device, &buffer_b));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeMemAllocDevice(context, &device_desc, size, 1, device, &buffer_b));
 
   std::memset(buffer_a, 0, size);
   for (size_t i = 0; i < size; i++) {
@@ -230,14 +227,14 @@ TEST_F(
   ASSERT_EQ(
       ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
       zeKernelSetArgumentValue(invalid_kernel, 0, sizeof(buffer_b), &buffer_b));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetArgumentValue(kernel, 0, sizeof(buffer_b), &buffer_b));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeKernelSetArgumentValue(kernel, 0, sizeof(buffer_b), &buffer_b));
 
   ASSERT_EQ(
       ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
       zeKernelSetArgumentValue(invalid_kernel, 1, sizeof(addval), &addval));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSetArgumentValue(kernel, 1, sizeof(addval), &addval));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeKernelSetArgumentValue(kernel, 1, sizeof(addval), &addval));
 
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
@@ -245,15 +242,13 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeKernelSuggestGroupSize(invalid_kernel, size, 1, 1, &group_size_x,
                                      &group_size_y, &group_size_z));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestGroupSize(kernel, size, 1, 1, &group_size_x,
-                                     &group_size_y, &group_size_z));
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelSuggestGroupSize(
+      kernel, size, 1, 1, &group_size_x, &group_size_y, &group_size_z));
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeKernelSetGroupSize(invalid_kernel, group_size_x, group_size_y,
                                  group_size_z));
-  ASSERT_EQ(
-      ZE_RESULT_SUCCESS,
+  ASSERT_ZE_RESULT_SUCCESS(
       zeKernelSetGroupSize(kernel, group_size_x, group_size_y, group_size_z));
 
   ze_group_count_t group_count = {};
@@ -272,9 +267,8 @@ TEST_F(
                                           size, nullptr, 1, &invalid_event));
   // TODO: add test for zeCommandListAppendMemoryCopy with list of multiple wait
   // events containing an invalid event
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendMemoryCopy(command_list, buffer_b, buffer_a,
-                                          size, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendMemoryCopy(
+      command_list, buffer_b, buffer_a, size, nullptr, 0, nullptr));
 
   ASSERT_EQ(
       ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
@@ -285,8 +279,8 @@ TEST_F(
   ASSERT_EQ(
       ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
       zeCommandListAppendBarrier(command_list, nullptr, 1, &invalid_event));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandListAppendLaunchKernel(invalid_command_list, kernel,
@@ -300,15 +294,13 @@ TEST_F(
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandListAppendLaunchKernel(command_list, kernel, &group_count,
                                             nullptr, 1, &invalid_event));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendLaunchKernel(command_list, kernel, &group_count,
-                                            nullptr, 0, nullptr));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
+      command_list, kernel, &group_count, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendMemoryCopy(command_list, buffer_a, buffer_b,
-                                          size, nullptr, 0, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendMemoryCopy(
+      command_list, buffer_a, buffer_b, size, nullptr, 0, nullptr));
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandQueueExecuteCommandLists(invalid_command_queue, 1,
@@ -322,15 +314,15 @@ TEST_F(
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandListClose(invalid_command_list));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(command_list));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(command_list));
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueExecuteCommandLists(
-                                   command_queue, 1, &command_list, nullptr));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueExecuteCommandLists(
+      command_queue, 1, &command_list, nullptr));
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandQueueSynchronize(invalid_command_queue, UINT64_MAX));
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueSynchronize(command_queue, UINT64_MAX));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeCommandQueueSynchronize(command_queue, UINT64_MAX));
 
   // validation
   LOG_DEBUG << "Validating results";
@@ -348,15 +340,15 @@ TEST_F(
               "destroyed objects";
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeMemFree(invalid_context, buffer_a));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, buffer_a));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFree(context, buffer_a));
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeMemFree(invalid_context, buffer_b));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeMemFree(context, buffer_b));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemFree(context, buffer_b));
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeKernelDestroy(invalid_kernel));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeKernelDestroy(kernel));
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelDestroy(kernel));
 
   // attempt to use kernel after it has been destroyed
   ASSERT_EQ(
@@ -365,7 +357,7 @@ TEST_F(
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeModuleDestroy(invalid_module));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module));
+  ASSERT_ZE_RESULT_SUCCESS(zeModuleDestroy(module));
 
   // attempt to use module after it has been destroyed
   uint32_t kernel_names_count = 0;
@@ -374,7 +366,7 @@ TEST_F(
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandListDestroy(invalid_command_list));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandListDestroy(command_list));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListDestroy(command_list));
 
   // attempt to use command list after it has been destroyed
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
@@ -382,7 +374,7 @@ TEST_F(
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandQueueDestroy(invalid_command_queue));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(command_queue));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandQueueDestroy(command_queue));
 
   // attempt to use command queue after it has been destroyed
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,

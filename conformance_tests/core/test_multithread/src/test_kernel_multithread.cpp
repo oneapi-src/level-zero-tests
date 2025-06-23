@@ -208,13 +208,13 @@ void thread_module_create_destroy() {
     auto device = lzt::get_default_device(driver);
     ze_module_handle_t module_handle =
         lzt::create_module(device, "test_fill_device_memory_multi_thread.spv");
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+    EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module_handle));
   }
 }
 
 class zeKernelSubmissionMultithreadTest : public ::testing::Test {};
 
-TEST_F(
+LZT_TEST_F(
     zeKernelSubmissionMultithreadTest,
     GivenMultipleThreadsWhenPerformingModuleCreateDestroyThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -229,7 +229,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zeKernelSubmissionMultithreadTest,
     GivenMultipleThreadsWhenPerformingKernelSubmissionsThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -249,10 +249,10 @@ TEST_F(
     threads[i]->join();
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+  EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module_handle));
 }
 
-TEST_F(
+LZT_TEST_F(
     zeKernelSubmissionMultithreadTest,
     GivenMultipleThreadsWhenPerformingKernelSubmissionsOnImmediateCmdListThenSuccessIsReturned) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -272,7 +272,7 @@ TEST_F(
     threads[i]->join();
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+  EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module_handle));
 }
 
 } // namespace

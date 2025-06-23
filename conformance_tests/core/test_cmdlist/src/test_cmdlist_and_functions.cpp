@@ -206,8 +206,9 @@ INSTANTIATE_TEST_CASE_P(zeCheckMiscFunctionsTestsInstantiate,
                                            immediate_types),
                         CombinationsTestNameSuffix());
 
-TEST_P(zeCheckMiscFunctionsTests,
-       GivenFunctionInKernelWhenLaunchingKernelsThenFunctionWorksCorrectly) {
+LZT_TEST_P(
+    zeCheckMiscFunctionsTests,
+    GivenFunctionInKernelWhenLaunchingKernelsThenFunctionWorksCorrectly) {
 
   const TestTypes test_type = std::get<0>(GetParam());
   bool is_immediate = std::get<1>(GetParam());

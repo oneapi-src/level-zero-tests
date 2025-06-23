@@ -17,14 +17,13 @@ namespace level_zero_tests {
 std::vector<uint32_t>
 get_compute_queue_group_ordinals(ze_device_handle_t device) {
   uint32_t num_queue_groups = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetCommandQueueGroupProperties(
-                                   device, &num_queue_groups, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetCommandQueueGroupProperties(
+      device, &num_queue_groups, nullptr));
   EXPECT_GT(num_queue_groups, 0) << "No queue groups found!";
   std::vector<ze_command_queue_group_properties_t> queue_properties(
       num_queue_groups);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetCommandQueueGroupProperties(device, &num_queue_groups,
-                                                   queue_properties.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetCommandQueueGroupProperties(
+      device, &num_queue_groups, queue_properties.data()));
   std::vector<uint32_t> compute_queue_group_ordinals = {};
   for (uint32_t i = 0; i < num_queue_groups; i++) {
     if (queue_properties[i].flags &
@@ -92,8 +91,8 @@ ze_command_queue_handle_t create_command_queue(
   ze_command_queue_handle_t command_queue = nullptr;
   auto context_initial = context;
   auto device_initial = device;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueCreate(context, device, &descriptor, &command_queue));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandQueueCreate(context, device, &descriptor, &command_queue));
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
   EXPECT_NE(nullptr, command_queue);
@@ -119,9 +118,8 @@ void execute_command_lists(ze_command_queue_handle_t cq,
   std::vector<ze_command_list_handle_t> command_lists_initial(numCommandLists);
   std::memcpy(command_lists_initial.data(), phCommandLists,
               sizeof(ze_command_list_handle_t) * numCommandLists);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueExecuteCommandLists(cq, numCommandLists,
-                                              phCommandLists, hFence));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueExecuteCommandLists(
+      cq, numCommandLists, phCommandLists, hFence));
   EXPECT_EQ(cq, command_queue_initial);
   EXPECT_EQ(hFence, fence_initial);
   for (int i = 0; i < numCommandLists; i++) {
@@ -131,12 +129,12 @@ void execute_command_lists(ze_command_queue_handle_t cq,
 
 void synchronize(ze_command_queue_handle_t cq, uint64_t timeout) {
   auto command_queue_initial = cq;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cq, timeout));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueSynchronize(cq, timeout));
   EXPECT_EQ(cq, command_queue_initial);
 }
 
 void destroy_command_queue(ze_command_queue_handle_t cq) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueDestroy(cq));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueDestroy(cq));
 }
 
 }; // namespace level_zero_tests

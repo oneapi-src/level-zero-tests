@@ -12,8 +12,8 @@
 
 namespace lzt = level_zero_tests;
 
-TEST(zeKernelIndirectAccessTests,
-     GivenKernelGetIndirectAccessFlagsCorrectFlagsAreReturned) {
+LZT_TEST(zeKernelIndirectAccessTests,
+         GivenKernelGetIndirectAccessFlagsCorrectFlagsAreReturned) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);

@@ -21,7 +21,7 @@ namespace {
 
 class zeRunDriverIn57bAddressSpace : public ::testing::Test {};
 
-TEST_F(zeRunDriverIn57bAddressSpace, CheckIfKernelCanBeExecuted) {
+LZT_TEST_F(zeRunDriverIn57bAddressSpace, CheckIfKernelCanBeExecuted) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);

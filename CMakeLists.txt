@@ -1,11 +1,12 @@
 # Copyright (C) 2019-2023 Intel Corporation
 # SPDX-License-Identifier: MIT
 
-cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif()
 project(level-zero-tests)
+set(CMAKE_CXX_STANDARD 17)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -16,6 +17,7 @@ include(vs2019_missing_redist_workaround)
 find_package(PNG REQUIRED)
 find_package(Git)
 
+include(gtest_setup)
 if(NOT TARGET GTest::GTest AND NOT TARGET GMock::GMock AND NOT BUILD_ZE_PERF_TESTS_ONLY)
     if(NOT DEFINED GTEST_ROOT)
         set(GTEST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest")
@@ -34,16 +36,11 @@ if(NOT TARGET GTest::GTest AND NOT TARGET GMock::GMock AND NOT BUILD_ZE_PERF_TES
           endif()
         endif()
     endif()
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     add_subdirectory("${GTEST_ROOT}" "${GTEST_ROOT}/build" EXCLUDE_FROM_ALL)
     add_library(GTest::GTest ALIAS gtest)
     add_library(GMock::GMock ALIAS gmock)
 endif()
 enable_testing()
-
-add_compile_definitions(GTEST_HAS_EXCEPTIONS=0)
-
-set(CMAKE_CXX_STANDARD 14)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
