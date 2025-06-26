@@ -2914,14 +2914,22 @@ protected:
   std::vector<ze_device_handle_t> devices;
   ze_device_handle_t device;
 
-  void SetUp() { devices = lzt::get_metric_test_device_list(); }
+  void SetUp() { 
+    if (!is_ext_supported()) {
+      LOG_INFO << "Skipping test as ZET_INTEL_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME "
+                << "extension is not supported";
+      GTEST_SKIP();
+    }
+    devices = lzt::get_metric_test_device_list(); 
+  }
+  bool is_ext_supported() {
+    return lzt::check_if_extension_supported(lzt::get_default_driver(),"ZET_INTEL_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME");
+  }
 };
 
 LZT_TEST_F(
     zetMetricsEnableDisableTest,
     GivenMetricsStaticallyEnabledWhenMetricsRuntimeAlsoEnabledThenMetricGroupGetAndGetPropertiesSucceed) {
-
-  // ZET_ENABLE_METRICS=1
 
   for (auto device : devices) {
     lzt::enable_metrics_runtime(device);
@@ -2947,8 +2955,6 @@ LZT_TEST_F(
 LZT_TEST_F(
     zetMetricsEnableDisableTest,
     GivenMetricsStaticallyEnabledWhenMetricsRuntimeDisabledThenMetricGroupGetAndGetPropertiesSucceed) {
-
-  // ZET_ENABLE_METRICS=1
 
   for (auto device : devices) {
     lzt::disable_metrics_runtime(device);
