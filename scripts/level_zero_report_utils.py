@@ -395,6 +395,8 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "SysMan Perf Profiles"
     elif test_binary == "test_metric":
         test_feature = "Metrics"
+    elif test_binary == "test_metric_enable":
+        test_feature = "Metrics"
     elif (re.search('debug', test_binary, re.IGNORECASE)):
         test_feature = "Program Debug"
     elif test_binary == "test_sysman_ecc":
