@@ -2925,8 +2925,7 @@ protected:
   }
   bool is_ext_supported() {
     return lzt::check_if_extension_supported(
-        lzt::get_default_driver(),
-        ZET_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME);
+        lzt::get_default_driver(), ZET_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME);
   }
 };
 
