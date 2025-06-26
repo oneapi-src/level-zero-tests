@@ -3162,7 +3162,7 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     zetMetricsEnableDisableStreamer,
-    GivenValidMetricGroupWhenWhenMetricsRuntimeIsEnabledAndMetricGroupIsAvtivatedThenStreamerFails) {
+    GivenValidMetricGroupWhenWhenMetricsRuntimeIsEnabledAndMetricGroupIsAvtivatedThenMetricDisableFails) {
 
   constexpr uint32_t maxReadAttempts = 20;
   constexpr uint32_t numberOfReportsReq = 100;
@@ -3200,6 +3200,7 @@ LZT_TEST_F(
     for (auto groupInfo : metricGroupInfo) {
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
+      ASSERT_NE(zetDeviceDisableMetricsExp(device), ZE_RESULT_SUCCESS);
 
       void *a_buffer, *b_buffer, *c_buffer;
       ze_group_count_t tg;
@@ -3218,6 +3219,7 @@ LZT_TEST_F(
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, nullptr, notifyEveryNReports,
               samplingPeriod);
+      ASSERT_NE(zetDeviceDisableMetricsExp(device), ZE_RESULT_SUCCESS);
 
       // Sleep for timeBeforeReadInNanoSec to ensure required reports are
       // generated
@@ -3229,6 +3231,7 @@ LZT_TEST_F(
       std::vector<uint8_t> rawData;
       rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle,
                                                         notifyEveryNReports);
+      ASSERT_NE(zetDeviceDisableMetricsExp(device), ZE_RESULT_SUCCESS);
       EXPECT_GT(rawDataSize, 0);
       rawData.resize(rawDataSize);
       for (uint32_t count = 0; count < maxReadAttempts; count++) {
@@ -3259,7 +3262,7 @@ LZT_TEST_F(
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
     ze_result_t result = zetDeviceDisableMetricsExp(device);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS);
+    ASSERT_NE(result, ZE_RESULT_SUCCESS);
   }
 }
 
