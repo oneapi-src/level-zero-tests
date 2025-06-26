@@ -2909,10 +2909,16 @@ LZT_TEST_F(
   run_multi_device_streamer_test(sub_devices);
 }
 
-using zetMetricsEnableDisable = zetMetricStreamerTest;
+class zetMetricsEnableDisableTest : public ::testing::Test {
+protected:
+  std::vector<ze_device_handle_t> devices;
+  ze_device_handle_t device;
+
+  void SetUp() { devices = lzt::get_metric_test_device_list(); }
+};
 
 LZT_TEST_F(
-    zetMetricsEnableDisable,
+    zetMetricsEnableDisableTest,
     GivenMetricsStaticallyEnabledWhenMetricsRuntimeAlsoEnabledThenMetricGroupGetAndGetPropertiesSucceed) {
 
   // ZET_ENABLE_METRICS=1
@@ -2939,7 +2945,7 @@ LZT_TEST_F(
 }
 
 LZT_TEST_F(
-    zetMetricsEnableDisable,
+    zetMetricsEnableDisableTest,
     GivenMetricsStaticallyEnabledWhenMetricsRuntimeDisabledThenMetricGroupGetAndGetPropertiesSucceed) {
 
   // ZET_ENABLE_METRICS=1
@@ -2965,18 +2971,20 @@ LZT_TEST_F(
   }
 }
 
-using zetMetricsEnableDisableStreamer = zetMetricStreamerTest;
-
-LZT_TEST_F(
-    zetMetricsEnableDisableStreamer,
-    GivenMetricsStaticallyEnabledWhenMetricsRuntimeAlsoEnabledThenMetricStreamerSucceeds) {
-  // ZET_ENABLE_METRICS=1
-
-  constexpr uint32_t maxReadAttempts = 20;
-  constexpr uint32_t numberOfReportsReq = 100;
-  constexpr uint32_t timeBeforeReadInNanoSec = 500000000;
+class zetMetricEnableDisableStreamerTest : public zetMetricsEnableDisableTest {
+protected:
+  std::vector<ze_device_handle_t> devices;
+  static constexpr uint32_t maxReadAttempts = 20;
+  static constexpr uint32_t numberOfReportsReq = 100;
+  static constexpr uint32_t timeBeforeReadInNanoSec = 500000000;
   uint32_t samplingPeriod = timeBeforeReadInNanoSec / numberOfReportsReq;
   uint32_t notifyEveryNReports = 9000;
+  ze_device_handle_t device;
+};
+
+LZT_TEST_F(
+    zetMetricEnableDisableStreamerTest,
+    GivenMetricsStaticallyEnabledWhenMetricsRuntimeAlsoEnabledThenMetricStreamerSucceeds) {
 
   for (auto device : devices) {
     lzt::enable_metrics_runtime(device);
@@ -3067,15 +3075,8 @@ LZT_TEST_F(
 }
 
 LZT_TEST_F(
-    zetMetricsEnableDisableStreamer,
+    zetMetricEnableDisableStreamerTest,
     GivenMetricsStaticallyEnabledWhenMetricGroupisActivatedThenMetricsRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
-  // ZET_ENABLE_METRICS=1
-
-  constexpr uint32_t maxReadAttempts = 20;
-  constexpr uint32_t numberOfReportsReq = 100;
-  constexpr uint32_t timeBeforeReadInNanoSec = 500000000;
-  uint32_t samplingPeriod = timeBeforeReadInNanoSec / numberOfReportsReq;
-  uint32_t notifyEveryNReports = 9000;
 
   for (auto device : devices) {
 
@@ -3181,10 +3182,10 @@ LZT_TEST_F(
   }
 }
 
-using zetMetricsEnableDisableQuery = zetMetricQueryLoadTest;
+using zetMetricsEnableDisableQueryTest = zetMetricsEnableDisableTest;
 
 LZT_TEST_F(
-    zetMetricsEnableDisableQuery,
+    zetMetricsEnableDisableQueryTest,
     GivenMetricsStaticallyEnabledWhenMetricsRuntimeAlsoEnabledThenMetricQuerySucceeds) {
 
   for (auto device : devices) {
@@ -3271,7 +3272,7 @@ LZT_TEST_F(
 }
 
 LZT_TEST_F(
-    zetMetricsEnableDisableQuery,
+    zetMetricsEnableDisableQueryTest,
     GivenMetricsStaticallyEnabledWhenMetricsRuntimeAlsoEnabledThenRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
 
   for (auto device : devices) {
