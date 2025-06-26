@@ -1709,6 +1709,16 @@ void metric_tracer_read_data(
       metric_tracer_handle, &metric_size, ptr_metric_data->data()));
 }
 
+void enable_metrics_runtime(ze_device_handle_t device) {
+  EXPECT_NE(nullptr, device);
+  EXPECT_ZE_RESULT_SUCCESS(zetDeviceEnableMetricsExp(device));
+}
+
+void disable_metrics_runtime(ze_device_handle_t device) {
+  EXPECT_NE(nullptr, device);
+  EXPECT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
+}
+
 void metric_decoder_create(
     zet_metric_tracer_exp_handle_t metric_tracer_handle,
     zet_metric_decoder_exp_handle_t *ptr_metric_decoder_handle) {

@@ -284,6 +284,10 @@ void metric_tracer_read_data(
     zet_metric_tracer_exp_handle_t metric_tracer_handle,
     std::vector<uint8_t> *ptr_metric_data);
 
+void enable_metrics_runtime(ze_device_handle_t device);
+
+void disable_metrics_runtime(ze_device_handle_t device);
+
 void metric_decoder_create(
     zet_metric_tracer_exp_handle_t metric_tracer_handle,
     zet_metric_decoder_exp_handle_t *ptr_metric_decoder_handle);
