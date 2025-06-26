@@ -33,7 +33,7 @@ protected:
   void SetUp() {
     if (!is_ext_supported()) {
       LOG_INFO << "Skipping test as "
-                  "ZET_INTEL_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME "
+                  "ZET_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME "
                << "extension is not supported";
       GTEST_SKIP();
     }
@@ -42,7 +42,7 @@ protected:
   bool is_ext_supported() {
     return lzt::check_if_extension_supported(
         lzt::get_default_driver(),
-        "ZET_INTEL_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME");
+        ZET_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME);
   }
 };
 
@@ -59,7 +59,7 @@ protected:
 
 LZT_TEST_F(
     zetMetricsEnableDisableTest,
-    GivenMetricsStaticallyDisabledWhenMetricsRuntimeNotEnabledThenMetricGroupGetFailsUntilRuntimeEnabled) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeNotEnabledThenMetricGroupGetFailsUntilRuntimeEnabled) {
 
   for (auto device : devices) {
     ze_device_properties_t deviceProperties = {
@@ -87,7 +87,7 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     zetMetricsEnableDisableTest,
-    GivenMetricsStaticallyDisabledWhenMetricsRuntimeEnabledThenMetricGroupGetPassesUntilRuntimeDisabled) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeEnabledThenMetricGroupGetPassesUntilRuntimeDisabled) {
 
   for (auto device : devices) {
     lzt::enable_metrics_runtime(device);
@@ -118,7 +118,7 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     zetMetricEnableDisableStreamerTest,
-    GivenMetricsStaticallyDisabledWhenMetricsRuntimeEnabledThenMetricStreamerSucceeds) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeEnabledThenMetricStreamerSucceeds) {
 
   for (auto device : devices) {
     lzt::enable_metrics_runtime(device);
@@ -210,7 +210,7 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     zetMetricEnableDisableStreamerTest,
-    GivenMetricsStaticallyDisabledWhenMetricGroupisActivatedThenMetricsRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
+    GivenMetricsDisabledByEnvironmentWhenMetricGroupisActivatedThenMetricsRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
 
   for (auto device : devices) {
     lzt::enable_metrics_runtime(device);
@@ -321,7 +321,7 @@ using zetMetricsEnableDisableQueryTest = zetMetricsEnableDisableTest;
 
 LZT_TEST_F(
     zetMetricsEnableDisableQueryTest,
-    GivenMetricsStaticallyEnabledWhenMetricsRuntimeAlsoEnabledThenMetricQuerySucceeds) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeAlsoEnabledThenMetricQuerySucceeds) {
 
   for (auto device : devices) {
     lzt::enable_metrics_runtime(device);
@@ -408,7 +408,7 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     zetMetricsEnableDisableQueryTest,
-    GivenMetricsStaticallyEnabledWhenMetricsRuntimeAlsoEnabledThenRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeAlsoEnabledThenRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
 
   for (auto device : devices) {
     ze_device_properties_t deviceProperties = {
