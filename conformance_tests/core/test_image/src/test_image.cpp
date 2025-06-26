@@ -548,7 +548,9 @@ LZT_TEST_P(zeImageGetAllocPropertiesExtTests,
         if (img == nullptr) {
           continue;
         }
-        ze_image_allocation_ext_properties_t img_alloc_ext_properties;
+        ze_image_allocation_ext_properties_t img_alloc_ext_properties = {};
+        img_alloc_ext_properties.stype =
+            ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES;
         EXPECT_ZE_RESULT_SUCCESS(zeImageGetAllocPropertiesExt(
             context, img, &img_alloc_ext_properties));
         lzt::destroy_ze_image(img);
