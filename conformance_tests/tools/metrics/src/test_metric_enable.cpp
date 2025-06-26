@@ -81,7 +81,7 @@ LZT_TEST_F(
     lzt::enable_metrics_runtime(device);
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
-    ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
+    EXPECT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
   }
 }
 
@@ -107,7 +107,7 @@ LZT_TEST_F(
     lzt::enable_metrics_runtime(device);
     auto metricGroupInfo = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
-    ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
+    EXPECT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
 
     lzt::disable_metrics_runtime(device);
     uint32_t metricGroupCount = 0;
@@ -204,7 +204,7 @@ LZT_TEST_F(
     }
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
-    ASSERT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
+    EXPECT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
   }
 }
 
@@ -260,7 +260,7 @@ LZT_TEST_F(
               device, groupInfo.metricGroupHandle, nullptr, notifyEveryNReports,
               samplingPeriod);
 
-      ASSERT_EQ(zetDeviceDisableMetricsExp(device),
+      EXPECT_EQ(zetDeviceDisableMetricsExp(device),
                 ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE);
 
       // Sleep for timeBeforeReadInNanoSec to ensure required reports are
@@ -273,7 +273,7 @@ LZT_TEST_F(
       std::vector<uint8_t> rawData;
       rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle,
                                                         notifyEveryNReports);
-      ASSERT_EQ(zetDeviceDisableMetricsExp(device),
+      EXPECT_EQ(zetDeviceDisableMetricsExp(device),
                 ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE);
       EXPECT_GT(rawDataSize, 0);
       rawData.resize(rawDataSize);
@@ -288,7 +288,7 @@ LZT_TEST_F(
                   groupInfo.metricGroupHandle, rawData, metricValues,
                   metricValueSets);
           ASSERT_ZE_RESULT_SUCCESS(result);
-          ASSERT_EQ(zetDeviceDisableMetricsExp(device),
+          EXPECT_EQ(zetDeviceDisableMetricsExp(device),
                     ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE);
           break;
         } else {
@@ -305,7 +305,7 @@ LZT_TEST_F(
                             rawData.data());
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
-      ASSERT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
+      EXPECT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
       lzt::destroy_function(function);
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
@@ -402,7 +402,7 @@ LZT_TEST_F(
 
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
-    ASSERT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
+    EXPECT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
   }
 }
 
@@ -445,10 +445,10 @@ LZT_TEST_F(
           << "failed to create metric query handle";
 
       lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
-      ASSERT_EQ(zetDeviceDisableMetricsExp(device),
+      EXPECT_EQ(zetDeviceDisableMetricsExp(device),
                 ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE);
       lzt::append_metric_query_begin(commandList, metric_query_handle);
-      ASSERT_EQ(zetDeviceDisableMetricsExp(device),
+      EXPECT_EQ(zetDeviceDisableMetricsExp(device),
                 ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE);
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
       ze_event_handle_t eventHandle;
@@ -466,7 +466,7 @@ LZT_TEST_F(
       lzt::append_barrier(commandList, nullptr, 0, nullptr);
       lzt::append_metric_query_end(commandList, metric_query_handle,
                                    eventHandle);
-      ASSERT_EQ(zetDeviceDisableMetricsExp(device),
+      EXPECT_EQ(zetDeviceDisableMetricsExp(device),
                 ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE);
 
       lzt::close_command_list(commandList);
@@ -484,7 +484,7 @@ LZT_TEST_F(
       lzt::destroy_metric_query_pool(metric_query_pool_handle);
 
       lzt::deactivate_metric_groups(device);
-      ASSERT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
+      EXPECT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
       lzt::destroy_function(function);
       lzt::free_memory(a_buffer);
       lzt::free_memory(b_buffer);
@@ -495,7 +495,7 @@ LZT_TEST_F(
 
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
-    ASSERT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
+    EXPECT_ZE_RESULT_SUCCESS(zetDeviceDisableMetricsExp(device));
   }
 }
 
