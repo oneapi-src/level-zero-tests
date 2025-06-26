@@ -26,7 +26,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
         ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                                 \
       throw LztGtestSkipExectuionException("Unsupported API version");         \
     }                                                                          \
-    ASSERT_EQ(ZE_RESULT_SUCCESS, lzt_assert_ze_result_success_macro);          \
+    ASSERT_EQ(ZE_RESULT_SUCCESS, lzt_assert_ze_result_success_macro)           \
+        << " --> " << #val;                                                    \
   }
 
 #define EXPECT_ZE_RESULT_SUCCESS(val)                                          \
@@ -36,7 +37,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
         ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                                 \
       throw LztGtestSkipExectuionException("Unsupported API version");         \
     }                                                                          \
-    EXPECT_EQ(ZE_RESULT_SUCCESS, lzt_expect_ze_result_success_macro);          \
+    EXPECT_EQ(ZE_RESULT_SUCCESS, lzt_expect_ze_result_success_macro)           \
+        << " --> " << #val;                                                    \
   }
 
 #define LZT_NAME_STATIC_VALIDATION(test_suite_name, test_name)                 \
