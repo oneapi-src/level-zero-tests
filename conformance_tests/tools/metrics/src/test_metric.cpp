@@ -2948,9 +2948,13 @@ LZT_TEST_F(
       LOG_INFO << "test device is a root device";
     }
 
-    auto metricGroupInfo = lzt::get_metric_group_info(
+    auto metricGroupInfoStreamer = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
-    EXPECT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
+    EXPECT_GT(metricGroupInfoStreamer.size(), 0u) << "No metric groups found";
+
+    auto metricGroupInfoQuery = lzt::get_metric_group_info(
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true, true);
+    EXPECT_GT(metricGroupInfoQuery.size(), 0u) << "No metric groups found";
   }
 }
 
@@ -2973,21 +2977,23 @@ LZT_TEST_F(
       LOG_INFO << "test device is a root device";
     }
 
-    auto metricGroupInfo = lzt::get_metric_group_info(
+    auto metricGroupInfoStreamer = lzt::get_metric_group_info(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true, true);
-    EXPECT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
+    EXPECT_GT(metricGroupInfoStreamer.size(), 0u) << "No metric groups found";
+
+    auto metricGroupInfoQuery = lzt::get_metric_group_info(
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true, true);
+    EXPECT_GT(metricGroupInfoQuery.size(), 0u) << "No metric groups found";
   }
 }
 
 class zetMetricEnableDisableStreamerTest : public zetMetricsEnableDisableTest {
 protected:
-  std::vector<ze_device_handle_t> devices;
   static constexpr uint32_t maxReadAttempts = 20;
   static constexpr uint32_t numberOfReportsReq = 100;
   static constexpr uint32_t timeBeforeReadInNanoSec = 500000000;
   uint32_t samplingPeriod = timeBeforeReadInNanoSec / numberOfReportsReq;
   uint32_t notifyEveryNReports = 9000;
-  ze_device_handle_t device;
 };
 
 LZT_TEST_F(
