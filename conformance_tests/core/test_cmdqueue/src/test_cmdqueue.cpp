@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2024 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -1049,6 +1049,75 @@ protected:
                                    ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
 
     cl = lzt::create_command_list(context, device, cl_flags, 0);
+
+    const uint64_t responsiveness = measure_device_responsiveness();
+    const double min_ratio = 0.02;
+    if (responsiveness > static_cast<uint64_t>(min_ratio * timeout)) {
+      timeout = static_cast<uint64_t>(responsiveness / min_ratio);
+      LOG_INFO << "Device responsiveness: " << responsiveness
+               << " ns, setting timeout to: " << timeout << " ns";
+    }
+  }
+
+  uint64_t measure_device_responsiveness() {
+    const ze_context_handle_t context =
+        lzt::create_context(lzt::get_default_driver());
+    const ze_device_handle_t device =
+        lzt::get_default_device(lzt::get_default_driver());
+    ze_command_list_handle_t cmd_list = lzt::create_immediate_command_list(
+        device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+
+    ze_module_handle_t module =
+        lzt::create_module(context, device, "cmdqueue_add.spv",
+                           ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+    ze_kernel_handle_t kernel =
+        lzt::create_function(module, "cmdqueue_add_constant");
+
+    size_t size = 10000;
+    size_t buff_size = size * sizeof(int);
+    int *buf_hst =
+        static_cast<int *>(lzt::allocate_host_memory(buff_size, 1, context));
+    int *buf_dev = static_cast<int *>(
+        lzt::allocate_device_memory(buff_size, 1, 0, 0, device, context));
+    std::fill_n(buf_hst, size, 0);
+
+    const int add_value = 7;
+    lzt::set_group_size(kernel, 1, 1, 1);
+    ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+    lzt::set_argument_value(kernel, 0, sizeof(buf_dev), &buf_dev);
+    lzt::set_argument_value(kernel, 1, sizeof(buf_dev), &buf_dev);
+    lzt::set_argument_value(kernel, 2, sizeof(add_value), &add_value);
+
+    lzt::append_memory_copy(cmd_list, buf_dev, buf_hst, buff_size, nullptr, 0,
+                            nullptr);
+
+    const auto t0 = std::chrono::steady_clock::now();
+    for (size_t i = 0; i < 2; ++i) {
+      lzt::append_launch_function(cmd_list, kernel, &args, nullptr, 0, nullptr);
+    }
+    const auto t1 = std::chrono::steady_clock::now();
+
+    lzt::append_memory_copy(cmd_list, buf_hst, buf_dev, buff_size, nullptr, 0,
+                            nullptr);
+    lzt::synchronize_command_list_host(cmd_list,
+                                       std::numeric_limits<uint64_t>::max());
+
+    // Verify
+    for (size_t i = 0; i < size; ++i) {
+      EXPECT_EQ(buf_hst[i], 2 * add_value);
+    }
+
+    // Cleanup
+    lzt::destroy_function(kernel);
+    lzt::destroy_module(module);
+    lzt::free_memory(context, buf_dev);
+    lzt::free_memory(context, buf_hst);
+    lzt::destroy_command_list(cmd_list);
+    lzt::destroy_context(context);
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0)
+        .count();
   }
 
   void TearDown() override {
@@ -1058,7 +1127,7 @@ protected:
     lzt::destroy_command_queue(cq);
   }
 
-  const uint64_t timeout = 5000000;
+  uint64_t timeout = 5000000;
   ze_event_pool_handle_t ep = nullptr;
   ze_event_handle_t ev = nullptr;
   ze_command_queue_handle_t cq = nullptr;
