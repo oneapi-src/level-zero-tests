@@ -1473,9 +1473,9 @@ protected:
     const uint64_t responsiveness = measure_device_responsiveness();
     const double min_ratio = 0.02;
     if (responsiveness > static_cast<uint64_t>(min_ratio * timeout)) {
+      timeout = static_cast<uint64_t>(responsiveness / min_ratio);
       LOG_INFO << "Device responsiveness: " << responsiveness
                << " ns, setting timeout to: " << timeout << " ns";
-      timeout = static_cast<uint64_t>(responsiveness / min_ratio);
     }
   }
 
