@@ -28,8 +28,8 @@ int main(int argc, char **argv) {
     auto count = 0;
     for (auto device : devices) {
       ze_pci_ext_properties_t pciProperties{};
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDevicePciGetPropertiesExt(device, &pciPropertiesVec[count]));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeDevicePciGetPropertiesExt(device, &pciPropertiesVec[count]));
       std::cout << pciPropertiesVec[count].address.domain << ":"
                 << pciPropertiesVec[count].address.bus << ":"
                 << pciPropertiesVec[count].address.device << "."

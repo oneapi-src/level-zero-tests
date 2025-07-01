@@ -131,13 +131,10 @@ protected:
     ze_result_t result;
     uint32_t metric_group_handles_count = 0;
 
-    result = zetDeviceCreateMetricGroupsFromMetricsExp(
+    ASSERT_ZE_RESULT_SUCCESS(zetDeviceCreateMetricGroupsFromMetricsExp(
         device_handle, metric_handles.size(), metric_handles.data(),
         metric_group_name_prefix.c_str(), metric_group_description.c_str(),
-        &metric_group_handles_count, nullptr);
-
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-        << "creation of metric groups with zero metric count has failed";
+        &metric_group_handles_count, nullptr));
     ASSERT_GT(metric_group_handles_count, 0)
         << "at least one metric group should have been created, but non were "
            "created.";
@@ -154,18 +151,16 @@ protected:
     }
 
     metric_group_handles.resize(metric_group_handles_subset_size);
-    result = zetDeviceCreateMetricGroupsFromMetricsExp(
+    ASSERT_ZE_RESULT_SUCCESS(zetDeviceCreateMetricGroupsFromMetricsExp(
         device_handle, metric_handles.size(), metric_handles.data(),
         metric_group_name_prefix.c_str(), metric_group_description.c_str(),
-        &metric_group_handles_subset_size, metric_group_handles.data());
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-        << "creation of metric groups with non-zero metric count has failed";
+        &metric_group_handles_subset_size, metric_group_handles.data()));
 
     LOG_DEBUG << "LEAVE generate_metric_groups_from_metrics";
   }
 };
 
-TEST_F(
+LZT_TEST_F(
     zetMetricMetricProgrammableTest,
     GivenValidDeviceSupportingMetricProgrammableThenMetricProgrammableGetYieldsAtLeastOneMetricProgrammableHandle) {
 
@@ -188,8 +183,8 @@ TEST_F(
   }
 }
 
-TEST_F(zetMetricMetricProgrammableTest,
-       GivenMetricProgrammableGetThenMetricProgrammablePropertiesAreValid) {
+LZT_TEST_F(zetMetricMetricProgrammableTest,
+           GivenMetricProgrammableGetThenMetricProgrammablePropertiesAreValid) {
 
   if (metric_programmable_lists_with_devices.size() == 0) {
     GTEST_SKIP()
@@ -216,12 +211,8 @@ TEST_F(zetMetricMetricProgrammableTest,
       ze_result_t result;
       zet_metric_programmable_exp_properties_t metric_programmable_properties{
           ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_EXP_PROPERTIES, nullptr};
-      result = zetMetricProgrammableGetPropertiesExp(
-          metric_programmable_handle, &metric_programmable_properties);
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricProgrammableGetPropertiesExp failed retrieving metric "
-             "properties for a metric programmable handle with error code"
-          << result;
+      ASSERT_ZE_RESULT_SUCCESS(zetMetricProgrammableGetPropertiesExp(
+          metric_programmable_handle, &metric_programmable_properties));
 
       size_t name_len;
       name_len = strnlen(metric_programmable_properties.name,
@@ -304,7 +295,7 @@ TEST_F(zetMetricMetricProgrammableTest,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricMetricProgrammableTest,
     GivenMetricProgrammablePropertiesThenGetParamInfoExpReturnsValidParamInfoExp) {
 
@@ -358,7 +349,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricMetricProgrammableTest,
     GivenMetricProgrammableParamInfoExpThenGetParamValueInfoExpAndParamValueInfoDescExpReturnValidParamInfoExp) {
 
@@ -423,7 +414,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricMetricProgrammableTest,
     GivenOneOrMoreMetricProgrammableHandlesThenCreateAndDestroyMetricsWillSucceed) {
 
@@ -482,7 +473,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricMetricProgrammableTest,
     GivenOneOrMoreMetricProgrammableThenCreateAndDestroyMetricGroupSuccessfully) {
 

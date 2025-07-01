@@ -110,8 +110,7 @@ protected:
     lzt::destroy_command_list(command_list);
     for (uint64_t dispatch_id = 0; dispatch_id < test_functions.size();
          dispatch_id++) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeKernelDestroy(test_functions[dispatch_id]));
+      EXPECT_ZE_RESULT_SUCCESS(zeKernelDestroy(test_functions[dispatch_id]));
     }
   }
 
@@ -122,7 +121,7 @@ protected:
   kernel_copy_unit_t init_value_3_ = 0x55555555; // 0101 0101
 };
 
-TEST_P(
+LZT_TEST_P(
     zeDriverMemoryAllocationStressTest,
     AlocateFullAvailableMemoryNumberOfKernelDispatchesDependsOnUserChunkAllocaitonRequest) {
 
@@ -279,7 +278,7 @@ TEST_P(
   lzt::destroy_context(context);
 
   LOG_INFO << "call destroy module";
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+  EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module_handle));
 
   EXPECT_EQ(false, memory_test_failure);
 }

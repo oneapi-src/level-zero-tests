@@ -82,8 +82,9 @@ void thread_create_destroy_max_command_queue(size_t max_cmd_queues) {
 class zeCommandQueueCreateDestroyDefaultMultithreadTest
     : public ::testing::Test {};
 
-TEST(zeCommandQueueCreateDestroyDefaultMultithreadTest,
-     GivenMultipleThreadsWhenCreateAndDestroyCommandQueueThenReturnSuccess) {
+LZT_TEST(
+    zeCommandQueueCreateDestroyDefaultMultithreadTest,
+    GivenMultipleThreadsWhenCreateAndDestroyCommandQueueThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
@@ -104,7 +105,7 @@ class zeCommandQueueCreateDestroyRandomMultithreadTest
           std::tuple<ze_command_queue_flag_t, ze_command_queue_mode_t,
                      ze_command_queue_priority_t>> {};
 
-TEST_P(
+LZT_TEST_P(
     zeCommandQueueCreateDestroyRandomMultithreadTest,
     GivenMultipleThreadsWhenCreateAndDestroyCommandQueueWithRandomValuesThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -117,7 +118,7 @@ TEST_P(
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_device_properties_t properties = {};
   properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &properties));
 
   uint32_t ordinal = 0;
 
@@ -154,7 +155,7 @@ INSTANTIATE_TEST_CASE_P(
 
 class zeCreateDestroyMaxCommandQueueMultithreadTest : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeMaxCommandQueueCreateDestroyMultithreadTest,
     GivenMultipleThreadsWhenCreateAndDestroyMaxCommandQueuesThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;

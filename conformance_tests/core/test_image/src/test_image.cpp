@@ -189,8 +189,9 @@ void image_create_test_3d(ze_image_format_type_t format_type,
 
 class zeImageCreateTests : public ::testing::Test {};
 
-TEST(zeImageCreateTests,
-     GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageCreateTests,
+    GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -210,8 +211,9 @@ TEST(zeImageCreateTests,
   }
 }
 
-TEST(zeImageCreateTests,
-     GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageCreateTests,
+    GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -231,8 +233,9 @@ TEST(zeImageCreateTests,
   }
 }
 
-TEST(zeImageCreateTests,
-     GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageCreateTests,
+    GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -252,8 +255,9 @@ TEST(zeImageCreateTests,
   }
 }
 
-TEST(zeImageCreateTests,
-     GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageCreateTests,
+    GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -273,8 +277,9 @@ TEST(zeImageCreateTests,
   }
 }
 
-TEST(zeImageCreateTests,
-     GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageCreateTests,
+    GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -294,8 +299,9 @@ TEST(zeImageCreateTests,
   }
 }
 
-TEST(zeImageCreateTests,
-     GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageCreateTests,
+    GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -317,8 +323,9 @@ TEST(zeImageCreateTests,
 
 class zeImageGetPropertiesTests : public ::testing::Test {};
 
-TEST(zeImageGetPropertiesTests,
-     GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageGetPropertiesTests,
+    GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -338,8 +345,9 @@ TEST(zeImageGetPropertiesTests,
   }
 }
 
-TEST(zeImageGetPropertiesTests,
-     GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageGetPropertiesTests,
+    GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -359,8 +367,9 @@ TEST(zeImageGetPropertiesTests,
   }
 }
 
-TEST(zeImageGetPropertiesTests,
-     GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageGetPropertiesTests,
+    GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -380,8 +389,9 @@ TEST(zeImageGetPropertiesTests,
   }
 }
 
-TEST(zeImageGetPropertiesTests,
-     GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageGetPropertiesTests,
+    GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -401,8 +411,9 @@ TEST(zeImageGetPropertiesTests,
   }
 }
 
-TEST(zeImageGetPropertiesTests,
-     GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageGetPropertiesTests,
+    GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -422,8 +433,9 @@ TEST(zeImageGetPropertiesTests,
   }
 }
 
-TEST(zeImageGetPropertiesTests,
-     GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
+LZT_TEST(
+    zeImageGetPropertiesTests,
+    GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -448,8 +460,8 @@ class zeImageGetAllocPropertiesExtTests
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_type_t>> {};
 
-TEST_P(zeImageGetAllocPropertiesExtTests,
-       GivenValidImageThenSuccessIsReturned) {
+LZT_TEST_P(zeImageGetAllocPropertiesExtTests,
+           GivenValidImageThenSuccessIsReturned) {
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
@@ -481,8 +493,8 @@ TEST_P(zeImageGetAllocPropertiesExtTests,
 
   ze_device_image_properties_t device_img_properties = {
       ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetImageProperties(device, &device_img_properties));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceGetImageProperties(device, &device_img_properties));
 
   uint32_t img_width = 1;
   uint32_t img_height = 1;
@@ -536,10 +548,11 @@ TEST_P(zeImageGetAllocPropertiesExtTests,
         if (img == nullptr) {
           continue;
         }
-        ze_image_allocation_ext_properties_t img_alloc_ext_properties;
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeImageGetAllocPropertiesExt(context, img,
-                                               &img_alloc_ext_properties));
+        ze_image_allocation_ext_properties_t img_alloc_ext_properties = {};
+        img_alloc_ext_properties.stype =
+            ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES;
+        EXPECT_ZE_RESULT_SUCCESS(zeImageGetAllocPropertiesExt(
+            context, img, &img_alloc_ext_properties));
         lzt::destroy_ze_image(img);
       }
     }
@@ -563,7 +576,7 @@ class zeImageMemoryPropertiesExpTests
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_type_t>> {};
 
-TEST_P(
+LZT_TEST_P(
     zeImageMemoryPropertiesExpTests,
     GivenValidImageWhenGettingMemoryPropertiesThenValidMemoryPropertiesIsReturned) {
   ze_context_handle_t context = lzt::get_default_context();
@@ -602,8 +615,8 @@ TEST_P(
 
   ze_device_image_properties_t device_img_properties = {
       ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetImageProperties(device, &device_img_properties));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceGetImageProperties(device, &device_img_properties));
 
   uint32_t img_width = 1;
   uint32_t img_height = 1;
@@ -661,8 +674,8 @@ TEST_P(
         image_mem_properties.stype =
             ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES;
         image_mem_properties.pNext = nullptr;
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeImageGetMemoryPropertiesExp(img, &image_mem_properties));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeImageGetMemoryPropertiesExp(img, &image_mem_properties));
         EXPECT_GE(0u, image_mem_properties.rowPitch);
         EXPECT_GE(0u, image_mem_properties.size);
         EXPECT_GE(0u, image_mem_properties.slicePitch);

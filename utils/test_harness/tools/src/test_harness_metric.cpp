@@ -21,8 +21,8 @@ namespace level_zero_tests {
 
 uint32_t get_metric_group_count(ze_device_handle_t device) {
   uint32_t metricGroupCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupGet(device, &metricGroupCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricGroupGet(device, &metricGroupCount, nullptr));
   EXPECT_GT(metricGroupCount, 0);
   return metricGroupCount;
 }
@@ -30,15 +30,14 @@ std::vector<zet_metric_group_handle_t>
 get_metric_group_handles(ze_device_handle_t device) {
   auto metricGroupCount = get_metric_group_count(device);
   std::vector<zet_metric_group_handle_t> phMetricGroups(metricGroupCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGet(device, &metricGroupCount,
-                                                 phMetricGroups.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricGroupGet(device, &metricGroupCount, phMetricGroups.data()));
   return phMetricGroups;
 }
 
 uint32_t get_metric_count(zet_metric_group_handle_t metricGroup) {
   uint32_t metricCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(metricGroup, &metricCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGet(metricGroup, &metricCount, nullptr));
   EXPECT_GT(metricCount, 0);
   return metricCount;
 }
@@ -46,16 +45,15 @@ std::vector<zet_metric_handle_t>
 get_metric_handles(zet_metric_group_handle_t metricGroup) {
   uint32_t metricCount = get_metric_count(metricGroup);
   std::vector<zet_metric_handle_t> phMetric(metricCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(metricGroup, &metricCount, phMetric.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricGet(metricGroup, &metricCount, phMetric.data()));
   return phMetric;
 }
 
 void get_metric_properties(zet_metric_handle_t hMetric,
                            zet_metric_properties_t *metricProperties) {
   *metricProperties = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGetProperties(hMetric, metricProperties));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGetProperties(hMetric, metricProperties));
 }
 
 std::string metric_type_to_string(zet_metric_type_t metric_type) {
@@ -139,12 +137,12 @@ std::vector<ze_device_handle_t> get_metric_test_no_subdevices_list(void) {
   std::vector<ze_device_handle_t> testDevices;
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   uint32_t subDeviceCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
   if (subDeviceCount) {
     testDevices.resize(subDeviceCount);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetSubDevices(device, &subDeviceCount,
-                                                       testDevices.data()));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeDeviceGetSubDevices(device, &subDeviceCount, testDevices.data()));
   } else {
     testDevices.resize(1);
     testDevices[0] = device;
@@ -156,14 +154,14 @@ std::vector<ze_device_handle_t>
 get_metric_test_device_list(uint32_t testSubDeviceCount) {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   uint32_t subDeviceCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
   subDeviceCount =
       testSubDeviceCount < subDeviceCount ? testSubDeviceCount : subDeviceCount;
   std::vector<ze_device_handle_t> testDevices(subDeviceCount + 1);
   if (subDeviceCount) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetSubDevices(device, &subDeviceCount,
-                                                       testDevices.data()));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeDeviceGetSubDevices(device, &subDeviceCount, testDevices.data()));
   }
   testDevices[subDeviceCount] = device;
   return testDevices;
@@ -179,7 +177,7 @@ bool check_metric_type_ip(zet_metric_group_handle_t metricGroupHandle,
     zet_metric_properties_t MetricProp = {};
     MetricProp.stype = ZET_STRUCTURE_TYPE_METRIC_PROPERTIES;
     MetricProp.pNext = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGetProperties(metric, &MetricProp));
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricGetProperties(metric, &MetricProp));
 
     if (MetricProp.metricType == ZET_METRIC_TYPE_IP && !includeExpFeature) {
       return true;
@@ -203,16 +201,13 @@ std::vector<zet_metric_group_handle_t> get_one_metric_group_per_domain(
   std::vector<zet_metric_group_handle_t> concurrentMetricGroupList{};
   if (metricGroupHandleList.size() != 0) {
     uint32_t concurrentGroupCount = 0;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zetDeviceGetConcurrentMetricGroupsExp(
-                                     device, metricGroupHandleList.size(),
-                                     metricGroupHandleList.data(), nullptr,
-                                     &concurrentGroupCount));
+    EXPECT_ZE_RESULT_SUCCESS(zetDeviceGetConcurrentMetricGroupsExp(
+        device, metricGroupHandleList.size(), metricGroupHandleList.data(),
+        nullptr, &concurrentGroupCount));
     std::vector<uint32_t> countPerConcurrentGroup(concurrentGroupCount);
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetDeviceGetConcurrentMetricGroupsExp(
-                  device, metricGroupHandleList.size(),
-                  metricGroupHandleList.data(), countPerConcurrentGroup.data(),
-                  &concurrentGroupCount));
+    EXPECT_ZE_RESULT_SUCCESS(zetDeviceGetConcurrentMetricGroupsExp(
+        device, metricGroupHandleList.size(), metricGroupHandleList.data(),
+        countPerConcurrentGroup.data(), &concurrentGroupCount));
 
     uint32_t metricGroupCountInConcurrentGroup = countPerConcurrentGroup[0];
 
@@ -303,8 +298,8 @@ get_metric_group_info(ze_device_handle_t device,
     zet_metric_group_properties_t metricGroupProp = {};
     metricGroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
     metricGroupProp.pNext = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGroupGetProperties(metricGroupHandle, &metricGroupProp));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zetMetricGroupGetProperties(metricGroupHandle, &metricGroupProp));
     // samplingType is a bit mask.
     if (!(metricGroupProp.samplingType & metricSamplingType)) {
       continue;
@@ -360,8 +355,8 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
     zet_metric_group_properties_t metricGroupProp = {};
     metricGroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
     metricGroupProp.pNext = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGroupGetProperties(metricGroupHandle, &metricGroupProp));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zetMetricGroupGetProperties(metricGroupHandle, &metricGroupProp));
     // samplingType is a bit mask.
     if (!(metricGroupProp.samplingType & metricSamplingType)) {
       continue;
@@ -415,8 +410,7 @@ std::vector<zet_metric_group_properties_t> get_metric_group_properties(
     zet_metric_group_properties_t GroupProp = {};
     GroupProp.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
     GroupProp.pNext = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGroupGetProperties(mGroup, &GroupProp));
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(mGroup, &GroupProp));
     metricGroupProp.push_back(GroupProp);
   }
   return metricGroupProp;
@@ -454,10 +448,9 @@ zet_metric_query_pool_handle_t create_metric_query_pool_for_device(
     zet_metric_group_handle_t metricGroup) {
   zet_metric_query_pool_handle_t metric_query_pool = nullptr;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricQueryPoolCreate(lzt::get_default_context(), device,
-                                     metricGroup, &metricQueryPoolDesc,
-                                     &metric_query_pool));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricQueryPoolCreate(lzt::get_default_context(), device, metricGroup,
+                               &metricQueryPoolDesc, &metric_query_pool));
   EXPECT_NE(nullptr, metric_query_pool);
   return metric_query_pool;
 }
@@ -490,16 +483,15 @@ create_metric_query_pool_for_device(ze_device_handle_t device, uint32_t count,
 
 void destroy_metric_query_pool(
     zet_metric_query_pool_handle_t metric_query_pool_handle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricQueryPoolDestroy(metric_query_pool_handle));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricQueryPoolDestroy(metric_query_pool_handle));
 }
 
 zet_metric_query_handle_t
 metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle,
                     uint32_t index) {
   zet_metric_query_handle_t metricQueryHandle;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryCreate(metricQueryPoolHandle,
-                                                    index, &metricQueryHandle));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricQueryCreate(metricQueryPoolHandle, index, &metricQueryHandle));
   EXPECT_NE(nullptr, metricQueryHandle);
 
   return metricQueryHandle;
@@ -514,18 +506,18 @@ metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle) {
 
 void destroy_metric_query(zet_metric_query_handle_t metricQueryHandle) {
   ASSERT_NE(nullptr, metricQueryHandle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryDestroy(metricQueryHandle));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricQueryDestroy(metricQueryHandle));
 }
 
 void reset_metric_query(zet_metric_query_handle_t &metricQueryHandle) {
   ASSERT_NE(nullptr, metricQueryHandle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricQueryReset(metricQueryHandle));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricQueryReset(metricQueryHandle));
 }
 
 size_t metric_query_get_data_size(zet_metric_query_handle_t metricQueryHandle) {
   size_t metricSize = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricQueryGetData(metricQueryHandle, &metricSize, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricQueryGetData(metricQueryHandle, &metricSize, nullptr));
   return metricSize;
 }
 void metric_query_get_data(zet_metric_query_handle_t metricQueryHandle,
@@ -534,13 +526,12 @@ void metric_query_get_data(zet_metric_query_handle_t metricQueryHandle,
   size_t metricSize = metric_query_get_data_size(metricQueryHandle);
   EXPECT_GT(metricSize, 0);
   metricData->resize(metricSize);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricQueryGetData(metricQueryHandle, &metricSize,
-                                  metricData->data()));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricQueryGetData(metricQueryHandle, &metricSize,
+                                                 metricData->data()));
 }
 
 void metric_streamer_close(zet_metric_streamer_handle_t metricStreamerHandle) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricStreamerClose(metricStreamerHandle));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerClose(metricStreamerHandle));
 }
 zet_metric_streamer_handle_t
 metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
@@ -551,10 +542,9 @@ metric_streamer_open(zet_metric_group_handle_t matchedGroupHandle,
   zet_metric_streamer_desc_t metricStreamerDesc = {
       ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, notifyEveryNReports,
       samplingPeriod};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerOpen(lzt::get_default_context(), device,
-                                  matchedGroupHandle, &metricStreamerDesc,
-                                  eventHandle, &metricStreamerHandle));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerOpen(
+      lzt::get_default_context(), device, matchedGroupHandle,
+      &metricStreamerDesc, eventHandle, &metricStreamerHandle));
   EXPECT_NE(nullptr, metricStreamerHandle);
   return metricStreamerHandle;
 }
@@ -567,10 +557,9 @@ zet_metric_streamer_handle_t metric_streamer_open_for_device(
   zet_metric_streamer_desc_t metricStreamerDesc = {
       ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, notifyEveryNReports,
       samplingPeriod};
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerOpen(lzt::get_default_context(), device,
-                                  matchedGroupHandle, &metricStreamerDesc,
-                                  eventHandle, &metricStreamerHandle));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerOpen(
+      lzt::get_default_context(), device, matchedGroupHandle,
+      &metricStreamerDesc, eventHandle, &metricStreamerHandle));
   EXPECT_NE(nullptr, metricStreamerHandle);
   notifyEveryNReports = metricStreamerDesc.notifyEveryNReports;
   samplingPeriod = metricStreamerDesc.samplingPeriod;
@@ -587,18 +576,16 @@ ze_result_t commandlist_append_streamer_marker(
 size_t metric_streamer_read_data_size(
     zet_metric_streamer_handle_t metricStreamerHandle) {
   size_t metricSize = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerReadData(metricStreamerHandle, UINT32_MAX,
-                                      &metricSize, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
+      metricStreamerHandle, UINT32_MAX, &metricSize, nullptr));
   return metricSize;
 }
 
 size_t metric_streamer_read_data_size(
     zet_metric_streamer_handle_t metricStreamerHandle, uint32_t reports) {
   size_t metricSize = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerReadData(metricStreamerHandle, reports,
-                                      &metricSize, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
+      metricStreamerHandle, reports, &metricSize, nullptr));
   return metricSize;
 }
 
@@ -609,9 +596,8 @@ void metric_streamer_read_data(
   size_t metricSize = metric_streamer_read_data_size(metricStreamerHandle);
   EXPECT_GT(metricSize, 0);
   metricData->resize(metricSize);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerReadData(metricStreamerHandle, UINT32_MAX,
-                                      &metricSize, metricData->data()));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
+      metricStreamerHandle, UINT32_MAX, &metricSize, metricData->data()));
 }
 
 void metric_streamer_read_data(
@@ -621,9 +607,8 @@ void metric_streamer_read_data(
   size_t metricSize = metric_streamer_read_data_size(metricStreamerHandle);
   EXPECT_GT(metricSize, 0);
   metricData->resize(metricSize);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerReadData(metricStreamerHandle, UINT32_MAX,
-                                      &metricSize, metricData->data()));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
+      metricStreamerHandle, UINT32_MAX, &metricSize, metricData->data()));
   rawDataSize = metricSize;
 }
 
@@ -631,31 +616,28 @@ void metric_streamer_read_data(
     zet_metric_streamer_handle_t metricStreamerHandle, uint32_t reports,
     size_t &rawDataSize, std::vector<uint8_t> *metricData) {
   ASSERT_NE(nullptr, metricData);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerReadData(metricStreamerHandle, reports,
-                                      &rawDataSize, metricData->data()));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
+      metricStreamerHandle, reports, &rawDataSize, metricData->data()));
 }
 
 void activate_metric_groups(
     ze_device_handle_t device, uint32_t count,
     zet_metric_group_handle_t *ptr_matched_group_handle) {
   ASSERT_NE(nullptr, *ptr_matched_group_handle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetContextActivateMetricGroups(lzt::get_default_context(), device,
-                                           count, ptr_matched_group_handle));
+  EXPECT_ZE_RESULT_SUCCESS(zetContextActivateMetricGroups(
+      lzt::get_default_context(), device, count, ptr_matched_group_handle));
 }
 
 void deactivate_metric_groups(ze_device_handle_t device) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetContextActivateMetricGroups(lzt::get_default_context(), device,
-                                           0, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetContextActivateMetricGroups(
+      lzt::get_default_context(), device, 0, nullptr));
 }
 
 void append_metric_query_begin(zet_command_list_handle_t commandList,
                                zet_metric_query_handle_t metricQueryHandle) {
   ASSERT_NE(nullptr, metricQueryHandle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryBegin(
-                                   commandList, metricQueryHandle));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetCommandListAppendMetricQueryBegin(commandList, metricQueryHandle));
 }
 
 void append_metric_query_end(zet_command_list_handle_t commandList,
@@ -672,14 +654,13 @@ void append_metric_query_end(zet_command_list_handle_t commandList,
                              uint32_t numWaitEvents,
                              ze_event_handle_t *waitEvents) {
   ASSERT_NE(nullptr, metricQueryHandle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetCommandListAppendMetricQueryEnd(
-                                   commandList, metricQueryHandle, eventHandle,
-                                   numWaitEvents, waitEvents));
+  EXPECT_ZE_RESULT_SUCCESS(zetCommandListAppendMetricQueryEnd(
+      commandList, metricQueryHandle, eventHandle, numWaitEvents, waitEvents));
 }
 
 void append_metric_memory_barrier(zet_command_list_handle_t commandList) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetCommandListAppendMetricMemoryBarrier(commandList));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetCommandListAppendMetricMemoryBarrier(commandList));
 }
 
 void verify_typed_metric_value(zet_typed_value_t result,
@@ -725,11 +706,10 @@ void validate_metrics_common(
   // Get set count and total metric value count
   uint32_t setCount = 0;
   uint32_t totalMetricValueCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupCalculateMultipleMetricValuesExp(
-                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
-                rawDataSize, rawData, &setCount, &totalMetricValueCount,
-                nullptr, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupCalculateMultipleMetricValuesExp(
+      hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+      rawDataSize, rawData, &setCount, &totalMetricValueCount, nullptr,
+      nullptr));
 
   LOG_DEBUG << "validate_metrics first calculate rawDataSize " << rawDataSize
             << " setCount " << setCount << " totalMetricValueCount "
@@ -760,13 +740,12 @@ void validate_metrics_common(
 
   // Setup
   uint32_t metricCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(hMetricGroup, &metricCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGet(hMetricGroup, &metricCount, nullptr));
   EXPECT_GT(metricCount, 0);
 
   std::vector<zet_metric_handle_t> phMetrics(metricCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
 
   LOG_INFO << "totalMetricValueCount " << totalMetricValueCount << " setCount "
            << setCount << " metricCount " << metricCount;
@@ -787,8 +766,8 @@ void validate_metrics_common(
       for (uint32_t metric = 0; metric < metricCount; metric++) {
         zet_metric_properties_t properties = {
             ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zetMetricGetProperties(phMetrics[metric], &properties));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zetMetricGetProperties(phMetrics[metric], &properties));
         const size_t metricIndex = report * metricCount + metric;
         zet_typed_value_t typed_value =
             totalMetricValues[startIndex + metricIndex];
@@ -838,28 +817,25 @@ void validate_metrics_std(zet_metric_group_handle_t hMetricGroup,
 
   uint32_t metricValueCount = 0;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupCalculateMetricValues(
-                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
-                rawDataSize, rawData, &metricValueCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupCalculateMetricValues(
+      hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+      rawDataSize, rawData, &metricValueCount, nullptr));
 
   // Get metric counts and metric values
   std::vector<zet_typed_value_t> metricValues(metricValueCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupCalculateMetricValues(
-                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
-                rawDataSize, rawData, &metricValueCount, metricValues.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupCalculateMetricValues(
+      hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+      rawDataSize, rawData, &metricValueCount, metricValues.data()));
   EXPECT_GT(metricValueCount, 0);
 
   // Setup
   uint32_t metricCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(hMetricGroup, &metricCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGet(hMetricGroup, &metricCount, nullptr));
   EXPECT_GT(metricCount, 0);
 
   std::vector<zet_metric_handle_t> phMetrics(metricCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
 
   LOG_DEBUG << "metricValueCount " << metricValueCount << " metricCount "
             << metricCount;
@@ -867,8 +843,8 @@ void validate_metrics_std(zet_metric_group_handle_t hMetricGroup,
   for (uint32_t count = 0; count < metricValueCount; count++) {
     zet_metric_properties_t properties = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES,
                                           nullptr};
-    EXPECT_EQ(
-        ZE_RESULT_SUCCESS,
+    EXPECT_ZE_RESULT_SUCCESS(
+
         zetMetricGetProperties(phMetrics[count % metricCount], &properties));
     zet_typed_value_t typed_value = metricValues[count];
     verify_typed_metric_value(typed_value, properties.resultType);
@@ -916,19 +892,18 @@ bool verify_metric_type(zet_metric_type_t metric_type) {
 bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup) {
   bool invalid_type_encountered = false;
   uint32_t metricCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(hMetricGroup, &metricCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGet(hMetricGroup, &metricCount, nullptr));
   EXPECT_GT(metricCount, 0);
 
   std::vector<zet_metric_handle_t> phMetrics(metricCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricGet(hMetricGroup, &metricCount, phMetrics.data()));
 
   for (uint32_t metric = 0; metric < metricCount; metric++) {
     zet_metric_properties_t properties = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES,
                                           nullptr};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGetProperties(phMetrics[metric], &properties));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zetMetricGetProperties(phMetrics[metric], &properties));
     invalid_type_encountered |= !verify_value_type(properties.resultType);
     invalid_type_encountered |= !verify_metric_type(properties.metricType);
   }
@@ -951,9 +926,8 @@ get_metric_groups_with_different_domains(const ze_device_handle_t device,
 
   // Identify unique domains
   for (auto metric_group_handle : metric_group_handles) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGroupGetProperties(metric_group_handle,
-                                          &metric_group_property));
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
+        metric_group_handle, &metric_group_property));
     if (std::find(unique_domains.begin(), unique_domains.end(),
                   metric_group_property.domain) == unique_domains.end()) {
       unique_domains.push_back(metric_group_property.domain);
@@ -964,9 +938,8 @@ get_metric_groups_with_different_domains(const ze_device_handle_t device,
   for (auto &domain : unique_domains) {
     uint32_t metric_group_count = 0;
     for (auto metric_group_handle : metric_group_handles) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zetMetricGroupGetProperties(metric_group_handle,
-                                            &metric_group_property));
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
+          metric_group_handle, &metric_group_property));
       if (metric_group_property.domain == domain) {
         unique_domain_metric_group_list.push_back(metric_group_handle);
         ++metric_group_count;
@@ -988,11 +961,10 @@ ze_result_t metric_calculate_metric_values_from_raw_data(
   uint32_t setCount = 0;
   uint32_t totalMetricValueCount = 0;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupCalculateMultipleMetricValuesExp(
-                hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
-                rawData.size(), rawData.data(), &setCount,
-                &totalMetricValueCount, nullptr, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupCalculateMultipleMetricValuesExp(
+      hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
+      rawData.size(), rawData.data(), &setCount, &totalMetricValueCount,
+      nullptr, nullptr));
 
   // Get metric counts and metric values
   metricValueSets.resize(setCount);
@@ -1018,13 +990,12 @@ void metric_get_metric_handles_from_metric_group(
     std::vector<zet_metric_handle_t> &hMetrics) {
 
   uint32_t metricCount = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(hMetricGroup, &metricCount, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGet(hMetricGroup, &metricCount, nullptr));
   EXPECT_GT(metricCount, 0);
 
   hMetrics.resize(metricCount);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGet(hMetricGroup, &metricCount, hMetrics.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricGet(hMetricGroup, &metricCount, hMetrics.data()));
 
   LOG_INFO << "number of metrics in metric group: metricCount " << metricCount;
 }
@@ -1035,9 +1006,8 @@ void metric_get_metric_properties_for_metric_group(
 
   for (uint32_t metric = 0; metric < metricHandles.size(); metric++) {
     metricProperties[metric] = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGetProperties(metricHandles[metric],
-                                     &metricProperties[metric]));
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricGetProperties(metricHandles[metric],
+                                                    &metricProperties[metric]));
   }
 }
 
@@ -1202,11 +1172,8 @@ void generate_device_list_with_metric_programmable_handles(
     collect_device_properties(device, device_description);
 
     uint32_t metric_programmable_handle_count = 0;
-    result = zetMetricProgrammableGetExp(
-        device, &metric_programmable_handle_count, nullptr);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-        << "zetMetricProgrammableGetExp() failed on device: "
-        << device_description;
+    ASSERT_ZE_RESULT_SUCCESS(zetMetricProgrammableGetExp(
+        device, &metric_programmable_handle_count, nullptr));
 
     if (metric_programmable_handle_count == 0) {
       LOG_INFO << "the device: " << device_description
@@ -1216,13 +1183,9 @@ void generate_device_list_with_metric_programmable_handles(
 
     std::vector<zet_metric_programmable_exp_handle_t>
         metric_programmable_handles(metric_programmable_handle_count);
-    result =
+    ASSERT_ZE_RESULT_SUCCESS(
         zetMetricProgrammableGetExp(device, &metric_programmable_handle_count,
-                                    metric_programmable_handles.data());
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-        << "zetMetricProgrammableGetExp failed to retrieve metric handles on "
-           "device "
-        << device_description;
+                                    metric_programmable_handles.data()));
 
     uint32_t metric_programmable_handle_subset_size =
         metric_programmable_handle_count;
@@ -1414,17 +1377,11 @@ void fetch_metric_programmable_exp_properties(
     zet_metric_programmable_exp_handle_t metric_programmable_handle,
     zet_metric_programmable_exp_properties_t &metric_programmable_properties) {
   LOG_DEBUG << "ENTER fetch_metric_programmable_exp_properties";
-
-  ze_result_t result;
-
   metric_programmable_properties.stype =
       ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_EXP_PROPERTIES;
   metric_programmable_properties.pNext = nullptr;
-  result = zetMetricProgrammableGetPropertiesExp(
-      metric_programmable_handle, &metric_programmable_properties);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-      << "zetMetricProgrammableGetPropertiesExp failed with error code "
-      << result;
+  ASSERT_ZE_RESULT_SUCCESS(zetMetricProgrammableGetPropertiesExp(
+      metric_programmable_handle, &metric_programmable_properties));
   LOG_DEBUG << "metric programmable properties ########";
   LOG_DEBUG << "name " << metric_programmable_properties.name;
   LOG_DEBUG << "description " << metric_programmable_properties.description;
@@ -1466,13 +1423,9 @@ void generate_param_info_exp_list_from_metric_programmable(
     parameter_info.pNext = nullptr;
   }
 
-  result = zetMetricProgrammableGetParamInfoExp(
+  ASSERT_ZE_RESULT_SUCCESS(zetMetricProgrammableGetParamInfoExp(
       metric_programmable_handle,
-      &metric_programmable_properties.parameterCount, param_infos.data());
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-      << "zetMetricProgrammableGetParamInfoExp has failed retrieving with "
-         "error code "
-      << result;
+      &metric_programmable_properties.parameterCount, param_infos.data()));
 
   uint32_t metric_programmable_param_info_subset_size =
       metric_programmable_properties.parameterCount;
@@ -1548,32 +1501,32 @@ void generate_param_value_info_list_from_param_info(
 
   ze_result_t result;
 
-  std::vector<zet_metric_programmable_param_value_info_exp_t> value_info(
-      value_info_count);
+  auto value_info =
+      std::make_unique<zet_metric_programmable_param_value_info_exp_t[]>(
+          value_info_count);
 
-  std::vector<zet_metric_programmable_param_value_info_exp_t> value_info_desc(
-      value_info_count);
+  auto value_info_desc =
+      std::make_unique<zet_metric_programmable_param_value_info_exp_t[]>(
+          value_info_count);
 
-  uint32_t count = value_info_count;
-  uint32_t index;
-  for (index = 0; index < count; index++) {
-    zet_metric_programmable_param_value_info_exp_t *info = &value_info[index];
-    info->stype = ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
-    info->pNext = nullptr;
-
-    zet_metric_programmable_param_value_info_exp_t *desc =
-        &value_info_desc[index];
-    desc->stype = static_cast<zet_structure_type_t>(
-        ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP);
-    desc->pNext = nullptr;
-
-    if (include_value_info_desc) {
-      info->pNext = desc;
+  auto count = value_info_count;
+  uint32_t index = 0;
+  if (include_value_info_desc) {
+    for (auto i = 0; i < static_cast<int>(count); i++) {
+      value_info_desc[i].stype =
+          ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
+      value_info_desc[i].pNext = nullptr;
     }
+  }
+  for (auto i = 0; i < static_cast<int>(count); i++) {
+    value_info[i].stype =
+        ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
+    value_info[i].pNext =
+        include_value_info_desc ? &value_info_desc[i] : nullptr;
   }
 
   result = zetMetricProgrammableGetParamValueInfoExp(
-      programmable_handle, ordinal, &count, value_info.data());
+      programmable_handle, ordinal, &count, value_info.get());
   EXPECT_EQ(result, ZE_RESULT_SUCCESS)
       << "an error occurred in the zetMetricProgrammableGetParamValueInfoExp() "
          "call, error code "
@@ -1586,17 +1539,15 @@ void generate_param_value_info_list_from_param_info(
   LOG_DEBUG << "param_info valueInfoCount is " << value_info_count;
 
   for (index = 0; index < count; index++) {
-    zet_metric_programmable_param_value_info_exp_t *info = &value_info[index];
-    print_value_info(value_info_type, info->valueInfo);
+    print_value_info(value_info_type, value_info[index].valueInfo);
     if (include_value_info_desc) {
-      zet_metric_programmable_param_value_info_exp_t *desc =
-          &value_info_desc[index];
-      size_t description_len;
-      description_len = strnlen(
-          desc->description, ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
+      const auto description_len =
+          strnlen(value_info_desc[index].description,
+                  ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
       EXPECT_LT(description_len,
                 ZET_MAX_METRIC_PROGRAMMABLE_VALUE_DESCRIPTION_EXP);
-      LOG_DEBUG << "value info description: " << desc->description;
+      LOG_DEBUG << "value info description: "
+                << value_info_desc[index].description;
     }
   }
   LOG_DEBUG << "LEAVE generate_param_value_info_list_from_param_info";
@@ -1617,14 +1568,10 @@ void generate_metric_handles_list_from_param_values(
             << metric_handles_limit << " :metric_programmable name: " << name
             << " :metric_programmable description: " << description;
 
-  result = zetMetricCreateFromProgrammableExp(
+  ASSERT_ZE_RESULT_SUCCESS(zetMetricCreateFromProgrammableExp(
       metric_programmable_handle, parameter_values.data(),
       parameter_values.size(), name.c_str(), description.c_str(),
-      &metric_handles_count, nullptr);
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-      << "zetMetricCreateFromProgrammableExp FIRST call failed with error "
-         "code "
-      << result;
+      &metric_handles_count, nullptr));
   LOG_INFO
       << "zetMetricCreateFromProgrammableExp returned metric handle count: "
       << metric_handles_count << "\n";
@@ -1648,13 +1595,10 @@ void generate_metric_handles_list_from_param_values(
 
   metric_handles.resize(metric_handles_subset_size);
 
-  result = zetMetricCreateFromProgrammableExp(
+  ASSERT_ZE_RESULT_SUCCESS(zetMetricCreateFromProgrammableExp(
       metric_programmable_handle, parameter_values.data(),
       parameter_values.size(), name.c_str(), description.c_str(),
-      &metric_handles_subset_size, metric_handles.data());
-  ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-      << "zetMetricCreateFromProgrammableExp SECOND call failed with error "
-      << result;
+      &metric_handles_subset_size, metric_handles.data()));
 
   for (uint32_t handle_index = 0; handle_index < metric_handles_subset_size;
        ++handle_index) {
@@ -1686,9 +1630,7 @@ void destroy_metric_handles_list(
             << metric_handles.size();
 
   for (auto metric_handle : metric_handles) {
-    ze_result_t result;
-    result = zetMetricDestroyExp(metric_handle);
-    EXPECT_EQ(result, ZE_RESULT_SUCCESS);
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricDestroyExp(metric_handle));
   }
 
   metric_handles.resize(0);
@@ -1702,9 +1644,7 @@ void destroy_metric_group_handles_list(
   for (auto metric_group_handle : metric_group_handles_list) {
     ze_result_t result;
 
-    result = zetMetricGroupDestroyExp(metric_group_handle);
-    EXPECT_EQ(result, ZE_RESULT_SUCCESS)
-        << "metric group destroy on handle has failed";
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupDestroyExp(metric_group_handle));
   }
   metric_group_handles_list.resize(0);
   LOG_DEBUG << "LEAVE destroy_metric_group_handles_list";
@@ -1718,12 +1658,10 @@ void metric_tracer_create(
     ze_event_handle_t notification_event_handle,
     zet_metric_tracer_exp_handle_t *ptr_metric_tracer_handle) {
   LOG_DEBUG << "create tracer";
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerCreateExp(
-                context_handle, device_handle, metric_group_count,
-                ptr_metric_group_handle, ptr_tracer_descriptor,
-                notification_event_handle, ptr_metric_tracer_handle))
-      << "zetMetricTracerCreateExp failed";
+  ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerCreateExp(
+      context_handle, device_handle, metric_group_count,
+      ptr_metric_group_handle, ptr_tracer_descriptor, notification_event_handle,
+      ptr_metric_tracer_handle));
   ASSERT_NE(nullptr, *ptr_metric_tracer_handle)
       << "zetMetricTracerCreateExp returned a NULL handle";
 }
@@ -1731,33 +1669,28 @@ void metric_tracer_create(
 void metric_tracer_destroy(
     zet_metric_tracer_exp_handle_t metric_tracer_handle) {
   LOG_DEBUG << "destroy tracer";
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricTracerDestroyExp(metric_tracer_handle))
-      << "zetMetricTracerDestroyExp failed";
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerDestroyExp(metric_tracer_handle));
 }
 
 void metric_tracer_enable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
                           ze_bool_t synchronous) {
   LOG_DEBUG << "enable tracer";
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerEnableExp(metric_tracer_handle, synchronous))
-      << "zetMetricTracerEnableExp failed, synchronous = " << synchronous;
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricTracerEnableExp(metric_tracer_handle, synchronous));
 }
 
 void metric_tracer_disable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
                            ze_bool_t synchronous) {
   LOG_DEBUG << "disable tracer";
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerDisableExp(metric_tracer_handle, synchronous))
-      << "zetMetricTracerDisableExp failed, synchronous = " << synchronous;
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricTracerDisableExp(metric_tracer_handle, synchronous));
 }
 
 size_t metric_tracer_read_data_size(
     zet_metric_tracer_exp_handle_t metric_tracer_handle) {
   size_t metric_size = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricTracerReadDataExp(
-                                   metric_tracer_handle, &metric_size, nullptr))
-      << "zetMetricTracerReadDataExp call failed when retrieving the raw data "
-         "size";
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetMetricTracerReadDataExp(metric_tracer_handle, &metric_size, nullptr));
   EXPECT_NE(0u, metric_size)
       << "zetMetricTracerReadDataExp reports that there are no "
          "metrics available to read";
@@ -1772,10 +1705,8 @@ void metric_tracer_read_data(
   size_t metric_size = metric_tracer_read_data_size(metric_tracer_handle);
   EXPECT_NE(0u, metric_size);
   ptr_metric_data->resize(metric_size);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerReadDataExp(metric_tracer_handle, &metric_size,
-                                       ptr_metric_data->data()))
-      << "zetMetricTracerReadDataExp call failed when retrieving the raw data";
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+      metric_tracer_handle, &metric_size, ptr_metric_data->data()));
 }
 
 void metric_decoder_create(
@@ -1783,10 +1714,8 @@ void metric_decoder_create(
     zet_metric_decoder_exp_handle_t *ptr_metric_decoder_handle) {
   LOG_DEBUG << "create tracer decoder";
   ASSERT_NE(nullptr, metric_tracer_handle);
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricDecoderCreateExp(metric_tracer_handle,
-                                      ptr_metric_decoder_handle))
-      << "zetMetricDecoderCreateExp failed";
+  ASSERT_ZE_RESULT_SUCCESS(zetMetricDecoderCreateExp(
+      metric_tracer_handle, ptr_metric_decoder_handle));
   ASSERT_NE(nullptr, *ptr_metric_decoder_handle)
       << "zetMetricDecoderCreateExp returned a NULL handle";
 }
@@ -1795,20 +1724,15 @@ void metric_decoder_destroy(
     zet_metric_decoder_exp_handle_t metric_decoder_handle) {
   LOG_DEBUG << "destroy tracer decoder";
   EXPECT_NE(nullptr, metric_decoder_handle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricDecoderDestroyExp(metric_decoder_handle))
-      << "zetMetricDecoderDestroyExp failed";
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricDecoderDestroyExp(metric_decoder_handle));
 }
 
 uint32_t metric_decoder_get_decodable_metrics_count(
     zet_metric_decoder_exp_handle_t metric_decoder_handle) {
   uint32_t decodable_metric_count = 0;
   EXPECT_NE(nullptr, metric_decoder_handle);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricDecoderGetDecodableMetricsExp(
-                metric_decoder_handle, &decodable_metric_count, nullptr))
-      << "zetMetricDecoderGetDecodableMetricsExp call failed when retrieving "
-         "the number of decodable metrics";
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricDecoderGetDecodableMetricsExp(
+      metric_decoder_handle, &decodable_metric_count, nullptr));
   EXPECT_NE(0u, decodable_metric_count)
       << "zetMetricDecoderGetDecodableMetricsExp reports that there are no "
          "decodable metrics";
@@ -1823,12 +1747,9 @@ void metric_decoder_get_decodable_metrics(
       metric_decoder_get_decodable_metrics_count(metric_decoder_handle);
   EXPECT_NE(0u, decodable_metric_count);
   ptr_decodable_metric_handles->resize(decodable_metric_count);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricDecoderGetDecodableMetricsExp(
-                metric_decoder_handle, &decodable_metric_count,
-                ptr_decodable_metric_handles->data()))
-      << "zetMetricDecoderGetDecodableMetricsExp call failed when retrieving "
-         "the decodable metric handles";
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricDecoderGetDecodableMetricsExp(
+      metric_decoder_handle, &decodable_metric_count,
+      ptr_decodable_metric_handles->data()));
 }
 
 void metric_tracer_decode_get_various_counts(
@@ -1837,12 +1758,10 @@ void metric_tracer_decode_get_various_counts(
     uint32_t decodable_metric_count,
     std::vector<zet_metric_handle_t> *ptr_decodable_metric_handles,
     uint32_t *ptr_set_count, uint32_t *ptr_metric_entries_count) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerDecodeExp(
-                metric_decoder_handle, ptr_raw_data_size, ptr_raw_data->data(),
-                decodable_metric_count, ptr_decodable_metric_handles->data(),
-                ptr_set_count, nullptr, ptr_metric_entries_count, nullptr))
-      << "zetMetricTracerDecodeExp failed";
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerDecodeExp(
+      metric_decoder_handle, ptr_raw_data_size, ptr_raw_data->data(),
+      decodable_metric_count, ptr_decodable_metric_handles->data(),
+      ptr_set_count, nullptr, ptr_metric_entries_count, nullptr));
   LOG_DEBUG << "decodable metric entry count: " << *ptr_metric_entries_count;
   LOG_DEBUG << "set count: " << *ptr_set_count;
 }
@@ -1856,13 +1775,11 @@ void metric_tracer_decode(
     std::vector<uint32_t> *ptr_metric_entries_count_per_set,
     uint32_t *ptr_metric_entries_count,
     std::vector<zet_metric_entry_exp_t> *ptr_metric_entries) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricTracerDecodeExp(
-                metric_decoder_handle, ptr_raw_data_size, ptr_raw_data->data(),
-                decodable_metric_count, ptr_decodable_metric_handles->data(),
-                ptr_set_count, ptr_metric_entries_count_per_set->data(),
-                ptr_metric_entries_count, ptr_metric_entries->data()))
-      << "zetMetricTracerDecodeExp failed";
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerDecodeExp(
+      metric_decoder_handle, ptr_raw_data_size, ptr_raw_data->data(),
+      decodable_metric_count, ptr_decodable_metric_handles->data(),
+      ptr_set_count, ptr_metric_entries_count_per_set->data(),
+      ptr_metric_entries_count, ptr_metric_entries->data()));
   LOG_DEBUG << "actual decoded metric entry count: "
             << *ptr_metric_entries_count;
   LOG_DEBUG << "raw data decoded: " << *ptr_raw_data_size << " bytes";
@@ -1879,9 +1796,8 @@ void get_metric_groups_supporting_dma_buf(
     metric_group_type.type = ZET_METRIC_GROUP_TYPE_EXP_FLAG_FORCE_UINT32;
     zet_metric_group_properties_t metric_group_properties = {};
     metric_group_properties.pNext = &metric_group_type;
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricGroupGetProperties(metric_group_handle,
-                                          &metric_group_properties));
+    ASSERT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
+        metric_group_handle, &metric_group_properties));
     if (metric_group_properties.samplingType == sampling_type &&
         metric_group_type.type ==
             ZET_METRIC_GROUP_TYPE_EXP_FLAG_EXPORT_DMA_BUF) {
@@ -1901,9 +1817,8 @@ void metric_get_dma_buf_fd_and_size(
   zet_metric_group_properties_t metric_group_properties = {};
   metric_group_properties.pNext = &dma_buf_properties;
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupGetProperties(metric_group_handle,
-                                        &metric_group_properties));
+  ASSERT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
+      metric_group_handle, &metric_group_properties));
   ASSERT_NE(-1, dma_buf_properties.fd)
       << "metric group " << metric_group_properties.name
       << " is of type dma buf and cannot get the fd";
@@ -1930,13 +1845,13 @@ void *metric_map_dma_buf_fd_to_memory(ze_device_handle_t device,
   mem_desc.pNext = &mem_import;
   mem_desc.flags = 0;
   mem_desc.ordinal = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemAllocDevice(context, &mem_desc, size,
-                                                alignment, device, &mem_ret));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemAllocDevice(context, &mem_desc, size, alignment, device, &mem_ret));
   ze_memory_allocation_properties_t prop = {};
   prop.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
   prop.pNext = NULL;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAllocProperties(context, mem_ret, &prop, NULL));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAllocProperties(context, mem_ret, &prop, NULL));
   LOG_DEBUG << "zeMemGetAllocProperties returned memory: " << mem_ret;
   return mem_ret;
 }

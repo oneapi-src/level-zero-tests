@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -29,7 +30,7 @@ class zeCommandListCreateTests : public ::testing::Test,
                                      std::tuple<ze_command_list_flag_t, bool>> {
 };
 
-TEST_P(
+LZT_TEST_P(
     zeCommandListCreateTests,
     GivenValidDeviceAndCommandListDescriptorWhenCreatingCommandListThenNotNullCommandListIsReturned) {
 
@@ -61,13 +62,13 @@ public:
   }
 };
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListDestroyTests,
     GivenValidDeviceAndCommandListDescriptorWhenDestroyingCommandListThenSuccessIsReturned) {
   run(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListDestroyTests,
     GivenValidDeviceAndImmediateCommandListDescriptorWhenDestroyingCommandListThenSuccessIsReturned) {
   run(true);
@@ -79,8 +80,9 @@ class zeCommandListCreateImmediateTests
           std::tuple<ze_command_queue_flag_t, ze_command_queue_mode_t,
                      ze_command_queue_priority_t>> {};
 
-TEST_P(zeCommandListCreateImmediateTests,
-       GivenImplicitCommandQueueWhenCreatingCommandListThenSuccessIsReturned) {
+LZT_TEST_P(
+    zeCommandListCreateImmediateTests,
+    GivenImplicitCommandQueueWhenCreatingCommandListThenSuccessIsReturned) {
 
   ze_command_queue_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
@@ -112,17 +114,17 @@ public:
   void run(const bool is_immediate) {
     auto bundle = lzt::create_command_bundle(is_immediate);
     EXPECT_NE(nullptr, bundle.list);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListClose(bundle.list));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.list));
     lzt::destroy_command_bundle(bundle);
   }
 };
 
-TEST_F(zeCommandListCloseTests,
-       GivenEmptyCommandListWhenClosingCommandListThenSuccessIsReturned) {
+LZT_TEST_F(zeCommandListCloseTests,
+           GivenEmptyCommandListWhenClosingCommandListThenSuccessIsReturned) {
   run(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListCloseTests,
     GivenEmptyImmediateCommandListWhenClosingCommandListThenSuccessIsReturned) {
   run(true);
@@ -242,7 +244,7 @@ protected:
         EXPECT_EQ(static_cast<int *>(kernel_buffer)[i], addval);
         EXPECT_EQ(static_cast<uint8_t *>(memory_fill_mem)[i], pattern);
       }
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(event));
     } else {
       lzt::validate_data_pattern(host_mem, size, -1);
       for (size_t i = 0; i < size; i++) {
@@ -280,40 +282,40 @@ protected:
   }
 };
 
-TEST_F(zeCommandListResetTests,
-       GivenEmptyCommandListWhenResettingCommandListThenSuccessIsReturned) {
+LZT_TEST_F(zeCommandListResetTests,
+           GivenEmptyCommandListWhenResettingCommandListThenSuccessIsReturned) {
   auto bundle = lzt::create_command_bundle(false);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(bundle.list));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListReset(bundle.list));
   lzt::destroy_command_bundle(bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListResetTests,
     GivenEmptyImmediateCommandListWhenResettingCommandListThenSuccessIsReturned) {
   auto bundle = lzt::create_command_bundle(true);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandListReset(bundle.list));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListReset(bundle.list));
   lzt::destroy_command_bundle(bundle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListResetTests,
     GivenResetCommandListWithVariousCommandsIncludingImageCommandsWhenExecutingMemoryFillThenOnlyMemoryFillExecuted) {
   run_reset_test(false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListResetTests,
     GivenResetImmediateCommandListWithVariousCommandsIncludingImageCommandsWhenExecutingMemoryFillThenOnlyMemoryFillExecuted) {
   run_reset_test(false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListResetTests,
     GivenResetExecutedCommandListWithVariousCommandsIncludingImageCommandsWhenExecutingMemoryFillThenAllCommandsExecuted) {
   run_reset_test(true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListResetTests,
     GivenResetExecutedImmediateCommandListWithVariousCommandsIncludingImageCommandsWhenExecutingMemoryFillThenAllCommandsExecuted) {
   run_reset_test(true, true);
@@ -321,7 +323,8 @@ TEST_F(
 
 class zeCommandListReuseTests : public ::testing::Test {};
 
-TEST(zeCommandListReuseTests, GivenCommandListWhenItIsExecutedItCanBeRunAgain) {
+LZT_TEST(zeCommandListReuseTests,
+         GivenCommandListWhenItIsExecutedItCanBeRunAgain) {
   auto cmdlist_mem_set = lzt::create_command_list();
   auto cmdlist_mem_zero = lzt::create_command_list();
   auto cmdq = lzt::create_command_queue();
@@ -415,7 +418,7 @@ void RunGivenResetCommandListWhenCloseImmediatelyNoInstructionsExecute(
   lzt::free_memory(buffer);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeCommandListCloseThenAppendTests,
     GivenResetCommandListWhenCloseImmediatelyNoCommandListInstructionsExecute) {
   RunGivenResetCommandListWhenCloseImmediatelyNoInstructionsExecute(GetParam());
@@ -496,8 +499,9 @@ void RunWhenResetThenVerifyOnlySubsequentInstructionsExecuted(
   }
 }
 
-TEST_P(zeCommandListCloseAndResetTests,
-       GivenCommandListWhenResetThenVerifyOnlySubsequentInstructionsExecuted) {
+LZT_TEST_P(
+    zeCommandListCloseAndResetTests,
+    GivenCommandListWhenResetThenVerifyOnlySubsequentInstructionsExecuted) {
   RunWhenResetThenVerifyOnlySubsequentInstructionsExecuted(
       std::get<0>(GetParam()), std::get<1>(GetParam()));
 }
@@ -514,8 +518,8 @@ INSTANTIATE_TEST_SUITE_P(
 class zeCommandListFlagTests : public ::testing::Test,
                                public ::testing::WithParamInterface<
                                    std::tuple<ze_command_list_flag_t, bool>> {};
-TEST_P(zeCommandListFlagTests,
-       GivenCommandListCreatedWithDifferentFlagsThenSuccessIsReturned) {
+LZT_TEST_P(zeCommandListFlagTests,
+           GivenCommandListCreatedWithDifferentFlagsThenSuccessIsReturned) {
   size_t size = 1024;
   auto device_memory = lzt::allocate_device_memory(size);
   auto host_memory = lzt::allocate_host_memory(size);
@@ -620,14 +624,14 @@ RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
                                            is_shared_system_dst);
 }
 
-TEST(
+LZT_TEST(
     zeCommandListAppendMemoryCopyTest,
     GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturned) {
   RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
       false, false);
 }
 
-TEST(
+LZT_TEST(
     zeCommandListAppendMemoryCopyTest,
     GivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -657,9 +661,8 @@ void RunAppendingWriteGlobalTimestampThenSuccessIsReturned(bool is_immediate) {
   ze_event_handle_t wait_event_before, wait_event_after;
   auto wait_event_initial = event;
 
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandListAppendWriteGlobalTimestamp(bundle.list, &dst_timestamp,
-                                                    nullptr, 1, &event));
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendWriteGlobalTimestamp(
+      bundle.list, &dst_timestamp, nullptr, 1, &event));
   ASSERT_EQ(event, wait_event_initial);
 
   lzt::close_command_list(bundle.list);
@@ -670,12 +673,13 @@ void RunAppendingWriteGlobalTimestampThenSuccessIsReturned(bool is_immediate) {
   lzt::destroy_command_bundle(bundle);
 }
 
-TEST(zeCommandListAppendWriteGlobalTimestampTest,
-     GivenCommandListWhenAppendingWriteGlobalTimestampThenSuccessIsReturned) {
+LZT_TEST(
+    zeCommandListAppendWriteGlobalTimestampTest,
+    GivenCommandListWhenAppendingWriteGlobalTimestampThenSuccessIsReturned) {
   RunAppendingWriteGlobalTimestampThenSuccessIsReturned(false);
 }
 
-TEST(
+LZT_TEST(
     zeCommandListAppendWriteGlobalTimestampTest,
     GivenImmediateCommandListWhenAppendingWriteGlobalTimestampThenSuccessIsReturned) {
   RunAppendingWriteGlobalTimestampThenSuccessIsReturned(true);
@@ -848,14 +852,14 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
   lzt::free_memory_with_allocator_selector(host_memory, is_shared_system_dst);
 }
 
-TEST(
+LZT_TEST(
     zeCommandListAppendMemoryCopyTest,
     GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturned) {
   RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
       false, false, false);
 }
 
-TEST(
+LZT_TEST(
     zeCommandListAppendMemoryCopyTest,
     GivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -959,13 +963,13 @@ static void RunAppendLaunchKernelEvent(cmdListVec cmdlist, cmdQueueVec cmdqueue,
 
     totalVal[n] = 0;
     for (int i = 0; i < (num_iterations - 1); i++) {
-      addval2 = rand() & 0xFFFF;
+      addval2 = lzt::generate_value<int>() & 0xFFFF;
       totalVal[n] += addval2;
       lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
 
       lzt::append_launch_function(cmdlist[n], kernel, &tg, nullptr, 0, nullptr);
     }
-    addval2 = rand() & 0xFFFF;
+    addval2 = lzt::generate_value<int>() & 0xFFFF;
     ;
     totalVal[n] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -979,7 +983,7 @@ static void RunAppendLaunchKernelEvent(cmdListVec cmdlist, cmdQueueVec cmdqueue,
     lzt::synchronize(cmdqueue[n], UINT64_MAX);
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event, timeout));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(event, timeout));
 
   for (int n = 0; n < num_cmdlist; n++) {
     for (size_t i = 0; i < size; i++) {
@@ -1068,14 +1072,14 @@ RunAppendLaunchKernelEventLoop(cmdListVec cmdlist, cmdQueueVec cmdqueue,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
   RunAppendLaunchKernelEventLoop(cmdlist, cmdqueue, event0,
                                  RunAppendLaunchKernelEventL0SharedAlloc);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingMallocWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1083,7 +1087,7 @@ TEST_F(
                                  RunAppendLaunchKernelEventHostMalloc);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingNewWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1091,7 +1095,7 @@ TEST_F(
                                  RunAppendLaunchKernelEventHostNew);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingUniquePtrWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1099,7 +1103,7 @@ TEST_F(
                                  RunAppendLaunchKernelEventHostUniquePtr);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeCommandListEventCounterTests,
     GivenInOrderCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionUsingSharedPtrWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();

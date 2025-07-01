@@ -20,7 +20,7 @@ namespace {
 
 class CommandQueueCreateNegativeTests : public ::testing::Test {};
 
-TEST_F(
+LZT_TEST_F(
     CommandQueueCreateNegativeTests,
     GivenInValidDeviceHandleWhenCreatingCommandQueueThenErrorInvalidNullHandleIsReturned) {
 
@@ -39,7 +39,7 @@ TEST_F(
                                  &descriptor, &command_queue));
 }
 
-TEST_F(
+LZT_TEST_F(
     CommandQueueCreateNegativeTests,
     GivenInValidDescWhenCreatingCommandQueueThenErrorInvalidNullHandleIsReturned) {
 
@@ -51,7 +51,7 @@ TEST_F(
                                  &command_queue));
 }
 
-TEST_F(
+LZT_TEST_F(
     CommandQueueCreateNegativeTests,
     GivenInValidOutputCmdQueueWhenCreatingCommandQueueThenErrorInvalidNullHandleIsReturned) {
 
@@ -71,7 +71,7 @@ TEST_F(
 
 class CommandQueueDestroyNegativeTests : public ::testing::Test {};
 
-TEST_F(
+LZT_TEST_F(
     CommandQueueDestroyNegativeTests,
     GivenValidDeviceAndNonNullCommandQueueWhenDestroyingCommandQueueThenSuccessIsReturned) {
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
@@ -80,7 +80,7 @@ TEST_F(
 
 class CommandQueueExecuteCommandListNegativeTests : public ::testing::Test {};
 
-TEST_F(
+LZT_TEST_F(
     CommandQueueExecuteCommandListNegativeTests,
     GivenInvalidCommandQueueHandleWhenExecutingCommandListsThenInvalidNullHandleErrorIsReturned) {
 
@@ -94,7 +94,7 @@ TEST_F(
   lzt::destroy_command_list(command_list);
 }
 
-TEST_F(
+LZT_TEST_F(
     CommandQueueExecuteCommandListNegativeTests,
     GivenInvalidCommandListPointerWhenExecutingCommandListsThenInvalidNullPointerErrorIsReturned) {
   ze_command_queue_handle_t command_queue = nullptr;
@@ -106,7 +106,7 @@ TEST_F(
   lzt::destroy_command_queue(command_queue);
 }
 
-TEST_F(
+LZT_TEST_F(
     CommandQueueExecuteCommandListNegativeTests,
     GivenInvalidNumberOfCommandListWhenExecutingCommandListsThenInvalidSizeErrorIsReturned) {
 
@@ -121,7 +121,7 @@ TEST_F(
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
 }
-TEST_F(
+LZT_TEST_F(
     CommandQueueExecuteCommandListNegativeTests,
     GivenAlreadySignalledFenceWhenExecutingCommandListsThenInvalidSynchronizationObjectErrorIsReturned) {
 
@@ -134,7 +134,7 @@ TEST_F(
 
   lzt::execute_command_lists(command_queue, 1, &command_list1, hFence);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, lzt::sync_fence(hFence, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(lzt::sync_fence(hFence, UINT64_MAX));
 
   // Now use the same signalled fence above for below other commandlist
   // execution
@@ -148,7 +148,7 @@ TEST_F(
   lzt::destroy_fence(hFence);
 }
 
-TEST_F(
+LZT_TEST_F(
     CommandQueueExecuteCommandListNegativeTests,
     GivenInvalidCommandQueueHandleWhenExecutingCommandQueueSynchronizeThenInvalidNullHandleErrorIsReturned) {
   ze_command_list_handle_t command_list;

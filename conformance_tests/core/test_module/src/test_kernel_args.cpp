@@ -75,10 +75,9 @@ static ze_image_handle_t create_2d_uint_test_image(int width, int height) {
 
   ze_image_handle_t image = nullptr;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeImageCreate(lzt::get_default_context(),
-                          lzt::zeDevice::get_instance()->get_device(),
-                          &image_description, &image));
+  EXPECT_ZE_RESULT_SUCCESS(zeImageCreate(
+      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+      &image_description, &image));
 
   return image;
 }
@@ -138,12 +137,12 @@ void KernelArgumentTests::RunGivenSeveralBuffersWhenPassingToKernelTest(
   }
 }
 
-TEST_F(KernelArgumentTests,
-       GivenSeveralBuffersWhenPassingToKernelThenCorrectResultIsReturned) {
+LZT_TEST_F(KernelArgumentTests,
+           GivenSeveralBuffersWhenPassingToKernelThenCorrectResultIsReturned) {
   RunGivenSeveralBuffersWhenPassingToKernelTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     KernelArgumentTests,
     GivenSeveralBuffersWhenPassingToKernelOnImmediateCmdListThenCorrectResultIsReturned) {
   RunGivenSeveralBuffersWhenPassingToKernelTest(true);
@@ -180,8 +179,8 @@ void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest(
   }
 }
 
-TEST_F(KernelArgumentTests,
-       GivenSeveral2DImagesWhenPassingToKernelThenCorrectResultIsReturned) {
+LZT_TEST_F(KernelArgumentTests,
+           GivenSeveral2DImagesWhenPassingToKernelThenCorrectResultIsReturned) {
   if (!(lzt::image_support())) {
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
@@ -189,7 +188,7 @@ TEST_F(KernelArgumentTests,
   RunGivenSeveral2DImagesWhenPassingToKernelTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     KernelArgumentTests,
     GivenSeveral2DImagesWhenPassingToKernelOnImmediateCmdListThenCorrectResultIsReturned) {
   if (!(lzt::image_support())) {
@@ -241,12 +240,12 @@ void KernelArgumentTests::RunGivenSeveralSamplersWhenPassingToKernelTest(
   }
 }
 
-TEST_F(KernelArgumentTests,
-       GivenSeveralSamplersWhenPassingToKernelThenSuccessIsReturned) {
+LZT_TEST_F(KernelArgumentTests,
+           GivenSeveralSamplersWhenPassingToKernelThenSuccessIsReturned) {
   RunGivenSeveralSamplersWhenPassingToKernelTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     KernelArgumentTests,
     GivenSeveralSamplersWhenPassingToKernelOnImmediateCmdListThenSuccessIsReturned) {
   RunGivenSeveralSamplersWhenPassingToKernelTest(true);
@@ -345,7 +344,7 @@ void KernelArgumentTests::
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     KernelArgumentTests,
     GivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelCorrectResultIsReturned) {
   if (!(lzt::image_support())) {
@@ -359,7 +358,7 @@ TEST_F(
   RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     KernelArgumentTests,
     GivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelOnImmediateCmdListCorrectResultIsReturned) {
   if (!(lzt::image_support())) {
@@ -404,12 +403,12 @@ void KernelArgumentTests::RunGivenManyLocalArgsWhenPassingToKernelTest(
   lzt::free_memory(buff);
 }
 
-TEST_F(KernelArgumentTests,
-       GivenManyLocalArgsWhenPassingToKernelCorrectResultIsReturned) {
+LZT_TEST_F(KernelArgumentTests,
+           GivenManyLocalArgsWhenPassingToKernelCorrectResultIsReturned) {
   RunGivenManyLocalArgsWhenPassingToKernelTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     KernelArgumentTests,
     GivenManyLocalArgsWhenPassingToKernelOnImmediateCmdListCorrectResultIsReturned) {
   RunGivenManyLocalArgsWhenPassingToKernelTest(true);

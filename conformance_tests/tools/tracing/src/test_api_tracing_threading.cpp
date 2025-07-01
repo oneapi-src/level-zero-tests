@@ -86,7 +86,7 @@ protected:
   ze_callbacks_t epilogues = {};
 };
 
-TEST_F(
+LZT_TEST_F(
     TracingThreadTests,
     GivenSingleTracingEnabledThreadWhenCallingDifferentAPIFunctionThenCallbacksCalledOnce) {
 
@@ -101,7 +101,7 @@ TEST_F(
   EXPECT_EQ(callback_exit_invocations, 1);
 }
 
-TEST_F(
+LZT_TEST_F(
     TracingThreadTests,
     GivenSingleTracingEnabledThreadWhenCallingSameAPIFunctionThenCallbackCalledTwice) {
 
@@ -131,7 +131,7 @@ void trace_memory_allocation_then_deallocate(ze_memory_type_t memory_type) {
   lzt::free_memory(memory);
 }
 
-TEST_F(
+LZT_TEST_F(
     TracingThreadTests,
     GivenTwoThreadsWhenTracingEnabledCallingDifferentAPIFunctionThenCallbackCalledOnce) {
 
@@ -148,7 +148,7 @@ TEST_F(
   EXPECT_EQ(1, callback_exit_invocations);
 }
 
-TEST_F(
+LZT_TEST_F(
     TracingThreadTests,
     GivenTwoThreadsWhenTracingEnabledCallingSameAPIFunctionThenCallbacksCalledTwice) {
 
@@ -170,7 +170,7 @@ protected:
   void TearDown() override {}
 };
 
-TEST_F(
+LZT_TEST_F(
     TracingThreadTestsDisabling,
     GivenInvokedPrologueWhenDisablingTracerInSeparateThreadThenEpilogueIsCalled) {
 

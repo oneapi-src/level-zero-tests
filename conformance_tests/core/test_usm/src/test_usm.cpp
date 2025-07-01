@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 
 namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
@@ -209,8 +210,8 @@ public:
       std::fill(host_found_output_buffer,
                 host_found_output_buffer + output_count_, 0);
 
-      uint16_t pattern_base = std::rand() % 0xFFFF;
-      uint16_t pattern_base_1 = std::rand() % 0xFFFF;
+      uint16_t pattern_base = lzt::generate_value<uint16_t>();
+      uint16_t pattern_base_1 = lzt::generate_value<uint16_t>();
 
       LOG_DEBUG << "PREPARE TO RUN START for device " << i;
       LOG_DEBUG << "totalSize " << totalSize;
@@ -266,8 +267,8 @@ public:
       // check if peer can access the shared memory
 
       ze_bool_t can_access = false;
-      EXPECT_EQ(
-          ZE_RESULT_SUCCESS,
+      EXPECT_ZE_RESULT_SUCCESS(
+
           zeDeviceCanAccessPeer(device_handle, device_handle_1, &can_access));
 
       // Before accessing make sure the peer's device size
@@ -353,7 +354,7 @@ public:
         level_zero_tests::free_memory(context, gpu_found_output_buffer_1);
 
         LOG_DEBUG << "call destroy module for device :" << index;
-        EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle_1));
+        EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module_handle_1));
 
         delete[] host_expected_output_buffer_1;
         delete[] host_found_output_buffer_1;
@@ -365,7 +366,7 @@ public:
 
       LOG_DEBUG << "host touches pattern_buffer with new pattern";
       // host will touch the pattern buffer,
-      uint16_t pattern_base_2 = std::rand() % 0xFFFF;
+      uint16_t pattern_base_2 = lzt::generate_value<uint16_t>();
       LOG_DEBUG << "pattern_base " << pattern_base_1;
       for (uint32_t i = 0; i < pattern_memory_count; i++)
         gpu_pattern_buffer[i] = (i << (sizeof(uint16_t) * 8)) + pattern_base_2;
@@ -389,7 +390,7 @@ public:
       level_zero_tests::free_memory(context, gpu_expected_output_buffer);
       level_zero_tests::free_memory(context, gpu_found_output_buffer);
       LOG_DEBUG << "call destroy module for device";
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+      EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module_handle));
       delete[] host_expected_output_buffer;
       delete[] host_found_output_buffer;
     }
@@ -461,8 +462,8 @@ public:
       std::fill(host_found_output_buffer,
                 host_found_output_buffer + output_count_, 0);
 
-      uint16_t pattern_base = std::rand() % 0xFFFF;
-      uint16_t pattern_base_1 = std::rand() % 0xFFFF;
+      uint16_t pattern_base = lzt::generate_value<uint16_t>();
+      uint16_t pattern_base_1 = lzt::generate_value<uint16_t>();
 
       LOG_DEBUG << "PREPARE TO RUN START for device " << i;
       LOG_DEBUG << "totalSize " << totalSize;
@@ -531,7 +532,7 @@ public:
       level_zero_tests::free_memory(context, gpu_expected_output_buffer);
       level_zero_tests::free_memory(context, gpu_found_output_buffer);
       LOG_DEBUG << "call destroy module for device";
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeModuleDestroy(module_handle));
+      EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module_handle));
       delete[] host_expected_output_buffer;
       delete[] host_found_output_buffer;
     }
@@ -548,7 +549,7 @@ public:
 class zeDriverMemoryMigrationPageFaultTestsSingleDevice
     : public ::zeDriverMemoryMigrationPageFaultTestsMultiDevice {};
 
-TEST_P(
+LZT_TEST_P(
     zeDriverMemoryMigrationPageFaultTestsSingleDevice,
     GivenSingleDeviceWhenMemoryAccessedFromHostAndDeviceDataIsValidAndSuccessful) {
 
@@ -560,7 +561,7 @@ TEST_P(
   memoryMigrationAccessTest(test_arguments);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeDriverMemoryMigrationPageFaultTestsMultiDevice,
     GivenMultipleDevicesWhenMemoryAccessedFromHostAndDeviceAndPeerToPeerDataIsValidAndSuccessful) {
 
@@ -573,7 +574,7 @@ TEST_P(
   memoryMigrationPageFaultTests(test_arguments);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeDriverMemoryMigrationPageFaultTestsSingleDevice,
     GivenSingleDeviceWhenMemoryAccessedFromHostAndDeviceAndPeerToPeerDataIsValidAndSuccessful) {
 
@@ -607,7 +608,7 @@ INSTANTIATE_TEST_SUITE_P(TestAllInputPermuntationsForMultiDevice,
 class zeConcurrentAccessToMemoryTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<size_t, bool>> {};
-TEST_P(
+LZT_TEST_P(
     zeConcurrentAccessToMemoryTests,
     GivenSharedMemoryDividedIntoTwoChunksWhenBothHostAndDeviceAccessAChunkConcurrentlyThenSuccessIsReturned) {
 
@@ -715,7 +716,7 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices,
   lzt::free_memory(memory);
 }
 
-TEST(
+LZT_TEST(
     MultiDeviceSharedMemoryTests,
     GivenMultipleRootDevicesUsingSharedMemoryWhenExecutingMemoryFillThenCorrectDataWritten) {
   auto driver = lzt::get_default_driver();
@@ -724,7 +725,7 @@ TEST(
   test_multi_device_shared_memory(devices, false);
 }
 
-TEST(
+LZT_TEST(
     MultiDeviceSharedMemoryTests,
     GivenMultipleRootDevicesUsingSharedMemoryWhenExecutingMemoryFillOnImmediateCmdListThenCorrectDataWritten) {
   auto driver = lzt::get_default_driver();
@@ -733,7 +734,7 @@ TEST(
   test_multi_device_shared_memory(devices, true);
 }
 
-TEST(
+LZT_TEST(
     MultiDeviceSharedMemoryTests,
     GivenMultipleSubDevicesUsingSharedMemoryWhenExecutingMemoryFillThenCorrectDataWritten) {
 
@@ -746,7 +747,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     MultiDeviceSharedMemoryTests,
     GivenMultipleSubDevicesUsingSharedMemoryWhenExecutingMemoryFillOnImmediateCmdListThenCorrectDataWritten) {
 

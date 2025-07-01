@@ -27,7 +27,7 @@ class MemoryModuleTest : public lzt::SysmanCtsClass {};
 #define MEMORY_TEST MemoryModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -40,7 +40,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullMemoryHandlesAreReturned) {
   for (auto device : devices) {
@@ -58,7 +58,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -75,7 +75,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarMemHandlesReturned) {
   for (auto device : devices) {
@@ -99,7 +99,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenValidMemHandleWhenRetrievingMemPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -130,7 +130,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenValidMemHandleWhenRetrievingMemPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -158,7 +158,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenValidMemHandleWhenRetrievingMemBandWidthThenValidBandWidthCountersAreReturned) {
   for (auto device : devices) {
@@ -180,8 +180,8 @@ TEST_F(
   }
 }
 
-TEST_F(MEMORY_TEST,
-       GivenValidMemHandleWhenRetrievingMemStateThenValidStateIsReturned) {
+LZT_TEST_F(MEMORY_TEST,
+           GivenValidMemHandleWhenRetrievingMemStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto mem_handles = lzt::get_mem_handles(device, count);
@@ -276,7 +276,7 @@ ze_result_t copy_workload(ze_device_handle_t device,
   return result;
 }
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenValidMemHandleWhenAllocatingMemoryUptoMaxCapacityThenOutOfDeviceMemoryErrorIsReturned) {
 
@@ -298,7 +298,7 @@ TEST_F(
     ze_device_properties_t deviceProperties = {
         ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     result = zeDeviceGetProperties(core_device, &deviceProperties);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_ZE_RESULT_SUCCESS(result);
     std::cout << "test device name " << deviceProperties.name << " uuid "
               << lzt::to_string(deviceProperties.uuid);
     device = core_device;
@@ -306,7 +306,7 @@ TEST_F(
     ze_device_properties_t deviceProperties = {
         ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     result = zeDeviceGetProperties(device, &deviceProperties);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_ZE_RESULT_SUCCESS(result);
     std::cout << "test device name " << deviceProperties.name << " uuid "
               << lzt::to_string(deviceProperties.uuid);
 #endif // USE_ZESINIT
@@ -322,19 +322,19 @@ TEST_F(
     void *local_mem = nullptr;
     result = zeMemAllocDevice(lzt::get_default_context(), &device_desc,
                               alloc_size, 1, device, &local_mem);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_ZE_RESULT_SUCCESS(result);
 
     result = zeContextMakeMemoryResident(lzt::get_default_context(), device,
                                          local_mem, alloc_size);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_ZE_RESULT_SUCCESS(result);
 
     result = copy_workload(device, &device_desc, local_mem,
                            static_cast<int *>(local_mem) + alloc_size / 2,
                            alloc_size / 2);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_ZE_RESULT_SUCCESS(result);
 
     result = zeMemFree(lzt::get_default_context(), local_mem);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_ZE_RESULT_SUCCESS(result);
 
     uint32_t count = 0;
     do {
@@ -363,7 +363,7 @@ TEST_F(
 
     for (int i = 0; i < alloc_list.size(); i++) {
       result = zeMemFree(lzt::get_default_context(), alloc_list[i]);
-      EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+      EXPECT_ZE_RESULT_SUCCESS(result);
     }
     alloc_list.clear();
   }
@@ -398,7 +398,7 @@ void getRasState(ze_device_handle_t device) {
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     MEMORY_TEST,
     GivenValidMemoryAndRasHandlesWhenGettingMemoryGetStateAndRasGetStateFromDifferentThreadsThenExpectBothToReturnSucess) {
   for (auto device : devices) {
@@ -408,4 +408,43 @@ TEST_F(
     memoryThread.join();
   }
 }
+
+LZT_TEST_F(MEMORY_TEST,
+           GivenDeviceWhenRetrievingMemoryPropertiesThenLocationIsAsExpected) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto mem_handles = lzt::get_mem_handles(device, count);
+
+    if (count == 0) {
+      FAIL() << "No memory handles found on this device!";
+      continue;
+    }
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    device = core_device;
+#endif // USE_ZESINIT
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &deviceProperties));
+    bool is_integrated =
+        (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED);
+
+    for (auto mem_handle : mem_handles) {
+      ASSERT_NE(nullptr, mem_handle);
+
+      auto mem_properties = lzt::get_mem_properties(mem_handle);
+      if (is_integrated) {
+        EXPECT_EQ(mem_properties.location, ZES_MEM_LOC_SYSTEM)
+            << "Integrated device should have system memory location";
+      } else {
+        EXPECT_EQ(mem_properties.location, ZES_MEM_LOC_DEVICE)
+            << "Discrete device should have device memory location";
+      }
+    }
+  }
+}
+
 } // namespace

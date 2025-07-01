@@ -26,12 +26,12 @@ int signum_caught = -1;
 
 bool check_p2p_capabilities(std::vector<ze_device_handle_t> devices) {
   ze_bool_t can_access_peer = false;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceCanAccessPeer(devices[0], devices[1], &can_access_peer));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceCanAccessPeer(devices[0], devices[1], &can_access_peer));
   ze_device_p2p_properties_t p2p_properties{};
   p2p_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceGetP2PProperties(devices[0], devices[1], &p2p_properties));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceGetP2PProperties(devices[0], devices[1], &p2p_properties));
 
   if ((can_access_peer == false) || (p2p_properties.flags == 0)) {
     LOG_WARNING << "Two devices found but no P2P capabilities detected\n";
@@ -112,9 +112,8 @@ inline void init_process(ze_context_handle_t &context,
     ze_device_p2p_properties_t peerProperties = {};
     peerProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetP2PProperties(devices[device_x], devices[device_y],
-                                       &peerProperties));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetP2PProperties(
+        devices[device_x], devices[device_y], &peerProperties));
     if ((peerProperties.flags & ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS) == 0) {
       LOG_WARNING << "P2P atomic access unsupported, required for concurrent "
                      "access tests\n";
@@ -304,7 +303,7 @@ void run_client(int size, uint32_t device_x, uint32_t device_y,
     lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
     lzt::reset_command_list(cb.list);
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemCloseIpcHandle(context, memory));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
 
     usleep(5e5);
     EXPECT_EQ(0, kill(ppid, SIGINT));
@@ -353,7 +352,7 @@ class P2PIpcMemoryAccessTest
       public ::testing::WithParamInterface<
           std::tuple<size_t, uint32_t, uint32_t, bool>> {};
 
-TEST_P(
+LZT_TEST_P(
     P2PIpcMemoryAccessTest,
     GivenTwoDevicesAndL0MemoryAllocatedInDeviceXExportedToDeviceYWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceYCorrectly) {
   size_t size = std::pow(2, std::get<0>(GetParam()));
@@ -388,7 +387,7 @@ TEST_P(
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     P2PIpcMemoryAccessTest,
     GivenTwoDevicesAndL0MemoryAllocatedInDeviceXAndDeviceYExportedToEachOtherSequentiallyWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceXAndDeviceYSequentially) {
   size_t size = std::pow(2, std::get<0>(GetParam()));
@@ -423,7 +422,7 @@ TEST_P(
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     P2PIpcMemoryAccessTest,
     GivenTwoDevicesAndL0MemoryAllocatedInDeviceXExportedToDeviceYWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByBothDeviceXAndDeviceYConcurrently) {
   size_t size = std::pow(2, std::get<0>(GetParam()));

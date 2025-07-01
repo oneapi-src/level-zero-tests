@@ -69,7 +69,7 @@ protected:
   zet_metric_tracer_exp_handle_t tracer_handle;
 };
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenActivatedMetricGroupsWhenTracerIsCreatedWithOneOrMultipleMetricsGroupsThenTracerCreateSucceeds) {
 
@@ -98,10 +98,7 @@ TEST_F(
           device_with_metric_group_handles.activatable_metric_group_handle_list
               .data(),
           &tracer_descriptor, nullptr, &metric_tracer_handle);
-      EXPECT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerCreateExp for the first time failed with "
-             "error code "
-          << result;
+      EXPECT_ZE_RESULT_SUCCESS(result);
 
       zet_metric_tracer_exp_handle_t metric_tracer_handle1;
       result = zetMetricTracerCreateExp(
@@ -120,7 +117,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     WhenCreatingTracerIfNotificationEventHandleIsValidAndNotifyEveryNBytesIsZeroThenNotifyEveryNBytesIsSetToNearestPossibleValue) {
   /* After the tracer notification event, notifyEveryNBytes will be set to a
@@ -166,7 +163,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     WhenCreatingTracerIfNotificationEventHandleIsValidAndNotifyEveryNBytesIsUnsignedIntMaxThenNotifyEveryNBytesIsSetToNearestPossibleValue) {
   /* After the tracer notification event, notifyEveryNBytes will be set to a
@@ -213,7 +210,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenNotificationEventHasHappenedThenEnsureAvailableRawDataSizeIsMoreThanNotifyEveryNBytes) {
   /* While executing a workload, right after the tracer notification event, raw
@@ -282,7 +279,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenTracerIsCreatedAndEnabledThenTracerCannotBeDestroyedWithoutFirstBeingDisabled) {
   /* A tracer still enabled cannot be destroyed */
@@ -314,12 +311,12 @@ TEST_F(
     EXPECT_EQ(ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE, result);
     lzt::metric_tracer_disable(metric_tracer_handle, true);
     result = zetMetricTracerDestroyExp(metric_tracer_handle);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_ZE_RESULT_SUCCESS(result);
     lzt::deactivate_metric_groups(device);
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenTracerIsCreatedWhenTracerIsNotEnabledThenExpectNoRawDataToBeAvailable) {
   /* When the tracer is not enabled, no raw data is available to be read */
@@ -381,7 +378,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenTracerIsCreatedWhenTracerIsAsynchronouslyEnabledThenExpectValidRawDataToBeAvailableOnceTracerIsEnabled) {
   /* When the tracer is asynchronously enabled, wait for the tracer to be
@@ -455,17 +452,14 @@ TEST_F(
                << max_wait_time_in_milliseconds << " ms";
       }
     } while (result == ZE_RESULT_NOT_READY);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result)
-        << "zetMetricTracerReadDataExp failed while retrieving the raw data "
-           "size";
+    EXPECT_ZE_RESULT_SUCCESS(result);
     EXPECT_NE(0, raw_data_size) << "zetMetricTracerReadDataExp reports that "
                                    "there are no metrics available to read";
     if (raw_data_size != 0) {
       std::vector<uint8_t> raw_data(raw_data_size, 0);
       result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
                                           raw_data.data());
-      EXPECT_EQ(ZE_RESULT_SUCCESS, result)
-          << "zetMetricTracerReadDataExp failed while retrieving the raw data";
+      EXPECT_ZE_RESULT_SUCCESS(result);
       uint64_t raw_data_accumulate =
           std::accumulate(raw_data.begin(), raw_data.end(), 0ULL);
       EXPECT_NE(0, raw_data_accumulate)
@@ -483,7 +477,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenTracerIsEnabledWhenTracerIsAsynchronouslyDisabledThenNoFurtherRawDataIsAvailableToReadOnceTracerIsDisabled) {
   /* If the tracer is asynchronously disabled, the test repeatedly calls
@@ -533,18 +527,13 @@ TEST_F(
     size_t raw_data_size{};
     std::vector<uint8_t> raw_data;
     uint64_t raw_data_accumulate{};
-    result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                        nullptr);
-    ASSERT_EQ(ZE_RESULT_SUCCESS, result)
-        << "zetMetricTracerReadDataExp failed while retrieving the raw data "
-           "size";
+    ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+        metric_tracer_handle, &raw_data_size, nullptr));
     ASSERT_NE(0, raw_data_size) << "zetMetricTracerReadDataExp reports that "
                                    "there are no metrics available to read";
     raw_data.resize(raw_data_size, 0);
-    result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                        raw_data.data());
-    ASSERT_EQ(ZE_RESULT_SUCCESS, result)
-        << "zetMetricTracerReadDataExp failed while retrieving the raw data";
+    ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+        metric_tracer_handle, &raw_data_size, raw_data.data()));
 
     raw_data_accumulate =
         std::accumulate(raw_data.begin(), raw_data.end(), 0ULL);
@@ -623,7 +612,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenTracerIsEnabledWhenRequestingMoreRawDataThanAvailableThenReturnOnlyWhatIsAvailable) {
   /* When allocating a larger buffer than needed, ensure that writes happen only
@@ -668,11 +657,8 @@ TEST_F(
     lzt::metric_tracer_disable(metric_tracer_handle, true);
 
     size_t raw_data_size{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                         nullptr))
-        << "zetMetricTracerReadDataExp failed while retrieving the raw data "
-           "size";
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+        metric_tracer_handle, &raw_data_size, nullptr));
     EXPECT_NE(0, raw_data_size)
         << "zetMetricTracerReadDataExp reports that there are no "
            "metrics available to read";
@@ -682,10 +668,8 @@ TEST_F(
       raw_data_size += extra_buffer_size;
 
       std::vector<uint8_t> raw_data(raw_data_size, raw_data_init_val);
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                           raw_data.data()))
-          << "zetMetricTracerReadDataExp failed while retrieving the raw data";
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+          metric_tracer_handle, &raw_data_size, raw_data.data()));
 
       uint64_t excess_buffer_raw_data_sum = std::accumulate(
           raw_data.end() - extra_buffer_size, raw_data.end(), 0ULL);
@@ -704,7 +688,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenTracerIsCreatedWithOneOrMoreActivatedMetricGroupWhenTracerIsEnabledSynchronouslyThenExpectTracerEnableToSucceed) {
 
@@ -748,7 +732,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenTracerIsCreatedWithOneOrMoreActivatedMetricGroupWhenTracerIsEnabledAndDisabledAsynchronouslyThenExpectTracerEnableAndDisableToSucceed) {
 
@@ -807,8 +791,7 @@ TEST_F(
         j++;
       } while (result == ZE_RESULT_NOT_READY);
 
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerReadDataExp has failed with error code " << result;
+      ASSERT_ZE_RESULT_SUCCESS(result);
 
       lzt::metric_tracer_disable(metric_tracer_handle, false);
 
@@ -825,9 +808,7 @@ TEST_F(
             result = zetMetricTracerReadDataExp(metric_tracer_handle,
                                                 &new_raw_data_size,
                                                 raw_data_buffer.data());
-            ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-                << "zetMetricTracerReadDataExp() with rawDataSize value "
-                << raw_data_size << " and data buffer has failed";
+            ASSERT_ZE_RESULT_SUCCESS(result);
             ASSERT_EQ(raw_data_size, new_raw_data_size)
                 << "zetMetricTracerReadDataExp called with a non-zero "
                    "rawDataSize "
@@ -957,9 +938,7 @@ void run_metric_tracer_read_test(
           j++;
         } while (result == ZE_RESULT_NOT_READY);
 
-        ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-            << "zetMetricTracerReadDataExp has failed with an unexpetced "
-               "error";
+        ASSERT_ZE_RESULT_SUCCESS(result);
 
         if (raw_data_size != 0) {
           size_t new_raw_data_size;
@@ -967,11 +946,7 @@ void run_metric_tracer_read_test(
           std::vector<uint8_t> raw_data_buffer(raw_data_size);
           result = zetMetricTracerReadDataExp(
               metric_tracer_handle, &new_raw_data_size, raw_data_buffer.data());
-          ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-              << "zetMetricTracerReadDataExp called with non-zero "
-                 "rawDataSize "
-                 "and a properly sized data buffer failed with error code "
-              << result;
+          ASSERT_ZE_RESULT_SUCCESS(result);
           ASSERT_EQ(raw_data_size, new_raw_data_size)
               << "zetMetricTracerReadDataExp called with non-zero "
                  "rawDataSize "
@@ -985,6 +960,7 @@ void run_metric_tracer_read_test(
 
       size_t raw_data_size = 0;
       raw_data_size = lzt::metric_tracer_read_data_size(metric_tracer_handle);
+
       ASSERT_NE(raw_data_size, 0) << "After executing a workload, "
                                      "zetMetricTracerReadDataExp with an "
                                      "enabled tracer and null data "
@@ -993,13 +969,9 @@ void run_metric_tracer_read_test(
       size_t enabled_read_data_size = raw_data_size / 2;
       std::vector<uint8_t> enabled_raw_data(enabled_read_data_size);
 
-      result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                          &enabled_read_data_size,
-                                          enabled_raw_data.data());
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerReadDataExp with non-null data buffer on an "
-             "enabled "
-             "tracer has failed";
+      ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+          metric_tracer_handle, &enabled_read_data_size,
+          enabled_raw_data.data()));
       ASSERT_NE(enabled_read_data_size, 0)
           << "zetMetricTracerReadDataExp on an enabled "
              "tracer returned zero data size";
@@ -1009,13 +981,9 @@ void run_metric_tracer_read_test(
       size_t disabled_read_data_size = raw_data_size - enabled_read_data_size;
       std::vector<uint8_t> disabled_raw_data(disabled_read_data_size);
 
-      result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                          &disabled_read_data_size,
-                                          disabled_raw_data.data());
-      ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-          << "zetMetricTracerReadDataExp with non-null data buffer and "
-             "disabled "
-             "tracer has failed";
+      ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+          metric_tracer_handle, &disabled_read_data_size,
+          disabled_raw_data.data()));
       ASSERT_NE(disabled_read_data_size, 0)
           << "zetMetricTracerReadDataExp with "
              "non-null data buffer and disabled "
@@ -1069,8 +1037,8 @@ TEST_F(
                           tracer_descriptor, false);
 }
 
-TEST_F(zetMetricTracerTest,
-       GivenTracerIsCreatedThenDecoderCreateAndDestroySucceed) {
+LZT_TEST_F(zetMetricTracerTest,
+           GivenTracerIsCreatedThenDecoderCreateAndDestroySucceed) {
 
   ze_result_t result;
 
@@ -1106,8 +1074,8 @@ TEST_F(zetMetricTracerTest,
   }
 }
 
-TEST_F(zetMetricTracerTest,
-       GivenDecoderIsCreatedThenGetDecodableMetricsSucceeds) {
+LZT_TEST_F(zetMetricTracerTest,
+           GivenDecoderIsCreatedThenGetDecodableMetricsSucceeds) {
 
   ze_result_t result;
 
@@ -1139,25 +1107,17 @@ TEST_F(zetMetricTracerTest,
     lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
 
     uint32_t num_decodable_metrics = 0;
-    result = zetMetricDecoderGetDecodableMetricsExp(
-        metric_decoder_handle, &num_decodable_metrics, nullptr);
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-        << "zetMetricDecoderGetDecodableMetricsExp call failed when "
-           "querying for "
-           "the number of decodable metrics";
+    ASSERT_ZE_RESULT_SUCCESS(zetMetricDecoderGetDecodableMetricsExp(
+        metric_decoder_handle, &num_decodable_metrics, nullptr));
     ASSERT_GT(num_decodable_metrics, 0u)
         << "zetMetricDecoderGetDecodableMetricsExp reports that there are no "
            "decodable metrics";
 
     uint32_t new_num_decodable_metrics = num_decodable_metrics + 1;
     std::vector<zet_metric_handle_t> metric_handles(new_num_decodable_metrics);
-    result = zetMetricDecoderGetDecodableMetricsExp(metric_decoder_handle,
-                                                    &new_num_decodable_metrics,
-                                                    metric_handles.data());
-    ASSERT_EQ(result, ZE_RESULT_SUCCESS)
-        << "zetMetricDecoderGetDecodableMetricsExp failed retrieving the "
-           "list of "
-           "handles for decodable metrics";
+    ASSERT_ZE_RESULT_SUCCESS(zetMetricDecoderGetDecodableMetricsExp(
+        metric_decoder_handle, &new_num_decodable_metrics,
+        metric_handles.data()));
     ASSERT_EQ(new_num_decodable_metrics, num_decodable_metrics)
         << "zetMetricDecoderGetDecodableMetricsExp reported an unexpected "
            "value "
@@ -1193,7 +1153,7 @@ TEST_F(zetMetricTracerTest,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenDecoderIsCreatedAndWorkloadExecutedAndTracerIsEnabledThenDecoderSucceedsDecodingMetrics) {
 
@@ -1387,8 +1347,8 @@ TEST_F(
   }
 }
 
-TEST_F(zetMetricTracerTest,
-       GivenDecoderIsCreatedWhenTracerIsDestroyedThenDecoderRemainsActive) {
+LZT_TEST_F(zetMetricTracerTest,
+           GivenDecoderIsCreatedWhenTracerIsDestroyedThenDecoderRemainsActive) {
   ze_result_t result;
 
   for (auto &device_with_metric_group_handles :
@@ -1454,7 +1414,7 @@ TEST_F(zetMetricTracerTest,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenDecoderIsCreatedWhenRequestingMoreDecodableMetricsThanAvailableThenReturnOnlyWhatIsAvailable) {
   /* When allocating a buffer for more decodable metrics than available,
@@ -1509,11 +1469,8 @@ TEST_F(
     lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
 
     uint32_t decodable_metric_count{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricDecoderGetDecodableMetricsExp(
-                  metric_decoder_handle, &decodable_metric_count, nullptr))
-        << "zetMetricDecoderGetDecodableMetricsExp call failed when retrieving "
-           "the number of decodable metrics";
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricDecoderGetDecodableMetricsExp(
+        metric_decoder_handle, &decodable_metric_count, nullptr));
     EXPECT_NE(0u, decodable_metric_count)
         << "zetMetricDecoderGetDecodableMetricsExp reports that there are no "
            "decodable metrics";
@@ -1526,13 +1483,9 @@ TEST_F(
 
       std::vector<zet_metric_handle_t> decodable_metric_handles(
           decodable_metric_count, decodable_metric_init);
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zetMetricDecoderGetDecodableMetricsExp(
-                    metric_decoder_handle, &decodable_metric_count,
-                    decodable_metric_handles.data()))
-          << "zetMetricDecoderGetDecodableMetricsExp call failed when "
-             "retrieving "
-             "the decodable metric handles";
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricDecoderGetDecodableMetricsExp(
+          metric_decoder_handle, &decodable_metric_count,
+          decodable_metric_handles.data()));
 
       for (auto itr = decodable_metric_handles.size() - additional_count;
            itr < decodable_metric_handles.size(); ++itr) {
@@ -1592,7 +1545,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenDecoderIsCreatedWhenRequestingMoreMetricEntriesThanAvailableThenReturnOnlyWhatIsAvailable) {
   /* When allocating a buffer for more metric entries than available, ensure
@@ -1657,11 +1610,10 @@ TEST_F(
     /* decode data */
     uint32_t set_count{};
     uint32_t metric_entry_count{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricTracerDecodeExp(
-                  metric_decoder_handle, &raw_data_size, raw_data.data(),
-                  decodable_metric_count, decodable_metric_handles.data(),
-                  &set_count, nullptr, &metric_entry_count, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerDecodeExp(
+        metric_decoder_handle, &raw_data_size, raw_data.data(),
+        decodable_metric_count, decodable_metric_handles.data(), &set_count,
+        nullptr, &metric_entry_count, nullptr));
     LOG_DEBUG << "decodable metric entry count: " << metric_entry_count;
     LOG_DEBUG << "set count: " << set_count;
     EXPECT_NE(0u, metric_entry_count)
@@ -1677,12 +1629,11 @@ TEST_F(
       std::vector<uint32_t> metric_entries_per_set_count(set_count, 0u);
       std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count,
                                                          metric_entries_init);
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zetMetricTracerDecodeExp(
-                    metric_decoder_handle, &raw_data_size, raw_data.data(),
-                    decodable_metric_count, decodable_metric_handles.data(),
-                    &set_count, metric_entries_per_set_count.data(),
-                    &metric_entry_count, metric_entries.data()));
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerDecodeExp(
+          metric_decoder_handle, &raw_data_size, raw_data.data(),
+          decodable_metric_count, decodable_metric_handles.data(), &set_count,
+          metric_entries_per_set_count.data(), &metric_entry_count,
+          metric_entries.data()));
 
       for (auto itr = metric_entries.size() - additional_entries;
            itr < metric_entries.size(); ++itr) {
@@ -1704,8 +1655,8 @@ TEST_F(
   }
 }
 
-TEST_F(zetMetricTracerTest,
-       GivenDecoderIsCreatedThenEnsureAllMetricEntriesTimeStampsAreValid) {
+LZT_TEST_F(zetMetricTracerTest,
+           GivenDecoderIsCreatedThenEnsureAllMetricEntriesTimeStampsAreValid) {
 
   for (auto &device_with_metric_group_handles :
        tracer_supporting_devices_list) {
@@ -1832,7 +1783,7 @@ TEST_F(zetMetricTracerTest,
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenMetricGroupSupportsTracerAndDmaBufAccessWhenWritingToDmaBufFromKernelThenEventIsGenerated) {
   for (auto &device_with_metric_group_handles :

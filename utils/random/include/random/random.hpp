@@ -1,13 +1,13 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
 
-#ifndef level_zero_tests_RANDOM_HPP
-#define level_zero_tests_RANDOM_HPP
+#ifndef UTILS_RANDOM_INCLUDE_RANDOM_RANDOM_HPP
+#define UTILS_RANDOM_INCLUDE_RANDOM_RANDOM_HPP
 
 #include <vector>
 #include <random>
@@ -20,6 +20,10 @@ T generate_value(const T min, const T max, const int seed) {
   static std::default_random_engine engine(seed);
   std::uniform_int_distribution<T> distribution(min, max);
   return distribution(engine);
+}
+template <typename T> T generate_value() {
+  return generate_value<T>(std::numeric_limits<T>::min(),
+                           std::numeric_limits<T>::max(), 0);
 }
 
 template <>

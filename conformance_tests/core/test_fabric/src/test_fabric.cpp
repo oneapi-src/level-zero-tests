@@ -21,13 +21,13 @@ namespace bp = boost::process;
 
 namespace {
 
-TEST(zeFabricVertexGetTests,
-     GivenZeroCountWhenRetrievingFabricVerticesThenValidCountReturned) {
+LZT_TEST(zeFabricVertexGetTests,
+         GivenZeroCountWhenRetrievingFabricVerticesThenValidCountReturned) {
   auto vertex_count = lzt::get_ze_fabric_vertex_count();
   EXPECT_GT(vertex_count, 0);
 }
 
-TEST(
+LZT_TEST(
     zeFabricVertexGetTests,
     GivenValidCountWhenRetrievingFabricVerticesThenNotNullFabricVerticesAreReturned) {
 
@@ -39,7 +39,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeFabricVertexGetTests,
     GivenValidCountWhenRetrievingFabricVerticesThenVerifyMultipleCallsReturnSameVertexHandles) {
 
@@ -54,7 +54,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeFabricVertexGetTests,
     GivenAffinityMaskIsSetWhenCallingFabricVertexGetThenVerifyOnlyExpectedVerticesAndSubVerticesAreReturned) {
 
@@ -83,7 +83,7 @@ TEST(
   EXPECT_TRUE(is_affinity_set_correctly);
 }
 
-TEST(
+LZT_TEST(
     zeFabricVertexGetPropertiesTests,
     GivenValidFabricVertexWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
 
@@ -113,7 +113,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeFabricVertexGetTests,
     GivenValidVerticesAndSubverticesThenVerifyVerticesAreDevicesAndSubverticesAreSubDevices) {
 
@@ -122,9 +122,8 @@ TEST(
   for (auto &vertex : vertices) {
     ze_device_handle_t device = {};
     ze_device_properties_t device_properties = {};
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeFabricVertexGetDeviceExp(vertex, &device));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetProperties(device, &device_properties));
+    EXPECT_ZE_RESULT_SUCCESS(zeFabricVertexGetDeviceExp(vertex, &device));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &device_properties));
     EXPECT_EQ(device_properties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE, 0u);
 
     auto count = lzt::get_ze_fabric_sub_vertices_count(vertex);
@@ -134,10 +133,10 @@ TEST(
       for (const auto &sub_vertex : sub_vertices) {
         ze_device_handle_t sub_device = {};
         ze_device_properties_t sub_device_properties = {};
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeFabricVertexGetDeviceExp(sub_vertex, &sub_device));
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeDeviceGetProperties(sub_device, &sub_device_properties));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeFabricVertexGetDeviceExp(sub_vertex, &sub_device));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeDeviceGetProperties(sub_device, &sub_device_properties));
         EXPECT_EQ(sub_device_properties.flags &
                       ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE,
                   ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE);
@@ -146,7 +145,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeFabricSubVertexGetTests,
     GivenValidCountWhenRetrievingFabricSubVerticesThenNotNullFabricVerticesAreReturned) {
 
@@ -171,7 +170,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeFabricVertexGetPropertiesTests,
     GivenValidFabricSubVertexWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
 
@@ -207,8 +206,9 @@ TEST(
   }
 }
 
-TEST(zeDeviceGetFabricVertexTests,
-     GivenValidDeviceAndSubDeviceWhenGettingVertexThenValidVertexIsReturned) {
+LZT_TEST(
+    zeDeviceGetFabricVertexTests,
+    GivenValidDeviceAndSubDeviceWhenGettingVertexThenValidVertexIsReturned) {
 
   auto devices = lzt::get_ze_devices();
   for (const auto &device : devices) {
@@ -219,21 +219,20 @@ TEST(zeDeviceGetFabricVertexTests,
     for (const auto &sub_device : sub_devices) {
       ze_fabric_vertex_handle_t vertex{};
       ze_device_handle_t device_vertex{};
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDeviceGetFabricVertexExp(sub_device, &vertex));
+      EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetFabricVertexExp(sub_device, &vertex));
       ASSERT_NE(vertex, nullptr);
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeFabricVertexGetDeviceExp(vertex, &device_vertex));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeFabricVertexGetDeviceExp(vertex, &device_vertex));
       ASSERT_NE(device_vertex, nullptr);
       EXPECT_EQ(device_vertex, sub_device);
     }
 
     ze_fabric_vertex_handle_t vertex{};
     ze_device_handle_t device_vertex{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetFabricVertexExp(device, &vertex));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetFabricVertexExp(device, &vertex));
     ASSERT_NE(vertex, nullptr);
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeFabricVertexGetDeviceExp(vertex, &device_vertex));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeFabricVertexGetDeviceExp(vertex, &device_vertex));
     ASSERT_NE(device_vertex, nullptr);
     EXPECT_EQ(device_vertex, device);
   }
@@ -284,8 +283,8 @@ static std::vector<ze_fabric_edge_handle_t> fabric_get_all_edges() {
   return all_edges;
 }
 
-TEST(zeFabricEdgeGetTests,
-     GivenZeroCountWhenRetrievingFabricEdgesThenValidCountReturned) {
+LZT_TEST(zeFabricEdgeGetTests,
+         GivenZeroCountWhenRetrievingFabricEdgesThenValidCountReturned) {
 
   std::vector<ze_fabric_vertex_handle_t> vertices = fabric_get_all_vertices();
   auto vertex_count = vertices.size();
@@ -301,7 +300,7 @@ TEST(zeFabricEdgeGetTests,
   }
 }
 
-TEST(
+LZT_TEST(
     zeFabricEdgeGetTests,
     GivenValidEdgesWhenRetrievingFabricEdgesThenVerifyMultipleCallsReturnsSameEdges) {
 
@@ -324,7 +323,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     zeFabricEdgeGetTests,
     GivenFabricEdgeExistsBetweenSubVerticesOfDifferentVerticesThenVerifyEdgeExistsBetweenVertices) {
 
@@ -349,14 +348,14 @@ TEST(
   for (auto sub_device_root0 : lzt::get_ze_sub_devices(devices[0])) {
 
     ze_fabric_vertex_handle_t vertex_a{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetFabricVertexExp(sub_device_root0, &vertex_a));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeDeviceGetFabricVertexExp(sub_device_root0, &vertex_a));
 
     for (auto sub_device_root1 : lzt::get_ze_sub_devices(devices[1])) {
       ze_fabric_vertex_handle_t vertex_b{};
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDeviceGetFabricVertexExp(sub_device_root1, &vertex_b));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeDeviceGetFabricVertexExp(sub_device_root1, &vertex_b));
       if (lzt::get_ze_fabric_edge_count(vertex_a, vertex_b) > 0) {
         is_sub_device_connected = true;
         break;
@@ -366,11 +365,9 @@ TEST(
 
   if (is_sub_device_connected == true) {
     ze_fabric_vertex_handle_t vertex_a{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetFabricVertexExp(devices[0], &vertex_a));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetFabricVertexExp(devices[0], &vertex_a));
     ze_fabric_vertex_handle_t vertex_b{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetFabricVertexExp(devices[1], &vertex_b));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetFabricVertexExp(devices[1], &vertex_b));
     EXPECT_GT(lzt::get_ze_fabric_edge_count(vertex_a, vertex_b), 0);
   } else {
     LOG_WARNING << "Test not executed since fabric edges do not exist between "
@@ -378,8 +375,9 @@ TEST(
   }
 }
 
-TEST(zeFabricEdgeGetTests,
-     GivenValidCountWhenRetrievingFabricEdgesThenValidFabricEdgesAreReturned) {
+LZT_TEST(
+    zeFabricEdgeGetTests,
+    GivenValidCountWhenRetrievingFabricEdgesThenValidFabricEdgesAreReturned) {
 
   std::vector<ze_fabric_vertex_handle_t> vertices = fabric_get_all_vertices();
   auto vertex_count = vertices.size();
@@ -397,8 +395,7 @@ TEST(zeFabricEdgeGetTests,
         EXPECT_NE(edge, nullptr);
         ze_fabric_vertex_handle_t check_vertex_a = nullptr,
                                   check_vertex_b = nullptr;
-        EXPECT_EQ(
-            ZE_RESULT_SUCCESS,
+        EXPECT_ZE_RESULT_SUCCESS(
             zeFabricEdgeGetVerticesExp(edge, &check_vertex_a, &check_vertex_b));
         EXPECT_TRUE(check_vertex_a == vertex_a || check_vertex_a == vertex_b);
         EXPECT_TRUE(check_vertex_b == vertex_a || check_vertex_b == vertex_b);
@@ -407,8 +404,8 @@ TEST(zeFabricEdgeGetTests,
   }
 }
 
-TEST(zeFabricEdgeGetTests,
-     GivenValidFabricEdgesThenValidEdgePropertiesAreReturned) {
+LZT_TEST(zeFabricEdgeGetTests,
+         GivenValidFabricEdgesThenValidEdgePropertiesAreReturned) {
 
   std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
   if (edges.size() == 0) {
@@ -435,7 +432,8 @@ TEST(zeFabricEdgeGetTests,
   }
 }
 
-TEST(zeFabricEdgeGetTests, GivenValidFabricEdgesThenEdgePropertyUuidIsUnique) {
+LZT_TEST(zeFabricEdgeGetTests,
+         GivenValidFabricEdgesThenEdgePropertyUuidIsUnique) {
 
   std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
   if (edges.size() == 0) {
@@ -468,8 +466,8 @@ TEST(zeFabricEdgeGetTests, GivenValidFabricEdgesThenEdgePropertyUuidIsUnique) {
   }
 }
 
-TEST(zeFabricEdgeGetTests,
-     GivenValidFabricEdgesThenVerifyDevicesCanAccessPeer) {
+LZT_TEST(zeFabricEdgeGetTests,
+         GivenValidFabricEdgesThenVerifyDevicesCanAccessPeer) {
   std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
   if (edges.size() == 0) {
     LOG_WARNING << "Test not executed due to not enough edges";
@@ -478,13 +476,11 @@ TEST(zeFabricEdgeGetTests,
 
   for (auto &edge : edges) {
     ze_fabric_vertex_handle_t vertex_a = nullptr, vertex_b = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeFabricEdgeGetVerticesExp(edge, &vertex_a, &vertex_b));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeFabricEdgeGetVerticesExp(edge, &vertex_a, &vertex_b));
     ze_device_handle_t device_a{}, device_b{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeFabricVertexGetDeviceExp(vertex_a, &device_a));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeFabricVertexGetDeviceExp(vertex_b, &device_b));
+    EXPECT_ZE_RESULT_SUCCESS(zeFabricVertexGetDeviceExp(vertex_a, &device_a));
+    EXPECT_ZE_RESULT_SUCCESS(zeFabricVertexGetDeviceExp(vertex_b, &device_b));
     EXPECT_TRUE(lzt::can_access_peer(device_a, device_b));
   }
 }
@@ -511,7 +507,7 @@ fabric_edge_get_minimum_bandwidth(std::vector<ze_fabric_edge_handle_t> &edges,
   }
 }
 
-TEST(
+LZT_TEST(
     zeFabricEdgeGetTests,
     GivenValidFabricEdgesThenVerifyThatRootVerticesEdgeBandwidthIsAtleastTheLowestBandwidthOfTheSubVerticesBandwidth) {
 
@@ -537,15 +533,15 @@ TEST(
   auto sub_devices_root0 = lzt::get_ze_sub_devices(devices[0]);
   for (auto sub_device_root0 : sub_devices_root0) {
     ze_fabric_vertex_handle_t vertex_a{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetFabricVertexExp(sub_device_root0, &vertex_a));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeDeviceGetFabricVertexExp(sub_device_root0, &vertex_a));
     auto sub_devices_root1 = lzt::get_ze_sub_devices(devices[1]);
 
     for (auto sub_device_root1 : sub_devices_root1) {
       ze_fabric_vertex_handle_t vertex_b{};
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeDeviceGetFabricVertexExp(sub_device_root1, &vertex_b));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeDeviceGetFabricVertexExp(sub_device_root1, &vertex_b));
       auto edge_count = lzt::get_ze_fabric_edge_count(vertex_a, vertex_b);
       if (edge_count > 0) {
 
@@ -563,10 +559,8 @@ TEST(
     uint32_t device_bandwidth = std::numeric_limits<uint32_t>::max();
     auto device_bandwidth_unit = ZE_BANDWIDTH_UNIT_UNKNOWN;
     ze_fabric_vertex_handle_t vertex_a{}, vertex_b{};
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetFabricVertexExp(devices[0], &vertex_a));
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetFabricVertexExp(devices[1], &vertex_b));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetFabricVertexExp(devices[0], &vertex_a));
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetFabricVertexExp(devices[1], &vertex_b));
 
     auto edge_count = lzt::get_ze_fabric_edge_count(vertex_a, vertex_b);
     EXPECT_GT(edge_count, 0u);
@@ -586,8 +580,8 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
                                       bool is_immediate) {
 
   ze_device_handle_t device_a{}, device_b{};
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeFabricVertexGetDeviceExp(vertex_a, &device_a));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zeFabricVertexGetDeviceExp(vertex_b, &device_b));
+  ASSERT_ZE_RESULT_SUCCESS(zeFabricVertexGetDeviceExp(vertex_a, &device_a));
+  ASSERT_ZE_RESULT_SUCCESS(zeFabricVertexGetDeviceExp(vertex_b, &device_b));
   ASSERT_TRUE(lzt::can_access_peer(device_a, device_b));
   ASSERT_TRUE(lzt::get_p2p_properties(device_a, device_b).flags &
               ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS);
@@ -679,8 +673,8 @@ class zeFabricEdgeCopyTests
       public ::testing::WithParamInterface<
           std::tuple<uint32_t, ze_memory_type_t, bool>> {};
 
-TEST_P(zeFabricEdgeCopyTests,
-       GivenValidFabricEdgesThenCopyIsSuccessfulBetweenThem) {
+LZT_TEST_P(zeFabricEdgeCopyTests,
+           GivenValidFabricEdgesThenCopyIsSuccessfulBetweenThem) {
 
   std::vector<ze_fabric_edge_handle_t> edges = fabric_get_all_edges();
   if (edges.size() == 0) {
@@ -695,8 +689,8 @@ TEST_P(zeFabricEdgeCopyTests,
 
   for (auto &edge : edges) {
     ze_fabric_vertex_handle_t vertex_a = nullptr, vertex_b = nullptr;
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zeFabricEdgeGetVerticesExp(edge, &vertex_a, &vertex_b));
+    ASSERT_ZE_RESULT_SUCCESS(
+        zeFabricEdgeGetVerticesExp(edge, &vertex_a, &vertex_b));
 
     fabric_vertex_copy_memory(vertex_a, vertex_b, copy_size, usm_type,
                               is_immediate);

@@ -145,7 +145,7 @@ void thread_append_memory_copy() {
 
 class zeCommandListMultithreadTest : public ::testing::Test {};
 
-TEST(
+LZT_TEST(
     zeCommandListMultithreadTest,
     GivenMultipleThreadsWhenCreateCloseAndDestroyCommandListsThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
@@ -162,8 +162,8 @@ TEST(
   }
 }
 
-TEST(zeCommandListMultithreadTest,
-     GivenMultipleThreadsWhenUsingCommandListsWithFenceThenReturnSuccess) {
+LZT_TEST(zeCommandListMultithreadTest,
+         GivenMultipleThreadsWhenUsingCommandListsWithFenceThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
 
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
@@ -181,7 +181,7 @@ class zeCommandListCreateDestroyValidFlagsMultithreadTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<ze_command_list_flag_t> {};
 
-TEST_P(
+LZT_TEST_P(
     zeCommandListCreateDestroyValidFlagsMultithreadTest,
     GivenMultipleThreadsWhenCreateCloseAndDestroyCommandListWithValidFlagValuesThenReturnSuccess) {
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;

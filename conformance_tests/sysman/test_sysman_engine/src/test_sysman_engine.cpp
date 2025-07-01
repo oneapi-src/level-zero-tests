@@ -25,7 +25,7 @@ class EngineModuleTest : public lzt::SysmanCtsClass {};
 #define ENGINE_TEST EngineModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanEngineHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -38,7 +38,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanEngineHandlesThenNotNullEngineHandlesAreReturned) {
   for (auto device : devices) {
@@ -56,7 +56,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanEngineHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -73,7 +73,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarEngineHandlesReturned) {
   for (auto device : devices) {
@@ -97,7 +97,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenValidEngineHandleWhenRetrievingEnginePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -121,7 +121,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenValidEngineHandleWhenRetrievingEnginePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -145,7 +145,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenValidEngineHandleWhenRetrievingEngineActivityStatsThenValidStatsIsReturned) {
   for (auto device : devices) {
@@ -163,7 +163,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenValidEngineHandleWhenRetrievingEngineActivityOfPfAndVfsThenValidStatsIsReturned) {
   for (auto device : devices) {
@@ -183,16 +183,16 @@ TEST_F(
                         "running in an environment with Virtual Functions"
                      << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
       }
-      EXPECT_EQ(status, ZE_RESULT_SUCCESS);
+      EXPECT_ZE_RESULT_SUCCESS(status);
       EXPECT_NE(count, 0u);
       std::vector<zes_engine_stats_t> engine_stats_list(count);
       status = zesEngineGetActivityExt(engine_handle, &count,
                                        engine_stats_list.data());
-      EXPECT_EQ(status, ZE_RESULT_SUCCESS);
+      EXPECT_ZE_RESULT_SUCCESS(status);
 
       zes_engine_properties_t engine_properties = {};
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zesEngineGetProperties(engine_handle, &engine_properties));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zesEngineGetProperties(engine_handle, &engine_properties));
       LOG_INFO << "| Engine Type = "
                << static_cast<int32_t>(engine_properties.type);
       for (uint32_t index = 0; index < engine_stats_list.size(); index++) {
@@ -252,7 +252,7 @@ static void workload_for_device(ze_device_handle_t device) {
   lzt::destroy_module(module);
 }
 
-TEST_F(
+LZT_TEST_F(
     ENGINE_TEST,
     GivenValidEngineHandleWhenGpuWorkloadIsSubmittedThenEngineActivityMeasuredIsHigher) {
   for (auto device : devices) {

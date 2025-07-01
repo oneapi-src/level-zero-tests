@@ -16,7 +16,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-TEST(zeInitTests, GivenGPUFlagWhenInitializingGPUDriverThenSuccessIsReturned) {
+LZT_TEST(zeInitTests,
+         GivenGPUFlagWhenInitializingGPUDriverThenSuccessIsReturned) {
   lzt::ze_init(ZE_INIT_FLAG_GPU_ONLY);
 }
 

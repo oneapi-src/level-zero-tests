@@ -23,7 +23,7 @@ namespace {
 
 class zeCommandQueueCreateFenceTests : public lzt::zeCommandQueueTests {};
 
-TEST_F(
+LZT_TEST_F(
     zeCommandQueueCreateFenceTests,
     GivenDefaultFenceDescriptorWhenCreatingFenceThenNotNullPointerIsReturned) {
   ze_fence_desc_t descriptor = {};
@@ -32,11 +32,11 @@ TEST_F(
   descriptor.stype = ZE_STRUCTURE_TYPE_FENCE_DESC;
 
   ze_fence_handle_t fence = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeFenceCreate(cq.command_queue_, &descriptor, &fence));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeFenceCreate(cq.command_queue_, &descriptor, &fence));
   EXPECT_NE(nullptr, fence);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceDestroy(fence));
+  EXPECT_ZE_RESULT_SUCCESS(zeFenceDestroy(fence));
 }
 
 class zeFenceTests : public ::testing::Test {
@@ -53,12 +53,12 @@ public:
 
     descriptor.pNext = nullptr;
 
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceCreate(cmd_q_, &descriptor, &fence_));
+    EXPECT_ZE_RESULT_SUCCESS(zeFenceCreate(cmd_q_, &descriptor, &fence_));
     EXPECT_NE(nullptr, fence_);
   }
 
   void TearDown() override {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceDestroy(fence_));
+    EXPECT_ZE_RESULT_SUCCESS(zeFenceDestroy(fence_));
     lzt::destroy_command_queue(cmd_q_);
     lzt::destroy_command_list(cmd_list_);
     lzt::destroy_context(context_);
@@ -76,8 +76,8 @@ class zeFenceSynchronizeTests : public zeFenceTests,
                                 public ::testing::WithParamInterface<uint32_t> {
 };
 
-TEST_P(zeFenceSynchronizeTests,
-       GivenSignaledFenceWhenSynchronizingThenSuccessIsReturned) {
+LZT_TEST_P(zeFenceSynchronizeTests,
+           GivenSignaledFenceWhenSynchronizingThenSuccessIsReturned) {
 
   const std::vector<int8_t> input = {72, 101, 108, 108, 111, 32,
                                      87, 111, 114, 108, 100, 33};
@@ -96,8 +96,8 @@ TEST_P(zeFenceSynchronizeTests,
 INSTANTIATE_TEST_CASE_P(FenceSyncParameterizedTest, zeFenceSynchronizeTests,
                         ::testing::Values(UINT32_MAX - 1, UINT64_MAX));
 
-TEST_F(zeFenceSynchronizeTests,
-       GivenSignaledFenceWhenQueryingThenSuccessIsReturned) {
+LZT_TEST_F(zeFenceSynchronizeTests,
+           GivenSignaledFenceWhenQueryingThenSuccessIsReturned) {
 
   const std::vector<int8_t> input = {72, 101, 108, 108, 111, 32,
                                      87, 111, 114, 108, 100, 33};
@@ -114,8 +114,8 @@ TEST_F(zeFenceSynchronizeTests,
   lzt::free_memory(context_, output_buffer);
 }
 
-TEST_F(zeFenceSynchronizeTests,
-       GivenSignaledFenceWhenResettingThenSuccessIsReturned) {
+LZT_TEST_F(zeFenceSynchronizeTests,
+           GivenSignaledFenceWhenResettingThenSuccessIsReturned) {
 
   const std::vector<int8_t> input = {72, 101, 108, 108, 111, 32,
                                      87, 111, 114, 108, 100, 33};
@@ -133,8 +133,9 @@ TEST_F(zeFenceSynchronizeTests,
   lzt::free_memory(context_, output_buffer);
 }
 
-TEST_F(zeFenceSynchronizeTests,
-       GivenSignaledFenceWhenResettingThenFenceStatusIsNotReadyWhenQueried) {
+LZT_TEST_F(
+    zeFenceSynchronizeTests,
+    GivenSignaledFenceWhenResettingThenFenceStatusIsNotReadyWhenQueried) {
 
   const std::vector<int8_t> input = {72, 101, 108, 108, 111, 32,
                                      87, 111, 114, 108, 100, 33};
@@ -156,7 +157,7 @@ TEST_F(zeFenceSynchronizeTests,
 class zeMultipleFenceTests : public lzt::zeEventPoolTests,
                              public ::testing::WithParamInterface<bool> {};
 
-TEST_P(
+LZT_TEST_P(
     zeMultipleFenceTests,
     GivenMultipleCommandQueuesWhenFenceAndEventSetThenVerifyAllSignaledSuccessful) {
   ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
@@ -164,7 +165,7 @@ TEST_P(
   ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
                                        nullptr};
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceGetProperties(device, &properties));
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &properties));
 
   auto cmdq_properties = lzt::get_command_queue_group_properties(device);
 
@@ -226,13 +227,13 @@ TEST_P(
   if (use_event) {
     for (size_t i = 0; i < num_cmdq; i++) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence[i]));
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(host_to_dev_event[i]));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(host_to_dev_event[i]));
     }
   }
 
   for (size_t i = 0; i < num_cmdq; i++) {
     lzt::sync_fence(fence[i], UINT64_MAX);
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeFenceQueryStatus(fence[i]));
+    EXPECT_ZE_RESULT_SUCCESS(zeFenceQueryStatus(fence[i]));
     for (size_t j = 0; j < size; j++) {
       EXPECT_EQ(static_cast<uint8_t *>(buffer[i])[j], val[i]);
     }

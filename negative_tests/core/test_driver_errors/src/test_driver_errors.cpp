@@ -17,26 +17,27 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 
 namespace {
-TEST(InitNegativeTests,
-     GivenInvalidFlagValueWhileCallingzeInitThenInvalidEnumerationIsReturned) {
+LZT_TEST(
+    InitNegativeTests,
+    GivenInvalidFlagValueWhileCallingzeInitThenInvalidEnumerationIsReturned) {
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ENUMERATION,
             zeInit(static_cast<ze_init_flag_t>(ZE_RESULT_ERROR_UNKNOWN)));
 }
-TEST(DriverGetNegativeTests,
-     GivenzeDriverGetIsCalledBeforezeInitThenUninitialiZedIsReturned) {
+LZT_TEST(DriverGetNegativeTests,
+         GivenzeDriverGetIsCalledBeforezeInitThenUninitialiZedIsReturned) {
   uint32_t pCount = 0;
   EXPECT_EQ(ZE_RESULT_ERROR_UNINITIALIZED, zeDriverGet(&pCount, nullptr));
 }
 
-TEST(
+LZT_TEST(
     DriverGetNegativeTests,
     GivenInvalidCountPointerUsedWhileCallingzeDriverGetThenInvalidNullPointerIsReturned) {
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_POINTER,
             zeDriverGet(nullptr, nullptr));
 }
 #ifdef ZE_API_VERSION_CURRENT_M
-TEST(zeInitDriversNegativeTests,
-     GivenCallToZeInitDriversWithNoFlagsThenExpectFailure) {
+LZT_TEST(zeInitDriversNegativeTests,
+         GivenCallToZeInitDriversWithNoFlagsThenExpectFailure) {
 
   uint32_t pCount = 0;
   ze_init_driver_type_desc_t desc = {ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC};
@@ -49,8 +50,8 @@ TEST(zeInitDriversNegativeTests,
   EXPECT_EQ(pCount, 0);
 }
 
-TEST(zeInitDriversNegativeTests,
-     GivenCallToZeInitDriversWithNullPointerCountThenExpectFailure) {
+LZT_TEST(zeInitDriversNegativeTests,
+         GivenCallToZeInitDriversWithNullPointerCountThenExpectFailure) {
 
   uint32_t pCount = 0;
   ze_init_driver_type_desc_t desc = {ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC};
@@ -70,8 +71,8 @@ TEST(zeInitDriversNegativeTests,
             zeInitDrivers(nullptr, nullptr, &desc));
 }
 
-TEST(zeInitDriversNegativeTests,
-     GivenCallToZeInitDriversWithNullPointerDescThenExpectFailure) {
+LZT_TEST(zeInitDriversNegativeTests,
+         GivenCallToZeInitDriversWithNullPointerDescThenExpectFailure) {
 
   uint32_t pCount = 0;
   ze_init_driver_type_desc_t desc = {ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC};

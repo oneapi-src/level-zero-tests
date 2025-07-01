@@ -27,7 +27,7 @@ class LedModuleTest : public lzt::SysmanCtsClass {};
 #define LED_TEST LedModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     LED_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -35,7 +35,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     LED_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullLedHandlesAreReturned) {
   for (auto device : devices) {
@@ -53,7 +53,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     LED_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -70,7 +70,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     LED_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarLedHandlesReturned) {
   for (auto device : devices) {
@@ -94,7 +94,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     LED_TEST,
     GivenValidLedHandleWhenRetrievingLedPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -116,7 +116,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     LED_TEST,
     GivenValidLedHandleWhenRetrievingLedPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -139,8 +139,8 @@ TEST_F(
     }
   }
 }
-TEST_F(LED_TEST,
-       GivenValidLedHandleWhenRetrievingLedStateThenValidStateIsReturned) {
+LZT_TEST_F(LED_TEST,
+           GivenValidLedHandleWhenRetrievingLedStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto led_handles = lzt::get_led_handles(device, count);
@@ -167,7 +167,8 @@ TEST_F(LED_TEST,
     }
   }
 }
-TEST_F(LED_TEST, GivenValidLedHandleWhenSettingLedColorTheSuccessIsReturned) {
+LZT_TEST_F(LED_TEST,
+           GivenValidLedHandleWhenSettingLedColorTheSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto led_handles = lzt::get_led_handles(device, count);
@@ -199,8 +200,8 @@ TEST_F(LED_TEST, GivenValidLedHandleWhenSettingLedColorTheSuccessIsReturned) {
     }
   }
 }
-TEST_F(LED_TEST,
-       GivenValidLedHandleWhenSettingLedStateToOffThenSuccessIsReturned) {
+LZT_TEST_F(LED_TEST,
+           GivenValidLedHandleWhenSettingLedStateToOffThenSuccessIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto led_handles = lzt::get_led_handles(device, count);

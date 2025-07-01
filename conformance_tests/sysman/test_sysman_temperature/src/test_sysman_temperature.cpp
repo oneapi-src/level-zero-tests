@@ -34,7 +34,7 @@ public:
 constexpr double max_valid_temperature = 125;
 constexpr double min_valid_temperature = 10;
 
-TEST_F(
+LZT_TEST_F(
     TEMPERATURE_TEST,
     GivenComponentCountZeroWhenRetrievingTempHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -52,7 +52,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     TEMPERATURE_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanTempThenNotNullTempHandlesAreReturned) {
   for (auto device : devices) {
@@ -76,7 +76,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     TEMPERATURE_TEST,
     GivenInvalidComponentCountWhenRetrievingTempHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -98,7 +98,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     TEMPERATURE_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarTempHandlesReturned) {
   for (auto device : devices) {
@@ -128,7 +128,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -158,7 +158,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -194,7 +194,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenRetrievingTempConfigurationThenValidTempConfigurationIsReturned) {
   for (auto device : devices) {
@@ -230,7 +230,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     TEMPERATURE_TEST,
     GivenValidTempHandleWhenSettingTempConfigurationThenExpectzesSysmanTemperatureSetConfigFollowedByzesSysmanTemperatureGetConfigToMatch) {
   for (auto device : devices) {
@@ -300,8 +300,9 @@ TEST_F(
   }
 }
 
-TEST_F(TEMPERATURE_TEST,
-       GivenValidTempHandleWhenRetrievingTempStateThenValidStateIsReturned) {
+LZT_TEST_F(
+    TEMPERATURE_TEST,
+    GivenValidTempHandleWhenRetrievingTempStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = lzt::get_temp_handle_count(device);
     if (count > 0) {

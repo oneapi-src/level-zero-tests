@@ -26,7 +26,7 @@ class PsuModuleTest : public lzt::SysmanCtsClass {};
 #define PSU_TEST PsuModuleTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     PSU_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
@@ -34,7 +34,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PSU_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullPsuHandlesAreReturned) {
   for (auto device : devices) {
@@ -52,7 +52,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PSU_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -69,7 +69,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PSU_TEST,
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarMemHandlesReturned) {
   for (auto device : devices) {
@@ -93,7 +93,7 @@ TEST_F(
     EXPECT_EQ(psu_handles_initial, psu_handles_later);
   }
 }
-TEST_F(
+LZT_TEST_F(
     PSU_TEST,
     GivenValidPsuHandleWhenRetrievingPsuPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -116,7 +116,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     PSU_TEST,
     GivenValidPsuHandleWhenRetrievingPsuPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -139,8 +139,8 @@ TEST_F(
     }
   }
 }
-TEST_F(PSU_TEST,
-       GivenValidPsuHandleWhenRetrievingPsuStateThenValidStateIsReturned) {
+LZT_TEST_F(PSU_TEST,
+           GivenValidPsuHandleWhenRetrievingPsuStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
     auto psu_handles = lzt::get_psu_handles(device, count);

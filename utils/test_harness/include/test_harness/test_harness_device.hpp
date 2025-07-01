@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2024 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -90,8 +90,13 @@ void set_kernel_cache_config(ze_kernel_handle_t kernel,
 
 void make_memory_resident(ze_device_handle_t device, void *memory,
                           const size_t size);
+void make_memory_resident(ze_context_handle_t context,
+                          ze_device_handle_t device, void *memory,
+                          const size_t size);
 ze_result_t get_device_status(ze_device_handle_t device);
 void evict_memory(ze_device_handle_t device, void *memory, const size_t size);
+void evict_memory(ze_context_handle_t context, ze_device_handle_t device,
+                  void *memory, const size_t size);
 ze_float_atomic_ext_properties_t
 get_device_module_float_atomic_properties(ze_device_handle_t device);
 #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME

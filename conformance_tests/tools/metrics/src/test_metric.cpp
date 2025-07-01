@@ -59,7 +59,7 @@ protected:
   void run_activate_deactivate_test(bool reactivate);
 };
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenValidMetricGroupWhenReadingClockResolutionAndBitsThenResultsDependOnDomain) {
 
@@ -93,8 +93,8 @@ TEST_F(
       GTEST_SKIP() << "Not enough metric groups in different domains";
     }
     for (auto metricGroupHandle : differentDomainsMetricGroupHandles) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
-                                       metricGroupHandle, &metricGroupProp));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zetMetricGroupGetProperties(metricGroupHandle, &metricGroupProp));
       LOG_INFO << "Metric group name: " << metricGroupProp.name
                << ". Metric Domain: " << metricGroupProp.domain
                << ". Timer Resolution: "
@@ -104,8 +104,9 @@ TEST_F(
   }
 }
 
-TEST_F(zetMetricGroupTest,
-       GivenValidMetricGroupWhenReadingTimestampsThenResultsDependOnDomain) {
+LZT_TEST_F(
+    zetMetricGroupTest,
+    GivenValidMetricGroupWhenReadingTimestampsThenResultsDependOnDomain) {
 
   for (auto deviceh : devices) {
 
@@ -134,30 +135,30 @@ TEST_F(zetMetricGroupTest,
       GTEST_SKIP() << "Not enough metric groups in different domains";
     }
     for (auto metricGroupHandle : differentDomainsMetricGroupHandles) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
-                                       metricGroupHandle, &metricGroupProp));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zetMetricGroupGetProperties(metricGroupHandle, &metricGroupProp));
       synchronizedWithHost = true;
       LOG_INFO << "Metric group name: " << metricGroupProp.name
                << ". Metric Domain: " << metricGroupProp.domain;
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetGlobalTimestampsExp(
-                                       metricGroupHandle, synchronizedWithHost,
-                                       &globalTimestamp, &metricTimestamp));
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetGlobalTimestampsExp(
+          metricGroupHandle, synchronizedWithHost, &globalTimestamp,
+          &metricTimestamp));
       LOG_INFO << "Host timestamp " << globalTimestamp
                << ". Metrics timestamp: " << metricTimestamp;
 
       synchronizedWithHost = false;
       LOG_INFO << "Metric group name: " << metricGroupProp.name
                << ". Metric Domain: " << metricGroupProp.domain;
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetGlobalTimestampsExp(
-                                       metricGroupHandle, synchronizedWithHost,
-                                       &globalTimestamp, &metricTimestamp));
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetGlobalTimestampsExp(
+          metricGroupHandle, synchronizedWithHost, &globalTimestamp,
+          &metricTimestamp));
       LOG_INFO << "Device timestamp " << globalTimestamp
                << ". Metrics timestamp: " << metricTimestamp;
     }
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenValidEventBasedMetricGroupWhenvalidGroupNameIsrequestedThenExpectMatchingMetricHandle) {
 
@@ -172,7 +173,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenValidEventBasedMetricGroupWhenvalidGroupNameIsrequestedThenExpectMetricsValidationsToSucceed) {
 
@@ -188,7 +189,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenValidTimeBasedMetricGroupWhenvalidGroupNameIsrequestedThenExpectMatchingMetricHandle) {
 
@@ -203,7 +204,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenValidTimeBasedMetricGroupWhenvalidGroupNameIsrequestedThenExpectMatchingMetricsValidationsToSucceed) {
 
@@ -221,7 +222,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenValidMetricGroupWhenValidGroupNameIsRequestedThenExpectGroupActivationAndDeactivationToSucceed) {
 
@@ -243,9 +244,8 @@ void zetMetricGroupTest::run_activate_deactivate_test(bool reactivate) {
   zet_metric_group_properties_t metric_group_properties = {};
   metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
   metric_group_properties.pNext = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupGetProperties(groupHandleList[0],
-                                        &metric_group_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
+      groupHandleList[0], &metric_group_properties));
   auto domain = metric_group_properties.domain;
   auto domain_2 = 0;
   std::vector<zet_metric_group_handle_t> test_handles{groupHandleList[0]};
@@ -253,8 +253,8 @@ void zetMetricGroupTest::run_activate_deactivate_test(bool reactivate) {
     metric_group_properties = {};
     metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
     metric_group_properties.pNext = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
-                                     groupHandle, &metric_group_properties));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zetMetricGroupGetProperties(groupHandle, &metric_group_properties));
     if (metric_group_properties.domain != domain) {
       domain_2 = metric_group_properties.domain;
       // lzt::get_metric_group_properties(groupHandle);
@@ -278,21 +278,21 @@ void zetMetricGroupTest::run_activate_deactivate_test(bool reactivate) {
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenMetricGroupsInDifferentDomainWhenValidGroupIsActivatedThenExpectGroupActivationAndDeactivationToSucceed) {
 
   run_activate_deactivate_test(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenMetricGroupsInDifferentDomainWhenValidGroupIsActivatedThenExpectGroupReActivationToSucceed) {
 
   run_activate_deactivate_test(true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenActiveMetricGroupsWhenActivatingSingleMetricGroupThenPreviouslyActiveGroupsAreDeactivated) {
 
@@ -303,9 +303,8 @@ TEST_F(
   zet_metric_group_properties_t metric_group_properties = {};
   metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
   metric_group_properties.pNext = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricGroupGetProperties(groupHandleList[0],
-                                        &metric_group_properties));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
+      groupHandleList[0], &metric_group_properties));
 
   std::set<uint32_t> domains;
   domains.insert(metric_group_properties.domain);
@@ -315,8 +314,8 @@ TEST_F(
     metric_group_properties = {};
     metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
     metric_group_properties.pNext = nullptr;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zetMetricGroupGetProperties(
-                                     groupHandle, &metric_group_properties));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zetMetricGroupGetProperties(groupHandle, &metric_group_properties));
     if (domains.find(metric_group_properties.domain) == domains.end()) {
       domains.insert(metric_group_properties.domain);
       test_handles.push_back(groupHandle);
@@ -338,23 +337,21 @@ TEST_F(
   LOG_DEBUG << "Verifying groups are active by attempting to open streamer";
   ASSERT_GT(test_handles.size(), 0u) << "No metric groups available to test";
   for (auto test_handle : test_handles) {
-    ASSERT_EQ(ZE_RESULT_SUCCESS,
-              zetMetricStreamerOpen(lzt::get_default_context(), device,
-                                    test_handle, &streamer_desc, nullptr,
-                                    &streamer));
+    ASSERT_ZE_RESULT_SUCCESS(
+        zetMetricStreamerOpen(lzt::get_default_context(), device, test_handle,
+                              &streamer_desc, nullptr, &streamer));
 
-    ASSERT_EQ(ZE_RESULT_SUCCESS, zetMetricStreamerClose(streamer));
+    ASSERT_ZE_RESULT_SUCCESS(zetMetricStreamerClose(streamer));
   }
 
   LOG_DEBUG << "Activating only first group";
   lzt::activate_metric_groups(device, 1, &test_handles[0]);
 
   LOG_DEBUG << "Verify only first group is active";
-  ASSERT_EQ(ZE_RESULT_SUCCESS,
-            zetMetricStreamerOpen(lzt::get_default_context(), device,
-                                  test_handles[0], &streamer_desc, nullptr,
-                                  &streamer));
-  ASSERT_EQ(ZE_RESULT_SUCCESS, zetMetricStreamerClose(streamer));
+  ASSERT_ZE_RESULT_SUCCESS(
+      zetMetricStreamerOpen(lzt::get_default_context(), device, test_handles[0],
+                            &streamer_desc, nullptr, &streamer));
+  ASSERT_ZE_RESULT_SUCCESS(zetMetricStreamerClose(streamer));
 
   for (auto test_handle : test_handles) {
     if (test_handle == test_handles[0]) {
@@ -370,8 +367,9 @@ TEST_F(
   lzt::deactivate_metric_groups(device);
 }
 
-TEST_F(zetMetricGroupTest,
-       GivenValidMetricGroupWhenStreamerIsOpenedThenExpectStreamerToSucceed) {
+LZT_TEST_F(
+    zetMetricGroupTest,
+    GivenValidMetricGroupWhenStreamerIsOpenedThenExpectStreamerToSucceed) {
 
   uint32_t notifyEveryNReports = 1000;
   uint32_t samplingPeriod = 40000;
@@ -395,7 +393,7 @@ TEST_F(zetMetricGroupTest,
 }
 
 #ifdef ZET_EXPORT_METRICS_DATA_EXP_NAME
-TEST_F(
+LZT_TEST_F(
     zetMetricGroupTest,
     GivenValidMetricGroupWhenMetricGroupGetExportDataExpIsCalledThenReturnSuccess) {
 
@@ -432,16 +430,14 @@ TEST_F(
 
       std::vector<uint8_t> raw_data(report_size);
       size_t export_data_size = 0;
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zetMetricGroupGetExportDataExp(test_metric_group,
-                                               raw_data.data(), report_size,
-                                               &export_data_size, nullptr));
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetExportDataExp(
+          test_metric_group, raw_data.data(), report_size, &export_data_size,
+          nullptr));
       EXPECT_GT(export_data_size, 0);
       std::vector<uint8_t> exported_data(export_data_size);
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zetMetricGroupGetExportDataExp(
-                    test_metric_group, raw_data.data(), report_size,
-                    &export_data_size, exported_data.data()));
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetExportDataExp(
+          test_metric_group, raw_data.data(), report_size, &export_data_size,
+          exported_data.data()));
     }
   }
 }
@@ -492,18 +488,19 @@ protected:
   }
 };
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryTest,
     GivenValidMetricQueryPoolWhenValidMetricGroupIsPassedThenExpectQueryHandle) {
   EXPECT_NE(nullptr, metric_query_handle);
 }
 
-TEST_F(zetMetricQueryTest,
-       GivenValidMetricQueryHandleWhenResettingQueryHandleThenExpectSuccess) {
+LZT_TEST_F(
+    zetMetricQueryTest,
+    GivenValidMetricQueryHandleWhenResettingQueryHandleThenExpectSuccess) {
   lzt::reset_metric_query(metric_query_handle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryTest,
     GivenOnlyMetricQueryWhenCommandListIsCreatedThenExpectCommandListToExecuteSuccessfully) {
   zet_command_list_handle_t commandList = lzt::create_command_list();
@@ -519,7 +516,7 @@ TEST_F(
   lzt::destroy_command_list(commandList);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryTest,
     GivenOnlyMetricQueryWithMetricMemoryBarrierWhenCommandListIsCreatedThenExpectCommandListToExecuteSucessfully) {
   zet_command_list_handle_t commandList = lzt::create_command_list();
@@ -545,7 +542,7 @@ protected:
 
 using zetMetricQueryLoadTestNoValidate = zetMetricQueryLoadTest;
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryLoadTestNoValidate,
     GivenValidMetricGroupWhenEventBasedQueryNoValidateIsCreatedThenExpectQueryToSucceed) {
 
@@ -608,7 +605,7 @@ TEST_F(
 
       lzt::synchronize(commandQueue, UINT64_MAX);
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(eventHandle));
       std::vector<uint8_t> rawData;
 
       lzt::metric_query_get_data(metric_query_handle, &rawData);
@@ -719,7 +716,7 @@ void run_test(const ze_device_handle_t &device,
     }
 
     if (!immediate) {
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(eventHandle));
     } else {
       lzt::event_host_synchronize(eventHandle, UINT64_MAX);
     }
@@ -755,7 +752,7 @@ void run_test(const ze_device_handle_t &device,
 
       lzt::synchronize(commandQueue, UINT64_MAX);
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(eventHandle));
 
       lzt::metric_query_get_data(metric_query_handle, &rawData);
       lzt::validate_metrics(
@@ -782,7 +779,7 @@ void run_test(const ze_device_handle_t &device,
   lzt::destroy_command_list(commandList);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryLoadTest,
     GivenValidMetricGroupWhenEventBasedQueryIsCreatedThenExpectQueryToSucceed) {
 
@@ -791,7 +788,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryLoadTest,
     GivenWorkloadExecutedWithMetricQueryWhenResettingQueryHandleThenResetSucceedsAndCanReuseHandle) {
   for (auto &device : devices) {
@@ -799,7 +796,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryLoadTest,
     GivenWorkloadExecutedOnImmediateCommandListWhenQueryingThenQuerySucceeds) {
 
@@ -808,7 +805,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryLoadTest,
     GivenWorkloadExecutedWithWaitEventWhenMakingMetricQueryThenQuerySucceeds) {
 
@@ -817,7 +814,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryLoadTest,
     GivenWorkloadExecutedWithWaitEventOnImmediateCommandListWhenMakingMetricQueryThenQuerySucceeds) {
 
@@ -929,8 +926,8 @@ void run_multi_device_query_load_test(
   lzt::synchronize(command_queue_0, UINT64_MAX);
   lzt::synchronize(command_queue_1, UINT64_MAX);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_handle_0));
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(event_handle_1));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(event_handle_0));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(event_handle_1));
 
   std::vector<uint8_t> raw_data_0, raw_data_1;
 
@@ -971,8 +968,9 @@ void run_multi_device_query_load_test(
   lzt::destroy_command_queue(command_queue_1);
 }
 
-TEST_F(zetMetricQueryLoadTest,
-       GivenValidMetricGroupsWhenMultipleDevicesQueryThenExpectQueryToSucceed) {
+LZT_TEST_F(
+    zetMetricQueryLoadTest,
+    GivenValidMetricGroupsWhenMultipleDevicesQueryThenExpectQueryToSucceed) {
 
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
@@ -980,7 +978,7 @@ TEST_F(zetMetricQueryLoadTest,
   run_multi_device_query_load_test(devices);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryLoadTest,
     GivenValidMetricGroupsWhenMultipleSubDevicesQueryThenExpectQueryToSucceed) {
   auto subdevices = lzt::get_all_sub_devices();
@@ -995,15 +993,15 @@ protected:
   void SetUp() override { devices = lzt::get_metric_test_no_subdevices_list(); }
 };
 
-TEST_F(
+LZT_TEST_F(
     zetMetricQueryLoadStdTest,
     GivenValidMetricGroupWhenEventBasedQueryWithNoSubDevicesListIsCreatedThenExpectQueryAndSpecValidateToSucceed) {
 
   for (auto device : devices) {
 
     uint32_t subDeviceCount = 0;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
     if (subDeviceCount != 0) {
       continue;
     }
@@ -1067,7 +1065,7 @@ TEST_F(
 
       lzt::synchronize(commandQueue, UINT64_MAX);
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventQueryStatus(eventHandle));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(eventHandle));
 
       std::vector<uint8_t> rawData;
       lzt::metric_query_get_data(metric_query_handle, &rawData);
@@ -1106,7 +1104,7 @@ protected:
 
 using zetMetricStreamerTestNoValidate = zetMetricStreamerTest;
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTestNoValidate,
     GivenValidMetricGroupWhenTimerBasedStreamerNoValidateIsCreatedThenExpectStreamerToSucceed) {
 
@@ -1177,7 +1175,7 @@ TEST_F(
 
 using zetMetricStreamerTestNReports = zetMetricStreamerTest;
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTestNReports,
     GivenValidMetricGroupWithTimerBasedStreamerThenEventHostSynchronizeWithNotifyOnNreportsEventSignalsDataPresent) {
 
@@ -1263,7 +1261,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToSucceed) {
 
@@ -1365,7 +1363,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToNotifyEventAtProperTimeAndSucceed) {
   /* This test computes the expected time before which events are generated by
@@ -1458,7 +1456,7 @@ TEST_F(
       std::this_thread::sleep_for(std::chrono::seconds(sleep));
 
       eventResult = zeEventQueryStatus(eventHandle);
-      EXPECT_EQ(eventResult, ZE_RESULT_SUCCESS);
+      EXPECT_ZE_RESULT_SUCCESS(eventResult);
 
       // signal the worker thread to stop running the workload.
       workloadThreadFlag = false;
@@ -1477,7 +1475,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToGenrateCorrectNumberOfReports) {
   /* This test computes the expected time before which events are generated by
@@ -1560,9 +1558,7 @@ TEST_F(
         std::this_thread::sleep_for(std::chrono::seconds(timeLeft));
       }
 
-      ze_result_t eventResult;
-      eventResult = zeEventQueryStatus(eventHandle);
-      EXPECT_EQ(eventResult, ZE_RESULT_SUCCESS);
+      EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(eventHandle));
 
       // signal the worker thread to stop running the workload.
       workloadThreadFlag = false;
@@ -1878,7 +1874,7 @@ void run_ip_sampling_with_validation(
       if (enableOverflow) {
         ASSERT_EQ(ZE_RESULT_WARNING_DROPPED_DATA, result);
       } else {
-        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+        ASSERT_ZE_RESULT_SUCCESS(result);
       }
 
       std::vector<zet_metric_handle_t> metricHandles;
@@ -1910,21 +1906,21 @@ void run_ip_sampling_with_validation(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndOverflowTriggeredThenExpectStreamerValidateError) {
   run_ip_sampling_with_validation(true, devices, notifyEveryNReports,
                                   samplingPeriod, TimeForNReportsComplete);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
   run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
                                   samplingPeriod, TimeForNReportsComplete);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndBufferOverflowIsTriggeredThenProperErrorIsReturned) {
 
@@ -2012,7 +2008,7 @@ TEST_F(
           break;
         }
 
-        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+        ASSERT_ZE_RESULT_SUCCESS(result);
         std::vector<zet_typed_value_t> metricValues;
         std::vector<uint32_t> metricValueSets;
         result = level_zero_tests::metric_calculate_metric_values_from_raw_data(
@@ -2021,7 +2017,7 @@ TEST_F(
         if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
           break;
         }
-        ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+        ASSERT_ZE_RESULT_SUCCESS(result);
         timeForNextIterationSec += timeForNextIterationSec;
       }
 
@@ -2044,7 +2040,7 @@ TEST_F(
 
 using zetMetricStreamerAppendMarkerTestNoValidate = zetMetricStreamerTest;
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerAppendMarkerTestNoValidate,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedWithAppendStreamerMarkerNoValidateThenExpectStreamerToSucceed) {
 
@@ -2157,7 +2153,7 @@ TEST_F(
 
 using zetMetricStreamerAppendMarkerTest = zetMetricStreamerTest;
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerAppendMarkerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedWithAppendStreamerMarkerThenExpectStreamerToSucceed) {
 
@@ -2292,7 +2288,7 @@ TEST_F(
               lzt::metric_calculate_metric_values_from_raw_data(
                   groupInfo.metricGroupHandle, rawData, metricValues,
                   metricValueSets);
-          ASSERT_EQ(ZE_RESULT_SUCCESS, result);
+          ASSERT_ZE_RESULT_SUCCESS(result);
 
           lzt::metric_validate_streamer_marker_data(
               metricProperties, metricValues, metricValueSets,
@@ -2334,15 +2330,15 @@ protected:
   void SetUp() override { devices = lzt::get_metric_test_no_subdevices_list(); }
 };
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerStdTest,
     GivenValidMetricGroupWhenTimerBasedStreamerWithNoSubDevicesListIsCreatedWithAppendStreamerMarkerThenExpectStreamerAndSpecValidateToSucceed) {
 
   for (auto device : devices) {
 
     uint32_t subDeviceCount = 0;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeDeviceGetSubDevices(device, &subDeviceCount, nullptr));
     if (subDeviceCount != 0) {
       continue;
     }
@@ -2455,7 +2451,7 @@ TEST_F(
   }
 }
 
-TEST(
+LZT_TEST(
     zetMetricStreamProcessTest,
     GivenWorkloadExecutingInSeparateProcessWhenStreamingSingleMetricsThenExpectValidMetrics) {
 
@@ -2540,7 +2536,7 @@ TEST(
   eventPool.destroy_event(eventHandle);
 }
 
-TEST(
+LZT_TEST(
     zetMetricStreamProcessTest,
     GivenWorkloadExecutingInSeparateProcessWhenStreamingMetricsAndSendInterruptThenExpectValidMetrics) {
   auto driver = lzt::get_default_driver();
@@ -2633,7 +2629,7 @@ TEST(
   eventPool.destroy_event(eventHandle);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerAppendMarkerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedWithAppendStreamerMarkerToImmediateCommandListThenExpectStreamerToSucceed) {
 
@@ -2895,7 +2891,7 @@ void run_multi_device_streamer_test(
   eventPool.destroy_event(eventHandle_1);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupsWhenMultipleDevicesExecutingThenExpectValidMetrics) {
 
@@ -2905,7 +2901,7 @@ TEST_F(
   run_multi_device_streamer_test(devices);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidMetricGroupsWhenMultipleSubDevicesExecutingThenExpectValidMetrics) {
   auto sub_devices = lzt::get_all_sub_devices();

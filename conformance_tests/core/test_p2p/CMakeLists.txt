@@ -31,7 +31,7 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
-    level_zero_tests::utils
+    level_zero_tests::random
   KERNELS
     atomic_access
     concurrent_access

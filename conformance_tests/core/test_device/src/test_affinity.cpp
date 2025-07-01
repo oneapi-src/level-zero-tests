@@ -221,7 +221,7 @@ std::string get_affinity_mask_string(ze_device_handle_t device,
   return output_mask.str();
 }
 
-TEST(
+LZT_TEST(
     TestAffinity,
     GivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
 
@@ -281,7 +281,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     TestDeviceHierarchy,
     GivenDeviceHierarchyFlatThenGivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
 
@@ -343,7 +343,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     TestDeviceHierarchy,
     GivenDeviceHierarchyCombinedThenGivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
 
@@ -403,7 +403,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     TestDeviceHierarchy,
     GivenDeviceHierarchyCompositeThenGivenAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturnedInAllCases) {
 
@@ -463,7 +463,7 @@ TEST(
   }
 }
 
-TEST(
+LZT_TEST(
     TestAffinity,
     GivenSpecificAffinityMaskSetWhenGettingDevicesThenCorrectNumberOfDevicesReturned) {
   auto driver = lzt::get_default_driver();
@@ -498,7 +498,7 @@ TEST(
                     "COMPOSITE");
 }
 
-TEST(
+LZT_TEST(
     TestAffinity,
     GivenAffinityMaskSetWhenGettingSubDevicesThenCorrectNumberOfSubDevicesReturned) {
   auto driver = lzt::get_default_driver();

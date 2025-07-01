@@ -36,8 +36,7 @@ zet_device_debug_properties_t get_debug_properties(ze_device_handle_t device) {
   zet_device_debug_properties_t properties = {};
   properties.stype = ZET_STRUCTURE_TYPE_DEVICE_DEBUG_PROPERTIES;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDeviceGetDebugProperties(device, &properties));
+  EXPECT_ZE_RESULT_SUCCESS(zetDeviceGetDebugProperties(device, &properties));
 
   return properties;
 }
@@ -74,7 +73,7 @@ zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,
                                                                       startTime)
                 .count() < timeout));
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+  EXPECT_ZE_RESULT_SUCCESS(result);
   if (ZE_RESULT_SUCCESS == result) {
     sessionsAttachStatus[debug_session] = true;
   }
@@ -85,7 +84,7 @@ zet_debug_session_handle_t debug_attach(const ze_device_handle_t &device,
 void debug_detach(const zet_debug_session_handle_t &debug_session) {
 
   ze_result_t result = zetDebugDetach(debug_session);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+  EXPECT_ZE_RESULT_SUCCESS(result);
 
   if (ZE_RESULT_SUCCESS == result) {
     sessionsAttachStatus[debug_session] = false;
@@ -98,8 +97,8 @@ debug_read_event(const zet_debug_session_handle_t &debug_session) {
   zet_debug_event_t debug_event = {};
 
   auto timeout = std::numeric_limits<uint64_t>::max();
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDebugReadEvent(debug_session, timeout, &debug_event));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetDebugReadEvent(debug_session, timeout, &debug_event));
 
   return debug_event;
 }
@@ -117,7 +116,7 @@ ze_result_t debug_read_event(const zet_debug_session_handle_t &debug_session,
     LOG_INFO << "[Debugger] zetDebugReadEvent timed out";
     EXPECT_EQ(ZE_RESULT_NOT_READY, result);
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_ZE_RESULT_SUCCESS(result);
   }
 
   debugEvent = event;
@@ -126,20 +125,20 @@ ze_result_t debug_read_event(const zet_debug_session_handle_t &debug_session,
 
 void debug_ack_event(const zet_debug_session_handle_t &debug_session,
                      const zet_debug_event_t *debug_event) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDebugAcknowledgeEvent(debug_session, debug_event));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetDebugAcknowledgeEvent(debug_session, debug_event));
 }
 
 void debug_interrupt(const zet_debug_session_handle_t &debug_session,
                      const ze_device_thread_t &device_thread) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugInterrupt(debug_session, device_thread));
+  EXPECT_ZE_RESULT_SUCCESS(zetDebugInterrupt(debug_session, device_thread));
 }
 
 void debug_resume(const zet_debug_session_handle_t &debug_session,
                   const ze_device_thread_t &device_thread) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugResume(debug_session, device_thread));
+  EXPECT_ZE_RESULT_SUCCESS(zetDebugResume(debug_session, device_thread));
 }
 
 void printRegSetProperties(zet_debug_regset_properties_t regSet) {
@@ -193,24 +192,22 @@ void clear_exceptions(const ze_device_handle_t &device,
   uint8_t *cr_values = new uint8_t[reg_size_in_bytes];
   uint32_t *uint32_values = (uint32_t *)cr_values;
 
-  ASSERT_EQ(zetDebugReadRegisters(debug_session, device_thread,
-                                  ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
-                                  cr_reg_prop.count, cr_values),
-            ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zetDebugReadRegisters(
+      debug_session, device_thread, ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
+      cr_reg_prop.count, cr_values));
 
   uint32_values[1] &= ~((1 << 26) | (1 << 30));
-  ASSERT_EQ(zetDebugWriteRegisters(debug_session, device_thread,
-                                   ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
-                                   cr_reg_prop.count, cr_values),
-            ZE_RESULT_SUCCESS);
+  ASSERT_ZE_RESULT_SUCCESS(zetDebugWriteRegisters(
+      debug_session, device_thread, ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
+      cr_reg_prop.count, cr_values));
 }
 
 void debug_read_memory(const zet_debug_session_handle_t &debug_session,
                        const ze_device_thread_t &device_thread,
                        const zet_debug_memory_space_desc_t &desc, size_t size,
                        void *buffer) {
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugReadMemory(debug_session, device_thread,
-                                                  &desc, size, buffer));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetDebugReadMemory(debug_session, device_thread, &desc, size, buffer));
 }
 
 void debug_write_memory(const zet_debug_session_handle_t &debug_session,
@@ -218,14 +215,14 @@ void debug_write_memory(const zet_debug_session_handle_t &debug_session,
                         const zet_debug_memory_space_desc_t &desc, size_t size,
                         const void *buffer) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugWriteMemory(debug_session, device_thread,
-                                                   &desc, size, buffer));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetDebugWriteMemory(debug_session, device_thread, &desc, size, buffer));
 }
 
 uint32_t get_register_set_properties_count(const ze_device_handle_t &device) {
   uint32_t count = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDebugGetRegisterSetProperties(device, &count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetDebugGetRegisterSetProperties(device, &count, nullptr));
 
   return count;
 }
@@ -238,8 +235,8 @@ get_register_set_properties(const ze_device_handle_t &device) {
       count, {ZET_STRUCTURE_TYPE_DEBUG_REGSET_PROPERTIES});
 
   auto device_initial = device;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugGetRegisterSetProperties(
-                                   device, &count, properties.data()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zetDebugGetRegisterSetProperties(device, &count, properties.data()));
   LOG_DEBUG << "[Debugger] Found " << count << " regsets";
   EXPECT_EQ(device, device_initial);
   EXPECT_NE(properties.data(), nullptr);
@@ -254,15 +251,14 @@ std::vector<zet_debug_regset_properties_t> get_thread_register_set_properties(
   uint32_t count = 0;
 
   auto device_initial = device;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zetDebugGetThreadRegisterSetProperties(
-                                   debug_session, thread, &count, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetDebugGetThreadRegisterSetProperties(
+      debug_session, thread, &count, nullptr));
 
   std::vector<zet_debug_regset_properties_t> properties(
       count, {ZET_STRUCTURE_TYPE_DEBUG_REGSET_PROPERTIES});
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDebugGetThreadRegisterSetProperties(debug_session, thread,
-                                                   &count, properties.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zetDebugGetThreadRegisterSetProperties(
+      debug_session, thread, &count, properties.data()));
 
   EXPECT_EQ(device, device_initial);
 
@@ -274,9 +270,8 @@ void debug_read_registers(const zet_debug_session_handle_t &debug_session,
                           const uint32_t type, const uint32_t start,
                           const uint32_t count, void *buffer) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDebugReadRegisters(debug_session, device_thread, type, start,
-                                  count, buffer));
+  EXPECT_ZE_RESULT_SUCCESS(zetDebugReadRegisters(debug_session, device_thread,
+                                                 type, start, count, buffer));
 }
 
 void debug_write_registers(const zet_debug_session_handle_t &debug_session,
@@ -284,23 +279,19 @@ void debug_write_registers(const zet_debug_session_handle_t &debug_session,
                            const uint32_t type, const uint32_t start,
                            const uint32_t count, void *buffer) {
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetDebugWriteRegisters(debug_session, device_thread, type, start,
-                                   count, buffer));
+  EXPECT_ZE_RESULT_SUCCESS(zetDebugWriteRegisters(debug_session, device_thread,
+                                                  type, start, count, buffer));
 }
 
 std::vector<uint8_t> get_debug_info(const zet_module_handle_t &module_handle) {
   size_t size = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetModuleGetDebugInfo(module_handle,
-                                  ZET_MODULE_DEBUG_INFO_FORMAT_ELF_DWARF, &size,
-                                  nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(zetModuleGetDebugInfo(
+      module_handle, ZET_MODULE_DEBUG_INFO_FORMAT_ELF_DWARF, &size, nullptr));
 
   std::vector<uint8_t> debug_info(size);
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zetModuleGetDebugInfo(module_handle,
-                                  ZET_MODULE_DEBUG_INFO_FORMAT_ELF_DWARF, &size,
-                                  debug_info.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zetModuleGetDebugInfo(
+      module_handle, ZET_MODULE_DEBUG_INFO_FORMAT_ELF_DWARF, &size,
+      debug_info.data()));
   return debug_info;
 }
 
@@ -316,11 +307,10 @@ bool is_heapless_mode(ze_device_thread_t stopped_thread,
     if (register_set.type == ZET_DEBUG_REGSET_TYPE_MODE_FLAGS_INTEL_GPU) {
       auto reg_size_in_bytes = register_set.count * register_set.byteSize;
       mode_values = new uint8_t[reg_size_in_bytes];
-      EXPECT_EQ(
+      EXPECT_ZE_RESULT_SUCCESS(
           zetDebugReadRegisters(debug_session, stopped_thread,
                                 ZET_DEBUG_REGSET_TYPE_MODE_FLAGS_INTEL_GPU, 0,
-                                register_set.count, mode_values),
-          ZE_RESULT_SUCCESS);
+                                register_set.count, mode_values));
 
       uint32_t *uint32_t_values = (uint32_t *)mode_values;
       LOG_DEBUG << "[Debugger] mode value: %u " << uint32_t_values[0];

@@ -8,8 +8,9 @@
 
 #include "image/image.hpp"
 #include "gtest/gtest.h"
+#include "utils/utils.hpp"
 
-TEST(ImageIntegrationTests, ReadsPNGFile) {
+LZT_TEST(ImageIntegrationTests, ReadsPNGFile) {
   level_zero_tests::ImagePNG32Bit image("rgb_brg_3x2.png");
   const std::vector<uint32_t> pixels = {
       0xFF0000FF, //
@@ -22,7 +23,7 @@ TEST(ImageIntegrationTests, ReadsPNGFile) {
   EXPECT_EQ(image.get_pixels(), pixels);
 }
 
-TEST(ImageIntegrationTests, WritesPNGFile) {
+LZT_TEST(ImageIntegrationTests, WritesPNGFile) {
   const std::vector<uint32_t> pixels = {
       0xFF0000FF, //
       0x00FF00FF, //
@@ -44,7 +45,7 @@ TEST(ImageIntegrationTests, WritesPNGFile) {
   EXPECT_EQ(image.get_pixels(), pixels);
 }
 
-TEST(ImageIntegrationTests, ReadsGrayscaleBMPFile) {
+LZT_TEST(ImageIntegrationTests, ReadsGrayscaleBMPFile) {
   level_zero_tests::ImageBMP8Bit image("kwkw_wwkk_4x2_mono.bmp");
   const std::vector<uint8_t> pixels = {
       0x00, //
@@ -59,7 +60,7 @@ TEST(ImageIntegrationTests, ReadsGrayscaleBMPFile) {
   EXPECT_EQ(image.get_pixels(), pixels);
 }
 
-TEST(ImageIntegrationTests, WritesGrayscaleBMPFile) {
+LZT_TEST(ImageIntegrationTests, WritesGrayscaleBMPFile) {
   const std::vector<uint8_t> pixels = {
       0x00, //
       0xFF, //
@@ -83,7 +84,7 @@ TEST(ImageIntegrationTests, WritesGrayscaleBMPFile) {
   EXPECT_EQ(image.get_pixels(), pixels);
 }
 
-TEST(ImageIntegrationTests, ReadsColorBMPFile) {
+LZT_TEST(ImageIntegrationTests, ReadsColorBMPFile) {
   level_zero_tests::ImageBMP32Bit image("rgb_brg_3x2_argb.bmp");
   const std::vector<uint32_t> pixels = {
       0xFFFF0000, //
@@ -96,7 +97,7 @@ TEST(ImageIntegrationTests, ReadsColorBMPFile) {
   EXPECT_EQ(image.get_pixels(), pixels);
 }
 
-TEST(ImageIntegrationTests, WritesColorBMPFile) {
+LZT_TEST(ImageIntegrationTests, WritesColorBMPFile) {
   const std::vector<uint32_t> pixels = {
       0xFFFF0000, //
       0xFF00FF00, //

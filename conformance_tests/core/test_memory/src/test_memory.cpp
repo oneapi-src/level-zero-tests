@@ -14,6 +14,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -40,7 +41,7 @@ protected:
 
 class zeDriverAllocDeviceMemParamsTests : public zeDriverAllocDeviceMemTests {};
 
-TEST_P(
+LZT_TEST_P(
     zeDriverAllocDeviceMemParamsTests,
     GivenAllocationFlagsAndSizeAndAlignmentWhenAllocatingDeviceMemoryThenNotNullPointerIsReturned) {
 }
@@ -56,8 +57,9 @@ INSTANTIATE_TEST_SUITE_P(
 class zeDriverAllocDeviceMemAlignmentTests
     : public zeDriverAllocDeviceMemTests {};
 
-TEST_P(zeDriverAllocDeviceMemAlignmentTests,
-       GivenSizeAndAlignmentWhenAllocatingDeviceMemoryThenPointerIsAligned) {
+LZT_TEST_P(
+    zeDriverAllocDeviceMemAlignmentTests,
+    GivenSizeAndAlignmentWhenAllocatingDeviceMemoryThenPointerIsAligned) {
   EXPECT_NE(nullptr, memory_);
   if (alignment_ != 0) {
     EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory_) % alignment_);
@@ -78,7 +80,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 class zeMemGetAllocPropertiesTests : public zeDriverAllocDeviceMemTests {};
 
-TEST_P(
+LZT_TEST_P(
     zeMemGetAllocPropertiesTests,
     GivenValidDeviceMemoryPointerWhenGettingPropertiesThenVersionAndTypeReturned) {
   ze_memory_allocation_properties_t memory_properties = {};
@@ -106,7 +108,7 @@ TEST_P(
     EXPECT_EQ(device, device_test);
   }
 }
-TEST_P(
+LZT_TEST_P(
     zeMemGetAllocPropertiesTests,
     GivenPointerToDeviceHandleIsSetToNullWhenGettingMemoryPropertiesThenSuccessIsReturned) {
 
@@ -126,18 +128,17 @@ INSTANTIATE_TEST_SUITE_P(
 
 class zeDriverMemGetAddressRangeTests : public zeDriverAllocDeviceMemTests {};
 
-TEST_P(
+LZT_TEST_P(
     zeDriverMemGetAddressRangeTests,
     GivenValidDeviceMemoryPointerWhenGettingAddressRangeThenBaseAddressAndSizeReturned) {
 
   void *pBase = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
-                                                    memory_, &pBase, NULL));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(lzt::get_default_context(), memory_, &pBase, NULL));
   EXPECT_EQ(pBase, memory_);
   size_t addr_range_size = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAddressRange(lzt::get_default_context(), memory_, NULL,
-                                 &addr_range_size));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(
+      lzt::get_default_context(), memory_, NULL, &addr_range_size));
 
   // Get device mem size rounds size up to nearest page size
   EXPECT_GE(addr_range_size, size_);
@@ -145,14 +146,12 @@ TEST_P(
   addr_range_size = 0;
   if (size_ > 0) {
     uint8_t *char_mem = static_cast<uint8_t *>(memory_);
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetAddressRange(lzt::get_default_context(),
-                                   static_cast<void *>(char_mem + size_ - 1),
-                                   &pBase, &addr_range_size));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(
+        lzt::get_default_context(), static_cast<void *>(char_mem + size_ - 1),
+        &pBase, &addr_range_size));
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetAddressRange(lzt::get_default_context(), memory_, &pBase,
-                                   &addr_range_size));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(
+        lzt::get_default_context(), memory_, &pBase, &addr_range_size));
   }
   EXPECT_EQ(pBase, memory_);
   // Get device mem size rounds size up to nearest page size
@@ -167,22 +166,23 @@ INSTANTIATE_TEST_SUITE_P(
 
 class zeDriverMemFreeTests : public ::testing::Test {};
 
-TEST_F(
+LZT_TEST_F(
     zeDriverMemFreeTests,
     GivenValidDeviceMemAllocationWhenFreeingDeviceMemoryThenSuccessIsReturned) {
   void *memory = lzt::allocate_device_memory(1);
   lzt::free_memory(memory);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeDriverMemFreeTests,
     GivenValidSharedMemAllocationWhenFreeingSharedMemoryThenSuccessIsReturned) {
   void *memory = lzt::allocate_shared_memory(1);
   lzt::free_memory(memory);
 }
 
-TEST_F(zeDriverMemFreeTests,
-       GivenValidHostMemAllocationWhenFreeingHostMemoryThenSuccessIsReturned) {
+LZT_TEST_F(
+    zeDriverMemFreeTests,
+    GivenValidHostMemAllocationWhenFreeingHostMemoryThenSuccessIsReturned) {
   void *memory = lzt::allocate_host_memory(1);
   lzt::free_memory(memory);
 }
@@ -242,13 +242,13 @@ public:
   }
 };
 
-TEST_P(
+LZT_TEST_P(
     zeDriverAllocSharedMemTests,
     GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryThenNotNullPointerIsReturned) {
   RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest(false);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeDriverAllocSharedMemTests,
     GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryOnImmediateCmdListThenNotNullPointerIsReturned) {
   RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest(true);
@@ -296,8 +296,9 @@ protected:
   ze_context_handle_t context_;
 };
 
-TEST_P(zeDriverAllocSharedMemAlignmentTests,
-       GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned) {
+LZT_TEST_P(
+    zeDriverAllocSharedMemAlignmentTests,
+    GivenSizeAndAlignmentWhenAllocatingSharedMemoryThenPointerIsAligned) {
   EXPECT_NE(nullptr, memory_);
   if (alignment_ != 0) {
     EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory_) % alignment_);
@@ -322,8 +323,8 @@ class zeSharedMemGetPropertiesTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<size_t, size_t>> {};
 
-TEST_P(zeSharedMemGetPropertiesTests,
-       GivenSharedAllocationWhenGettingMemPropertiesThenSuccessIsReturned) {
+LZT_TEST_P(zeSharedMemGetPropertiesTests,
+           GivenSharedAllocationWhenGettingMemPropertiesThenSuccessIsReturned) {
   const size_t size = std::get<0>(GetParam());
   const size_t alignment = std::get<1>(GetParam());
   ze_context_handle_t context = lzt::get_default_context();
@@ -344,30 +345,32 @@ INSTANTIATE_TEST_SUITE_P(TestSharedMemGetPropertiesPermutations,
 
 class zeSharedMemGetAddressRangeTests : public ::testing::Test {};
 
-TEST_F(zeSharedMemGetAddressRangeTests,
-       GivenSharedAllocationWhenGettingAddressRangeThenCorrectSizeIsReturned) {
+LZT_TEST_F(
+    zeSharedMemGetAddressRangeTests,
+    GivenSharedAllocationWhenGettingAddressRangeThenCorrectSizeIsReturned) {
   const size_t size = 1;
   const size_t alignment = 1;
 
   void *memory = lzt::allocate_shared_memory(size, alignment);
   size_t size_out;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
-                                                    memory, NULL, &size_out));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(lzt::get_default_context(),
+                                                memory, NULL, &size_out));
   EXPECT_GE(size_out, size);
   lzt::free_memory(memory);
 }
 
-TEST_F(zeSharedMemGetAddressRangeTests,
-       GivenSharedAllocationWhenGettingAddressRangeThenCorrectBaseIsReturned) {
+LZT_TEST_F(
+    zeSharedMemGetAddressRangeTests,
+    GivenSharedAllocationWhenGettingAddressRangeThenCorrectBaseIsReturned) {
   const size_t size = 1;
   const size_t alignment = 1;
 
   void *memory = lzt::allocate_shared_memory(size, alignment);
   void *base = nullptr;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
-                                                    memory, &base, NULL));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(lzt::get_default_context(), memory, &base, NULL));
   EXPECT_EQ(base, memory);
   lzt::free_memory(memory);
 }
@@ -376,7 +379,7 @@ class zeSharedMemGetAddressRangeParameterizedTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<size_t, size_t>> {};
 
-TEST_P(
+LZT_TEST_P(
     zeSharedMemGetAddressRangeParameterizedTests,
     GivenSharedAllocationWhenGettingAddressRangeThenCorrectSizeAndBaseIsReturned) {
   const size_t size = std::get<0>(GetParam());
@@ -388,25 +391,23 @@ TEST_P(
 
   // Test getting address info from begining of memory range
   uint8_t *mem_target = static_cast<uint8_t *>(memory);
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
-                                                    memory, &base, &size_out));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(lzt::get_default_context(),
+                                                memory, &base, &size_out));
   EXPECT_GE(size_out, size);
   EXPECT_EQ(base, memory);
 
   if (size > 1) {
     // Test getting address info from middle of memory range
     mem_target = static_cast<uint8_t *>(memory) + (size - 1) / 2;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetAddressRange(lzt::get_default_context(), mem_target,
-                                   &base, &size_out));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(
+        lzt::get_default_context(), mem_target, &base, &size_out));
     EXPECT_GE(size_out, size);
     EXPECT_EQ(memory, base);
 
     // Test getting address info from end of memory range
     mem_target = static_cast<uint8_t *>(memory) + (size - 1);
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetAddressRange(lzt::get_default_context(), mem_target,
-                                   &base, &size_out));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(
+        lzt::get_default_context(), mem_target, &base, &size_out));
     EXPECT_GE(size_out, size);
     EXPECT_EQ(memory, base);
   }
@@ -421,7 +422,7 @@ class zeDriverAllocHostMemTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<ze_host_mem_alloc_flag_t, size_t, size_t>> {};
-TEST_P(
+LZT_TEST_P(
     zeDriverAllocHostMemTests,
     GivenFlagsSizeAndAlignmentWhenAllocatingHostMemoryThenNotNullPointerIsReturned) {
 
@@ -436,13 +437,12 @@ TEST_P(
 
   host_desc.pNext = nullptr;
   host_desc.flags = flags;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemAllocHost(lzt::get_default_context(), &host_desc, size,
-                           alignment, &memory));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemAllocHost(
+      lzt::get_default_context(), &host_desc, size, alignment, &memory));
 
   EXPECT_NE(nullptr, memory);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemFree(lzt::get_default_context(), memory));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemFree(lzt::get_default_context(), memory));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -470,8 +470,8 @@ protected:
   void *memory_ = nullptr;
 };
 
-TEST_P(zeDriverAllocHostMemAlignmentTests,
-       GivenSizeAndAlignmentWhenAllocatingHostMemoryThenPointerIsAligned) {
+LZT_TEST_P(zeDriverAllocHostMemAlignmentTests,
+           GivenSizeAndAlignmentWhenAllocatingHostMemoryThenPointerIsAligned) {
   EXPECT_NE(nullptr, memory_);
   if (alignment_ != 0) {
     EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(memory_) % alignment_);
@@ -494,7 +494,7 @@ class zeHostMemPropertiesTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<size_t, size_t>> {};
 
-TEST_P(
+LZT_TEST_P(
     zeHostMemPropertiesTests,
     GivenValidMemoryPointerWhenQueryingAttributesOnHostMemoryAllocationThenSuccessIsReturned) {
 
@@ -519,7 +519,7 @@ INSTANTIATE_TEST_SUITE_P(TestHostMemGetPropertiesParameterCombinations,
 
 class zeHostMemGetAddressRangeTests : public ::testing::Test {};
 
-TEST_F(
+LZT_TEST_F(
     zeHostMemGetAddressRangeTests,
     GivenBasePointerWhenQueryingBaseAddressofHostMemoryAllocationThenSuccessIsReturned) {
 
@@ -530,8 +530,8 @@ TEST_F(
 
   void *memory = lzt::allocate_host_memory(size, alignment);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
-                                                    memory, &base, nullptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetAddressRange(lzt::get_default_context(), memory, &base, nullptr));
   EXPECT_EQ(memory, base);
 
   lzt::free_memory(memory);
@@ -560,7 +560,7 @@ bool check_ext_version() {
 
 class zeMemFreeExtTests : public ::testing::Test {};
 
-TEST_F(zeMemFreeExtTests, GetMemoryFreePolicyFlagsAndVerifySet) {
+LZT_TEST_F(zeMemFreeExtTests, GetMemoryFreePolicyFlagsAndVerifySet) {
   if (!check_ext_version())
     GTEST_SKIP();
 
@@ -571,7 +571,7 @@ TEST_F(zeMemFreeExtTests, GetMemoryFreePolicyFlagsAndVerifySet) {
     ext_properties.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
     properties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
     properties.pNext = &ext_properties;
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeDriverGetProperties(driver, &properties));
+    EXPECT_ZE_RESULT_SUCCESS(zeDriverGetProperties(driver, &properties));
     EXPECT_GE(ext_properties.freePolicies, 0u);
     if (ext_properties.freePolicies > 0) {
       uint32_t valid_policy_flags_found = 0;
@@ -588,7 +588,8 @@ TEST_F(zeMemFreeExtTests, GetMemoryFreePolicyFlagsAndVerifySet) {
   }
 }
 
-TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithBlockingFreePolicy) {
+LZT_TEST_F(zeMemFreeExtTests,
+           AllocateHostMemoryAndThenFreeWithBlockingFreePolicy) {
   if (!check_ext_version())
     GTEST_SKIP();
 
@@ -601,12 +602,12 @@ TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithBlockingFreePolicy) {
   ze_memory_free_ext_desc_t memfreedesc = {};
   memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
   memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
 }
 
-TEST_F(zeMemFreeExtTests,
-       AllocateSharedMemoryAndThenFreeWithBlockingFreePolicy) {
+LZT_TEST_F(zeMemFreeExtTests,
+           AllocateSharedMemoryAndThenFreeWithBlockingFreePolicy) {
   if (!check_ext_version())
     GTEST_SKIP();
 
@@ -619,12 +620,12 @@ TEST_F(zeMemFreeExtTests,
   ze_memory_free_ext_desc_t memfreedesc = {};
   memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
   memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
 }
 
-TEST_F(zeMemFreeExtTests,
-       AllocateDeviceMemoryAndThenFreeWithBlockingFreePolicy) {
+LZT_TEST_F(zeMemFreeExtTests,
+           AllocateDeviceMemoryAndThenFreeWithBlockingFreePolicy) {
   if (!check_ext_version())
     GTEST_SKIP();
 
@@ -637,11 +638,12 @@ TEST_F(zeMemFreeExtTests,
   ze_memory_free_ext_desc_t memfreedesc = {};
   memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
   memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
 }
 
-TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithDeferFreePolicy) {
+LZT_TEST_F(zeMemFreeExtTests,
+           AllocateHostMemoryAndThenFreeWithDeferFreePolicy) {
   if (!check_ext_version())
     GTEST_SKIP();
 
@@ -654,11 +656,12 @@ TEST_F(zeMemFreeExtTests, AllocateHostMemoryAndThenFreeWithDeferFreePolicy) {
   ze_memory_free_ext_desc_t memfreedesc = {};
   memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
   memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
 }
 
-TEST_F(zeMemFreeExtTests, AllocateSharedMemoryAndThenFreeWithDeferFreePolicy) {
+LZT_TEST_F(zeMemFreeExtTests,
+           AllocateSharedMemoryAndThenFreeWithDeferFreePolicy) {
   if (!check_ext_version())
     GTEST_SKIP();
 
@@ -671,11 +674,12 @@ TEST_F(zeMemFreeExtTests, AllocateSharedMemoryAndThenFreeWithDeferFreePolicy) {
   ze_memory_free_ext_desc_t memfreedesc = {};
   memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
   memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
 }
 
-TEST_F(zeMemFreeExtTests, AllocateDeviceMemoryAndThenFreeWithDeferFreePolicy) {
+LZT_TEST_F(zeMemFreeExtTests,
+           AllocateDeviceMemoryAndThenFreeWithDeferFreePolicy) {
   if (!check_ext_version())
     GTEST_SKIP();
 
@@ -688,8 +692,8 @@ TEST_F(zeMemFreeExtTests, AllocateDeviceMemoryAndThenFreeWithDeferFreePolicy) {
   ze_memory_free_ext_desc_t memfreedesc = {};
   memfreedesc.stype = ZE_STRUCTURE_TYPE_DRIVER_MEMORY_FREE_EXT_PROPERTIES;
   memfreedesc.freePolicy = ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemFreeExt(lzt::get_default_context(), &memfreedesc, memory));
 }
 
 class zeMemFreeExtMultipleTests
@@ -697,7 +701,7 @@ class zeMemFreeExtMultipleTests
       public ::testing::WithParamInterface<
           std::tuple<size_t, uint32_t, uint32_t, bool>> {};
 
-TEST_P(
+LZT_TEST_P(
     zeMemFreeExtMultipleTests,
     AllocateMultipleDeviceMemoryAndThenFreeWithDeferFreePolicyWhileBuffersInUse) {
   if (!check_ext_version())
@@ -744,7 +748,7 @@ TEST_P(
         dev_copy_buf[i] = static_cast<uint8_t *>(lzt::allocate_device_memory(
             size, alignment, 0, 0, device, context));
         EXPECT_NE(nullptr, dev_copy_buf[i]);
-        pattern[i] = rand() & 0xff;
+        pattern[i] = lzt::generate_value<uint8_t>();
         host_verify_buf[i] = new uint8_t[size]();
         EXPECT_NE(nullptr, host_verify_buf[i]);
       }
@@ -767,10 +771,10 @@ TEST_P(
       }
 
       for (uint32_t i = 0; i < num_buffers; i++) {
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeMemFreeExt(context, &memfreedesc, dev_fill_buf[i]));
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeMemFreeExt(context, &memfreedesc, dev_copy_buf[i]));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeMemFreeExt(context, &memfreedesc, dev_fill_buf[i]));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeMemFreeExt(context, &memfreedesc, dev_copy_buf[i]));
       }
 
       if (is_immediate) {
@@ -811,7 +815,7 @@ class zeHostMemGetAddressRangeSizeTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<size_t, size_t>> {};
 
-TEST_P(
+LZT_TEST_P(
     zeHostMemGetAddressRangeSizeTests,
     GivenSizePointerWhenQueryingSizeOfHostMemoryAllocationThenSuccessIsReturned) {
 
@@ -821,9 +825,8 @@ TEST_P(
   size_t size_out;
   void *memory = lzt::allocate_host_memory(size, alignment);
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeMemGetAddressRange(lzt::get_default_context(), memory, nullptr,
-                                 &size_out));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(lzt::get_default_context(),
+                                                memory, nullptr, &size_out));
   EXPECT_GE(size_out, size);
 
   lzt::free_memory(memory);
@@ -838,7 +841,7 @@ class zeHostMemGetAddressRangeParameterTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<size_t, size_t>> {};
 
-TEST_P(
+LZT_TEST_P(
     zeHostMemGetAddressRangeParameterTests,
     GivenBasePointerAndSizeWhenQueryingBaseAddressOfHostMemoryAllocationThenSuccessIsReturned) {
 
@@ -849,22 +852,20 @@ TEST_P(
   void *base = nullptr;
   size_t size_out;
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeMemGetAddressRange(lzt::get_default_context(),
-                                                    memory, &base, &size_out));
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(lzt::get_default_context(),
+                                                memory, &base, &size_out));
   EXPECT_EQ(memory, base);
 
   if (size > 1) {
     uint8_t *mem_target = static_cast<uint8_t *>(memory) + (size - 1) / 2;
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetAddressRange(lzt::get_default_context(), mem_target,
-                                   &base, &size_out));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(
+        lzt::get_default_context(), mem_target, &base, &size_out));
     EXPECT_EQ(memory, base);
     EXPECT_GE(size_out, size);
 
     mem_target = static_cast<uint8_t *>(memory) + (size - 1);
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeMemGetAddressRange(lzt::get_default_context(), mem_target,
-                                   &base, &size_out));
+    EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(
+        lzt::get_default_context(), mem_target, &base, &size_out));
     EXPECT_EQ(memory, base);
     EXPECT_GE(size_out, size);
   }
@@ -885,7 +886,7 @@ protected:
   uint8_t *memory_ = nullptr;
 };
 
-TEST_F(
+LZT_TEST_F(
     zeHostSystemMemoryHostTests,
     GivenHostSystemAllocationWhenWritingAndReadingOnHostThenCorrectDataIsRead) {
   lzt::write_data_pattern(memory_, size_, 1);
@@ -941,13 +942,13 @@ void zeHostSystemMemoryDeviceTests::
   lzt::destroy_module(module);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenAccessingMemoryOnDeviceThenCorrectDataIsRead) {
   RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenAccessingMemoryOnDeviceOnImmediateCmdListThenCorrectDataIsRead) {
   RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest(true);
@@ -974,13 +975,13 @@ void zeHostSystemMemoryDeviceTests::
   delete[] other_system_memory;
 }
 
-TEST_F(
+LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenCopyingMemoryOnDeviceThenMemoryCopiedCorrectly) {
   RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenCopyingMemoryOnDeviceOnImmediateCmdListThenMemoryCopiedCorrectly) {
   RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest(true);
@@ -1006,13 +1007,14 @@ void zeHostSystemMemoryDeviceTests::
   lzt::destroy_command_bundle(cmd_bundle_);
 }
 
-TEST_F(zeHostSystemMemoryDeviceTests,
-       GivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly) {
+LZT_TEST_F(
+    zeHostSystemMemoryDeviceTests,
+    GivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly) {
   RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly(
       false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemMemoryWhenSettingMemoryOnDeviceOnImmediateCmdListThenMemorySetCorrectly) {
   RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly(true);

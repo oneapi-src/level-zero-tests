@@ -33,7 +33,7 @@ class FirmwareTest : public lzt::SysmanCtsClass {};
 #define FIRMWARE_TEST FirmwareTest
 #endif // USE_ZESINIT
 
-TEST_F(
+LZT_TEST_F(
     FIRMWARE_TEST,
     GivenComponentCountZeroWhenRetrievingFirmwareHandlesThenCountIsReturned) {
   for (auto device : devices) {
@@ -45,7 +45,7 @@ TEST_F(
     }
   }
 }
-TEST_F(
+LZT_TEST_F(
     FIRMWARE_TEST,
     GivenComponentCountZeroWhenRetrievingFirmwareHandlesThenNotNullFirmwareHandlesAreReturned) {
   for (auto device : devices) {
@@ -63,7 +63,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FIRMWARE_TEST,
     GivenInvalidComponentCountWhenRetrievingSysmanFirmwareHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
@@ -79,7 +79,7 @@ TEST_F(
     EXPECT_EQ(test_count, actual_count);
   }
 }
-TEST_F(
+LZT_TEST_F(
     FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenRetrievingFirmwarePropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
@@ -104,7 +104,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenRetrievingFirmwarePropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
@@ -134,7 +134,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectFirmwareFlashingSuccess) {
   auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
@@ -231,7 +231,7 @@ void track_firmware_flash(zes_firmware_handle_t firmware_handle) {
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectFlashProgressGetsUpdated) {
   auto fw_dir_env = getenv("ZE_LZT_FIRMWARE_DIRECTORY");

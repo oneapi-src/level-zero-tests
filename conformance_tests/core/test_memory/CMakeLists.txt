@@ -20,6 +20,7 @@ add_lzt_test(
     level_zero_tests::logging
     level_zero_tests::net
     level_zero_tests::utils
+    level_zero_tests::random
     ${OS_SPECIFIC_LIBS}
   KERNELS
     unified_mem_test

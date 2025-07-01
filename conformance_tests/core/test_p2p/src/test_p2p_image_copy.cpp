@@ -152,13 +152,13 @@ void P2PImageCopy::
   lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
-TEST_F(
+LZT_TEST_F(
     P2PImageCopy,
     GivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceThenResultIsCorrect) {
   RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     P2PImageCopy,
     GivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceUsingImmediateCmdListThenResultIsCorrect) {
   RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(true);
@@ -221,13 +221,13 @@ void P2PImageCopy::
   lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
-TEST_F(
+LZT_TEST_F(
     P2PImageCopy,
     GivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceThenResultIsCorrect) {
   RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(false);
 }
 
-TEST_F(
+LZT_TEST_F(
     P2PImageCopy,
     GivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceUsingImmediateCmdListThenResultIsCorrect) {
   RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(true);
@@ -238,7 +238,7 @@ class P2PImageCopyMemory
       public ::testing::WithParamInterface<std::tuple<ze_memory_type_t, bool>> {
 };
 
-TEST_P(
+LZT_TEST_P(
     P2PImageCopyMemory,
     GivenTwoDevicesAndImageOnDeviceWhenCopiedToMemoryOnOtherDeviceThenResultIsCorrect) {
   if (skip)
@@ -302,7 +302,7 @@ TEST_P(
   lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
-TEST_P(
+LZT_TEST_P(
     P2PImageCopyMemory,
     GivenTwoDevicesAndImageOnDeviceWhenCopiedFromMemoryOnOtherDeviceThenResultIsCorrect) {
   if (skip)
@@ -362,7 +362,7 @@ TEST_P(
   lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
-TEST_P(
+LZT_TEST_P(
     P2PImageCopyMemory,
     GivenTwoDevicesAndImageOnRemoteDeviceWhenCopiedToMemoryOnLocalDeviceThenResultIsCorrect) {
   if (skip)
@@ -422,7 +422,7 @@ TEST_P(
   lzt::destroy_command_bundle(cmd_bundle_dev0);
 }
 
-TEST_P(
+LZT_TEST_P(
     P2PImageCopyMemory,
     GivenTwoDevicesAndImageOnRemoteDeviceWhenCopiedFromMemoryOnLocalDeviceThenResultIsCorrect) {
   if (skip)

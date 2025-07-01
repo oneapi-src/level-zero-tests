@@ -40,8 +40,8 @@ class KernelCopyTests : public ::testing::Test,
                         public ::testing::WithParamInterface<
                             std::tuple<ze_memory_type_t, int, bool>> {};
 
-TEST_P(KernelCopyTests,
-       GivenDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
+LZT_TEST_P(KernelCopyTests,
+           GivenDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
   ze_memory_type_t memory_type = std::get<0>(GetParam());
   int offset = std::get<1>(GetParam());
   bool is_immediate = std::get<2>(GetParam());
@@ -101,8 +101,8 @@ TEST_P(KernelCopyTests,
   }
 }
 
-TEST_P(KernelCopyTests,
-       GivenInDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
+LZT_TEST_P(KernelCopyTests,
+           GivenInDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
   ze_memory_type_t memory_type = std::get<0>(GetParam());
   int offset = std::get<1>(GetParam());
   bool is_immediate = std::get<2>(GetParam());
@@ -225,9 +225,8 @@ protected:
       for (int j = 0; j < devices[i].size(); j++) {
         ze_device_memory_access_properties_t mem_access_properties{
             ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES, nullptr};
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeDeviceGetMemoryAccessProperties(devices[i][j],
-                                                    &mem_access_properties));
+        EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetMemoryAccessProperties(
+            devices[i][j], &mem_access_properties));
         memory_access_properties[i].push_back(mem_access_properties);
       }
     }
@@ -593,7 +592,7 @@ protected:
       memory_access_properties;
 };
 
-TEST_P(
+LZT_TEST_P(
     KernelCopyTestsWithIndirectMemoryTypes,
     GivenInDirectMemoryWithDifferentMemoryTypesWhenCopyingDataInKernelThenCopyIsCorrect) {
   test_memory_type src_test_type = std::get<0>(GetParam());

@@ -61,38 +61,37 @@ protected:
 
 class zeDeviceRegisterCLCommandQueueTests : public zeCLInteropTests {};
 
-TEST_F(
+LZT_TEST_F(
     zeDeviceRegisterCLCommandQueueTests,
     GivenOpenCLContextAndOpenCLCommandQueueWhenRegisteringOpenCLCommandQueueThenNotNullCommandQueueIsReturned) {
   ze_command_queue_handle_t command_queue = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeDeviceRegisterCLCommandQueue(
-                lzt::zeDevice::get_instance()->get_device(), cl_context_.get(),
-                cl_command_queue_.get(), &command_queue));
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceRegisterCLCommandQueue(
+      lzt::zeDevice::get_instance()->get_device(), cl_context_.get(),
+      cl_command_queue_.get(), &command_queue));
   EXPECT_NE(nullptr, command_queue);
 }
 
 class zeDeviceRegisterCLProgramTests : public zeCLInteropTests {};
 
-TEST_F(
+LZT_TEST_F(
     zeDeviceRegisterCLProgramTests,
     GivenOpenCLContextAndOpenCLProgramWhenRegisteringOpenCLProgramThenNotNullModuleHandleIsReturned) {
   ze_module_handle_t module_handle = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceRegisterCLProgram(
-                                   lzt::zeDevice::get_instance()->get_device(),
-                                   cl_context_, cl_program_, &module_handle));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceRegisterCLProgram(lzt::zeDevice::get_instance()->get_device(),
+                                cl_context_, cl_program_, &module_handle));
   EXPECT_NE(nullptr, module_handle);
 }
 
 class zeDeviceRegisterCLMemoryTests : public zeCLInteropTests {};
 
-TEST_F(
+LZT_TEST_F(
     zeDeviceRegisterCLMemoryTests,
     GivenOpenCLContextAndCLDeviceMemoryWhenRegisteringCLMemoryThenNotNullMemoryIsReturned) {
   void *ptr = nullptr;
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeDeviceRegisterCLMemory(
-                                   lzt::zeDevice::get_instance()->get_device(),
-                                   cl_context_.get(), cl_memory_, &ptr));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceRegisterCLMemory(lzt::zeDevice::get_instance()->get_device(),
+                               cl_context_.get(), cl_memory_, &ptr));
   EXPECT_NE(nullptr, ptr);
 }
 
@@ -227,9 +226,8 @@ static std::vector<int> bitonic_sort_l0(std::vector<int> input) {
   uint32_t group_size_x = 0;
   uint32_t group_size_y = 0;
   uint32_t group_size_z = 0;
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeKernelSuggestGroupSize(func, input.size(), 1, 1, &group_size_x,
-                                     &group_size_y, &group_size_z));
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSuggestGroupSize(
+      func, input.size(), 1, 1, &group_size_x, &group_size_y, &group_size_z));
 
   lzt::set_group_size(func, group_size_x, group_size_y, group_size_z);
   lzt::set_argument_value(func, 0, sizeof(l0_buf), &l0_buf);
@@ -277,8 +275,8 @@ static bool is_power_of_two(const unsigned n) {
   return (n > 0) && (0 == (n & (n - 1)));
 }
 
-TEST(zeCLInteropTests,
-     GivenOpenClStructsWhenSortingOnKernelThenCorrectResultIsOutput) {
+LZT_TEST(zeCLInteropTests,
+         GivenOpenClStructsWhenSortingOnKernelThenCorrectResultIsOutput) {
 
   std::vector<int> input = lzt::generate_vector<int>(1 << 16, 0);
   EXPECT_TRUE(is_power_of_two(input.size()));
@@ -294,7 +292,7 @@ TEST(zeCLInteropTests,
   EXPECT_TRUE(output_cpu == output_cl);
 }
 
-TEST(
+LZT_TEST(
     zeCLInteropTests,
     GivenOCLAndL0KernelSortRoutinesWhenRunningBothConcurrentlyThenCorrectResultIsOutput) {
 

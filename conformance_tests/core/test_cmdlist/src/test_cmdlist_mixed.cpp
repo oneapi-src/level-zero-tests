@@ -11,6 +11,7 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
+#include "random/random.hpp"
 #include <vector>
 #include <utility>
 
@@ -87,7 +88,7 @@ class zeTestMixedCMDListsIndependentOverlapping
                      ze_command_queue_mode_t, ze_command_list_flags_t, bool>> {
 };
 
-TEST_P(
+LZT_TEST_P(
     zeTestMixedCMDListsIndependentOverlapping,
     GivenRegularCMDListOnComputeEngineAndImmCMDListOnCopyEngineThenCorrectResultsAreReturned) {
   std::vector<void *> host_vecs_compute;
@@ -208,14 +209,14 @@ TEST_P(
     }
     for (int j = 0; j < cls_copy_imm.size(); j++) {
       if (use_events_sync) {
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeEventHostSynchronize(events_copy[j], UINT64_MAX));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeEventHostSynchronize(events_copy[j], UINT64_MAX));
       } else {
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeCommandListHostSynchronize(cls_copy_imm[j], UINT64_MAX));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeCommandListHostSynchronize(cls_copy_imm[j], UINT64_MAX));
       }
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events_copy[j]));
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events_fill[j]));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events_copy[j]));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events_fill[j]));
     }
   }
 
@@ -263,7 +264,7 @@ TEST_P(
   }
 }
 
-TEST_P(
+LZT_TEST_P(
     zeTestMixedCMDListsIndependentOverlapping,
     GivenRegularCMDListOnCopyEngineAndImmCMDListOnComputeEngineThenCorrectResultsAreReturned) {
   std::vector<void *> host_vecs_compute;
@@ -380,8 +381,8 @@ TEST_P(
     if (use_events_sync) {
       lzt::event_host_synchronize(events[i], UINT64_MAX);
     } else {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListHostSynchronize(cls_compute_imm[i], UINT64_MAX));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeCommandListHostSynchronize(cls_compute_imm[i], UINT64_MAX));
     }
   }
 
@@ -427,8 +428,9 @@ TEST_P(
   }
 }
 
-TEST_P(zeTestMixedCMDListsIndependentOverlapping,
-       GivenRegularAndImmCMDListsOnComputeEngineThenCorrectResultsAreReturned) {
+LZT_TEST_P(
+    zeTestMixedCMDListsIndependentOverlapping,
+    GivenRegularAndImmCMDListsOnComputeEngineThenCorrectResultsAreReturned) {
   std::vector<void *> host_vecs;
   std::vector<void *> host_vecs_imm;
   std::vector<void *> device_vecs;
@@ -539,8 +541,8 @@ TEST_P(zeTestMixedCMDListsIndependentOverlapping,
     if (use_events_sync) {
       lzt::event_host_synchronize(events[i], UINT64_MAX);
     } else {
-      EXPECT_EQ(ZE_RESULT_SUCCESS,
-                zeCommandListHostSynchronize(cls_imm[i], UINT64_MAX));
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeCommandListHostSynchronize(cls_imm[i], UINT64_MAX));
     }
   }
 
@@ -584,8 +586,9 @@ TEST_P(zeTestMixedCMDListsIndependentOverlapping,
   }
 }
 
-TEST_P(zeTestMixedCMDListsIndependentOverlapping,
-       GivenRegularAndImmCMDListsOnCopyEngineThenCorrectResultsAreReturned) {
+LZT_TEST_P(
+    zeTestMixedCMDListsIndependentOverlapping,
+    GivenRegularAndImmCMDListsOnCopyEngineThenCorrectResultsAreReturned) {
   std::vector<void *> host_vecs;
   std::vector<void *> host_vecs_imm;
   std::vector<void *> device_vecs;
@@ -690,15 +693,15 @@ TEST_P(zeTestMixedCMDListsIndependentOverlapping,
     }
     for (int j = 0; j < cls_imm.size(); j++) {
       if (use_events_sync) {
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeEventHostSynchronize(events_copy[j], UINT64_MAX));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeEventHostSynchronize(events_copy[j], UINT64_MAX));
       } else {
-        EXPECT_EQ(ZE_RESULT_SUCCESS,
-                  zeCommandListHostSynchronize(cls_imm[j], UINT64_MAX));
+        EXPECT_ZE_RESULT_SUCCESS(
+            zeCommandListHostSynchronize(cls_imm[j], UINT64_MAX));
       }
 
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events_copy[j]));
-      EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostReset(events_fill[j]));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events_copy[j]));
+      EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events_fill[j]));
     }
   }
 
@@ -841,7 +844,7 @@ protected:
   const int n_iters = 10000;
 };
 
-TEST_P(
+LZT_TEST_P(
     zeTestMixedCMDListsInterdependPairSameEngineType,
     GivenRegularAndImmCMDListPairWithEventDependenciesAndRegularCMDListExecutedFirstThenExecuteSuccessfully) {
   const ze_command_queue_mode_t cq_mode_imm = std::get<1>(GetParam());
@@ -895,7 +898,7 @@ TEST_P(
   lzt::destroy_command_queue(cq);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeTestMixedCMDListsInterdependPairSameEngineType,
     GivenRegularAndImmCMDListPairWithEventDependenciesAndImmCMDListExecutedFirstThenExecuteSuccessfully) {
   const ze_command_queue_mode_t cq_mode = std::get<1>(GetParam());
@@ -932,8 +935,7 @@ TEST_P(
   lzt::execute_command_lists(cq, 1, &cl, nullptr);
 
   if (!use_events_sync) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cl_imm, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListHostSynchronize(cl_imm, UINT64_MAX));
   }
   lzt::synchronize(cq, UINT64_MAX);
   lzt::event_host_synchronize(ev0, UINT64_MAX);
@@ -998,7 +1000,7 @@ protected:
   const int n_iters = 8;
 };
 
-TEST_P(
+LZT_TEST_P(
     zeTestMixedCMDListsInterdependPipelining,
     GivenRegularCMDListOnComputeEngineAndImmCMDListOnCopyEngineThenCorrectResultsAreReturned) {
   // A single copy engine is enough to serve the Copy-Compute-Copy tuple because
@@ -1095,17 +1097,16 @@ TEST_P(
   lzt::execute_command_lists(cq_compute, 1, &cl_compute, nullptr);
 
   // Kickstart the pipeline
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(ev_h2d));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(ev_h2d));
 
   // Once the last kernel launch is finished, the results should be back soon
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueSynchronize(cq_compute, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueSynchronize(cq_compute, UINT64_MAX));
 
   if (use_events_sync) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_h2d, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(ev_h2d, UINT64_MAX));
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cl_d2h_imm, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandListHostSynchronize(cl_d2h_imm, UINT64_MAX));
   }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
@@ -1128,7 +1129,7 @@ TEST_P(
   lzt::destroy_command_queue(cq_compute);
 }
 
-TEST_P(
+LZT_TEST_P(
     zeTestMixedCMDListsInterdependPipelining,
     GivenRegularCMDListOnCopyEngineAndImmCMDListOnComputeEngineThenCorrectResultsAreReturned) {
   // We need two physical copy engines because the H2D and D2H commands are
@@ -1230,13 +1231,13 @@ TEST_P(
   lzt::execute_command_lists(cq_h2d, 1, &cl_h2d, nullptr);
 
   // Kickstart the pipeline
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(ev_h2d));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(ev_h2d));
 
   // The results should be back once the last copy queue is done
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cq_d2h, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueSynchronize(cq_d2h, UINT64_MAX));
   if (!use_events_sync) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cl_compute_imm, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandListHostSynchronize(cl_compute_imm, UINT64_MAX));
   }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
@@ -1260,8 +1261,9 @@ TEST_P(
   lzt::destroy_command_queue(cq_h2d);
 }
 
-TEST_P(zeTestMixedCMDListsInterdependPipelining,
-       GivenRegularAndImmCMDListsOnComputeEngineThenCorrectResultsAreReturned) {
+LZT_TEST_P(
+    zeTestMixedCMDListsInterdependPipelining,
+    GivenRegularAndImmCMDListsOnComputeEngineThenCorrectResultsAreReturned) {
   // Alternating cmdlist types, so we need at least two physical compute engines
   // to avoid deadlocks
   if (compute_engines.size() < 2) {
@@ -1363,16 +1365,15 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
   lzt::execute_command_lists(cq_compute, 1, &cl_compute, nullptr);
 
   // Kickstart the pipeline
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(ev_h2d));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(ev_h2d));
 
   // Once the last kernel launch is finished, the results should be back soon
-  EXPECT_EQ(ZE_RESULT_SUCCESS,
-            zeCommandQueueSynchronize(cq_compute, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueSynchronize(cq_compute, UINT64_MAX));
   if (use_events_sync) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_h2d, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(ev_h2d, UINT64_MAX));
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cl_d2h_imm, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeCommandListHostSynchronize(cl_d2h_imm, UINT64_MAX));
   }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
@@ -1395,8 +1396,9 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
   lzt::destroy_command_queue(cq_compute);
 }
 
-TEST_P(zeTestMixedCMDListsInterdependPipelining,
-       GivenRegularAndImmCMDListsOnCopyEngineThenCorrectResultsAreReturned) {
+LZT_TEST_P(
+    zeTestMixedCMDListsInterdependPipelining,
+    GivenRegularAndImmCMDListsOnCopyEngineThenCorrectResultsAreReturned) {
   // Alternating cmdlist types for fill-copy stages, so we need at least two
   // physical copy engines to avoid deadlocks
   if (copy_engines.size() < 2) {
@@ -1476,16 +1478,15 @@ TEST_P(zeTestMixedCMDListsInterdependPipelining,
   lzt::execute_command_lists(cq_fill, 1, &cl_fill, nullptr);
 
   // Kickstart the pipeline
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSignal(ev_fill));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(ev_fill));
 
   // Once the last copy is finished, the results should be back soon
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeCommandQueueSynchronize(cq_fill, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueSynchronize(cq_fill, UINT64_MAX));
 
   if (use_events_sync) {
-    EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(ev_fill, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(ev_fill, UINT64_MAX));
   } else {
-    EXPECT_EQ(ZE_RESULT_SUCCESS,
-              zeCommandListHostSynchronize(cl_copy, UINT64_MAX));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListHostSynchronize(cl_copy, UINT64_MAX));
   }
 
   lzt::query_event(ev_fill, ZE_RESULT_SUCCESS);
@@ -1642,13 +1643,13 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 
     totalVal[n] = 0;
     for (int i = 0; i < (num_iterations - 1); i++) {
-      addval2 = rand() & 0xFFFF;
+      addval2 = lzt::generate_value<int>() & 0xFFFF;
       totalVal[n] += addval2;
       lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
 
       lzt::append_launch_function(cmdlist[n], kernel, &tg, nullptr, 0, nullptr);
     }
-    addval2 = rand() & 0xFFFF;
+    addval2 = lzt::generate_value<int>() & 0xFFFF;
     ;
     totalVal[n] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -1666,7 +1667,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
     }
   }
 
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event, timeout));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(event, timeout));
 
   for (int n = 0; n < num_cmdlist; n++) {
     for (size_t i = 0; i < size; i++) {
@@ -1684,7 +1685,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
   lzt::free_memory_with_allocator_selector(buffer, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMixedCommandListEventCounterTests,
     GivenInOrderMixedCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
 
@@ -1698,7 +1699,7 @@ TEST_F(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zeMixedCommandListEventCounterTests,
     GivenInOrderMixedCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1823,13 +1824,13 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
 
   totalVal[0] = 0;
   for (int i = 0; i < (num_iterations - 1); i++) {
-    addval2 = rand() & 0xFFFF;
+    addval2 = lzt::generate_value<int>() & 0xFFFF;
     totalVal[0] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
 
     lzt::append_launch_function(cmdlist[0], kernel, &tg, nullptr, 0, nullptr);
   }
-  addval2 = rand() & 0xFFFF;
+  addval2 = lzt::generate_value<int>() & 0xFFFF;
   ;
   totalVal[0] += addval2;
   lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -1853,14 +1854,14 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
 
   totalVal[1] = 0;
   for (int i = 0; i < (num_iterations - 1); i++) {
-    addval2 = rand() & 0xFFFF;
+    addval2 = lzt::generate_value<int>() & 0xFFFF;
     totalVal[1] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
 
     lzt::append_launch_function(cmdlist[1], kernel, &tg, nullptr, 0, nullptr);
     lzt::append_barrier(cmdlist[1]);
   }
-  addval2 = rand() & 0xFFFF;
+  addval2 = lzt::generate_value<int>() & 0xFFFF;
   totalVal[1] += addval2;
   lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
   lzt::append_launch_function(cmdlist[1], kernel, &tg, event, 0,
@@ -1871,7 +1872,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
     lzt::execute_command_lists(cmdqueue[1], 1, &cmdlist[1], nullptr);
     lzt::synchronize(cmdqueue[1], UINT64_MAX);
   }
-  EXPECT_EQ(ZE_RESULT_SUCCESS, zeEventHostSynchronize(event, timeout));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(event, timeout));
 
   for (int n = 0; n < num_cmdlist; n++) {
     for (size_t i = 0; i < size; i++) {
@@ -1888,7 +1889,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   lzt::free_memory_with_allocator_selector(buffer, is_shared_system);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeOutOfOrderCommandListEventCounterTests,
     GivenOutOfOrderRegularCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEvent) {
 
@@ -1900,7 +1901,7 @@ TEST_F(
                                        false, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeOutOfOrderCommandListEventCounterTests,
     GivenOutOfOrderRegularCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEventWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
@@ -1913,7 +1914,7 @@ TEST_F(
                                        false, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeOutOfOrderCommandListEventCounterTests,
     GivenOutOfOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEvent) {
 
@@ -1925,7 +1926,7 @@ TEST_F(
                                        true, false);
 }
 
-TEST_F(
+LZT_TEST_F(
     zeOutOfOrderCommandListEventCounterTests,
     GivenOutOfOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEventWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();

@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "random/random.hpp"
 #include <stdlib.h>
 #include <level_zero/ze_api.h>
 
@@ -62,8 +63,8 @@ void RunGivenModulesWithLinkageDependenciesWhenCreatingTest(bool is_immediate) {
 
   lzt::set_group_size(kernel, 1, 1, 1);
 
-  int x = rand();
-  int y = rand();
+  int x = lzt::generate_value<int>();
+  int y = lzt::generate_value<int>();
   lzt::set_argument_value(kernel, 0, sizeof(int), &x);
   lzt::set_argument_value(kernel, 1, sizeof(int), &y);
   lzt::set_argument_value(kernel, 2, sizeof(result_buffer), &result_buffer);
@@ -87,14 +88,14 @@ void RunGivenModulesWithLinkageDependenciesWhenCreatingTest(bool is_immediate) {
   lzt::destroy_context(context);
 }
 
-TEST(zeModuleProgramTests,
-     GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned) {
+LZT_TEST(zeModuleProgramTests,
+         GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned) {
   if (!check_ext_version())
     GTEST_SKIP();
   RunGivenModulesWithLinkageDependenciesWhenCreatingTest(false);
 }
 
-TEST(
+LZT_TEST(
     zeModuleProgramTests,
     GivenModulesWithLinkageDependenciesWhenCreatingOnImmediateCmdListThenSuccessIsReturned) {
   if (!check_ext_version())
