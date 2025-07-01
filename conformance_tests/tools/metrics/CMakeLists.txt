@@ -28,3 +28,17 @@ add_lzt_test_executable(
   level_zero_tests::logging
   level_zero_tests::utils
 )
+
+add_lzt_test_executable(
+  NAME test_metric_enable
+  GROUP "/conformance_tests/tools/metrics"
+  SOURCES
+    src/test_metric_utils.cpp
+    src/test_metric_enable.cpp
+    src/test_metric_enable_main.cpp
+  LINK_LIBRARIES
+    level_zero_tests::logging
+    level_zero_tests::utils
+  KERNELS
+    ze_matrix_multiplication_metrics
+)
