@@ -1023,14 +1023,14 @@ void run_metric_tracer_read_test(
   }
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenSynchronouslyEnabledAndDisabledTracerThenExpectTracerReadsToSucceed) {
   run_metric_tracer_read_test(device, tracer_supporting_devices_list,
                           tracer_descriptor, true);
 }
 
-TEST_F(
+LZT_TEST_F(
     zetMetricTracerTest,
     GivenAsynchronouslyEnabledAndDisabledTracerThenExpectTracerReadsToSucceed) {
   run_metric_tracer_read_test(device, tracer_supporting_devices_list,
