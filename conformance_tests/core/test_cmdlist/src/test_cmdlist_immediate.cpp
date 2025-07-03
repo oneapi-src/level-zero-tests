@@ -1033,25 +1033,50 @@ LZT_TEST_P(zeImmediateCommandListExecutionTests,
   lzt::free_memory(memory);
 }
 
-static void RunAppendMemAdvise(ze_command_list_handle_t cmdlist_immediate,
-                               const uint64_t timeout) {
+LZT_TEST_P(
+    zeImmediateCommandListExecutionTests,
+    GivenImmediateCommandListWhenAppendMemAdviseThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   size_t size = 4096;
-  void *memory = lzt::allocate_shared_memory(size);
+  void *memory = lzt::aligned_malloc(size, 1);
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemAdvise(
       cmdlist_immediate, lzt::zeDevice::get_instance()->get_device(), memory,
       size, ZE_MEMORY_ADVICE_SET_READ_MOSTLY));
   EXPECT_ZE_RESULT_SUCCESS(
       zeCommandListHostSynchronize(cmdlist_immediate, timeout));
-  lzt::free_memory(memory);
+  lzt::aligned_free(memory);
+}
+
+static void RunAppendMemAdvise(ze_command_list_handle_t cmdlist_immediate,
+                               const uint64_t timeout, bool is_shared_system) {
+  size_t size = 4096;
+  void *memory = lzt::allocate_shared_memory_with_allocator_selector(
+      size, is_shared_system);
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemAdvise(
+      cmdlist_immediate, lzt::zeDevice::get_instance()->get_device(), memory,
+      size, ZE_MEMORY_ADVICE_SET_READ_MOSTLY));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListHostSynchronize(cmdlist_immediate, timeout));
+  lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
 
 LZT_TEST_F(
     zeImmediateCommandListInOrderExecutionTests,
     GivenInOrderImmediateCommandListWhenAppendMemAdviseThenSuccessIsReturned) {
   const uint64_t timeout = UINT64_MAX - 1;
-  RunAppendMemAdvise(cmdlist_immediate_default_mode, timeout);
-  RunAppendMemAdvise(cmdlist_immediate_sync_mode, 0);
-  RunAppendMemAdvise(cmdlist_immediate_async_mode, timeout);
+  RunAppendMemAdvise(cmdlist_immediate_default_mode, timeout, false);
+  RunAppendMemAdvise(cmdlist_immediate_sync_mode, 0, false);
+  RunAppendMemAdvise(cmdlist_immediate_async_mode, timeout, false);
+}
+
+LZT_TEST_F(
+    zeImmediateCommandListInOrderExecutionTests,
+    GivenInOrderImmediateCommandListWhenAppendMemAdviseThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  const uint64_t timeout = UINT64_MAX - 1;
+  RunAppendMemAdvise(cmdlist_immediate_default_mode, timeout, true);
+  RunAppendMemAdvise(cmdlist_immediate_sync_mode, 0, true);
+  RunAppendMemAdvise(cmdlist_immediate_async_mode, timeout, true);
 }
 
 static ze_image_handle_t create_test_image(int height, int width) {
