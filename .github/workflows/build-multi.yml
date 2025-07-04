@@ -137,10 +137,9 @@ jobs:
           {name: ubuntu, vmaj: 22, vmin: '04'},
           {name: ubuntu, vmaj: 24, vmin: '04'},
           {name: ubuntu, vmaj: 24, vmin: '10'},
-          {name: sles, vmaj: 15, vmin: 2},
-          {name: sles, vmaj: 15, vmin: 3},
           {name: sles, vmaj: 15, vmin: 4},
-          {name: rhel, vmaj: 8, vmin: 6},
+          {name: sles, vmaj: 15, vmin: 6},
+          {name: rhel, vmaj: 8, vmin: 10},
           {name: windows}
         ]
         arch: ['']
