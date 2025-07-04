@@ -185,5 +185,59 @@ LZT_TEST_F(
     }
   }
 }
+LZT_TEST_F(
+    ECC_TEST,
+    GivenValidDeviceHandleWhenEccDefaultStateIsQueriedAndSetThenDefaultValuesAreReturned) {
+  for (const auto &device : devices) {
+    // Step 1: Get the ECC state (with default state extension)
+    zes_device_ecc_properties_t originalProps = {};
+    zes_device_ecc_default_properties_ext_t extProps = {};
+    originalProps.stype = ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES;
+    originalProps.pNext = &extProps;
+    extProps.stype = ZES_STRUCTURE_TYPE_DEVICE_ECC_DEFAULT_PROPERTIES_EXT;
+    extProps.pNext = nullptr;
 
+    ze_result_t result = zesDeviceGetEccState(device, &originalProps);
+    EXPECT_ZE_RESULT_SUCCESS(ZE_RESULT_SUCCESS, result);
+
+    // Step 2: Set ECC state to default
+    zes_device_ecc_desc_t setDesc = {};
+    setDesc.stype = ZES_STRUCTURE_TYPE_DEVICE_ECC_DESC;
+    setDesc.pNext = nullptr;
+    setDesc.state = extProps.defaultState;
+
+    zes_device_ecc_properties_t newProps = {};
+    newProps.stype = ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES;
+    newProps.pNext = nullptr;
+
+    result = zesDeviceSetEccState(device, &setDesc, &newProps);
+    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+
+    // Step 3: Re-check ECC state
+    zes_device_ecc_properties_t checkProps = {};
+    checkProps.stype = ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES;
+    checkProps.pNext = nullptr;
+
+    result = zesDeviceGetEccState(device, &checkProps);
+    EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+    EXPECT_EQ(checkProps.pendingState, extProps.defaultState);
+
+    // Step 4: Restore original pending ECC state if it changed
+    if (checkProps.pendingState != originalProps.pendingState) {
+      zes_device_ecc_desc_t restoreDesc = {};
+      restoreDesc.stype = ZES_STRUCTURE_TYPE_DEVICE_ECC_DESC;
+      restoreDesc.pNext = nullptr;
+      restoreDesc.state = originalProps.pendingState;
+
+      zes_device_ecc_properties_t restoredProps = {};
+      restoredProps.stype = ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES;
+      restoredProps.pNext = nullptr;
+
+      result = zesDeviceSetEccState(device, &restoreDesc, &restoredProps);
+      EXPECT_EQ(ZE_RESULT_SUCCESS, result);
+      EXPECT_EQ(restoredProps.pendingState,
+                               originalProps.pendingState);
+    }
+  }
+}
 } // namespace
