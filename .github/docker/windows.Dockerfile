@@ -90,9 +90,9 @@ cd ../.. && `
 rm -rf OpenCL-ICD-Loader-2024.10.24"
 
 RUN "`
-curl -OSL --ssl-no-revoke https://archives.boost.io/release/1.73.0/source/boost_1_73_0.7z && `
-7z.exe x boost_1_73_0.7z && `
-cd boost_1_73_0 && `
+curl -OSL --ssl-no-revoke https://archives.boost.io/release/1.76.0/source/boost_1_76_0.7z && `
+7z.exe x boost_1_76_0.7z && `
+cd boost_1_76_0 && `
 MSYS_NO_PATHCONV=1 cmd /c bootstrap.bat && `
 ./b2.exe install -j 16 address-model=64 `
   --with-chrono `
@@ -100,6 +100,7 @@ MSYS_NO_PATHCONV=1 cmd /c bootstrap.bat && `
   --with-program_options `
   --with-serialization `
   --with-system `
+  --with-date_time `
   --with-timer && `
 cd .. && `
-rm -rf boost_1_73_0"
+rm -rf boost_1_76_0"

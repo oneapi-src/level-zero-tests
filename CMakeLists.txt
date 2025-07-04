@@ -6,7 +6,8 @@ if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif()
 project(level-zero-tests)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -50,9 +51,9 @@ set(_Boost_LOG_SETUP_DEPENDENCIES log)
 set(_Boost_LOG_DEPENDENCIES "")
 if(BUILD_ZE_PERF_TESTS_ONLY)
   # do not require boost when building perf tests only, will skip tests that use boost
-  find_package(Boost 1.65 COMPONENTS log program_options timer chrono system serialization)
+  find_package(Boost 1.76 COMPONENTS log program_options timer chrono system serialization)
 else()
-  find_package(Boost 1.65 REQUIRED COMPONENTS log program_options timer chrono system serialization)
+  find_package(Boost 1.76 REQUIRED COMPONENTS log program_options timer chrono system serialization)
 endif()
 message(STATUS "Boost_FOUND: ${Boost_FOUND}")
 
