@@ -1401,16 +1401,23 @@ LZT_TEST_F(
 class zeCommandListAppendMemAdviseTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<ze_memory_advice_t, bool>> {};
+          std::tuple<ze_memory_advice_t, bool>> {
+protected:
+  void RunGivenMemAdviseWhenWritingFromDeviceTest(ze_memory_advice_t mem_advice,
+                                                  bool is_immediate,
+                                                  bool is_shared_system);
+};
 
-LZT_TEST_P(zeCommandListAppendMemAdviseTests,
-           GivenMemAdviseWhenWritingFromDeviceThenDataIsCorrectFromHost) {
+void zeCommandListAppendMemAdviseTests::
+    RunGivenMemAdviseWhenWritingFromDeviceTest(ze_memory_advice_t mem_advice,
+                                               bool is_immediate,
+                                               bool is_shared_system) {
   const size_t size = 16;
   const uint8_t value = 0x55;
-  void *memory = allocate_shared_memory(size);
+  void *memory =
+      allocate_shared_memory_with_allocator_selector(size, is_shared_system);
   memset(memory, 0xaa, size);
-  ze_memory_advice_t mem_advice = std::get<0>(GetParam());
-  bool is_immediate = std::get<1>(GetParam());
+
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemAdvise(
@@ -1425,8 +1432,24 @@ LZT_TEST_P(zeCommandListAppendMemAdviseTests,
     ASSERT_EQ(value, ((uint8_t *)memory)[i]);
   }
 
-  free_memory(memory);
+  free_memory_with_allocator_selector(memory, is_shared_system);
   lzt::destroy_command_bundle(cmd_bundle);
+}
+
+LZT_TEST_P(zeCommandListAppendMemAdviseTests,
+           GivenMemAdviseWhenWritingFromDeviceThenDataIsCorrectFromHost) {
+  ze_memory_advice_t mem_advice = std::get<0>(GetParam());
+  bool is_immediate = std::get<1>(GetParam());
+  RunGivenMemAdviseWhenWritingFromDeviceTest(mem_advice, is_immediate, false);
+}
+
+LZT_TEST_P(
+    zeCommandListAppendMemAdviseTests,
+    GivenMemAdviseWhenWritingFromDeviceThenDataIsCorrectFromHostWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  ze_memory_advice_t mem_advice = std::get<0>(GetParam());
+  bool is_immediate = std::get<1>(GetParam());
+  RunGivenMemAdviseWhenWritingFromDeviceTest(mem_advice, is_immediate, true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
