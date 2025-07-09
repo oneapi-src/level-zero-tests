@@ -308,11 +308,18 @@ void zeModuleCreateTests::
       typed_global_pointer = static_cast<int *>(memory);
       *typed_global_pointer = i + 2;
       lzt::append_memory_copy(bundle.list, global_pointer, memory, sizeof(i));
-      lzt::close_command_list(bundle.list);
+      if (!is_immediate) {
+        lzt::close_command_list(bundle.list);
+      }
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+      if (!is_immediate) {
+        lzt::reset_command_list(bundle.list);
+      }
       *typed_global_pointer = 0;
       lzt::append_memory_copy(bundle.list, memory, global_pointer, sizeof(i));
-      lzt::close_command_list(bundle.list);
+      if (!is_immediate) {
+        lzt::close_command_list(bundle.list);
+      }
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
       EXPECT_EQ(i + 2, *typed_global_pointer);
       lzt::free_memory(memory);
