@@ -131,7 +131,7 @@ LZT_TEST_F(
   command_queue = lzt::create_command_queue();
   command_list1 = lzt::create_command_list();
   hFence = lzt::create_fence(command_queue);
-
+  lzt::close_command_list(command_list1);
   lzt::execute_command_lists(command_queue, 1, &command_list1, hFence);
 
   EXPECT_ZE_RESULT_SUCCESS(lzt::sync_fence(hFence, UINT64_MAX));
@@ -139,6 +139,7 @@ LZT_TEST_F(
   // Now use the same signalled fence above for below other commandlist
   // execution
   command_list2 = lzt::create_command_list();
+  lzt::close_command_list(command_list2);
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT,
             zeCommandQueueExecuteCommandLists(command_queue, 0, &command_list2,
                                               hFence));
