@@ -35,6 +35,29 @@ protected:
       bool is_immediate, bool is_shared_system, bool use_copy_engine);
   void RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
       bool is_immediate, bool is_shared_system, bool use_copy_engine);
+
+  void get_copy_and_compute_ordinals(
+      const std::vector<ze_command_queue_group_properties_t>
+          &cmd_queue_group_props,
+      int &compute_ordinal, int &copy_ordinal) {
+    for (uint32_t i = 0; i < cmd_queue_group_props.size(); i++) {
+      if (cmd_queue_group_props[i].flags &
+              ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE &&
+          compute_ordinal < 0) {
+        compute_ordinal = i;
+      }
+      if (cmd_queue_group_props[i].flags &
+              ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY &&
+          !(cmd_queue_group_props[i].flags &
+            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
+          copy_ordinal < 0) {
+        copy_ordinal = i;
+      }
+      if (compute_ordinal >= 0 && copy_ordinal >= 0) {
+        break;
+      }
+    }
+  }
 };
 
 void zeCommandListAppendMemoryFillTests::
@@ -43,26 +66,16 @@ void zeCommandListAppendMemoryFillTests::
   auto cmd_queue_group_props = get_command_queue_group_properties(
       zeDevice::get_instance()->get_device());
 
-  int computeOrdinal = -1, copyOrdinal = -1;
-  for (uint32_t i = 0; i < cmd_queue_group_props.size(); i++) {
-    if (cmd_queue_group_props[i].flags &
-            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE &&
-        computeOrdinal < 0) {
-      computeOrdinal = i;
-    }
-    if (cmd_queue_group_props[i].flags &
-            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY &&
-        copyOrdinal < 0) {
-      copyOrdinal = i;
-    }
-    if (computeOrdinal >= 0 && copyOrdinal >= 0) {
-      break;
-    }
+  int compute_ordinal = -1, copy_ordinal = -1;
+  get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
+                                copy_ordinal);
+  if (use_copy_engine && copy_ordinal < 0) {
+    GTEST_SKIP() << "Device does not support copy queue, skipping the test";
   }
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copyOrdinal : computeOrdinal, is_immediate);
+      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -197,26 +210,16 @@ void zeCommandListAppendMemoryFillTests::
   auto cmd_queue_group_props = get_command_queue_group_properties(
       zeDevice::get_instance()->get_device());
 
-  int computeOrdinal = -1, copyOrdinal = -1;
-  for (uint32_t i = 0; i < cmd_queue_group_props.size(); i++) {
-    if (cmd_queue_group_props[i].flags &
-            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE &&
-        computeOrdinal < 0) {
-      computeOrdinal = i;
-    }
-    if (cmd_queue_group_props[i].flags &
-            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY &&
-        copyOrdinal < 0) {
-      copyOrdinal = i;
-    }
-    if (computeOrdinal >= 0 && copyOrdinal >= 0) {
-      break;
-    }
+  int compute_ordinal = -1, copy_ordinal = -1;
+  get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
+                                copy_ordinal);
+  if (use_copy_engine && copy_ordinal < 0) {
+    GTEST_SKIP() << "Device does not support copy queue";
   }
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copyOrdinal : computeOrdinal, is_immediate);
+      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -303,26 +306,16 @@ void zeCommandListAppendMemoryFillTests::
   auto cmd_queue_group_props = get_command_queue_group_properties(
       zeDevice::get_instance()->get_device());
 
-  int computeOrdinal = -1, copyOrdinal = -1;
-  for (uint32_t i = 0; i < cmd_queue_group_props.size(); i++) {
-    if (cmd_queue_group_props[i].flags &
-            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE &&
-        computeOrdinal < 0) {
-      computeOrdinal = i;
-    }
-    if (cmd_queue_group_props[i].flags &
-            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY &&
-        copyOrdinal < 0) {
-      copyOrdinal = i;
-    }
-    if (computeOrdinal >= 0 && copyOrdinal >= 0) {
-      break;
-    }
+  int compute_ordinal = -1, copy_ordinal = -1;
+  get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
+                                copy_ordinal);
+  if (use_copy_engine && copy_ordinal < 0) {
+    GTEST_SKIP() << "Device does not support copy queue";
   }
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copyOrdinal : computeOrdinal, is_immediate);
+      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
