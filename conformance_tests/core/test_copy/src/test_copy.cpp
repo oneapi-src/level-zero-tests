@@ -29,19 +29,53 @@ namespace {
 class zeCommandListAppendMemoryFillTests : public ::testing::Test {
 protected:
   void RunMaxMemoryFillTest(bool is_immediate, bool is_shared_system);
-  void
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(bool is_immediate,
-                                                        bool is_shared_system);
+  void RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(
+      bool is_immediate, bool is_shared_system, bool use_copy_engine);
   void RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(
-      bool is_immediate, bool is_shared_system);
+      bool is_immediate, bool is_shared_system, bool use_copy_engine);
   void RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      bool is_immediate, bool is_shared_system);
+      bool is_immediate, bool is_shared_system, bool use_copy_engine);
+
+  void get_copy_and_compute_ordinals(
+      const std::vector<ze_command_queue_group_properties_t>
+          &cmd_queue_group_props,
+      int &compute_ordinal, int &copy_ordinal) {
+    for (uint32_t i = 0; i < cmd_queue_group_props.size(); i++) {
+      if (cmd_queue_group_props[i].flags &
+              ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE &&
+          compute_ordinal < 0) {
+        compute_ordinal = i;
+      }
+      if (cmd_queue_group_props[i].flags &
+              ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY &&
+          !(cmd_queue_group_props[i].flags &
+            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
+          copy_ordinal < 0) {
+        copy_ordinal = i;
+      }
+      if (compute_ordinal >= 0 && copy_ordinal >= 0) {
+        break;
+      }
+    }
+  }
 };
 
 void zeCommandListAppendMemoryFillTests::
     RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(
-        bool is_immediate, bool is_shared_system) {
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+        bool is_immediate, bool is_shared_system, bool use_copy_engine) {
+  auto cmd_queue_group_props = get_command_queue_group_properties(
+      zeDevice::get_instance()->get_device());
+
+  int compute_ordinal = -1, copy_ordinal = -1;
+  get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
+                                copy_ordinal);
+  if (use_copy_engine && copy_ordinal < 0) {
+    GTEST_SKIP() << "Device does not support copy queue, skipping the test";
+  }
+
+  auto cmd_bundle = lzt::create_command_bundle(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
+      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -60,27 +94,53 @@ void zeCommandListAppendMemoryFillTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, true, false);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillThenSuccessIsReturned) {
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, false, true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, false, true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, true, true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, true, true);
 }
 
 void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
@@ -144,9 +204,22 @@ LZT_TEST_F(
 
 void zeCommandListAppendMemoryFillTests::
     RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(
-        bool is_immediate, bool is_shared_system) {
+        bool is_immediate, bool is_shared_system, bool use_copy_engine) {
   lzt::zeEventPool ep;
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+
+  auto cmd_queue_group_props = get_command_queue_group_properties(
+      zeDevice::get_instance()->get_device());
+
+  int compute_ordinal = -1, copy_ordinal = -1;
+  get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
+                                copy_ordinal);
+  if (use_copy_engine && copy_ordinal < 0) {
+    GTEST_SKIP() << "Device does not support copy queue";
+  }
+
+  auto cmd_bundle = lzt::create_command_bundle(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
+      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -168,34 +241,81 @@ void zeCommandListAppendMemoryFillTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, false,
+                                                                  false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, false,
+                                                                  false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, true,
+                                                                  false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, true,
+                                                                  false);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, false,
+                                                                  true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, false,
+                                                                  true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, true,
+                                                                  true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, true,
+                                                                  true);
 }
 
 void zeCommandListAppendMemoryFillTests::
     RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-        bool is_immediate, bool is_shared_system) {
+        bool is_immediate, bool is_shared_system, bool use_copy_engine) {
   lzt::zeEventPool ep;
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+
+  auto cmd_queue_group_props = get_command_queue_group_properties(
+      zeDevice::get_instance()->get_device());
+
+  int compute_ordinal = -1, copy_ordinal = -1;
+  get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
+                                copy_ordinal);
+  if (use_copy_engine && copy_ordinal < 0) {
+    GTEST_SKIP() << "Device does not support copy queue";
+  }
+
+  auto cmd_bundle = lzt::create_command_bundle(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
+      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -220,30 +340,60 @@ void zeCommandListAppendMemoryFillTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(false,
-                                                                     false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(true,
-                                                                     false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      true, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(false,
-                                                                     true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      false, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(true,
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(true, true,
+                                                                     false);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned) {
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      false, false, true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      true, false, true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
+      false, true, true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryFillTests,
+    GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(true, true,
                                                                      true);
 }
 
