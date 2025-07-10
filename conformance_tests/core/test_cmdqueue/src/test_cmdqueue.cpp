@@ -1065,7 +1065,7 @@ protected:
     const ze_device_handle_t device =
         lzt::get_default_device(lzt::get_default_driver());
     ze_command_list_handle_t cmd_list = lzt::create_immediate_command_list(
-        device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
 
     ze_module_handle_t module =
