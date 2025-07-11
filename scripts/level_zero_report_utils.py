@@ -407,6 +407,8 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "SysMan Perf Profiles"
     elif test_binary == "test_metric":
         test_feature = "Metrics"
+    elif test_binary == "test_metric_enable":
+        test_feature = "Metrics"
     elif (re.search('debug', test_binary, re.IGNORECASE)):
         test_feature = "Program Debug"
     elif test_binary == "test_sysman_ecc":
@@ -424,7 +426,8 @@ def assign_test_feature(test_binary: str, test_name: str):
             or (re.search('tracing', test_name, re.IGNORECASE)) \
             or (re.search('sysman', test_binary, re.IGNORECASE)) \
             or (re.search('debug', test_binary, re.IGNORECASE)) \
-            or (test_binary == "test_metric"):
+            or (test_binary == "test_metric") \
+            or (test_binary == "test_metric_enable"):
             test_feature = assign_tool_test_feature(test_binary, test_name)
             test_section = "Tools"
             return test_feature, test_section
