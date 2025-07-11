@@ -113,6 +113,7 @@ LZT_TEST_F(
     uint32_t metricGroupCount = 0;
     ze_result_t result = zetMetricGroupGet(device, &metricGroupCount, nullptr);
     EXPECT_ZE_RESULT_SUCCESS(result);
+    EXPECT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
   }
 }
 
