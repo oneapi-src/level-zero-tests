@@ -86,7 +86,7 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     zetMetricsEnableDisableTest,
-    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeEnabledThenMetricGroupGetPassesUntilRuntimeDisabled) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeEnabledThenMetricGroupGetPassesAfterRuntimeDisabled) {
 
   for (auto device : devices) {
     lzt::enable_metrics_runtime(device);
@@ -111,7 +111,7 @@ LZT_TEST_F(
     lzt::disable_metrics_runtime(device);
     uint32_t metricGroupCount = 0;
     ze_result_t result = zetMetricGroupGet(device, &metricGroupCount, nullptr);
-    EXPECT_EQ(result, ZE_RESULT_ERROR_UNINITIALIZED);
+    EXPECT_ZE_RESULT_SUCCESS(result);
   }
 }
 
