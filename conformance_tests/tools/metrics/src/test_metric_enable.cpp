@@ -45,7 +45,7 @@ protected:
   }
 };
 
-class zetMetricEnableDisableStreamerTest : public zetMetricsEnableDisableTest {
+class zetMetricsEnableDisableStreamerTest : public zetMetricsEnableDisableTest {
 protected:
   std::vector<ze_device_handle_t> devices;
   static constexpr uint32_t maxReadAttempts = 20;
@@ -58,7 +58,7 @@ protected:
 
 LZT_TEST_F(
     zetMetricsEnableDisableTest,
-    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeNotEnabledThenMetricGroupGetFailsUntilRuntimeEnabled) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeNotEnabledThenMetricGroupGetPassesWithMetricGroupsCountZero) {
 
   for (auto device : devices) {
     ze_device_properties_t deviceProperties = {
@@ -75,7 +75,8 @@ LZT_TEST_F(
 
     uint32_t metricGroupCount = 0;
     ze_result_t result = zetMetricGroupGet(device, &metricGroupCount, nullptr);
-    EXPECT_EQ(result, ZE_RESULT_ERROR_UNINITIALIZED);
+    EXPECT_ZE_RESULT_SUCCESS(result);
+    EXPECT_EQ(metricGroupCount, 0);
 
     lzt::enable_metrics_runtime(device);
     auto metricGroupInfo = lzt::get_metric_group_info(
@@ -116,7 +117,7 @@ LZT_TEST_F(
 }
 
 LZT_TEST_F(
-    zetMetricEnableDisableStreamerTest,
+    zetMetricsEnableDisableStreamerTest,
     GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeEnabledThenMetricStreamerSucceeds) {
 
   for (auto device : devices) {
@@ -208,7 +209,7 @@ LZT_TEST_F(
 }
 
 LZT_TEST_F(
-    zetMetricEnableDisableStreamerTest,
+    zetMetricsEnableDisableStreamerTest,
     GivenMetricsDisabledByEnvironmentWhenMetricGroupisActivatedThenMetricsRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
 
   for (auto device : devices) {
