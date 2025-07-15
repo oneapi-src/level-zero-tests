@@ -2979,7 +2979,7 @@ LZT_TEST_F(
   }
 }
 
-class zetMetricEnableDisableStreamerTest : public zetMetricsEnableDisableTest {
+class zetMetricsEnableDisableStreamerTest : public zetMetricsEnableDisableTest {
 protected:
   static constexpr uint32_t maxReadAttempts = 20;
   static constexpr uint32_t numberOfReportsReq = 100;
@@ -2989,7 +2989,7 @@ protected:
 };
 
 LZT_TEST_F(
-    zetMetricEnableDisableStreamerTest,
+    zetMetricsEnableDisableStreamerTest,
     GivenMetricsEnabledByEnvironmentWhenMetricsRuntimeAlsoEnabledThenMetricStreamerSucceeds) {
 
   for (auto device : devices) {
@@ -3081,7 +3081,7 @@ LZT_TEST_F(
 }
 
 LZT_TEST_F(
-    zetMetricEnableDisableStreamerTest,
+    zetMetricsEnableDisableStreamerTest,
     GivenMetricsEnabledByEnvironmentWhenMetricGroupisActivatedThenMetricsRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
 
   for (auto device : devices) {
