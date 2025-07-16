@@ -127,8 +127,6 @@ LZT_TEST_F(
 
   auto device = devices[0];
 
-  ze_event_handle_t invalid_event;
-
   ze_command_queue_handle_t command_queue;
   ze_command_queue_desc_t command_queue_desc = {};
   command_queue_desc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
