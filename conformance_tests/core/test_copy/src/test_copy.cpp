@@ -815,8 +815,8 @@ protected:
     memset(dst_memory, init, size);
 
     auto cmd_bundle = lzt::create_command_bundle(
-        lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0, 
-        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 
+        lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
+        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0,
         ordinal, 0, is_immediate);
 
     lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_memory),
@@ -838,16 +838,13 @@ LZT_TEST_P(
   RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(
       std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
       std::get<3>(GetParam()), std::get<4>(GetParam()));
- }
-
+}
 
 INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, zeCommandListAppendMemoryBackToBackTests,
     ::testing::Combine(::testing::Bool(), ::testing::Bool(), ::testing::Bool(),
                        ::testing::Bool(),
                        ::testing::Values(10, 10 * 1024, 32 * 1024 * 1024)));
-
-
 
 class zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests
     : public zeCommandListCommandQueueTests {
