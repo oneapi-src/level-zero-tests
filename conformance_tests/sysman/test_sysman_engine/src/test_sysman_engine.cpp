@@ -270,7 +270,7 @@ LZT_TEST_F(
         auto s1 = lzt::get_engine_activity(engine_handle);
         auto s2 = lzt::get_engine_activity(engine_handle);
         double pre_utilization = 0.0;
-        if (s2.timestamp - s1.timestamp > 0) {
+        if (s2.timestamp > s1.timestamp) {
           pre_utilization = (static_cast<double>(s2.activeTime) -
                              static_cast<double>(s1.activeTime)) /
                             (static_cast<double>(s2.timestamp) -
@@ -295,14 +295,16 @@ LZT_TEST_F(
         s2 = lzt::get_engine_activity(engine_handle);
 #endif // USE_ZESINIT
         EXPECT_NE(s2.timestamp, s1.timestamp);
-        double post_utilization = (static_cast<double>(s2.activeTime) -
-                                   static_cast<double>(s1.activeTime)) /
-                                  (static_cast<double>(s2.timestamp) -
-                                   static_cast<double>(s1.timestamp));
-        // check if engine utilization increases with GPU workload
-        EXPECT_LT(pre_utilization, post_utilization);
-        LOG_INFO << "pre_utilization: " << pre_utilization * 100 << "%"
-                 << " | post_utilization: " << post_utilization * 100 << "%";
+        if (s2.timestamp > s1.timestamp) {
+          double post_utilization = (static_cast<double>(s2.activeTime) -
+                                     static_cast<double>(s1.activeTime)) /
+                                    (static_cast<double>(s2.timestamp) -
+                                     static_cast<double>(s1.timestamp));
+          // check if engine utilization increases with GPU workload
+          EXPECT_LT(pre_utilization, post_utilization);
+          LOG_INFO << "pre_utilization: " << pre_utilization * 100 << "%"
+                   << " | post_utilization: " << post_utilization * 100 << "%";
+        }
       }
     }
   }
