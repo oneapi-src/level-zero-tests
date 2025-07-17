@@ -51,6 +51,9 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
                 "test suite with test name exceeds the maximum length of 250 " \
                 "characters.");
 
+#define LZT_CONCATENATE_(a, b) a##b
+#define LZT_CONCATENATE(a, b) LZT_CONCATENATE_(a, b)
+
 #define TEST(test_suite_name, test_name)                                       \
   static_assert(false, "Use LZT_TEST instead of TEST");                        \
   void LZT_BODY_##test_suite_name##_##test_name()
@@ -76,10 +79,51 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
   }                                                                            \
   void LZT_BODY_##test_suite_name##_##test_name()
 
+#define LZT_HELPER_CLASS_INIT(test_suite_name, test_name)                      \
+  class LZT_CONCATENATE(GTEST_TEST_CLASS_NAME_(test_suite_name, test_name),    \
+                        _helper)                                               \
+      : public test_suite_name {                                               \
+  public:                                                                      \
+    static void SetUpTestSuite() {                                             \
+      try {                                                                    \
+        test_suite_name::SetUpTestSuite();                                     \
+      } catch (const LztGtestSkipExectuionException &e) {                      \
+        GTEST_SKIP() << e.what();                                              \
+      }                                                                        \
+    }                                                                          \
+    static void TearDownTestSuite() {                                          \
+      try {                                                                    \
+        test_suite_name::TearDownTestSuite();                                  \
+      } catch (const LztGtestSkipExectuionException &e) {                      \
+        GTEST_SKIP() << e.what();                                              \
+      }                                                                        \
+    }                                                                          \
+    void SetUp() override;                                                     \
+    void TearDown() override;                                                  \
+  };                                                                           \
+  void LZT_CONCATENATE(GTEST_TEST_CLASS_NAME_(test_suite_name, test_name),     \
+                       _helper)::SetUp() {                                     \
+    try {                                                                      \
+      test_suite_name::SetUp();                                                \
+    } catch (const LztGtestSkipExectuionException &e) {                        \
+      GTEST_SKIP() << e.what();                                                \
+    }                                                                          \
+  }                                                                            \
+  void LZT_CONCATENATE(GTEST_TEST_CLASS_NAME_(test_suite_name, test_name),     \
+                       _helper)::TearDown() {                                  \
+    try {                                                                      \
+      test_suite_name::TearDown();                                             \
+    } catch (const LztGtestSkipExectuionException &e) {                        \
+      GTEST_SKIP() << e.what();                                                \
+    }                                                                          \
+  }
+
 #define LZT_TEST_P(test_suite_name, test_name)                                 \
   LZT_NAME_STATIC_VALIDATION(test_suite_name, test_name)                       \
+  LZT_HELPER_CLASS_INIT(test_suite_name, test_name)                            \
   class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                     \
-      : public test_suite_name {                                               \
+      : public LZT_CONCATENATE(                                                \
+            GTEST_TEST_CLASS_NAME_(test_suite_name, test_name), _helper) {     \
   public:                                                                      \
     GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)() {}                    \
     void TestBody() override;                                                  \
@@ -115,8 +159,10 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
 
 #define LZT_TEST_F_(test_suite_name, test_name)                                \
   LZT_NAME_STATIC_VALIDATION(test_suite_name, test_name)                       \
+  LZT_HELPER_CLASS_INIT(test_suite_name, test_name)                            \
   class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                     \
-      : public test_suite_name {                                               \
+      : public LZT_CONCATENATE(                                                \
+            GTEST_TEST_CLASS_NAME_(test_suite_name, test_name), _helper) {     \
   public:                                                                      \
     GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)() = default;            \
     ~GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)() override = default;  \
