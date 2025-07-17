@@ -781,22 +781,17 @@ LZT_TEST_F(
   RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(true);
 }
 
-class zeCommandListAppendMemoryBackToBackTests : public ::testing::Test,
-                                                 public ::testing::WithParamInterface<
-                                                     std::tuple<bool,
-                                                                bool,
-                                                                bool,
-                                                                bool,
-                                                                size_t>> {
+class zeCommandListAppendMemoryBackToBackTests 
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<bool, bool, bool, bool, size_t>> {
 
 protected:
-    void RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(bool is_src_shared_system,
-                                                             bool is_dst_shared_system,
-                                                             bool is_immediate,
-                                                             bool isCopyOnly,
-                                                             size_t size) {
-    const uint8_t value = (rand())&0xFF;
-    const uint8_t init = (value + 0x22)&0xFF;
+    void RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(
+        bool is_src_shared_system, bool is_dst_shared_system, bool is_immediate,
+        bool isCopyOnly, size_t size) {
+    const uint8_t value = (rand()) & 0xFF;
+    const uint8_t init = (value + 0x22) & 0xFF;
 
     void *src_memory = lzt::allocate_shared_memory_with_allocator_selector(
         size, is_src_shared_system);
@@ -805,34 +800,25 @@ protected:
 
     uint32_t ordinal = 0;
     if (isCopyOnly) {
-        ordinal = 1;
+      ordinal = 1;
     }
 
-    if (!is_src_shared_system) {
-        if (!is_dst_shared_system) {
-            printf("src_memory (USM)= %p dst_memory (USM)= %p  immediate = %d  isCopyOnly = %d size = %ld\n", src_memory, dst_memory, is_immediate, isCopyOnly, size);
-        } else {
-            printf("src_memory (USM)= %p dst_memory (SVM)= %p  immediate = %d  isCopyOnly = %d size = %ld\n", src_memory, dst_memory, is_immediate, isCopyOnly, size);
-        }
-    } else {
-        if (is_dst_shared_system) {
-            printf("src_memory (SVM)= %p dst_memory (SVM)= %p  immediate = %d  isCopyOnly = %d size = %ld\n", src_memory, dst_memory, is_immediate, isCopyOnly, size);
-        } else {
-          printf("src_memory (SVM)= %p dst_memory (USM)= %p  immediate = %d  isCopyOnly = %d size = %ld\n", src_memory, dst_memory, is_immediate, isCopyOnly, size);
-        }
-    }
+    const char* src_memory_type = is_src_shared_system ? "SVM" : "USM";
+    const char* dst_memory_type = is_dst_shared_system ? "SVM" : "USM";
+
+    printf("src_memory (%s)= %p dst_memory (%s)= %p immediate = %d isCopyOnly = %d size = %ld\n",
+       src_memory_type, src_memory, dst_memory_type, dst_memory, is_immediate, isCopyOnly, size);
 
     memset(src_memory, value, size);
     memset(dst_memory, init, size);
 
-
     auto cmd_bundle = lzt::create_command_bundle(
-        lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, ordinal, 0, is_immediate);
+    lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0, 
+    ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 
+    ordinal, 0, is_immediate);
 
     lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_memory),
-                            static_cast<void *>(src_memory),
-                            size);
+                            static_cast<void *>(src_memory), size);
 
     lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -840,7 +826,6 @@ protected:
 
     free_memory_with_allocator_selector(src_memory, is_src_shared_system);
     free_memory_with_allocator_selector(dst_memory, is_dst_shared_system);
-
   }
 };
 
