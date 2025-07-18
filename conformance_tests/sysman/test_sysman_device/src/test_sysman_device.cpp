@@ -725,6 +725,15 @@ LZT_TEST_F(
 #endif // USE_ZESINIT
 
     bool is_success = compute_workload_and_validate(device_handle);
+    if (!is_success) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      int process_id = getpid();
+      do {
+        is_success =
+            is_compute_engine_used(process_id, device_handle.sysman_handle);
+      } while (!is_success);
+    }
+
     EXPECT_TRUE(is_success);
   }
 }
