@@ -726,7 +726,7 @@ LZT_TEST_F(
 
     bool is_success = compute_workload_and_validate(device_handle);
     if (!is_success) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(400));
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
       int process_id = getpid();
       do {
         is_success =
