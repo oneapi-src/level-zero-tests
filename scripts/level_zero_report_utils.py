@@ -300,7 +300,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenModuleWithGlobalVariableWhenWritingGlobalDataThenValidKernelOutputIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('GivenModuleWithGlobalVariableWhenWritingGlobalDataOnImmediateCmdListThenValidKernelOutputIsReturned', test_name, re.IGNORECASE)) or \
                     (re.search('zeCheckMiscFunctionsTestsInstantiate_zeCheckMiscFunctionsTests_GivenFunctionInKernelWhenLaunchingKernelsThenFunctionWorksCorrectly', test_name, re.IGNORECASE)) or \
-                    (re.search('zeCommandListAppendMemoryBackToBackTests_GivenUsmAndSharedSystemUsmConfirmSuccessfulExecutionBackToBackAllPermutations', test_name, re.IGNORECASE)) or \
+                    (re.search('zeCommandListAppendMemoryBackToBackTests_GivenAllUsmAndSvmPermutationsConfirmSuccessfulExecutionBackToBackWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
                     re.search('fabric', test_name, re.IGNORECASE) or \
                     re.search('zeInitDrivers', test_name, re.IGNORECASE):
                 test_feature_tag = "advanced"
