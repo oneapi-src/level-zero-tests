@@ -833,7 +833,7 @@ protected:
 
 LZT_TEST_P(
     zeCommandListAppendMemoryBackToBackTests,
-    GivenUsmAndSharedSystemUsmConfirmSuccessfulExecutionBackToBackAllPermutations) {
+    GivenAllUsmAndSvmPermutationsConfirmSuccessfulExecutionBackToBackWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(
       std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
