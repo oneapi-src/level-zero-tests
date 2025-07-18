@@ -728,7 +728,14 @@ LZT_TEST_F(
     if (!is_success) {
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
       int process_id = getpid();
+      auto start_time = std::chrono::steady_clock::now();
+      const auto timeout_duration = std::chrono::seconds(5);
       do {
+        auto current_time = std::chrono::steady_clock::now();
+        if (current_time - start_time >= timeout_duration) {
+          std::cout << "Timeout!!! Engine usage state not updated\n";
+          break;
+        }
         is_success =
             is_compute_engine_used(process_id, device_handle.sysman_handle);
       } while (!is_success);
