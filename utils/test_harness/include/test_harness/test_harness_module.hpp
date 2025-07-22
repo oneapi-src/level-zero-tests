@@ -50,6 +50,11 @@ ze_module_handle_t create_module(ze_context_handle_t context,
 void destroy_module(ze_module_handle_t module);
 size_t get_build_log_size(const ze_module_build_log_handle_t build_log);
 std::string get_build_log_string(const ze_module_build_log_handle_t build_log);
+void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules);
+void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
+                  ze_module_build_log_handle_t *link_log);
+void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
+                  ze_module_build_log_handle_t *link_log, ze_result_t *result);
 size_t get_native_binary_size(const ze_module_handle_t module);
 void save_native_binary_file(const ze_module_handle_t module,
                              const std::string filename);
