@@ -31,17 +31,14 @@ protected:
   ze_device_handle_t device;
 
   void SetUp() {
-    if (!is_ext_supported()) {
-      LOG_INFO << "Skipping test as "
-                  "ZET_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME "
-               << "extension is not supported";
-      GTEST_SKIP();
+    if (!lzt::check_if_extension_supported(
+            lzt::get_default_driver(),
+            ZET_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME)) {
+      GTEST_SKIP() << "Extension "
+                   << ZET_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME
+                   << " not supported";
     }
     devices = lzt::get_metric_test_device_list();
-  }
-  bool is_ext_supported() {
-    return lzt::check_if_extension_supported(
-        lzt::get_default_driver(), ZET_METRICS_RUNTIME_ENABLE_DISABLE_EXP_NAME);
   }
 };
 
