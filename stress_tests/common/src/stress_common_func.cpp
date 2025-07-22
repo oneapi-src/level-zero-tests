@@ -120,7 +120,7 @@ void adjust_max_memory_allocation(
   // take into account max memory allocation supported by device
   if (one_allocation_size > device_properties.maxMemAllocSize) {
     if (!lzt::check_if_extension_supported(
-            driver, "ZE_experimental_relaxed_allocation_limits")) {
+            driver, ZE_RELAXED_ALLOCATION_LIMITS_EXP_NAME)) {
       LOG_INFO << "Requested allocation size higher then max alloc size. Need "
                   "to limit... ";
       one_allocation_size = device_properties.maxMemAllocSize;

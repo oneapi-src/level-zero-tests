@@ -585,7 +585,8 @@ LZT_TEST_P(
 
   if (!lzt::check_if_extension_supported(lzt::get_default_driver(),
                                          ZE_IMAGE_MEMORY_PROPERTIES_EXP_NAME)) {
-    GTEST_SKIP() << "Missing ZE_experimental_image_memory_properties support\n";
+    GTEST_SKIP() << "Extension " << ZE_IMAGE_MEMORY_PROPERTIES_EXP_NAME
+                 << " not supported";
   }
 
   const ze_image_type_t img_type = std::get<0>(GetParam());

@@ -1688,11 +1688,11 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 LZT_TEST_F(
     zeMixedCommandListEventCounterTests,
     GivenInOrderMixedCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
-
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
-
+  if (!lzt::check_if_extension_supported(
+          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                 << " not supported";
+  }
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, false);
@@ -1703,11 +1703,11 @@ LZT_TEST_F(
     zeMixedCommandListEventCounterTests,
     GivenInOrderMixedCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
-
+  if (!lzt::check_if_extension_supported(
+          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                 << " not supported";
+  }
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, true);
@@ -1892,11 +1892,11 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
 LZT_TEST_F(
     zeOutOfOrderCommandListEventCounterTests,
     GivenOutOfOrderRegularCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEvent) {
-
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
-
+  if (!lzt::check_if_extension_supported(
+          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                 << " not supported";
+  }
   RunOutOfOrderAppendLaunchKernelEvent(cmdlist_reg, cmdqueue, event0, event1,
                                        false, false);
 }
@@ -1906,9 +1906,11 @@ LZT_TEST_F(
     GivenOutOfOrderRegularCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEventWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
 
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
+  if (!lzt::check_if_extension_supported(
+          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                 << " not supported";
+  }
 
   RunOutOfOrderAppendLaunchKernelEvent(cmdlist_reg, cmdqueue, event0, event1,
                                        false, true);
@@ -1918,9 +1920,11 @@ LZT_TEST_F(
     zeOutOfOrderCommandListEventCounterTests,
     GivenOutOfOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEvent) {
 
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
+  if (!lzt::check_if_extension_supported(
+          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                 << " not supported";
+  }
 
   RunOutOfOrderAppendLaunchKernelEvent(cmdlist_imm, cmdqueue, event0, event1,
                                        true, false);
@@ -1931,9 +1935,11 @@ LZT_TEST_F(
     GivenOutOfOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyWaitForEventWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
 
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
+  if (!lzt::check_if_extension_supported(
+          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                 << " not supported";
+  }
 
   RunOutOfOrderAppendLaunchKernelEvent(cmdlist_imm, cmdqueue, event0, event1,
                                        true, true);

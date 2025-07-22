@@ -417,10 +417,11 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 LZT_TEST_F(
     zeImmediateCommandListEventCounterTests,
     GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
-
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
+  if (!lzt::check_if_extension_supported(
+          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                 << " not supported";
+  }
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, event0, i, false);
@@ -432,9 +433,11 @@ LZT_TEST_F(
     GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
 
-  bool event_pool_ext_found = lzt::check_if_extension_supported(
-      lzt::get_default_driver(), "ZE_experimental_event_pool_counter_based");
-  EXPECT_TRUE(event_pool_ext_found);
+  if (!lzt::check_if_extension_supported(
+          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                 << " not supported";
+  }
   for (int i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, event0, i, true);

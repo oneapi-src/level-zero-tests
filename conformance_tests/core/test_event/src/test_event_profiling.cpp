@@ -33,11 +33,10 @@ protected:
     if (use_mapped_timestamp) {
       const auto driver = lzt::get_default_driver();
       if (!lzt::check_if_extension_supported(
-              driver, "ZE_extension_event_query_kernel_timestamps")) {
-        LOG_WARNING << "driver does not support "
-                       "ZE_extension_event_query_kernel_timestamps, "
-                       "skipping test";
-        GTEST_SKIP();
+              driver, ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_NAME)) {
+        GTEST_SKIP() << "Extension "
+                     << ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_NAME
+                     << " not supported";
       }
 
       ep = lzt::create_event_pool(context, 10,
@@ -739,11 +738,9 @@ protected:
     context = lzt::create_context();
     auto driver = lzt::get_default_driver();
     if (!lzt::check_if_extension_supported(
-            driver, "ZE_extension_event_query_kernel_timestamps")) {
-      LOG_WARNING << "driver does not support "
-                     "ZE_extension_event_query_kernel_timestamps, "
-                     "skipping test";
-      GTEST_SKIP();
+            driver, ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_NAME)) {
+      GTEST_SKIP() << "Extension " << ZE_EVENT_QUERY_KERNEL_TIMESTAMPS_EXT_NAME
+                   << " not supported";
     }
 
     ep = lzt::create_event_pool(context, 10,

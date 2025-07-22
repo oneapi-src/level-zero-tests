@@ -713,9 +713,9 @@ LZT_TEST_F(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
   if (!lzt::check_if_extension_supported(driver,
-                                         "ZE_extension_cache_reservation")) {
-    LOG_WARNING << "test not executed because ZE_extension_cache_reservation "
-                   "is not supported";
+                                         ZE_CACHE_RESERVATION_EXT_NAME)) {
+    LOG_WARNING << "test not executed because " << ZE_CACHE_RESERVATION_EXT_NAME
+                << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
@@ -739,9 +739,9 @@ LZT_TEST_F(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
   if (!lzt::check_if_extension_supported(driver,
-                                         "ZE_extension_cache_reservation")) {
-    LOG_WARNING << "test not executed because ZE_extension_cache_reservation "
-                   "is not supported";
+                                         ZE_CACHE_RESERVATION_EXT_NAME)) {
+    LOG_WARNING << "test not executed because " << ZE_CACHE_RESERVATION_EXT_NAME
+                << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
@@ -776,10 +776,9 @@ LZT_TEST_F(
   ze_pci_ext_properties_t devicePciProperties = {
       ZE_STRUCTURE_TYPE_PCI_EXT_PROPERTIES, nullptr};
 
-  if (!lzt::check_if_extension_supported(driver,
-                                         "ZE_extension_pci_properties")) {
-    LOG_WARNING << "test not executed because ZE_extension_pci_properties is "
-                   "not supported";
+  if (!lzt::check_if_extension_supported(driver, ZE_PCI_PROPERTIES_EXT_NAME)) {
+    LOG_WARNING << "test not executed because " << ZE_PCI_PROPERTIES_EXT_NAME
+                << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
@@ -1181,9 +1180,9 @@ LZT_TEST_F(
                                       lzt::lepilogue_callback);
 
   if (!lzt::check_if_extension_supported(driver,
-                                         "ZE_extension_memory_free_policies")) {
+                                         ZE_MEMORY_FREE_POLICIES_EXT_NAME)) {
     LOG_WARNING << "test not executed because "
-                   "ZE_extension_memory_free_policies is not supported";
+                << ZE_MEMORY_FREE_POLICIES_EXT_NAME << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
@@ -1826,9 +1825,9 @@ LZT_TEST_F(
   zelTracerCommandListAppendImageCopyToMemoryExtRegisterCallback(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
-  if (!lzt::check_if_extension_supported(driver, "ZE_extension_image_copy")) {
-    LOG_WARNING
-        << "test not executed because ZE_extension_image_copy is not supported";
+  if (!lzt::check_if_extension_supported(driver, ZE_IMAGE_COPY_EXT_NAME)) {
+    LOG_WARNING << "test not executed because " << ZE_IMAGE_COPY_EXT_NAME
+                << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
@@ -1863,9 +1862,9 @@ LZT_TEST_F(
   zelTracerCommandListAppendImageCopyFromMemoryExtRegisterCallback(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
-  if (!lzt::check_if_extension_supported(driver, "ZE_extension_image_copy")) {
-    LOG_WARNING
-        << "test not executed because ZE_extension_image_copy is not supported";
+  if (!lzt::check_if_extension_supported(driver, ZE_IMAGE_COPY_EXT_NAME)) {
+    LOG_WARNING << "test not executed because " << ZE_IMAGE_COPY_EXT_NAME
+                << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
@@ -1901,9 +1900,10 @@ LZT_TEST_F(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
   if (!lzt::check_if_extension_supported(
-          driver, "ZE_extension_image_query_alloc_properties")) {
+          driver, ZE_IMAGE_QUERY_ALLOC_PROPERTIES_EXT_NAME)) {
     LOG_WARNING << "test not executed because "
-                   "ZE_extension_image_query_alloc_properties is not supported";
+                << ZE_IMAGE_QUERY_ALLOC_PROPERTIES_EXT_NAME
+                << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
@@ -1964,9 +1964,9 @@ LZT_TEST_F(
   zelTracerImageViewCreateExtRegisterCallback(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
-  if (!lzt::check_if_extension_supported(driver, "ZE_extension_image_view")) {
-    LOG_WARNING
-        << "test not executed because ZE_extension_image_view is not supported";
+  if (!lzt::check_if_extension_supported(driver, ZE_IMAGE_VIEW_EXT_NAME)) {
+    LOG_WARNING << "test not executed because " << ZE_IMAGE_VIEW_EXT_NAME
+                << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
@@ -2643,9 +2643,9 @@ LZT_TEST_F(
     GivenEnabledTracerWithzeModuleInspectLinkageExtCallbacksWhenCallingzeModuleInspectLinkageExtThenUserDataIsSetAndResultUnchanged) {
 
   if (!lzt::check_if_extension_supported(driver,
-                                         "ZE_extension_linkage_inspection")) {
-    LOG_WARNING << "test not executed because ZE_extension_linkage_inspection "
-                   "is not supported";
+                                         ZE_LINKAGE_INSPECTION_EXT_NAME)) {
+    LOG_WARNING << "test not executed because "
+                << ZE_LINKAGE_INSPECTION_EXT_NAME << " is not supported";
     user_data.prologue_called = true;
     user_data.epilogue_called = true;
     GTEST_SKIP();
