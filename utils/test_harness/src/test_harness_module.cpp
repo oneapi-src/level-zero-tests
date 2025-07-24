@@ -156,6 +156,28 @@ std::string get_build_log_string(ze_module_build_log_handle_t build_log) {
   return std::string(build_log_c_string.begin(), build_log_c_string.end());
 }
 
+void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules) {
+  dynamic_link(num_modules, modules, nullptr);
+}
+
+void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
+                  ze_module_build_log_handle_t *link_log) {
+  ze_result_t result = ZE_RESULT_SUCCESS;
+  dynamic_link(num_modules, modules, link_log, &result);
+}
+
+void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
+                  ze_module_build_log_handle_t *link_log, ze_result_t *result) {
+  std::vector<ze_module_handle_t> modules_initial(num_modules);
+  memcpy(modules_initial.data(), modules,
+         sizeof(ze_module_handle_t) * num_modules);
+  *result = zeModuleDynamicLink(num_modules, modules, link_log);
+  EXPECT_ZE_RESULT_SUCCESS(*result);
+  for (int i = 0; i < num_modules; i++) {
+    EXPECT_EQ(modules[i], modules_initial[i]);
+  }
+}
+
 size_t get_native_binary_size(ze_module_handle_t module) {
   size_t native_binary_size = 0;
   auto module_initial = module;
