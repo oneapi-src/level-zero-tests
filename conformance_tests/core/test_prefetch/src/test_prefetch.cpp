@@ -138,7 +138,7 @@ protected:
     fp = popen("grep -c setVmPrefetch myfile.txt", "r");
     char buffer[1024];
     if (fgets(buffer, sizeof(buffer), fp) != NULL) {
-       prefetch_ioctl_count = atoi(buffer);
+      prefetch_ioctl_count = atoi(buffer);
     }
     pclose(fp);
 
@@ -185,7 +185,7 @@ LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
       }
       // Expect all prefetch (no page faults) for 100% case
       EXPECT_EQ(0, page_fault[i][2]);
-     }
+    }
   }
 }
 
