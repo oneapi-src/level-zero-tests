@@ -45,6 +45,10 @@ ze_command_list_handle_t create_immediate_command_list(
     ze_context_handle_t context, ze_device_handle_t device,
     ze_command_queue_flags_t flags, ze_command_queue_mode_t mode,
     ze_command_queue_priority_t priority, uint32_t ordinal, uint32_t index);
+ze_command_list_handle_t create_immediate_command_list(
+    ze_context_handle_t context, ze_device_handle_t device, const void *pNext,
+    ze_command_queue_flags_t flags, ze_command_queue_mode_t mode,
+    ze_command_queue_priority_t priority, uint32_t ordinal, uint32_t index);
 
 ze_command_list_handle_t create_immediate_command_list();
 
