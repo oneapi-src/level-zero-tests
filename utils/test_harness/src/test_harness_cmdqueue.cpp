@@ -78,11 +78,19 @@ ze_command_queue_handle_t create_command_queue(
     ze_context_handle_t context, ze_device_handle_t device,
     ze_command_queue_flags_t flags, ze_command_queue_mode_t mode,
     ze_command_queue_priority_t priority, uint32_t ordinal, uint32_t index) {
+  return create_command_queue(context, device, nullptr, flags, mode, priority,
+                              ordinal, index);
+}
+
+ze_command_queue_handle_t create_command_queue(
+    ze_context_handle_t context, ze_device_handle_t device, const void *pNext,
+    ze_command_queue_flags_t flags, ze_command_queue_mode_t mode,
+    ze_command_queue_priority_t priority, uint32_t ordinal, uint32_t index) {
 
   ze_command_queue_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
 
-  descriptor.pNext = nullptr;
+  descriptor.pNext = pNext;
   descriptor.flags = flags;
   descriptor.mode = mode;
   descriptor.priority = priority;
