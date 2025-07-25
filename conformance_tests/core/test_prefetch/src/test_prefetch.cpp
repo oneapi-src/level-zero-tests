@@ -130,7 +130,7 @@ protected:
     if (!is_src_shared_system && !is_dst_shared_system) {
       EXPECT_EQ(0, page_faults_iteration);
     }
-
+#ifdef __linux__
     fflush(stderr);
     freopen("/dev/tty", "w", stderr);
     fclose(fp_err);
@@ -144,6 +144,7 @@ protected:
 
     //  printf("Prefetch Ioctl Count = %ld\n", prefetch_ioctl_count);
     EXPECT_EQ(expected_ioctl_count, prefetch_ioctl_count);
+#endif
     free_memory_with_allocator_selector(src_memory, is_src_shared_system);
     free_memory_with_allocator_selector(dst_memory, is_dst_shared_system);
     lzt::destroy_command_bundle(cmd_bundle);
@@ -157,6 +158,7 @@ public:
 
 LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
            GivenNoPrefetchCaseVerifyDecreasingPageFaultsWithPrefetchCases) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   std::vector<std::vector<uint64_t>> page_fault(3, std::vector<uint64_t>(3, 0));
   std::vector<size_t> transfer_size{32 * 1024 * 1024, 512 * 1024 * 1024};
   float step = 0.5;
@@ -191,6 +193,7 @@ LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
 
 LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
            GivenNoPrefetchCaseVerifyDecreasingExecTimeWithPrefetchCases) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   float step = 0.5;
 
   size_t size = 32 * 1024 * 1024;
