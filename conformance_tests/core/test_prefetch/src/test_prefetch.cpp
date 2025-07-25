@@ -34,6 +34,7 @@ class zeCommandListAppendMemoryPrefetchDataVerificationTests
           std::tuple<bool, bool, bool, bool, size_t, float>> {
 protected:
   uint64_t GetPageFaultCount() {
+    uint64_t page_fault_count = 0;
 #ifdef __linux__
     FILE *fp;
     char buffer[1024];
@@ -45,7 +46,6 @@ protected:
       perror("Failed to run command");
       exit(EXIT_FAILURE);
     }
-    uint64_t page_fault_count = 0;
     if (fgets(buffer, sizeof(buffer), fp) != NULL) {
       page_fault_count = atoi(buffer);
     }
