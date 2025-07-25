@@ -206,9 +206,13 @@ void unmap_and_free_reserved_memory(
     ze_physical_mem_handle_t reservedPhysicalMemory, size_t allocSize);
 
 inline bool supports_shared_system_alloc(
+#ifdef __linux__
     const ze_device_memory_access_properties_t &access) {
   const auto alloc_cap = access.sharedSystemAllocCapabilities;
   return (alloc_cap & ZE_MEMORY_ACCESS_CAP_FLAG_RW) != 0;
+#else
+  return false;
+#endif
 }
 
 inline bool supports_shared_system_alloc(const ze_device_handle_t device) {

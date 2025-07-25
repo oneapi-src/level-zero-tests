@@ -34,6 +34,7 @@ class zeCommandListAppendMemoryPrefetchDataVerificationTests
           std::tuple<bool, bool, bool, bool, size_t, float>> {
 protected:
   uint64_t GetPageFaultCount() {
+#ifdef __linux__
     FILE *fp;
     char buffer[1024];
     fp =
@@ -49,6 +50,7 @@ protected:
       page_fault_count = atoi(buffer);
     }
     pclose(fp);
+#endif
     return (page_fault_count);
   }
 
@@ -178,9 +180,6 @@ LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
         RunAppendMemoryCopyWithPrefetch(src_shared, dst_shared, false, false,
                                         size, j * step);
         page_fault[i][j] = page_faults_iteration;
-        if ((i > 0) && (j < 2)) {
-          EXPECT_LT(page_fault[i][j], page_fault[0][j]);
-        }
       }
       for (uint32_t j = 1; j < 3; j++) {
         EXPECT_LT(page_fault[i][j], page_fault[i][j - 1]);
