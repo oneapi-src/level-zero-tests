@@ -24,7 +24,11 @@ namespace {
 class EventsZesTest : public lzt::ZesSysmanCtsClass {
 public:
   ze_driver_handle_t hDriver;
+<<<<<<< HEAD
   bool is_events_supported = false;
+=======
+  bool is_handles_available = false;
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
   uint32_t timeout;
   uint64_t timeoutEx;
   EventsZesTest() {
@@ -39,7 +43,11 @@ public:
 class EventsTest : public lzt::SysmanCtsClass {
 public:
   ze_driver_handle_t hDriver;
+<<<<<<< HEAD
   bool is_events_supported = false;
+=======
+  bool is_handles_available = false;
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
   uint32_t timeout;
   uint64_t timeoutEx;
   EventsTest() {
@@ -63,36 +71,44 @@ LZT_TEST_F(
     GivenValidEventHandleWhenListeningTemperatureEventsForCriticalOrThresholdTempThenEventsAreTriggered) {
   for (auto device : devices) {
     uint32_t num_temp_sensors = 0;
-    auto temp_handles = lzt::get_temp_handles(device, num_temp_sensors);
-    if (num_temp_sensors == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    num_temp_sensors = lzt::get_temp_handle_count(device);
+    if (num_temp_sensors > 0) {
+      is_handles_available = true;
+      LOG_INFO << "Temperature handles are available on this device";
+      auto temp_handles = lzt::get_temp_handles(device, num_temp_sensors);
+      for (auto temp_handle : temp_handles) {
+        auto temp_properties = lzt::get_temp_properties(temp_handle);
+        auto temp_config = lzt::get_temp_config(temp_handle);
+        auto tempLimit = lzt::get_temp_state(temp_handle);
+        if (temp_properties.isCriticalTempSupported) {
+          temp_config.enableCritical = true;
+        }
+        if (temp_properties.isThreshold1Supported) {
+          temp_config.threshold1.enableHighToLow = false;
+          temp_config.threshold1.enableLowToHigh = true;
+          // Setting threshold couple of degree above the current temperature
+          temp_config.threshold1.threshold = tempLimit + 2;
+          temp_config.threshold2.enableHighToLow = false;
+          temp_config.threshold2.enableLowToHigh = false;
+        }
+        if ((temp_properties.isCriticalTempSupported == false) ||
+            (temp_properties.isThreshold1Supported == false)) {
+          // continue, as HW is not supporting the events
+          continue;
+        }
+        ASSERT_ZE_RESULT_SUCCESS(
+            lzt::set_temp_config(temp_handle, temp_config));
+        zes_event_type_flags_t setEvents = ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL |
+                                           ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1 |
+                                           ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2;
+      }
+    } else {
+      LOG_INFO << "No temperature handles found for this devcie! ";
     }
-    for (auto temp_handle : temp_handles) {
-      auto temp_properties = lzt::get_temp_properties(temp_handle);
-      auto temp_config = lzt::get_temp_config(temp_handle);
-      auto tempLimit = lzt::get_temp_state(temp_handle);
-      if (temp_properties.isCriticalTempSupported) {
-        temp_config.enableCritical = true;
-      }
-      if (temp_properties.isThreshold1Supported) {
-        temp_config.threshold1.enableHighToLow = false;
-        temp_config.threshold1.enableLowToHigh = true;
-        // Setting threshold couple of degree above the current temperature
-        temp_config.threshold1.threshold = tempLimit + 2;
-        temp_config.threshold2.enableHighToLow = false;
-        temp_config.threshold2.enableLowToHigh = false;
-      }
-      if ((temp_properties.isCriticalTempSupported == false) ||
-          (temp_properties.isThreshold1Supported == false)) {
-        // continue, as HW is not supporting the events
-        continue;
-      }
-      ASSERT_ZE_RESULT_SUCCESS(lzt::set_temp_config(temp_handle, temp_config));
-      zes_event_type_flags_t setEvents = ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL |
-                                         ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1 |
-                                         ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2;
-    }
+  }
+  if (!is_handles_available) {
+    FAIL() << "No temperature handles found on any of the devices! "
+           << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
   // If we registered to receive events on any devices, start listening now
   uint32_t num_device_events = 0;
@@ -443,8 +459,13 @@ LZT_TEST_F(
   for (auto device : devices) {
     uint32_t count = lzt::get_power_handle_count(device);
     if (count > 0) {
+<<<<<<< HEAD
       is_events_supported = true;
       LOG_INFO << "Events handles are available on this device!";
+=======
+      is_handles_available = true;
+      LOG_INFO << "Power handles are available on this device!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
       auto power_handles = lzt::get_power_handles(device, count);
       ASSERT_EQ(power_handles.size(), count);
       for (auto power_handle : power_handles) {
@@ -467,12 +488,21 @@ LZT_TEST_F(
                             ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "No events handles found for this device!";
     }
   }
 
   if (!is_events_supported) {
     FAIL() << "No events handles found on any of the devices!";
+=======
+      LOG_INFO << "No power handles found for this device!";
+    }
+  }
+
+  if (!is_handles_available) {
+    FAIL() << "No power handles found on any of the devices!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
   }
 
   // If we registered to receive events on any devices, start listening now
@@ -498,8 +528,13 @@ LZT_TEST_F(
   for (auto device : devices) {
     uint32_t count = lzt::get_power_handle_count(device);
     if (count > 0) {
+<<<<<<< HEAD
       is_events_supported = true;
       LOG_INFO << "Events handles are available on this device!";
+=======
+      is_handles_available = true;
+      LOG_INFO << "Power handles are available on this device!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
       auto power_handles = lzt::get_power_handles(device, count);
       ASSERT_EQ(power_handles.size(), count);
       for (auto power_handle : power_handles) {
@@ -522,11 +557,19 @@ LZT_TEST_F(
                             ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "No events handles found for this device!";
     }
   }
   if (!is_events_supported) {
     FAIL() << "No events handles found on any of the devices!";
+=======
+      LOG_INFO << "No power handles found for this device!";
+    }
+  }
+  if (!is_handles_available) {
+    FAIL() << "No power handles found on any of the devices!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
   }
 
   // If we registered to receive events on any devices, start listening now
@@ -691,8 +734,13 @@ LZT_TEST_F(
     uint32_t count = 0;
     count = lzt::get_ras_handles_count(device);
     if (count > 0) {
+<<<<<<< HEAD
       is_events_supported = true;
       LOG_INFO << "Events handles are available on this device!";
+=======
+      is_handles_available = true;
+      LOG_INFO << "RAS handles are available on this device!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
 
       auto ras_handles = lzt::get_ras_handles(device, count);
       for (auto ras_handle : ras_handles) {
@@ -718,11 +766,19 @@ LZT_TEST_F(
         lzt::register_event(device, setEvent);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "No events handles are available on this device!";
     }
   }
   if (!is_events_supported) {
     FAIL() << "No Events handles are available on any device!";
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_handles_available) {
+    FAIL() << "No ras handles are available on any of the devices!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
   }
 
   // If we registered to receive events on any devices, start listening now
@@ -752,8 +808,13 @@ LZT_TEST_F(
     uint32_t count = 0;
     count = lzt::get_ras_handles_count(device);
     if (count > 0) {
+<<<<<<< HEAD
       is_events_supported = true;
       LOG_INFO << "Events handles are available on this device!";
+=======
+      is_handles_available = true;
+      LOG_INFO << "RAS handles are available on this device!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
       auto ras_handles = lzt::get_ras_handles(device, count);
       for (auto ras_handle : ras_handles) {
         auto props = lzt::get_ras_properties(ras_handle);
@@ -779,11 +840,19 @@ LZT_TEST_F(
         lzt::register_event(device, setEvent);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "No events handles are available on this device!";
     }
   }
   if (!is_events_supported) {
     FAIL() << "No events handles are available on any device!";
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_handles_available) {
+    FAIL() << "No ras handles are found on any of the devices!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
   }
 
   // If we registered to receive events on any devices, start listening now

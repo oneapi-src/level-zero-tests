@@ -55,11 +55,19 @@ LZT_TEST_F(
         ASSERT_NE(nullptr, psu_handle);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "PSU handles are not available on this device!";
     }
   }
   if (!is_psu_supported) {
     FAIL() << "No psu handles found: "
+=======
+      LOG_INFO << "No psu handles are found for this device!";
+    }
+  }
+  if (!is_psu_supported) {
+    FAIL() << "No psu handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -78,11 +86,19 @@ LZT_TEST_F(
       lzt::get_psu_handles(device, test_count);
       EXPECT_EQ(test_count, actual_count);
     } else {
+<<<<<<< HEAD
       LOG_INFO << "PSU handles are not available on this device!";
     }
   }
   if (!is_psu_supported) {
     FAIL() << "No psu handles found: "
+=======
+      LOG_INFO << "No psu handles are found for this device!";
+    }
+  }
+  if (!is_psu_supported) {
+    FAIL() << "No psu handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -106,11 +122,19 @@ LZT_TEST_F(
       }
       EXPECT_EQ(psu_handles_initial, psu_handles_later);
     } else {
+<<<<<<< HEAD
       LOG_INFO << "PSU handles are not available on this device!";
     }
   }
   if (!is_psu_supported) {
     FAIL() << "No psu devices found: "
+=======
+      LOG_INFO << "No psu handles are found for this device!";
+    }
+  }
+  if (!is_psu_supported) {
+    FAIL() << "No psu handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -134,11 +158,19 @@ LZT_TEST_F(
         }
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "PSU handles are not available on this device!";
     }
   }
   if (!is_psu_supported) {
     FAIL() << "No psu handles found: "
+=======
+      LOG_INFO << "No psu handles are found for this device!";
+    }
+  }
+  if (!is_psu_supported) {
+    FAIL() << "No psu handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -163,11 +195,19 @@ LZT_TEST_F(
         EXPECT_EQ(properties_initial.ampLimit, properties_later.ampLimit);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "PSU handles are not available on this device!";
     }
   }
   if (!is_psu_supported) {
     FAIL() << "No psu handles found: "
+=======
+      LOG_INFO << "No psu handles are found for this device!";
+    }
+  }
+  if (!is_psu_supported) {
+    FAIL() << "No psu handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -192,11 +232,19 @@ LZT_TEST_F(PSU_TEST,
         EXPECT_LE(state.current, properties.ampLimit);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "PSU handles are not available on this device!";
     }
   }
   if (!is_psu_supported) {
     FAIL() << "No psu handles found: "
+=======
+      LOG_INFO << "No psu handles are found for this device!";
+    }
+  }
+  if (!is_psu_supported) {
+    FAIL() << "No psu handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }

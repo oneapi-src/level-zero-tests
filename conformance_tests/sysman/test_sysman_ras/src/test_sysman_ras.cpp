@@ -181,11 +181,19 @@ LZT_TEST_F(
         lzt::set_ras_config(ras_handle, rasConfigOriginal);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "RAS handles are not available on this device!";
     }
   }
   if (!is_ras_supported) {
     FAIL() << "No ras handles found: "
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_ras_supported) {
+    FAIL() << "No ras handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -207,11 +215,19 @@ LZT_TEST_F(RAS_TEST,
         validate_ras_state(rasState);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "RAS handles are not available on this device!";
     }
   }
   if (!is_ras_supported) {
     FAIL() << "No ras handles found: "
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_ras_supported) {
+    FAIL() << "No ras handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -241,11 +257,19 @@ LZT_TEST_F(
         EXPECT_GE(tErrorsinitial, tErrorsAfterClear);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "RAS handles are not available on this device!";
     }
   }
   if (!is_ras_supported) {
     FAIL() << "No ras handles found: "
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_ras_supported) {
+    FAIL() << "No ras handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -276,11 +300,19 @@ LZT_TEST_F(
         }
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "RAS handles are not available on this device!";
     }
   }
   if (!is_ras_supported) {
     FAIL() << "No ras handles found: "
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_ras_supported) {
+    FAIL() << "No ras handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -299,11 +331,19 @@ LZT_TEST_F(
         ASSERT_NE(nullptr, ras_handle);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "RAS handles are not available on this device!";
     }
   }
   if (!is_ras_supported) {
     FAIL() << "No ras handles found: "
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_ras_supported) {
+    FAIL() << "No ras handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -316,7 +356,11 @@ LZT_TEST_F(
     count = lzt::get_ras_handles_count(device);
     if (count > 0) {
       is_ras_supported = true;
+<<<<<<< HEAD
       LOG_INFO << "RAS handles are  available on this device!";
+=======
+      LOG_INFO << "RAS handles are available on this device!";
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
       auto ras_handles = lzt::get_ras_handles(device, count);
       for (auto ras_handle : ras_handles) {
         ASSERT_NE(nullptr, ras_handle);
@@ -326,11 +370,19 @@ LZT_TEST_F(
         }
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "RAS handles are not available on this device!";
     }
   }
   if (!is_ras_supported) {
     FAIL() << "No ras handles found: "
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_ras_supported) {
+    FAIL() << "No ras handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
@@ -363,11 +415,19 @@ LZT_TEST_F(
         EXPECT_LE(errors_after_clear, initial_errors);
       }
     } else {
+<<<<<<< HEAD
       LOG_INFO << "RAS handles are not available on this device!";
     }
   }
   if (!is_ras_supported) {
     FAIL() << "No ras devices found: "
+=======
+      LOG_INFO << "No ras handles found for this device!";
+    }
+  }
+  if (!is_ras_supported) {
+    FAIL() << "No ras handles found on any of the devices! "
+>>>>>>> 466a087 (Primary JIRA: VLCJ-2513)
            << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
