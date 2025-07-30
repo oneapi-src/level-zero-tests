@@ -423,10 +423,10 @@ void RunGivenDeviceImageAndHostImageWhenAppendingImageCopyRegionWithVariousRegio
       init_region(0, 1, 0, width - 1, height - 1, 1),
       // Entire image less 2 pixels in width, top, bottom (region touches 2 out
       // of 4 borders): (C 11)
-      init_region(0, 1, 0, width - 2, height, 1),
+      init_region(1, 0, 0, width - 2, height, 1),
       // Entire image less 2 pixels in height, right, left (region touches 2 out
       // of 4 borders): (C 12)
-      init_region(1, 0, 0, width, height - 2, 1),
+      init_region(0, 1, 0, width, height - 2, 1),
 
       // Entire image less (2 pixels in width and 1 pixel in height), touches
       // only top border (region touches 1 out of 4 borders): (C 13)
