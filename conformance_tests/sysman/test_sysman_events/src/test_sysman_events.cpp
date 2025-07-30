@@ -24,6 +24,7 @@ namespace {
 class EventsZesTest : public lzt::ZesSysmanCtsClass {
 public:
   ze_driver_handle_t hDriver;
+  bool is_events_supported = false;
   uint32_t timeout;
   uint64_t timeoutEx;
   EventsZesTest() {
@@ -38,6 +39,7 @@ public:
 class EventsTest : public lzt::SysmanCtsClass {
 public:
   ze_driver_handle_t hDriver;
+  bool is_events_supported = false;
   uint32_t timeout;
   uint64_t timeoutEx;
   EventsTest() {
@@ -439,28 +441,40 @@ LZT_TEST_F(
     EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventForCrossingEnergyThresholdThenEventsAreTriggeredForAccordingly) {
   for (auto device : devices) {
-    uint32_t count = 0;
-    auto power_handles = lzt::get_power_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-    for (auto power_handle : power_handles) {
-      zes_energy_threshold_t energy_threshold = {};
-      auto status =
-          lzt::get_power_energy_threshold(power_handle, &energy_threshold);
-      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-        continue;
+    uint32_t count = lzt::get_power_handle_count(device);
+    if (count > 0) {
+      is_events_supported = true;
+      LOG_INFO << "Events handles are available on this device!";
+      auto power_handles = lzt::get_power_handles(device, count);
+      ASSERT_EQ(power_handles.size(), count);
+      for (auto power_handle : power_handles) {
+        ASSERT_NE(nullptr, power_handle);
       }
-      EXPECT_ZE_RESULT_SUCCESS(status);
-      // Aim to receive event for energy threshold after setting energy
-      // threshold 25% more than current threshold
-      double threshold =
-          energy_threshold.threshold + 0.25 * (energy_threshold.threshold);
-      lzt::set_power_energy_threshold(power_handle, threshold);
-      lzt::register_event(device, ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED);
+      for (auto power_handle : power_handles) {
+        zes_energy_threshold_t energy_threshold = {};
+        auto status =
+            lzt::get_power_energy_threshold(power_handle, &energy_threshold);
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
+        }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+        // Aim to receive event for energy threshold after setting energy
+        // threshold 25% more than current threshold
+        double threshold =
+            energy_threshold.threshold + 0.25 * (energy_threshold.threshold);
+        lzt::set_power_energy_threshold(power_handle, threshold);
+        lzt::register_event(device,
+                            ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED);
+      }
+    } else {
+      LOG_INFO << "No events handles found for this device!";
     }
   }
+
+  if (!is_events_supported) {
+    FAIL() << "No events handles found on any of the devices!";
+  }
+
   // If we registered to receive events on any devices, start listening now
   uint32_t num_device_events = 0;
   std::vector<zes_event_type_flags_t> events(devices.size(), 0);
@@ -482,28 +496,39 @@ LZT_TEST_F(
     EVENTS_TEST,
     GivenValidEventHandleWhenListeningEventExForCrossingEnergyThresholdThenEventsAreTriggeredForAccordingly) {
   for (auto device : devices) {
-    uint32_t count = 0;
-    auto power_handles = lzt::get_power_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-    for (auto power_handle : power_handles) {
-      zes_energy_threshold_t energy_threshold = {};
-      auto status =
-          lzt::get_power_energy_threshold(power_handle, &energy_threshold);
-      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-        continue;
+    uint32_t count = lzt::get_power_handle_count(device);
+    if (count > 0) {
+      is_events_supported = true;
+      LOG_INFO << "Events handles are available on this device!";
+      auto power_handles = lzt::get_power_handles(device, count);
+      ASSERT_EQ(power_handles.size(), count);
+      for (auto power_handle : power_handles) {
+        ASSERT_NE(nullptr, power_handle);
       }
-      EXPECT_ZE_RESULT_SUCCESS(status);
-      // Aim to receive event for energy threshold after setting energy
-      // threshold 25% more than current threshold
-      double threshold =
-          energy_threshold.threshold + 0.25 * (energy_threshold.threshold);
-      lzt::set_power_energy_threshold(power_handle, threshold);
-      lzt::register_event(device, ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED);
+      for (auto power_handle : power_handles) {
+        zes_energy_threshold_t energy_threshold = {};
+        auto status =
+            lzt::get_power_energy_threshold(power_handle, &energy_threshold);
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
+        }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+        // Aim to receive event for energy threshold after setting energy
+        // threshold 25% more than current threshold
+        double threshold =
+            energy_threshold.threshold + 0.25 * (energy_threshold.threshold);
+        lzt::set_power_energy_threshold(power_handle, threshold);
+        lzt::register_event(device,
+                            ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED);
+      }
+    } else {
+      LOG_INFO << "No events handles found for this device!";
     }
   }
+  if (!is_events_supported) {
+    FAIL() << "No events handles found on any of the devices!";
+  }
+
   // If we registered to receive events on any devices, start listening now
   uint32_t num_device_events = 0;
   std::vector<zes_event_type_flags_t> events(devices.size(), 0);
@@ -664,35 +689,40 @@ LZT_TEST_F(
     GivenValidEventHandleWhenListeningEventForCrossingTotalRASErrorsThresholdThenEventsAreTriggeredForAccordingly) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto ras_handles = lzt::get_ras_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-    for (auto ras_handle : ras_handles) {
-      auto props = lzt::get_ras_properties(ras_handle);
-      auto config = lzt::get_ras_config(ras_handle);
-      // Aim to receive event for RAS errors after setting RAS threshold 20%
-      // more than current threshold
-      if (1.20 * (config.totalThreshold) < UINT64_MAX) {
-        config.totalThreshold = 1.20 * (config.totalThreshold);
-      }
+    count = lzt::get_ras_handles_count(device);
+    if (count > 0) {
+      is_events_supported = true;
+      LOG_INFO << "Events handles are available on this device!";
 
-      lzt::set_ras_config(ras_handle, config);
-
-      zes_event_type_flags_t setEvent = 0;
-      switch (props.type) {
-      case ZES_RAS_ERROR_TYPE_CORRECTABLE:
-        setEvent = ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS;
-        break;
-      case ZES_RAS_ERROR_TYPE_UNCORRECTABLE:
-        setEvent = ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS;
-        break;
-      default:
-        break;
+      auto ras_handles = lzt::get_ras_handles(device, count);
+      for (auto ras_handle : ras_handles) {
+        auto props = lzt::get_ras_properties(ras_handle);
+        auto config = lzt::get_ras_config(ras_handle);
+        // Aim to receive event for RAS errors after setting RAS threshold 20%
+        // more than current threshold
+        if (1.20 * (config.totalThreshold) < UINT64_MAX) {
+          config.totalThreshold = 1.20 * (config.totalThreshold);
+        }
+        lzt::set_ras_config(ras_handle, config);
+        zes_event_type_flags_t setEvent = 0;
+        switch (props.type) {
+        case ZES_RAS_ERROR_TYPE_CORRECTABLE:
+          setEvent = ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS;
+          break;
+        case ZES_RAS_ERROR_TYPE_UNCORRECTABLE:
+          setEvent = ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS;
+          break;
+        default:
+          break;
+        }
+        lzt::register_event(device, setEvent);
       }
-      lzt::register_event(device, setEvent);
+    } else {
+      LOG_INFO << "No events handles are available on this device!";
     }
+  }
+  if (!is_events_supported) {
+    FAIL() << "No Events handles are available on any device!";
   }
 
   // If we registered to receive events on any devices, start listening now
@@ -720,35 +750,40 @@ LZT_TEST_F(
     GivenValidEventHandleWhenListeningEventExForCrossingTotalRASErrorsThresholdThenEventsAreTriggeredForAccordingly) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto ras_handles = lzt::get_ras_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-    for (auto ras_handle : ras_handles) {
-      auto props = lzt::get_ras_properties(ras_handle);
-      auto config = lzt::get_ras_config(ras_handle);
-      // Aim to receive event for RAS errors after setting RAS threshold 20%
-      // more than current threshold
-      if (1.20 * (config.totalThreshold) < UINT64_MAX) {
-        config.totalThreshold = 1.20 * (config.totalThreshold);
-      }
+    count = lzt::get_ras_handles_count(device);
+    if (count > 0) {
+      is_events_supported = true;
+      LOG_INFO << "Events handles are available on this device!";
+      auto ras_handles = lzt::get_ras_handles(device, count);
+      for (auto ras_handle : ras_handles) {
+        auto props = lzt::get_ras_properties(ras_handle);
+        auto config = lzt::get_ras_config(ras_handle);
+        // Aim to receive event for RAS errors after setting RAS threshold 20%
+        // more than current threshold
+        if (1.20 * (config.totalThreshold) < UINT64_MAX) {
+          config.totalThreshold = 1.20 * (config.totalThreshold);
+        }
 
-      lzt::set_ras_config(ras_handle, config);
-
-      zes_event_type_flags_t setEvent = 0;
-      switch (props.type) {
-      case ZES_RAS_ERROR_TYPE_CORRECTABLE:
-        setEvent = ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS;
-        break;
-      case ZES_RAS_ERROR_TYPE_UNCORRECTABLE:
-        setEvent = ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS;
-        break;
-      default:
-        break;
+        lzt::set_ras_config(ras_handle, config);
+        zes_event_type_flags_t setEvent = 0;
+        switch (props.type) {
+        case ZES_RAS_ERROR_TYPE_CORRECTABLE:
+          setEvent = ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS;
+          break;
+        case ZES_RAS_ERROR_TYPE_UNCORRECTABLE:
+          setEvent = ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS;
+          break;
+        default:
+          break;
+        }
+        lzt::register_event(device, setEvent);
       }
-      lzt::register_event(device, setEvent);
+    } else {
+      LOG_INFO << "No events handles are available on this device!";
     }
+  }
+  if (!is_events_supported) {
+    FAIL() << "No events handles are available on any device!";
   }
 
   // If we registered to receive events on any devices, start listening now
