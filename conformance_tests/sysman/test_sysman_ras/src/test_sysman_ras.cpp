@@ -311,7 +311,7 @@ LZT_TEST_F(
     count = lzt::get_ras_handles_count(device);
     if (count > 0) {
       is_ras_supported = true;
-      LOG_INFO << "RAS handles are  available on this device!";
+      LOG_INFO << "RAS handles are available on this device!";
       auto ras_handles = lzt::get_ras_handles(device, count);
       for (auto ras_handle : ras_handles) {
         ASSERT_NE(nullptr, ras_handle);
