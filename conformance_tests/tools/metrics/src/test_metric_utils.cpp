@@ -14,6 +14,17 @@ namespace lzt = level_zero_tests;
 ze_kernel_handle_t get_matrix_multiplication_kernel(
     ze_device_handle_t device, ze_group_count_t *tg, void **a_buffer,
     void **b_buffer, void **c_buffer, int dimensions = 1024) {
+
+  const char *dimensions_test_environment_variable =
+      std::getenv("LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS");
+  if (dimensions_test_environment_variable != nullptr) {
+    dimensions = atoi(dimensions_test_environment_variable);
+    LOG_INFO
+        << "overriding the matrix multiplication dimension as "
+           "LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS is used with value of "
+        << dimensions;
+  }
+
   int m, k, n;
   m = k = n = dimensions;
   std::vector<float> a(m * k, 1);
