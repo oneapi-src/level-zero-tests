@@ -86,7 +86,7 @@ protected:
     //    file
     //
     //    printf("src_memory (%s)= %p dst_memory (%s)= %p immediate = %d
-    //    isCopyOnly 
+    //    isCopyOnly
     //           = %d size = %ld  prefetch_size = %ld\n",
     //           src_memory_type, src_memory, dst_memory_type, dst_memory,
     //           is_immediate, isCopyOnly, size, prefetch_size);
@@ -151,30 +151,30 @@ protected:
     free_memory_with_allocator_selector(dst_memory, is_dst_shared_system);
     lzt::destroy_command_bundle(cmd_bundle);
   }
-  
+
  void RunAppendLaunchKernelWithPrefetch(bool is_src_shared_system,
                                        bool is_dst_shared_system,
-                                       bool is_immediate,
-                                       size_t size, float prefetch_ratio) {
+                                       bool is_immediate, size_t size,
+                                       float prefetch_ratio) {
     FILE *fp_err;
     fp_err = freopen("myfile.txt", "w", stderr);
 
     const int value = rand() & 0x3FFFFFFF;
-    const int init =  rand() & 0x3FFFFFFF;
+    const int init = rand() & 0x3FFFFFFF;
     uint64_t expected_ioctl_count = 0;
 
     void *src_memory = lzt::allocate_shared_memory_with_allocator_selector(
         size, is_src_shared_system);
     void *dst_memory = lzt::allocate_shared_memory_with_allocator_selector(
         size, is_dst_shared_system);
-   int *input_int = static_cast<int *>(src_memory);
-   int *output_int = static_cast<int *>(dst_memory);
+    int *input_int = static_cast<int *>(src_memory);
+    int *output_int = static_cast<int *>(dst_memory);
 
     size_t prefetch_size = (prefetch_ratio * size);
 
     for (size_t i = 0; i < size/(sizeof(int)); i++) { 
-        input_int[i] = value;
-        output_int[i] = init;
+      input_int[i] = value;
+      output_int[i] = init;
     }
 
     const char *src_memory_type = is_src_shared_system ? "SVM" : "USM";
@@ -196,20 +196,19 @@ protected:
         0, 0, is_immediate);
 
     ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "module_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+        lzt::zeDevice::get_instance()->get_device(), "module_add.spv",
+        ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
     ze_kernel_handle_t kernel =
-      lzt::create_function(module, "module_add_two_arrays");
-    EXPECT_ZE_RESULT_SUCCESS(zeKernelSetArgumentValue(
-        kernel, 0, sizeof(output_int), &output_int));
-    EXPECT_ZE_RESULT_SUCCESS(zeKernelSetArgumentValue(
-        kernel, 1, sizeof(input_int), &input_int));
+        lzt::create_function(module, "module_add_two_arrays");
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeKernelSetArgumentValue(kernel, 0, sizeof(output_int), &output_int));
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeKernelSetArgumentValue(kernel, 1, sizeof(input_int), &input_int));
     uint32_t groupSizeX = 16;
     lzt::set_group_size(kernel, groupSizeX, 1, 1);
     uint32_t groupCount = size / sizeof(int);
-    uint32_t threadGroup = groupCount / groupSizeX > 1
-                               ? groupCount / groupSizeX
-                               : 1;
+    uint32_t threadGroup =
+        groupCount / groupSizeX > 1 ? groupCount / groupSizeX : 1;
     ze_group_count_t group_dimensions = {threadGroup, 1, 1};
 
     const auto t0 = std::chrono::steady_clock::now();
@@ -227,9 +226,8 @@ protected:
       }
     }
 
-
-    lzt::append_launch_function(cmd_bundle.list, kernel, &group_dimensions, nullptr, 0,
-                                nullptr);
+    lzt::append_launch_function(cmd_bundle.list, kernel, &group_dimensions,
+                                nullptr, 0, nullptr);
 
     lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -242,8 +240,8 @@ protected:
     uint64_t page_fault_count2 = GetPageFaultCount();
     page_faults_iteration = page_fault_count2 - page_fault_count1;
 
-    for (size_t i = 0; i < size/(sizeof(int)); i++) { 
-        EXPECT_EQ(output_int[i], value + init);
+    for (size_t i = 0; i < size / (sizeof(int)); i++) { 
+      EXPECT_EQ(output_int[i], value + init);
     }
 
     //  printf("total page faults per iteration = %ld\n",
@@ -271,16 +269,15 @@ protected:
     lzt::destroy_command_bundle(cmd_bundle);
   }
 
-
-
 public:
   uint64_t prefetch_ioctl_count = 0;
   uint64_t page_faults_iteration = 0;
   uint64_t execution_time = 0;
 };
 
-LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
-           GivenAppendMemoryCopyAndNoPrefetchCaseVerifyDecreasingPageFaultsWithPrefetchCases) {
+LZT_TEST_F(
+    zeCommandListAppendMemoryPrefetchDataVerificationTests,
+    GivenAppendMemoryCopyAndNoPrefetchCaseVerifyDecreasingPageFaultsWithPrefetchCases) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   std::vector<std::vector<uint64_t>> page_fault(3, std::vector<uint64_t>(3, 0));
   std::vector<size_t> transfer_size{32 * 1024 * 1024, 512 * 1024 * 1024};
@@ -311,8 +308,9 @@ LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
   }
 }
 
-LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
-           GivenAppendLaunchKernelAndNoPrefetchCaseVerifyDecreasingPageFaultsWithPrefetchCases) {
+LZT_TEST_F(
+    zeCommandListAppendMemoryPrefetchDataVerificationTests,
+    GivenAppendLaunchKernelAndNoPrefetchCaseVerifyDecreasingPageFaultsWithPrefetchCases) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   std::vector<std::vector<uint64_t>> page_fault(3, std::vector<uint64_t>(3, 0));
   std::vector<size_t> transfer_size{32 * 1024 * 1024, 512 * 1024 * 1024};
@@ -330,8 +328,8 @@ LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
         dst_shared = false;
       }
       for (uint32_t j = 0; j < 3; j++) {
-        RunAppendLaunchKernelWithPrefetch(src_shared, dst_shared, false,
-                                        size, j * step);
+        RunAppendLaunchKernelWithPrefetch(src_shared, dst_shared, false, size,
+                                          j * step);
         page_fault[i][j] = page_faults_iteration;
       }
       for (uint32_t j = 1; j < 3; j++) {
@@ -343,8 +341,9 @@ LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
   }
 }
 
-LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
-           GivenAppendMemoryCopyAndNoPrefetchCaseVerifyDecreasingExecTimeWithPrefetchCases) {
+LZT_TEST_F(
+    zeCommandListAppendMemoryPrefetchDataVerificationTests,
+    GivenAppendMemoryCopyAndNoPrefetchCaseVerifyDecreasingExecTimeWithPrefetchCases) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   float step = 0.5;
 
@@ -378,8 +377,9 @@ LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
   }
 }
 
-LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
-           GivenAppendLaunchKernelAndNoPrefetchCaseVerifyDecreasingExecTimeWithPrefetchCases) {
+LZT_TEST_F(
+    zeCommandListAppendMemoryPrefetchDataVerificationTests,
+    GivenAppendLaunchKernelAndNoPrefetchCaseVerifyDecreasingExecTimeWithPrefetchCases) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   float step = 0.5;
 
@@ -398,8 +398,8 @@ LZT_TEST_F(zeCommandListAppendMemoryPrefetchDataVerificationTests,
     }
     for (uint32_t j = 0; j < 20; j++) {
       for (uint32_t k = 0; k < 3; k++) {
-        RunAppendLaunchKernelWithPrefetch(src_shared, dst_shared, false,
-                                        size, k * step);
+        RunAppendLaunchKernelWithPrefetch(src_shared, dst_shared, false, size,
+                                          k * step);
         duration[k] += execution_time;
       }
     }
@@ -422,10 +422,10 @@ LZT_TEST_P(
       std::get<3>(GetParam()), std::get<4>(GetParam()),
       std::get<5>(GetParam()));
   if (std::get<3>(GetParam()) == true) {
-      RunAppendLaunchKernelWithPrefetch(
-         std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
-         std::get<4>(GetParam()),
-         std::get<5>(GetParam()));
+    RunAppendLaunchKernelWithPrefetch(
+        std::get<0>(GetParam()), std::get<1>(GetParam()),
+        std::get<2>(GetParam()), std::get<4>(GetParam()),
+        std::get<5>(GetParam()));
   }
 }
 
