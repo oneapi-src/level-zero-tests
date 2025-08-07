@@ -6,13 +6,22 @@
  *
  */
 
+#include <boost/process.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+
 #include "gtest/gtest.h"
 #include <thread>
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include <chrono>
+
 namespace lzt = level_zero_tests;
+namespace bp = boost::process;
+namespace fs = boost::filesystem;
+namespace bi = boost::interprocess;
 
 #include <level_zero/zes_api.h>
 
@@ -180,6 +189,131 @@ LZT_TEST_F(
       if ((pPeak.powerAC != -1) && (pBurst.enabled != 0)) {
         EXPECT_LE(pBurst.power, pPeak.powerAC);
       }
+    }
+  }
+}
+struct powerInfo {
+  uint32_t interval;
+  uint32_t limit;
+  bool limitValueLocked;
+};
+struct powerDomains {
+  zes_uuid_t uuid;
+  std::vector<powerInfo> power_info_list;
+};
+LZT_TEST_F(
+    POWER_TEST,
+    MultiProcessTestSetValidPowerLimitInParentProcessAndReadInChildProcess) {
+  // run test for all available devices
+  std::vector<powerDomains> pd(devices.size());
+  for (int d = 0; d < devices.size(); ++d) {
+    uint32_t count = 0;
+    auto p_power_handles = lzt::get_power_handles(devices[d], count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    // loop through all power domains and set the power limit
+
+    // preserve initial power limit descriptors for restoration later
+    std::vector<std::vector<zes_power_limit_ext_desc_t>> power_limits_descriptors_initial(p_power_handles.size());
+    for (int p = 0; p < p_power_handles.size(); ++p) {
+      EXPECT_NE(nullptr, p_power_handles[p]);
+
+      uint32_t count_power = 0;
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
+      auto status = lzt::get_power_limits_ext(
+          p_power_handles[p], &count_power,
+          power_limits_descriptors);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      //set power limit
+      zes_power_limit_ext_desc_t power_peak_set = {};
+      for (auto &power_limits_descriptor : power_limits_descriptors) {
+        power_limits_descriptors_initial[p].push_back(power_limits_descriptor);
+        if (power_limits_descriptor.level == ZES_POWER_LEVEL_PEAK) {
+          power_peak_set = power_limits_descriptor;
+          power_peak_set.limit = power_limits_descriptor.limit - 1000;
+          power_limits_descriptor.limit = power_peak_set.limit;
+        }
+      }
+
+      if (power_peak_set.limitValueLocked == false) {
+        // store power info into the list for sharing it with child process
+        powerInfo p_info;
+        p_info.limit = power_peak_set.limit;
+        p_info.interval = power_peak_set.interval;
+        p_info.limitValueLocked = power_peak_set.limitValueLocked;
+        pd[d].power_info_list.push_back(p_info);
+
+        status = lzt::set_power_limits_ext(p_power_handles[p], &count_power,
+            power_limits_descriptors.data());
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
+        }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+
+        // Read power limits to confirm power limit is set
+        zes_power_limit_ext_desc_t power_peak_get = {};
+        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_get;
+        status = lzt::get_power_limits_ext(p_power_handles[p], &count_power,
+                                           power_limits_descriptors_get);
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
+        }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+        for (const auto &p_power_limits_descriptor_get :
+             power_limits_descriptors_get) {
+          if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK) {
+            power_peak_get = p_power_limits_descriptor_get;
+          }
+        }
+        EXPECT_EQ(power_peak_get.limitValueLocked, power_peak_set.limitValueLocked);
+        EXPECT_EQ(power_peak_get.interval, power_peak_set.interval);
+        EXPECT_EQ(power_peak_get.limit, power_peak_set.limit);
+      }
+    }
+
+    // step 2: Launch child process and share power limits set
+    // create named shared object and copy all power settings
+    zes_uuid_t uuid = lzt::get_sysman_device_uuid(devices[d]);
+
+    bi::shared_memory_object::remove("MultiProcPowerLimitSharedMemory");
+    bi::shared_memory_object power_limit_shm(bi::create_only, "MultiProcPowerLimitSharedMemory", bi::read_write);
+    power_limit_shm.truncate(ZES_MAX_UUID_SIZE+pd[d].power_info_list.size()*sizeof(powerInfo));
+    bi::mapped_region mapped_region(power_limit_shm, bi::read_write);
+    std::memcpy(mapped_region.get_address(), uuid.id, ZES_MAX_UUID_SIZE);
+    std::memcpy(((char*)mapped_region.get_address())+ZES_MAX_UUID_SIZE, pd[d].power_info_list.data(), pd[d].power_info_list.size()*sizeof(powerInfo));
+
+    // launch child process with power_handle_count
+    // Launch a child process and find out if child process reads same power limit set by parent process.
+
+    // create child process
+    auto env = boost::this_process::environment();
+    fs::path helper_path(fs::current_path() / "process");
+    bp::environment child_env = env;
+    std::vector<fs::path> paths;
+    paths.push_back(helper_path);
+    fs::path helper = bp::search_path("test_sysman_power_process_helper", paths);
+    bp::child get_power_limit_in_child_proc(helper,bp::args({std::to_string(p_power_handles.size())}), child_env);
+    get_power_limit_in_child_proc.wait();
+    // Need to check child process return statement to decide test pass/fail.
+    EXPECT_EQ(get_power_limit_in_child_proc.exit_code(), 0);
+
+    // Step 3 : Restore power limits back to origianl
+    for (int p=0; p < p_power_handles.size(); ++p) {
+      EXPECT_NE(nullptr, p_power_handles[p]);
+      uint32_t count_power = 0;
+      auto status = lzt::set_power_limits_ext(
+          p_power_handles[p], &count_power,
+          power_limits_descriptors_initial[p].data()); // restore initial limits
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
     }
   }
 }
