@@ -152,10 +152,10 @@ protected:
     lzt::destroy_command_bundle(cmd_bundle);
   }
 
- void RunAppendLaunchKernelWithPrefetch(bool is_src_shared_system,
-                                       bool is_dst_shared_system,
-                                       bool is_immediate, size_t size,
-                                       float prefetch_ratio) {
+  void RunAppendLaunchKernelWithPrefetch(bool is_src_shared_system,
+                                         bool is_dst_shared_system,
+                                         bool is_immediate, size_t size,
+                                         float prefetch_ratio) {
     FILE *fp_err;
     fp_err = freopen("myfile.txt", "w", stderr);
 
@@ -172,7 +172,7 @@ protected:
 
     size_t prefetch_size = (prefetch_ratio * size);
 
-    for (size_t i = 0; i < size/(sizeof(int)); i++) { 
+    for (size_t i = 0; i < size / (sizeof(int)); i++) { 
       input_int[i] = value;
       output_int[i] = init;
     }
@@ -240,7 +240,7 @@ protected:
     uint64_t page_fault_count2 = GetPageFaultCount();
     page_faults_iteration = page_fault_count2 - page_fault_count1;
 
-    for (size_t i = 0; i < size / (sizeof(int)); i++) { 
+    for (size_t i = 0; i < size / (sizeof(int)); i++) {
       EXPECT_EQ(output_int[i], value + init);
     }
 
@@ -369,7 +369,6 @@ LZT_TEST_F(
     }
 
     EXPECT_LT(duration[2], duration[0]);
-
   }
 }
 
@@ -401,7 +400,6 @@ LZT_TEST_F(
     }
 
     EXPECT_LT(duration[2], duration[0]);
-
   }
 }
 
