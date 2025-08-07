@@ -216,7 +216,8 @@ LZT_TEST_F(
 
     // loop through all power domains and set the power limit
 
-    // preserve initial power limit descriptors for restoration later
+    //step 1: i) Preserve initial power limit descriptors for restoration later
+    //       ii) Set the power limit and verify the setting
     std::vector<std::vector<zes_power_limit_ext_desc_t>> power_limits_descriptors_initial(p_power_handles.size());
     for (int p = 0; p < p_power_handles.size(); ++p) {
       EXPECT_NE(nullptr, p_power_handles[p]);
@@ -230,7 +231,7 @@ LZT_TEST_F(
         continue;
       }
       EXPECT_ZE_RESULT_SUCCESS(status);
-      //set power limit
+      // set power limit
       zes_power_limit_ext_desc_t power_peak_set = {};
       for (auto &power_limits_descriptor : power_limits_descriptors) {
         power_limits_descriptors_initial[p].push_back(power_limits_descriptor);
@@ -289,9 +290,6 @@ LZT_TEST_F(
     std::memcpy(((char*)mapped_region.get_address())+ZES_MAX_UUID_SIZE, pd[d].power_info_list.data(), pd[d].power_info_list.size()*sizeof(powerInfo));
 
     // launch child process with power_handle_count
-    // Launch a child process and find out if child process reads same power limit set by parent process.
-
-    // create child process
     auto env = boost::this_process::environment();
     fs::path helper_path(fs::current_path() / "process");
     bp::environment child_env = env;
@@ -300,7 +298,8 @@ LZT_TEST_F(
     fs::path helper = bp::search_path("test_sysman_power_process_helper", paths);
     bp::child get_power_limit_in_child_proc(helper,bp::args({std::to_string(p_power_handles.size())}), child_env);
     get_power_limit_in_child_proc.wait();
-    // Need to check child process return statement to decide test pass/fail.
+
+    // check child process return status to decide test pass/fail.
     EXPECT_EQ(get_power_limit_in_child_proc.exit_code(), 0);
 
     // Step 3 : Restore power limits back to origianl

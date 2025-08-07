@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
   bool test_result = true;
   GetPowerLimitsSetByParentProcess(power_handle_size, test_result);
   if (test_result == false) {
-    return 1; // test failed, report the same to partent process
+    return 1; // test failed, report the same to parent process
   }
   return 0;
 }
