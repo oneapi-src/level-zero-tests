@@ -206,7 +206,7 @@ LZT_TEST_F(
     MultiProcessTestSetValidPowerLimitInParentProcessAndReadInChildProcess) {
   // run test for all available devices
   std::vector<powerDomains> pd(devices.size());
-  for (int d = 0; d < devices.size(); ++d) {
+  for (size_t d = 0; d < devices.size(); ++d) {
     uint32_t count = 0;
     auto p_power_handles = lzt::get_power_handles(devices[d], count);
     if (count == 0) {
@@ -219,7 +219,7 @@ LZT_TEST_F(
     //step 1: i) Preserve initial power limit descriptors for restoration later
     //       ii) Set the power limit and verify the setting
     std::vector<std::vector<zes_power_limit_ext_desc_t>> power_limits_descriptors_initial(p_power_handles.size());
-    for (int p = 0; p < p_power_handles.size(); ++p) {
+    for (size_t p = 0; p < p_power_handles.size(); ++p) {
       EXPECT_NE(nullptr, p_power_handles[p]);
 
       uint32_t count_power = 0;
@@ -302,8 +302,8 @@ LZT_TEST_F(
     // check child process return status to decide test pass/fail.
     EXPECT_EQ(get_power_limit_in_child_proc.exit_code(), 0);
 
-    // Step 3 : Restore power limits back to origianl
-    for (int p=0; p < p_power_handles.size(); ++p) {
+    // Step 3 : Restore power limits back to original
+    for (size_t p = 0; p < p_power_handles.size(); ++p) {
       EXPECT_NE(nullptr, p_power_handles[p]);
       uint32_t count_power = 0;
       auto status = lzt::set_power_limits_ext(

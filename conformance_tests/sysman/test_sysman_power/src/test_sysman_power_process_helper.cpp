@@ -49,7 +49,7 @@ void GetPowerLimitsSetByParentProcess(uint32_t power_handle_size, bool &test_res
         test_result = false;
       }
 
-      for (int p = 0; p < p_power_handles.size(); ++p) {
+      for (size_t p = 0; p < p_power_handles.size(); ++p) {
         EXPECT_NE(nullptr, p_power_handles[p]);
         uint32_t count_power = 0;
         zes_power_limit_ext_desc_t power_peak_get = {};
