@@ -172,7 +172,7 @@ protected:
 
     size_t prefetch_size = (prefetch_ratio * size);
 
-    for (size_t i = 0; i < size / (sizeof(int)); i++) { 
+    for (size_t i = 0; i < size / (sizeof(int)); i++) {
       input_int[i] = value;
       output_int[i] = init;
     }
