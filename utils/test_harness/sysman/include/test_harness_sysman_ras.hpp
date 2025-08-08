@@ -12,7 +12,7 @@
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
 namespace level_zero_tests {
-
+uint32_t get_ras_handles_count(zes_device_handle_t device);
 std::vector<zes_ras_handle_t> get_ras_handles(zes_device_handle_t device,
                                               uint32_t &count);
 zes_ras_properties_t get_ras_properties(zes_ras_handle_t rasHandle);
