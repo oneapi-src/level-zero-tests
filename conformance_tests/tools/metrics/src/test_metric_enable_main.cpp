@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   LOG_TRACE << "Driver initialized";
 
   LOG_TRACE << "Tools API initialized";
-  int returnVal = RUN_ALL_TESTS();
+  int return_val = RUN_ALL_TESTS();
 
   if (env_value != nullptr) {
     LOG_INFO << "Re-enabling ZET_ENABLE_METRICS=1";
@@ -45,5 +45,5 @@ int main(int argc, char **argv) {
 #endif
   }
 
-  return returnVal;
+  return return_val;
 }
