@@ -19,11 +19,11 @@ int main(int argc, char **argv) {
   const char *env_value = std::getenv(var_enable_metrics.c_str());
   if (env_value != nullptr) {
     LOG_INFO << "ZET_ENABLE_METRICS=1 is Set. Disabling.";
-    #if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32) || defined(_WIN64)
     _putenv_s(var_enable_metrics.c_str(), "0");
-    #else
+#else
     setenv(var_enable_metrics.c_str(), "0", 1) == 0;
-    #endif
+#endif
   }
 
   ze_result_t result = zeInit(0);
@@ -38,11 +38,11 @@ int main(int argc, char **argv) {
 
   if (env_value != nullptr) {
     LOG_INFO << "Re-enabling ZET_ENABLE_METRICS=1";
-    #if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32) || defined(_WIN64)
     _putenv_s(var_enable_metrics.c_str(), "1");
-    #else
+#else
     setenv(var_enable_metrics.c_str(), "1", 1) == 0;
-    #endif
+#endif
   }
 
   return returnVal;
