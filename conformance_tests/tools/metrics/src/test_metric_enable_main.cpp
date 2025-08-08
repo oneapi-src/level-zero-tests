@@ -15,11 +15,15 @@ int main(int argc, char **argv) {
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
 
-  const std::string varEnableMetrics = "ZET_ENABLE_METRICS";
-  const char *envValue = std::getenv(varEnableMetrics.c_str());
-  if (envValue != nullptr) {
+  const std::string var_enable_metrics = "ZET_ENABLE_METRICS";
+  const char *env_value = std::getenv(var_enable_metrics.c_str());
+  if (env_value != nullptr) {
     LOG_INFO << "ZET_ENABLE_METRICS=1 is Set. Disabling.";
-    setenv(varEnableMetrics.c_str(), "0", 1) == 0;
+    #if defined(_WIN32) || defined(_WIN64)
+    _putenv_s(var_enable_metrics.c_str(), "0");
+    #else
+    setenv(var_enable_metrics.c_str(), "0", 1) == 0;
+    #endif
   }
 
   ze_result_t result = zeInit(0);
@@ -32,9 +36,14 @@ int main(int argc, char **argv) {
   LOG_TRACE << "Tools API initialized";
   int returnVal = RUN_ALL_TESTS();
 
-  if (envValue != nullptr) {
+  if (env_value != nullptr) {
     LOG_INFO << "Re-enabling ZET_ENABLE_METRICS=1";
-    setenv(varEnableMetrics.c_str(), "1", 1) == 0;
+    #if defined(_WIN32) || defined(_WIN64)
+    _putenv_s(var_enable_metrics.c_str(), "1");
+    #else
+    setenv(var_enable_metrics.c_str(), "1", 1) == 0;
+    #endif
   }
+
   return returnVal;
 }
