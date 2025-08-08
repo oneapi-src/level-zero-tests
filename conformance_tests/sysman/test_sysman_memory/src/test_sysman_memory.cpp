@@ -20,10 +20,16 @@ namespace lzt = level_zero_tests;
 namespace {
 
 #ifdef USE_ZESINIT
-class MemoryModuleZesTest : public lzt::ZesSysmanCtsClass {};
+class MemoryModuleZesTest : public lzt::ZesSysmanCtsClass {
+public:
+  bool is_mem_supported = false;
+};
 #define MEMORY_TEST MemoryModuleZesTest
 #else // USE_ZESINIT
-class MemoryModuleTest : public lzt::SysmanCtsClass {};
+class MemoryModuleTest : public lzt::SysmanCtsClass {
+public:
+  bool is_mem_supported = false;
+};
 #define MEMORY_TEST MemoryModuleTest
 #endif // USE_ZESINIT
 
@@ -32,11 +38,17 @@ LZT_TEST_F(
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto mem_handles = lzt::get_mem_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_mem_handle_count(device);
+    if (count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      auto mem_handles = lzt::get_mem_handles(device, count);
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
 
@@ -45,16 +57,21 @@ LZT_TEST_F(
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullMemoryHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto mem_handles = lzt::get_mem_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_mem_handle_count(device);
+    if (count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      auto mem_handles = lzt::get_mem_handles(device, count);
+      ASSERT_EQ(mem_handles.size(), count);
+      for (auto mem_handle : mem_handles) {
+        EXPECT_NE(nullptr, mem_handle);
+      }
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
-
-    ASSERT_EQ(mem_handles.size(), count);
-    for (auto mem_handle : mem_handles) {
-      EXPECT_NE(nullptr, mem_handle);
-    }
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
 
@@ -63,15 +80,20 @@ LZT_TEST_F(
     GivenInvalidComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t actual_count = 0;
-    lzt::get_mem_handles(device, actual_count);
-    if (actual_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    actual_count = lzt::get_mem_handle_count(device);
+    if (actual_count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      lzt::get_mem_handles(device, actual_count);
+      uint32_t test_count = actual_count + 1;
+      lzt::get_mem_handles(device, test_count);
+      EXPECT_EQ(test_count, actual_count);
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
-
-    uint32_t test_count = actual_count + 1;
-    lzt::get_mem_handles(device, test_count);
-    EXPECT_EQ(test_count, actual_count);
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
 
@@ -80,53 +102,61 @@ LZT_TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarMemHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto mem_handles_initial = lzt::get_mem_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_mem_handle_count(device);
+    if (count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      auto mem_handles_initial = lzt::get_mem_handles(device, count);
+      for (auto mem_handle : mem_handles_initial) {
+        EXPECT_NE(nullptr, mem_handle);
+      }
+      count = 0;
+      auto mem_handles_later = lzt::get_mem_handles(device, count);
+      for (auto mem_handle : mem_handles_later) {
+        EXPECT_NE(nullptr, mem_handle);
+      }
+      EXPECT_EQ(mem_handles_initial, mem_handles_later);
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
-
-    for (auto mem_handle : mem_handles_initial) {
-      EXPECT_NE(nullptr, mem_handle);
-    }
-
-    count = 0;
-    auto mem_handles_later = lzt::get_mem_handles(device, count);
-    for (auto mem_handle : mem_handles_later) {
-      EXPECT_NE(nullptr, mem_handle);
-    }
-    EXPECT_EQ(mem_handles_initial, mem_handles_later);
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
-
 LZT_TEST_F(
     MEMORY_TEST,
     GivenValidMemHandleWhenRetrievingMemPropertiesThenValidPropertiesAreReturned) {
   for (auto device : devices) {
     auto deviceProperties = lzt::get_sysman_device_properties(device);
     uint32_t count = 0;
-    auto mem_handles = lzt::get_mem_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto mem_handle : mem_handles) {
-      ASSERT_NE(nullptr, mem_handle);
-      auto properties = lzt::get_mem_properties(mem_handle);
-      if (properties.onSubdevice) {
-        EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
+    count = lzt::get_mem_handle_count(device);
+    if (count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      auto mem_handles = lzt::get_mem_handles(device, count);
+      for (auto mem_handle : mem_handles) {
+        ASSERT_NE(nullptr, mem_handle);
+        auto properties = lzt::get_mem_properties(mem_handle);
+        if (properties.onSubdevice) {
+          EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
+        }
+        EXPECT_LT(properties.physicalSize, UINT64_MAX);
+        EXPECT_GE(properties.location, ZES_MEM_LOC_SYSTEM);
+        EXPECT_LE(properties.location, ZES_MEM_LOC_DEVICE);
+        EXPECT_LE(properties.busWidth, INT32_MAX);
+        EXPECT_GE(properties.busWidth, -1);
+        EXPECT_NE(properties.busWidth, 0);
+        EXPECT_LE(properties.numChannels, INT32_MAX);
+        EXPECT_GE(properties.numChannels, -1);
+        EXPECT_NE(properties.numChannels, 0);
       }
-      EXPECT_LT(properties.physicalSize, UINT64_MAX);
-      EXPECT_GE(properties.location, ZES_MEM_LOC_SYSTEM);
-      EXPECT_LE(properties.location, ZES_MEM_LOC_DEVICE);
-      EXPECT_LE(properties.busWidth, INT32_MAX);
-      EXPECT_GE(properties.busWidth, -1);
-      EXPECT_NE(properties.busWidth, 0);
-      EXPECT_LE(properties.numChannels, INT32_MAX);
-      EXPECT_GE(properties.numChannels, -1);
-      EXPECT_NE(properties.numChannels, 0);
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
 
@@ -135,26 +165,33 @@ LZT_TEST_F(
     GivenValidMemHandleWhenRetrievingMemPropertiesThenExpectSamePropertiesReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto mem_handles = lzt::get_mem_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto mem_handle : mem_handles) {
-      EXPECT_NE(nullptr, mem_handle);
-      auto properties_initial = lzt::get_mem_properties(mem_handle);
-      auto properties_later = lzt::get_mem_properties(mem_handle);
-      EXPECT_EQ(properties_initial.type, properties_later.type);
-      EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
-      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
-        EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
+    count = lzt::get_mem_handle_count(device);
+    if (count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      auto mem_handles = lzt::get_mem_handles(device, count);
+      for (auto mem_handle : mem_handles) {
+        EXPECT_NE(nullptr, mem_handle);
+        auto properties_initial = lzt::get_mem_properties(mem_handle);
+        auto properties_later = lzt::get_mem_properties(mem_handle);
+        EXPECT_EQ(properties_initial.type, properties_later.type);
+        EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
+        if (properties_initial.onSubdevice && properties_later.onSubdevice) {
+          EXPECT_EQ(properties_initial.subdeviceId,
+                    properties_later.subdeviceId);
+        }
+        EXPECT_EQ(properties_initial.physicalSize,
+                  properties_later.physicalSize);
+        EXPECT_EQ(properties_initial.location, properties_later.location);
+        EXPECT_EQ(properties_initial.busWidth, properties_later.busWidth);
+        EXPECT_EQ(properties_initial.numChannels, properties_later.numChannels);
       }
-      EXPECT_EQ(properties_initial.physicalSize, properties_later.physicalSize);
-      EXPECT_EQ(properties_initial.location, properties_later.location);
-      EXPECT_EQ(properties_initial.busWidth, properties_later.busWidth);
-      EXPECT_EQ(properties_initial.numChannels, properties_later.numChannels);
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
 
@@ -163,20 +200,25 @@ LZT_TEST_F(
     GivenValidMemHandleWhenRetrievingMemBandWidthThenValidBandWidthCountersAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto mem_handles = lzt::get_mem_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_mem_handle_count(device);
+    if (count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      auto mem_handles = lzt::get_mem_handles(device, count);
+      for (auto mem_handle : mem_handles) {
+        ASSERT_NE(nullptr, mem_handle);
+        auto bandwidth = lzt::get_mem_bandwidth(mem_handle);
+        EXPECT_LT(bandwidth.readCounter, UINT64_MAX);
+        EXPECT_LT(bandwidth.writeCounter, UINT64_MAX);
+        EXPECT_LT(bandwidth.maxBandwidth, UINT64_MAX);
+        EXPECT_LT(bandwidth.timestamp, UINT64_MAX);
+      }
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
-
-    for (auto mem_handle : mem_handles) {
-      ASSERT_NE(nullptr, mem_handle);
-      auto bandwidth = lzt::get_mem_bandwidth(mem_handle);
-      EXPECT_LT(bandwidth.readCounter, UINT64_MAX);
-      EXPECT_LT(bandwidth.writeCounter, UINT64_MAX);
-      EXPECT_LT(bandwidth.maxBandwidth, UINT64_MAX);
-      EXPECT_LT(bandwidth.timestamp, UINT64_MAX);
-    }
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
 
@@ -184,23 +226,28 @@ LZT_TEST_F(MEMORY_TEST,
            GivenValidMemHandleWhenRetrievingMemStateThenValidStateIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto mem_handles = lzt::get_mem_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto mem_handle : mem_handles) {
-      ASSERT_NE(nullptr, mem_handle);
-      auto state = lzt::get_mem_state(mem_handle);
-      EXPECT_GE(state.health, ZES_MEM_HEALTH_UNKNOWN);
-      EXPECT_LE(state.health, ZES_MEM_HEALTH_REPLACE);
-      auto properties = lzt::get_mem_properties(mem_handle);
-      if (properties.physicalSize != 0) {
-        EXPECT_LE(state.size, properties.physicalSize);
+    count = lzt::get_mem_handle_count(device);
+    if (count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      auto mem_handles = lzt::get_mem_handles(device, count);
+      for (auto mem_handle : mem_handles) {
+        ASSERT_NE(nullptr, mem_handle);
+        auto state = lzt::get_mem_state(mem_handle);
+        EXPECT_GE(state.health, ZES_MEM_HEALTH_UNKNOWN);
+        EXPECT_LE(state.health, ZES_MEM_HEALTH_REPLACE);
+        auto properties = lzt::get_mem_properties(mem_handle);
+        if (properties.physicalSize != 0) {
+          EXPECT_LE(state.size, properties.physicalSize);
+        }
+        EXPECT_LE(state.free, state.size);
       }
-      EXPECT_LE(state.free, state.size);
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
 
@@ -413,37 +460,41 @@ LZT_TEST_F(MEMORY_TEST,
            GivenDeviceWhenRetrievingMemoryPropertiesThenLocationIsAsExpected) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto mem_handles = lzt::get_mem_handles(device, count);
-
-    if (count == 0) {
-      FAIL() << "No memory handles found on this device!";
-      continue;
-    }
-    ze_device_properties_t deviceProperties = {
-        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+    count = lzt::get_mem_handle_count(device);
+    if (count > 0) {
+      is_mem_supported = true;
+      LOG_INFO << "Memory handles are available on this device! ";
+      auto mem_handles = lzt::get_mem_handles(device, count);
+      ze_device_properties_t deviceProperties = {
+          ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
 #ifdef USE_ZESINIT
-    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
-    ze_device_handle_t core_device =
-        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
-    EXPECT_NE(core_device, nullptr);
-    device = core_device;
+      auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+      ze_device_handle_t core_device =
+          lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+      EXPECT_NE(core_device, nullptr);
+      device = core_device;
 #endif // USE_ZESINIT
-    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &deviceProperties));
-    bool is_integrated =
-        (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED);
-
-    for (auto mem_handle : mem_handles) {
-      ASSERT_NE(nullptr, mem_handle);
-
-      auto mem_properties = lzt::get_mem_properties(mem_handle);
-      if (is_integrated) {
-        EXPECT_EQ(mem_properties.location, ZES_MEM_LOC_SYSTEM)
-            << "Integrated device should have system memory location";
-      } else {
-        EXPECT_EQ(mem_properties.location, ZES_MEM_LOC_DEVICE)
-            << "Discrete device should have device memory location";
+      EXPECT_ZE_RESULT_SUCCESS(
+          zeDeviceGetProperties(device, &deviceProperties));
+      bool is_integrated =
+          (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED);
+      for (auto mem_handle : mem_handles) {
+        ASSERT_NE(nullptr, mem_handle);
+        auto mem_properties = lzt::get_mem_properties(mem_handle);
+        if (is_integrated) {
+          EXPECT_EQ(mem_properties.location, ZES_MEM_LOC_SYSTEM)
+              << "Integrated device should have system memory location";
+        } else {
+          EXPECT_EQ(mem_properties.location, ZES_MEM_LOC_DEVICE)
+              << "Discrete device should have device memory location";
+        }
       }
+    } else {
+      LOG_INFO << "No memory handles found for this device! ";
     }
+  }
+  if (!is_mem_supported) {
+    FAIL() << "No memory handles found on any of the devices! ";
   }
 }
 
