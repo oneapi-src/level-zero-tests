@@ -1657,7 +1657,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
     if (n == 0) {
       lzt::append_launch_function(cmdlist[n], kernel, &tg, event, 0, nullptr);
     } else {
-      lzt::append_launch_function(cmdlist[n], kernel, &tg, event, 0, &event);
+      lzt::append_launch_function(cmdlist[n], kernel, &tg, event, 1, &event);
     }
 
     if ((n % 2) == 0) {
@@ -1864,7 +1864,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   addval2 = lzt::generate_value<int>() & 0xFFFF;
   totalVal[1] += addval2;
   lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
-  lzt::append_launch_function(cmdlist[1], kernel, &tg, event, 0,
+  lzt::append_launch_function(cmdlist[1], kernel, &tg, event, 1,
                               &counter_event);
   lzt::append_barrier(cmdlist[1]);
   if (!is_immediate) {
