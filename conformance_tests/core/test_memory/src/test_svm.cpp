@@ -29,7 +29,7 @@ protected:
 
 LZT_TEST_P(
     SharedSystemMemoryTests,
-    GivenAtomicOrNonAtomicKernelWithVaryingBufferSizeAndUSMOrSVMWhenAppendingToImmediateOrRegularCmdListThenValuesAreCorrect) {
+    GivenSharedSystemMemoryAllocationsAsKernelArgumentsWhenKernelExecutesThenValuesAreCorrect) {
   bool is_dst_shared_system = std::get<0>(GetParam()).first;
   bool is_src_shared_system = std::get<0>(GetParam()).second;
   bool use_atomic_kernel = std::get<1>(GetParam());
@@ -43,8 +43,8 @@ LZT_TEST_P(
     SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   }
 
-  constexpr int source_value = 0x42;
-  constexpr int add_value = 0x1234;
+  constexpr int source_value = 1234;
+  constexpr int add_value = 5678;
 
   void *result = lzt::allocate_shared_memory_with_allocator_selector(
       buffer_size, 1, 0, 0, device, is_dst_shared_system);
@@ -69,8 +69,8 @@ LZT_TEST_P(
   lzt::zeCommandBundle cmd_bundle =
       lzt::create_command_bundle(use_immediate_cmdlist);
 
-  const uint32_t thread_group_size = buffer_size / (sizeof(int) * group_size);
-  ze_group_count_t thread_group_dimensions = {thread_group_size, 1, 1};
+  const uint32_t group_count_x = buffer_size / (sizeof(int) * group_size);
+  ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
   lzt::append_launch_function(cmd_bundle.list, function,
                               &thread_group_dimensions, nullptr, 0, nullptr);
 
@@ -99,7 +99,7 @@ struct SharedSystemMemoryTestsNameSuffix {
     bool use_immediate_cmdlist = std::get<2>(info.param);
     size_t buffer_size = std::get<3>(info.param);
 
-    const char *str = [](size_t size) -> const char * {
+    const char *buffer_size_str = [](size_t size) -> const char * {
       switch (size) {
       case 0x80u:
         return "_128B";
@@ -111,6 +111,10 @@ struct SharedSystemMemoryTestsNameSuffix {
         return "_1MB";
       case 0x100800u:
         return "_1MB2KB";
+      case 0x4000'0000u:
+        return "_1GB";
+      case 0x4000'0800u:
+        return "_1GB2KB";
       }
       return "";
     }(buffer_size);
@@ -120,7 +124,7 @@ struct SharedSystemMemoryTestsNameSuffix {
     ss << (is_dst_shared_system ? "SVM" : "USM");
     ss << (use_atomic_kernel ? "_Atomic" : "_NonAtomic");
     ss << (use_immediate_cmdlist ? "_Immediate" : "_Regular");
-    ss << str;
+    ss << buffer_size_str;
 
     return ss.str();
   }
@@ -133,5 +137,5 @@ INSTANTIATE_TEST_SUITE_P(
                                      std::make_pair(true, true)),
                      testing::Bool(), testing::Bool(),
                      testing::Values(0x80u, 0x1000u, 0x1800u, 0x100000u,
-                                     0x100800u)),
+                                     0x100800u, 0x4000'0000u, 0x4000'0800u)),
     SharedSystemMemoryTestsNameSuffix());
