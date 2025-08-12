@@ -1872,9 +1872,9 @@ void run_ip_sampling_with_validation(
               metricValueSets);
 
       if (enableOverflow) {
-        ASSERT_EQ(ZE_RESULT_WARNING_DROPPED_DATA, result);
+        EXPECT_EQ(ZE_RESULT_WARNING_DROPPED_DATA, result);        
       } else {
-        ASSERT_ZE_RESULT_SUCCESS(result);
+        EXPECT_EQ(ZE_RESULT_SUCCESS, result);  
       }
 
       std::vector<zet_metric_handle_t> metricHandles;
