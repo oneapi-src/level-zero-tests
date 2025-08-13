@@ -121,7 +121,8 @@ static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s) {
 }
 
 template <typename T>
-static void calculate_timestamp_mask(T &timestamp_mask, uint32_t timestamp_bits) {
+static void calculate_timestamp_mask(T &timestamp_mask,
+                                     uint32_t timestamp_bits) {
   if (timestamp_bits >= sizeof(T) * CHAR_BIT) {
     timestamp_mask = std::numeric_limits<T>::max();
   } else {
