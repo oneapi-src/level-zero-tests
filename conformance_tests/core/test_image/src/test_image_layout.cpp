@@ -20,10 +20,6 @@ namespace {
 
 enum TestType { IMAGE_OBJECT_ONLY, ONE_KERNEL_ONLY, TWO_KERNEL_CONVERT };
 
-const std::vector<ze_image_type_t> tested_image_types = {
-    ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_1DARRAY,
-    ZE_IMAGE_TYPE_2DARRAY};
-
 class ImageLayoutFixture : public ::testing::Test {
 public:
   void SetUp() override {
@@ -106,8 +102,10 @@ public:
                               group_size_z);
       lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-      lzt::set_argument_value(kernel, 0, sizeof(image_in), &image_in);
-      lzt::set_argument_value(kernel, 1, sizeof(image_convert), &image_convert);
+      SKIP_ZE_RESULT_UNSUPPORTED(
+          zeKernelSetArgumentValue(kernel, 0, sizeof(image_in), &image_in));
+      SKIP_ZE_RESULT_UNSUPPORTED(zeKernelSetArgumentValue(
+          kernel, 1, sizeof(image_convert), &image_convert));
 
       ze_group_count_t group_dems = {
           (static_cast<uint32_t>(image_dims.width) / group_size_x),
@@ -130,9 +128,10 @@ public:
                                 group_size_z);
         lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-        lzt::set_argument_value(kernel, 0, sizeof(image_convert),
-                                &image_convert);
-        lzt::set_argument_value(kernel, 1, sizeof(image_out), &image_out);
+        SKIP_ZE_RESULT_UNSUPPORTED(zeKernelSetArgumentValue(
+            kernel, 0, sizeof(image_convert), &image_convert));
+        SKIP_ZE_RESULT_UNSUPPORTED(
+            zeKernelSetArgumentValue(kernel, 1, sizeof(image_out), &image_out));
 
         group_dems = {(static_cast<uint32_t>(image_dims.width) / group_size_x),
                       (image_dims.height / group_size_y),
@@ -358,38 +357,33 @@ LZT_TEST_P(
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutUIntFormat, zeImageLayoutOneOrNoKernelTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+    ::testing::Combine(lzt::image_types_buffer_excluded,
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT),
-                       ::testing::ValuesIn(lzt::image_format_layout_uint),
-                       ::testing::Bool()));
+                       lzt::image_format_layout_uint, ::testing::Bool()));
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutSIntFormat, zeImageLayoutOneOrNoKernelTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+    ::testing::Combine(lzt::image_types_buffer_excluded,
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_SINT),
-                       ::testing::ValuesIn(lzt::image_format_layout_sint),
-                       ::testing::Bool()));
+                       lzt::image_format_layout_sint, ::testing::Bool()));
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutUNormFormat, zeImageLayoutOneOrNoKernelTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+    ::testing::Combine(lzt::image_types_buffer_excluded,
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UNORM),
-                       ::testing::ValuesIn(lzt::image_format_layout_unorm),
-                       ::testing::Bool()));
+                       lzt::image_format_layout_unorm, ::testing::Bool()));
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutSNormFormat, zeImageLayoutOneOrNoKernelTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+    ::testing::Combine(lzt::image_types_buffer_excluded,
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_SNORM),
-                       ::testing::ValuesIn(lzt::image_format_layout_snorm),
-                       ::testing::Bool()));
+                       lzt::image_format_layout_snorm, ::testing::Bool()));
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutFloatFormat, zeImageLayoutOneOrNoKernelTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+    ::testing::Combine(lzt::image_types_buffer_excluded,
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
-                       ::testing::ValuesIn(lzt::image_format_layout_float),
-                       ::testing::Bool()));
+                       lzt::image_format_layout_float, ::testing::Bool()));
 
 class zeImageLayoutTwoKernelsTests
     : public ImageLayoutFixture,
@@ -505,9 +499,10 @@ LZT_TEST_P(zeImageLayoutTwoKernelsTests,
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    LayoutTwoKernelsTestsParam, zeImageLayoutTwoKernelsTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
-                       lzt::image_format_types, ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(LayoutTwoKernelsTestsParam,
+                         zeImageLayoutTwoKernelsTests,
+                         ::testing::Combine(lzt::image_types_buffer_excluded,
+                                            lzt::image_format_types,
+                                            ::testing::Bool()));
 
 } // namespace
