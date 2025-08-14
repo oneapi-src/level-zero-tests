@@ -183,7 +183,7 @@ LZT_TEST_F(
     count = lzt::get_firmware_handle_count(device);
     if (count > 0) {
       is_firmware_supported = true;
-      LOG_INFO << "Firnware handles are available on this device! ";
+      LOG_INFO << "Firmware handles are available on this device! ";
       auto firmware_handles = lzt::get_firmware_handles(device, count);
       for (auto firmware_handle : firmware_handles) {
         ASSERT_NE(nullptr, firmware_handle);
@@ -283,9 +283,10 @@ LZT_TEST_F(
   std::string fw_dir(fw_dir_env);
   for (auto device : devices) {
     uint32_t count = 0;
+    count = lzt::get_firmware_handle_count(device);
     if (count > 0) {
       is_firmware_supported = true;
-      LOG_INFO << "Firnware handles are available on this device! ";
+      LOG_INFO << "Firmware handles are available on this device! ";
       auto firmware_handles = lzt::get_firmware_handles(device, count);
       for (auto firmware_handle : firmware_handles) {
         std::thread firmware_flasher(flash_firmware, firmware_handle, fw_dir);
