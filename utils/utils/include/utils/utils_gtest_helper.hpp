@@ -9,9 +9,9 @@
 #include <gtest/gtest.h>
 #include <level_zero/ze_api.h>
 
-class LztGtestSkipExectuionException : public std::runtime_error {
+class LztGtestSkipExecutionException : public std::runtime_error {
 public:
-  explicit LztGtestSkipExectuionException(const std::string &message)
+  explicit LztGtestSkipExecutionException(const std::string &message)
       : std::runtime_error(message) {}
 };
 namespace {
@@ -24,7 +24,7 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
     const auto lzt_assert_ze_result_success_macro = val;                       \
     if (lzt_assert_ze_result_success_macro ==                                  \
         ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                                 \
-      throw LztGtestSkipExectuionException("Unsupported API version");         \
+      throw LztGtestSkipExecutionException("Unsupported API version");         \
     }                                                                          \
     ASSERT_EQ(ZE_RESULT_SUCCESS, lzt_assert_ze_result_success_macro)           \
         << " --> " << #val;                                                    \
@@ -35,10 +35,30 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
     const auto lzt_expect_ze_result_success_macro = val;                       \
     if (lzt_expect_ze_result_success_macro ==                                  \
         ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                                 \
-      throw LztGtestSkipExectuionException("Unsupported API version");         \
+      throw LztGtestSkipExecutionException("Unsupported API version");         \
     }                                                                          \
     EXPECT_EQ(ZE_RESULT_SUCCESS, lzt_expect_ze_result_success_macro)           \
         << " --> " << #val;                                                    \
+  }
+
+#define SKIP_ZE_RESULT_UNSUPPORTED(val)                                        \
+  {                                                                            \
+    const auto res = val;                                                      \
+    if (res == ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                          \
+      throw LztGtestSkipExecutionException("Unsupported API version");         \
+    }                                                                          \
+    if (res == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE ||                          \
+        res == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT ||                     \
+        res == ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION ||                      \
+        res == ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT ||                        \
+        res == ZE_RESULT_ERROR_UNSUPPORTED_SIZE) {                             \
+      std::string res_string = lzt::to_string(res);                            \
+      std::size_t pos = res_string.find("UNSUPPORTED");                        \
+      std::string unsupported_type_string = res_string.substr(pos + 12);       \
+      GTEST_SKIP() << "[" << unsupported_type_string                           \
+                   << " not supported on this device or driver]";              \
+    }                                                                          \
+    ASSERT_EQ(ZE_RESULT_SUCCESS, res) << " --> " << #val;                      \
   }
 
 #define LZT_NAME_STATIC_VALIDATION(test_suite_name, test_name)                 \
@@ -73,7 +93,7 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
   GTEST_TEST(test_suite_name, test_name) {                                     \
     try {                                                                      \
       LZT_BODY_##test_suite_name##_##test_name();                              \
-    } catch (const LztGtestSkipExectuionException &e) {                        \
+    } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
     }                                                                          \
   }                                                                            \
@@ -87,14 +107,14 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
     static void SetUpTestSuite() {                                             \
       try {                                                                    \
         test_suite_name::SetUpTestSuite();                                     \
-      } catch (const LztGtestSkipExectuionException &e) {                      \
+      } catch (const LztGtestSkipExecutionException &e) {                      \
         GTEST_SKIP() << e.what();                                              \
       }                                                                        \
     }                                                                          \
     static void TearDownTestSuite() {                                          \
       try {                                                                    \
         test_suite_name::TearDownTestSuite();                                  \
-      } catch (const LztGtestSkipExectuionException &e) {                      \
+      } catch (const LztGtestSkipExecutionException &e) {                      \
         GTEST_SKIP() << e.what();                                              \
       }                                                                        \
     }                                                                          \
@@ -105,7 +125,7 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
                        _helper)::SetUp() {                                     \
     try {                                                                      \
       test_suite_name::SetUp();                                                \
-    } catch (const LztGtestSkipExectuionException &e) {                        \
+    } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
     }                                                                          \
   }                                                                            \
@@ -113,7 +133,7 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
                        _helper)::TearDown() {                                  \
     try {                                                                      \
       test_suite_name::TearDown();                                             \
-    } catch (const LztGtestSkipExectuionException &e) {                        \
+    } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
     }                                                                          \
   }
@@ -151,7 +171,7 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
   void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody() {        \
     try {                                                                      \
       LztTestBodyHelper();                                                     \
-    } catch (const LztGtestSkipExectuionException &e) {                        \
+    } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
     }                                                                          \
   }                                                                            \
@@ -198,7 +218,7 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
   void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody() {        \
     try {                                                                      \
       LztTestBodyHelper();                                                     \
-    } catch (const LztGtestSkipExectuionException &e) {                        \
+    } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
     }                                                                          \
   }                                                                            \
