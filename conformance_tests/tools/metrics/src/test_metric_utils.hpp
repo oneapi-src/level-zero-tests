@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023 Intel Corporation
+ * Copyright (C) 2023-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -10,6 +10,7 @@
 #define TEST_METRIC_UTILS_HPP
 
 #include <level_zero/ze_api.h>
+#include <level_zero/zet_api.h>
 
 ze_kernel_handle_t get_matrix_multiplication_kernel(
     ze_device_handle_t device, ze_group_count_t *tg, void **a_buffer,
