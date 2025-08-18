@@ -664,33 +664,39 @@ void append_metric_memory_barrier(zet_command_list_handle_t commandList) {
 }
 
 void verify_typed_metric_value(zet_typed_value_t result,
-                               zet_value_type_t metricValueType) {
+                               zet_value_type_t metricValueType, char *name) {
   EXPECT_EQ(metricValueType, result.type);
+  LOG_DEBUG << "Metric: " << name;
   switch (result.type) {
   case zet_value_type_t::ZET_VALUE_TYPE_BOOL8:
     EXPECT_GE(result.value.b8, std::numeric_limits<unsigned char>::min());
     EXPECT_LE(result.value.b8, std::numeric_limits<unsigned char>::max());
-    LOG_DEBUG << "BOOL " << result.value.b8;
+    LOG_DEBUG << ". BOOL     " << result.value.b8
+              << (result.value.b8 ? " TRUE " : "\t FALSE");
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_FLOAT32:
     EXPECT_GE(result.value.fp32, std::numeric_limits<float>::lowest());
     EXPECT_LE(result.value.fp32, std::numeric_limits<float>::max());
-    LOG_DEBUG << "fp32 " << result.value.fp32;
+    LOG_DEBUG << ". fp32     " << result.value.fp32
+              << (result.value.fp32 ? " OK " : "\t ZERO");
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
     EXPECT_GE(result.value.fp64, std::numeric_limits<double>::lowest());
     EXPECT_LE(result.value.fp64, std::numeric_limits<double>::max());
-    LOG_DEBUG << "fp64 " << result.value.fp64;
+    LOG_DEBUG << ". fp64     " << result.value.fp64
+              << (result.value.fp64 ? " OK " : "\t ZERO");
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
     EXPECT_GE(result.value.ui32, 0);
     EXPECT_LE(result.value.ui32, std::numeric_limits<uint32_t>::max());
-    LOG_DEBUG << "uint32_t " << result.value.ui32;
+    LOG_DEBUG << ". uint32_t " << result.value.ui32
+              << (result.value.ui32 ? " OK " : "\t ZERO");
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_UINT64:
     EXPECT_GE(result.value.ui64, 0);
     EXPECT_LE(result.value.ui64, std::numeric_limits<uint64_t>::max());
-    LOG_DEBUG << "uint64_t " << result.value.ui64;
+    LOG_DEBUG << ". uint64_t " << result.value.ui64
+              << (result.value.ui64 ? " OK " : "\t ZERO");
     break;
   default:
     ADD_FAILURE() << "Unexpected value type returned for metric query";
@@ -771,7 +777,8 @@ void validate_metrics_common(
         const size_t metricIndex = report * metricCount + metric;
         zet_typed_value_t typed_value =
             totalMetricValues[startIndex + metricIndex];
-        verify_typed_metric_value(typed_value, properties.resultType);
+        verify_typed_metric_value(typed_value, properties.resultType,
+                                  properties.name);
         if ((metricNameForTest != nullptr)) {
           if (strncmp(metricNameForTest, properties.name,
                       strnlen(metricNameForTest, 1024)) == 0) {
@@ -781,9 +788,7 @@ void validate_metrics_common(
       }
       LOG_DEBUG << "END METRIC INSTANCE";
     }
-
     LOG_DEBUG << "END METRIC SET";
-
     if ((metricNameForTest != nullptr)) {
       typedValuesFound.push_back(valueVector);
     }
@@ -840,14 +845,19 @@ void validate_metrics_std(zet_metric_group_handle_t hMetricGroup,
   LOG_DEBUG << "metricValueCount " << metricValueCount << " metricCount "
             << metricCount;
 
-  for (uint32_t count = 0; count < metricValueCount; count++) {
-    zet_metric_properties_t properties = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES,
-                                          nullptr};
-    EXPECT_ZE_RESULT_SUCCESS(
-
-        zetMetricGetProperties(phMetrics[count % metricCount], &properties));
-    zet_typed_value_t typed_value = metricValues[count];
-    verify_typed_metric_value(typed_value, properties.resultType);
+  uint32_t reportNumber = metricValueCount / metricCount;
+  for (uint32_t count = 0; count < reportNumber; count++) {
+    LOG_DEBUG << "--- Result Report : " << count;
+    for (uint32_t metric = 0; metric < metricCount; metric++) {
+      zet_metric_properties_t properties = {
+          ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
+      EXPECT_ZE_RESULT_SUCCESS(
+          zetMetricGetProperties(phMetrics[metric], &properties));
+      zet_typed_value_t typed_value =
+          metricValues[count * metricCount + metric];
+      verify_typed_metric_value(typed_value, properties.resultType,
+                                properties.name);
+    }
   }
 }
 
