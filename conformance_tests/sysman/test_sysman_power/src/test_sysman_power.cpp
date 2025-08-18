@@ -668,8 +668,7 @@ LZT_TEST_F(
 
             status = lzt::set_power_limits_ext(
                 p_power_handle, &count_power,
-                power_limits_descriptors_initial
-                    .data()); // restore initial limits
+                power_limits_descriptors_initial.data()); // restore initial limits
             if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
               continue;
             }
