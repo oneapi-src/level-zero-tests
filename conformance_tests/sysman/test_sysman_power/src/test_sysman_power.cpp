@@ -757,8 +757,7 @@ LZT_TEST_F(
           EXPECT_EQ(power_peak_get.interval, power_peak_set.interval);
           EXPECT_EQ(power_peak_get.limit, power_peak_set.limit);
 
-          status =
-              lzt::set_power_limits_ext(p_power_handle, &count_power,
+          status = lzt::set_power_limits_ext(p_power_handle, &count_power,
                                         power_limits_descriptors_initial.data()); // restore initial limits
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
