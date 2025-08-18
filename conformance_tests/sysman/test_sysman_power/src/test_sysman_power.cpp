@@ -636,8 +636,7 @@ LZT_TEST_F(
           if (power_sustained_set.limitValueLocked == false) {
             status = lzt::set_power_limits_ext(
                 p_power_handle, &count_power,
-                power_limits_descriptors
-                    .data()); // set power limits for all descriptors
+                power_limits_descriptors.data()); // set power limits for all descriptors
             if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
               continue;
             }
@@ -731,8 +730,7 @@ LZT_TEST_F(
         if (power_peak_set.limitValueLocked == false) {
           status = lzt::set_power_limits_ext(
               p_power_handle, &count_power,
-              power_limits_descriptors
-                  .data()); // set power limits for all descriptors
+              power_limits_descriptors.data()); // set power limits for all descriptors
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
@@ -815,8 +813,7 @@ LZT_TEST_F(
         if (power_burst_set.limitValueLocked == false) {
           status = lzt::set_power_limits_ext(
               p_power_handle, &count_power,
-              power_limits_descriptors
-                  .data()); // set power limits for all descriptors
+              power_limits_descriptors.data()); // set power limits for all descriptors
 
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
@@ -902,8 +899,7 @@ LZT_TEST_F(
         if (power_instantaneous_set.limitValueLocked == false) {
           status = lzt::set_power_limits_ext(
               p_power_handle, &count_power,
-              power_limits_descriptors
-                  .data()); // set power limits for all descriptors
+              power_limits_descriptors.data()); // set power limits for all descriptors
 
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
