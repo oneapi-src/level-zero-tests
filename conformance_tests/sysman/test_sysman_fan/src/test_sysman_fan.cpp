@@ -115,7 +115,7 @@ LZT_TEST_F(
       }
       EXPECT_EQ(fan_handles_initial, fan_handles_later);
     } else {
-      "No fan handles found for this device! ";
+      LOG_INFO << "No fan handles found for this device! ";
     }
   }
   if (!is_fan_supported) {
