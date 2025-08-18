@@ -1420,7 +1420,7 @@ LZT_TEST_F(
       LOG_INFO << "No power handles found for this device! ";
     }
   }
-  if (!power_handles_available) {
+  if (!is_power_supported) {
     FAIL() << "No power handles found in any of the devices!";
   }
 }
