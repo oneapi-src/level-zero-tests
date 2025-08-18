@@ -46,7 +46,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
@@ -68,7 +68,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
@@ -90,7 +90,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
@@ -118,7 +118,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
@@ -143,7 +143,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -167,7 +167,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
@@ -195,7 +195,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -225,7 +225,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -253,7 +253,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -285,7 +285,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -320,7 +320,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
@@ -359,7 +359,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -392,7 +392,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
@@ -424,7 +424,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
@@ -457,7 +457,7 @@ LZT_TEST_F(
     }
   }
   if (!is_scheduler_supported) {
-    FAIL() << "No scheduler handles found on any of the devcies! ";
+    FAIL() << "No scheduler handles found on any of the devices! ";
   }
 }
 
