@@ -21,14 +21,12 @@ namespace {
 class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
   bool power_handles_available = false;
-  bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleZesTest
 #else // USE_ZESINIT
 class PowerModuleTest : public lzt::SysmanCtsClass {
 public:
   bool power_handles_available = false;
-  bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleTest
 #endif // USE_ZESINIT
@@ -38,20 +36,15 @@ LZT_TEST_F(
     GivenValidDeviceWhenRetrievingPowerHandlesThenNonZeroCountAndValidPowerHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+    }
   }
 }
 LZT_TEST_F(
@@ -60,19 +53,14 @@ LZT_TEST_F(
   for (auto device : devices) {
     uint32_t icount = 0;
     uint32_t lcount = 0;
-    icount = lzt::get_power_handle_count(device);
-    if (icount > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handlesInitial = lzt::get_power_handles(device, icount);
-      auto p_power_handlesLater = lzt::get_power_handles(device, lcount);
-      EXPECT_EQ(p_power_handlesInitial, p_power_handlesLater);
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handlesInitial = lzt::get_power_handles(device, icount);
+    if (icount == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    auto p_power_handlesLater = lzt::get_power_handles(device, lcount);
+    EXPECT_EQ(p_power_handlesInitial, p_power_handlesLater);
   }
 }
 LZT_TEST_F(
@@ -81,23 +69,19 @@ LZT_TEST_F(
   for (auto device : devices) {
 
     uint32_t p_count = lzt::get_power_handle_count(device);
-    if (p_count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      uint32_t tcount = p_count + 1;
-      lzt::get_power_handles(device, tcount);
-      EXPECT_EQ(tcount, p_count);
-      if (p_count > 1) {
-        tcount = p_count - 1;
-        auto p_power_handles = lzt::get_power_handles(device, tcount);
-        EXPECT_EQ(static_cast<uint32_t>(p_power_handles.size()), tcount);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    if (p_count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    uint32_t tcount = p_count + 1;
+    lzt::get_power_handles(device, tcount);
+    EXPECT_EQ(tcount, p_count);
+    if (p_count > 1) {
+      tcount = p_count - 1;
+      auto p_power_handles = lzt::get_power_handles(device, tcount);
+      EXPECT_EQ(static_cast<uint32_t>(p_power_handles.size()), tcount);
+    }
   }
 }
 LZT_TEST_F(
@@ -105,37 +89,34 @@ LZT_TEST_F(
     GivenSamePowerHandleWhenRequestingPowerPropertiesThenCheckPowerLimitsAreInRange) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        auto pProperties = lzt::get_power_properties(p_power_handle);
-        if (pProperties.maxLimit != -1) {
-          EXPECT_GT(pProperties.maxLimit, 0);
-          EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
-        } else {
-          LOG_INFO << "maxLimit unsupported: ";
-        }
-        if (pProperties.minLimit != -1) {
-          EXPECT_GE(pProperties.minLimit, 0);
-        } else {
-          LOG_INFO << "minlimit unsupported: ";
-        }
-        if (pProperties.defaultLimit != -1) {
-          EXPECT_GT(pProperties.defaultLimit, 0);
-        } else {
-          LOG_INFO << "defaultLimit unsupported: ";
-        }
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      auto pProperties = lzt::get_power_properties(p_power_handle);
+      if (pProperties.maxLimit != -1) {
+        EXPECT_GT(pProperties.maxLimit, 0);
+        EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
+      } else {
+        LOG_INFO << "maxLimit unsupported: ";
+      }
+
+      if (pProperties.minLimit != -1) {
+        EXPECT_GE(pProperties.minLimit, 0);
+      } else {
+        LOG_INFO << "minlimit unsupported: ";
+      }
+
+      if (pProperties.defaultLimit != -1) {
+        EXPECT_GT(pProperties.defaultLimit, 0);
+      } else {
+        LOG_INFO << "defaultLimit unsupported: ";
+      }
+    }
   }
 }
 
@@ -144,36 +125,29 @@ LZT_TEST_F(
     GivenSamePowerHandleWhenRequestingPowerPropertiesThenExpectSamePropertiesTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        auto pproperties_initial = lzt::get_power_properties(p_power_handle);
-        if (pproperties_initial.maxLimit == -1) {
-          LOG_INFO << "maxlimit unsupported: ";
-        }
-        auto pproperties_later = lzt::get_power_properties(p_power_handle);
-        EXPECT_EQ(pproperties_initial.onSubdevice,
-                  pproperties_later.onSubdevice);
-        EXPECT_EQ(pproperties_initial.subdeviceId,
-                  pproperties_later.subdeviceId);
-        EXPECT_EQ(pproperties_initial.canControl, pproperties_later.canControl);
-        EXPECT_EQ(pproperties_initial.isEnergyThresholdSupported,
-                  pproperties_later.isEnergyThresholdSupported);
-        EXPECT_EQ(pproperties_initial.maxLimit, pproperties_later.maxLimit);
-        EXPECT_EQ(pproperties_initial.minLimit, pproperties_later.minLimit);
-        EXPECT_EQ(pproperties_initial.defaultLimit,
-                  pproperties_later.defaultLimit);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      auto pproperties_initial = lzt::get_power_properties(p_power_handle);
+      if (pproperties_initial.maxLimit == -1) {
+        LOG_INFO << "maxlimit unsupported: ";
+      }
+      auto pproperties_later = lzt::get_power_properties(p_power_handle);
+      EXPECT_EQ(pproperties_initial.onSubdevice, pproperties_later.onSubdevice);
+      EXPECT_EQ(pproperties_initial.subdeviceId, pproperties_later.subdeviceId);
+      EXPECT_EQ(pproperties_initial.canControl, pproperties_later.canControl);
+      EXPECT_EQ(pproperties_initial.isEnergyThresholdSupported,
+                pproperties_later.isEnergyThresholdSupported);
+      EXPECT_EQ(pproperties_initial.maxLimit, pproperties_later.maxLimit);
+      EXPECT_EQ(pproperties_initial.minLimit, pproperties_later.minLimit);
+      EXPECT_EQ(pproperties_initial.defaultLimit,
+                pproperties_later.defaultLimit);
+    }
   }
 }
 
@@ -182,36 +156,31 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectZesSysmanPowerGetLimitsToReturnValidPowerLimits) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        zes_power_sustained_limit_t pSustained = {};
-        zes_power_burst_limit_t pBurst = {};
-        zes_power_peak_limit_t pPeak = {};
-        auto status =
-            lzt::get_power_limits(p_power_handle, &pSustained, &pBurst, &pPeak);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        auto pProperties = lzt::get_power_properties(p_power_handle);
-        if ((pBurst.enabled != 0) && (pSustained.enabled != 0)) {
-          EXPECT_LE(pSustained.power, pBurst.power);
-        }
-        if ((pPeak.powerAC != -1) && (pBurst.enabled != 0)) {
-          EXPECT_LE(pBurst.power, pPeak.powerAC);
-        }
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      zes_power_sustained_limit_t pSustained = {};
+      zes_power_burst_limit_t pBurst = {};
+      zes_power_peak_limit_t pPeak = {};
+      auto status =
+          lzt::get_power_limits(p_power_handle, &pSustained, &pBurst, &pPeak);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      auto pProperties = lzt::get_power_properties(p_power_handle);
+      if ((pBurst.enabled != 0) && (pSustained.enabled != 0)) {
+        EXPECT_LE(pSustained.power, pBurst.power);
+      }
+      if ((pPeak.powerAC != -1) && (pBurst.enabled != 0)) {
+        EXPECT_LE(pBurst.power, pPeak.powerAC);
+      }
+    }
   }
 }
 LZT_TEST_F(
@@ -219,45 +188,40 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectzesSysmanPowerGetLimitsToReturnSameValuesTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        zes_power_sustained_limit_t pSustainedInitial = {};
-        zes_power_burst_limit_t pBurstInitial = {};
-        zes_power_peak_limit_t pPeakInitial = {};
-        auto status = lzt::get_power_limits(p_power_handle, &pSustainedInitial,
-                                            &pBurstInitial, &pPeakInitial);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        zes_power_sustained_limit_t pSustainedLater = {};
-        zes_power_burst_limit_t pBurstLater = {};
-        zes_power_peak_limit_t pPeakLater = {};
-        status = lzt::get_power_limits(p_power_handle, &pSustainedLater,
-                                       &pBurstLater, &pPeakLater);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        EXPECT_EQ(pSustainedInitial.enabled, pSustainedLater.enabled);
-        EXPECT_EQ(pSustainedInitial.power, pSustainedLater.power);
-        EXPECT_EQ(pSustainedInitial.interval, pSustainedLater.interval);
-        EXPECT_EQ(pBurstInitial.enabled, pBurstLater.enabled);
-        EXPECT_EQ(pBurstInitial.power, pBurstLater.power);
-        EXPECT_EQ(pPeakInitial.powerAC, pPeakLater.powerAC);
-        EXPECT_EQ(pPeakInitial.powerDC, pPeakLater.powerDC);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      zes_power_sustained_limit_t pSustainedInitial = {};
+      zes_power_burst_limit_t pBurstInitial = {};
+      zes_power_peak_limit_t pPeakInitial = {};
+      auto status = lzt::get_power_limits(p_power_handle, &pSustainedInitial,
+                                          &pBurstInitial, &pPeakInitial);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      zes_power_sustained_limit_t pSustainedLater = {};
+      zes_power_burst_limit_t pBurstLater = {};
+      zes_power_peak_limit_t pPeakLater = {};
+      status = lzt::get_power_limits(p_power_handle, &pSustainedLater,
+                                     &pBurstLater, &pPeakLater);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      EXPECT_EQ(pSustainedInitial.enabled, pSustainedLater.enabled);
+      EXPECT_EQ(pSustainedInitial.power, pSustainedLater.power);
+      EXPECT_EQ(pSustainedInitial.interval, pSustainedLater.interval);
+      EXPECT_EQ(pBurstInitial.enabled, pBurstLater.enabled);
+      EXPECT_EQ(pBurstInitial.power, pBurstLater.power);
+      EXPECT_EQ(pPeakInitial.powerAC, pPeakLater.powerAC);
+      EXPECT_EQ(pPeakInitial.powerDC, pPeakLater.powerDC);
+    }
   }
 }
 LZT_TEST_F(
@@ -265,93 +229,87 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenSettingPowerValuesThenExpectzesSysmanPowerSetLimitsFollowedByzesSysmanPowerGetLimitsToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        zes_power_sustained_limit_t pSustainedInitial = {};
-        zes_power_burst_limit_t pBurstInitial = {};
-        zes_power_peak_limit_t pPeakInitial = {};
-        auto status = lzt::get_power_limits(
-            p_power_handle, &pSustainedInitial, &pBurstInitial,
-            &pPeakInitial); // get default power values
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      zes_power_sustained_limit_t pSustainedInitial = {};
+      zes_power_burst_limit_t pBurstInitial = {};
+      zes_power_peak_limit_t pPeakInitial = {};
+      auto status = lzt::get_power_limits(
+          p_power_handle, &pSustainedInitial, &pBurstInitial,
+          &pPeakInitial); // get default power values
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      auto pProperties = lzt::get_power_properties(p_power_handle);
+      if (pProperties.maxLimit == -1) {
+        LOG_INFO << "maxlimit unsupported:";
+      }
+      zes_power_sustained_limit_t pSustainedSet = {};
+      zes_power_burst_limit_t pBurstSet = {};
+      zes_power_peak_limit_t pPeakSet = {};
+      if (pSustainedInitial.enabled)
+        pSustainedSet.enabled = 1;
+      else
+        pSustainedSet.enabled = 0;
+      pSustainedSet.interval = pSustainedInitial.interval;
+      if (pBurstInitial.enabled)
+        pBurstSet.enabled = 1;
+      else
+        pBurstSet.enabled = 0;
+      if (pProperties.maxLimit != -1) {
+        pSustainedSet.power = pProperties.maxLimit;
+        pBurstSet.power = pProperties.maxLimit;
+        pPeakSet.powerAC = pProperties.maxLimit;
+      }
+      pPeakSet.powerDC = pPeakInitial.powerDC;
+      if (pBurstSet.enabled && pSustainedSet.enabled) {
+        status =
+            lzt::set_power_limits(p_power_handle, &pSustainedSet, &pBurstSet,
+                                  &pPeakSet); // Set power values
         if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        auto pProperties = lzt::get_power_properties(p_power_handle);
-        if (pProperties.maxLimit == -1) {
-          LOG_INFO << "maxlimit unsupported:";
+        zes_power_sustained_limit_t pSustainedGet = {};
+        zes_power_burst_limit_t pBurstGet = {};
+        zes_power_peak_limit_t pPeakGet = {};
+        status =
+            lzt::get_power_limits(p_power_handle, &pSustainedGet, &pBurstGet,
+                                  &pPeakGet); // Get power values
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
         }
-        zes_power_sustained_limit_t pSustainedSet = {};
-        zes_power_burst_limit_t pBurstSet = {};
-        zes_power_peak_limit_t pPeakSet = {};
-        if (pSustainedInitial.enabled)
-          pSustainedSet.enabled = 1;
-        else
-          pSustainedSet.enabled = 0;
-        pSustainedSet.interval = pSustainedInitial.interval;
-        if (pBurstInitial.enabled)
-          pBurstSet.enabled = 1;
-        else
-          pBurstSet.enabled = 0;
-        if (pProperties.maxLimit != -1) {
-          pSustainedSet.power = pProperties.maxLimit;
-          pBurstSet.power = pProperties.maxLimit;
-          pPeakSet.powerAC = pProperties.maxLimit;
+        EXPECT_ZE_RESULT_SUCCESS(status);
+        EXPECT_EQ(pSustainedGet.enabled, pSustainedSet.enabled);
+        EXPECT_EQ(pSustainedGet.power, pSustainedSet.power);
+        EXPECT_EQ(pSustainedGet.interval, pSustainedSet.interval);
+        EXPECT_EQ(pBurstGet.enabled, pBurstSet.enabled);
+        EXPECT_EQ(pBurstGet.power, pBurstSet.power);
+        if (pPeakGet.powerAC != -1) {
+          EXPECT_EQ(pPeakGet.powerAC, pPeakSet.powerAC);
         }
-        pPeakSet.powerDC = pPeakInitial.powerDC;
-        if (pBurstSet.enabled && pSustainedSet.enabled) {
-          status =
-              lzt::set_power_limits(p_power_handle, &pSustainedSet, &pBurstSet,
-                                    &pPeakSet); // Set power values
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          zes_power_sustained_limit_t pSustainedGet = {};
-          zes_power_burst_limit_t pBurstGet = {};
-          zes_power_peak_limit_t pPeakGet = {};
-          status =
-              lzt::get_power_limits(p_power_handle, &pSustainedGet, &pBurstGet,
-                                    &pPeakGet); // Get power values
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          EXPECT_EQ(pSustainedGet.enabled, pSustainedSet.enabled);
-          EXPECT_EQ(pSustainedGet.power, pSustainedSet.power);
-          EXPECT_EQ(pSustainedGet.interval, pSustainedSet.interval);
-          EXPECT_EQ(pBurstGet.enabled, pBurstSet.enabled);
-          EXPECT_EQ(pBurstGet.power, pBurstSet.power);
-          if (pPeakGet.powerAC != -1) {
-            EXPECT_EQ(pPeakGet.powerAC, pPeakSet.powerAC);
-          }
-          if (pPeakGet.powerDC != -1) {
-            EXPECT_EQ(pPeakGet.powerDC,
-                      pPeakSet.powerDC); // Verify whether values match or not
-          }
-          status = lzt::set_power_limits(
-              p_power_handle, &pSustainedInitial, &pBurstInitial,
-              &pPeakInitial); // Set values to default
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-        } else {
-          LOG_INFO << "Set limit not supported due to burst and sustained "
-                      "enabled flag is false";
+        if (pPeakGet.powerDC != -1) {
+          EXPECT_EQ(pPeakGet.powerDC,
+                    pPeakSet.powerDC); // Verify whether values match or not
         }
+        status = lzt::set_power_limits(p_power_handle, &pSustainedInitial,
+                                       &pBurstInitial,
+                                       &pPeakInitial); // Set values to default
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
+        }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+      } else {
+        LOG_INFO << "Set limit not supported due to burst and sustained "
+                    "enabled flag is false";
       }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -359,30 +317,25 @@ LZT_TEST_F(
     GivenValidPowerHandleThenExpectzesSysmanPowerGetEnergyCounterToReturnSuccess) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        zes_power_energy_counter_t pEnergyCounter = {};
-        lzt::get_power_energy_counter(p_power_handle, &pEnergyCounter);
-        uint64_t energy_initial = pEnergyCounter.energy;
-        uint64_t timestamp_initial = pEnergyCounter.timestamp;
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
-        lzt::get_power_energy_counter(p_power_handle, &pEnergyCounter);
-        uint64_t energy_later = pEnergyCounter.energy;
-        uint64_t timestamp_later = pEnergyCounter.timestamp;
-        EXPECT_GE(energy_later, energy_initial);
-        EXPECT_NE(timestamp_later, timestamp_initial);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      zes_power_energy_counter_t pEnergyCounter = {};
+      lzt::get_power_energy_counter(p_power_handle, &pEnergyCounter);
+      uint64_t energy_initial = pEnergyCounter.energy;
+      uint64_t timestamp_initial = pEnergyCounter.timestamp;
+      std::this_thread::sleep_for(std::chrono::milliseconds(2));
+      lzt::get_power_energy_counter(p_power_handle, &pEnergyCounter);
+      uint64_t energy_later = pEnergyCounter.energy;
+      uint64_t timestamp_later = pEnergyCounter.timestamp;
+      EXPECT_GE(energy_later, energy_initial);
+      EXPECT_NE(timestamp_later, timestamp_initial);
+    }
   }
 }
 LZT_TEST_F(
@@ -390,32 +343,27 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenGettingEnergyThresholdThenSuccessIsReturnedAndParameterValuesAreValid) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        zes_energy_threshold_t pThreshold = {};
-        auto status =
-            lzt::get_power_energy_threshold(p_power_handle, &pThreshold);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        ASSERT_GE(pThreshold.threshold, 0);
-        if (pThreshold.threshold > 0)
-          EXPECT_LT(pThreshold.processId, UINT32_MAX);
-        else
-          EXPECT_EQ(pThreshold.processId, UINT32_MAX);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      zes_energy_threshold_t pThreshold = {};
+      auto status =
+          lzt::get_power_energy_threshold(p_power_handle, &pThreshold);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      ASSERT_GE(pThreshold.threshold, 0);
+      if (pThreshold.threshold > 0)
+        EXPECT_LT(pThreshold.processId, UINT32_MAX);
+      else
+        EXPECT_EQ(pThreshold.processId, UINT32_MAX);
+    }
   }
 }
 LZT_TEST_F(
@@ -423,37 +371,32 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenGettingEnergyThresholdTwiceThenSameValueReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        zes_energy_threshold_t pThresholdInitial = {};
-        auto status =
-            lzt::get_power_energy_threshold(p_power_handle, &pThresholdInitial);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        zes_energy_threshold_t pThresholdLater = {};
-        status =
-            lzt::get_power_energy_threshold(p_power_handle, &pThresholdLater);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        EXPECT_EQ(pThresholdInitial.enable, pThresholdLater.enable);
-        EXPECT_EQ(pThresholdInitial.threshold, pThresholdLater.threshold);
-        EXPECT_EQ(pThresholdInitial.processId, pThresholdLater.processId);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      zes_energy_threshold_t pThresholdInitial = {};
+      auto status =
+          lzt::get_power_energy_threshold(p_power_handle, &pThresholdInitial);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      zes_energy_threshold_t pThresholdLater = {};
+      status =
+          lzt::get_power_energy_threshold(p_power_handle, &pThresholdLater);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      EXPECT_EQ(pThresholdInitial.enable, pThresholdLater.enable);
+      EXPECT_EQ(pThresholdInitial.threshold, pThresholdLater.threshold);
+      EXPECT_EQ(pThresholdInitial.processId, pThresholdLater.processId);
+    }
   }
 }
 LZT_TEST_F(
@@ -461,43 +404,38 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenSettingEnergyValuesThenExpectZesSysmanPowerSetEnergyThresholdFollowedByZesSysmanPowerGetEnergyThresholdToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        zes_energy_threshold_t pThresholdInitial = {};
-        auto status = lzt::get_power_energy_threshold(
-            p_power_handle, &pThresholdInitial); // get initial value
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        double threshold = 0;
-        lzt::set_power_energy_threshold(p_power_handle,
-                                        threshold); // set test value
-        zes_energy_threshold_t pThresholdGet = {};
-        status =
-            lzt::get_power_energy_threshold(p_power_handle,
-                                            &pThresholdGet); // get test value
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        EXPECT_EQ(pThresholdGet.threshold, threshold); // match both the values
-        EXPECT_EQ(pThresholdGet.processId, UINT32_MAX);
-        lzt::set_power_energy_threshold(
-            p_power_handle,
-            pThresholdInitial.threshold); // reset to initial value
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      zes_energy_threshold_t pThresholdInitial = {};
+      auto status = lzt::get_power_energy_threshold(
+          p_power_handle, &pThresholdInitial); // get initial value
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      double threshold = 0;
+      lzt::set_power_energy_threshold(p_power_handle, threshold); // set test
+                                                                  // value
+      zes_energy_threshold_t pThresholdGet = {};
+      status =
+          lzt::get_power_energy_threshold(p_power_handle,
+                                          &pThresholdGet); // get test value
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      EXPECT_EQ(pThresholdGet.threshold, threshold); // match both the values
+      EXPECT_EQ(pThresholdGet.processId, UINT32_MAX);
+      lzt::set_power_energy_threshold(
+          p_power_handle,
+          pThresholdInitial.threshold); // reset to initial value
+    }
   }
 }
 LZT_TEST_F(
@@ -505,90 +443,84 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenRequestingPowerLimitsThenExpectZesPowerGetLimitsExtToReturnSameValuesTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        uint32_t count_power = 0;
-        zes_power_limit_ext_desc_t power_peak_descriptor_first = {};
-        zes_power_limit_ext_desc_t power_burst_descriptor_first = {};
-        zes_power_limit_ext_desc_t power_sustained_descriptor_first = {};
-        zes_power_limit_ext_desc_t power_instantaneous_descriptor_first = {};
-
-        zes_power_limit_ext_desc_t power_peak_descriptor_second = {};
-        zes_power_limit_ext_desc_t power_burst_descriptor_second = {};
-        zes_power_limit_ext_desc_t power_sustained_descriptor_second = {};
-        zes_power_limit_ext_desc_t power_instantaneous_descriptor_second = {};
-
-        std::vector<zes_power_limit_ext_desc_t>
-            power_limits_descriptors_initial;
-        auto status = lzt::get_power_limits_ext(
-            p_power_handle, &count_power, power_limits_descriptors_initial);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        for (auto power_limits_descriptor_initial :
-             power_limits_descriptors_initial) {
-          if (power_limits_descriptor_initial.level ==
-              ZES_POWER_LEVEL_SUSTAINED) {
-            power_sustained_descriptor_first = power_limits_descriptor_initial;
-          } else if (power_limits_descriptor_initial.level ==
-                     ZES_POWER_LEVEL_PEAK) {
-            power_peak_descriptor_first = power_limits_descriptor_initial;
-          } else if (power_limits_descriptor_initial.level ==
-                     ZES_POWER_LEVEL_BURST) {
-            power_burst_descriptor_first = power_limits_descriptor_initial;
-          } else if (power_limits_descriptor_initial.level ==
-                     ZES_POWER_LEVEL_INSTANTANEOUS) {
-            power_instantaneous_descriptor_first =
-                power_limits_descriptor_initial;
-          }
-        }
-        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_final;
-        status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                           power_limits_descriptors_final);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        for (auto power_limits_descriptor_final :
-             power_limits_descriptors_final) {
-          if (power_limits_descriptor_final.level ==
-              ZES_POWER_LEVEL_SUSTAINED) {
-            power_sustained_descriptor_second = power_limits_descriptor_final;
-          } else if (power_limits_descriptor_final.level ==
-                     ZES_POWER_LEVEL_PEAK) {
-            power_peak_descriptor_second = power_limits_descriptor_final;
-          } else if (power_limits_descriptor_final.level ==
-                     ZES_POWER_LEVEL_BURST) {
-            power_burst_descriptor_second = power_limits_descriptor_final;
-          } else if (power_limits_descriptor_final.level ==
-                     ZES_POWER_LEVEL_INSTANTANEOUS) {
-            power_instantaneous_descriptor_second =
-                power_limits_descriptor_final;
-          }
-        }
-        lzt::compare_power_descriptor_structures(power_peak_descriptor_first,
-                                                 power_peak_descriptor_second);
-        lzt::compare_power_descriptor_structures(power_burst_descriptor_first,
-                                                 power_burst_descriptor_second);
-        lzt::compare_power_descriptor_structures(
-            power_sustained_descriptor_first,
-            power_sustained_descriptor_second);
-        lzt::compare_power_descriptor_structures(
-            power_instantaneous_descriptor_first,
-            power_instantaneous_descriptor_second);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      uint32_t count_power = 0;
+
+      zes_power_limit_ext_desc_t power_peak_descriptor_first = {};
+      zes_power_limit_ext_desc_t power_burst_descriptor_first = {};
+      zes_power_limit_ext_desc_t power_sustained_descriptor_first = {};
+      zes_power_limit_ext_desc_t power_instantaneous_descriptor_first = {};
+
+      zes_power_limit_ext_desc_t power_peak_descriptor_second = {};
+      zes_power_limit_ext_desc_t power_burst_descriptor_second = {};
+      zes_power_limit_ext_desc_t power_sustained_descriptor_second = {};
+      zes_power_limit_ext_desc_t power_instantaneous_descriptor_second = {};
+
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_initial;
+      auto status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                              power_limits_descriptors_initial);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      for (auto power_limits_descriptor_initial :
+           power_limits_descriptors_initial) {
+        if (power_limits_descriptor_initial.level ==
+            ZES_POWER_LEVEL_SUSTAINED) {
+          power_sustained_descriptor_first = power_limits_descriptor_initial;
+        } else if (power_limits_descriptor_initial.level ==
+                   ZES_POWER_LEVEL_PEAK) {
+          power_peak_descriptor_first = power_limits_descriptor_initial;
+        } else if (power_limits_descriptor_initial.level ==
+                   ZES_POWER_LEVEL_BURST) {
+          power_burst_descriptor_first = power_limits_descriptor_initial;
+        } else if (power_limits_descriptor_initial.level ==
+                   ZES_POWER_LEVEL_INSTANTANEOUS) {
+          power_instantaneous_descriptor_first =
+              power_limits_descriptor_initial;
+        }
+      }
+
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_final;
+      status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                         power_limits_descriptors_final);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      for (auto power_limits_descriptor_final :
+           power_limits_descriptors_final) {
+        if (power_limits_descriptor_final.level == ZES_POWER_LEVEL_SUSTAINED) {
+          power_sustained_descriptor_second = power_limits_descriptor_final;
+        } else if (power_limits_descriptor_final.level ==
+                   ZES_POWER_LEVEL_PEAK) {
+          power_peak_descriptor_second = power_limits_descriptor_final;
+        } else if (power_limits_descriptor_final.level ==
+                   ZES_POWER_LEVEL_BURST) {
+          power_burst_descriptor_second = power_limits_descriptor_final;
+        } else if (power_limits_descriptor_final.level ==
+                   ZES_POWER_LEVEL_INSTANTANEOUS) {
+          power_instantaneous_descriptor_second = power_limits_descriptor_final;
+        }
+      }
+
+      lzt::compare_power_descriptor_structures(power_peak_descriptor_first,
+                                               power_peak_descriptor_second);
+      lzt::compare_power_descriptor_structures(power_burst_descriptor_first,
+                                               power_burst_descriptor_second);
+      lzt::compare_power_descriptor_structures(
+          power_sustained_descriptor_first, power_sustained_descriptor_second);
+      lzt::compare_power_descriptor_structures(
+          power_instantaneous_descriptor_first,
+          power_instantaneous_descriptor_second);
+    }
   }
 }
 LZT_TEST_F(
@@ -596,96 +528,92 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenSettingPowerValuesForSustainedPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        uint32_t count_power = 0;
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
 
-        zes_power_limit_ext_desc_t power_sustained_set = {};
-        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
-        auto status = lzt::get_power_limits_ext(
-            p_power_handle, &count_power,
-            power_limits_descriptors); // get power limits for all descriptors
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        std::vector<zes_power_limit_ext_desc_t>
-            power_limits_descriptors_initial; // preserve initial power limit
-                                              // descriptors for restoration
-                                              // later
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
-          power_limits_descriptors[i] = {
-              ZES_STRUCTURE_TYPE_POWER_LIMIT_EXT_DESC, nullptr};
-          power_limits_descriptors_initial.push_back(
-              power_limits_descriptors[i]);
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      uint32_t count_power = 0;
 
-          if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_SUSTAINED) {
-            power_sustained_set = power_limits_descriptors[i];
-            power_sustained_set.limit =
-                power_limits_descriptors[i].limit - 1000;
-            power_limits_descriptors[i].limit = power_sustained_set.limit;
-          }
-        }
+      zes_power_limit_ext_desc_t power_sustained_set = {};
 
-        if (power_sustained_set.level == ZES_POWER_LEVEL_SUSTAINED) {
-          if (power_sustained_set.limitValueLocked == false) {
-            status = lzt::set_power_limits_ext(
-                p_power_handle, &count_power,
-                power_limits_descriptors.data()); // set power limits for all descriptors
-            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-              continue;
-            }
-            EXPECT_ZE_RESULT_SUCCESS(status);
-            zes_power_limit_ext_desc_t power_sustained_get = {};
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
+      auto status = lzt::get_power_limits_ext(
+          p_power_handle, &count_power,
+          power_limits_descriptors); // get power limits for all descriptors
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      std::vector<zes_power_limit_ext_desc_t>
+          power_limits_descriptors_initial; // preserve initial power limit
+                                            // descriptors for restoration
+                                            // later
 
-            std::vector<zes_power_limit_ext_desc_t>
-                power_limits_descriptors_get;
-            status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                               power_limits_descriptors_get);
-            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-              continue;
-            }
-            EXPECT_ZE_RESULT_SUCCESS(status);
-            for (const auto &p_power_limits_descriptor_get :
-                 power_limits_descriptors_get) {
-              if (p_power_limits_descriptor_get.level ==
-                  ZES_POWER_LEVEL_SUSTAINED) {
-                power_sustained_get = p_power_limits_descriptor_get;
-              }
-            }
+      for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        power_limits_descriptors[i] = {ZES_STRUCTURE_TYPE_POWER_LIMIT_EXT_DESC,
+                                       nullptr};
+        power_limits_descriptors_initial.push_back(power_limits_descriptors[i]);
 
-            EXPECT_EQ(power_sustained_get.limitValueLocked,
-                      power_sustained_set.limitValueLocked);
-            EXPECT_EQ(power_sustained_get.interval,
-                      power_sustained_set.interval);
-            EXPECT_EQ(power_sustained_get.limit, power_sustained_set.limit);
-
-            status = lzt::set_power_limits_ext(
-                p_power_handle, &count_power,
-                power_limits_descriptors_initial.data()); // restore initial limits
-            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-              continue;
-            }
-            EXPECT_ZE_RESULT_SUCCESS(status);
-          } else {
-            LOG_INFO << "Set limit not supported due to sustained "
-                        "limitValueLocked flag is true";
-          }
-        } else {
-          LOG_INFO << "Sustained power limit not supported";
+        if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_SUSTAINED) {
+          power_sustained_set = power_limits_descriptors[i];
+          power_sustained_set.limit = power_limits_descriptors[i].limit - 1000;
+          power_limits_descriptors[i].limit = power_sustained_set.limit;
         }
       }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+
+      if (power_sustained_set.level == ZES_POWER_LEVEL_SUSTAINED) {
+        if (power_sustained_set.limitValueLocked == false) {
+          status = lzt::set_power_limits_ext(
+              p_power_handle, &count_power,
+              power_limits_descriptors
+                  .data()); // set power limits for all descriptors
+
+          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            continue;
+          }
+          EXPECT_ZE_RESULT_SUCCESS(status);
+          zes_power_limit_ext_desc_t power_sustained_get = {};
+
+          std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_get;
+          status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                             power_limits_descriptors_get);
+          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            continue;
+          }
+          EXPECT_ZE_RESULT_SUCCESS(status);
+          for (const auto &p_power_limits_descriptor_get :
+               power_limits_descriptors_get) {
+            if (p_power_limits_descriptor_get.level ==
+                ZES_POWER_LEVEL_SUSTAINED) {
+              power_sustained_get = p_power_limits_descriptor_get;
+            }
+          }
+
+          EXPECT_EQ(power_sustained_get.limitValueLocked,
+                    power_sustained_set.limitValueLocked);
+          EXPECT_EQ(power_sustained_get.interval, power_sustained_set.interval);
+          EXPECT_EQ(power_sustained_get.limit, power_sustained_set.limit);
+
+          status =
+              lzt::set_power_limits_ext(p_power_handle, &count_power,
+                                        power_limits_descriptors_initial
+                                            .data()); // restore initial limits
+          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            continue;
+          }
+          EXPECT_ZE_RESULT_SUCCESS(status);
+        } else {
+          LOG_INFO << "Set limit not supported due to sustained "
+                      "limitValueLocked flag is true";
+        }
+      } else {
+        LOG_INFO << "Sustained power limit not supported";
+      }
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -693,84 +621,84 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenSettingPowerValuesForPeakPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        uint32_t count_power = 0;
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
 
-        zes_power_limit_ext_desc_t power_peak_set = {};
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      uint32_t count_power = 0;
 
-        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
-        auto status = lzt::get_power_limits_ext(
+      zes_power_limit_ext_desc_t power_peak_set = {};
+
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
+      auto status = lzt::get_power_limits_ext(
+          p_power_handle, &count_power,
+          power_limits_descriptors); // get power limits for all descriptors
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      std::vector<zes_power_limit_ext_desc_t>
+          power_limits_descriptors_initial; // preserve initial power limit
+                                            // descriptors for restoration
+                                            // later
+
+      for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        power_limits_descriptors_initial.push_back(power_limits_descriptors[i]);
+
+        if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_PEAK) {
+          power_peak_set = power_limits_descriptors[i];
+          power_peak_set.limit = power_limits_descriptors[i].limit - 1000;
+          power_limits_descriptors[i].limit = power_peak_set.limit;
+        }
+      }
+
+      if (power_peak_set.limitValueLocked == false) {
+        status = lzt::set_power_limits_ext(
             p_power_handle, &count_power,
-            power_limits_descriptors); // get power limits for all descriptors
+            power_limits_descriptors
+                .data()); // set power limits for all descriptors
+
         if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        std::vector<zes_power_limit_ext_desc_t>
-            power_limits_descriptors_initial; // preserve initial power limit
-                                              // descriptors for restoration
-                                              // later
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
-          power_limits_descriptors_initial.push_back(
-              power_limits_descriptors[i]);
+        zes_power_limit_ext_desc_t power_peak_get = {};
 
-          if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_PEAK) {
-            power_peak_set = power_limits_descriptors[i];
-            power_peak_set.limit = power_limits_descriptors[i].limit - 1000;
-            power_limits_descriptors[i].limit = power_peak_set.limit;
+        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_get;
+        status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                           power_limits_descriptors_get);
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
+        }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+        for (const auto &p_power_limits_descriptor_get :
+             power_limits_descriptors_get) {
+          if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK) {
+            power_peak_get = p_power_limits_descriptor_get;
           }
         }
 
-        if (power_peak_set.limitValueLocked == false) {
-          status = lzt::set_power_limits_ext(
-              p_power_handle, &count_power,
-              power_limits_descriptors.data()); // set power limits for all descriptors
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          zes_power_limit_ext_desc_t power_peak_get = {};
-          std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_get;
-          status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                             power_limits_descriptors_get);
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          for (const auto &p_power_limits_descriptor_get :
-               power_limits_descriptors_get) {
-            if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK) {
-              power_peak_get = p_power_limits_descriptor_get;
-            }
-          }
-          EXPECT_EQ(power_peak_get.limitValueLocked,
-                    power_peak_set.limitValueLocked);
-          EXPECT_EQ(power_peak_get.interval, power_peak_set.interval);
-          EXPECT_EQ(power_peak_get.limit, power_peak_set.limit);
+        EXPECT_EQ(power_peak_get.limitValueLocked,
+                  power_peak_set.limitValueLocked);
+        EXPECT_EQ(power_peak_get.interval, power_peak_set.interval);
+        EXPECT_EQ(power_peak_get.limit, power_peak_set.limit);
 
-          status = lzt::set_power_limits_ext(p_power_handle, &count_power,
-                                        power_limits_descriptors_initial.data()); // restore initial limits
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-        } else {
-          LOG_INFO << "Set limit not supported due to peak "
-                      "limitValueLocked flag is true";
+        status = lzt::set_power_limits_ext(
+            p_power_handle, &count_power,
+            power_limits_descriptors_initial.data()); // restore initial limits
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
         }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+      } else {
+        LOG_INFO << "Set limit not supported due to peak "
+                    "limitValueLocked flag is true";
       }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -778,87 +706,86 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenSettingPowerValuesForBurstPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        uint32_t count_power = 0;
-        zes_power_limit_ext_desc_t power_burst_set = {};
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
 
-        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
-        auto status = lzt::get_power_limits_ext(
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      uint32_t count_power = 0;
+
+      zes_power_limit_ext_desc_t power_burst_set = {};
+
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
+      auto status = lzt::get_power_limits_ext(
+          p_power_handle, &count_power,
+          power_limits_descriptors); // get power limits for all descriptors
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      std::vector<zes_power_limit_ext_desc_t>
+          power_limits_descriptors_initial; // preserve initial power limit
+                                            // descriptors for restoration
+                                            // later
+
+      for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        power_limits_descriptors_initial.push_back(power_limits_descriptors[i]);
+
+        if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_BURST) {
+          power_burst_set = power_limits_descriptors[i];
+          power_burst_set.limit = power_limits_descriptors[i].limit - 1000;
+          power_limits_descriptors[i].limit = power_burst_set.limit;
+        }
+      }
+
+      if (power_burst_set.limitValueLocked == false) {
+        status = lzt::set_power_limits_ext(
             p_power_handle, &count_power,
-            power_limits_descriptors); // get power limits for all descriptors
+            power_limits_descriptors
+                .data()); // set power limits for all descriptors
+
         if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        std::vector<zes_power_limit_ext_desc_t>
-            power_limits_descriptors_initial; // preserve initial power limit
-                                              // descriptors for restoration
-                                              // later
+        zes_power_limit_ext_desc_t power_burst_get = {};
 
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
-          power_limits_descriptors_initial.push_back(
-              power_limits_descriptors[i]);
-          if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_BURST) {
-            power_burst_set = power_limits_descriptors[i];
-            power_burst_set.limit = power_limits_descriptors[i].limit - 1000;
-            power_limits_descriptors[i].limit = power_burst_set.limit;
+        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_get;
+        status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                           power_limits_descriptors_get);
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
+        }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+        for (const auto &p_power_limits_descriptor_get :
+             power_limits_descriptors_get) {
+          if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_BURST) {
+            power_burst_get = p_power_limits_descriptor_get;
           }
         }
-        if (power_burst_set.limitValueLocked == false) {
-          status = lzt::set_power_limits_ext(
-              p_power_handle, &count_power,
-              power_limits_descriptors.data()); // set power limits for all descriptors
 
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          zes_power_limit_ext_desc_t power_burst_get = {};
+        EXPECT_EQ(power_burst_get.limitValueLocked,
+                  power_burst_set.limitValueLocked);
+        EXPECT_EQ(power_burst_get.interval, power_burst_set.interval);
+        EXPECT_EQ(power_burst_get.limit, power_burst_set.limit);
 
-          std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_get;
-          status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                             power_limits_descriptors_get);
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          for (const auto &p_power_limits_descriptor_get :
-               power_limits_descriptors_get) {
-            if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_BURST) {
-              power_burst_get = p_power_limits_descriptor_get;
-            }
-          }
-          EXPECT_EQ(power_burst_get.limitValueLocked,
-                    power_burst_set.limitValueLocked);
-          EXPECT_EQ(power_burst_get.interval, power_burst_set.interval);
-          EXPECT_EQ(power_burst_get.limit, power_burst_set.limit);
-          status = lzt::set_power_limits_ext(p_power_handle, &count_power,
-			  power_limits_descriptors_initial.data()); // restore initial limits
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-        } else {
-          LOG_INFO << "Set limit not supported due to burst "
-                      "limitValueLocked flag is true";
+        status = lzt::set_power_limits_ext(
+            p_power_handle, &count_power,
+            power_limits_descriptors_initial.data()); // restore initial limits
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
         }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+      } else {
+        LOG_INFO << "Set limit not supported due to burst "
+                    "limitValueLocked flag is true";
       }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
     }
   }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
-  }
 }
-
-
 LZT_TEST_F(
     POWER_TEST,
     GivenValidPowerHandleWhenSettingPowerValuesForInstantaneousPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
@@ -949,7 +876,6 @@ LZT_TEST_F(
   }
 }
 
-
 LZT_TEST_F(
     POWER_TEST,
     GivenValidPowerHandleWhenRequestingEnergyCounterThenExpectEnergyConsumedByRootDeviceToBeGreaterThanOrEqualToEnergyConsumedBySubdevices) {
@@ -981,98 +907,91 @@ LZT_TEST_F(
     GivenValidPowerHandlesAfterGettingMaxPowerLimitsWhenSettingValuesForSustainedPowerThenExpectzesPowerGetLimitsExtToReturnPowerLimitsLessThanMaxPowerLimits) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        auto p_properties = lzt::get_power_properties(p_power_handle);
-        if (p_properties.onSubdevice == true) {
-          continue;
-        }
-        uint32_t count_power = 0;
-        bool sustained_limit_available = false;
-        zes_power_limit_ext_desc_t power_sustained_Max = {};
-        zes_power_limit_ext_desc_t power_sustained_Initial = {};
-        zes_power_limit_ext_desc_t power_sustained_getMax = {};
-        zes_power_limit_ext_desc_t power_sustained_get = {};
-        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
-        auto status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                                power_limits_descriptors);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
-          if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_SUSTAINED) {
-            sustained_limit_available = true;
-            power_sustained_Max = power_limits_descriptors[i];
-            power_sustained_Initial = power_limits_descriptors[i];
-            power_sustained_Max.limit = std::numeric_limits<int>::max();
-            power_sustained_Initial.limit *= 2;
-            if (power_sustained_Max.limitValueLocked == false) {
-              status = lzt::set_power_limits_ext(p_power_handle, &count_power,
-                                                 &power_sustained_Max);
-              if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-                continue;
-              }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              std::vector<zes_power_limit_ext_desc_t>
-                  power_limits_descriptors_getMax;
-              status =
-                  lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                            power_limits_descriptors_getMax);
-              if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-                continue;
-              }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              for (const auto &p_power_limits_descriptor_get :
-                   power_limits_descriptors_getMax) {
-                if (p_power_limits_descriptor_get.level ==
-                    ZES_POWER_LEVEL_SUSTAINED) {
-                  power_sustained_getMax = p_power_limits_descriptor_get;
-                }
-              }
-              status = lzt::set_power_limits_ext(p_power_handle, &count_power,
-                                                 &power_sustained_Initial);
-              if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-                continue;
-              }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              std::vector<zes_power_limit_ext_desc_t>
-                  power_limits_descriptors_get;
-              status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                                 power_limits_descriptors_get);
-              if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-                continue;
-              }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              for (const auto &p_power_limits_descriptor_get :
-                   power_limits_descriptors_get) {
-                if (p_power_limits_descriptor_get.level ==
-                    ZES_POWER_LEVEL_SUSTAINED) {
-                  power_sustained_get = p_power_limits_descriptor_get;
-                }
-              }
-              EXPECT_LE(power_sustained_get.limit,
-                        power_sustained_getMax.limit);
-            } else {
-              LOG_INFO << "Set limit not supported due to sustained "
-                          "limitValueLocked flag is true";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto p_power_handle : p_power_handles) {
+      auto p_properties = lzt::get_power_properties(p_power_handle);
+      if (p_properties.onSubdevice == true) {
+        continue;
+      }
+      uint32_t count_power = 0;
+      bool sustained_limit_available = false;
+      zes_power_limit_ext_desc_t power_sustained_Max = {};
+      zes_power_limit_ext_desc_t power_sustained_Initial = {};
+      zes_power_limit_ext_desc_t power_sustained_getMax = {};
+      zes_power_limit_ext_desc_t power_sustained_get = {};
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
+      auto status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                              power_limits_descriptors);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_SUSTAINED) {
+          sustained_limit_available = true;
+          power_sustained_Max = power_limits_descriptors[i];
+          power_sustained_Initial = power_limits_descriptors[i];
+          power_sustained_Max.limit = std::numeric_limits<int>::max();
+          power_sustained_Initial.limit *= 2;
+
+          if (power_sustained_Max.limitValueLocked == false) {
+            status = lzt::set_power_limits_ext(p_power_handle, &count_power,
+                                               &power_sustained_Max);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
             }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            std::vector<zes_power_limit_ext_desc_t>
+                power_limits_descriptors_getMax;
+            status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                               power_limits_descriptors_getMax);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            for (const auto &p_power_limits_descriptor_get :
+                 power_limits_descriptors_getMax) {
+              if (p_power_limits_descriptor_get.level ==
+                  ZES_POWER_LEVEL_SUSTAINED) {
+                power_sustained_getMax = p_power_limits_descriptor_get;
+              }
+            }
+            status = lzt::set_power_limits_ext(p_power_handle, &count_power,
+                                               &power_sustained_Initial);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            std::vector<zes_power_limit_ext_desc_t>
+                power_limits_descriptors_get;
+            status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                               power_limits_descriptors_get);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            for (const auto &p_power_limits_descriptor_get :
+                 power_limits_descriptors_get) {
+              if (p_power_limits_descriptor_get.level ==
+                  ZES_POWER_LEVEL_SUSTAINED) {
+                power_sustained_get = p_power_limits_descriptor_get;
+              }
+            }
+            EXPECT_LE(power_sustained_get.limit, power_sustained_getMax.limit);
+          } else {
+            LOG_INFO << "Set limit not supported due to sustained "
+                        "limitValueLocked flag is true";
           }
         }
-        if (!sustained_limit_available) {
-          LOG_INFO << "Sustained power limit not supported";
-        }
       }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+      if (!sustained_limit_available) {
+        LOG_INFO << "Sustained power limit not supported";
+      }
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
@@ -1081,109 +1000,100 @@ LZT_TEST_F(
     GivenValidPowerHandlesAfterGettingMaxPowerLimitWhenSettingValuesForPeakPowerThenExpectZesPowerGetLimitsExtToReturnPowerLimitsLessThanMaxPowerLimits) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        auto p_properties = lzt::get_power_properties(p_power_handle);
-        if (p_properties.onSubdevice == true) {
-          continue;
-        }
-        uint32_t count_power = 0;
-        uint32_t single_count = 1;
-        bool peak_limit_available = false;
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto p_power_handle : p_power_handles) {
+      auto p_properties = lzt::get_power_properties(p_power_handle);
+      if (p_properties.onSubdevice == true) {
+        continue;
+      }
+      uint32_t count_power = 0;
+      uint32_t single_count = 1;
+      bool peak_limit_available = false;
 
-        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
-        auto status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                                power_limits_descriptors);
-        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-          continue;
-        }
-        EXPECT_ZE_RESULT_SUCCESS(status);
-        int32_t max_power_limit_first = std::numeric_limits<int>::max();
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
-          zes_power_limit_ext_desc_t power_peak_initial = {};
-          zes_power_limit_ext_desc_t power_peak_Max = {};
-          zes_power_limit_ext_desc_t power_peak_getMax = {};
-          zes_power_limit_ext_desc_t power_peak_get = {};
-          if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_PEAK) {
-            peak_limit_available = true;
-            zes_power_source_t power_source =
-                power_limits_descriptors[i].source;
-            power_peak_Max = power_limits_descriptors[i];
-            power_peak_initial = power_limits_descriptors[i];
-            power_peak_Max.limit = max_power_limit_first;
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
+      auto status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                              power_limits_descriptors);
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      int32_t max_power_limit_first = std::numeric_limits<int>::max();
+      for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        zes_power_limit_ext_desc_t power_peak_initial = {};
+        zes_power_limit_ext_desc_t power_peak_Max = {};
+        zes_power_limit_ext_desc_t power_peak_getMax = {};
+        zes_power_limit_ext_desc_t power_peak_get = {};
+        if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_PEAK) {
+          peak_limit_available = true;
+          zes_power_source_t power_source = power_limits_descriptors[i].source;
+          power_peak_Max = power_limits_descriptors[i];
+          power_peak_initial = power_limits_descriptors[i];
+          power_peak_Max.limit = max_power_limit_first;
 
-            int32_t max_power_limit_second =
-                power_limits_descriptors[i].limit * 2;
-            power_peak_initial.limit = max_power_limit_second;
-            if (power_limits_descriptors[i].limitValueLocked == false) {
-              status = lzt::set_power_limits_ext(p_power_handle, &single_count,
-                                                 &power_peak_Max);
-              if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-                continue;
-              }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              std::vector<zes_power_limit_ext_desc_t>
-                  power_limits_descriptors_getMax;
-              status =
-                  lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                            power_limits_descriptors_getMax);
-              if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-                continue;
-              }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              for (const auto &p_power_limits_descriptor_get :
-                   power_limits_descriptors_getMax) {
-                if (p_power_limits_descriptor_get.level ==
-                        ZES_POWER_LEVEL_PEAK &&
-                    p_power_limits_descriptor_get.source == power_source) {
-                  power_peak_getMax = p_power_limits_descriptor_get;
-                  EXPECT_LT(power_peak_getMax.limit, max_power_limit_first);
-                }
-              }
+          int32_t max_power_limit_second =
+              power_limits_descriptors[i].limit * 2;
+          power_peak_initial.limit = max_power_limit_second;
 
-              status = lzt::set_power_limits_ext(p_power_handle, &single_count,
-                                                 &power_peak_initial);
-              if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-                continue;
-              }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              std::vector<zes_power_limit_ext_desc_t>
-                  power_limits_descriptors_get;
-              status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                                 power_limits_descriptors_get);
-              if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-                continue;
-              }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              for (const auto &p_power_limits_descriptor_get :
-                   power_limits_descriptors_get) {
-                if (p_power_limits_descriptor_get.level ==
-                        ZES_POWER_LEVEL_PEAK &&
-                    p_power_limits_descriptor_get.source == power_source) {
-                  power_peak_get = p_power_limits_descriptor_get;
-                  EXPECT_LE(power_peak_get.limit, max_power_limit_second);
-                }
-              }
-            } else {
-              LOG_INFO << "Set limit not supported due to peak "
-                          "limitValueLocked flag is true";
+          if (power_limits_descriptors[i].limitValueLocked == false) {
+            status = lzt::set_power_limits_ext(p_power_handle, &single_count,
+                                               &power_peak_Max);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
             }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            std::vector<zes_power_limit_ext_desc_t>
+                power_limits_descriptors_getMax;
+            status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                               power_limits_descriptors_getMax);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            for (const auto &p_power_limits_descriptor_get :
+                 power_limits_descriptors_getMax) {
+              if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK &&
+                  p_power_limits_descriptor_get.source == power_source) {
+                power_peak_getMax = p_power_limits_descriptor_get;
+                EXPECT_LT(power_peak_getMax.limit, max_power_limit_first);
+              }
+            }
+
+            status = lzt::set_power_limits_ext(p_power_handle, &single_count,
+                                               &power_peak_initial);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            std::vector<zes_power_limit_ext_desc_t>
+                power_limits_descriptors_get;
+            status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                               power_limits_descriptors_get);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            for (const auto &p_power_limits_descriptor_get :
+                 power_limits_descriptors_get) {
+              if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK &&
+                  p_power_limits_descriptor_get.source == power_source) {
+                power_peak_get = p_power_limits_descriptor_get;
+                EXPECT_LE(power_peak_get.limit, max_power_limit_second);
+              }
+            }
+          } else {
+            LOG_INFO << "Set limit not supported due to peak "
+                        "limitValueLocked flag is true";
           }
         }
-        if (!peak_limit_available) {
-          LOG_INFO << "peak power limit not supported";
-        }
       }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+      if (!peak_limit_available) {
+        LOG_INFO << "peak power limit not supported";
+      }
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
@@ -1192,30 +1102,24 @@ LZT_TEST_F(
     GivenPowerHandleWhenRequestingExtensionPowerPropertiesThenValidPowerDomainIsReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        zes_power_properties_t pProperties = {
-            ZES_STRUCTURE_TYPE_POWER_PROPERTIES, nullptr};
-        zes_power_ext_properties_t pExtProperties = {
-            ZES_STRUCTURE_TYPE_POWER_EXT_PROPERTIES, nullptr};
-        pProperties.pNext = &pExtProperties;
-
-        EXPECT_ZE_RESULT_SUCCESS(
-            zesPowerGetProperties(p_power_handle, &pProperties));
-
-        EXPECT_GT(pExtProperties.domain, ZES_POWER_DOMAIN_UNKNOWN);
-        EXPECT_LT(pExtProperties.domain, ZES_POWER_DOMAIN_FORCE_UINT32);
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+    for (auto p_power_handle : p_power_handles) {
+      zes_power_properties_t pProperties = {ZES_STRUCTURE_TYPE_POWER_PROPERTIES,
+                                            nullptr};
+      zes_power_ext_properties_t pExtProperties = {
+          ZES_STRUCTURE_TYPE_POWER_EXT_PROPERTIES, nullptr};
+      pProperties.pNext = &pExtProperties;
+
+      EXPECT_ZE_RESULT_SUCCESS(
+          zesPowerGetProperties(p_power_handle, &pProperties));
+
+      EXPECT_GT(pExtProperties.domain, ZES_POWER_DOMAIN_UNKNOWN);
+      EXPECT_LT(pExtProperties.domain, ZES_POWER_DOMAIN_FORCE_UINT32);
+    }
   }
 }
 
@@ -1224,47 +1128,39 @@ LZT_TEST_F(
     GivenPowerHandleWhenRequestingExtensionPowerPropertiesThenValidDefaultLimitsAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        zes_power_properties_t pProperties = {
-            ZES_STRUCTURE_TYPE_POWER_PROPERTIES, nullptr};
-        zes_power_ext_properties_t pExtProperties = {
-            ZES_STRUCTURE_TYPE_POWER_EXT_PROPERTIES, nullptr};
-        zes_power_limit_ext_desc_t default_limits = {};
-        pExtProperties.defaultLimit = &default_limits;
-        pProperties.pNext = &pExtProperties;
-        // query extension properties
-        EXPECT_ZE_RESULT_SUCCESS(
-            zesPowerGetProperties(p_power_handle, &pProperties));
-        // verify default limits
-        EXPECT_GE(pExtProperties.defaultLimit->level, ZES_POWER_LEVEL_UNKNOWN);
-        EXPECT_LE(pExtProperties.defaultLimit->level,
-                  ZES_POWER_LEVEL_INSTANTANEOUS);
-        EXPECT_GE(pExtProperties.defaultLimit->source, ZES_POWER_SOURCE_ANY);
-        EXPECT_LE(pExtProperties.defaultLimit->source,
-                  ZES_POWER_SOURCE_BATTERY);
-        EXPECT_GE(pExtProperties.defaultLimit->limitUnit,
-                  ZES_LIMIT_UNIT_UNKNOWN);
-        EXPECT_LE(pExtProperties.defaultLimit->limitUnit, ZES_LIMIT_UNIT_POWER);
-        if (!pExtProperties.defaultLimit->intervalValueLocked) {
-          EXPECT_GE(pExtProperties.defaultLimit->interval, 0u);
-          EXPECT_LE(pExtProperties.defaultLimit->interval, INT32_MAX);
-        }
-        if (!pExtProperties.defaultLimit->limitValueLocked) {
-          EXPECT_GE(pExtProperties.defaultLimit->limit, 0u);
-          EXPECT_LE(pExtProperties.defaultLimit->limit, INT32_MAX);
-        }
-      }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+    for (auto p_power_handle : p_power_handles) {
+      zes_power_properties_t pProperties = {ZES_STRUCTURE_TYPE_POWER_PROPERTIES,
+                                            nullptr};
+      zes_power_ext_properties_t pExtProperties = {
+          ZES_STRUCTURE_TYPE_POWER_EXT_PROPERTIES, nullptr};
+      zes_power_limit_ext_desc_t default_limits = {};
+      pExtProperties.defaultLimit = &default_limits;
+      pProperties.pNext = &pExtProperties;
+      // query extension properties
+      EXPECT_ZE_RESULT_SUCCESS(
+          zesPowerGetProperties(p_power_handle, &pProperties));
+      // verify default limits
+      EXPECT_GE(pExtProperties.defaultLimit->level, ZES_POWER_LEVEL_UNKNOWN);
+      EXPECT_LE(pExtProperties.defaultLimit->level,
+                ZES_POWER_LEVEL_INSTANTANEOUS);
+      EXPECT_GE(pExtProperties.defaultLimit->source, ZES_POWER_SOURCE_ANY);
+      EXPECT_LE(pExtProperties.defaultLimit->source, ZES_POWER_SOURCE_BATTERY);
+      EXPECT_GE(pExtProperties.defaultLimit->limitUnit, ZES_LIMIT_UNIT_UNKNOWN);
+      EXPECT_LE(pExtProperties.defaultLimit->limitUnit, ZES_LIMIT_UNIT_POWER);
+      if (!pExtProperties.defaultLimit->intervalValueLocked) {
+        EXPECT_GE(pExtProperties.defaultLimit->interval, 0u);
+        EXPECT_LE(pExtProperties.defaultLimit->interval, INT32_MAX);
+      }
+      if (!pExtProperties.defaultLimit->limitValueLocked) {
+        EXPECT_GE(pExtProperties.defaultLimit->limit, 0u);
+        EXPECT_LE(pExtProperties.defaultLimit->limit, INT32_MAX);
+      }
+    }
   }
 }
 
