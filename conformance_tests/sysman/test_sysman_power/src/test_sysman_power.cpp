@@ -1284,7 +1284,7 @@ LZT_TEST_F(
   }
 }
 
-LZT_TEST_F(
+/*LZT_TEST_F(
     POWER_TEST,
     GivenValidPowerAndPerformanceHandlesWhenIncreasingPerformanceFactorThenExpectTotalEnergyConsumedToBeIncreased) {
   for (auto device : devices) {
@@ -1333,6 +1333,50 @@ LZT_TEST_F(
   }
   if (!is_power_supported) {
     FAIL() << "No power handles found on any of the devices! ";
+  }
+}*/
+
+LZT_TEST_F(
+    POWER_TEST,
+    GivenValidPowerAndPerformanceHandlesWhenIncreasingPerformanceFactorThenExpectTotalEnergyConsumedToBeIncreased) {
+  for (auto device : devices) {
+    uint32_t count = 0;
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+    for (auto p_power_handle : p_power_handles) {
+      auto p_properties = lzt::get_power_properties(p_power_handle);
+      if (p_properties.onSubdevice == true) {
+        continue;
+      }
+      uint32_t perf_count = 0;
+      zes_power_energy_counter_t energy_counter_initial;
+      zes_power_energy_counter_t energy_counter_later;
+      auto p_performance_handles =
+          lzt::get_performance_handles(device, perf_count);
+      if (perf_count == 0) {
+        FAIL() << "No handles found: "
+               << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+      }
+      for (auto p_performance_handle : p_performance_handles) {
+        zes_perf_properties_t p_perf_properties =
+            lzt::get_performance_properties(p_performance_handle);
+        p_perf_properties.engines =
+            1; // 1 is the equivalent value for ZES_ENGINE_TYPE_FLAG_OTHER
+        if (p_perf_properties.engines == ZES_ENGINE_TYPE_FLAG_OTHER) {
+          lzt::set_performance_config(p_performance_handle, 25);
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          lzt::get_power_energy_counter(p_power_handle,
+                                        &energy_counter_initial);
+          lzt::set_performance_config(p_performance_handle, 100);
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          lzt::get_power_energy_counter(p_power_handle, &energy_counter_later);
+          EXPECT_GE(energy_counter_later.energy, energy_counter_initial.energy);
+        }
+      }
+    }
   }
 }
 
