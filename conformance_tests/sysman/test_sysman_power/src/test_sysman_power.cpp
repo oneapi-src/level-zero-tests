@@ -1287,6 +1287,8 @@ LZT_TEST_F(
     count = lzt::get_power_handle_count(device);
     if(count > 0)
     {
+	    is_power_supported = true;
+	    LOG_INFO << "Power handles are available on this device! ";
 	    auto p_power_handles = lzt::get_power_handles(device, count);
 	    for (auto p_power_handle : p_power_handles) {
 	      	    auto p_properties = lzt::get_power_properties(p_power_handle);
