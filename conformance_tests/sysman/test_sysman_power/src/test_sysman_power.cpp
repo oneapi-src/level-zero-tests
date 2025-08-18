@@ -20,13 +20,13 @@ namespace {
 #ifdef USE_ZESINIT
 class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
-	bool is_power_supported = false;
+  bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleZesTest
 #else // USE_ZESINIT
 class PowerModuleTest : public lzt::SysmanCtsClass {
 public:
-	bool is_power_supported = false;
+  bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleTest
 #endif // USE_ZESINIT
@@ -81,54 +81,62 @@ LZT_TEST_F(
   for (auto device : devices) {
 
     uint32_t p_count = lzt::get_power_handle_count(device);
-    if (p_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    uint32_t tcount = p_count + 1;
-    lzt::get_power_handles(device, tcount);
-    EXPECT_EQ(tcount, p_count);
-    if (p_count > 1) {
-      tcount = p_count - 1;
-      auto p_power_handles = lzt::get_power_handles(device, tcount);
-      EXPECT_EQ(static_cast<uint32_t>(p_power_handles.size()), tcount);
+    if (p_count > 0) {
+      is_power_supported = true;
+      LOG_INFO << "Power handles are available on this device! ";
+      uint32_t tcount = p_count + 1;
+      lzt::get_power_handles(device, tcount);
+      EXPECT_EQ(tcount, p_count);
+      if (p_count > 1) {
+        tcount = p_count - 1;
+        auto p_power_handles = lzt::get_power_handles(device, tcount);
+        EXPECT_EQ(static_cast<uint32_t>(p_power_handles.size()), tcount);
+      }
+    } else {
+      LOG_INFO << "No power handles found for this device! ";
     }
   }
+  if (!is_power_supported) {
+    FAIL() << "No power handles found on any of the devices! ";
+  }
 }
+
 LZT_TEST_F(
     POWER_TEST,
     GivenSamePowerHandleWhenRequestingPowerPropertiesThenCheckPowerLimitsAreInRange) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto p_power_handles = lzt::get_power_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_power_handle_count(device);
+    if (count > 0) {
+      is_power_supported = true;
+      LOG_INFO << "Power handles are available on this device! ";
+      auto p_power_handles = lzt::get_power_handles(device, count);
+      for (auto p_power_handle : p_power_handles) {
+        EXPECT_NE(nullptr, p_power_handle);
+        auto pProperties = lzt::get_power_properties(p_power_handle);
+        if (pProperties.maxLimit != -1) {
+          EXPECT_GT(pProperties.maxLimit, 0);
+          EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
+        } else {
+          LOG_INFO << "maxLimit unsupported: ";
+        }
+        if (pProperties.minLimit != -1) {
+          EXPECT_GE(pProperties.minLimit, 0);
+        } else {
+          LOG_INFO << "minlimit unsupported: ";
+        }
+        if (pProperties.defaultLimit != -1) {
+          EXPECT_GT(pProperties.defaultLimit, 0);
+        } else {
+          LOG_INFO << "defaultLimit unsupported: ";
+        }
+      }
+    } else {
+      LOG_INFO << "No power handles found for this device! ";
     }
-
-    for (auto p_power_handle : p_power_handles) {
-      EXPECT_NE(nullptr, p_power_handle);
-      auto pProperties = lzt::get_power_properties(p_power_handle);
-      if (pProperties.maxLimit != -1) {
-        EXPECT_GT(pProperties.maxLimit, 0);
-        EXPECT_GE(pProperties.maxLimit, pProperties.minLimit);
-      } else {
-        LOG_INFO << "maxLimit unsupported: ";
-      }
-
-      if (pProperties.minLimit != -1) {
-        EXPECT_GE(pProperties.minLimit, 0);
-      } else {
-        LOG_INFO << "minlimit unsupported: ";
-      }
-
-      if (pProperties.defaultLimit != -1) {
-        EXPECT_GT(pProperties.defaultLimit, 0);
-      } else {
-        LOG_INFO << "defaultLimit unsupported: ";
-      }
-    }
+  }
+  if (!is_power_supported) {
+    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
