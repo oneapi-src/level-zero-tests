@@ -20,12 +20,14 @@ namespace {
 #ifdef USE_ZESINIT
 class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
+  bool power_handles_available = false;
   bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleZesTest
 #else // USE_ZESINIT
 class PowerModuleTest : public lzt::SysmanCtsClass {
 public:
+  bool power_handles_available = false;
   bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleTest
@@ -1298,7 +1300,7 @@ LZT_TEST_F(
           continue;
         }
         uint32_t perf_count = 0;
-	perf_count = lzt::get_performance_handle_count(device);
+	// perf_count = lzt::get_performance_handle_count(device);
         zes_power_energy_counter_t energy_counter_initial;
         zes_power_energy_counter_t energy_counter_later;
         auto p_performance_handles = lzt::get_performance_handles(device, perf_count);
@@ -1306,8 +1308,10 @@ LZT_TEST_F(
       		FAIL() << "No performance handles found for this device! ";
         }
         for (auto p_performance_handle : p_performance_handles) {
-      		zes_perf_properties_t p_perf_properties = lzt::get_performance_properties(p_performance_handle);
-          p_perf_properties.engines = 1; // 1 is the equivalent value for ZES_ENGINE_TYPE_FLAG_OTHER
+          zes_perf_properties_t p_perf_properties =
+              lzt::get_performance_properties(p_performance_handle);
+          p_perf_properties.engines =
+              1; // 1 is the equivalent value for ZES_ENGINE_TYPE_FLAG_OTHER
 
           if (p_perf_properties.engines == ZES_ENGINE_TYPE_FLAG_OTHER) {
             lzt::set_performance_config(p_performance_handle, 25);
@@ -1372,7 +1376,7 @@ LZT_TEST_F(
       LOG_INFO << "No power handles found for this device! ";
     }
   }
-  if (!is_power_supported) {
+  if (!power_handles_available) {
     FAIL() << "No power handles found in any of the devices!";
   }
 }
