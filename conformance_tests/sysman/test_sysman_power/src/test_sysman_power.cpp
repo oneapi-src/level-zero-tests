@@ -1298,12 +1298,13 @@ LZT_TEST_F(
           continue;
         }
         uint32_t perf_count = 0;
-	perf_count = lzt::get_performance_handle_count(device);
+        perf_count = lzt::get_performance_handle_count(device);
         zes_power_energy_counter_t energy_counter_initial;
         zes_power_energy_counter_t energy_counter_later;
-        auto p_performance_handles = lzt::get_performance_handles(device, perf_count);
+        auto p_performance_handles =
+            lzt::get_performance_handles(device, perf_count);
         if (perf_count == 0) {
-      		FAIL() << "No performance handles found for this device! ";
+          FAIL() << "No performance handles found for this device! ";
         }
         for (auto p_performance_handle : p_performance_handles) {
           zes_perf_properties_t p_perf_properties =
