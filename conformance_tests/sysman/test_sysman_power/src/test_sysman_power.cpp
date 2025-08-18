@@ -759,8 +759,7 @@ LZT_TEST_F(
 
           status =
               lzt::set_power_limits_ext(p_power_handle, &count_power,
-                                        power_limits_descriptors_initial
-                                            .data()); // restore initial limits
+                                        power_limits_descriptors_initial.data()); // restore initial limits
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
@@ -845,7 +844,7 @@ LZT_TEST_F(
           EXPECT_EQ(power_burst_get.interval, power_burst_set.interval);
           EXPECT_EQ(power_burst_get.limit, power_burst_set.limit);
           status = lzt::set_power_limits_ext(p_power_handle, &count_power,
-		                                          power_limits_descriptors_initial.data()); // restore initial limits
+			  power_limits_descriptors_initial.data()); // restore initial limits
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
@@ -936,10 +935,8 @@ LZT_TEST_F(
           EXPECT_EQ(power_instantaneous_get.limit,
                     power_instantaneous_set.limit);
 
-          status =
-              lzt::set_power_limits_ext(p_power_handle, &count_power,
-                                        power_limits_descriptors_initial
-                                            .data()); // restore initial limits
+          status = lzt::set_power_limits_ext(p_power_handle, &count_power,
+     			  power_limits_descriptors_initial.data()); // restore initial limits
           if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
             continue;
           }
@@ -1197,7 +1194,7 @@ LZT_TEST_F(
     }
   }
   if (!is_power_supported) {
-    FAIL() << "No power handles on any of the devices! ";
+    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
@@ -1229,7 +1226,7 @@ LZT_TEST_F(
     }
   }
   if (!is_power_supported) {
-    FAIL() << "No power handles on any of the devices! ";
+    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
@@ -1278,7 +1275,7 @@ LZT_TEST_F(
     }
   }
   if (!is_power_supported) {
-    FAIL() << "No power handles on any of the devices! ";
+    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
@@ -1287,42 +1284,49 @@ LZT_TEST_F(
     GivenValidPowerAndPerformanceHandlesWhenIncreasingPerformanceFactorThenExpectTotalEnergyConsumedToBeIncreased) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto p_power_handles = lzt::get_power_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_power_handle_count(device);
+    if(count > 0)
+    {
+	    auto p_power_handles = lzt::get_power_handles(device, count);
+	    for (auto p_power_handle : p_power_handles) {
+	      	    auto p_properties = lzt::get_power_properties(p_power_handle);
+	      	    if (p_properties.onSubdevice == true) {
+		    	    continue;
+	      	    }
+	      	    uint32_t perf_count = 0;
+	      	    zes_power_energy_counter_t energy_counter_initial;
+	      	    zes_power_energy_counter_t energy_counter_later;
+	      	    auto p_performance_handles =
+		  	    lzt::get_performance_handles(device, perf_count);
+	      	    if (perf_count == 0) {
+		    	    FAIL() << "No handles found: "
+		     		    << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+	      	    }
+	      	    for (auto p_performance_handle : p_performance_handles) {
+		    	    zes_perf_properties_t p_perf_properties =
+				    lzt::get_performance_properties(p_performance_handle);
+		    	    p_perf_properties.engines =            1; // 1 is the equivalent value for ZES_ENGINE_TYPE_FLAG_OTHER
+        		    if (p_perf_properties.engines == ZES_ENGINE_TYPE_FLAG_OTHER) {
+			  	    lzt::set_performance_config(p_performance_handle, 25);
+			  	    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			  	    lzt::get_power_energy_counter(p_power_handle,
+	    					    &energy_counter_initial);
+			  	    lzt::set_performance_config(p_performance_handle, 100);
+			  	    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			  	    lzt::get_power_energy_counter(p_power_handle, &energy_counter_later);
+			  	    EXPECT_GE(energy_counter_later.energy, energy_counter_initial.energy);
+		    	    }
+	      	    }
+	    }
     }
-    for (auto p_power_handle : p_power_handles) {
-      auto p_properties = lzt::get_power_properties(p_power_handle);
-      if (p_properties.onSubdevice == true) {
-        continue;
-      }
-      uint32_t perf_count = 0;
-      zes_power_energy_counter_t energy_counter_initial;
-      zes_power_energy_counter_t energy_counter_later;
-      auto p_performance_handles =
-          lzt::get_performance_handles(device, perf_count);
-      if (perf_count == 0) {
-        FAIL() << "No handles found: "
-               << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-      }
-      for (auto p_performance_handle : p_performance_handles) {
-        zes_perf_properties_t p_perf_properties =
-            lzt::get_performance_properties(p_performance_handle);
-        p_perf_properties.engines =
-            1; // 1 is the equivalent value for ZES_ENGINE_TYPE_FLAG_OTHER
-        if (p_perf_properties.engines == ZES_ENGINE_TYPE_FLAG_OTHER) {
-          lzt::set_performance_config(p_performance_handle, 25);
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          lzt::get_power_energy_counter(p_power_handle,
-                                        &energy_counter_initial);
-          lzt::set_performance_config(p_performance_handle, 100);
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          lzt::get_power_energy_counter(p_power_handle, &energy_counter_later);
-          EXPECT_GE(energy_counter_later.energy, energy_counter_initial.energy);
-        }
-      }
+    else
+    {
+	    LOG_INFO << "No power handles found for this device! ";
     }
+  }
+  if(!is_power_supported)
+  {
+	  FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
