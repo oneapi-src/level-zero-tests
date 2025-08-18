@@ -857,94 +857,94 @@ LZT_TEST_F(
     FAIL() << "No power handles found on any of the devices! ";
   }
 }
+
 LZT_TEST_F(
     POWER_TEST,
     GivenValidPowerHandleWhenSettingPowerValuesForInstantaneousPowerThenExpectzesPowerSetLimitsExtFollowedByzesPowerGetLimitsExtToMatch) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      for (auto p_power_handle : p_power_handles) {
-        EXPECT_NE(nullptr, p_power_handle);
-        uint32_t count_power = 0;
-        zes_power_limit_ext_desc_t power_instantaneous_set = {};
-        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
-        auto status = lzt::get_power_limits_ext(
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    }
+
+    for (auto p_power_handle : p_power_handles) {
+      EXPECT_NE(nullptr, p_power_handle);
+      uint32_t count_power = 0;
+
+      zes_power_limit_ext_desc_t power_instantaneous_set = {};
+
+      std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors;
+      auto status = lzt::get_power_limits_ext(
+          p_power_handle, &count_power,
+          power_limits_descriptors); // get power limits for all descriptors
+      if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(status);
+      std::vector<zes_power_limit_ext_desc_t>
+          power_limits_descriptors_initial; // preserve initial power limit
+                                            // descriptors for restoration
+                                            // later
+
+      for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        power_limits_descriptors_initial.push_back(power_limits_descriptors[i]);
+
+        if (power_limits_descriptors[i].level ==
+            ZES_POWER_LEVEL_INSTANTANEOUS) {
+          power_instantaneous_set = power_limits_descriptors[i];
+          power_instantaneous_set.limit =
+              power_limits_descriptors[i].limit - 1000;
+          power_limits_descriptors[i].limit = power_instantaneous_set.limit;
+        }
+      }
+
+      if (power_instantaneous_set.limitValueLocked == false) {
+        status = lzt::set_power_limits_ext(
             p_power_handle, &count_power,
-            power_limits_descriptors); // get power limits for all descriptors
+            power_limits_descriptors
+                .data()); // set power limits for all descriptors
+
         if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        std::vector<zes_power_limit_ext_desc_t>
-            power_limits_descriptors_initial; // preserve initial power limit
-                                              // descriptors for restoration
-                                              // later
+        zes_power_limit_ext_desc_t power_instantaneous_get = {};
 
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
-          power_limits_descriptors_initial.push_back(
-              power_limits_descriptors[i]);
-          if (power_limits_descriptors[i].level ==
+        std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_get;
+        status = lzt::get_power_limits_ext(p_power_handle, &count_power,
+                                           power_limits_descriptors_get);
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
+        }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+        for (const auto &p_power_limits_descriptor_get :
+             power_limits_descriptors_get) {
+          if (p_power_limits_descriptor_get.level ==
               ZES_POWER_LEVEL_INSTANTANEOUS) {
-            power_instantaneous_set = power_limits_descriptors[i];
-            power_instantaneous_set.limit =
-                power_limits_descriptors[i].limit - 1000;
-            power_limits_descriptors[i].limit = power_instantaneous_set.limit;
+            power_instantaneous_get = p_power_limits_descriptor_get;
           }
         }
 
-        if (power_instantaneous_set.limitValueLocked == false) {
-          status = lzt::set_power_limits_ext(p_power_handle, &count_power,
-			  power_limits_descriptors.data()); // set power limits for all descriptors
+        EXPECT_EQ(power_instantaneous_get.limitValueLocked,
+                  power_instantaneous_set.limitValueLocked);
+        EXPECT_EQ(power_instantaneous_get.interval,
+                  power_instantaneous_set.interval);
+        EXPECT_EQ(power_instantaneous_get.limit, power_instantaneous_set.limit);
 
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          zes_power_limit_ext_desc_t power_instantaneous_get = {};
-
-          std::vector<zes_power_limit_ext_desc_t> power_limits_descriptors_get;
-          status = lzt::get_power_limits_ext(p_power_handle, &count_power,
-                                             power_limits_descriptors_get);
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          for (const auto &p_power_limits_descriptor_get :
-               power_limits_descriptors_get) {
-            if (p_power_limits_descriptor_get.level ==
-                ZES_POWER_LEVEL_INSTANTANEOUS) {
-              power_instantaneous_get = p_power_limits_descriptor_get;
-            }
-          }
-
-          EXPECT_EQ(power_instantaneous_get.limitValueLocked,
-                    power_instantaneous_set.limitValueLocked);
-          EXPECT_EQ(power_instantaneous_get.interval,
-                    power_instantaneous_set.interval);
-          EXPECT_EQ(power_instantaneous_get.limit,
-                    power_instantaneous_set.limit);
-
-          status = lzt::set_power_limits_ext(p_power_handle, &count_power,
-     			  power_limits_descriptors_initial.data()); // restore initial limits
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-        } else {
-          LOG_INFO << "Set limit not supported due to instantaneous "
-                      "limitValueLocked flag is true";
+        status = lzt::set_power_limits_ext(
+            p_power_handle, &count_power,
+            power_limits_descriptors_initial.data()); // restore initial limits
+        if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          continue;
         }
+        EXPECT_ZE_RESULT_SUCCESS(status);
+      } else {
+        LOG_INFO << "Set limit not supported due to instantaneous "
+                    "limitValueLocked flag is true";
       }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
