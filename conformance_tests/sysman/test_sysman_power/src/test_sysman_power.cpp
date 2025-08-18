@@ -955,30 +955,24 @@ LZT_TEST_F(
     GivenValidPowerHandleWhenRequestingEnergyCounterThenExpectEnergyConsumedByRootDeviceToBeGreaterThanOrEqualToEnergyConsumedBySubdevices) {
   for (auto device : devices) {
     uint32_t count = 0;
-    count = lzt::get_power_handle_count(device);
-    if (count > 0) {
-      is_power_supported = true;
-      LOG_INFO << "Power handles are available on this device! ";
-      auto p_power_handles = lzt::get_power_handles(device, count);
-      uint64_t total_rootdevice_energy = 0;
-      uint64_t total_subdevices_energy = 0;
-      for (auto p_power_handle : p_power_handles) {
-        auto p_properties = lzt::get_power_properties(p_power_handle);
-        zes_power_energy_counter_t p_energy_counter = {};
-        lzt::get_power_energy_counter(p_power_handle, &p_energy_counter);
-        if (p_properties.onSubdevice == false) {
-          total_rootdevice_energy += p_energy_counter.energy;
-        } else {
-          total_subdevices_energy += p_energy_counter.energy;
-        }
-      }
-      EXPECT_GE(total_rootdevice_energy, total_subdevices_energy);
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+    auto p_power_handles = lzt::get_power_handles(device, count);
+    if (count == 0) {
+      FAIL() << "No handles found: "
+             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
     }
-  }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+    uint64_t total_rootdevice_energy = 0;
+    uint64_t total_subdevices_energy = 0;
+    for (auto p_power_handle : p_power_handles) {
+      auto p_properties = lzt::get_power_properties(p_power_handle);
+      zes_power_energy_counter_t p_energy_counter = {};
+      lzt::get_power_energy_counter(p_power_handle, &p_energy_counter);
+      if (p_properties.onSubdevice == false) {
+        total_rootdevice_energy += p_energy_counter.energy;
+      } else {
+        total_subdevices_energy += p_energy_counter.energy;
+      }
+    }
+    EXPECT_GE(total_rootdevice_energy, total_subdevices_energy);
   }
 }
 
