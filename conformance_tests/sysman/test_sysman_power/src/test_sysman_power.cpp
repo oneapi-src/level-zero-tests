@@ -20,14 +20,12 @@ namespace {
 #ifdef USE_ZESINIT
 class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
-  bool power_handles_available = false;
   bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleZesTest
 #else // USE_ZESINIT
 class PowerModuleTest : public lzt::SysmanCtsClass {
 public:
-  bool power_handles_available = false;
   bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleTest
@@ -1376,8 +1374,8 @@ LZT_TEST_F(
       LOG_INFO << "No power handles found for this device! ";
     }
   }
-  if (!power_handles_available) {
-    FAIL() << "No power handles found in any of the devices!";
+  if (!is_power_supported) {
+    FAIL() << "No power handles found on any of the devices!";
   }
 }
 #endif
