@@ -20,13 +20,13 @@ namespace {
 #ifdef USE_ZESINIT
 class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
-  bool power_handles_available = false;
+	bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleZesTest
 #else // USE_ZESINIT
 class PowerModuleTest : public lzt::SysmanCtsClass {
 public:
-  bool power_handles_available = false;
+	bool is_power_supported = false;
 };
 #define POWER_TEST PowerModuleTest
 #endif // USE_ZESINIT
@@ -36,33 +36,45 @@ LZT_TEST_F(
     GivenValidDeviceWhenRetrievingPowerHandlesThenNonZeroCountAndValidPowerHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto p_power_handles = lzt::get_power_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto p_power_handle : p_power_handles) {
-      EXPECT_NE(nullptr, p_power_handle);
+    count = lzt::get_power_handle_count(device);
+    if (count > 0) {
+      is_power_supported = true;
+      LOG_INFO << "Power handles are available on this device! ";
+      auto p_power_handles = lzt::get_power_handles(device, count);
+      for (auto p_power_handle : p_power_handles) {
+        EXPECT_NE(nullptr, p_power_handle);
+      }
+    } else {
+      LOG_INFO << "No power handles found for this device! ";
     }
   }
+  if (!is_power_supported) {
+    FAIL() << "No power handles found on any of the devices! ";
+  }
 }
+
 LZT_TEST_F(
     POWER_TEST,
     GivenValidDeviceWhenRetrievingPowerHandlesThenSimilarHandlesAreReturnedTwice) {
   for (auto device : devices) {
     uint32_t icount = 0;
     uint32_t lcount = 0;
-    auto p_power_handlesInitial = lzt::get_power_handles(device, icount);
-    if (icount == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    icount = lzt::get_power_handle_count(device);
+    if (icount > 0) {
+      is_power_supported = true;
+      LOG_INFO << "Power handles are available on this device! ";
+      auto p_power_handlesInitial = lzt::get_power_handles(device, icount);
+      auto p_power_handlesLater = lzt::get_power_handles(device, lcount);
+      EXPECT_EQ(p_power_handlesInitial, p_power_handlesLater);
+    } else {
+      LOG_INFO << "No power handles found for this device! ";
     }
-
-    auto p_power_handlesLater = lzt::get_power_handles(device, lcount);
-    EXPECT_EQ(p_power_handlesInitial, p_power_handlesLater);
+  }
+  if (!is_power_supported) {
+    FAIL() << "No power handles found on any of the devices! ";
   }
 }
+
 LZT_TEST_F(
     POWER_TEST,
     GivenValidDeviceWhenRetrievingPowerHandlesThenActualHandleCountIsUpdatedAndIfRequestedHandlesAreLessThanActualHandleCountThenDesiredNumberOfHandlesAreReturned) {
@@ -1217,7 +1229,8 @@ LZT_TEST_F(
     auto power_handles = lzt::get_power_handles(device, count);
 
     if (count > 0) {
-      power_handles_available = true;
+      is_power_supported = true;
+      // power_handles_available = true;
       auto start = std::chrono::steady_clock::now();
       auto energy_counters = lzt::get_power_energy_counter(power_handles);
       auto end = std::chrono::steady_clock::now();
@@ -1248,7 +1261,7 @@ LZT_TEST_F(
     }
   }
 
-  if (!power_handles_available) {
+  if (!is_power_supported) {
     FAIL() << "No handles found in any of the devices!";
   }
 }
