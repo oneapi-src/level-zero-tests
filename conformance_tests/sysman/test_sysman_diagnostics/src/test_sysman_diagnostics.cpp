@@ -254,6 +254,7 @@ LZT_TEST_F(
     GivenValidDiagTestsWhenRunningIndividualDiagTestsThenExpectTestsToRunFine) {
   for (auto device : devices) {
     uint32_t count = 0;
+    count = lzt::get_diag_handle_count(device);
     if (count > 0) {
       is_diag_supported = true;
       LOG_INFO << "Diagnostics handles are available on this device! ";
