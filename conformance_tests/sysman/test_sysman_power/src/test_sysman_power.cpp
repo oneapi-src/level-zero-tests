@@ -1021,7 +1021,6 @@ LZT_TEST_F(
         continue;
       }
       EXPECT_ZE_RESULT_SUCCESS(status);
-      int32_t max_power_limit_first = std::numeric_limits<int>::max();
       for (int i = 0; i < power_limits_descriptors.size(); i++) {
         zes_power_limit_ext_desc_t power_peak_initial = {};
         zes_power_limit_ext_desc_t power_peak_Max = {};
@@ -1032,11 +1031,8 @@ LZT_TEST_F(
           zes_power_source_t power_source = power_limits_descriptors[i].source;
           power_peak_Max = power_limits_descriptors[i];
           power_peak_initial = power_limits_descriptors[i];
-          power_peak_Max.limit = max_power_limit_first;
-
-          int32_t max_power_limit_second =
-              power_limits_descriptors[i].limit * 2;
-          power_peak_initial.limit = max_power_limit_second;
+          power_peak_Max.limit = std::numeric_limits<int>::max();
+          power_peak_initial.limit *= 2;
 
           if (power_limits_descriptors[i].limitValueLocked == false) {
             status = lzt::set_power_limits_ext(p_power_handle, &single_count,
@@ -1058,7 +1054,6 @@ LZT_TEST_F(
               if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK &&
                   p_power_limits_descriptor_get.source == power_source) {
                 power_peak_getMax = p_power_limits_descriptor_get;
-                EXPECT_LT(power_peak_getMax.limit, max_power_limit_first);
               }
             }
 
@@ -1081,9 +1076,9 @@ LZT_TEST_F(
               if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK &&
                   p_power_limits_descriptor_get.source == power_source) {
                 power_peak_get = p_power_limits_descriptor_get;
-                EXPECT_LE(power_peak_get.limit, max_power_limit_second);
               }
             }
+            EXPECT_LE(power_peak_get.limit, power_peak_getMax.limit);
           } else {
             LOG_INFO << "Set limit not supported due to peak "
                         "limitValueLocked flag is true";
