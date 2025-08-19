@@ -41,6 +41,26 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
         << " --> " << #val;                                                    \
   }
 
+#define SKIP_ZE_RESULT_UNSUPPORTED(val)                                        \
+  {                                                                            \
+    const auto res = val;                                                      \
+    if (res == ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                          \
+      throw LztGtestSkipExectuionException("Unsupported API version");         \
+    }                                                                          \
+    if (res == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE ||                          \
+        res == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT ||                     \
+        res == ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION ||                      \
+        res == ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT ||                        \
+        res == ZE_RESULT_ERROR_UNSUPPORTED_SIZE) {                             \
+      std::string res_string = lzt::to_string(res);                            \
+      std::size_t pos = res_string.find("UNSUPPORTED");                        \
+      std::string unsupported_type_string = res_string.substr(pos + 12);       \
+      GTEST_SKIP() << "[" << unsupported_type_string                           \
+                   << " not supported on this device or driver]";              \
+    }                                                                          \
+    ASSERT_EQ(ZE_RESULT_SUCCESS, res) << " --> " << #val;                      \
+  }
+
 #define LZT_NAME_STATIC_VALIDATION(test_suite_name, test_name)                 \
   static_assert(sizeof(GTEST_STRINGIFY_(test_suite_name)) > 1,                 \
                 "test_suite_name must not be empty");                          \
