@@ -319,7 +319,7 @@ using zetMetricsEnableDisableQueryTest = zetMetricsEnableDisableTest;
 
 LZT_TEST_F(
     zetMetricsEnableDisableQueryTest,
-    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeAlsoEnabledThenMetricQuerySucceeds) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeEnabledThenMetricQuerySucceeds) {
 
   for (auto device : devices) {
     lzt::enable_metrics_runtime(device);
@@ -406,9 +406,10 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     zetMetricsEnableDisableQueryTest,
-    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeAlsoEnabledThenRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
+    GivenMetricsDisabledByEnvironmentWhenMetricsRuntimeEnabledThenRuntimeDisableFailsUntilMetricGroupIsDeactivated) {
 
   for (auto device : devices) {
+    lzt::enable_metrics_runtime(device);
     ze_device_properties_t deviceProperties = {
         ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
     zeDeviceGetProperties(device, &deviceProperties);
