@@ -95,10 +95,8 @@ void ImageFormatFixture::run_test(
 
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-  SKIP_ZE_RESULT_UNSUPPORTED(
-      zeKernelSetArgumentValue(kernel, 0, sizeof(img_in), &img_in));
-  SKIP_ZE_RESULT_UNSUPPORTED(
-      zeKernelSetArgumentValue(kernel, 1, sizeof(img_out), &img_out));
+  lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);
+  lzt::set_argument_value(kernel, 1, sizeof(img_out), &img_out);
 
   ze_group_count_t group_dems = {
       (static_cast<uint32_t>(image_dims.width) / group_size_x),

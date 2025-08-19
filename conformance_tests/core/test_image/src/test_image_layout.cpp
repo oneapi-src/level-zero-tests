@@ -102,10 +102,8 @@ public:
                               group_size_z);
       lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-      SKIP_ZE_RESULT_UNSUPPORTED(
-          zeKernelSetArgumentValue(kernel, 0, sizeof(image_in), &image_in));
-      SKIP_ZE_RESULT_UNSUPPORTED(zeKernelSetArgumentValue(
-          kernel, 1, sizeof(image_convert), &image_convert));
+      lzt::set_argument_value(kernel, 0, sizeof(image_in), &image_in);
+      lzt::set_argument_value(kernel, 1, sizeof(image_convert), &image_convert);
 
       ze_group_count_t group_dems = {
           (static_cast<uint32_t>(image_dims.width) / group_size_x),
@@ -128,10 +126,9 @@ public:
                                 group_size_z);
         lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-        SKIP_ZE_RESULT_UNSUPPORTED(zeKernelSetArgumentValue(
-            kernel, 0, sizeof(image_convert), &image_convert));
-        SKIP_ZE_RESULT_UNSUPPORTED(
-            zeKernelSetArgumentValue(kernel, 1, sizeof(image_out), &image_out));
+        lzt::set_argument_value(kernel, 0, sizeof(image_convert),
+                                &image_convert);
+        lzt::set_argument_value(kernel, 1, sizeof(image_out), &image_out);
 
         group_dems = {(static_cast<uint32_t>(image_dims.width) / group_size_x),
                       (image_dims.height / group_size_y),

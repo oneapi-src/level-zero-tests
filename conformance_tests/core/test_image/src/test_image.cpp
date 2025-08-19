@@ -7,6 +7,7 @@
  */
 
 #include "gtest/gtest.h"
+#include "helpers_test_image.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -44,6 +45,12 @@ public:
     image_cache_flag = std::get<3>(GetParam());
     image_type = std::get<4>(GetParam());
     image_size = std::get<5>(GetParam());
+    auto supported_image_types = get_supported_image_types(
+        lzt::zeDevice::get_instance()->get_device(), false, false);
+    if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                  image_type) == supported_image_types.end()) {
+      GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+    }
 
     ze_image_format_t format_descriptor = {
         layout,                    // layout
@@ -107,9 +114,7 @@ public:
 LZT_TEST_P(zeImageCreateTest,
            GivenValidDescriptorWhenCreatingImageThenNotNullPointerIsReturned) {
   lzt::print_image_descriptor(image_descriptor);
-  ze_image_handle_t image;
-  SKIP_ZE_RESULT_UNSUPPORTED(
-      zeImageCreate(context, device, &image_descriptor, &image));
+  auto image = lzt::create_ze_image(context, device, image_descriptor);
   if (image) {
     lzt::destroy_ze_image(image);
   }
@@ -192,6 +197,12 @@ public:
     image_rw_flag = std::get<2>(GetParam());
     image_cache_flag = std::get<3>(GetParam());
     image_type = std::get<4>(GetParam());
+    auto supported_image_types = get_supported_image_types(
+        lzt::zeDevice::get_instance()->get_device(), false, false);
+    if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                  image_type) == supported_image_types.end()) {
+      GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+    }
 
     ze_device_image_properties_t device_img_properties = {
         ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
@@ -258,8 +269,7 @@ protected:
 
 LZT_TEST_P(zeImagePropertiesExtTests,
            GivenValidImageWhenGettingAllocPropertiesThenSuccessIsReturned) {
-  ze_image_handle_t img = nullptr;
-  SKIP_ZE_RESULT_UNSUPPORTED(zeImageCreate(context, device, &image_desc, &img));
+  auto img = lzt::create_ze_image(context, device, image_desc);
 
   ze_image_allocation_ext_properties_t img_alloc_ext_properties = {};
   img_alloc_ext_properties.stype =
@@ -272,8 +282,7 @@ LZT_TEST_P(zeImagePropertiesExtTests,
 LZT_TEST_P(
     zeImagePropertiesExtTests,
     GivenValidImageWhenGettingMemoryPropertiesThenValidMemoryPropertiesIsReturned) {
-  ze_image_handle_t img = nullptr;
-  SKIP_ZE_RESULT_UNSUPPORTED(zeImageCreate(context, device, &image_desc, &img));
+  auto img = lzt::create_ze_image(context, device, image_desc);
 
   ze_image_memory_properties_exp_t image_mem_properties = {};
   image_mem_properties.stype = ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES;
