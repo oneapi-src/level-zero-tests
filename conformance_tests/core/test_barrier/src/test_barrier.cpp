@@ -289,9 +289,10 @@ class zeContextSystemBarrierTests : public ::testing::Test {};
 
 LZT_TEST_F(zeContextSystemBarrierTests,
            GivenDeviceWhenAddingSystemBarrierThenSuccessIsReturned) {
+  EXPECT_ZE_RESULT_SUCCESS(
 
-  SKIP_ZE_RESULT_UNSUPPORTED(zeContextSystemBarrier(
-      lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device()));
+      zeContextSystemBarrier(lzt::get_default_context(),
+                             lzt::zeDevice::get_instance()->get_device()));
 }
 
 class zeBarrierEventSignalingTests : public lzt::zeEventPoolTests {};
