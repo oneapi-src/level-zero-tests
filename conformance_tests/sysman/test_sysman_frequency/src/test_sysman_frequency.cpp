@@ -187,7 +187,7 @@ LZT_TEST_F(
     count = lzt::get_freq_handle_count(device);
     if (count > 0) {
       is_freq_supported = true;
-      LOG_INFO << "Frequency handles are availble on this device! ";
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto pfreq_handles = lzt::get_freq_handles(device, count);
       for (auto pfreq_handle : pfreq_handles) {
         EXPECT_NE(nullptr, pfreq_handle);
@@ -236,7 +236,7 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No frequency hanldes found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
   if (!is_freq_supported) {
@@ -296,7 +296,7 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No frequency handles found fot this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
   if (!is_freq_supported) {
@@ -379,7 +379,7 @@ LZT_TEST_F(
     count = lzt::get_freq_handle_count(device);
     if (count > 0) {
       is_freq_supported = true;
-      LOG_INFO << "Frequency handles are avilable on this device! ";
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto pfreq_handles = lzt::get_freq_handles(device, count);
       for (auto pfreq_handle : pfreq_handles) {
         EXPECT_NE(nullptr, pfreq_handle);
@@ -404,7 +404,7 @@ LZT_TEST_F(
     count = lzt::get_freq_handle_count(device);
     if (count > 0) {
       is_freq_supported = true;
-      LOG_INFO << "Frequncy handles are available on this device! ";
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto pfreq_handles = lzt::get_freq_handles(device, count);
       for (auto pfreq_handle : pfreq_handles) {
         EXPECT_NE(nullptr, pfreq_handle);
@@ -433,7 +433,7 @@ LZT_TEST_F(
     count = lzt::get_freq_handle_count(device);
     if (count > 0) {
       is_freq_supported = true;
-      LOG_INFO << "Frequncy handles are available on this device! ";
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto pfreq_handles = lzt::get_freq_handles(device, count);
       zes_freq_range_t freqRange = {};
       for (auto pfreq_handle : pfreq_handles)
@@ -456,7 +456,7 @@ LZT_TEST_F(
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
       is_freq_supported = true;
-      LOG_INFO << "Frequncy handles are available on this device! ";
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto pfreq_handles = lzt::get_freq_handles(device, p_count);
       for (auto pfreq_handle : pfreq_handles) {
         EXPECT_NE(nullptr, pfreq_handle);
@@ -516,7 +516,7 @@ LZT_TEST_F(
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
       is_freq_supported = true;
-      LOG_INFO << "Frequncy handles are available on this device!";
+      LOG_INFO << "Frequency handles are available on this device!";
       auto pfreq_handles = lzt::get_freq_handles(device, p_count);
       for (auto pfreq_handle : pfreq_handles) {
         EXPECT_NE(nullptr, pfreq_handle);
