@@ -38,7 +38,7 @@ public:
 #else // USE_ZESINIT
 class DiagnosticsTest : public lzt::SysmanCtsClass {
 public:
-  bool is_diag_supported = true;
+  bool is_diag_supported = false;
 };
 #define DIAGNOSTICS_TEST DiagnosticsTest
 #endif // USE_ZESINIT
