@@ -829,6 +829,7 @@ LZT_TEST_F(
     GivenValidDeviceWhenCallingFrequencyGetStateMultipleTimesThenExpectFirstCallIsSlowerThanSubsequentCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
+    count = lzt::get_freq_handle_count(device);
     if (count > 0) {
       is_freq_supported = true;
       LOG_INFO << "Frequency devices are available on this device! ";
