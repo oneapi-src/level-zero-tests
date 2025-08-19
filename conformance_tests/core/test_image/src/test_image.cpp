@@ -181,7 +181,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Values(ImageSize::min, ImageSize::large)));
 
-class zeImagePropertiesExtTests
+class zeImagePropertiesTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<ze_image_format_type_t, ze_image_format_layout_t,
@@ -267,7 +267,7 @@ protected:
       lzt::get_default_device(lzt::get_default_driver());
 };
 
-LZT_TEST_P(zeImagePropertiesExtTests,
+LZT_TEST_P(zeImagePropertiesTests,
            GivenValidImageWhenGettingAllocPropertiesThenSuccessIsReturned) {
   auto img = lzt::create_ze_image(context, device, image_desc);
 
@@ -280,7 +280,7 @@ LZT_TEST_P(zeImagePropertiesExtTests,
 }
 
 LZT_TEST_P(
-    zeImagePropertiesExtTests,
+    zeImagePropertiesTests,
     GivenValidImageWhenGettingMemoryPropertiesThenValidMemoryPropertiesIsReturned) {
   auto img = lzt::create_ze_image(context, device, image_desc);
 
@@ -296,7 +296,7 @@ LZT_TEST_P(
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    UInt, zeImagePropertiesExtTests,
+    UInt, zeImagePropertiesTests,
     ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT),
                        ::testing::ValuesIn(lzt::image_format_layout_uint),
                        ::testing::ValuesIn(lzt::image_rw_flags),
@@ -304,7 +304,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(lzt::image_types)));
 
 INSTANTIATE_TEST_SUITE_P(
-    SInt, zeImagePropertiesExtTests,
+    SInt, zeImagePropertiesTests,
     ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_SINT),
                        ::testing::ValuesIn(lzt::image_format_layout_sint),
                        ::testing::ValuesIn(lzt::image_rw_flags),
@@ -312,7 +312,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(lzt::image_types)));
 
 INSTANTIATE_TEST_SUITE_P(
-    UNorm, zeImagePropertiesExtTests,
+    UNorm, zeImagePropertiesTests,
     ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_UNORM),
                        ::testing::ValuesIn(lzt::image_format_layout_unorm),
                        ::testing::ValuesIn(lzt::image_rw_flags),
@@ -320,7 +320,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(lzt::image_types)));
 
 INSTANTIATE_TEST_SUITE_P(
-    SNorm, zeImagePropertiesExtTests,
+    SNorm, zeImagePropertiesTests,
     ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_SNORM),
                        ::testing::ValuesIn(lzt::image_format_layout_snorm),
                        ::testing::ValuesIn(lzt::image_rw_flags),
@@ -328,7 +328,7 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(lzt::image_types)));
 
 INSTANTIATE_TEST_SUITE_P(
-    Float, zeImagePropertiesExtTests,
+    Float, zeImagePropertiesTests,
     ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
                        ::testing::ValuesIn(lzt::image_format_layout_float),
                        ::testing::ValuesIn(lzt::image_rw_flags),
