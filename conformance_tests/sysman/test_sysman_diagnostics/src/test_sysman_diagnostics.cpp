@@ -143,7 +143,7 @@ LZT_TEST_F(
     count = lzt::get_diag_handle_count(device);
     if (count > 0) {
       is_diag_supported = true;
-      LOG_INFO << "Diagnostics handles are available on this devcie! ";
+      LOG_INFO << "Diagnostics handles are available on this device! ";
       auto diag_handles = lzt::get_diag_handles(device, count);
       for (auto diag_handle : diag_handles) {
         ASSERT_NE(nullptr, diag_handle);
