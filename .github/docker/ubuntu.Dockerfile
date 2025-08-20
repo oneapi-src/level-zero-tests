@@ -4,32 +4,23 @@ ARG VMAJ
 ARG VMIN
 FROM ghcr.io/oneapi-src/level-zero-linux-compute/ubuntu:${VMAJ}.${VMIN}
 
-ARG VMAJ
-ARG VMIN
-
-SHELL ["/bin/bash", "-e", "-c"]
-
-ENV DEBIAN_FRONTEND=noninteractive
-# /etc/apt/apt.conf.d/docker-clean doesn't work on older versions of docker for U2204 containers
-RUN --mount=type=cache,target=/var/cache/apt <<EOF
-rm /etc/apt/apt.conf.d/docker-clean
-apt-get update
-apt-get install -o Dpkg::Options::="--force-overwrite" -y \
-  build-essential \
-  ccache \
-  clang-tidy \
-  cmake \
-  curl \
-  file \
-  git \
-  ninja-build \
-  libboost-all-dev \
-  libpapi-dev \
-  libpng-dev \
-  libva-dev \
-  ocl-icd-opencl-dev \
-  opencl-headers \
-  python3 \
-  python3-pip
-rm -rf /var/lib/apt/lists/*
+ENV BOOST_BUILD_PATH=/boost_1_76_0
+ADD https://archives.boost.io/release/1.76.0/source/boost_1_76_0.tar.gz /boost_1_76_0.tar.gz
+RUN <<EOF
+tar xf /boost_1_76_0.tar.gz
+rm /boost_1_76_0.tar.gz
+cd /boost_1_76_0
+./bootstrap.sh
+./b2 install \
+  -j $(nproc) \
+  link=static \
+  address-model=64 \
+  --with-chrono \
+  --with-log \
+  --with-program_options \
+  --with-regex \
+  --with-serialization \
+  --with-system \
+  --with-timer
+rm -rf /boost_1_76_0
 EOF
