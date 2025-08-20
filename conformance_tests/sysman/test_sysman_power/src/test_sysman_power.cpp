@@ -1095,6 +1095,11 @@ LZT_TEST_F(
     GivenValidPowerHandlesAfterGettingMaxPowerLimitWhenSettingValuesForPeakPowerThenExpectZesPowerGetLimitsExtToReturnPowerLimitsLessThanMaxPowerLimits) {
   for (auto device : devices) {
     uint32_t count = 0;
+    count = lzt::get_power_handle_count(device);
+    if(count > 0)
+    {
+	    is_poower_supported = true;
+	    LOG_INFO << "Power handles are available on this device! ";
     auto p_power_handles = lzt::get_power_handles(device, count);
     if (count == 0) {
       FAIL() << "No handles found: "
@@ -1150,7 +1155,7 @@ LZT_TEST_F(
                   p_power_limits_descriptor_get.source == power_source) {
                 power_peak_getMax = p_power_limits_descriptor_get;
               }
-
+            }
 
             status = lzt::set_power_limits_ext(p_power_handle, &single_count,
                                                &power_peak_initial);
@@ -1171,39 +1176,28 @@ LZT_TEST_F(
               if (p_power_limits_descriptor_get.level == ZES_POWER_LEVEL_PEAK &&
                   p_power_limits_descriptor_get.source == power_source) {
                 power_peak_get = p_power_limits_descriptor_get;
-
               }
-              EXPECT_ZE_RESULT_SUCCESS(status);
-              for (const auto &p_power_limits_descriptor_get :
-                   power_limits_descriptors_get) {
-                if (p_power_limits_descriptor_get.level ==
-                        ZES_POWER_LEVEL_PEAK &&
-                    p_power_limits_descriptor_get.source == power_source) {
-                  power_peak_get = p_power_limits_descriptor_get;
-                }
-              }
-              EXPECT_LE(power_peak_get.limit, power_peak_getMax.limit);
-            } else {
-              LOG_INFO << "Set limit not supported due to peak "
-                          "limitValueLocked flag is true";
             }
-
             EXPECT_LE(power_peak_get.limit, power_peak_getMax.limit);
           } else {
             LOG_INFO << "Set limit not supported due to peak "
                         "limitValueLocked flag is true";
           }
         }
-        if (!peak_limit_available) {
-          LOG_INFO << "peak power limit not supported";
-        }
       }
-    } else {
-      LOG_INFO << "No power handles found for this device! ";
+      if (!peak_limit_available) {
+        LOG_INFO << "peak power limit not supported";
+      }
     }
   }
-  if (!is_power_supported) {
-    FAIL() << "No power handles found on any of the devices! ";
+    else
+    {
+	    LOG_INFO << "No power handles found for this device! ";
+    }
+  }
+  if(!is_power_supported)
+  {
+	  FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
@@ -1235,7 +1229,7 @@ LZT_TEST_F(
     }
   }
   if (!is_power_supported) {
-    FAIL() << "No power handles on any of the devices! ";
+    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
@@ -1284,7 +1278,7 @@ LZT_TEST_F(
     }
   }
   if (!is_power_supported) {
-    FAIL() << "No power handles on any of the devices! ";
+    FAIL() << "No power handles found on any of the devices! ";
   }
 }
 
