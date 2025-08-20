@@ -14,6 +14,7 @@ add_lzt_test(
     src/test_memory.cpp
     src/test_param_tests.cpp
     src/test_memory_export_import.cpp
+    src/test_svm.cpp
     src/test_virtual_memory.cpp
     src/main.cpp
   LINK_LIBRARIES
@@ -23,6 +24,7 @@ add_lzt_test(
     level_zero_tests::random
     ${OS_SPECIFIC_LIBS}
   KERNELS
+    memory_add
     unified_mem_test
     write_memory_pattern
 )
