@@ -22,13 +22,13 @@ namespace {
 #ifdef USE_ZESINIT
 class FrequencyModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
-  bool freq_handles_available = false;
+  bool is_freq_supported = false;
 };
 #define FREQUENCY_TEST FrequencyModuleZesTest
 #else // USE_ZESINIT
 class FrequencyModuleTest : public lzt::SysmanCtsClass {
 public:
-  bool freq_handles_available = false;
+  bool is_freq_supported = false;
 };
 #define FREQUENCY_TEST FrequencyModuleTest
 #endif // USE_ZESINIT
@@ -46,15 +46,20 @@ LZT_TEST_F(
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNotNullFrequencyHandlesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device!";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+      }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-    }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -63,15 +68,20 @@ LZT_TEST_F(
     GivenComponentCountWhenRetrievingSysmanHandlesThenActualComponentCountIsUpdated) {
   for (auto device : devices) {
     uint32_t p_count = 0;
-    lzt::get_freq_handles(device, p_count);
-    if (p_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    p_count = lzt::get_freq_handle_count(device);
+    if (p_count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device!";
+      lzt::get_freq_handles(device, p_count);
+      uint32_t test_count = p_count + 1;
+      lzt::get_freq_handles(device, test_count);
+      EXPECT_EQ(test_count, p_count);
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    uint32_t test_count = p_count + 1;
-    lzt::get_freq_handles(device, test_count);
-    EXPECT_EQ(test_count, p_count);
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -80,21 +90,26 @@ LZT_TEST_F(
     GivenValidComponentCountWhenCallingApiTwiceThenSimilarFrequencyHandlesReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles_initial = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device!";
+      auto pfreq_handles_initial = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles_initial) {
+        EXPECT_NE(nullptr, pfreq_handle);
+      }
+      count = 0;
+      auto pfreq_handles_later = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles_later) {
+        EXPECT_NE(nullptr, pfreq_handle);
+      }
+      EXPECT_EQ(pfreq_handles_initial, pfreq_handles_later);
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    for (auto pfreq_handle : pfreq_handles_initial) {
-      EXPECT_NE(nullptr, pfreq_handle);
-    }
-    count = 0;
-    auto pfreq_handles_later = lzt::get_freq_handles(device, count);
-    for (auto pfreq_handle : pfreq_handles_later) {
-      EXPECT_NE(nullptr, pfreq_handle);
-    }
-    EXPECT_EQ(pfreq_handles_initial, pfreq_handles_later);
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -103,17 +118,22 @@ LZT_TEST_F(
     GivenValidDeviceWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        zes_freq_state_t pState = lzt::get_freq_state(pfreq_handle);
+        lzt::validate_freq_state(pfreq_handle, pState);
+      }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      zes_freq_state_t pState = lzt::get_freq_state(pfreq_handle);
-      lzt::validate_freq_state(pfreq_handle, pState);
-    }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -122,36 +142,41 @@ LZT_TEST_F(
     GivenValidFreqRangeWhenRetrievingFreqStateThenValidFreqStatesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
-    if (p_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      zes_freq_range_t limits = {};
-      zes_freq_properties_t properties = {};
-      properties = lzt::get_freq_properties(pfreq_handle);
-      limits.min = properties.min;
-      limits.max = properties.max;
-      lzt::set_freq_range(pfreq_handle, limits);
-      lzt::idle_check(pfreq_handle);
-      zes_freq_state_t state = lzt::get_freq_state(pfreq_handle);
-      lzt::validate_freq_state(pfreq_handle, state);
-      if (state.actual > 0) {
-        EXPECT_LE(state.actual, limits.max);
-        EXPECT_GE(state.actual, limits.min);
-      } else {
-        LOG_INFO << "Actual frequency is unknown";
+    p_count = lzt::get_freq_handle_count(device);
+    if (p_count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        zes_freq_range_t limits = {};
+        zes_freq_properties_t properties = {};
+        properties = lzt::get_freq_properties(pfreq_handle);
+        limits.min = properties.min;
+        limits.max = properties.max;
+        lzt::set_freq_range(pfreq_handle, limits);
+        lzt::idle_check(pfreq_handle);
+        zes_freq_state_t state = lzt::get_freq_state(pfreq_handle);
+        lzt::validate_freq_state(pfreq_handle, state);
+        if (state.actual > 0) {
+          EXPECT_LE(state.actual, limits.max);
+          EXPECT_GE(state.actual, limits.min);
+        } else {
+          LOG_INFO << "Actual frequency is unknown";
+        }
+        if (state.request > 0) {
+          EXPECT_LE(state.request, limits.max);
+          EXPECT_GE(state.request, limits.min);
+        } else {
+          LOG_INFO << "Requested frequency is unknown";
+        }
       }
-      if (state.request > 0) {
-        EXPECT_LE(state.request, limits.max);
-        EXPECT_GE(state.request, limits.min);
-      } else {
-        LOG_INFO << "Requested frequency is unknown";
-      }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -159,20 +184,26 @@ LZT_TEST_F(
     GivenValidFrequencyHandleWhenRetrievingAvailableClocksThenSuccessAndSameValuesAreReturnedTwice) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        uint32_t icount = 0;
+        uint32_t lcount = 0;
+        auto pFrequencyInitial =
+            lzt::get_available_clocks(pfreq_handle, icount);
+        auto pFrequencyLater = lzt::get_available_clocks(pfreq_handle, lcount);
+        EXPECT_EQ(pFrequencyInitial, pFrequencyLater);
+      }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      uint32_t icount = 0;
-      uint32_t lcount = 0;
-      auto pFrequencyInitial = lzt::get_available_clocks(pfreq_handle, icount);
-      auto pFrequencyLater = lzt::get_available_clocks(pfreq_handle, lcount);
-      EXPECT_EQ(pFrequencyInitial, pFrequencyLater);
-    }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -181,32 +212,35 @@ LZT_TEST_F(
     GivenValidFrequencyHandleWhenRetrievingAvailableClocksThenPositiveAndValidValuesAreReturned) {
   for (auto device : devices) {
     uint32_t p_count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
-    if (p_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      uint32_t count = 0;
-      zes_freq_properties_t freq_property =
-          lzt::get_freq_properties(pfreq_handle);
-
-      auto pFrequency = lzt::get_available_clocks(pfreq_handle, count);
-
-      for (uint32_t i = 0; i < pFrequency.size(); i++) {
-        if (pFrequency[i] != -1) {
-          EXPECT_GE(pFrequency[i], freq_property.min);
-          EXPECT_LE(pFrequency[i], freq_property.max);
+    p_count = lzt::get_freq_handle_count(device);
+    if (p_count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        uint32_t count = 0;
+        zes_freq_properties_t freq_property =
+            lzt::get_freq_properties(pfreq_handle);
+        auto pFrequency = lzt::get_available_clocks(pfreq_handle, count);
+        for (uint32_t i = 0; i < pFrequency.size(); i++) {
+          if (pFrequency[i] != -1) {
+            EXPECT_GE(pFrequency[i], freq_property.min);
+            EXPECT_LE(pFrequency[i], freq_property.max);
+          }
+          if (i > 0)
+            EXPECT_GE(
+                pFrequency[i],
+                pFrequency[i - 1]); // Each entry in array of pFrequency, should
+                                    // be less than or equal to next entry
         }
-        if (i > 0)
-          EXPECT_GE(
-              pFrequency[i],
-              pFrequency[i - 1]); // Each entry in array of pFrequency, should
-                                  // be less than or equal to next entry
       }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -214,20 +248,25 @@ LZT_TEST_F(
     GivenClocksCountWhenRetrievingAvailableClocksThenActualCountIsUpdated) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        uint32_t p_count = 0;
+        p_count = lzt::get_available_clock_count(pfreq_handle);
+        uint32_t tCount = p_count + 1;
+        lzt::get_available_clocks(pfreq_handle, tCount);
+        EXPECT_EQ(p_count, tCount);
+      }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      uint32_t p_count = 0;
-      p_count = lzt::get_available_clock_count(pfreq_handle);
-      uint32_t tCount = p_count + 1;
-      lzt::get_available_clocks(pfreq_handle, tCount);
-      EXPECT_EQ(p_count, tCount);
-    }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -236,27 +275,32 @@ LZT_TEST_F(
     GivenValidFrequencyHandleWhenRequestingDeviceGPUTypeThenExpectCanControlPropertyToBeTrue) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      zes_freq_properties_t properties = {};
-      properties = lzt::get_freq_properties(pfreq_handle);
-      if (properties.type == ZES_FREQ_DOMAIN_GPU)
-        EXPECT_TRUE(properties.canControl);
-      else if (properties.type == ZES_FREQ_DOMAIN_MEMORY)
-        EXPECT_FALSE(properties.canControl);
-      else if (properties.type == ZES_FREQ_DOMAIN_MEDIA)
-        EXPECT_TRUE(properties.canControl);
-      else {
-        LOG_INFO << "Skipping test as freq handle is of unknown type";
-        GTEST_SKIP();
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        zes_freq_properties_t properties = {};
+        properties = lzt::get_freq_properties(pfreq_handle);
+        if (properties.type == ZES_FREQ_DOMAIN_GPU)
+          EXPECT_TRUE(properties.canControl);
+        else if (properties.type == ZES_FREQ_DOMAIN_MEMORY)
+          EXPECT_FALSE(properties.canControl);
+        else if (properties.type == ZES_FREQ_DOMAIN_MEDIA)
+          EXPECT_TRUE(properties.canControl);
+        else {
+          LOG_INFO << "Skipping test as freq handle is of unknown type";
+          GTEST_SKIP();
+        }
       }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -265,23 +309,28 @@ LZT_TEST_F(
     GivenValidFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectPositiveFrequencyRange) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      zes_freq_properties_t properties = {};
-      properties = lzt::get_freq_properties(pfreq_handle);
-      if (properties.max != -1) {
-        EXPECT_GT(properties.max, 0);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        zes_freq_properties_t properties = {};
+        properties = lzt::get_freq_properties(pfreq_handle);
+        if (properties.max != -1) {
+          EXPECT_GT(properties.max, 0);
+        }
+        if (properties.min != -1) {
+          EXPECT_GT(properties.min, 0);
+        }
       }
-      if (properties.min != -1) {
-        EXPECT_GT(properties.min, 0);
-      }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -290,32 +339,35 @@ LZT_TEST_F(
     GivenSameFrequencyHandleWhenRequestingFrequencyPropertiesThenExpectSamePropertiesOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+      }
+      std::vector<zes_freq_properties_t> properties(3);
+      for (uint32_t i = 0; i < 3; i++)
+        properties[i] = lzt::get_freq_properties(pfreq_handles[0]);
+      ASSERT_GT(properties.size(), 1);
+      for (uint32_t i = 1; i < properties.size(); i++) {
+        EXPECT_EQ(properties[0].type, properties[i].type);
+        EXPECT_EQ(properties[0].onSubdevice, properties[i].onSubdevice);
+        if (properties[0].onSubdevice && properties[i].onSubdevice)
+          EXPECT_EQ(properties[0].subdeviceId, properties[i].subdeviceId);
+        EXPECT_EQ(properties[0].canControl, properties[i].canControl);
+        EXPECT_EQ(properties[0].isThrottleEventSupported,
+                  properties[i].isThrottleEventSupported);
+        EXPECT_EQ(properties[0].max, properties[i].max);
+        EXPECT_EQ(properties[0].min, properties[i].min);
+      }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-    }
-    std::vector<zes_freq_properties_t> properties(3);
-
-    for (uint32_t i = 0; i < 3; i++)
-      properties[i] = lzt::get_freq_properties(pfreq_handles[0]);
-
-    ASSERT_GT(properties.size(), 1);
-    for (uint32_t i = 1; i < properties.size(); i++) {
-      EXPECT_EQ(properties[0].type, properties[i].type);
-      EXPECT_EQ(properties[0].onSubdevice, properties[i].onSubdevice);
-      if (properties[0].onSubdevice && properties[i].onSubdevice)
-        EXPECT_EQ(properties[0].subdeviceId, properties[i].subdeviceId);
-      EXPECT_EQ(properties[0].canControl, properties[i].canControl);
-      EXPECT_EQ(properties[0].isThrottleEventSupported,
-                properties[i].isThrottleEventSupported);
-      EXPECT_EQ(properties[0].max, properties[i].max);
-      EXPECT_EQ(properties[0].min, properties[i].min);
-    }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -324,18 +376,23 @@ LZT_TEST_F(
     GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnSuccessOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        zes_freq_range_t freqRange = {};
+        for (uint32_t i = 0; i < 3; i++)
+          freqRange = lzt::get_freq_range(pfreq_handle);
+      }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      zes_freq_range_t freqRange = {};
-      for (uint32_t i = 0; i < 3; i++)
-        freqRange = lzt::get_freq_range(pfreq_handle);
-    }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -344,23 +401,27 @@ LZT_TEST_F(
     GivenSameFrequencyHandleWhenRequestingFrequencyRangeThenExpectSameRangeOnMultipleCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      std::vector<zes_freq_range_t> freqRangeToCompare;
-      for (uint32_t i = 0; i < 3; i++)
-        freqRangeToCompare.push_back(lzt::get_freq_range(pfreq_handle));
-
-      for (uint32_t i = 1; i < freqRangeToCompare.size(); i++) {
-        EXPECT_EQ(freqRangeToCompare[0].max, freqRangeToCompare[i].max);
-        EXPECT_EQ(freqRangeToCompare[0].min, freqRangeToCompare[i].min);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        std::vector<zes_freq_range_t> freqRangeToCompare;
+        for (uint32_t i = 0; i < 3; i++)
+          freqRangeToCompare.push_back(lzt::get_freq_range(pfreq_handle));
+        for (uint32_t i = 1; i < freqRangeToCompare.size(); i++) {
+          EXPECT_EQ(freqRangeToCompare[0].max, freqRangeToCompare[i].max);
+          EXPECT_EQ(freqRangeToCompare[0].min, freqRangeToCompare[i].min);
+        }
       }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -369,15 +430,21 @@ LZT_TEST_F(
     GivenValidFrequencyCountWhenRequestingFrequencyHandleThenExpectzesSysmanFrequencyGetRangeToReturnValidFrequencyRanges) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      zes_freq_range_t freqRange = {};
+      for (auto pfreq_handle : pfreq_handles)
+        freqRange = lzt::get_and_validate_freq_range(pfreq_handle);
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
-
-    zes_freq_range_t freqRange = {};
-    for (auto pfreq_handle : pfreq_handles)
-      freqRange = lzt::get_and_validate_freq_range(pfreq_handle);
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices: "
+           << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
   }
 }
 
@@ -386,38 +453,42 @@ LZT_TEST_F(
     GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectUpdatedFrequencyInGetFrequencyCall) {
   for (auto device : devices) {
     uint32_t p_count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
-    if (p_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-
-      zes_freq_range_t freqRange = {};
-      zes_freq_range_t freqRangeReset = {};
-      uint32_t count = 0;
-      auto frequency = lzt::get_available_clocks(pfreq_handle, count);
-      ASSERT_GT(frequency.size(), 0);
-      if (count == 1) {
-        freqRange.min = frequency[0];
-        freqRange.max = frequency[0];
-        lzt::set_freq_range(pfreq_handle, freqRange);
-        freqRangeReset = lzt::get_and_validate_freq_range(pfreq_handle);
-        EXPECT_EQ(freqRange.max, freqRangeReset.max);
-        EXPECT_EQ(freqRange.min, freqRangeReset.min);
-      } else {
-        for (uint32_t i = 1; i < count; i++) {
-          freqRange.min = frequency[i - 1];
-          freqRange.max = frequency[i];
+    p_count = lzt::get_freq_handle_count(device);
+    if (p_count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        zes_freq_range_t freqRange = {};
+        zes_freq_range_t freqRangeReset = {};
+        uint32_t count = 0;
+        auto frequency = lzt::get_available_clocks(pfreq_handle, count);
+        ASSERT_GT(frequency.size(), 0);
+        if (count == 1) {
+          freqRange.min = frequency[0];
+          freqRange.max = frequency[0];
           lzt::set_freq_range(pfreq_handle, freqRange);
           freqRangeReset = lzt::get_and_validate_freq_range(pfreq_handle);
           EXPECT_EQ(freqRange.max, freqRangeReset.max);
           EXPECT_EQ(freqRange.min, freqRangeReset.min);
+        } else {
+          for (uint32_t i = 1; i < count; i++) {
+            freqRange.min = frequency[i - 1];
+            freqRange.max = frequency[i];
+            lzt::set_freq_range(pfreq_handle, freqRange);
+            freqRangeReset = lzt::get_and_validate_freq_range(pfreq_handle);
+            EXPECT_EQ(freqRange.max, freqRangeReset.max);
+            EXPECT_EQ(freqRange.min, freqRangeReset.min);
+          }
         }
       }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -442,46 +513,46 @@ LZT_TEST_F(
     GivenValidFrequencyHandleWhenRequestingSetFrequencyWithInvalidRangeThenExpectMinAndMaxFrequencyAreClampedToHardwareLimits) {
   for (auto device : devices) {
     uint32_t p_count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
-    if (p_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-
-      zes_freq_range_t invalid_freq_range = {};
-      zes_freq_range_t clamped_freq_range = {};
-
-      zes_freq_properties_t freq_property =
-          lzt::get_freq_properties(pfreq_handle);
-
-      if (freq_property.canControl) {
-        if (freq_property.min - 100 >= 0) {
-          invalid_freq_range.min = freq_property.min - 100;
+    p_count = lzt::get_freq_handle_count(device);
+    if (p_count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device!";
+      auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        zes_freq_range_t invalid_freq_range = {};
+        zes_freq_range_t clamped_freq_range = {};
+        zes_freq_properties_t freq_property =
+            lzt::get_freq_properties(pfreq_handle);
+        if (freq_property.canControl) {
+          if (freq_property.min - 100 >= 0) {
+            invalid_freq_range.min = freq_property.min - 100;
+          } else {
+            invalid_freq_range.min = 0;
+          }
+          invalid_freq_range.max = freq_property.max + 100;
+          ze_result_t result{};
+          lzt::set_freq_range(pfreq_handle, invalid_freq_range, result);
+          if (result == ZE_RESULT_SUCCESS) {
+            // driver allows to set out of range freq limits
+            clamped_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
+            EXPECT_EQ(freq_property.min, clamped_freq_range.min);
+            EXPECT_EQ(freq_property.max, clamped_freq_range.max);
+          } else {
+            LOG_WARNING << "Setting Out of Range Freq Limits Failed!";
+          }
         } else {
-          invalid_freq_range.min = 0;
+          LOG_WARNING << "User cannot control min/max frequency setting for "
+                         "frequency domain "
+                      << get_freq_domain(freq_property.type);
         }
-        invalid_freq_range.max = freq_property.max + 100;
-
-        ze_result_t result{};
-        lzt::set_freq_range(pfreq_handle, invalid_freq_range, result);
-
-        if (result == ZE_RESULT_SUCCESS) {
-          // driver allows to set out of range freq limits
-          clamped_freq_range = lzt::get_and_validate_freq_range(pfreq_handle);
-          EXPECT_EQ(freq_property.min, clamped_freq_range.min);
-          EXPECT_EQ(freq_property.max, clamped_freq_range.max);
-        } else {
-          LOG_WARNING << "Setting Out of Range Freq Limits Failed!";
-        }
-      } else {
-        LOG_WARNING << "User cannot control min/max frequency setting for "
-                       "frequency domain "
-                    << get_freq_domain(freq_property.type);
       }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -543,68 +614,71 @@ void get_throttle_time_init(zes_freq_handle_t pfreq_handle,
 LZT_TEST_F(FREQUENCY_TEST, GivenValidFrequencyHandleThenCheckForThrottling) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, count);
-    if (count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-      {
-        uint32_t p_count = 0;
-        auto p_power_handles = lzt::get_power_handles(device, p_count);
-        if (p_count == 0) {
-          FAIL() << "No handles found: "
-                 << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-        }
-        for (auto p_power_handle : p_power_handles) {
-          EXPECT_NE(nullptr, p_power_handle);
-          zes_power_sustained_limit_t power_sustained_limit_Initial;
-          auto status = lzt::get_power_limits(
-              p_power_handle, &power_sustained_limit_Initial, nullptr, nullptr);
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          zes_power_sustained_limit_t power_sustained_limit_set;
-          power_sustained_limit_set.power = 0;
-          status = lzt::set_power_limits(
-              p_power_handle, &power_sustained_limit_set, nullptr, nullptr);
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
-          }
-          EXPECT_ZE_RESULT_SUCCESS(status);
-          auto before_throttletime = lzt::get_throttle_time(pfreq_handle);
-          zes_freq_throttle_time_t throttletime;
+    count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        {
+          uint32_t p_count = 0;
+          auto p_power_handles = lzt::get_power_handles(device, p_count);
+          for (auto p_power_handle : p_power_handles) {
+            EXPECT_NE(nullptr, p_power_handle);
+            zes_power_sustained_limit_t power_sustained_limit_Initial;
+            auto status = lzt::get_power_limits(p_power_handle,
+                                                &power_sustained_limit_Initial,
+                                                nullptr, nullptr);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            zes_power_sustained_limit_t power_sustained_limit_set;
+            power_sustained_limit_set.power = 0;
+            status = lzt::set_power_limits(
+                p_power_handle, &power_sustained_limit_set, nullptr, nullptr);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
+            auto before_throttletime = lzt::get_throttle_time(pfreq_handle);
+            zes_freq_throttle_time_t throttletime;
 #ifdef USE_ZESINIT
-          auto sysman_device_properties =
-              lzt::get_sysman_device_properties(device);
-          ze_device_handle_t core_device = lzt::get_core_device_by_uuid(
-              sysman_device_properties.core.uuid.id);
-          EXPECT_NE(core_device, nullptr);
-          std::thread first(load_for_gpu, core_device);
+            auto sysman_device_properties =
+                lzt::get_sysman_device_properties(device);
+            ze_device_handle_t core_device = lzt::get_core_device_by_uuid(
+                sysman_device_properties.core.uuid.id);
+            EXPECT_NE(core_device, nullptr);
+            std::thread first(load_for_gpu, core_device);
 #else  // USE_ZESINIT
-          std::thread first(load_for_gpu, device);
+            std::thread first(load_for_gpu, device);
 #endif // USE_ZESINIT
-          std::thread second(get_throttle_time_init, pfreq_handle,
-                             std::ref(throttletime));
-          first.join();
-          second.join();
-          auto after_throttletime = lzt::get_throttle_time(pfreq_handle);
-          EXPECT_LT(before_throttletime.throttleTime,
-                    after_throttletime.throttleTime);
-          EXPECT_NE(before_throttletime.timestamp,
-                    after_throttletime.timestamp);
-          status = lzt::set_power_limits(
-              p_power_handle, &power_sustained_limit_Initial, nullptr, nullptr);
-          if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            continue;
+            std::thread second(get_throttle_time_init, pfreq_handle,
+                               std::ref(throttletime));
+            first.join();
+            second.join();
+            auto after_throttletime = lzt::get_throttle_time(pfreq_handle);
+            EXPECT_LT(before_throttletime.throttleTime,
+                      after_throttletime.throttleTime);
+            EXPECT_NE(before_throttletime.timestamp,
+                      after_throttletime.timestamp);
+            status = lzt::set_power_limits(p_power_handle,
+                                           &power_sustained_limit_Initial,
+                                           nullptr, nullptr);
+            if (status == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+              continue;
+            }
+            EXPECT_ZE_RESULT_SUCCESS(status);
           }
-          EXPECT_ZE_RESULT_SUCCESS(status);
         }
       }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -694,57 +768,58 @@ LZT_TEST_F(
     GivenValidFrequencyRangeWhenRequestingSetFrequencyThenExpectRequestFrequencyStaysInRangeDuringGpuLoad) {
   for (auto device : devices) {
     uint32_t p_count = 0;
-    auto pfreq_handles = lzt::get_freq_handles(device, p_count);
-    if (p_count == 0) {
-      FAIL() << "No handles found: "
-             << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-    }
-
-    for (auto pfreq_handle : pfreq_handles) {
-      EXPECT_NE(nullptr, pfreq_handle);
-
-      // Fetch frequency properties
-      zes_freq_properties_t properties = {};
-      properties = lzt::get_freq_properties(pfreq_handle);
-
-      if (properties.canControl) {
-        // Set values for min and max frequencies
-        zes_freq_range_t limits = {};
-        limits.min = properties.min + (properties.max - properties.min) / 4;
-        limits.max = properties.min + (properties.max - properties.min) / 2;
-
-        if ((fmod(limits.min, 50))) {
-          limits.min = limits.min - fmod(limits.min, 50);
-        }
-        if (fmod(limits.max, 50)) {
-          limits.max = limits.max - fmod(limits.max, 50);
-        }
-
-        lzt::set_freq_range(pfreq_handle, limits);
-        lzt::idle_check(pfreq_handle);
-        // Thread to start workload on GPU
+    p_count = lzt::get_freq_handle_count(device);
+    if (p_count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
+      auto pfreq_handles = lzt::get_freq_handles(device, p_count);
+      for (auto pfreq_handle : pfreq_handles) {
+        EXPECT_NE(nullptr, pfreq_handle);
+        // Fetch frequency properties
+        zes_freq_properties_t properties = {};
+        properties = lzt::get_freq_properties(pfreq_handle);
+        if (properties.canControl) {
+          // Set values for min and max frequencies
+          zes_freq_range_t limits = {};
+          limits.min = properties.min + (properties.max - properties.min) / 4;
+          limits.max = properties.min + (properties.max - properties.min) / 2;
+          if ((fmod(limits.min, 50))) {
+            limits.min = limits.min - fmod(limits.min, 50);
+          }
+          if (fmod(limits.max, 50)) {
+            limits.max = limits.max - fmod(limits.max, 50);
+          }
+          lzt::set_freq_range(pfreq_handle, limits);
+          lzt::idle_check(pfreq_handle);
+          // Thread to start workload on GPU
 #ifdef USE_ZESINIT
-        auto sysman_device_properties =
-            lzt::get_sysman_device_properties(device);
-        ze_device_handle_t core_device =
-            lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
-        EXPECT_NE(core_device, nullptr);
-        std::thread first(loadForGpuMaxFreqTest, core_device);
+          auto sysman_device_properties =
+              lzt::get_sysman_device_properties(device);
+          ze_device_handle_t core_device = lzt::get_core_device_by_uuid(
+              sysman_device_properties.core.uuid.id);
+          EXPECT_NE(core_device, nullptr);
+          std::thread first(loadForGpuMaxFreqTest, core_device);
 #else  // USE_ZESINIT
-        std::thread first(loadForGpuMaxFreqTest, device);
+          std::thread first(loadForGpuMaxFreqTest, device);
 #endif // USE_ZESINIT
        // Thread to monitor actual frequency
-        std::thread second(checkFreqInLoop, pfreq_handle);
+          std::thread second(checkFreqInLoop, pfreq_handle);
 
-        // wait for threads to finish
-        first.join();
-        second.join();
-      } else {
-        // User cannot control min,max frequency settings
-        LOG_WARNING
-            << "User cannot control min/max frequency setting, skipping test";
+          // wait for threads to finish
+          first.join();
+          second.join();
+        } else {
+          // User cannot control min,max frequency settings
+          LOG_WARNING
+              << "User cannot control min/max frequency setting, skipping test";
+        }
       }
+    } else {
+      LOG_INFO << "No frequency handles found for this device! ";
     }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -754,18 +829,17 @@ LZT_TEST_F(
     GivenValidDeviceWhenCallingFrequencyGetStateMultipleTimesThenExpectFirstCallIsSlowerThanSubsequentCalls) {
   for (auto device : devices) {
     uint32_t count = 0;
-    auto freq_handles = lzt::get_freq_handles(device, count);
-
+    count = lzt::get_freq_handle_count(device);
     if (count > 0) {
-      freq_handles_available = true;
+      is_freq_supported = true;
+      LOG_INFO << "Frequency devices are available on this device! ";
+      auto freq_handles = lzt::get_freq_handles(device, count);
       auto start = std::chrono::steady_clock::now();
       auto states = lzt::get_freq_state(freq_handles);
       auto end = std::chrono::steady_clock::now();
       std::chrono::duration<double, std::micro> elapsed_initial = end - start;
-
       uint32_t iterations = 20;
       std::chrono::duration<double, std::micro> total_time(0);
-
       for (uint32_t i = 0; i < iterations; i++) {
         auto start = std::chrono::steady_clock::now();
         auto states = lzt::get_freq_state(freq_handles);
@@ -773,23 +847,20 @@ LZT_TEST_F(
         std::chrono::duration<double, std::micro> elapsed = end - start;
         total_time += elapsed;
       }
-
       auto avg_time = total_time / iterations;
       LOG_INFO << "Initial Telemetry collection time (micro sec): "
                << elapsed_initial.count();
       LOG_INFO << "Average Telemetry collection time (micro sec) for "
                << iterations << " iterations : " << avg_time.count();
-
       EXPECT_GT(elapsed_initial.count(), 0);
       EXPECT_GT(avg_time.count(), 0);
       EXPECT_GT(elapsed_initial.count(), avg_time.count());
     } else {
-      LOG_WARNING << "No handles found on this device!";
+      LOG_WARNING << "No frequency handles found for this device!";
     }
   }
-
-  if (!freq_handles_available) {
-    FAIL() << "No handles found in any of the devices!";
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 #endif
