@@ -20,13 +20,13 @@ namespace {
 #ifdef USE_ZESINIT
 class OverclockingZesTest : public lzt::ZesSysmanCtsClass {
 public:
-  bool is_overclocking_supported = false;
+  bool is_frequency_supported = false;
 };
 #define OVERCLOCK_TEST OverclockingZesTest
 #else // USE_ZESINIT
 class OverclockingTest : public lzt::SysmanCtsClass {
 public:
-  bool is_overclocking_supported = false;
+  bool is_frequency_supported = false;
 };
 #define OVERCLOCK_TEST OverclockingTest
 #endif // USE_ZESINIT
@@ -38,8 +38,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -50,11 +50,11 @@ LZT_TEST_F(
         EXPECT_GT(capabilities.maxOcVoltage, 0);
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -64,8 +64,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -99,11 +99,11 @@ LZT_TEST_F(
                   capabilitiesLater.isFixedModeSupported);
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -113,8 +113,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -129,11 +129,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -143,8 +143,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -163,11 +163,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -177,8 +177,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -198,11 +198,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -213,8 +213,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -239,11 +239,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -254,8 +254,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -267,11 +267,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -282,8 +282,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -305,11 +305,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
@@ -320,8 +320,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -333,11 +333,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -347,8 +347,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -363,11 +363,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -377,8 +377,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -390,11 +390,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 LZT_TEST_F(
@@ -404,8 +404,8 @@ LZT_TEST_F(
     uint32_t p_count = 0;
     p_count = lzt::get_freq_handle_count(device);
     if (p_count > 0) {
-      is_overclocking_supported = true;
-      LOG_INFO << "Overclocking handles are available on this device! ";
+      is_frequency_supported = true;
+      LOG_INFO << "Frequency handles are available on this device! ";
       auto freq_handles = lzt::get_freq_handles(device, p_count);
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
@@ -420,11 +420,11 @@ LZT_TEST_F(
         }
       }
     } else {
-      LOG_INFO << "No overclocking handles found for this device! ";
+      LOG_INFO << "No frequency handles found for this device! ";
     }
   }
-  if (!is_overclocking_supported) {
-    FAIL() << "No overclocking handles found on any of the devices! ";
+  if (!is_frequency_supported) {
+    FAIL() << "No frequency handles found on any of the devices! ";
   }
 }
 
