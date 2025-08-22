@@ -302,13 +302,19 @@ LZT_TEST_F(
 #ifdef USE_ZESINIT
 class PerformanceModuleParamComputePerformanceFactorZesTest
     : public lzt::ZesSysmanCtsClass,
-      public ::testing::WithParamInterface<int> {};
+      public ::testing::WithParamInterface<int> {
+public:
+  bool is_performance_supported = false;
+};
 #define PERFORMANCE_COMPUTE_TEST                                               \
   PerformanceModuleParamComputePerformanceFactorZesTest
 #else // USE_ZESINIT
 class PerformanceModuleParamComputePerformanceFactorTest
     : public lzt::SysmanCtsClass,
-      public ::testing::WithParamInterface<int> {};
+      public ::testing::WithParamInterface<int> {
+public:
+  bool is_performance_supported = false;
+};
 #define PERFORMANCE_COMPUTE_TEST                                               \
   PerformanceModuleParamComputePerformanceFactorTest
 #endif // USE_ZESINIT
@@ -316,12 +322,11 @@ class PerformanceModuleParamComputePerformanceFactorTest
 LZT_TEST_P(
     PERFORMANCE_COMPUTE_TEST,
     GivenValidPerformanceHandleWhenSettingMultiplePerformanceFactorForComputeThenValidPerformanceFactorIsReturned) {
-  bool is_perf_supported = false;
   for (auto device : devices) {
     uint32_t count = 0;
     count = lzt::get_performance_handle_count(device);
     if (count > 0) {
-      is_perf_supported = true;
+      is_performance_supported = true;
       LOG_INFO << "Performance handles are available on this device! ";
       auto performance_handles = lzt::get_performance_handles(device, count);
       for (auto performance_handle : performance_handles) {
@@ -341,7 +346,7 @@ LZT_TEST_P(
       LOG_INFO << "No performance handles found for this device! ";
     }
   }
-  if (!is_perf_supported) {
+  if (!is_performance_supported) {
     FAIL() << "No performance handles found on any of the devices! ";
   }
 }
