@@ -1341,7 +1341,7 @@ LZT_TEST_F(
     auto power_handles = lzt::get_power_handles(device, count);
     if (count > 0) {
       is_power_supported = true;
-      LOG_INFO << "Power handles are found on this device! ";
+      LOG_INFO << "Power handles are available on this device! ";
       auto start = std::chrono::steady_clock::now();
       auto energy_counters = lzt::get_power_energy_counter(power_handles);
       auto end = std::chrono::steady_clock::now();
