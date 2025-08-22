@@ -1100,10 +1100,6 @@ LZT_TEST_F(
       is_power_supported = true;
       LOG_INFO << "Power handles are available on this device! ";
       auto p_power_handles = lzt::get_power_handles(device, count);
-      if (count == 0) {
-        FAIL() << "No handles found: "
-               << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-      }
       for (auto p_power_handle : p_power_handles) {
         auto p_properties = lzt::get_power_properties(p_power_handle);
         if (p_properties.onSubdevice == true) {
@@ -1304,8 +1300,7 @@ LZT_TEST_F(
         auto p_performance_handles =
             lzt::get_performance_handles(device, perf_count);
         if (perf_count == 0) {
-          FAIL() << "No handles found: "
-                 << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
+          FAIL() << "No performance handles found for this device! ";
         }
         for (auto p_performance_handle : p_performance_handles) {
           zes_perf_properties_t p_perf_properties =
