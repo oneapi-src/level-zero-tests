@@ -303,4 +303,142 @@ LZT_TEST_F(
   }
 }
 
+LZT_TEST_F(
+    FIRMWARE_TEST,
+    GivenValidFirmwareHandleWhenFlashingGfxFirmwareThenExpectFirmwareFlashingSuccess) {
+  auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (nullptr == fwDirEnv) {
+    LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY not set";
+    GTEST_SKIP();
+  }
+  std::string fwDir(fwDirEnv);
+  std::vector<char> testFwImage;
+  for (auto device : devices) {
+    uint32_t count = 0;
+    count = lzt::get_firmware_handle_count(device);
+    if (count > 0) {
+      is_firmware_supported = true;
+      LOG_INFO << "Firmware handles are available on this device! ";
+      auto firmware_handles = lzt::get_firmware_handles(device, count);
+      for (auto firmware_handle : firmware_handles) {
+        ASSERT_NE(nullptr, firmware_handle);
+        auto propFw = lzt::get_firmware_properties(firmware_handle);
+        if (propFw.canControl == true &&
+            std::string(reinterpret_cast<char *>(propFw.name)) == "GFX") {
+          std::string fwName(reinterpret_cast<char *>(propFw.name));
+          std::string fwToLoad = fwDir + "/" + fwName + ".bin";
+          std::ifstream inFileStream(fwToLoad,
+                                     std::ios::binary | std::ios::ate);
+          if (!inFileStream.is_open()) {
+            LOG_INFO << "Skipping test as firmware image not found";
+            GTEST_SKIP();
+          }
+          testFwImage.resize(inFileStream.tellg());
+          inFileStream.seekg(0, inFileStream.beg);
+          inFileStream.read(testFwImage.data(), testFwImage.size());
+          lzt::flash_firmware(firmware_handle,
+                              static_cast<void *>(testFwImage.data()),
+                              testFwImage.size());
+        }
+      }
+    } else {
+      LOG_INFO << "No firmware handles found for this device!";
+    }
+  }
+  if (!is_firmware_supported) {
+    FAIL() << "No firmware handles found on any of the devices!";
+  }
+}
+
+LZT_TEST_F(
+    FIRMWARE_TEST,
+    GivenValidFirmwareHandleWhenFlashingOptionRomCodeThenExpectFirmwareFlashingSuccess) {
+  auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (nullptr == fwDirEnv) {
+    LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY not set";
+    GTEST_SKIP();
+  }
+  std::string fwDir(fwDirEnv);
+  std::vector<char> testFwImage;
+  for (auto device : devices) {
+    uint32_t count = 0;
+    count = lzt::get_firmware_handle_count(device);
+    if (count > 0) {
+      is_firmware_supported = true;
+      auto firmware_handles = lzt::get_firmware_handles(device, count);
+      for (auto firmware_handle : firmware_handles) {
+        ASSERT_NE(nullptr, firmware_handle);
+        auto propFw = lzt::get_firmware_properties(firmware_handle);
+        if (propFw.canControl == true &&
+            std::string(reinterpret_cast<char *>(propFw.name)) == "OptionROM") {
+          std::string fwName(reinterpret_cast<char *>(propFw.name));
+          std::string fwToLoad = fwDir + "/" + fwName + ".bin";
+          std::ifstream inFileStream(fwToLoad,
+                                     std::ios::binary | std::ios::ate);
+          if (!inFileStream.is_open()) {
+            LOG_INFO << "Skipping test as firmware image not found";
+            GTEST_SKIP();
+          }
+          testFwImage.resize(inFileStream.tellg());
+          inFileStream.seekg(0, inFileStream.beg);
+          inFileStream.read(testFwImage.data(), testFwImage.size());
+          lzt::flash_firmware(firmware_handle,
+                              static_cast<void *>(testFwImage.data()),
+                              testFwImage.size());
+        }
+      }
+    } else {
+      LOG_INFO << "No firmware handles found for this device!";
+    }
+  }
+  if (!is_firmware_supported) {
+    FAIL() << "No firmware handles found on any of the devices!";
+  }
+}
+
+LZT_TEST_F(
+    FIRMWARE_TEST,
+    GivenValidFirmwareHandleWhenFlashingOptionRomDataThenExpectFirmwareFlashingSuccess) {
+  auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (nullptr == fwDirEnv) {
+    LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY not set";
+    GTEST_SKIP();
+  }
+  std::string fwDir(fwDirEnv);
+  std::vector<char> testFwImage;
+  for (auto device : devices) {
+    uint32_t count = 0;
+    count = lzt::get_firmware_handle_count(device);
+    if (count > 0) {
+      is_firmware_supported = true;
+      auto firmware_handles = lzt::get_firmware_handles(device, count);
+      for (auto firmware_handle : firmware_handles) {
+        ASSERT_NE(nullptr, firmware_handle);
+        auto propFw = lzt::get_firmware_properties(firmware_handle);
+        if (propFw.canControl == true &&
+            std::string(reinterpret_cast<char *>(propFw.name)) == "OptionROM") {
+          std::string fwName(reinterpret_cast<char *>(propFw.name));
+          std::string fwToLoad = fwDir + "/" + fwName + ".bin";
+          std::ifstream inFileStream(fwToLoad,
+                                     std::ios::binary | std::ios::ate);
+          if (!inFileStream.is_open()) {
+            LOG_INFO << "Skipping test as firmware image not found";
+            GTEST_SKIP();
+          }
+          testFwImage.resize(inFileStream.tellg());
+          inFileStream.seekg(0, inFileStream.beg);
+          inFileStream.read(testFwImage.data(), testFwImage.size());
+          lzt::flash_firmware(firmware_handle,
+                              static_cast<void *>(testFwImage.data()),
+                              testFwImage.size());
+        }
+      }
+    } else {
+      LOG_INFO << "No firmware handles found for this device!";
+    }
+  }
+  if (!is_firmware_supported) {
+    FAIL() << "No firmware handles found on any of the devices!";
+  }
+}
 } // namespace
