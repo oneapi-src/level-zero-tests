@@ -18,13 +18,15 @@ class SharedSystemMemoryTests
 protected:
   void SetUp() override {
     device = lzt::zeDevice::get_instance()->get_device();
-    module = lzt::create_module(device, "memory_add.spv");
+
+    bool is_dst_shared_system = std::get<0>(GetParam()).first;
+    bool is_src_shared_system = std::get<0>(GetParam()).second;
+    if (is_dst_shared_system || is_src_shared_system) {
+      SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+    }
   }
 
-  void TearDown() override { lzt::destroy_module(module); }
-
   ze_device_handle_t device;
-  ze_module_handle_t module;
 };
 
 LZT_TEST_P(
@@ -39,12 +41,9 @@ LZT_TEST_P(
   constexpr size_t group_size = 32;
   ASSERT_EQ(buffer_size % (sizeof(int) * group_size), 0);
 
-  if (is_dst_shared_system || is_src_shared_system) {
-    SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  }
-
   constexpr int source_value = 1234;
   constexpr int add_value = 5678;
+  const size_t num_elements = buffer_size / sizeof(int);
 
   void *result = lzt::allocate_shared_memory_with_allocator_selector(
       buffer_size, 1, 0, 0, device, is_dst_shared_system);
@@ -53,9 +52,11 @@ LZT_TEST_P(
 
   memset(result, 0, buffer_size);
   int *source_as_int = reinterpret_cast<int *>(source);
-  for (size_t i = 0; i < buffer_size / sizeof(int); i++) {
+  for (size_t i = 0; i < num_elements; i++) {
     source_as_int[i] = source_value;
   }
+
+  ze_module_handle_t module = lzt::create_module(device, "memory_add.spv");
 
   const char *funcion_name =
       use_atomic_kernel ? "memory_atomic_add" : "memory_add";
@@ -78,15 +79,81 @@ LZT_TEST_P(
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   int *result_as_int = reinterpret_cast<int *>(result);
-  for (size_t i = 0; i < buffer_size / sizeof(int); i++) {
+  for (size_t i = 0; i < num_elements; i++) {
     EXPECT_EQ(result_as_int[i], source_value + add_value) << "index = " << i;
   }
 
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_function(function);
+  lzt::destroy_module(module);
 
   lzt::free_memory_with_allocator_selector(source, is_src_shared_system);
   lzt::free_memory_with_allocator_selector(result, is_dst_shared_system);
+}
+
+LZT_TEST_P(
+    SharedSystemMemoryTests,
+    GivenSharedSystemMemoryAllocationsAsKernelArgumentsWhenCooperativeKernelExecutesThenValueIsCorrect) {
+  bool is_dst_shared_system = std::get<0>(GetParam()).first;
+  bool is_src_shared_system = std::get<0>(GetParam()).second;
+  bool use_atomic_kernel = std::get<1>(GetParam());
+  bool use_immediate_cmdlist = std::get<2>(GetParam());
+  size_t buffer_size = std::get<3>(GetParam());
+
+  constexpr size_t group_size = 32;
+  ASSERT_EQ(buffer_size % (sizeof(int) * group_size), 0);
+  const size_t num_elements = buffer_size / sizeof(int);
+  const size_t group_count_x = buffer_size / (sizeof(int) * group_size);
+
+  void *partial_sums = lzt::allocate_shared_memory_with_allocator_selector(
+      group_count_x * sizeof(int), 1, 0, 0, device, is_dst_shared_system);
+  void *input = lzt::allocate_shared_memory_with_allocator_selector(
+      buffer_size, 1, 0, 0, device, is_src_shared_system);
+
+  memset(partial_sums, 0, group_count_x * sizeof(int));
+  int *input_as_int = reinterpret_cast<int *>(input);
+  for (size_t i = 0; i < num_elements; i++) {
+    input_as_int[i] = 1;
+  }
+
+  int result = 0;
+
+  ze_module_handle_t module = lzt::create_module(device, "memory_sum.spv");
+
+  const char *funcion_name =
+      use_atomic_kernel ? "memory_sum_atomic" : "memory_sum";
+  ze_kernel_handle_t function = lzt::create_function(module, funcion_name);
+  lzt::set_group_size(function, group_size, 1, 1);
+
+  lzt::set_argument_value(function, 0, sizeof(input), &input);
+  lzt::set_argument_value(function, 1, sizeof(partial_sums), &partial_sums);
+  lzt::set_argument_value(function, 2, sizeof(int) * group_size, nullptr);
+  lzt::set_argument_value(function, 3, sizeof(group_count_x), &group_count_x);
+  if (use_atomic_kernel) {
+    lzt::set_argument_value(function, 4, sizeof(result), &result);
+  }
+
+  lzt::zeCommandBundle cmd_bundle =
+      lzt::create_command_bundle(use_immediate_cmdlist);
+
+  ze_group_count_t thread_group_dimensions = {
+      static_cast<uint32_t>(group_count_x), 1, 1};
+
+  lzt::append_launch_function(cmd_bundle.list, function,
+                              &thread_group_dimensions, nullptr, 0, nullptr);
+
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+  if (!use_atomic_kernel) {
+    EXPECT_EQ(result, 0);
+    int *partial_sums_as_int = reinterpret_cast<int *>(partial_sums);
+    for (size_t i = 0; i < group_count_x; i++) {
+      result += partial_sums_as_int[i];
+    }
+  }
+
+  EXPECT_EQ(result, num_elements);
 }
 
 struct SharedSystemMemoryTestsNameSuffix {
