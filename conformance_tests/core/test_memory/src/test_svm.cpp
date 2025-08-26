@@ -154,6 +154,13 @@ LZT_TEST_P(
   }
 
   EXPECT_EQ(result, num_elements);
+
+  lzt::destroy_command_bundle(cmd_bundle);
+  lzt::destroy_function(function);
+  lzt::destroy_module(module);
+
+  lzt::free_memory_with_allocator_selector(input, is_src_shared_system);
+  lzt::free_memory_with_allocator_selector(partial_sums, is_dst_shared_system);
 }
 
 struct SharedSystemMemoryTestsNameSuffix {
