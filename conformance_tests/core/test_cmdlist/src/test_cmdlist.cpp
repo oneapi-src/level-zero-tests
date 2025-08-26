@@ -695,7 +695,7 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
   uint32_t expectedMemorySize = (arraySize * 2 + 1) * typeSize - 4;
   uint32_t inMemorySize = expectedMemorySize;
   uint32_t outMemorySize = expectedMemorySize;
-  uint32_t offsetMemorySize = 128 * arraySize;
+  uint32_t offsetMemorySize = 1281 * typeSize;
 
   ze_device_mem_alloc_desc_t deviceDesc = {};
   deviceDesc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
@@ -759,9 +759,9 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
                           groupSizeY, groupSizeZ);
   size_t groupSize = groupSizeX * groupSizeY * groupSizeZ;
   lzt::set_group_size(scratch_function, groupSizeX, groupSizeY, groupSizeZ);
-  lzt::set_argument_value(scratch_function, 2, sizeof(dstBuffer), &dstBuffer);
-  lzt::set_argument_value(scratch_function, 1, sizeof(srcBuffer), &srcBuffer);
-  lzt::set_argument_value(scratch_function, 0, sizeof(offsetBuffer),
+  lzt::set_argument_value(scratch_function, 0, sizeof(srcBuffer), &srcBuffer);
+  lzt::set_argument_value(scratch_function, 1, sizeof(dstBuffer), &dstBuffer);
+  lzt::set_argument_value(scratch_function, 2, sizeof(offsetBuffer),
                           &offsetBuffer);
   // if groupSize is greater then memory count, then at least one thread group
   // should be dispatched
