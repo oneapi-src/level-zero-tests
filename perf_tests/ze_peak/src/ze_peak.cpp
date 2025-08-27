@@ -583,7 +583,7 @@ void L0Context::execute_commandlist_and_sync(bool use_copy_only_queue) {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   if (sub_device_count) {
-    for (auto i = 0; i < sub_device_count; i++) {
+    for (uint32_t i = 0U; i < sub_device_count; i++) {
       auto cmd_l = use_copy_only_queue ? copy_command_list : cmd_list[i];
       auto cmd_q = use_copy_only_queue ? copy_command_queue : cmd_queue[i];
 
@@ -1821,7 +1821,7 @@ long double ZePeak::context_time_in_us(L0Context &context,
 
   const uint64_t timestamp_freq = context.device_property.timerResolution;
   const uint64_t timestamp_max_value =
-      ~(-1L << context.device_property.kernelTimestampValidBits);
+      ~(-1ULL << context.device_property.kernelTimestampValidBits);
   context_time_ns =
       (ts_result.global.kernelEnd >= ts_result.global.kernelStart)
           ? (ts_result.global.kernelEnd - ts_result.global.kernelStart) *

@@ -76,7 +76,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
       (uint32_t *)lzt::allocate_host_memory_with_allocator_selector(
           image_size * sizeof(uint32_t), is_shared_system);
 
-  for (int i = 0; i < image_size; i++) {
+  for (size_t i = 0U; i < image_size; i++) {
     inbuff[i] = 0x12345678;
   }
 
@@ -104,7 +104,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
-  for (int i = 0; i < image_size; i++) {
+  for (size_t i = 0U; i < image_size; i++) {
     EXPECT_EQ(outbuff[i], 0x78563412); // After swizzle from RGBA to AGBR the
                                        // data format will be reversed from 12
                                        // 34 56 78 -> 78 56 34 12

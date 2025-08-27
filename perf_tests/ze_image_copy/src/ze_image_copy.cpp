@@ -92,7 +92,7 @@ void ZeImageCopy::test_initialize(void) {
   hdevice_event = new ze_event_handle_t[num_wait_events];
   event_pool = benchmark->create_event_pool(num_wait_events,
                                             ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     benchmark->create_event(event_pool, hdevice_event[i], i);
     zeEventHostReset(hdevice_event[i]);
   }
@@ -108,7 +108,7 @@ void ZeImageCopy::test_cleanup(void) {
 #endif
   benchmark->imageDestroy(this->image);
   image = nullptr;
-  for (int i = 0; i < num_wait_events; i++)
+  for (uint32_t i = 0U; i < num_wait_events; i++)
     benchmark->destroy_event(hdevice_event[i]);
   benchmark->destroy_event_pool(this->event_pool);
   event_pool = nullptr;
@@ -116,7 +116,7 @@ void ZeImageCopy::test_cleanup(void) {
 }
 
 void ZeImageCopy::reset_all_events(void) {
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     zeEventHostReset(hdevice_event[i]);
   }
 }
@@ -148,13 +148,13 @@ void ZeImageCopy::measureHost2Device2Host() {
   benchmark->commandListClose(command_list);
 
   /* Warm up */
-  for (int i = 0; i < warm_up_iterations; i++) {
+  for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     benchmark->commandQueueExecuteCommandList(command_queue, 1, &command_list);
     benchmark->commandQueueSynchronize(command_queue);
   }
 
   // Measure the bandwidth of copy from host to device to host only
-  for (int i = 0; i < num_iterations; i++) {
+  for (uint32_t i = 0U; i < num_iterations; i++) {
 
     timer.start();
 
@@ -191,7 +191,7 @@ void ZeImageCopy::measureParallelHost2Device() {
 
   // Copy from srcBuffer->Image->dstBuffer, so at the end dstBuffer = srcBuffer
   benchmark->commandListReset(command_list_a);
-  for (int i = 0; i < num_image_copies; i++) {
+  for (uint32_t i = 0U; i < num_image_copies; i++) {
     benchmark->commandListAppendImageCopyFromMemory(command_list_a, image,
                                                     srcBuffer, &this->region);
   }
@@ -210,7 +210,7 @@ void ZeImageCopy::measureParallelHost2Device() {
   benchmark->commandQueueExecuteCommandList(command_queue, 1, &command_list_b);
   benchmark->commandQueueSynchronize(command_queue);
 
-  for (int i = 0; i < num_iterations; i++) {
+  for (uint32_t i = 0U; i < num_iterations; i++) {
 
     // Measure the bandwidth of copy from host to device only
     timer.start();
@@ -263,7 +263,7 @@ void ZeImageCopy::measureParallelDevice2Host() {
   // commandListReset to make sure resetting the command_list_b from previous
   // operations on host2device
   benchmark->commandListReset(command_list_b);
-  for (int i = 0; i < num_image_copies; i++) {
+  for (uint32_t i = 0U; i < num_image_copies; i++) {
     benchmark->commandListAppendImageCopyToMemory(command_list_b, dstBuffer,
                                                   image, &this->region);
   }
@@ -276,7 +276,7 @@ void ZeImageCopy::measureParallelDevice2Host() {
   benchmark->commandQueueExecuteCommandList(command_queue, 1, &command_list_b);
   benchmark->commandQueueSynchronize(command_queue);
 
-  for (int i = 0; i < num_iterations; i++) {
+  for (uint32_t i = 0U; i < num_iterations; i++) {
 
     // measure the bandwidth of copy from device to host only
     timer.start();
@@ -325,7 +325,7 @@ void ZeImageCopy::measureSerialHost2Device() {
   ze_event_handle_t *first_event = &hdevice_event[0];
   ze_event_handle_t *last_event = &hdevice_event[num_wait_events - 1];
   benchmark->commandListAppendWaitOnEvents(command_list_a, 1, first_event);
-  for (int i = 0; i < num_image_copies; i++) {
+  for (uint32_t i = 0U; i < num_image_copies; i++) {
     benchmark->commandListAppendImageCopyFromMemory(
         command_list_a, image, srcBuffer, &this->region,
         hdevice_event[i + 1] // Signal this event upon image copy completion
@@ -344,7 +344,7 @@ void ZeImageCopy::measureSerialHost2Device() {
   benchmark->commandListClose(command_list_b);
 
   // Warm up
-  for (int j = 0; j < warm_up_iterations; j++) {
+  for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     // Launch all command queued. They will wait to be executed until after
     // an event is signaled.
     benchmark->commandQueueExecuteCommandList(command_queue, 1,
@@ -359,7 +359,7 @@ void ZeImageCopy::measureSerialHost2Device() {
 
   // Measure the bandwidth of copy from host to device only
   total_time_usec = 0;
-  for (int j = 0; j < num_iterations; j++) {
+  for (uint32_t i = 0U; i < num_iterations; i++) {
     benchmark->commandQueueExecuteCommandList(command_queue, 1,
                                               &command_list_a);
     timer.start();
@@ -420,7 +420,7 @@ void ZeImageCopy::measureSerialDevice2Host() {
   ze_event_handle_t *first_event = &hdevice_event[0];
   ze_event_handle_t *last_event = &hdevice_event[num_wait_events - 1];
   benchmark->commandListAppendWaitOnEvents(command_list_b, 1, first_event);
-  for (int i = 0; i < num_image_copies; i++) {
+  for (uint32_t i = 0U; i < num_image_copies; i++) {
     benchmark->commandListAppendImageCopyToMemory(
         command_list_b, dstBuffer, image, &this->region,
         hdevice_event[i + 1] // Signal this event upon image copy completion
@@ -433,7 +433,7 @@ void ZeImageCopy::measureSerialDevice2Host() {
   benchmark->commandListClose(command_list_b);
 
   // Warm up
-  for (int i = 0; i < warm_up_iterations; i++) {
+  for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     // Launch all command queued. They will wait to be executed until after
     // an event is signaled.
     benchmark->commandQueueExecuteCommandList(command_queue, 1,
@@ -448,7 +448,7 @@ void ZeImageCopy::measureSerialDevice2Host() {
 
   // Measure the bandwidth of copy from device to host only
   total_time_usec = 0;
-  for (int i = 0; i < num_iterations; i++) {
+  for (uint32_t i = 0U; i < num_iterations; i++) {
     // Measure the bandwidth of copy from device to host only
     benchmark->commandQueueExecuteCommandList(command_queue, 1,
                                               &command_list_b);

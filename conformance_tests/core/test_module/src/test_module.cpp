@@ -497,7 +497,7 @@ void zeModuleCreateTests::
                                    buff_spec, is_immediate);
   uint64_t *output = static_cast<uint64_t *>(buff_spec);
 
-  for (int i = 0; i < spec_constants_num; i++) {
+  for (uint32_t i = 0U; i < spec_constants_num; i++) {
     int expected = (i + 1) * 11 + 1;
     int actual = output[i];
     EXPECT_EQ(expected, actual);
@@ -910,7 +910,7 @@ protected:
       EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchMultipleKernelsIndirect(
           bundle.list, 2, function_list.data(), num_launch_arg, mult_tg_dim,
           signal_event, num_wait, p_wait_events));
-      for (int i = 0; i < function_list.size(); i++) {
+      for (size_t i = 0U; i < function_list.size(); i++) {
         ASSERT_EQ(function_list[i], functions_initial[i]);
       }
 
@@ -918,7 +918,7 @@ protected:
       num_launch_arg[0] = 2;
       memcpy(args_buff, arg_buffer_list.data(), 2 * sizeof(ze_group_count_t));
     }
-    for (int i = 0; i < events_host_to_kernel.size(); i++) {
+    for (size_t i = 0U; i < events_host_to_kernel.size(); i++) {
       EXPECT_EQ(events_host_to_kernel[i], wait_events_initial[i]);
     }
     EXPECT_ZE_RESULT_SUCCESS(
@@ -1432,7 +1432,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
       if (comparison) {
         LOG_DEBUG << "Failed at offset: " << offset << std::endl;
         LOG_DEBUG << "Finding Incorrect Value";
-        for (int j = 0; j < validation_buffer_size; j++) {
+        for (size_t j = 0U; j < validation_buffer_size; j++) {
           if (validation_buffer[j] != reference_buffer[j]) {
             LOG_DEBUG << "index: " << std::dec << j << " val: " << std::hex
                       << (int)validation_buffer[j] << "\tref: " << std::hex
@@ -1524,15 +1524,15 @@ LZT_TEST_P(
     GTEST_SKIP();
   }
 
-  auto base_size = 8;
-  auto size = base_size * base_size * base_size;
+  uint32_t base_size = 8;
+  uint32_t size = base_size * base_size * base_size;
 
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, device, context);
   std::memset(buffer_a, 0, size);
-  for (int x = 0; x < base_size; x++) {
-    for (int y = 0; y < base_size; y++) {
-      for (int z = 0; z < base_size; z++) {
+  for (uint32_t x = 0U; x < base_size; x++) {
+    for (uint32_t y = 0U; y < base_size; y++) {
+      for (uint32_t z = 0U; z < base_size; z++) {
         auto index = x + base_size * y + base_size * base_size * z;
         static_cast<uint8_t *>(buffer_a)[index] = (index & 0xFF);
       }
@@ -1585,11 +1585,11 @@ LZT_TEST_P(
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   // validation
-  for (int x = 0; x < base_size; x++) {
-    for (int y = 0; y < base_size; y++) {
-      for (int z = 0; z < base_size; z++) {
+  for (uint32_t x = 0U; x < base_size; x++) {
+    for (uint32_t y = 0U; y < base_size; y++) {
+      for (uint32_t z = 0U; z < base_size; z++) {
 
-        auto index = x + base_size * y + base_size * base_size * z;
+        uint32_t index = x + base_size * y + base_size * base_size * z;
 
         uint8_t val = 0;
         if (x >= offset_x && y >= offset_y && z >= offset_z) {

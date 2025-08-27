@@ -40,7 +40,7 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
-  auto size = 256;
+  size_t size = 256;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
@@ -131,7 +131,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
   LOG_INFO << "[Application] Creating kernel";
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
-  auto size = 8192;
+  size_t size = 8192;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
@@ -225,7 +225,7 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
-  auto size = 8192;
+  size_t size = 8192;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
@@ -333,7 +333,7 @@ void multiple_modules_created_test(ze_context_handle_t context,
   lzt::append_launch_function(command_list, kernel2, &group_count, nullptr, 0,
                               nullptr);
 
-  auto size = 8192;
+  size_t size = 8192;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));

@@ -43,14 +43,14 @@ zes_driver_handle_t get_default_zes_driver() {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   static zes_driver_handle_t driver = nullptr;
-  int default_idx = 0;
+  uint32_t default_idx = 0U;
 
   if (driver)
     return driver;
 
   char *user_driver_index = getenv("LZT_DEFAULT_DRIVER_IDX");
   if (user_driver_index != nullptr) {
-    default_idx = std::stoi(user_driver_index);
+    default_idx = static_cast<uint32_t>(std::stoul(user_driver_index));
   }
 
   std::vector<zes_driver_handle_t> drivers =
@@ -59,7 +59,7 @@ zes_driver_handle_t get_default_zes_driver() {
     throw std::runtime_error("zesDriverGet failed: " + to_string(result));
   }
 
-  if (default_idx >= drivers.size()) {
+  if (default_idx >= static_cast<uint32_t>(drivers.size())) {
     LOG_ERROR << "Default Driver index " << default_idx
               << " invalid on this machine.";
     throw std::runtime_error("Get Default Driver failed");
@@ -97,14 +97,14 @@ ze_driver_handle_t get_default_driver() {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   static ze_driver_handle_t driver = nullptr;
-  int default_idx = 0;
+  uint32_t default_idx = 0U;
 
   if (driver)
     return driver;
 
   char *user_driver_index = getenv("LZT_DEFAULT_DRIVER_IDX");
   if (user_driver_index != nullptr) {
-    default_idx = std::stoi(user_driver_index);
+    default_idx = static_cast<uint32_t>(std::stoul(user_driver_index));
   }
 
   std::vector<ze_driver_handle_t> drivers =
@@ -113,7 +113,7 @@ ze_driver_handle_t get_default_driver() {
     throw std::runtime_error("zeDriverGet failed: " + to_string(result));
   }
 
-  if (default_idx >= drivers.size()) {
+  if (default_idx >= static_cast<uint32_t>(drivers.size())) {
     LOG_ERROR << "Default Driver index " << default_idx
               << " invalid on this machine.";
     throw std::runtime_error("Get Default Driver failed");
@@ -167,14 +167,14 @@ ze_device_handle_t get_default_device(ze_driver_handle_t driver) {
   ze_result_t result = ZE_RESULT_SUCCESS;
 
   static ze_device_handle_t device = nullptr;
-  int default_idx = 0;
+  uint32_t default_idx = 0U;
   char *default_name = nullptr;
   if (device)
     return device;
 
   char *user_device_index = getenv("LZT_DEFAULT_DEVICE_IDX");
   if (user_device_index != nullptr) {
-    default_idx = std::stoi(user_device_index);
+    default_idx = static_cast<uint32_t>(std::stoul(user_device_index));
   }
   default_name = getenv("LZT_DEFAULT_DEVICE_NAME");
 
@@ -201,7 +201,7 @@ ze_device_handle_t get_default_device(ze_driver_handle_t driver) {
       throw std::runtime_error("Get Default Device failed");
     }
   } else {
-    if (default_idx >= devices.size()) {
+    if (default_idx >= static_cast<uint32_t>(devices.size())) {
       LOG_ERROR << "Default Device index " << default_idx
                 << " invalid on this machine.";
       throw std::runtime_error("Get Default Device failed");

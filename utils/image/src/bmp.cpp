@@ -29,14 +29,14 @@ struct BMPFileHeader {
 
 struct BMPInfoHeader {
   uint32_t bi_size_;      // length of info header
-  int32_t bi_width_;      // width of bitmap in pixels
-  int32_t bi_height_;     // height of bitmap in pixels
+  uint32_t bi_width_;     // width of bitmap in pixels
+  uint32_t bi_height_;    // height of bitmap in pixels
   uint16_t bi_planes_;    // number of color planes - must be 1
   uint16_t bi_bit_count_; // bit depth
   uint32_t bi_compression_;
   uint32_t bi_size_image_; // size of picture in bytes
-  int32_t bi_x_pels_per_meter_;
-  int32_t bi_y_pels_per_meter_;
+  uint32_t bi_x_pels_per_meter_;
+  uint32_t bi_y_pels_per_meter_;
   uint32_t bi_clr_used_;
   uint32_t bi_clr_important_;
 };
@@ -53,7 +53,7 @@ struct BMPRGBQUAD_t {
 
 const uint32_t BI_RGB = 0;
 
-bool BmpUtils::save_image_as_bmp(uint32_t *ptr, int width, int height,
+bool BmpUtils::save_image_as_bmp(uint32_t *ptr, uint32_t width, uint32_t height,
                                  const char *file_name) {
   FILE *stream = nullptr;
   uint32_t *ppix = ptr;
@@ -103,8 +103,8 @@ bool BmpUtils::save_image_as_bmp(uint32_t *ptr, int width, int height,
 
   uint8_t buffer[4];
   memset(buffer, 0, sizeof(buffer));
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
+  for (uint32_t y = 0; y < height; y++) {
+    for (uint32_t x = 0; x < width; x++) {
       ppix = ptr + (height - 1 - y) * width + x;
       if (4 != fwrite(ppix, 1, 4, stream)) {
         goto error_exit;
@@ -121,8 +121,8 @@ error_exit:
   return false;
 }
 
-bool BmpUtils::save_image_as_bmp_32fc4(float *ptr, float scale, int width,
-                                       int height, const char *file_name) {
+bool BmpUtils::save_image_as_bmp_32fc4(float *ptr, float scale, uint32_t width,
+                                       uint32_t height, const char *file_name) {
   // save results in bitmap files
   float tmp_f_val = 0.0f;
   uint32_t *out_u_int_buf =
@@ -132,8 +132,8 @@ bool BmpUtils::save_image_as_bmp_32fc4(float *ptr, float scale, int width,
     return false;
   }
 
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
+  for (uint32_t y = 0U; y < height; y++) {
+    for (uint32_t x = 0U; x < width; x++) {
       // Ensure that no value is greater than 255.0
       uint32_t ui_tmp[4];
       tmp_f_val = (scale * ptr[(y * width + x) * 4 + 0]);
@@ -168,7 +168,7 @@ bool BmpUtils::save_image_as_bmp_32fc4(float *ptr, float scale, int width,
   return res;
 }
 
-bool BmpUtils::save_image_as_bmp_8u(uint8_t *ptr, int width, int height,
+bool BmpUtils::save_image_as_bmp_8u(uint8_t *ptr, uint32_t width, uint32_t height,
                                     const char *file_name) {
   uint32_t *out_u_int_buf =
       (uint32_t *)malloc(width * height * sizeof(uint32_t));
@@ -177,8 +177,8 @@ bool BmpUtils::save_image_as_bmp_8u(uint8_t *ptr, int width, int height,
     return false;
   }
 
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
+  for (uint32_t y = 0U; y < height; y++) {
+    for (uint32_t x = 0U; x < width; x++) {
       uint8_t uc_data = ptr[y * width + x];
 
       uint32_t ui_data =
@@ -193,8 +193,8 @@ bool BmpUtils::save_image_as_bmp_8u(uint8_t *ptr, int width, int height,
   return res;
 }
 
-bool BmpUtils::load_bmp_image(uint8_t *&data, int &width, int &height,
-                              int &pitch, uint16_t &bits_per_pixel,
+bool BmpUtils::load_bmp_image(uint8_t *&data, uint32_t &width, uint32_t &height,
+                              uint32_t &pitch, uint16_t &bits_per_pixel,
                               const char *file_name) {
   FILE *stream = nullptr;
 
@@ -240,15 +240,15 @@ bool BmpUtils::load_bmp_image(uint8_t *&data, int &width, int &height,
     goto error_exit;
 
   if (info_header.bi_height_ > 0) {
-    for (int h = 0; h < height; h++) {
+    for (uint32_t h = 0; h < height; h++) {
       uint8_t *dst = data + (height - h - 1) * pitch;
-      if (pitch != static_cast<int>(fread(dst, 1, pitch, stream))) {
+      if (pitch != static_cast<uint32_t>(fread(dst, 1, pitch, stream))) {
         goto error_exit;
       }
     }
   } else {
     if (height * pitch !=
-        static_cast<int>(fread(data, 1, height * pitch, stream))) {
+        static_cast<uint32_t>(fread(data, 1, height * pitch, stream))) {
       goto error_exit;
     }
   }
@@ -261,10 +261,10 @@ error_exit:
   return false;
 }
 
-bool BmpUtils::load_bmp_image_8u(uint8_t *&data, int &width, int &height,
+bool BmpUtils::load_bmp_image_8u(uint8_t *&data, uint32_t &width, uint32_t &height,
                                  const char *file_name) {
   // First, load the BMP image generally:
-  int src_pitch = 0;
+  uint32_t src_pitch = 0;
   uint16_t src_bits_per_pixel = 0;
 
   bool success = load_bmp_image(data, width, height, src_pitch,
@@ -275,11 +275,11 @@ bool BmpUtils::load_bmp_image_8u(uint8_t *&data, int &width, int &height,
     success = false;
   }
 
-  if ((width > (1 << 16)) || (height > (1 << 16))) {
+  if ((width > (1U << 16)) || (height > (1U << 16))) {
     success = false;
   }
 
-  int dst_pitch = width;
+  uint32_t dst_pitch = width;
   uint8_t *data8u = nullptr;
 
   if (success) {
@@ -287,7 +287,7 @@ bool BmpUtils::load_bmp_image_8u(uint8_t *&data, int &width, int &height,
     if (nullptr == data8u) {
       success = false;
     }
-    if ((width > (1 << 16)) || (height > (1 << 16))) {
+    if ((width > (1U << 16)) || (height > (1U << 16))) {
       success = false;
     }
   }
@@ -298,12 +298,12 @@ bool BmpUtils::load_bmp_image_8u(uint8_t *&data, int &width, int &height,
     uint16_t src_bytes_per_pixel = (src_bits_per_pixel + 7) / 8;
     uint16_t dst_bytes_per_pixel = 1;
 
-    for (int h = 0; h < height;
+    for (uint32_t h = 0U; h < height;
          h++, src_start += src_pitch, dst_start += dst_pitch) {
       uint8_t *src_pixel = src_start;
       uint8_t *dst_pixel = dst_start;
 
-      for (int w = 0; w < width; w++, src_pixel += src_bytes_per_pixel,
+      for (uint32_t w = 0U; w < width; w++, src_pixel += src_bytes_per_pixel,
                dst_pixel += dst_bytes_per_pixel) {
         switch (src_bits_per_pixel) {
         case 8:

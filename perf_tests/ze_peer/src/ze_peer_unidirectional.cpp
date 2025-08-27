@@ -20,7 +20,7 @@ void ZePeer::perform_copy(peer_test_t test_type,
   Timer<std::chrono::microseconds::period> timer;
 
   /* Warm up */
-  for (int i = 0; i < warm_up_iterations; i++) {
+  for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
         command_queue, 1, &command_list, nullptr));
     SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
@@ -29,7 +29,7 @@ void ZePeer::perform_copy(peer_test_t test_type,
 
   do {
     timer.start();
-    for (int i = 0; i < number_iterations; i++) {
+    for (uint32_t i = 0U; i < number_iterations; i++) {
       SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
           command_queue, 1, &command_list, nullptr));
       SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(

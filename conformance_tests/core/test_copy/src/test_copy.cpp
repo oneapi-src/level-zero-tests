@@ -151,7 +151,7 @@ void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
   auto device_properties = lzt::get_device_properties(device);
   auto max_alloc_memsize = device_properties.maxMemAllocSize;
 
-  for (int i = 0; i < cmd_q_group_properties.size(); i++) {
+  for (size_t i = 0U; i < cmd_q_group_properties.size(); i++) {
     auto bundle = lzt::create_command_bundle(lzt::get_default_context(), device,
                                              0, i, is_immediate);
     size_t size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
@@ -606,7 +606,7 @@ LZT_TEST_P(
       lzt::close_command_list(cmd_bundle.list);
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-      for (int i = 0; i < size; i++) {
+      for (size_t i = 0U; i < size; i++) {
         ASSERT_EQ(static_cast<uint8_t *>(host_memory)[i], pattern)
             << "Memory Fill did not match on sub-device";
       }
@@ -639,7 +639,7 @@ protected:
 
 void zeCommandListAppendMemoryFillPatternVerificationTests::
     RunGivenPatternSizeWhenExecutingAMemoryFillTest(bool is_shared_system) {
-  const int pattern_size = std::get<0>(GetParam());
+  const size_t pattern_size = std::get<0>(GetParam());
   const bool is_immediate = std::get<1>(GetParam());
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t total_size = (pattern_size * 10) + 5;
@@ -647,7 +647,7 @@ void zeCommandListAppendMemoryFillPatternVerificationTests::
   auto target_memory = lzt::allocate_host_memory_with_allocator_selector(
       total_size, is_shared_system);
 
-  for (uint32_t i = 0; i < pattern_size; i++) {
+  for (size_t i = 0U; i < pattern_size; i++) {
     pattern.get()[i] = i;
   }
 
@@ -657,7 +657,7 @@ void zeCommandListAppendMemoryFillPatternVerificationTests::
   close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  for (uint32_t i = 0; i < total_size; i++) {
+  for (size_t i = 0U; i < total_size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(target_memory)[i], i % pattern_size)
         << "Memory Fill did not match.";
   }
@@ -1057,9 +1057,9 @@ protected:
 
     for (int region = 0; region < 3; region++) {
       // Define region to be copied from/to
-      auto width = widths[region];
-      auto height = heights[region];
-      auto depth = depths[region];
+      size_t width = widths[region];
+      size_t height = heights[region];
+      size_t depth = depths[region];
 
       ze_copy_region_t src_region;
       src_region.originX = 0;
@@ -1088,9 +1088,9 @@ protected:
       execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
       reset_command_list(cmd_bundle.list);
 
-      for (int z = 0; z < depth; z++) {
-        for (int y = 0; y < height; y++) {
-          for (int x = 0; x < width; x++) {
+      for (size_t z = 0U; z < depth; z++) {
+        for (size_t y = 0U; y < height; y++) {
+          for (size_t x = 0U; x < width; x++) {
             // index calculated based on memory sized by rows * columns * slices
             size_t index = z * columns * rows + y * columns + x;
             uint8_t dest_val =
@@ -1167,9 +1167,9 @@ protected:
 
     for (int region = 0; region < 3; region++) {
       // Define region to be copied from/to
-      auto width = widths[region];
-      auto height = heights[region];
-      auto depth = depths[region];
+      size_t width = widths[region];
+      size_t height = heights[region];
+      size_t depth = depths[region];
 
       ze_copy_region_t src_region;
       src_region.originX = 0;
@@ -1198,9 +1198,9 @@ protected:
       execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
       reset_command_list(cmd_bundle.list);
 
-      for (int z = 0; z < depth; z++) {
-        for (int y = 0; y < height; y++) {
-          for (int x = 0; x < width; x++) {
+      for (size_t z = 0U; z < depth; z++) {
+        for (size_t y = 0U; y < height; y++) {
+          for (size_t x = 0U; x < width; x++) {
             // index calculated based on memory sized by rows * columns * slices
             size_t index = z * columns * rows + y * columns + x;
             uint8_t dest_val =

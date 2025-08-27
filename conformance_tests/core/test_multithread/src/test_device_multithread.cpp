@@ -87,7 +87,7 @@ void device_thread_test(ze_driver_handle_t driver) {
     auto new_cmd_q_group_properties =
         lzt::get_command_queue_group_properties(device);
     ASSERT_EQ(cmd_q_group_properties.size(), new_cmd_q_group_properties.size());
-    for (int i = 0; i < cmd_q_group_properties.size(); i++) {
+    for (size_t i = 0U; i < cmd_q_group_properties.size(); i++) {
       ASSERT_EQ(0, memcmp(&cmd_q_group_properties[i],
                           &new_cmd_q_group_properties[i],
                           sizeof(cmd_q_group_properties[i])));
@@ -101,14 +101,14 @@ LZT_TEST(zeDeviceMultithreadTests,
          GivenMultipleThreadsWhenUsingDriverAPIsThenResultsAreConsistent) {
   std::vector<std::thread *> threads;
 
-  for (int i = 0; i < num_threads; i++)
+  for (size_t i = 0U; i < num_threads; i++)
     threads.push_back(new std::thread(driver_thread_test));
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     delete threads[i];
   }
 }
@@ -117,14 +117,14 @@ LZT_TEST(zeDeviceMultithreadTests,
          GivenMultipleThreadsWhenUsingDeviceAPIsThenResultsAreConsistent) {
   std::vector<std::thread *> threads;
   auto driver = lzt::get_default_driver();
-  for (int i = 0; i < num_threads; i++)
+  for (size_t i = 0U; i < num_threads; i++)
     threads.push_back(new std::thread(device_thread_test, driver));
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     delete threads[i];
   }
 }

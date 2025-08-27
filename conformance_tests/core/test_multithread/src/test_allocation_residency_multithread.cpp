@@ -62,7 +62,7 @@ void make_resident_evict_device_memory() {
 void make_resident_evict_API(ze_module_handle_t module) {
   ze_kernel_handle_t kernel;
 
-  for (uint32_t i = 0; i < thread_iters; i++) {
+  for (uint32_t j = 0U; j < thread_iters; j++) {
     auto context = lzt::get_default_context();
     auto driver = lzt::get_default_driver();
     auto device = lzt::get_default_device(driver);
@@ -79,7 +79,7 @@ void make_resident_evict_API(ze_module_handle_t module) {
         sizeof(node), 1, device_flags, host_flags, device, context));
     data->value = 0;
     node *temp = data;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       temp->next = static_cast<node *>(lzt::allocate_shared_memory(
           sizeof(node), 1, device_flags, host_flags, device, context));
       temp = temp->next;
@@ -100,7 +100,7 @@ void make_resident_evict_API(ze_module_handle_t module) {
 
     temp = data->next;
     node *temp2;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       temp2 = temp->next;
       lzt::make_memory_resident(device, temp, sizeof(node));
       temp = temp2;
@@ -110,7 +110,7 @@ void make_resident_evict_API(ze_module_handle_t module) {
     lzt::synchronize(command_queue, UINT64_MAX);
 
     temp = data->next;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       lzt::evict_memory(device, temp, sizeof(node));
       temp = temp->next;
     }
@@ -118,7 +118,7 @@ void make_resident_evict_API(ze_module_handle_t module) {
     // cleanup
     temp = data;
     // total of size elements linked *after* initial element
-    for (int i = 0; i < size + 1; i++) {
+    for (size_t i = 0U; i < size + 1; i++) {
       // the kernel increments each node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 
@@ -146,7 +146,7 @@ void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
   node *data = static_cast<node *>(lzt::allocate_shared_memory(
       sizeof(node), 1, device_flags, host_flags, device, context));
   node *temp = data;
-  for (int i = 0; i < size; i++) {
+  for (size_t i = 0U; i < size; i++) {
     temp->next = static_cast<node *>(lzt::allocate_shared_memory(
         sizeof(node), 1, device_flags, host_flags, device, context));
     temp = temp->next;
@@ -154,12 +154,12 @@ void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
 
   // init
   temp = data;
-  for (int i = 0; i < size + 1; i++) {
+  for (size_t i = 0U; i < size + 1; i++) {
     temp->value = i;
     temp = temp->next;
   }
 
-  for (uint32_t iter = 0; iter < thread_iters; iter++) {
+  for (size_t iter = 0U; iter < thread_iters; iter++) {
     // set up
     auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
     kernel = lzt::create_function(module, ZE_KERNEL_FLAG_FORCE_RESIDENCY,
@@ -183,7 +183,7 @@ void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
 
     // check
     temp = data;
-    for (int i = 0; i < size + 1; i++) {
+    for (size_t i = 0U; i < size + 1; i++) {
       // kernel should increment each node's value by 1
       ASSERT_EQ(temp->value, i + iter + 1);
       temp = temp->next;
@@ -204,7 +204,7 @@ void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
   }
 
   // cleanup
-  for (int i = 0; i < size + 1; i++) {
+  for (size_t i = 0U; i < size + 1; i++) {
     temp = data;
     data = temp->next;
     lzt::free_memory(context, temp);
@@ -220,12 +220,12 @@ LZT_TEST(
 
   std::vector<std::unique_ptr<std::thread>> threads;
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
         new std::thread(make_resident_device_memory)));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 }
@@ -237,12 +237,12 @@ LZT_TEST(
 
   std::vector<std::unique_ptr<std::thread>> threads;
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
         new std::thread(make_resident_evict_device_memory)));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 }
@@ -260,12 +260,12 @@ LZT_TEST(
   ze_module_handle_t module =
       lzt::create_module(device, "residency_tests_multi_thread.spv");
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
         new std::thread(make_resident_evict_API, module)));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 
@@ -285,12 +285,12 @@ LZT_TEST(
   ze_module_handle_t module =
       lzt::create_module(device, "residency_tests_multi_thread.spv");
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
         new std::thread(indirect_access_Kernel, module, false)));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 
@@ -310,12 +310,12 @@ LZT_TEST(
   ze_module_handle_t module =
       lzt::create_module(device, "residency_tests_multi_thread.spv");
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
         new std::thread(indirect_access_Kernel, module, true)));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 
@@ -352,12 +352,12 @@ LZT_TEST_F(
   lzt::zeImageCreateCommon img;
   std::vector<std::unique_ptr<std::thread>> threads;
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
         new std::thread(image_make_resident_evict, img.dflt_device_image_)));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 }

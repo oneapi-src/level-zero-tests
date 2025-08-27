@@ -400,8 +400,8 @@ int compare_data_pattern(
             << " originY: " << region->originY
             << " originZ: " << region->originZ << " width: " << region->width
             << " height: " << region->height << std::endl;
-  for (unsigned row = 0; row < image.height(); row++) {
-    for (unsigned column = 0; column < image.width(); column++) {
+  for (uint32_t row = 0; row < image.height(); row++) {
+    for (uint32_t column = 0; column < image.width(); column++) {
       uint32_t pixel = image.get_pixel(column, row);
       const lzt::ImagePNG32Bit *expected_image;
       LOG_DEBUG << "row: " << row << " and column: " << column

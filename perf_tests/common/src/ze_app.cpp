@@ -448,7 +448,7 @@ void ZeApp::initCountDevices(const uint32_t count) {
 
   if (_module_path.size() != 0) {
     _modules.resize(device_count);
-    for (int i = 0; i < device_count; i++) {
+    for (uint32_t i = 0U; i < device_count; i++) {
       moduleCreate(_devices[i], &_modules[i]);
     }
   }
@@ -463,7 +463,7 @@ uint32_t ZeApp::allDevicesInit(void) {
 
 void ZeApp::cleanupDevices(void) {
   if (_module_path.size() != 0) {
-    for (int i = 0; i < _devices.size(); i++) {
+    for (size_t i = 0U; i < _devices.size(); i++) {
       moduleDestroy(_modules[i]);
     }
   }

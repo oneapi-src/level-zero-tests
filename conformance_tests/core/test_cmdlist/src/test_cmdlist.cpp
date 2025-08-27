@@ -343,17 +343,17 @@ LZT_TEST(zeCommandListReuseTests,
   lzt::append_memory_copy(cmdlist_mem_zero, host_buffer, device_buffer, size);
   lzt::close_command_list(cmdlist_mem_zero);
 
-  const int num_execute = 5;
-  for (int i = 0; i < num_execute; i++) {
+  const uint32_t num_execute = 5;
+  for (uint32_t i = 0U; i < num_execute; i++) {
     lzt::execute_command_lists(cmdq, 1, &cmdlist_mem_zero, nullptr);
     lzt::synchronize(cmdq, UINT64_MAX);
-    for (int j = 0; j < size; j++)
+    for (size_t j = 0U; j < size; j++)
       ASSERT_EQ(static_cast<uint8_t *>(host_buffer)[j], 0x0)
           << "Memory Set did not match.";
 
     lzt::execute_command_lists(cmdq, 1, &cmdlist_mem_set, nullptr);
     lzt::synchronize(cmdq, UINT64_MAX);
-    for (int j = 0; j < size; j++)
+    for (size_t j = 0U; j < size; j++)
       ASSERT_EQ(static_cast<uint8_t *>(host_buffer)[j], 0x1)
           << "Memory Set did not match.";
   }
@@ -1068,7 +1068,7 @@ RunAppendLaunchKernelEventLoop(cmdListVec cmdlist, cmdQueueVec cmdqueue,
   }
 
   constexpr size_t size = 16;
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
     func(cmdlist, cmdqueue, event, i, size);
   }

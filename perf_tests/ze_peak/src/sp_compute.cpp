@@ -111,7 +111,7 @@ void ZePeak::ze_peak_sp_compute(L0Context &context) {
     std::cout << "device output buffer allocated\n";
 
   if (context.sub_device_count) {
-    for (auto i = 0; i < context.sub_device_count; i++) {
+    for (uint32_t i = 0U; i < context.sub_device_count; i++) {
       result = zeCommandListAppendMemoryCopy(context.cmd_list[i], dev_in_val[i],
                                              &input_value, sizeof(float),
                                              nullptr, 0, nullptr);
@@ -134,7 +134,7 @@ void ZePeak::ze_peak_sp_compute(L0Context &context) {
     std::cout << "Input value copy encoded\n";
 
   if (context.sub_device_count) {
-    for (auto i = 0; i < context.sub_device_count; i++) {
+    for (uint32_t i = 0U; i < context.sub_device_count; i++) {
       result =
           zeCommandListAppendBarrier(context.cmd_list[i], nullptr, 0, nullptr);
       if (result) {

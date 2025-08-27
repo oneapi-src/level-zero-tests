@@ -170,7 +170,7 @@ LZT_TEST_P(
   auto cmdq_properties = lzt::get_command_queue_group_properties(device);
 
   size_t num_cmdq = 0;
-  std::vector<int> num_queues_per_group;
+  std::vector<uint32_t> num_queues_per_group;
   for (auto properties : cmdq_properties) {
     num_queues_per_group.push_back(properties.numQueues);
     num_cmdq += properties.numQueues;

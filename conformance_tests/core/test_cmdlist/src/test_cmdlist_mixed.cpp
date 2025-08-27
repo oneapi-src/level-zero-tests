@@ -166,7 +166,7 @@ LZT_TEST_P(
   lzt::set_group_size(kernel, 8, 1, 1);
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
 
-  for (int i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     const auto cl = cls_compute[i];
     void *h_vec = host_vecs_compute[i];
     void *d_vec = device_vecs_compute[i];
@@ -188,15 +188,15 @@ LZT_TEST_P(
   }
 
   // Submit compute engine CMD lists, ASYNC execution
-  for (int i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     lzt::execute_command_lists(cqs_compute[i], 1, &cls_compute[i], nullptr);
   }
 
   // Submit tasks to copy engine immediate CMD lists
   const int log_blk_len = 8;
   const int blk_sz = (1u << log_blk_len);
-  for (int i = 0; i < (vec_sz >> log_blk_len); i++) {
-    for (int j = 0; j < cls_copy_imm.size(); j++) {
+  for (size_t i = 0U; i < (vec_sz >> log_blk_len); i++) {
+    for (size_t j = 0U; j < cls_copy_imm.size(); j++) {
       const auto cl = cls_copy_imm[j];
       const auto device_ptr =
           reinterpret_cast<uint8_t *>(device_vecs_copy[j]) + i * blk_sz;
@@ -207,7 +207,7 @@ LZT_TEST_P(
       lzt::append_memory_copy(cl, host_ptr, device_ptr, blk_sz, events_copy[j],
                               1, &events_fill[j]);
     }
-    for (int j = 0; j < cls_copy_imm.size(); j++) {
+    for (size_t j = 0U; j < cls_copy_imm.size(); j++) {
       if (use_events_sync) {
         EXPECT_ZE_RESULT_SUCCESS(
             zeEventHostSynchronize(events_copy[j], UINT64_MAX));
@@ -221,14 +221,14 @@ LZT_TEST_P(
   }
 
   // Sync with compute engine queues
-  for (int i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     lzt::synchronize(cqs_compute[i], UINT64_MAX);
   }
 
   // Verify compute engine results
-  for (uint8_t i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_compute[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 2) {
         EXPECT_TRUE(false);
         break;
@@ -237,9 +237,9 @@ LZT_TEST_P(
   }
 
   // Verify copy engine results
-  for (uint8_t i = 0; i < cls_copy_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_copy_imm.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_copy[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 42) {
         EXPECT_TRUE(false);
         break;
@@ -248,14 +248,14 @@ LZT_TEST_P(
   }
 
   // Cleanup
-  for (int i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     lzt::free_memory(host_vecs_compute[i]);
     lzt::free_memory(device_vecs_compute[i]);
     lzt::destroy_command_list(cls_compute[i]);
     lzt::destroy_command_queue(cqs_compute[i]);
   }
 
-  for (int i = 0; i < cls_copy_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_copy_imm.size(); i++) {
     lzt::free_memory(host_vecs_copy[i]);
     lzt::free_memory(device_vecs_copy[i]);
     lzt::destroy_command_list(cls_copy_imm[i]);
@@ -335,9 +335,9 @@ LZT_TEST_P(
   // Fill copy engine CMD lists with tasks
   const int log_blk_len = 1;
   const int blk_sz = (1u << log_blk_len);
-  for (int j = 0; j < cls_copy.size(); j++) {
+  for (size_t j = 0U; j < cls_copy.size(); j++) {
     const auto cl = cls_copy[j];
-    for (int i = 0; i < (vec_sz >> log_blk_len); i++) {
+    for (size_t i = 0U; i < (vec_sz >> log_blk_len); i++) {
       const auto device_ptr =
           reinterpret_cast<uint8_t *>(device_vecs_copy[j]) + i * blk_sz;
       const auto host_ptr =
@@ -352,12 +352,12 @@ LZT_TEST_P(
   }
 
   // Submit copy engine CMD lists, ASYNC execution
-  for (int i = 0; i < cls_copy.size(); i++) {
+  for (size_t i = 0U; i < cls_copy.size(); i++) {
     lzt::execute_command_lists(cqs_copy[i], 1, &cls_copy[i], nullptr);
   }
 
   // Submit tasks to compute engine immediate CMD lists
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     lzt::append_memory_fill(cls_compute_imm[i], device_vecs_compute[i],
                             &patterns_compute[i], 1, vec_sz, nullptr);
     lzt::append_barrier(cls_compute_imm[i]);
@@ -366,18 +366,18 @@ LZT_TEST_P(
   lzt::set_group_size(kernel, 8, 1, 1);
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
 
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     lzt::set_argument_value(kernel, 0, sizeof(void *), &device_vecs_compute[i]);
     lzt::append_launch_function(cls_compute_imm[i], kernel, &dispatch, nullptr,
                                 0, nullptr);
     lzt::append_barrier(cls_compute_imm[i]);
   }
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     lzt::append_memory_copy(cls_compute_imm[i], host_vecs_compute[i],
                             device_vecs_compute[i], vec_sz, events[i]);
     lzt::append_barrier(cls_compute_imm[i]);
   }
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     if (use_events_sync) {
       lzt::event_host_synchronize(events[i], UINT64_MAX);
     } else {
@@ -387,14 +387,14 @@ LZT_TEST_P(
   }
 
   // Sync with copy engine queues
-  for (int i = 0; i < cls_copy.size(); i++) {
+  for (size_t i = 0U; i < cls_copy.size(); i++) {
     lzt::synchronize(cqs_copy[i], UINT64_MAX);
   }
 
   // Verify copy engine results
-  for (uint8_t i = 0; i < cls_copy.size(); i++) {
+  for (size_t i = 0U; i < cls_copy.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_copy[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 42) {
         EXPECT_TRUE(false);
         break;
@@ -403,9 +403,9 @@ LZT_TEST_P(
   }
 
   // Verify compute engine results
-  for (uint8_t i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_compute[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 1) {
         EXPECT_TRUE(false);
         break;
@@ -414,13 +414,13 @@ LZT_TEST_P(
   }
 
   // Cleanup
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     lzt::free_memory(host_vecs_compute[i]);
     lzt::free_memory(device_vecs_compute[i]);
     lzt::destroy_command_list(cls_compute_imm[i]);
     lzt::destroy_event(events[i]);
   }
-  for (int i = 0; i < cls_copy.size(); i++) {
+  for (size_t i = 0U; i < cls_copy.size(); i++) {
     lzt::free_memory(host_vecs_copy[i]);
     lzt::free_memory(device_vecs_copy[i]);
     lzt::destroy_command_list(cls_copy[i]);
@@ -495,7 +495,7 @@ LZT_TEST_P(
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
 
   // Fill regular CMD lists
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     const auto cl = cls[i];
     void *h_vec = host_vecs[i];
     void *d_vec = device_vecs[i];
@@ -516,28 +516,28 @@ LZT_TEST_P(
   }
 
   // Submit regular CMD lists, ASYNC execution
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::execute_command_lists(cqs[i], 1, &cls[i], nullptr);
   }
 
   // Submit tasks to the immediate CMD lists
-  for (int i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     lzt::append_memory_fill(cls_imm[i], device_vecs_imm[i], &patterns_imm[i], 1,
                             vec_sz, nullptr);
     lzt::append_barrier(cls_imm[i]);
   }
-  for (int i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     lzt::set_argument_value(kernel, 0, sizeof(void *), &device_vecs_imm[i]);
     lzt::append_launch_function(cls_imm[i], kernel, &dispatch, nullptr, 0,
                                 nullptr);
     lzt::append_barrier(cls_imm[i]);
   }
-  for (int i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     lzt::append_memory_copy(cls_imm[i], host_vecs_imm[i], device_vecs_imm[i],
                             vec_sz, events[i]);
     lzt::append_barrier(cls_imm[i]);
   }
-  for (int i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     if (use_events_sync) {
       lzt::event_host_synchronize(events[i], UINT64_MAX);
     } else {
@@ -547,14 +547,14 @@ LZT_TEST_P(
   }
 
   // Sync with regular CMD lists
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::synchronize(cqs[i], UINT64_MAX);
   }
 
   // Verify regular CMD lists' results
-  for (uint8_t i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 2) {
         EXPECT_TRUE(false);
         break;
@@ -563,9 +563,9 @@ LZT_TEST_P(
   }
 
   // Verify immediate CMD lists' results
-  for (uint8_t i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_imm[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 43) {
         EXPECT_TRUE(false);
         break;
@@ -574,7 +574,7 @@ LZT_TEST_P(
   }
 
   // Cleanup
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::free_memory(host_vecs[i]);
     lzt::free_memory(host_vecs_imm[i]);
     lzt::free_memory(device_vecs[i]);
@@ -658,9 +658,9 @@ LZT_TEST_P(
   const int blk_sz = (1u << log_blk_len);
 
   // Fill regular CMD lists
-  for (int j = 0; j < cls.size(); j++) {
+  for (size_t j = 0U; j < cls.size(); j++) {
     const auto cl = cls[j];
-    for (int i = 0; i < (vec_sz >> log_blk_len); i++) {
+    for (size_t i = 0U; i < (vec_sz >> log_blk_len); i++) {
       const auto device_ptr =
           reinterpret_cast<uint8_t *>(device_vecs[j]) + i * blk_sz;
       const auto host_ptr =
@@ -674,13 +674,13 @@ LZT_TEST_P(
   }
 
   // Submit regular CMD lists, ASYNC execution
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::execute_command_lists(cqs[i], 1, &cls[i], nullptr);
   }
 
   // Submit tasks to immediate CMD lists
-  for (int i = 0; i < (vec_sz >> log_blk_len); i++) {
-    for (int j = 0; j < cls_imm.size(); j++) {
+  for (size_t i = 0U; i < (vec_sz >> log_blk_len); i++) {
+    for (size_t j = 0U; j < cls_imm.size(); j++) {
       const auto cl = cls_imm[j];
       const auto device_ptr =
           reinterpret_cast<uint8_t *>(device_vecs_imm[j]) + i * blk_sz;
@@ -691,7 +691,7 @@ LZT_TEST_P(
       lzt::append_memory_copy(cl, host_ptr, device_ptr, blk_sz, events_copy[j],
                               1, &events_fill[j]);
     }
-    for (int j = 0; j < cls_imm.size(); j++) {
+    for (size_t j = 0U; j < cls_imm.size(); j++) {
       if (use_events_sync) {
         EXPECT_ZE_RESULT_SUCCESS(
             zeEventHostSynchronize(events_copy[j], UINT64_MAX));
@@ -706,14 +706,14 @@ LZT_TEST_P(
   }
 
   // Sync with regular CMD lists' queues
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::synchronize(cqs[i], UINT64_MAX);
   }
 
   // Verify regular CMD lists' results
-  for (uint8_t i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 1) {
         EXPECT_TRUE(false);
         break;
@@ -722,9 +722,9 @@ LZT_TEST_P(
   }
 
   // Verify immediate CMD lists' results
-  for (uint8_t i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_imm[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 42) {
         EXPECT_TRUE(false);
         break;
@@ -733,7 +733,7 @@ LZT_TEST_P(
   }
 
   // Cleanup
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::free_memory(host_vecs[i]);
     lzt::free_memory(host_vecs_imm[i]);
     lzt::free_memory(device_vecs[i]);
@@ -997,7 +997,7 @@ protected:
 
   uint8_t *vec_hst;
   uint8_t *vec_dev;
-  const int n_iters = 8;
+  const uint32_t n_iters = 8;
 };
 
 LZT_TEST_P(
@@ -1070,7 +1070,7 @@ LZT_TEST_P(
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
   lzt::set_argument_value(kernel, 0, sizeof(void *), &vec_dev);
 
-  for (int i = 0; i < n_iters; i++) {
+  for (uint32_t i = 0U; i < n_iters; i++) {
     // Copy to device and signal kernel launch
     lzt::append_memory_copy(cl_h2d_imm, vec_dev, vec_hst, vec_sz, nullptr, 1,
                             &ev_h2d);
@@ -1113,7 +1113,7 @@ LZT_TEST_P(
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
   lzt::query_event(ev_d2h, ZE_RESULT_NOT_READY);
 
-  for (int i = 0; i < vec_sz; i++) {
+  for (size_t i = 0U; i < vec_sz; i++) {
     if (vec_hst[i] != n_iters) {
       EXPECT_TRUE(false);
       break;
@@ -1201,7 +1201,7 @@ LZT_TEST_P(
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
   lzt::set_argument_value(kernel, 0, sizeof(void *), &vec_dev);
 
-  for (int i = 0; i < n_iters; i++) {
+  for (uint32_t i = 0U; i < n_iters; i++) {
     // Copy to device and signal kernel launch
     lzt::append_memory_copy(cl_h2d, vec_dev, vec_hst, vec_sz, nullptr, 1,
                             &ev_h2d);
@@ -1244,7 +1244,7 @@ LZT_TEST_P(
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
   lzt::query_event(ev_d2h, ZE_RESULT_NOT_READY);
 
-  for (int i = 0; i < vec_sz; i++) {
+  for (size_t i = 0U; i < vec_sz; i++) {
     if (vec_hst[i] != n_iters) {
       EXPECT_TRUE(false);
       break;
@@ -1338,7 +1338,7 @@ LZT_TEST_P(
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
   lzt::set_argument_value(kernel, 0, sizeof(void *), &vec_dev);
 
-  for (int i = 0; i < n_iters; i++) {
+  for (uint32_t i = 0U; i < n_iters; i++) {
     // Copy to device and signal kernel launch
     lzt::append_memory_copy(cl_h2d_imm, vec_dev, vec_hst, vec_sz, nullptr, 1,
                             &ev_h2d);
@@ -1380,7 +1380,7 @@ LZT_TEST_P(
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
   lzt::query_event(ev_d2h, ZE_RESULT_NOT_READY);
 
-  for (int i = 0; i < vec_sz; i++) {
+  for (size_t i = 0U; i < vec_sz; i++) {
     if (vec_hst[i] != n_iters) {
       EXPECT_TRUE(false);
       break;
@@ -1455,9 +1455,9 @@ LZT_TEST_P(
   ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   auto ev_copy = lzt::create_event(event_pool, ev_desc);
 
-  const int blk_sz = vec_sz / n_iters;
+  const uint32_t blk_sz = static_cast<uint32_t>(vec_sz / n_iters);
 
-  for (int i = 0; i < n_iters; i++) {
+  for (uint32_t i = 0U; i < n_iters; i++) {
     // Fill the device buffer block
     lzt::append_memory_fill(cl_fill, vec_dev + i * blk_sz, &n_iters, 1, blk_sz,
                             nullptr, 1, &ev_fill);
@@ -1492,7 +1492,7 @@ LZT_TEST_P(
   lzt::query_event(ev_fill, ZE_RESULT_SUCCESS);
   lzt::query_event(ev_copy, ZE_RESULT_NOT_READY);
 
-  for (int i = 0; i < blk_sz * n_iters; i++) {
+  for (uint32_t i = 0U; i < blk_sz * n_iters; i++) {
     if (vec_hst[i] != n_iters) {
       EXPECT_TRUE(false);
       break;
@@ -1693,7 +1693,7 @@ LZT_TEST_F(
     GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
                  << " not supported";
   }
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, false);
   }
@@ -1708,7 +1708,7 @@ LZT_TEST_F(
     GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
                  << " not supported";
   }
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, true);
   }

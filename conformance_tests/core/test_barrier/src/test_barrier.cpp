@@ -118,7 +118,7 @@ void RunAppendingBarrierWithSignalEventAndWaitEvents(bool isImmediate) {
   for (auto &ev : events) {
     lzt::signal_event_from_host(ev);
   }
-  for (int i = 0; i < events.size(); i++) {
+  for (size_t i = 0U; i < events.size(); i++) {
     ASSERT_EQ(events[i], events_initial[i]);
   }
   ep.destroy_events(events);
@@ -233,7 +233,7 @@ void RunAppendingMemoryRangesBarrierWaitEvents(bool isImmediate) {
   auto wait_events_initial = waiting_events;
   AppendMemoryRangesBarrierTest(context, device, bundle.list, nullptr,
                                 waiting_events);
-  for (int i = 0; i < waiting_events.size(); i++) {
+  for (size_t i = 0U; i < waiting_events.size(); i++) {
     ASSERT_EQ(waiting_events[i], wait_events_initial[i]);
   }
   ep.destroy_events(waiting_events);

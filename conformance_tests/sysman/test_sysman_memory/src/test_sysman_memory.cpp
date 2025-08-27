@@ -408,7 +408,7 @@ LZT_TEST_F(
 
     EXPECT_EQ(ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY, result);
 
-    for (int i = 0; i < alloc_list.size(); i++) {
+    for (size_t i = 0U; i < alloc_list.size(); i++) {
       result = zeMemFree(lzt::get_default_context(), alloc_list[i]);
       EXPECT_ZE_RESULT_SUCCESS(result);
     }

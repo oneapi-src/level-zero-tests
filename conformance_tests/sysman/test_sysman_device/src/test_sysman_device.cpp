@@ -394,7 +394,7 @@ LZT_TEST_F(
     if (processes.size() > 0) {
       for (auto process : processes) {
         EXPECT_GT(process.processId, 0u);
-        if (process.processId == pid) {
+        if (process.processId == static_cast<uint32_t>(pid)) {
           pid_found = 1;
         }
       }
@@ -503,10 +503,10 @@ static std::vector<float>
 perform_matrix_multiplication_on_cpu(std::vector<float> a, std::vector<float> b,
                                      uint32_t n) {
   std::vector<float> c_cpu(n * n, 0);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
+  for (uint32_t i = 0U; i < n; i++) {
+    for (uint32_t j = 0U; j < n; j++) {
       float sum = 0;
-      for (int kl = 0; kl < n; kl++) {
+      for (uint32_t kl = 0U; kl < n; kl++) {
         sum += a[i * n + kl] * b[kl * n + j];
       }
       c_cpu[i * n + j] = sum;
@@ -516,7 +516,7 @@ perform_matrix_multiplication_on_cpu(std::vector<float> a, std::vector<float> b,
 }
 
 static void compare_results(std::vector<float> c, std::vector<float> c_cpu) {
-  for (int i = 0; i < c.size(); i++) {
+  for (size_t i = 0U; i < c.size(); i++) {
     if (c[i] != c_cpu[i]) {
       EXPECT_EQ(c[i], c_cpu[i]);
     }
@@ -529,7 +529,7 @@ bool is_compute_engine_used(int pid, zes_device_handle_t device) {
   auto processes = lzt::get_processes_state(device, count);
 
   for (const auto &process : processes) {
-    if (process.processId == pid &&
+    if (process.processId == static_cast<uint32_t>(pid) &&
         process.engines == ZES_ENGINE_TYPE_FLAG_COMPUTE) {
       return true;
     }
@@ -797,15 +797,15 @@ LZT_TEST_F(
   const char *valueString = std::getenv("LZT_SYSMAN_DEVICE_TEST_ITERATIONS");
   uint32_t number_iterations = 2;
   if (valueString != nullptr) {
-    auto _value = atoi(valueString);
-    number_iterations = _value < 0 ? number_iterations : std::min(_value, 300);
+    uint32_t _value = static_cast<uint32_t>(atoi(valueString));
+    number_iterations = _value < 0 ? number_iterations : std::min(_value, 300U);
     if (number_iterations != _value) {
       LOG_WARNING << "Number of iterations is capped at 300\n";
     }
   }
 
   for (auto device : devices) {
-    for (int i = 0; i < number_iterations; i++) {
+    for (uint32_t i = 0U; i < number_iterations; i++) {
       // Perform workload execution before reset
 #ifdef USE_ZESINIT
       auto sysman_device_properties = lzt::get_sysman_device_properties(device);

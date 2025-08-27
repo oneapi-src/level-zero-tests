@@ -94,7 +94,7 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
   print_results_header(remote_device_ids, local_device_ids, pair_device_ids,
                        test_type, transfer_type);
 
-  for (int number_of_elements = 8; number_of_elements <= max_number_of_elements;
+  for (size_t number_of_elements = 8; number_of_elements <= max_number_of_elements;
        number_of_elements *= 2) {
     if (size_to_run != -1) {
       number_of_elements = size_to_run;
@@ -152,7 +152,7 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
   print_results_header(remote_device_ids, local_device_ids, pair_device_ids,
                        test_type, transfer_type);
 
-  for (int number_of_elements = 8; number_of_elements <= max_number_of_elements;
+  for (size_t number_of_elements = 8; number_of_elements <= max_number_of_elements;
        number_of_elements *= 2) {
     if (size_to_run != -1) {
       number_of_elements = size_to_run;

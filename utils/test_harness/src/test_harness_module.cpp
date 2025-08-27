@@ -173,7 +173,7 @@ void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
          sizeof(ze_module_handle_t) * num_modules);
   *result = zeModuleDynamicLink(num_modules, modules, link_log);
   EXPECT_ZE_RESULT_SUCCESS(*result);
-  for (int i = 0; i < num_modules; i++) {
+  for (uint32_t i = 0U; i < num_modules; i++) {
     EXPECT_EQ(modules[i], modules_initial[i]);
   }
 }

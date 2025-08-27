@@ -183,7 +183,7 @@ LZT_TEST_F(
   auto events_initial = events;
   EXPECT_ZE_RESULT_SUCCESS(
       zeCommandListAppendWaitOnEvents(cmd_list, event_count, events.data()));
-  for (int i = 0; i < events.size(); i++) {
+  for (size_t i = 0U; i < events.size(); i++) {
     ASSERT_EQ(events[i], events_initial[i]);
   }
   ep.destroy_events(events);
@@ -215,7 +215,7 @@ protected:
     }
 
     context = lzt::create_context();
-    for (auto idx = 0; idx < dev_handles.size(); idx++) {
+    for (size_t idx = 0U; idx < dev_handles.size(); idx++) {
       cmdlist_immediate_handles.resize(dev_handles.size());
       cmd_lists.resize(dev_handles.size());
       cmd_qs.resize(dev_handles.size());
@@ -238,8 +238,8 @@ protected:
   }
 
   void TearDown() override {
-    auto num_handles = cmdlist_immediate_handles.size();
-    for (auto i = 0; i < num_handles; i++) {
+    size_t num_handles = cmdlist_immediate_handles.size();
+    for (size_t i = 0U; i < num_handles; i++) {
       if (use_immediate) {
         lzt::destroy_command_list(cmdlist_immediate_handles[i]);
       } else {
@@ -267,7 +267,7 @@ LZT_TEST_P(
   ze_event_handle_t event = nullptr;
 
   ep.InitEventPool(ep_desc, dev_handles);
-  for (auto i = 0; i < dev_handles.size(); i++) {
+  for (size_t i = 0U; i < dev_handles.size(); i++) {
     ep.create_event(event);
     if (use_immediate) {
       EXPECT_ZE_RESULT_SUCCESS(
@@ -287,17 +287,16 @@ LZT_TEST_P(
     zeSubDeviceCreateEventAndCommandListTests,
     GivenSubDeviceWhenChainingSignalEventToCommandListThenSuccessIsReturned) {
   std::vector<ze_event_handle_t> events(num_events);
-  for (auto i = 0; i < num_events; i++) {
+  for (uint64_t i = 0U; i < num_events; i++) {
     ep.create_event(events[i]);
   }
 
-  auto num_iters =
+  uint64_t num_iters =
       (num_events > dev_handles.size()) ? dev_handles.size() : num_events;
   if (num_iters < 1) {
     GTEST_SKIP() << "No subdevices found, skipping test";
   }
-  uint32_t i = 0;
-  for (i = 0; i < num_iters - 1; i++) {
+  for (uint32_t i = 0U; i < num_iters - 1; i++) {
     if (use_immediate) {
       EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendSignalEvent(
           cmdlist_immediate_handles[i], events[i]));
@@ -313,19 +312,20 @@ LZT_TEST_P(
 
   // For regular command lists, execute as batch
   if (!use_immediate) {
-    for (auto idx = 0; idx < num_iters; idx++) {
+    for (uint64_t idx = 0U; idx < num_iters; idx++) {
       lzt::close_command_list(cmd_lists[idx]);
       lzt::execute_command_lists(cmd_qs[idx], 1, &cmd_lists[idx], nullptr);
       lzt::synchronize(cmd_qs[idx], timeout);
     }
   } else {
     // Signal last event in queue and wait on host
+    uint64_t idx = num_iters - 1;
     EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendSignalEvent(
-        cmdlist_immediate_handles[i], events[i]));
-    EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(events[i], timeout));
+        cmdlist_immediate_handles[idx], events[idx]));
+    EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(events[idx], timeout));
   }
 
-  for (auto i = 0; i < num_events; i++) {
+  for (uint64_t i = 0U; i < num_events; i++) {
     ep.destroy_event(events[i]);
   }
 }
@@ -337,7 +337,7 @@ LZT_TEST_P(
   ze_event_handle_t event_imm = nullptr;
 
   ep.InitEventPool(ep_desc, dev_handles);
-  for (auto i = 0; i < dev_handles.size(); i++) {
+  for (size_t i = 0U; i < dev_handles.size(); i++) {
     ep.create_event(event);
     ep.create_event(event_imm);
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(event));
