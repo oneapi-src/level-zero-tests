@@ -85,8 +85,8 @@ LZT_TEST_P(
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_function(function);
 
-  lzt::free_memory_with_allocator_selector(source, is_dst_shared_system);
-  lzt::free_memory_with_allocator_selector(result, is_src_shared_system);
+  lzt::free_memory_with_allocator_selector(source, is_src_shared_system);
+  lzt::free_memory_with_allocator_selector(result, is_dst_shared_system);
 }
 
 struct SharedSystemMemoryTestsNameSuffix {
