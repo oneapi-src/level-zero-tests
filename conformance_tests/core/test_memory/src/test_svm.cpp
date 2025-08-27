@@ -94,73 +94,90 @@ LZT_TEST_P(
 LZT_TEST_P(
     SharedSystemMemoryTests,
     GivenSharedSystemMemoryAllocationsAsKernelArgumentsWhenCooperativeKernelExecutesThenValueIsCorrect) {
-  bool is_dst_shared_system = std::get<0>(GetParam()).first;
-  bool is_src_shared_system = std::get<0>(GetParam()).second;
-  bool use_atomic_kernel = std::get<1>(GetParam());
-  bool use_immediate_cmdlist = std::get<2>(GetParam());
-  size_t buffer_size = std::get<3>(GetParam());
+  int ordinal = -1;
+  auto command_queue_group_properties =
+      lzt::get_command_queue_group_properties(device);
+  for (int i = 0; i < command_queue_group_properties.size(); i++) {
+    if (command_queue_group_properties[i].flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS) {
+      ordinal = i;
+      break;
+    }
+  }
+  if (ordinal < 0) {
+    LOG_WARNING << "No command queues that support cooperative kernels";
+    GTEST_SKIP();
+  }
 
-  constexpr size_t group_size = 32;
-  ASSERT_EQ(buffer_size % (sizeof(int) * group_size), 0);
+  const bool is_dst_shared_system = std::get<0>(GetParam()).first;
+  const bool is_src_shared_system = std::get<0>(GetParam()).second;
+  const bool use_atomic_kernel = std::get<1>(GetParam());
+  const bool use_immediate_cmdlist = std::get<2>(GetParam());
+  const size_t buffer_size = std::get<3>(GetParam());
   const size_t num_elements = buffer_size / sizeof(int);
-  const size_t group_count_x = buffer_size / (sizeof(int) * group_size);
 
-  void *partial_sums = lzt::allocate_shared_memory_with_allocator_selector(
-      group_count_x * sizeof(int), 1, 0, 0, device, is_dst_shared_system);
   void *input = lzt::allocate_shared_memory_with_allocator_selector(
       buffer_size, 1, 0, 0, device, is_src_shared_system);
+  void *output = lzt::allocate_shared_memory_with_allocator_selector(
+      buffer_size, 1, 0, 0, device, is_dst_shared_system);
 
-  memset(partial_sums, 0, group_count_x * sizeof(int));
   int *input_as_int = reinterpret_cast<int *>(input);
   for (size_t i = 0; i < num_elements; i++) {
-    input_as_int[i] = 1;
+    input_as_int[i] = i;
   }
 
-  int result = 0;
-
-  ze_module_handle_t module = lzt::create_module(device, "memory_sum.spv");
-
+  ze_module_handle_t module =
+      lzt::create_module(device, "cooperative_kernel.spv");
   const char *funcion_name =
-      use_atomic_kernel ? "memory_sum_atomic" : "memory_sum";
+      use_atomic_kernel ? "cooperative_kernel_atomic" : "cooperative_kernel";
   ze_kernel_handle_t function = lzt::create_function(module, funcion_name);
-  lzt::set_group_size(function, group_size, 1, 1);
 
-  lzt::set_argument_value(function, 0, sizeof(input), &input);
-  lzt::set_argument_value(function, 1, sizeof(partial_sums), &partial_sums);
-  lzt::set_argument_value(function, 2, sizeof(int) * group_size, nullptr);
-  lzt::set_argument_value(function, 3, sizeof(group_count_x), &group_count_x);
-  if (use_atomic_kernel) {
-    lzt::set_argument_value(function, 4, sizeof(result), &result);
+  auto compute_properties = lzt::get_compute_properties(device);
+
+  LOG_INFO << "Num elements: " << num_elements;
+  uint32_t suggested_group_count = 1;
+  ASSERT_ZE_RESULT_SUCCESS(zeKernelSuggestMaxCooperativeGroupCount(
+      function, &suggested_group_count));
+  ASSERT_GT(suggested_group_count, 0);
+  uint32_t group_count = (num_elements < suggested_group_count)
+                             ? num_elements
+                             : suggested_group_count;
+  LOG_INFO << "Group count: " << group_count;
+  uint32_t group_size = num_elements / group_count;
+  if (group_size > compute_properties.maxTotalGroupSize) {
+    group_size = compute_properties.maxTotalGroupSize;
   }
+  LOG_INFO << "Group size: " << group_size;
+  // Clamp test to maximum supported work size
+  uint32_t test_range = group_size * group_count;
+  LOG_INFO << "Test range: " << test_range;
 
-  lzt::zeCommandBundle cmd_bundle =
-      lzt::create_command_bundle(use_immediate_cmdlist);
+  lzt::set_group_size(function, group_size, 1, 1);
+  lzt::set_argument_value(function, 0, sizeof(input), &input);
+  lzt::set_argument_value(function, 1, sizeof(output), &output);
+  lzt::set_argument_value(function, 2, sizeof(group_count), &group_count);
+  lzt::zeCommandBundle cmd_bundle = lzt::create_command_bundle(
+      lzt::get_default_context(), device, 0, ordinal, use_immediate_cmdlist);
 
-  ze_group_count_t thread_group_dimensions = {
-      static_cast<uint32_t>(group_count_x), 1, 1};
+  ze_group_count_t thread_group_dimensions = {group_count, 1, 1};
 
-  lzt::append_launch_function(cmd_bundle.list, function,
-                              &thread_group_dimensions, nullptr, 0, nullptr);
-
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchCooperativeKernel(
+      cmd_bundle.list, function, &thread_group_dimensions, nullptr, 0,
+      nullptr));
   lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  if (!use_atomic_kernel) {
-    EXPECT_EQ(result, 0);
-    int *partial_sums_as_int = reinterpret_cast<int *>(partial_sums);
-    for (size_t i = 0; i < group_count_x; i++) {
-      result += partial_sums_as_int[i];
-    }
+  int *output_as_int = reinterpret_cast<int *>(output);
+  for (size_t i = 0; i < test_range; i++) {
+    EXPECT_EQ(output_as_int[i], i + group_count) << "index = " << i;
   }
-
-  EXPECT_EQ(result, num_elements);
 
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_function(function);
   lzt::destroy_module(module);
 
   lzt::free_memory_with_allocator_selector(input, is_src_shared_system);
-  lzt::free_memory_with_allocator_selector(partial_sums, is_dst_shared_system);
+  lzt::free_memory_with_allocator_selector(output, is_dst_shared_system);
 }
 
 struct SharedSystemMemoryTestsNameSuffix {
