@@ -24,8 +24,8 @@ add_lzt_test(
     level_zero_tests::random
     ${OS_SPECIFIC_LIBS}
   KERNELS
+    cooperative_kernel
     memory_add
-    memory_sum
     unified_mem_test
     write_memory_pattern
 )
