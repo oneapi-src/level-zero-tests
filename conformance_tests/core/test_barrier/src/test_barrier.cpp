@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -289,7 +289,6 @@ class zeContextSystemBarrierTests : public ::testing::Test {};
 
 LZT_TEST_F(zeContextSystemBarrierTests,
            GivenDeviceWhenAddingSystemBarrierThenSuccessIsReturned) {
-
   EXPECT_ZE_RESULT_SUCCESS(
 
       zeContextSystemBarrier(lzt::get_default_context(),

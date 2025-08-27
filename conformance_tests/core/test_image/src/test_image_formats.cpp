@@ -20,10 +20,6 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-const std::vector<ze_image_type_t> tested_image_types = {
-    ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_1DARRAY,
-    ZE_IMAGE_TYPE_2DARRAY};
-
 class ImageFormatFixture : public ::testing::Test {
 public:
   void SetUp() override {
@@ -419,7 +415,7 @@ LZT_TEST_P(
 
 INSTANTIATE_TEST_SUITE_P(
     FormatTypeTestsParam, zeImageFormatTypeTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Bool()));
 
 class zeImageFormatLayoutTests
@@ -728,7 +724,7 @@ LZT_TEST_P(
 INSTANTIATE_TEST_SUITE_P(
     FormatLayoutTestsParam, zeImageFormatLayoutTests,
     ::testing::Combine(
-        ::testing::ValuesIn(tested_image_types),
+        ::testing::ValuesIn(lzt::image_types_buffer_excluded),
         ::testing::Values(
             ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16,
             ZE_IMAGE_FORMAT_LAYOUT_32, ZE_IMAGE_FORMAT_LAYOUT_8_8,
