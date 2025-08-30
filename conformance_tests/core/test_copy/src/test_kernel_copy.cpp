@@ -321,7 +321,8 @@ protected:
     }
   }
 
-  uint32_t get_cross_device_index(uint32_t driver_index, uint32_t device_index) {
+  uint32_t get_cross_device_index(uint32_t driver_index,
+                                  uint32_t device_index) {
     for (uint32_t i = 0U; i < devices.size(); i++) {
       if (i != device_index) {
         return i;
@@ -362,10 +363,10 @@ protected:
   }
 
   void test_indirect_memory_kernel_copy(
-      uint32_t driver_index, uint32_t device_index, ze_memory_type_t src_mem_type,
-      ze_memory_type_t src_ptr_mem_type, ze_memory_type_t dst_mem_type,
-      ze_memory_type_t dst_ptr_mem_type, int offset,
-      shared_memory_type src_shr_type = SHARED_LOCAL,
+      uint32_t driver_index, uint32_t device_index,
+      ze_memory_type_t src_mem_type, ze_memory_type_t src_ptr_mem_type,
+      ze_memory_type_t dst_mem_type, ze_memory_type_t dst_ptr_mem_type,
+      int offset, shared_memory_type src_shr_type = SHARED_LOCAL,
       shared_memory_type src_ptr_shr_type = SHARED_LOCAL,
       shared_memory_type dst_shr_type = SHARED_LOCAL,
       shared_memory_type dst_ptr_shr_type = SHARED_LOCAL,
@@ -375,7 +376,8 @@ protected:
     auto device = devices[driver_index][device_index];
     auto context = contexts[device_index];
 
-    uint32_t cross_device_index = get_cross_device_index(driver_index, device_index);
+    uint32_t cross_device_index =
+        get_cross_device_index(driver_index, device_index);
     if (cross_device_index == device_index &&
         (src_shr_type == SHARED_CROSS || src_ptr_shr_type == SHARED_CROSS ||
          dst_shr_type == SHARED_CROSS || dst_ptr_shr_type == SHARED_CROSS)) {

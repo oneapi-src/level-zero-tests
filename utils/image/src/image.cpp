@@ -101,7 +101,9 @@ template <typename T> uint16_t ImagePNG<T>::number_of_channels() const {
   return bits_per_pixel() / bits_per_channel();
 }
 
-template <typename T> uint16_t ImagePNG<T>::bits_per_channel() const { return 8; }
+template <typename T> uint16_t ImagePNG<T>::bits_per_channel() const {
+  return 8;
+}
 
 template <typename T> uint16_t ImagePNG<T>::bits_per_pixel() const {
   return std::numeric_limits<T>::digits;
@@ -115,7 +117,8 @@ template <typename T> size_t ImagePNG<T>::size_in_bytes() const {
   return pixels_.size() * sizeof(T);
 }
 
-template <typename T> T ImagePNG<T>::get_pixel(const uint32_t x, const uint32_t y) const {
+template <typename T>
+T ImagePNG<T>::get_pixel(const uint32_t x, const uint32_t y) const {
   return pixels_[y * width() + x];
 }
 
@@ -124,8 +127,7 @@ void ImagePNG<T>::set_pixel(const uint32_t x, const uint32_t y, const T data) {
   pixels_[y * width() + x] = data;
 }
 
-template <typename T>
-std::vector<T> ImagePNG<T>::get_pixels() const {
+template <typename T> std::vector<T> ImagePNG<T>::get_pixels() const {
   return pixels_;
 }
 
@@ -221,7 +223,9 @@ template <typename T> uint16_t ImageBMP<T>::number_of_channels() const {
   return bits_per_pixel() / bits_per_channel();
 }
 
-template <typename T> uint16_t ImageBMP<T>::bits_per_channel() const { return 8; }
+template <typename T> uint16_t ImageBMP<T>::bits_per_channel() const {
+  return 8;
+}
 
 template <typename T> uint16_t ImageBMP<T>::bits_per_pixel() const {
   return std::numeric_limits<T>::digits;
@@ -235,7 +239,8 @@ template <typename T> size_t ImageBMP<T>::size_in_bytes() const {
   return pixels_.size() * sizeof(T);
 }
 
-template <typename T> T ImageBMP<T>::get_pixel(const uint32_t x, const uint32_t y) const {
+template <typename T>
+T ImageBMP<T>::get_pixel(const uint32_t x, const uint32_t y) const {
   return pixels_[y * width() + x];
 }
 

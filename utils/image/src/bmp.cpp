@@ -168,8 +168,8 @@ bool BmpUtils::save_image_as_bmp_32fc4(float *ptr, float scale, uint32_t width,
   return res;
 }
 
-bool BmpUtils::save_image_as_bmp_8u(uint8_t *ptr, uint32_t width, uint32_t height,
-                                    const char *file_name) {
+bool BmpUtils::save_image_as_bmp_8u(uint8_t *ptr, uint32_t width,
+                                    uint32_t height, const char *file_name) {
   uint32_t *out_u_int_buf =
       (uint32_t *)malloc(width * height * sizeof(uint32_t));
   if (!out_u_int_buf) {
@@ -261,8 +261,8 @@ error_exit:
   return false;
 }
 
-bool BmpUtils::load_bmp_image_8u(uint8_t *&data, uint32_t &width, uint32_t &height,
-                                 const char *file_name) {
+bool BmpUtils::load_bmp_image_8u(uint8_t *&data, uint32_t &width,
+                                 uint32_t &height, const char *file_name) {
   // First, load the BMP image generally:
   uint32_t src_pitch = 0;
   uint16_t src_bits_per_pixel = 0;
@@ -304,7 +304,7 @@ bool BmpUtils::load_bmp_image_8u(uint8_t *&data, uint32_t &width, uint32_t &heig
       uint8_t *dst_pixel = dst_start;
 
       for (uint32_t w = 0U; w < width; w++, src_pixel += src_bytes_per_pixel,
-               dst_pixel += dst_bytes_per_pixel) {
+                    dst_pixel += dst_bytes_per_pixel) {
         switch (src_bits_per_pixel) {
         case 8:
           dst_pixel[0] = src_pixel[0];

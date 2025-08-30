@@ -254,11 +254,11 @@ LZT_TEST(
       auto temp_mask = mask;
       std::string affinity_mask_string;
       uint16_t parent_index = 0;
-      for (size_t root_device = 0U; root_device < devices.size(); root_device++) {
+      for (size_t device_idx = 0U; device_idx < devices.size(); device_idx++) {
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[root_device], temp_mask, parent_index, root_device,
+            devices[device_idx], temp_mask, parent_index, device_idx,
             device_present, false, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -316,11 +316,11 @@ LZT_TEST(
       auto temp_mask = mask;
       std::string affinity_mask_string;
       uint16_t parent_index = 0;
-      for (size_t root_device = 0U; root_device < devices.size(); root_device++) {
+      for (size_t device_idx = 0U; device_idx < devices.size(); device_idx++) {
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[root_device], temp_mask, parent_index, root_device,
+            devices[device_idx], temp_mask, parent_index, device_idx,
             device_present, true, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -376,11 +376,11 @@ LZT_TEST(
       auto temp_mask = mask;
       std::string affinity_mask_string;
       uint16_t parent_index = 0;
-      for (size_t root_device = 0U; root_device < devices.size(); root_device++) {
+      for (size_t device_idx = 0U; device_idx < devices.size(); device_idx++) {
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[root_device], temp_mask, parent_index, root_device,
+            devices[device_idx], temp_mask, parent_index, device_idx,
             device_present, true, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -436,11 +436,11 @@ LZT_TEST(
       auto temp_mask = mask;
       std::string affinity_mask_string;
       uint16_t parent_index = 0;
-      for (size_t root_device = 0U; root_device < devices.size(); root_device++) {
+      for (size_t device_idx = 0U; device_idx < devices.size(); device_idx++) {
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[root_device], temp_mask, parent_index, root_device,
+            devices[device_idx], temp_mask, parent_index, device_idx,
             device_present, false, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {

@@ -54,7 +54,8 @@ void init_driver() {
 }
 
 void fill_expected_buffer(char *expected_buffer, const size_t size,
-                          const size_t concurrency_offset, const bool is_server) {
+                          const size_t concurrency_offset,
+                          const bool is_server) {
   if (concurrency_offset > 0U) {
     for (size_t i = 0; i < size - concurrency_offset; ++i) {
       if (is_server) {

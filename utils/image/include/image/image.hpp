@@ -40,7 +40,8 @@ public:
   ImagePNG();
   ImagePNG(const std::string &image_path);
   ImagePNG(const uint32_t width, const uint32_t height);
-  ImagePNG(const uint32_t width, const uint32_t height, const std::vector<T> &data);
+  ImagePNG(const uint32_t width, const uint32_t height,
+           const std::vector<T> &data);
   bool read(const std::string &image_path) override;
   bool write(const std::string &image_path) override;
   bool write(const std::string &image_path, const T *data) override;
@@ -74,7 +75,8 @@ public:
   ImageBMP();
   ImageBMP(const std::string &image_path);
   ImageBMP(const uint32_t width, const uint32_t height);
-  ImageBMP(const uint32_t width, const uint32_t height, const std::vector<T> &data);
+  ImageBMP(const uint32_t width, const uint32_t height,
+           const std::vector<T> &data);
   bool read(const std::string &image_path) override;
   bool write(const std::string &image_path) override;
   bool write(const std::string &image_path, const T *data) override;
