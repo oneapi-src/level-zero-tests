@@ -13,8 +13,6 @@ namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
-using lzt::to_f64;
-
 ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
                                          uint32_t count,
                                          ze_event_pool_flags_t flags) {
@@ -131,7 +129,7 @@ get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
   auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
-      ~(-1ULL << device_properties.kernelTimestampValidBits);
+      ~(to_u64(-1) << device_properties.kernelTimestampValidBits);
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
@@ -162,7 +160,7 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
   auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
-      ~(-1ULL << device_properties.kernelTimestampValidBits);
+      ~(to_u64(-1) << device_properties.kernelTimestampValidBits);
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
@@ -295,7 +293,7 @@ uint32_t find_index(const std::vector<bool> &indexes_available) {
   for (uint32_t i = 0; i < indexes_available.size(); i++)
     if (indexes_available[i])
       return i;
-  return -1U;
+  return to_u32(-1);
 }
 
 void zeEventPool::create_event(ze_event_handle_t &event) {

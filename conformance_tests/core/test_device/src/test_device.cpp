@@ -27,6 +27,7 @@ namespace {
 
 using lzt::to_u8;
 using lzt::to_u32;
+using lzt::to_u64;
 using lzt::to_f64;
 
 bool comparePciIdBusNumber(std::string &bdfString1, std::string &bdfString2) {
@@ -943,7 +944,7 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   auto device_time_1 = std::get<1>(timestamps_1);
   auto device_properties = lzt::get_device_properties(device);
   uint64_t timestamp_max_val =
-      ~(-1ULL << device_properties.kernelTimestampValidBits);
+      ~(to_u64(-1) << device_properties.kernelTimestampValidBits);
   uint64_t timestamp_freq = device_properties.timerResolution;
 
   auto device_diff_ns =

@@ -25,12 +25,12 @@
 
 namespace lzt = level_zero_tests;
 
+using lzt::to_u64;
+
 namespace {
 #ifdef __linux__
 
 namespace bipc = boost::interprocess;
-
-using lzt::to_u64;
 
 static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
                                     uint32_t size, bool reserved, bool getFromFd,

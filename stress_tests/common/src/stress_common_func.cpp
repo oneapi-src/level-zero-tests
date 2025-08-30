@@ -12,17 +12,12 @@
 
 namespace lzt = level_zero_tests;
 
+using lzt::to_u64;  // Available from utils.hpp through test_harness.hpp,
+using lzt::to_f64;  //    through test_harness_image.hpp.
+
 #if defined(unix) || defined(__unix__) || defined(__unix)
 
 #include <unistd.h>
-
-template <typename T> inline constexpr uint64_t to_u64(T val) {
-  return static_cast<uint64_t>(val);
-}
-
-template <typename T> inline constexpr double to_f64(T val) {
-  return static_cast<double>(val);
-}
 
 uint64_t total_available_host_memory() {
   const uint64_t page_count = to_u64(sysconf(_SC_AVPHYS_PAGES));

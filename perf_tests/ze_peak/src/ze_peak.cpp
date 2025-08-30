@@ -1832,7 +1832,7 @@ long double ZePeak::context_time_in_us(L0Context &context,
 
   const uint64_t timestamp_freq = context.device_property.timerResolution;
   const uint64_t timestamp_max_value =
-      ~(-1ULL << context.device_property.kernelTimestampValidBits);
+      ~(to_u64(-1) << context.device_property.kernelTimestampValidBits);
   context_time_ns =
       (ts_result.global.kernelEnd >= ts_result.global.kernelStart)
           ? to_f80(ts_result.global.kernelEnd - ts_result.global.kernelStart) *

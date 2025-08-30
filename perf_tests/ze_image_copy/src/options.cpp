@@ -78,7 +78,7 @@ int ZeImageCopy::parse_command_line(int argc, char **argv) {
     std::cout << "unknown format layout" << std::endl;
     std::cout << desc << std::endl;
     return 1;
-  } else if (Imageflags == -1U) {
+  } else if (Imageflags == static_cast<uint32_t>(-1)) {
     std::cout << "unknown image flags" << std::endl;
     std::cout << desc << std::endl;
     return 1;
