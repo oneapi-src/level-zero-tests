@@ -349,7 +349,7 @@ else()
 endif()
 
 if (MSVC)
-    add_compile_options(/W3)
+    add_compile_options(/W4)
 else()
     add_compile_options(-Wsign-compare -Wnarrowing)
 endif()
