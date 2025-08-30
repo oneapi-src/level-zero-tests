@@ -18,7 +18,11 @@
 
 namespace {
 
+using lzt::to_nanoseconds;
+
 using lzt::to_u32;
+using lzt::to_u64;
+using lzt::to_f64;
 
 class zeDeviceCreateEventPoolTests : public lzt::zeEventPoolTests {};
 
@@ -740,8 +744,8 @@ protected:
 
     const uint64_t responsiveness = measure_device_responsiveness();
     const double min_ratio = 0.02;
-    if (responsiveness > static_cast<uint64_t>(min_ratio * timeout)) {
-      timeout = static_cast<uint64_t>(responsiveness / min_ratio);
+    if (responsiveness > to_u64(min_ratio * to_f64(timeout))) {
+      timeout = to_u64(to_f64(responsiveness) / min_ratio);
       LOG_INFO << "Device responsiveness: " << responsiveness
                << " ns, setting timeout to: " << timeout << " ns";
     }
@@ -805,8 +809,7 @@ protected:
     lzt::destroy_command_list(cmd_list);
     lzt::destroy_context(context);
 
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0)
-        .count();
+    return to_nanoseconds(t1 - t0);
   }
 
   void TearDown() override {
@@ -825,12 +828,11 @@ LZT_TEST_P(zeEventHostSynchronizeTimeoutTests,
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(ev, timeout));
   const auto t1 = std::chrono::steady_clock::now();
 
-  const uint64_t wall_time =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-  const float ratio = static_cast<float>(wall_time) / timeout;
+  const uint64_t wall_time = to_nanoseconds(t1 - t0);
+  const double ratio = to_f64(wall_time) / to_f64(timeout);
   // Tolerance: 2%
-  EXPECT_GE(ratio, 0.98f);
-  EXPECT_LE(ratio, 1.02f);
+  EXPECT_GE(ratio, 0.98);
+  EXPECT_LE(ratio, 1.02);
 
   lzt::signal_event_from_host(ev);
   lzt::event_host_synchronize(ev, UINT64_MAX);
@@ -865,7 +867,7 @@ protected:
     ev_desc.pNext = nullptr;
     ev_desc.signal = std::get<0>(GetParam());
     ev_desc.wait = std::get<0>(GetParam());
-    for (int i = 0; i < n_events; i++) {
+    for (uint32_t i = 0; i < n_events; i++) {
       ev_desc.index = i;
       if (i == n_events - 1)
         ev_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
@@ -874,7 +876,7 @@ protected:
   }
 
   void TearDown() override {
-    for (int i = 0; i < n_events; i++) {
+    for (uint32_t i = 0; i < n_events; i++) {
       lzt::destroy_event(ev[i]);
     }
     lzt::destroy_event_pool(ep);
@@ -884,7 +886,7 @@ protected:
   ze_context_handle_t context = nullptr;
   ze_device_handle_t device = nullptr;
   ze_event_pool_handle_t ep = nullptr;
-  static constexpr int n_events = 5;
+  static constexpr uint32_t n_events = 5;
   ze_event_handle_t ev[n_events];
 };
 
@@ -944,7 +946,7 @@ LZT_TEST_P(
     lzt::reset_command_list(cmd_bundle.list);
     lzt::destroy_command_bundle(cmd_bundle);
 
-    for (int j = 0; j < n_events; j++) {
+    for (uint32_t j = 0; j < n_events; j++) {
       lzt::query_event(ev[j], ZE_RESULT_SUCCESS);
       lzt::event_host_synchronize(ev[j], UINT64_MAX);
       lzt::event_host_reset(ev[j]);

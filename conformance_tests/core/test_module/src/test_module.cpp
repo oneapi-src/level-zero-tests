@@ -25,8 +25,11 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_nanoseconds;
+
 using lzt::to_u8;
 using lzt::to_u32;
+using lzt::to_u64;
 
 enum TestType { FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT };
 
@@ -44,9 +47,7 @@ std::vector<ze_module_handle_t> create_module_vector_and_log(
   auto start = std::chrono::system_clock::now();
   auto end = std::chrono::system_clock::now();
   // Create pseudo-random integer to add to native binary filename
-  srand(static_cast<unsigned>(time(NULL) +
-        std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-            .count()));
+  srand(to_u32(to_u64(time(NULL)) + to_nanoseconds(end - start)));
   std::string filename_native =
       filename_prefix + std::to_string(lzt::generate_value<uint16_t>()) +
       ".native";
@@ -371,7 +372,7 @@ void zeModuleCreateTests::
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_initial_value, *typed_global_pointer);
-    lzt::create_and_execute_function(device, mod, "test", 1, nullptr,
+    lzt::create_and_execute_function(device, mod, "test", 1U, nullptr,
                                      is_immediate);
     lzt::reset_command_list(bundle.list);
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
@@ -410,7 +411,7 @@ void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest(
   ASSERT_ZE_RESULT_SUCCESS(build_result);
   std::string kernel_name = "test";
   void *buff = lzt::allocate_host_memory(sizeof(uint64_t));
-  lzt::create_and_execute_function(device, module, kernel_name, 1, buff,
+  lzt::create_and_execute_function(device, module, kernel_name, 1U, buff,
                                    is_immediate);
   uint64_t data = *static_cast<uint64_t *>(buff);
   const uint64_t expected_initial_value = 160;
@@ -442,7 +443,7 @@ void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest(
                                           nullptr));
   kernel_name = "test";
   void *buff_spec = lzt::allocate_host_memory(sizeof(uint64_t));
-  lzt::create_and_execute_function(device, module_spec, kernel_name, 1,
+  lzt::create_and_execute_function(device, module_spec, kernel_name, 1U,
                                    buff_spec, is_immediate);
   data = *static_cast<uint64_t *>(buff_spec);
   const uint64_t expected_updated_value = 190;
@@ -495,7 +496,7 @@ void zeModuleCreateTests::
   void *buff_spec =
       lzt::allocate_host_memory(sizeof(uint64_t) * spec_constants_num);
   const std::string kernel_name = "test";
-  lzt::create_and_execute_function(device, module_spec, kernel_name, 1,
+  lzt::create_and_execute_function(device, module_spec, kernel_name, 1U,
                                    buff_spec, is_immediate);
   uint64_t *output = static_cast<uint64_t *>(buff_spec);
 
@@ -666,9 +667,7 @@ LZT_TEST_F(
   auto start = std::chrono::system_clock::now();
   auto end = std::chrono::system_clock::now();
   // Create pseudo-random integer to add to native binary filename
-  srand(static_cast<unsigned>(time(NULL) +
-        std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-            .count()));
+  srand(to_u32(to_u64(time(NULL)) + to_nanoseconds(end - start)));
   std::string filename_native =
       "module_add" + std::to_string(lzt::generate_value<uint16_t>()) +
       ".native";
@@ -819,7 +818,7 @@ protected:
 
     int *host_addval_offset = static_cast<int *>(host_buff);
 
-    const int addval = 10;
+    const uint32_t addval = 10;
     const int host_offset = 200;
     int *input_a_int = static_cast<int *>(input_a);
 
@@ -952,7 +951,7 @@ protected:
           zeEventHostSynchronize(event_kernel_to_host, UINT32_MAX - 1));
     }
 
-    int offset = 0;
+    uint32_t offset = 0;
 
     EXPECT_EQ(input_a_int[0],
               offset + ((addval * (group_size_x * th_group_dim.groupCountX) *
@@ -1349,7 +1348,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
     size = device_properties.maxMemAllocSize;
   } else {
     head = std::min(difference, head);
-    size = std::max(1ULL << 32 /*4 GiB*/,
+    size = std::max(static_cast<uint64_t>(1ULL) << 32 /*4 GiB*/,
                     device_properties.maxMemAllocSize) +
            head;
   }
@@ -1669,7 +1668,7 @@ class ModuleGetKernelNamesTests
 LZT_TEST_P(
     ModuleGetKernelNamesTests,
     GivenValidModuleWhenGettingKernelNamesThenCorrectKernelNumberAndNamesAreReturned) {
-  int num = GetParam();
+  uint32_t num = GetParam();
   uint32_t kernel_count = 0;
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::string filename =
@@ -1711,7 +1710,7 @@ LZT_TEST(
 void zeModuleCreateTests::RunGivenModuleWithGlobalVariableWhenWritingGlobalData(
     bool is_immediate) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  const size_t work_group_size = 16;
+  const uint32_t work_group_size = 16;
   const std::string filename = "global_data_kernel.spv";
   const std::vector<uint8_t> binary_file =
       level_zero_tests::load_binary_file(filename);

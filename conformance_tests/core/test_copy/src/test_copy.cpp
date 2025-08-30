@@ -26,6 +26,7 @@ using namespace level_zero_tests;
 namespace {
 
 using lzt::to_u8;
+using lzt::to_int;
 using lzt::to_u32;
 
 class zeCommandListAppendMemoryFillTests : public ::testing::Test {
@@ -46,14 +47,14 @@ protected:
       if (cmd_queue_group_props[i].flags &
               ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE &&
           compute_ordinal < 0) {
-        compute_ordinal = i;
+        compute_ordinal = to_int(i);
       }
       if (cmd_queue_group_props[i].flags &
               ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY &&
           !(cmd_queue_group_props[i].flags &
             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
           copy_ordinal < 0) {
-        copy_ordinal = i;
+        copy_ordinal = to_int(i);
       }
       if (compute_ordinal >= 0 && copy_ordinal >= 0) {
         break;
@@ -77,7 +78,7 @@ void zeCommandListAppendMemoryFillTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -221,7 +222,7 @@ void zeCommandListAppendMemoryFillTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -317,7 +318,7 @@ void zeCommandListAppendMemoryFillTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -792,7 +793,7 @@ protected:
   void RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(
       bool is_src_shared_system, bool is_dst_shared_system, bool is_immediate,
       bool isCopyOnly, size_t size) {
-    const uint8_t value = (rand()) & 0xFF;
+    const uint8_t value = to_u8(rand()) & 0xFF;
     const uint8_t init = (value + 0x22) & 0xFF;
 
     void *src_memory = lzt::allocate_shared_memory_with_allocator_selector(
@@ -1060,7 +1061,7 @@ protected:
     std::array<uint32_t, 3> heights = {1, hght / 2, hght};
     std::array<uint32_t, 3> depths = {1, dpth / 2, dpth};
 
-    for (int region = 0; region < 3; region++) {
+    for (uint32_t region = 0; region < 3; region++) {
       // Define region to be copied from/to
       uint32_t width = widths[region];
       uint32_t height = heights[region];
@@ -1172,7 +1173,7 @@ protected:
     std::array<uint32_t, 3> heights = {1, hght / 2, hght};
     std::array<uint32_t, 3> depths = {1, dpth / 2, dpth};
 
-    for (int region = 0; region < 3; region++) {
+    for (uint32_t region = 0; region < 3; region++) {
       // Define region to be copied from/to
       uint32_t width = widths[region];
       uint32_t height = heights[region];

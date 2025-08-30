@@ -15,23 +15,25 @@ namespace lzt = level_zero_tests;
 #include <ctime>
 #include <thread>
 
+using lzt::to_nanoseconds;
+
 using lzt::to_u32;
 
 ze_kernel_handle_t get_matrix_multiplication_kernel(
     ze_device_handle_t device, ze_group_count_t *tg, void **a_buffer,
-    void **b_buffer, void **c_buffer, int dimensions = 1024) {
+    void **b_buffer, void **c_buffer, uint32_t dimensions = 1024) {
 
   const char *dimensions_test_environment_variable =
       std::getenv("LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS");
   if (dimensions_test_environment_variable != nullptr) {
-    dimensions = atoi(dimensions_test_environment_variable);
+    dimensions = to_u32(dimensions_test_environment_variable);
     LOG_INFO
         << "overriding the matrix multiplication dimension as "
            "LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS is used with value of "
         << dimensions;
   }
 
-  int m, k, n;
+  uint32_t m, k, n;
   m = k = n = dimensions;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
@@ -43,11 +45,8 @@ ze_kernel_handle_t get_matrix_multiplication_kernel(
   std::memcpy(*a_buffer, a.data(), a.size() * sizeof(float));
   std::memcpy(*b_buffer, b.data(), b.size() * sizeof(float));
 
-  int group_count_x = m / 16;
-  int group_count_y = n / 16;
-
-  tg->groupCountX = group_count_x;
-  tg->groupCountY = group_count_y;
+  tg->groupCountX = m / 16;
+  tg->groupCountY = n / 16;
   tg->groupCountZ = 1;
 
   ze_module_handle_t module =
@@ -310,10 +309,7 @@ void metric_run_ip_sampling_with_validation(
 
       std::chrono::steady_clock::time_point endTime =
           std::chrono::steady_clock::now();
-      uint64_t elapsedTime =
-          std::chrono::duration_cast<std::chrono::nanoseconds>(endTime -
-                                                               startTime)
-              .count();
+      auto elapsedTime = to_nanoseconds(endTime - startTime);
 
       LOG_INFO << "elapsed time for workload completion " << elapsedTime
                << " time for NReports to complete " << timeForNReportsComplete;
@@ -326,7 +322,7 @@ void metric_run_ip_sampling_with_validation(
 
       if (sleep_in_buffer_overflow_test_environment_variable != nullptr) {
         uint32_t value =
-            atoi(sleep_in_buffer_overflow_test_environment_variable);
+            to_u32(sleep_in_buffer_overflow_test_environment_variable);
         std::this_thread::sleep_for(std::chrono::milliseconds(value));
       }
 

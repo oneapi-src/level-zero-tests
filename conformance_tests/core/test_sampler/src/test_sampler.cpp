@@ -98,7 +98,7 @@ void RunGivenSamplerWhenPassingAsFunctionArgumentTest(bool is_immediate) {
   args.push_back(arg);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name, 1, args, is_immediate);
+                                   module, func_name, 1U, args, is_immediate);
   lzt::destroy_module(module);
   lzt::destroy_sampler(sampler);
 }
@@ -115,7 +115,7 @@ LZT_TEST(
 }
 
 static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image,
-                                              int height, int width) {
+                                              uint32_t height, uint32_t width) {
   ze_image_desc_t image_description = {};
   image_description.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
@@ -149,8 +149,8 @@ LZT_TEST_P(
     GTEST_SKIP();
   }
   lzt::ImagePNG32Bit input("test_input.png");
-  int output_width = input.width() / 2;
-  int output_height = input.height() / 2;
+  uint32_t output_width = input.width() / 2;
+  uint32_t output_height = input.height() / 2;
   lzt::ImagePNG32Bit output_inhost(output_width, output_height);
   lzt::ImagePNG32Bit output_inkernel(output_width, output_height);
   std::string module_name = "sampler.spv";
@@ -242,11 +242,11 @@ LZT_TEST_P(
   args_inhost.push_back(arg);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name_inhost, 1, args_inhost,
+                                   module, func_name_inhost, 1U, args_inhost,
                                    is_immediate);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name_inkernel, 1, args_inkernel,
+                                   module, func_name_inkernel, 1U, args_inkernel,
                                    is_immediate);
 
   lzt::copy_image_to_mem(output_xeimage_host, output_inhost);

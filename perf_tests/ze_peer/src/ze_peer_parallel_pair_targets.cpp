@@ -628,7 +628,7 @@ void ZePeer::perform_parallel_copy_to_pair_targets(
 
 void ZePeer::bandwidth_latency_parallel_to_pair_targets(
     peer_test_t test_type, peer_transfer_t transfer_type,
-    int number_buffer_elements,
+    size_t number_buffer_elements,
     std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
     bool divide_buffers) {
 

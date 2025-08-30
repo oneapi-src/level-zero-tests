@@ -19,10 +19,11 @@ namespace lzt = level_zero_tests;
 namespace {
 
 using lzt::to_int;
+using lzt::to_u32;
 
 class CooperativeKernelTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<int, bool>> {
+      public ::testing::WithParamInterface<std::tuple<uint32_t, bool>> {
 protected:
   void RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(
       bool is_shared_system);
@@ -58,7 +59,7 @@ void CooperativeKernelTests::
   }
   auto is_immediate = std::get<1>(GetParam());
   auto cmd_bundle = lzt::create_command_bundle(
-      context, device, flags, mode, priority, 0, ordinal, 0, is_immediate);
+      context, device, flags, mode, priority, 0, to_u32(ordinal), 0, is_immediate);
 
   // Set up input vector data
   const size_t data_size = 4096;

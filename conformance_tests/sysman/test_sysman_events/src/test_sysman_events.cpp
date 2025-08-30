@@ -248,7 +248,7 @@ LZT_TEST_F(
 static void eventListenThread(ze_driver_handle_t hDriver,
                               std::vector<ze_device_handle_t> devices,
                               uint32_t *numEventsGenerated) {
-  auto timeout = 5000;
+  uint64_t timeout = 5000U;
   // If we registered to receive events on any devices, start listening now
   uint32_t num_devices = to_u32(devices.size());
   uint32_t numDeviceEvents = std::numeric_limits<int32_t>::max();

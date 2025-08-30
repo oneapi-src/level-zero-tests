@@ -14,6 +14,22 @@
 
 bool verbose = false;
 
+template <typename T> inline constexpr uint32_t to_u32(T val) {
+  return static_cast<uint32_t>(val);
+}
+
+template <typename T> inline constexpr uint64_t to_u64(T val) {
+  return static_cast<uint64_t>(val);
+}
+
+template <typename T> inline constexpr double to_f64(T val) {
+  return static_cast<double>(val);
+}
+
+template <typename T> inline constexpr long double to_f80(T val) {
+  return static_cast<long double>(val);
+}
+
 //---------------------------------------------------------------------
 // Utility function to load the binary spv file from a path
 // and return the file as a vector for use by L0.
@@ -29,14 +45,13 @@ std::vector<uint8_t> L0Context::load_binary_file(const std::string &file_path) {
     return binary_file;
   }
 
-  size_t length = 0;
   stream.seekg(0, stream.end);
-  length = static_cast<size_t>(stream.tellg());
+  auto length = stream.tellg();
   stream.seekg(0, stream.beg);
   if (verbose)
     std::cout << "Binary file length: " << length << "\n";
 
-  binary_file.resize(length);
+  binary_file.resize(static_cast<size_t>(length));
   stream.read(reinterpret_cast<char *>(binary_file.data()), length);
   if (verbose)
     std::cout << "Binary file loaded\n";
@@ -73,7 +88,7 @@ void L0Context::create_module(std::vector<uint8_t> binary_file) {
 
   module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
-  module_description.inputSize = static_cast<uint32_t>(binary_file.size());
+  module_description.inputSize = binary_file.size();
   module_description.pInputModule =
       reinterpret_cast<const uint8_t *>(binary_file.data());
   module_description.pBuildFlags = nullptr;
@@ -428,7 +443,7 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
           (queueProperties[i].numQueues > 0)) {
 
-        copy_ordinal = i;
+        copy_ordinal = static_cast<int>(i);
         break;
       }
     }
@@ -436,8 +451,8 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
     if (copy_ordinal != -1) {
       std::cout << "Async copy engine detected with ordinal " << copy_ordinal
                 << ", enabling blitter benchmark\n";
-      command_list_description.commandQueueGroupOrdinal = copy_ordinal;
-      command_queue_description.ordinal = copy_ordinal;
+      command_list_description.commandQueueGroupOrdinal = to_u32(copy_ordinal);
+      command_queue_description.ordinal = to_u32(copy_ordinal);
       command_queue_description.index = command_queue_id;
 
       if (enable_fixed_ordinal_index) {
@@ -672,35 +687,33 @@ uint64_t ZePeak::set_workgroups(L0Context &context,
                                 const uint64_t total_work_items_requested,
                                 struct ZeWorkGroups *workgroup_info) {
 
-  auto group_size_x =
-      std::min(total_work_items_requested,
-               uint64_t(context.device_compute_property.maxGroupSizeX));
-  auto group_size_y = 1;
-  auto group_size_z = 1;
-  auto group_size = group_size_x * group_size_y * group_size_z;
+  uint32_t group_size_x =
+      to_u32(std::min(total_work_items_requested,
+                      to_u64(context.device_compute_property.maxGroupSizeX)));
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  uint64_t work_items = to_u64(group_size_x) * group_size_y * group_size_z;
 
-  auto group_count_x = total_work_items_requested / group_size;
-  group_count_x = std::min(
-      group_count_x, uint64_t(context.device_compute_property.maxGroupCountX));
-  auto remaining_items =
-      total_work_items_requested - group_count_x * group_size;
+  uint32_t group_count_x = to_u32(total_work_items_requested / work_items) ;
+  group_count_x = std::min(group_count_x,
+                           context.device_compute_property.maxGroupCountX);
+  work_items *= group_count_x;
+  auto remaining_items = total_work_items_requested - work_items;
 
-  uint64_t group_count_y = remaining_items / (group_count_x * group_size);
-  group_count_y = std::min(
-      group_count_y, uint64_t(context.device_compute_property.maxGroupCountY));
-  group_count_y = std::max(group_count_y, uint64_t(1));
-  remaining_items =
-      total_work_items_requested - group_count_x * group_count_y * group_size;
+  uint32_t group_count_y = to_u32(remaining_items / work_items);
+  group_count_y = std::min(group_count_y,
+                           context.device_compute_property.maxGroupCountY);
+  group_count_y = std::max(group_count_y, 1U);
+  work_items *= group_count_y;
+  remaining_items = total_work_items_requested - work_items;
 
-  uint64_t group_count_z =
-      remaining_items / (group_count_x * group_count_y * group_size);
-  group_count_z = std::min(
-      group_count_z, uint64_t(context.device_compute_property.maxGroupCountZ));
-  group_count_z = std::max(group_count_z, uint64_t(1));
+  uint32_t group_count_z = to_u32(remaining_items / work_items);
+  group_count_z = std::min(group_count_z,
+                           context.device_compute_property.maxGroupCountZ);
+  group_count_z = std::max(group_count_z, 1U);
+  work_items *= group_count_z;
 
-  auto final_work_items =
-      group_count_x * group_count_y * group_count_z * group_size;
-  remaining_items = total_work_items_requested - final_work_items;
+  remaining_items = total_work_items_requested - work_items;
 
   if (verbose) {
     std::cout << "Group size x: " << group_size_x << "\n";
@@ -712,20 +725,17 @@ uint64_t ZePeak::set_workgroups(L0Context &context,
   }
 
   if (verbose)
-    std::cout << "total work items that will be executed: " << final_work_items
+    std::cout << "total work items that will be executed: " << work_items
               << " requested: " << total_work_items_requested << "\n";
 
-  workgroup_info->group_size_x = static_cast<uint32_t>(group_size_x);
-  workgroup_info->group_size_y = static_cast<uint32_t>(group_size_y);
-  workgroup_info->group_size_z = static_cast<uint32_t>(group_size_z);
-  workgroup_info->thread_group_dimensions.groupCountX =
-      static_cast<uint32_t>(group_count_x);
-  workgroup_info->thread_group_dimensions.groupCountY =
-      static_cast<uint32_t>(group_count_y);
-  workgroup_info->thread_group_dimensions.groupCountZ =
-      static_cast<uint32_t>(group_count_z);
+  workgroup_info->group_size_x = group_size_x;
+  workgroup_info->group_size_y = group_size_y;
+  workgroup_info->group_size_z = group_size_z;
+  workgroup_info->thread_group_dimensions.groupCountX = group_count_x;
+  workgroup_info->thread_group_dimensions.groupCountY = group_count_y;
+  workgroup_info->thread_group_dimensions.groupCountZ = group_count_z;
 
-  return final_work_items;
+  return work_items;
 }
 
 //---------------------------------------------------------------------
@@ -1309,8 +1319,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
       uint64_t masked_kernel_time =
           kernel_timestamp.global.kernelStart & timestamp_mask;
 
-      timed += (masked_kernel_time - masked_device_time) * timer_resolution_ns /
-               1e3; // returned in microseconds
+      timed += to_f80(masked_kernel_time - masked_device_time) *
+               to_f80(timer_resolution_ns) / 1e3L; // returned in microseconds
 
       result = zeEventHostReset(kernel_launch_event);
       if (result) {
@@ -1491,8 +1501,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
       uint64_t masked_kernel_time =
           kernel_timestamp.global.kernelStart & timestamp_mask;
 
-      timed += (masked_kernel_time - masked_device_time) * timer_resolution_ns /
-               1e3; // returned in microseconds
+      timed += to_f80(masked_kernel_time - masked_device_time) *
+               to_f80(timer_resolution_ns) / 1e3; // returned in microseconds
 
       result = zeEventHostReset(kernel_launch_event);
       if (result) {
@@ -1768,8 +1778,8 @@ int main(int argc, char **argv) {
 #include <unistd.h>
 
 unsigned long long int total_available_memory() {
-  const long page_count = sysconf(_SC_PHYS_PAGES);
-  const long page_size = sysconf(_SC_PAGE_SIZE);
+  const uint64_t page_count = to_u64(sysconf(_SC_PHYS_PAGES));
+  const uint64_t page_size = to_u64(sysconf(_SC_PAGE_SIZE));
   const unsigned long long total_bytes = page_count * page_size;
 
   return total_bytes;
@@ -1825,11 +1835,10 @@ long double ZePeak::context_time_in_us(L0Context &context,
       ~(-1ULL << context.device_property.kernelTimestampValidBits);
   context_time_ns =
       (ts_result.global.kernelEnd >= ts_result.global.kernelStart)
-          ? (ts_result.global.kernelEnd - ts_result.global.kernelStart) *
-                (double)timestamp_freq
-          : ((timestamp_max_value - ts_result.global.kernelStart) +
-             ts_result.global.kernelEnd + 1) *
-                (double)timestamp_freq;
+          ? to_f80(ts_result.global.kernelEnd - ts_result.global.kernelStart) *
+            to_f80(timestamp_freq)
+          : (to_f80(timestamp_max_value - ts_result.global.kernelStart) +
+            to_f80(ts_result.global.kernelEnd + 1)) * to_f80(timestamp_freq);
 
-  return (context_time_ns / 1000); // time is returned in microseconds
+  return (context_time_ns / 1000.0L); // time is returned in microseconds
 }

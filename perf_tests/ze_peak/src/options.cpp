@@ -42,6 +42,16 @@ static const char *usage_str =
     "\n  -h, --help                  display help message"
     "\n";
 
+template <typename T> inline constexpr uint32_t to_u32(T val) {
+  return static_cast<uint32_t>(val);
+}
+template <> inline uint32_t to_u32<const char *>(const char *str) {
+  return static_cast<uint32_t>(atoi(str));
+}
+template <> inline uint32_t to_u32<char *>(char *str) {
+  return static_cast<uint32_t>(atoi(str));
+}
+
 static uint32_t sanitize_ulong(char *in) {
   unsigned long temp = strtoul(in, NULL, 0);
   if (ERANGE == errno) {
@@ -139,12 +149,12 @@ int ZePeak::parse_arguments(int argc, char **argv) {
       } else if ((strcmp(argv[i], "-g") == 0)) {
         enable_fixed_ordinal_index = true;
         if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
-          command_queue_group_ordinal = atoi(argv[i + 1]);
+          command_queue_group_ordinal = to_u32(argv[i + 1]);
         }
         i++;
       } else if ((strcmp(argv[i], "-n") == 0)) {
         if (((i + 1) < argc) && isdigit(argv[i + 1][0])) {
-          command_queue_index = atoi(argv[i + 1]);
+          command_queue_index = to_u32(argv[i + 1]);
         }
         i++;
       } else {

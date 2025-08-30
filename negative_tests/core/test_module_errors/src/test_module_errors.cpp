@@ -149,8 +149,8 @@ LZT_TEST_F(
 
   auto device_compute_properties = lzt::get_compute_properties(device_);
 
-  const int local_size =
-      (device_compute_properties.maxSharedLocalMemory + 1) * sizeof(uint8_t);
+  const size_t local_size =
+      (device_compute_properties.maxSharedLocalMemory + 1U) * sizeof(uint8_t);
   auto buff = lzt::allocate_host_memory(local_size);
 
   arg.arg_size = local_size;
@@ -174,7 +174,7 @@ LZT_TEST_F(
 
       zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
 
-  int i = 0;
+  uint32_t i = 0U;
   for (auto arg : args) {
     EXPECT_ZE_RESULT_SUCCESS(
 

@@ -20,9 +20,14 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_nanoseconds;
+
 using lzt::to_u8;
 using lzt::to_int;
 using lzt::to_u32;
+using lzt::to_u64;
+using lzt::to_f32;
+using lzt::to_f64;
 
 void print_cmdqueue_descriptor(const ze_command_queue_desc_t descriptor) {
   LOG_INFO << "VERSION = " << descriptor.stype
@@ -759,9 +764,10 @@ public:
 
     cmdqueue = lzt::create_command_queue(context, device, 0, mode,
                                          ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-                                         copy_ordinal);
+                                         to_u32(copy_ordinal));
 
-    cmdlist = lzt::create_command_list(context, device, 0, copy_ordinal);
+    cmdlist = lzt::create_command_list(context, device, 0,
+                                       to_u32(copy_ordinal));
 
     return true;
   }
@@ -967,7 +973,7 @@ LZT_TEST(ConcurrentCommandQueueExecutionTests,
   for (size_t i = 0; i < num_queues; i++) {
     if (index >= num_queues_per_group[ordinal]) {
       index = 0;
-      ordinal = (ordinal + 1) % cmdq_groups.size();
+      ordinal = to_u32((ordinal + 1) % cmdq_groups.size());
     }
     queue_data_t queue;
     queue.cmdqueue = lzt::create_command_queue(
@@ -1056,8 +1062,8 @@ protected:
 
     const uint64_t responsiveness = measure_device_responsiveness();
     const double min_ratio = 0.02;
-    if (responsiveness > static_cast<uint64_t>(min_ratio * timeout)) {
-      timeout = static_cast<uint64_t>(responsiveness / min_ratio);
+    if (responsiveness > to_u64(min_ratio * to_f64(timeout))) {
+      timeout = to_u64(to_f64(responsiveness) / min_ratio);
       LOG_INFO << "Device responsiveness: " << responsiveness
                << " ns, setting timeout to: " << timeout << " ns";
     }
@@ -1089,7 +1095,7 @@ protected:
 
     const int add_value = 7;
     lzt::set_group_size(kernel, 1, 1, 1);
-    ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+    ze_group_count_t args = {to_u32(size), 1, 1};
     lzt::set_argument_value(kernel, 0, sizeof(buf_dev), &buf_dev);
     lzt::set_argument_value(kernel, 1, sizeof(buf_dev), &buf_dev);
     lzt::set_argument_value(kernel, 2, sizeof(add_value), &add_value);
@@ -1121,8 +1127,7 @@ protected:
     lzt::destroy_command_list(cmd_list);
     lzt::destroy_context(context);
 
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0)
-        .count();
+    return to_nanoseconds(t1 - t0);
   }
 
   void TearDown() override {
@@ -1162,9 +1167,8 @@ LZT_TEST_P(zeCommandQueueSynchronizeTimeoutTests,
     EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceHostSynchronize(fence, timeout));
     const auto t1 = std::chrono::steady_clock::now();
 
-    const uint64_t wall_time =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-    const float ratio_fence = static_cast<float>(wall_time) / timeout;
+    const uint64_t wall_time = to_nanoseconds(t1 - t0);
+    const float ratio_fence = to_f32(wall_time) / to_f32(timeout);
     // Tolerance: 2%
     EXPECT_GE(ratio_fence, 0.98f);
     EXPECT_LE(ratio_fence, 1.02f);
@@ -1174,9 +1178,8 @@ LZT_TEST_P(zeCommandQueueSynchronizeTimeoutTests,
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeCommandQueueSynchronize(cq, timeout));
   const auto t1 = std::chrono::steady_clock::now();
 
-  const uint64_t wall_time =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-  const float ratio_cq = static_cast<float>(wall_time) / timeout;
+  const uint64_t wall_time = to_nanoseconds(t1 - t0);
+  const float ratio_cq = to_f32(wall_time) / to_f32(timeout);
   // Tolerance: 2%
   EXPECT_GE(ratio_cq, 0.98f);
   EXPECT_LE(ratio_cq, 1.02f);

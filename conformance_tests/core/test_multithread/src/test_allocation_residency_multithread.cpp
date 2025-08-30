@@ -74,8 +74,8 @@ void make_resident_evict_API(ze_module_handle_t module) {
     auto command_queue = lzt::create_command_queue(device);
     kernel = lzt::create_function(module, "residency_function");
 
-    auto device_flags = 0;
-    auto host_flags = 0;
+  ze_device_mem_alloc_flags_t device_flags = 0U;
+  ze_host_mem_alloc_flags_t host_flags = 0U;
 
     node *data = static_cast<node *>(lzt::allocate_shared_memory(
         sizeof(node), 1, device_flags, host_flags, device, context));
@@ -142,8 +142,8 @@ void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
 
-  auto device_flags = 0;
-  auto host_flags = 0;
+  ze_device_mem_alloc_flags_t device_flags = 0U;
+  ze_host_mem_alloc_flags_t host_flags = 0U;
 
   node *data = static_cast<node *>(lzt::allocate_shared_memory(
       sizeof(node), 1, device_flags, host_flags, device, context));

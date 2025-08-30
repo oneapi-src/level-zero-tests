@@ -67,7 +67,7 @@ TYPED_TEST(GenerateValue, WithinTypeMinAndMaxValue) {
 
 template <typename T> class GenerateVector : public testing::Test {
 protected:
-  const int size = 100;
+  const size_t size = 100;
   const int seed = 0;
 };
 TYPED_TEST_CASE(GenerateVector, StandardTypes);

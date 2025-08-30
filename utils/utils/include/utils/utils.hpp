@@ -41,12 +41,29 @@ template <typename T> inline constexpr int32_t to_s32(T val) {
 template <typename T> inline constexpr uint32_t to_u32(T val) {
   return static_cast<uint32_t>(val);
 }
+template <> inline uint32_t to_u32<const char *>(const char *str) {
+  return static_cast<uint32_t>(atoi(str));
+}
+template <> inline uint32_t to_u32<char *>(char *str) {
+  return static_cast<uint32_t>(atoi(str));
+}
 
-template <typename T> inline constexpr float to_flt(T val) {
+template <typename T> inline constexpr uint64_t to_u64(T val) {
+  return static_cast<uint64_t>(val);
+}
+
+template <typename T> inline constexpr float to_f32(T val) {
   return static_cast<float>(val);
 }
-template <typename T> inline constexpr double to_dbl(T val) {
+template <typename T> inline constexpr double to_f64(T val) {
   return static_cast<double>(val);
+}
+
+using nanosec = std::chrono::nanoseconds;
+
+template <typename D>
+uint64_t to_nanoseconds(D&& dur) {
+  return to_u64(std::chrono::duration_cast<nanosec>(std::forward<D>(dur)).count());
 }
 
 zes_driver_handle_t get_default_zes_driver();
@@ -88,8 +105,8 @@ inline uint32_t nextPowerOfTwo(uint64_t value) {
   return nextPowerOfTwo(to_u32(value));
 }
 
-template <typename T> int size_in_bytes(const std::vector<T> &v) {
-  return static_cast<int>(sizeof(T) * v.size());
+template <typename T> size_t size_in_bytes(const std::vector<T> &v) {
+  return sizeof(T) * v.size();
 }
 
 extern std::unique_ptr<std::map<std::string, std::vector<uint8_t>>>

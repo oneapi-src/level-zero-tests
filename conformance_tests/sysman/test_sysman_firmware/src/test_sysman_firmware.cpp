@@ -23,7 +23,9 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-uint32_t get_prop_length(char *prop) { return std::strlen(prop); }
+using lzt::to_u32;
+
+uint32_t get_prop_length(char *prop) { return to_u32(std::strlen(prop)); }
 
 #ifdef USE_ZESINIT
 class FirmwareZesTest : public lzt::ZesSysmanCtsClass {
@@ -197,12 +199,13 @@ LZT_TEST_F(
             LOG_INFO << "Skipping test as firmware image not found";
             GTEST_SKIP();
           }
-          testFwImage.resize(inFileStream.tellg());
+          testFwImage.resize(static_cast<size_t>(inFileStream.tellg()));
           inFileStream.seekg(0, inFileStream.beg);
-          inFileStream.read(testFwImage.data(), testFwImage.size());
+          inFileStream.read(testFwImage.data(),
+                            static_cast<std::streamsize>(testFwImage.size()));
           lzt::flash_firmware(firmware_handle,
                               static_cast<void *>(testFwImage.data()),
-                              testFwImage.size());
+                              to_u32(testFwImage.size()));
         }
       }
     } else {
@@ -226,12 +229,13 @@ void flash_firmware(zes_firmware_handle_t firmware_handle, std::string fw_dir) {
       LOG_INFO << "Skipping test as firmware image not found";
       GTEST_SKIP();
     }
-    test_fw_image.resize(in_filestream.tellg());
+    test_fw_image.resize(static_cast<size_t>(in_filestream.tellg()));
     in_filestream.seekg(0, in_filestream.beg);
-    in_filestream.read(test_fw_image.data(), test_fw_image.size());
+    in_filestream.read(test_fw_image.data(),
+                       static_cast<std::streamsize>(test_fw_image.size()));
     lzt::flash_firmware(firmware_handle,
                         static_cast<void *>(test_fw_image.data()),
-                        test_fw_image.size());
+                        to_u32(test_fw_image.size()));
   } else {
     LOG_INFO
         << "Skipping test as canControl is set to false in firmware properties";

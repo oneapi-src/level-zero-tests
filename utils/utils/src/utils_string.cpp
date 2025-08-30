@@ -310,7 +310,7 @@ ze_image_format_layout_t to_layout(const std::string layout) {
     return ZE_IMAGE_FORMAT_LAYOUT_P216;
   } else {
     std::cout << "Unknown ze_image_format_layout_t value: " << layout;
-    return static_cast<ze_image_format_layout_t>(-1);
+    return ZE_IMAGE_FORMAT_LAYOUT_FORCE_UINT32;
   }
 }
 
@@ -344,7 +344,7 @@ ze_image_format_type_t to_format_type(const std::string format_type) {
     return ZE_IMAGE_FORMAT_TYPE_FLOAT;
   } else {
     std::cout << "Unknown ze_image_format_type_t value: ";
-    return (static_cast<ze_image_format_type_t>(-1));
+    return ZE_IMAGE_FORMAT_TYPE_FORCE_UINT32;
   }
 }
 
@@ -483,7 +483,7 @@ ze_image_type_t to_image_type(const std::string type) {
     return ZE_IMAGE_TYPE_2DARRAY;
   } else {
     std::cout << "Unknown ze_image_type_t value: ";
-    return (static_cast<ze_image_type_t>(-1));
+    return ZE_IMAGE_TYPE_FORCE_UINT32;
   }
 }
 

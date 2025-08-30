@@ -110,7 +110,7 @@ protected:
   ze_kernel_handle_t create_function(const ze_module_handle_t module,
                                      const std::string name,
                                      uint32_t group_size_x, int *arg1,
-                                     int arg2) {
+                                     uint32_t arg2) {
 
     ze_kernel_desc_t function_description = {};
     function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
@@ -350,8 +350,8 @@ protected:
     void *device_mem_remote;
     ze_physical_mem_handle_t device_mem_remote_physical;
     void *device_mem_validation;
-    int init_val;
-    int kernel_add_val;
+    uint32_t init_val;
+    uint32_t kernel_add_val;
     uint32_t group_size_x;
     uint32_t group_count_x;
     ze_command_list_handle_t cmd_list;
@@ -458,7 +458,7 @@ LZT_TEST_P(
   }
   kernel_name_ = std::get<0>(GetParam());
   p2p_memory_ = std::get<1>(GetParam());
-  uint32_t num_concurrent_devices = std::get<2>(GetParam());
+  uint32_t num_concurrent_devices = to_u32(std::get<2>(GetParam()));
 
   uint32_t base_index = 0;
   uint32_t concurrent_index = 0;
@@ -544,7 +544,7 @@ LZT_TEST_P(
 
   kernel_name_ = std::get<0>(GetParam());
   p2p_memory_ = std::get<1>(GetParam());
-  uint32_t num_concurrent_devices = std::get<2>(GetParam());
+  uint32_t num_concurrent_devices = to_u32(std::get<2>(GetParam()));
 
   uint32_t base_index = 0;
   uint32_t concurrent_index = 0;

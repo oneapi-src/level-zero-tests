@@ -27,6 +27,7 @@ namespace {
 
 using lzt::to_u8;
 using lzt::to_u32;
+using lzt::to_f64;
 
 bool comparePciIdBusNumber(std::string &bdfString1, std::string &bdfString2) {
   // bdf1[0] would be domain, bdf1[1] would be bus, bdf1[2] would be device
@@ -444,7 +445,7 @@ LZT_TEST(
 
   for (auto device : devices) {
     auto properties = lzt::get_device_module_float_atomic_properties(device);
-    auto supported_atomic_flags =
+    uint32_t supported_atomic_flags =
         ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_LOAD_STORE |
         ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_ADD |
         ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_MIN_MAX |
@@ -941,15 +942,15 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   auto device_time_0 = std::get<1>(timestamps);
   auto device_time_1 = std::get<1>(timestamps_1);
   auto device_properties = lzt::get_device_properties(device);
-  uint64_t timestamp_max_val = ~(static_cast<uint64_t>(-1)
-                                 << device_properties.kernelTimestampValidBits);
+  uint64_t timestamp_max_val =
+      ~(-1ULL << device_properties.kernelTimestampValidBits);
   uint64_t timestamp_freq = device_properties.timerResolution;
 
   auto device_diff_ns =
       (device_time_1 >= device_time_0)
-          ? (device_time_1 - device_time_0) * (double)timestamp_freq
+          ? (device_time_1 - device_time_0) * timestamp_freq
           : ((timestamp_max_val - device_time_0) + device_time_1 + 1) *
-                (double)timestamp_freq;
+                timestamp_freq;
 
   LOG_DEBUG << "host " << host_diff << "\n";
   LOG_DEBUG << "device  " << device_diff_ns << " ns \n";

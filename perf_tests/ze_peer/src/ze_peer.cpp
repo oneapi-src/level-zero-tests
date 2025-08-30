@@ -21,6 +21,16 @@ bool ZePeer::parallel_divide_buffers = false;
 uint32_t ZePeer::number_iterations = 50;
 const size_t max_elems = 268435456; /* 256 MB */
 
+template <typename T> inline constexpr uint32_t to_u32(T val) {
+  return static_cast<uint32_t>(val);
+}
+template <> inline uint32_t to_u32<const char *>(const char *str) {
+  return static_cast<uint32_t>(atoi(str));
+}
+template <> inline uint32_t to_u32<char *>(char *str) {
+  return static_cast<uint32_t>(atoi(str));
+}
+
 void stress_handler(int signal) { exit(1); }
 
 void print_results_header(
@@ -96,7 +106,7 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
 
   for (size_t num_elems = 8; num_elems <= max_elems; num_elems *= 2) {
     if (size_to_run != -1) {
-      num_elems = size_to_run;
+      num_elems = static_cast<size_t>(size_to_run);
     }
     pid = fork();
     if (pid == 0) {
@@ -153,7 +163,7 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
 
   for (size_t num_elems = 8; num_elems <= max_elems; num_elems *= 2) {
     if (size_to_run != -1) {
-      num_elems = size_to_run;
+      num_elems = static_cast<size_t>(size_to_run);
     }
     ZePeer peer(remote_device_ids, local_device_ids, pair_device_ids, queues);
     if (ZePeer::validate_results) {
@@ -249,7 +259,7 @@ int main(int argc, char **argv) {
   auto parse_and_insert = [&](std::string &s,
                               std::vector<uint32_t> &vector_of_indexes) {
     if (isdigit(s[0])) {
-      vector_of_indexes.push_back(atoi(s.c_str()));
+      vector_of_indexes.push_back(to_u32(s.c_str()));
     } else {
       std::cerr << usage_str;
       exit(-1);
@@ -269,7 +279,7 @@ int main(int argc, char **argv) {
         if ((pos = s.find(colon, start)) != std::string::npos) {
           device_id_string = s.substr(start, pos);
           if (isdigit(device_id_string[0])) {
-            local_device_id = atoi(device_id_string.c_str());
+            local_device_id = to_u32(device_id_string.c_str());
           } else {
             std::cerr << usage_str;
             exit(-1);
@@ -278,7 +288,7 @@ int main(int argc, char **argv) {
           start = pos + 1;
           device_id_string = s.substr(start, s.length());
           if (isdigit(device_id_string[0])) {
-            remote_device_id = atoi(device_id_string.c_str());
+            remote_device_id = to_u32(device_id_string.c_str());
             vector_of_indexes.push_back(
                 std::make_pair(local_device_id, remote_device_id));
           } else {
@@ -304,7 +314,7 @@ int main(int argc, char **argv) {
       exit(0);
     } else if ((strcmp(argv[i], "-i") == 0)) {
       if (isdigit(argv[i + 1][0])) {
-        ZePeer::number_iterations = atoi(argv[i + 1]);
+        ZePeer::number_iterations = to_u32(argv[i + 1]);
       } else {
         std::cout << usage_str;
         exit(-1);

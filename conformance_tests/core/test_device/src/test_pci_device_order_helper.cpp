@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
     auto devices = lzt::get_devices(driver);
     EXPECT_FALSE(devices.empty());
     std::vector<ze_pci_ext_properties_t> pciPropertiesVec(devices.size());
-    auto count = 0;
+    uint32_t count = 0U;
     for (auto device : devices) {
       ze_pci_ext_properties_t pciProperties{};
       EXPECT_ZE_RESULT_SUCCESS(

@@ -196,7 +196,7 @@ void clear_exceptions(const ze_device_handle_t &device,
       debug_session, device_thread, ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
       cr_reg_prop.count, cr_values));
 
-  uint32_values[1] &= ~((1 << 26) | (1 << 30));
+  uint32_values[1] &= ~((1U << 26) | (1U << 30));
   ASSERT_ZE_RESULT_SUCCESS(zetDebugWriteRegisters(
       debug_session, device_thread, ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
       cr_reg_prop.count, cr_values));

@@ -17,7 +17,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-const int thread_iters = 200;
+const uint32_t thread_iters = 200;
 const size_t num_threads = 16;
 
 void driver_thread_test() {
@@ -29,7 +29,7 @@ void driver_thread_test() {
   auto driver_api_version = lzt::get_api_version(driver);
   auto driver_ipc_props = lzt::get_ipc_properties(driver);
 
-  for (int i = 0; i < thread_iters; i++) {
+  for (uint32_t i = 0; i < thread_iters; i++) {
 
     ASSERT_EQ(driver, lzt::get_default_driver());
     ASSERT_EQ(driver_version, lzt::get_driver_version(driver));
@@ -58,7 +58,7 @@ void device_thread_test(ze_driver_handle_t driver) {
   auto device_image_props = lzt::get_image_properties(device);
   auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
 
-  for (int i = 0; i < thread_iters; i++) {
+  for (uint32_t i = 0U; i < thread_iters; i++) {
     ASSERT_EQ(device, lzt::get_default_device(driver));
     ASSERT_EQ(sub_device, lzt::get_ze_sub_devices(device));
     auto new_device_props = lzt::get_device_properties(device);
@@ -72,7 +72,7 @@ void device_thread_test(ze_driver_handle_t driver) {
                         sizeof(device_module_props)));
     ASSERT_EQ(device_mem_prop_count, lzt::get_memory_properties_count(device));
     auto new_mem_props = lzt::get_memory_properties(device);
-    int j = 0;
+    uint32_t j = 0U;
     for (auto mem_prop : device_mem_props) {
       ASSERT_EQ(0, memcmp(&mem_prop, &new_mem_props[j++], sizeof(mem_prop)));
     }

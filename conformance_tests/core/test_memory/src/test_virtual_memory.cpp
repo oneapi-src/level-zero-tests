@@ -21,6 +21,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_int;
+
 class zeVirtualMemoryTests : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -400,7 +402,7 @@ LZT_TEST_F(
 
 void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemory(
     zeVirtualMemoryTests &test, bool is_immediate) {
-  int numDevices = lzt::get_ze_device_count();
+  uint32_t numDevices = lzt::get_ze_device_count();
   std::vector<ze_device_handle_t> devices;
   std::vector<ze_physical_mem_handle_t> reservedPhysicalMemoryArray;
   devices = lzt::get_ze_devices(numDevices);
@@ -541,7 +543,7 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   arg.arg_value = &test.reservedVirtualMemory;
   args.push_back(arg);
   arg.arg_size = sizeof(int);
-  int size = static_cast<int>(totalAllocationSize);
+  int size = to_int(totalAllocationSize);
   arg.arg_value = &size;
   args.push_back(arg);
 
@@ -555,7 +557,7 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   EXPECT_ZE_RESULT_SUCCESS(
       zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
 
-  int i = 0;
+  uint32_t i = 0;
   for (auto arg : args) {
     EXPECT_ZE_RESULT_SUCCESS(
         zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));

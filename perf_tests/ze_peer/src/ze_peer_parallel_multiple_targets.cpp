@@ -717,7 +717,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
 
 void ZePeer::bandwidth_latency_parallel_to_multiple_targets(
     peer_test_t test_type, peer_transfer_t transfer_type,
-    int number_buffer_elements, std::vector<uint32_t> &remote_device_ids,
+    size_t number_buffer_elements, std::vector<uint32_t> &remote_device_ids,
     std::vector<uint32_t> &local_device_ids, bool divide_buffers) {
 
   size_t buffer_size = 0;

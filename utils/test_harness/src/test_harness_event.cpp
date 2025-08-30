@@ -13,6 +13,8 @@ namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
 
+using lzt::to_f64;
+
 ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
                                          uint32_t count,
                                          ze_event_pool_flags_t flags) {
@@ -133,20 +135,19 @@ get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
-    timer_period = (1000000000.0 / to_dbl(timestamp_freq));
+    timer_period = (1000000000.0 / to_f64(timestamp_freq));
   } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
-    timer_period = to_dbl(timestamp_freq);
+    timer_period = to_f64(timestamp_freq);
   } else {
     LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
   }
 
+  uint64_t strt = timestamp->global.kernelStart;
+  uint64_t stop = timestamp->global.kernelEnd;
   global_time_ns =
-      (timestamp->global.kernelEnd >= timestamp->global.kernelStart)
-          ? (timestamp->global.kernelEnd - timestamp->global.kernelStart) *
-                timer_period
-          : ((timestamp_max_val - timestamp->global.kernelStart) +
-             timestamp->global.kernelEnd + 1) *
-                timer_period;
+      (stop >= strt)
+          ? to_f64(stop - strt) * timer_period
+          : to_f64((timestamp_max_val - strt) + stop + 1) * timer_period;
 
   return global_time_ns;
 }
@@ -161,24 +162,23 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
   auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
-      ~(-1L << device_properties.kernelTimestampValidBits);
+      ~(-1ULL << device_properties.kernelTimestampValidBits);
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
-    timer_period = (1000000000.0 / to_dbl(timestamp_freq));
+    timer_period = (1000000000.0 / to_f64(timestamp_freq));
   } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
-    timer_period = to_dbl(timestamp_freq);
+    timer_period = to_f64(timestamp_freq);
   } else {
     LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
   }
 
+  uint64_t strt = timestamp->context.kernelStart;
+  uint64_t stop = timestamp->context.kernelEnd;
   context_time_ns =
-      (timestamp->context.kernelEnd >= timestamp->context.kernelStart)
-          ? (timestamp->context.kernelEnd - timestamp->context.kernelStart) *
-                timer_period
-          : ((timestamp_max_val - timestamp->context.kernelStart) +
-             timestamp->context.kernelEnd + 1) *
-                timer_period;
+      (stop >= strt)
+          ? to_f64(stop - strt) * timer_period
+          : to_f64((timestamp_max_val - strt) + stop + 1) * timer_period;
 
   return context_time_ns;
 }

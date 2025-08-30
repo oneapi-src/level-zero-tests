@@ -443,7 +443,8 @@ std::vector<uint8_t> load_binary_file(const std::string &file_path) {
   LOG_DEBUG << "Binary file length: " << length;
 
   binary_file.resize(length);
-  stream.read(reinterpret_cast<char *>(binary_file.data()), length);
+  stream.read(reinterpret_cast<char *>(binary_file.data()),
+              static_cast<std::streamsize>(length));
   LOG_DEBUG << "Binary file loaded";
 
   stream.close();
@@ -461,7 +462,7 @@ void save_binary_file(const std::vector<uint8_t> &data,
 
   std::ofstream stream(file_path, std::ios::out | std::ios::binary);
   stream.write(reinterpret_cast<const char *>(data.data()),
-               size_in_bytes(data));
+               static_cast<std::streamsize>(size_in_bytes(data)));
 
   stream.close();
 

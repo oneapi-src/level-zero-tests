@@ -20,7 +20,9 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 
+using lzt::to_u8;
 using lzt::to_u16;
+using lzt::to_u32;
 
 void print_device(const ze_device_handle_t &device) {
   std::cout << "\n==========================================================="
@@ -171,14 +173,14 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   unsigned char slm_pattern[4] = {0xDE, 0xAD, 0xBE, 0xEF};
 
   memset(buffer1, 0xaa, bufferSize);
-  int i = 0;
+  size_t i = 0;
   for (i = 0; i < bufferSize; i++) {
     buffer2[i] = slm_pattern[i & 0x3];
   }
 
   // Save original content to restore at the end
-  int accessSize;
-  int accessOffset;
+  size_t accessSize;
+  uint8_t accessOffset;
   desc.address = slmBaseAddress;
 
   lzt::debug_read_memory(debug_session, thread, desc, bufferSize, original);
@@ -204,7 +206,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   }
   // Veriy the rest of the buffer was not altered
   for (i = accessSize; i < bufferSize; i++) {
-    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF) + accessOffset);
+    EXPECT_EQ(buffer1[i], to_u8(i + 1 & 0xFF) + accessOffset);
   }
   memset(buffer1, 0, bufferSize);
   if (::testing::Test::HasFailure()) {
@@ -368,7 +370,7 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
 
   // Access ELF
   if (access_elf) {
-    int offset = 0xF;
+    uint32_t offset = 0xF;
     size_t elf_size = module_event.info.module.moduleEnd -
                       module_event.info.module.moduleBegin;
     uint8_t *elf_buffer = new uint8_t[elf_size];
@@ -406,10 +408,10 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
   }
 }
 
-int get_numCQs_per_ordinal(ze_device_handle_t &device,
-                           std::map<int, int> &ordinalCQs) {
+uint32_t get_numCQs_per_ordinal(ze_device_handle_t &device,
+                                MapNumCmdQueue &ordinalCQs) {
 
-  int totalNumCQs = 0;
+  uint32_t totalNumCQs = 0;
   uint32_t numQueueGroups =
       lzt::get_command_queue_group_properties_count(device);
 
@@ -738,7 +740,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
     debugHelper = launch_process(helper_test_type, device, use_sub_devices);
 
     zet_debug_event_t module_event;
-    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
+    attach_and_get_module_event(to_u32(debugHelper.id()), synchro, device, debugSession,
                                 module_event);
 
     if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
@@ -773,7 +775,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
 
     zet_debug_memory_space_desc_t memorySpaceDesc = {};
     memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
-    int sizeToRead = 512;
+    size_t sizeToRead = 512;
     uint8_t *buffer = new uint8_t[sizeToRead];
 
     memorySpaceDesc.address = gpu_buffer_va;
@@ -824,10 +826,10 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
 
         // Skip the first byte since the first thread read will
         // see it 1 and others will see 0 after setting buffer[0]=0 below
-        int i = 1;
+        size_t i = 1;
         for (i = 1; i < sizeToRead; i++) {
           // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
-          EXPECT_EQ(buffer[i], (i + 1 & 0xFF));
+          EXPECT_EQ(buffer[i], to_u8(i + 1 & 0xFF));
         }
       }
 

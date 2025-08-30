@@ -257,8 +257,8 @@ static inline uint8_t lookup_idx(ze_image_format_swizzle_t s,
 
 static void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
                                      const ze_image_format_t &image_format,
-                                     int originX, int originY, int width,
-                                     int height) {
+                                     uint32_t originX, uint32_t originY,
+                                     uint32_t width, uint32_t height) {
   int8_t pixel_r = dp * 1;
   uint8_t r_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_R, image_format);
   int8_t pixel_g = dp * 2;
@@ -268,8 +268,8 @@ static void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
   int8_t pixel_a = dp * 4;
   uint8_t a_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_A, image_format);
 
-  for (int y = originY; y < height; y++) {
-    for (int x = originX; x < width; x++) {
+  for (uint32_t y = originY; y < height; y++) {
+    for (uint32_t x = originX; x < width; x++) {
       uint32_t pixel = make_pixel(pixel_r, r_idx, pixel_g, g_idx, pixel_b,
                                   b_idx, pixel_a, a_idx);
       image.set_pixel(x, y, pixel);
@@ -283,26 +283,28 @@ static void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
 
 void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
                               const ze_image_format_t &image_format) {
-  write_image_data_pattern(image, dp, image_format, 0, 0, image.width(),
+  write_image_data_pattern(image, dp, image_format, 0U, 0U, image.width(),
                            image.height());
 }
 
 void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp) {
   ze_image_desc_t img_desc = zeImageCreateCommon::dflt_ze_image_desc;
 
-  write_image_data_pattern(image, dp, img_desc.format, 0, 0, image.width(),
+  write_image_data_pattern(image, dp, img_desc.format, 0U, 0U, image.width(),
                            image.height());
 }
 
-static inline uint32_t get_pixel(const uint32_t *image, int x, int y,
-                                 int row_width) {
+static inline uint32_t get_pixel(const uint32_t *image, uint32_t x, uint32_t y,
+                                 uint32_t row_width) {
   return image[y * row_width + x];
 }
 
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
-                         const lzt::ImagePNG32Bit &imagepng2, int origin1X,
-                         int origin1Y, int width1, int height1, int origin2X,
-                         int origin2Y, int width2, int height2) {
+                         const lzt::ImagePNG32Bit &imagepng2,
+                         uint32_t origin1X, uint32_t origin1Y,
+                         uint32_t width1, uint32_t height1,
+                         uint32_t origin2X, uint32_t origin2Y,
+                         uint32_t width2, uint32_t height2) {
   ze_image_desc_t img_desc = zeImageCreateCommon::dflt_ze_image_desc;
 
   return compare_data_pattern(imagepng1, img_desc.format, imagepng2,
@@ -310,8 +312,8 @@ int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
                               height1, origin2X, origin2Y, width2, height2);
 }
 
-static void decompose_pixel(uint32_t pixel, int8_t &r, uint8_t r_idx, int8_t &g,
-                            uint8_t g_idx, int8_t &b, uint8_t b_idx, int8_t &a,
+static void decompose_pixel(uint32_t pixel, uint8_t &r, uint8_t r_idx, uint8_t &g,
+                            uint8_t g_idx, uint8_t &b, uint8_t b_idx, uint8_t &a,
                             uint8_t a_idx) {
   r = (pixel >> r_idx) & 0xff;
   g = (pixel >> g_idx) & 0xff;
@@ -324,9 +326,11 @@ static void decompose_pixel(uint32_t pixel, int8_t &r, uint8_t r_idx, int8_t &g,
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
                          const ze_image_format_t &image1_format,
                          const lzt::ImagePNG32Bit &imagepng2,
-                         const ze_image_format_t &image2_format, int origin1X,
-                         int origin1Y, int width1, int height1, int origin2X,
-                         int origin2Y, int width2, int height2) {
+                         const ze_image_format_t &image2_format,
+                         uint32_t origin1X, uint32_t origin1Y,
+                         uint32_t width1, uint32_t height1,
+                         uint32_t origin2X, uint32_t origin2Y,
+                         uint32_t width2, uint32_t height2) {
   uint8_t r1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_R, image1_format);
   uint8_t g1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_G, image1_format);
   uint8_t b1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_B, image1_format);
@@ -341,9 +345,9 @@ int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
   const uint32_t *image1 = imagepng1.raw_data();
   const uint32_t *image2 = imagepng2.raw_data();
   int errCnt = 0, successCnt = 0;
-  for (int y1 = origin1Y, y2 = origin2Y;
+  for (uint32_t y1 = origin1Y, y2 = origin2Y;
        (y1 < (origin1Y + height1)) && (y2 < (origin2Y + height2)); y1++, y2++) {
-    for (int x1 = origin1X, x2 = origin2X;
+    for (uint32_t x1 = origin1X, x2 = origin2X;
          (x1 < (origin1X + width1)) && (x2 < (origin2X + width2)); x1++, x2++) {
       if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0)
         continue;
@@ -352,8 +356,8 @@ int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
       uint32_t pixel2 = get_pixel(image2, x2, y2, width2);
       bool correct;
       if (must_decompose_colors) {
-        int8_t r1, g1, b1, a1;
-        int8_t r2, g2, b2, a2;
+        uint8_t r1, g1, b1, a1;
+        uint8_t r2, g2, b2, a2;
         decompose_pixel(pixel1, r1, r1_idx, g1, g1_idx, b1, b1_idx, a1, a1_idx);
         decompose_pixel(pixel2, r2, r2_idx, g2, g2_idx, b2, b2_idx, a2, a2_idx);
         if ((r1 != r2) || (g1 != g2) || (b1 != b2) || (a1 != a2)) {
@@ -386,12 +390,9 @@ int compare_data_pattern(
     const lzt::ImagePNG32Bit &image, const ze_image_region_t *region,
     const lzt::ImagePNG32Bit &expected_fg, // expected foreground
     const lzt::ImagePNG32Bit &expected_bg) {
-  const ze_image_region_t full_image_region = {uint32_t(0),
-                                               uint32_t(0),
-                                               uint32_t(0),
-                                               uint32_t(image.width()),
-                                               uint32_t(image.height()),
-                                               uint32_t(1)};
+  const ze_image_region_t full_image_region = {0U, 0U, 0U,
+                                               image.width(), image.height(),
+                                               1U};
   if (region == nullptr) {
     region = &full_image_region;
   }

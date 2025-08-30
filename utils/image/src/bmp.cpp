@@ -54,6 +54,14 @@ struct BMPRGBQUAD_t {
 
 const uint32_t BI_RGB = 0;
 
+template <typename T> inline constexpr uint8_t to_u8(T val) {
+  return static_cast<uint8_t>(val);
+}
+
+template <typename T> inline constexpr uint16_t to_u16(T val) {
+  return static_cast<uint16_t>(val);
+}
+
 template <typename T> inline constexpr int32_t to_s32(T val) {
   return static_cast<int32_t>(val);
 }
@@ -74,17 +82,19 @@ bool BmpUtils::save_image_as_bmp(uint32_t *ptr, uint32_t width, uint32_t height,
   BMPFileHeader file_header;
   BMPInfoHeader info_header;
 
-  int align_size = width * 4;
+  constexpr size_t file_hdr_size = sizeof(file_header);
+  constexpr size_t info_hdr_size = sizeof(info_header);
+
+  uint32_t align_size = width * 4;
   align_size ^= 0x03;
   align_size++;
   align_size &= 0x03;
 
-  int rowLength = width * 4 + align_size;
+  uint32_t rowLength = width * 4 + align_size;
 
   file_header.bf_type_ = 0x4D42; // 'BM'
-  file_header.bf_size_ =
-      sizeof(file_header) + sizeof(info_header) + rowLength * height;
-  file_header.bf_off_bits_ = sizeof(file_header) + sizeof(info_header);
+  file_header.bf_size_ = file_hdr_size + info_hdr_size + rowLength * height;
+  file_header.bf_off_bits_ = file_hdr_size + info_hdr_size;
   file_header.bf_reserved1_ = 0;
   file_header.bf_reserved2_ = 0;
 
@@ -100,13 +110,11 @@ bool BmpUtils::save_image_as_bmp(uint32_t *ptr, uint32_t width, uint32_t height,
   info_header.bi_clr_used_ = 0;
   info_header.bi_clr_important_ = 0;
 
-  if (sizeof(file_header) !=
-      fwrite(&file_header, 1, sizeof(file_header), stream)) {
+  if (file_hdr_size != fwrite(&file_header, 1, file_hdr_size, stream)) {
     goto error_exit;
   }
 
-  if (sizeof(info_header) !=
-      fwrite(&info_header, 1, sizeof(info_header), stream)) {
+  if (info_hdr_size != fwrite(&info_header, 1, info_hdr_size, stream)) {
     goto error_exit;
   }
 
@@ -216,17 +224,18 @@ bool BmpUtils::load_bmp_image(uint8_t *&data, uint32_t &width, uint32_t &height,
   BMPInfoHeader info_header;
   uint32_t gap = 0;
 
-  if (sizeof(file_header) !=
-      fread(&file_header, 1, sizeof(file_header), stream)) {
+  constexpr size_t file_hdr_size = sizeof(file_header);
+  constexpr size_t info_hdr_size = sizeof(info_header);
+
+  if (file_hdr_size != fread(&file_header, 1, file_hdr_size, stream)) {
     goto error_exit;
   }
 
-  if (sizeof(info_header) !=
-      fread(&info_header, 1, sizeof(info_header), stream)) {
+  if (info_hdr_size != fread(&info_header, 1, info_hdr_size, stream)) {
     goto error_exit;
   }
 
-  gap = file_header.bf_off_bits_ - sizeof(file_header) - sizeof(info_header);
+  gap = to_u32(file_header.bf_off_bits_ - file_hdr_size - info_hdr_size);
   if (fseek(stream, gap, SEEK_CUR)) {
     LOG_ERROR << "Failed to seek in BMP file";
     goto error_exit;
@@ -236,10 +245,10 @@ bool BmpUtils::load_bmp_image(uint8_t *&data, uint32_t &width, uint32_t &height,
   height = to_u32(info_header.bi_height_ > 0 ? info_header.bi_height_
                                              : -info_header.bi_height_);
   bits_per_pixel = info_header.bi_bit_count_;
-  pitch = info_header.bi_width_ * ((info_header.bi_bit_count_ + 7) / 8);
+  pitch = info_header.bi_width_ * ((info_header.bi_bit_count_ + 7U) / 8U);
 
   // Pitch is a multiple of four bytes:
-  pitch = (pitch + (4 - 1)) & ~(4 - 1);
+  pitch = (pitch + 3U) & ~3U;
 
   if ((height > (1 << 16)) || (pitch > (1 << 16)))
     goto error_exit;
@@ -303,7 +312,7 @@ bool BmpUtils::load_bmp_image_8u(uint8_t *&data, uint32_t &width,
   if (success) {
     uint8_t *src_start = data;
     uint8_t *dst_start = data8u;
-    uint16_t src_bytes_per_pixel = (src_bits_per_pixel + 7) / 8;
+    uint16_t src_bytes_per_pixel = to_u16((src_bits_per_pixel + 7U) / 8U);
     uint16_t dst_bytes_per_pixel = 1;
 
     for (uint32_t h = 0U; h < height;
@@ -319,8 +328,8 @@ bool BmpUtils::load_bmp_image_8u(uint8_t *&data, uint32_t &width,
           break;
         case 24:
         case 32:
-          dst_pixel[0] = (char)(0.21f * src_pixel[0] + 0.72f * src_pixel[1] +
-                                0.07f * src_pixel[2]);
+          dst_pixel[0] = to_u8(0.21f * src_pixel[0] + 0.72f * src_pixel[1] +
+                               0.07f * src_pixel[2]);
           break;
         default:
           LOG_WARNING << "Unexpected bits per pixel: " << src_bits_per_pixel;

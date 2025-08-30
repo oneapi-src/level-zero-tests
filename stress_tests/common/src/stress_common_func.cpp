@@ -6,6 +6,8 @@
  *
  */
 
+ #include <cmath>
+ 
 #include "stress_common_func.hpp"
 
 namespace lzt = level_zero_tests;
@@ -14,17 +16,22 @@ namespace lzt = level_zero_tests;
 
 #include <unistd.h>
 
-uint64_t total_available_host_memory() {
-  const long page_count = sysconf(_SC_AVPHYS_PAGES);
-  const long page_size = sysconf(_SC_PAGE_SIZE);
-  const uint64_t total_bytes = page_count * page_size;
+template <typename T> inline constexpr uint64_t to_u64(T val) {
+  return static_cast<uint64_t>(val);
+}
 
-  return total_bytes;
+template <typename T> inline constexpr double to_f64(T val) {
+  return static_cast<double>(val);
+}
+
+uint64_t total_available_host_memory() {
+  const uint64_t page_count = to_u64(sysconf(_SC_AVPHYS_PAGES));
+  const uint64_t page_size = to_u64(sysconf(_SC_PAGE_SIZE));
+  return page_count * page_size;
 }
 
 uint64_t get_page_size() {
-  const long page_size = sysconf(_SC_PAGE_SIZE);
-  return page_size;
+  return to_u64(sysconf(_SC_PAGE_SIZE));
 }
 #endif
 
@@ -86,13 +93,13 @@ void adjust_max_memory_allocation(
            << (double)total_available_memory / (1024 * 1024) << " MB";
 
   // initial values base on test arguments
-  one_allocation_size =
-      static_cast<uint64_t>(test_arguments.one_allocation_size_limit *
-                            total_available_memory / number_of_all_alloc);
+  one_allocation_size = to_u64(test_arguments.one_allocation_size_limit *
+                               to_f64(total_available_memory) /
+                               to_f64(number_of_all_alloc));
 
-  total_allocation_size =
-      static_cast<uint64_t>(number_of_all_alloc * one_allocation_size *
-                            test_arguments.total_memory_size_limit);
+  total_allocation_size = to_u64(to_f64(number_of_all_alloc) *
+                                 to_f64(one_allocation_size) *
+                                 test_arguments.total_memory_size_limit);
 
   LOG_INFO << "Test total memory size requested: "
            << (double)total_allocation_size / (1024 * 1024) << "MB";
@@ -110,12 +117,13 @@ void adjust_max_memory_allocation(
     LOG_INFO << "One allocation size too low. Change from "
              << one_allocation_size << " to " << min_page_size;
     one_allocation_size = min_page_size; // increased
-    number_of_all_alloc = static_cast<uint64_t>(
-        floor(total_allocation_size /
-              (one_allocation_size * test_arguments.total_memory_size_limit)));
-    total_allocation_size =
-        static_cast<uint64_t>(number_of_all_alloc * one_allocation_size *
-                              test_arguments.total_memory_size_limit);
+    number_of_all_alloc =
+        to_u64(std::floor(to_f64(total_allocation_size) /
+                          (to_f64(one_allocation_size) *
+                           test_arguments.total_memory_size_limit)));
+    total_allocation_size = to_u64(to_f64(number_of_all_alloc) *
+                                   to_f64(one_allocation_size) *
+                                   test_arguments.total_memory_size_limit);
   }
 
   // take into account max memory allocation supported by device
@@ -126,8 +134,8 @@ void adjust_max_memory_allocation(
                   "to limit... ";
       one_allocation_size = device_properties.maxMemAllocSize;
       total_allocation_size =
-          static_cast<uint64_t>(number_of_all_alloc * one_allocation_size *
-                                test_arguments.total_memory_size_limit);
+          to_u64(to_f64(number_of_all_alloc) * to_f64(one_allocation_size) *
+                 test_arguments.total_memory_size_limit);
     } else {
       LOG_INFO << "Relax memory capability enabled. Higher memory allocation "
                   "allowed. ";
@@ -140,16 +148,16 @@ void adjust_max_memory_allocation(
     LOG_INFO << "Requested  total memory size higher then device memory size. "
                 "Need to limit... ";
     total_allocation_size =
-        static_cast<uint64_t>(test_arguments.total_memory_size_limit *
-                              total_available_memory);
-    one_allocation_size =
-        static_cast<uint64_t>(test_arguments.one_allocation_size_limit *
-                              total_allocation_size / number_of_all_alloc);
+        to_u64(test_arguments.total_memory_size_limit *
+               to_f64(total_available_memory));
+    one_allocation_size = to_u64(test_arguments.one_allocation_size_limit *
+                                 to_f64(total_allocation_size) /
+                                 to_f64(number_of_all_alloc));
     if (one_allocation_size < min_page_size) {
       one_allocation_size = min_page_size;
-      number_of_all_alloc = static_cast<uint64_t>(floor(
-          total_allocation_size /
-          (one_allocation_size * test_arguments.total_memory_size_limit)));
+      number_of_all_alloc = to_u64(std::floor(
+          to_f64(total_allocation_size) /
+          (to_f64(one_allocation_size) * test_arguments.total_memory_size_limit)));
     }
   }
 
@@ -159,9 +167,9 @@ void adjust_max_memory_allocation(
     LOG_WARNING << "Single size allocation " << one_allocation_size
                 << " exceeds 16GB, adjusting it to 16GB";
     one_allocation_size = maxSingleSizeAllocation;
-    total_allocation_size =
-        static_cast<uint64_t>(number_of_all_alloc * one_allocation_size *
-                              test_arguments.total_memory_size_limit);
+    total_allocation_size = to_u64(to_f64(number_of_all_alloc) *
+                                   to_f64(one_allocation_size) *
+                                   test_arguments.total_memory_size_limit);
   }
 
   LOG_INFO << "Test total memory size submitted: "
@@ -198,15 +206,15 @@ void get_mem_page_size(const ze_driver_handle_t &driver,
   lzt::free_memory(context, simple_allocation);
 };
 
-double one_percent = 0.01f;
-double five_percent = 0.05f;
-double ten_percent = 0.1f;
-double twenty_percent = 0.2f;
-double thirty_percent = 0.3f;
-double fourty_percent = 0.4f;
-double fifty_percent = 0.5f;
-double sixty_percent = 0.6f;
-double seventy_percent = 0.7f;
-double eighty_percent = 0.8f;
-double ninety_percent = 0.9f;
-double hundred_percent = 1.0f;
+double one_percent = 0.01;
+double five_percent = 0.05;
+double ten_percent = 0.1;
+double twenty_percent = 0.2;
+double thirty_percent = 0.3;
+double fourty_percent = 0.4;
+double fifty_percent = 0.5;
+double sixty_percent = 0.6;
+double seventy_percent = 0.7;
+double eighty_percent = 0.8;
+double ninety_percent = 0.9;
+double hundred_percent = 1.0;

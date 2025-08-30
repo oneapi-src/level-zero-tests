@@ -34,6 +34,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 typedef enum class _test_memory_type_t {
   TEST_MEMORY_TYPE_HOST = 0,
   TEST_MEMORY_TYPE_DEVICE = 1,
@@ -54,7 +56,7 @@ bool verify_external_memory_type_flag_support(
     ze_external_memory_type_flag_t external_memory_type_flag) {
   auto external_memory_properties = lzt::get_external_memory_properties(device);
   if (!(external_memory_properties.memoryAllocationExportTypes &
-        external_memory_type_flag)) {
+        to_u32(external_memory_type_flag))) {
     switch (external_memory_type_flag) {
     case ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF:
       LOG_WARNING << "Device does not support exporting DMA_BUF";
@@ -294,7 +296,8 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
   }
 
   if (bind(receive_socket, (struct sockaddr *)&local_addr,
-           strlen(local_addr.sun_path) + sizeof(local_addr.sun_family)) < 0) {
+           static_cast<socklen_t>(strlen(local_addr.sun_path) +
+                                  sizeof(local_addr.sun_family))) < 0) {
     close(receive_socket);
     perror("Socket Bind Error");
     throw std::runtime_error("Could not bind to socket");

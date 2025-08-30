@@ -332,7 +332,7 @@ public:
     // We may pass negative origin coordinates to compare_data_pattern; in that
     // case, it will skip over any negative-index pixels.
     EXPECT_EQ(0, lzt::compare_data_pattern(
-                     in_image, out_image, 0, 0, in_region.width,
+                     in_image, out_image, 0U, 0U, in_region.width,
                      in_region.height, in_region.originX - out_region.originX,
                      in_region.originY - out_region.originY, out_region.width,
                      out_region.height));
@@ -873,8 +873,8 @@ LZT_TEST_F(
   }
 
   img_ptr = new zeImageCreateCommon;
-  int full_width = img_ptr->dflt_host_image_.width();
-  int full_height = img_ptr->dflt_host_image_.height();
+  uint32_t full_width = img_ptr->dflt_host_image_.width();
+  uint32_t full_height = img_ptr->dflt_host_image_.height();
 
   EXPECT_GE(full_width, 10);
   EXPECT_GE(full_height, 10);
@@ -898,8 +898,8 @@ LZT_TEST_F(
   }
 
   img_ptr = new zeImageCreateCommon;
-  int full_width = img_ptr->dflt_host_image_.width();
-  int full_height = img_ptr->dflt_host_image_.height();
+  uint32_t full_width = img_ptr->dflt_host_image_.width();
+  uint32_t full_height = img_ptr->dflt_host_image_.height();
 
   EXPECT_GE(full_width, 10);
   EXPECT_GE(full_height, 10);

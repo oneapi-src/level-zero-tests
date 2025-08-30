@@ -34,8 +34,9 @@ namespace bi = boost::interprocess;
 
 namespace {
 
+using lzt::to_s32;
 using lzt::to_u32;
-using lzt::to_dbl;
+using lzt::to_f64;
 
 static constexpr uint32_t nanoSecToSeconds = 1000000000;
 std::atomic<bool> workloadThreadFlag(false);
@@ -249,8 +250,8 @@ void zetMetricGroupTest::run_activate_deactivate_test(bool reactivate) {
   metric_group_properties.pNext = nullptr;
   EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
       groupHandleList[0], &metric_group_properties));
-  auto domain = metric_group_properties.domain;
-  auto domain_2 = 0;
+  uint32_t domain = metric_group_properties.domain;
+  uint32_t domain_2 = 0U;
   std::vector<zet_metric_group_handle_t> test_handles{groupHandleList[0]};
   for (zet_metric_group_handle_t groupHandle : groupHandleList) {
     metric_group_properties = {};
@@ -1431,7 +1432,7 @@ LZT_TEST_F(
                          nullptr);
 
       double minimumTimeBeforeEventIsExpected =
-          notifyEveryNReports * (to_dbl(samplingPeriod) / nanoSecToSeconds);
+          notifyEveryNReports * (to_f64(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
       double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
@@ -1542,7 +1543,7 @@ LZT_TEST_F(
                          nullptr);
 
       double minimumTimeBeforeEventIsExpected =
-          notifyEveryNReports * (to_dbl(samplingPeriod) / nanoSecToSeconds);
+          notifyEveryNReports * (to_f64(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
       double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
@@ -1553,7 +1554,7 @@ LZT_TEST_F(
       auto currentTime = std::chrono::system_clock::now();
       std::chrono::duration<double> elapsedSeconds = currentTime - startTime;
       int32_t timeLeft =
-          to_u32(std::ceil(minimumTimeBeforeEventIsExpected +
+          to_s32(std::ceil(minimumTimeBeforeEventIsExpected +
                                          errorBuffer - elapsedSeconds.count()));
       if (timeLeft > 0) {
         LOG_DEBUG << "additional sleep before expecting event to be ready "
@@ -1932,7 +1933,7 @@ LZT_TEST_F(
             std::getenv("LZT_METRIC_READ_DATA_MAX_DURATION_MS");
         uint32_t max_wait_time_in_milliseconds = 10;
         if (value_string != nullptr) {
-          uint32_t value = atoi(value_string);
+          uint32_t value = to_u32(value_string);
           max_wait_time_in_milliseconds =
               value != 0 ? value : max_wait_time_in_milliseconds;
           max_wait_time_in_milliseconds =
@@ -2362,7 +2363,7 @@ LZT_TEST_F(
                                device_properties.numEUsPerSubslice *
                                device_properties.numThreadsPerEU;
       LOG_INFO << "Available threads: " << max_threads;
-      const auto dimensions = (max_threads > 4096 ? 1024 : 2);
+      const uint32_t dimensions = (max_threads > 4096 ? 1024 : 2);
       ze_kernel_handle_t function = get_matrix_multiplication_kernel(
           device, &tg, &a_buffer, &b_buffer, &c_buffer, dimensions);
 

@@ -42,7 +42,7 @@ bool check_ext_version() {
 bool luid_equal(
     const std::array<uint8_t, ZE_MAX_DEVICE_LUID_SIZE_EXT> &first,
     const std::array<uint8_t, ZE_MAX_DEVICE_LUID_SIZE_EXT> &second) {
-  for (int index = 0; (index < ZE_MAX_DEVICE_LUID_SIZE_EXT); index++) {
+  for (uint32_t index = 0; index < ZE_MAX_DEVICE_LUID_SIZE_EXT; index++) {
     if (first[index] != second[index])
       return false;
   }

@@ -211,7 +211,7 @@ void ZePeer::perform_parallel_copy_to_single_target(
 
 void ZePeer::bandwidth_latency_parallel_to_single_target(
     peer_test_t test_type, peer_transfer_t transfer_type,
-    int number_buffer_elements, uint32_t remote_device_id,
+    size_t number_buffer_elements, uint32_t remote_device_id,
     uint32_t local_device_id) {
 
   size_t buffer_size = 0;

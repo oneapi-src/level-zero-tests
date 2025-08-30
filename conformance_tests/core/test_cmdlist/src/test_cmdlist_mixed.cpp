@@ -1611,11 +1611,11 @@ protected:
 static void
 RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
                            std::vector<ze_command_queue_handle_t> cmdqueue,
-                           ze_event_handle_t event, int num_cmdlist,
+                           ze_event_handle_t event, size_t num_cmdlist,
                            bool is_shared_system) {
   const size_t size = 16;
   const int addval = 10;
-  const int num_iterations = 100;
+  const uint32_t num_iterations = 100;
   int addval2 = 0;
   const uint64_t timeout = UINT64_MAX - 1;
 
@@ -1633,7 +1633,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 
   memset(buffer, 0x0, num_cmdlist * size * sizeof(int));
 
-  for (int n = 0; n < num_cmdlist; n++) {
+  for (size_t n = 0; n < num_cmdlist; n++) {
     int *p_dev = static_cast<int *>(buffer);
     p_dev += (n * size);
     lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
@@ -1646,7 +1646,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
     lzt::append_launch_function(cmdlist[n], kernel, &tg, nullptr, 0, nullptr);
 
     totalVal[n] = 0;
-    for (int i = 0; i < (num_iterations - 1); i++) {
+    for (uint32_t i = 0; i < (num_iterations - 1); i++) {
       addval2 = lzt::generate_value<int>() & 0xFFFF;
       totalVal[n] += addval2;
       lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -1673,7 +1673,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(event, timeout));
 
-  for (int n = 0; n < num_cmdlist; n++) {
+  for (size_t n = 0; n < num_cmdlist; n++) {
     for (size_t i = 0; i < size; i++) {
       EXPECT_EQ(static_cast<int *>(buffer)[(n * size) + i],
                 (addval + totalVal[n]));
@@ -1699,7 +1699,7 @@ LZT_TEST_F(
   }
   for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, to_int(i), false);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, false);
   }
 }
 
@@ -1714,7 +1714,7 @@ LZT_TEST_F(
   }
   for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
-    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, to_int(i), true);
+    RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, true);
   }
 }
 
@@ -1793,10 +1793,10 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
     std::vector<ze_command_queue_handle_t> cmdqueue,
     ze_event_handle_t counter_event, ze_event_handle_t event, bool is_immediate,
     bool is_shared_system) {
-  int num_cmdlist = 2;
+  uint32_t num_cmdlist = 2;
   const size_t size = 16;
   const int addval = 10;
-  const int num_iterations = 100;
+  const uint32_t num_iterations = 100;
   int addval2 = 0;
   const uint64_t timeout = UINT64_MAX - 1;
 
@@ -1827,7 +1827,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   lzt::append_launch_function(cmdlist[0], kernel, &tg, nullptr, 0, nullptr);
 
   totalVal[0] = 0;
-  for (int i = 0; i < (num_iterations - 1); i++) {
+  for (uint32_t i = 0; i < num_iterations - 1; i++) {
     addval2 = lzt::generate_value<int>() & 0xFFFF;
     totalVal[0] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -1857,7 +1857,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   lzt::append_barrier(cmdlist[1]);
 
   totalVal[1] = 0;
-  for (int i = 0; i < (num_iterations - 1); i++) {
+  for (uint32_t i = 0; i < (num_iterations - 1); i++) {
     addval2 = lzt::generate_value<int>() & 0xFFFF;
     totalVal[1] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -1878,7 +1878,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   }
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(event, timeout));
 
-  for (int n = 0; n < num_cmdlist; n++) {
+  for (uint32_t n = 0; n < num_cmdlist; n++) {
     for (size_t i = 0; i < size; i++) {
       EXPECT_EQ(static_cast<int *>(buffer)[(n * size) + i],
                 (addval + totalVal[n]));

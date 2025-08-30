@@ -596,15 +596,15 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 void run_multiple_threads(ze_context_handle_t context,
                           ze_device_handle_t device, process_synchro &synchro,
                           debug_options &options) {
-  constexpr auto num_threads = 2;
+  constexpr uint32_t num_threads = 2;
   std::vector<std::unique_ptr<std::thread>> threads;
 
-  for (int i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(new std::thread(
         basic, context, device, std::ref(synchro), std::ref(options))));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     threads[i]->join();
   }
 }
@@ -615,8 +615,8 @@ void loop_create_destroy_multiple_cq_immcl(ze_context_handle_t context,
                                            debug_options &options,
                                            debug_test_type_t test_selected) {
 
-  std::map<int, int> ordinalCQs;
-  int totalNumCQs = get_numCQs_per_ordinal(device, ordinalCQs);
+  MapNumCmdQueue ordinalCQs;
+  uint32_t totalNumCQs = get_numCQs_per_ordinal(device, ordinalCQs);
   std::vector<ze_command_queue_handle_t> cmdQueues;
   std::vector<ze_command_list_handle_t> cmdLists;
 
@@ -627,12 +627,12 @@ void loop_create_destroy_multiple_cq_immcl(ze_context_handle_t context,
 
     LOG_DEBUG << "[Application] Child Proceeding";
 
-    for (std::map<int, int>::iterator ordinalCQ = ordinalCQs.begin();
+    for (MapNumCmdQueue::iterator ordinalCQ = ordinalCQs.begin();
          ordinalCQ != ordinalCQs.end(); ordinalCQ++) {
-      int ordinal = ordinalCQ->first;
-      int numQueues = ordinalCQ->second;
+      uint32_t ordinal = ordinalCQ->first;
+      uint32_t numQueues = ordinalCQ->second;
 
-      for (int index = 0; index < numQueues; index++) {
+      for (uint32_t index = 0; index < numQueues; index++) {
         if (test_selected == MULTIPLE_CQ) {
           ze_command_queue_handle_t cmdqueue = lzt::create_command_queue(
               context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
@@ -912,8 +912,8 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
                                       debug_options &options) {
 
   auto result = ZE_RESULT_SUCCESS;
-  auto size = 65536;
-  auto alignment = 8;
+  size_t size = 65536;
+  size_t alignment = 8;
 
   void *values =
       lzt::allocate_device_memory(size, alignment, 0, device_0, context);
@@ -983,11 +983,11 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
   lzt::set_argument_value(kernel, 1, sizeof(device_idx), &device_idx);
 
   std::vector<uint32_t> WG(3);
-  lzt::suggest_group_size(kernel, size, 0, 0, WG[0], WG[1], WG[2]);
+  lzt::suggest_group_size(kernel, to_u32(size), 0, 0, WG[0], WG[1], WG[2]);
   lzt::set_group_size(kernel, WG[0], WG[1], WG[2]);
   event = lzt::create_event(event_pool, event_desc);
 
-  ze_group_count_t ZeThreadGroupDimensions = {size / WG[0], 1, 1};
+  ze_group_count_t ZeThreadGroupDimensions = {to_u32(size / WG[0]), 1, 1};
   lzt::append_launch_function(command_list, kernel, &ZeThreadGroupDimensions,
                               event, 0, nullptr);
   lzt::append_barrier(command_list);
@@ -1061,7 +1061,7 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
   lzt::set_argument_value(kernel, 0, sizeof(values_1), (&values_1));
   lzt::set_argument_value(kernel, 1, sizeof(device_idx), &device_idx);
 
-  lzt::suggest_group_size(kernel, size, 0, 0, WG[0], WG[1], WG[2]);
+  lzt::suggest_group_size(kernel, to_u32(size), 0, 0, WG[0], WG[1], WG[2]);
   lzt::set_group_size(kernel, WG[0], WG[1], WG[2]);
 
   lzt::append_launch_function(command_list_1, kernel, &ZeThreadGroupDimensions,
@@ -1080,7 +1080,7 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
   lzt::synchronize(command_queue_1, UINT64_MAX);
 
   // validation
-  for (int i = 0; i < size; i++) {
+  for (size_t i = 0; i < size; i++) {
     // Kernel function: values[xid] = values[xid] * 3 + 11 * (device_idx + 1);
     auto val_0 = 1 * 3 + 11 * 1;
     EXPECT_EQ(validation_buffer_0[i], val_0);

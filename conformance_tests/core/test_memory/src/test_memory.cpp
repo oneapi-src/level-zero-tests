@@ -22,6 +22,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_int;
+
 class zeDriverAllocDeviceMemTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
@@ -933,11 +935,11 @@ void zeHostSystemMemoryDeviceTests::
   arg.arg_value = &memory_;
   args.push_back(arg);
   arg.arg_size = sizeof(int);
-  int size = static_cast<int>(size_);
+  int size = to_int(size_);
   arg.arg_value = &size;
   args.push_back(arg);
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name, 1, args, is_immediate);
+                                   module, func_name, 1U, args, is_immediate);
   lzt::validate_data_pattern(memory_, size_, -1);
   lzt::destroy_module(module);
 }

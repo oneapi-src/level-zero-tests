@@ -46,6 +46,15 @@ static const char *usage_str =
     "\n  -h, --help               display help message"
     "\n";
 
+template <typename T> inline constexpr uint32_t to_u32(T val) {
+  return static_cast<uint32_t>(val);
+}
+template <> inline uint32_t to_u32<const char *>(const char *str) {
+  return static_cast<uint32_t>(atoi(str));
+}
+template <> inline uint32_t to_u32<char *>(char *str) {
+  return static_cast<uint32_t>(atoi(str));
+}
 static uint32_t sanitize_ulong(char *in) {
   unsigned long temp = strtoul(in, NULL, 0);
   if (ERANGE == errno) {
@@ -53,7 +62,7 @@ static uint32_t sanitize_ulong(char *in) {
   } else if (temp > UINT32_MAX) {
     fprintf(stderr, "%ld greater than UINT32_MAX\n", temp);
   } else {
-    return static_cast<uint32_t>(temp);
+    return to_u32(temp);
   }
   return 0;
 }
@@ -67,7 +76,7 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
   auto parse_and_insert = [&](std::string &s,
                               std::vector<uint32_t> &vector_of_indexes) {
     if (isdigit(s[0])) {
-      vector_of_indexes.push_back(atoi(s.c_str()));
+      vector_of_indexes.push_back(to_u32(s.c_str()));
     } else {
       std::cerr << usage_str;
       exit(-1);
@@ -120,11 +129,11 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       if ((pos = queues_string.find(comma, start)) != std::string::npos) {
         queue_string = queues_string.substr(start, pos);
         start = pos + 1;
-        command_queue_group_ordinal = atoi(queue_string.c_str());
+        command_queue_group_ordinal = to_u32(queue_string.c_str());
         queue_string = queues_string.substr(start, queues_string.length());
-        command_queue_group_ordinal1 = atoi(queue_string.c_str());
+        command_queue_group_ordinal1 = to_u32(queue_string.c_str());
       } else {
-        command_queue_group_ordinal = atoi(argv[i + 1]);
+        command_queue_group_ordinal = to_u32(argv[i + 1]);
         command_queue_group_ordinal1 = command_queue_group_ordinal;
       }
       i++;
@@ -143,11 +152,11 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       if ((pos = queues_string.find(comma, start)) != std::string::npos) {
         queue_string = queues_string.substr(start, pos);
         start = pos + 1;
-        command_queue_index = atoi(queue_string.c_str());
+        command_queue_index = to_u32(queue_string.c_str());
         queue_string = queues_string.substr(start, queues_string.length());
-        command_queue_index1 = atoi(queue_string.c_str());
+        command_queue_index1 = to_u32(queue_string.c_str());
       } else {
-        command_queue_index = atoi(argv[i + 1]);
+        command_queue_index = to_u32(argv[i + 1]);
         command_queue_index1 = command_queue_index;
       }
       i++;

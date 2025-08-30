@@ -32,6 +32,15 @@ namespace gil = boost::gil;
 #include "bmp.hpp"
 
 namespace level_zero_tests {
+
+template <typename T> inline constexpr uint8_t to_u8(T val) {
+  return static_cast<uint8_t>(val);
+}
+
+template <typename T> inline constexpr uint32_t to_u32(T val) {
+  return static_cast<uint32_t>(val);
+}
+
 template <typename T> ImagePNG<T>::ImagePNG() : width_(0U), height_(0U) {}
 
 template <typename T> ImagePNG<T>::ImagePNG(const std::string &image_path) {
@@ -58,8 +67,8 @@ template <> bool ImagePNG<uint32_t>::read(const std::string &image_path) {
 #endif
   gil::rgba8_view_t view = gil::view(image);
   for (gil::rgba8_pixel_t pixel : view) {
-    uint32_t raw_pixel =
-        (pixel[0] << 24) + (pixel[1] << 16) + (pixel[2] << 8) + pixel[3];
+    uint32_t raw_pixel = (to_u32(pixel[0]) << 24) + (to_u32(pixel[1]) << 16) +
+                         (to_u32(pixel[2]) << 8) + to_u32(pixel[3]);
     pixels_.push_back(raw_pixel);
   }
   width_ = static_cast<uint32_t>(view.width());
@@ -73,11 +82,11 @@ template <> bool ImagePNG<uint32_t>::write(const std::string &image_path) {
   for (size_t idx = 0; idx < pixels_.size(); ++idx) {
     uint32_t raw_pixel = pixels_[idx];
     gil::rgba8_pixel_t pixel;
-    pixel[3] = raw_pixel & 0xFF;
-    pixel[2] = (raw_pixel >> 8) & 0xFF;
-    pixel[1] = (raw_pixel >> 16) & 0xFF;
-    pixel[0] = (raw_pixel >> 24) & 0xFF;
-    view[idx] = pixel;
+    pixel[3] = to_u8(raw_pixel & 0xFF);
+    pixel[2] = to_u8((raw_pixel >> 8) & 0xFF);
+    pixel[1] = to_u8((raw_pixel >> 16) & 0xFF);
+    pixel[0] = to_u8((raw_pixel >> 24) & 0xFF);
+    view[static_cast<long>(idx)] = pixel;
   }
 #ifdef BOOST_GIL_IO_PNG_168_API
   gil::write_view(image_path, view, gil::png_tag());

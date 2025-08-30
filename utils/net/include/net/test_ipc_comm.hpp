@@ -57,7 +57,8 @@ template <typename T> int receive_ipc_handle(char *data) {
   }
 
   if (bind(unix_rcv_socket, (struct sockaddr *)&local_addr,
-           strlen(local_addr.sun_path) + sizeof(local_addr.sun_family)) == -1) {
+           static_cast<socklen_t>(strlen(local_addr.sun_path) +
+                                  sizeof(local_addr.sun_family))) == -1) {
     perror("Server Bind Error");
     close(unix_rcv_socket);
     throw std::runtime_error("[Server] Could not bind to socket");

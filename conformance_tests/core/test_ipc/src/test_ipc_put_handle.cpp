@@ -23,13 +23,17 @@
 #include <thread>
 #include <level_zero/ze_api.h>
 
+namespace lzt = level_zero_tests;
+
 namespace {
 #ifdef __linux__
 
 namespace bipc = boost::interprocess;
 
+using lzt::to_u64;
+
 static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
-                                    int size, bool reserved, bool getFromFd,
+                                    uint32_t size, bool reserved, bool getFromFd,
                                     ze_ipc_memory_flags_t flags,
                                     bool is_immediate) {
   ze_result_t result = zeInit(0);
@@ -83,7 +87,7 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
     alloc_props.pNext = &export_fd;
     lzt::get_mem_alloc_properties(context, memory, &alloc_props);
     ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandleFromFileDescriptorExp(
-        context, export_fd.fd, &ipc_handle));
+        context, to_u64(export_fd.fd), &ipc_handle));
   } else {
     ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, &ipc_handle));
   }
@@ -464,7 +468,7 @@ LZT_TEST_F(
 
   uint64_t fd_handle = 0;
   EXPECT_ZE_RESULT_SUCCESS(zeMemGetIpcHandleFromFileDescriptorExp(
-      context_, export_fd.fd, &ipc_mem_handle_));
+      context_, to_u64(export_fd.fd), &ipc_mem_handle_));
   void *memory = nullptr;
   EXPECT_ZE_RESULT_SUCCESS(zeMemOpenIpcHandle(context_, device, ipc_mem_handle_,
                                               ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
@@ -492,17 +496,17 @@ LZT_TEST(
   void *buf_d = lzt::allocate_device_memory(1, 0, 0, context);
 
   auto thread_func = [](ze_context_handle_t context, void *buf_h, void *buf_d,
-                        int thread_id) {
-    constexpr int n_iters = 2000;
+                        uint32_t thread_id) {
+    constexpr uint32_t n_iters = 2000;
 
-    for (int i = 0; i < n_iters; i++) {
-      const int n_handles = 450 - thread_id;
+    for (uint32_t i = 0; i < n_iters; i++) {
+      const uint32_t n_handles = 450 - thread_id;
       std::vector<ze_ipc_mem_handle_t> handles(n_handles);
       for (auto &handle : handles) {
         std::fill_n(handle.data, ZE_MAX_IPC_HANDLE_SIZE, 0);
       }
 
-      for (int j = 0; j < n_handles; j++) {
+      for (uint32_t j = 0; j < n_handles; j++) {
         if ((j + thread_id) % 2 == 0) {
           lzt::get_ipc_handle(context, &handles[j], buf_h);
         } else {

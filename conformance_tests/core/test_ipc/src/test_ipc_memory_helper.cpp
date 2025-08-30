@@ -22,7 +22,7 @@
 namespace bipc = boost::interprocess;
 
 #ifdef __linux__
-static void child_device_access_test(int size, ze_ipc_memory_flags_t flags,
+static void child_device_access_test(size_t size, ze_ipc_memory_flags_t flags,
                                      bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -64,7 +64,7 @@ static void child_device_access_test(int size, ze_ipc_memory_flags_t flags,
   }
 }
 
-static void child_subdevice_access_test(int size, ze_ipc_memory_flags_t flags,
+static void child_subdevice_access_test(size_t size, ze_ipc_memory_flags_t flags,
                                         bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -118,7 +118,7 @@ static void child_subdevice_access_test(int size, ze_ipc_memory_flags_t flags,
 }
 #endif
 
-static void child_device_access_test_opaque(int size,
+static void child_device_access_test_opaque(size_t size,
                                             ze_ipc_memory_flags_t flags,
                                             bool is_immediate,
                                             ze_ipc_mem_handle_t ipc_handle) {
@@ -152,7 +152,7 @@ static void child_device_access_test_opaque(int size,
   }
 }
 
-static void child_subdevice_access_test_opaque(int size,
+static void child_subdevice_access_test_opaque(size_t size,
                                                ze_ipc_memory_flags_t flags,
                                                bool is_immediate,
                                                ze_ipc_mem_handle_t ipc_handle) {

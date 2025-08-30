@@ -105,8 +105,8 @@ LZT_TEST_F(
     module = lzt::create_module(device, "residency_tests.spv");
     kernel = lzt::create_function(module, "residency_function");
 
-    auto device_flags = 0;
-    auto host_flags = 0;
+    uint32_t device_flags = 0U;
+    uint32_t host_flags = 0U;
 
     node *data = static_cast<node *>(lzt::allocate_shared_memory(
         sizeof(node), 1, device_flags, host_flags, device, context));
@@ -281,8 +281,8 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     kernel = lzt::create_function(module, ZE_KERNEL_FLAG_FORCE_RESIDENCY,
                                   "residency_function");
 
-    auto device_flags = 0;
-    auto host_flags = 0;
+    uint32_t device_flags = 0U;
+    uint32_t host_flags = 0U;
 
     node *data = static_cast<node *>(lzt::allocate_shared_memory(
         sizeof(node), 1, device_flags, host_flags, device, context));

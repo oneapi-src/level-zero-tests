@@ -274,7 +274,7 @@ ze_kernel_properties_t get_kernel_properties(ze_kernel_handle_t kernel) {
 // Expand as needed.
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
-                                 std::string func_name, int group_size,
+                                 std::string func_name, uint32_t group_size,
                                  void *arg, bool is_immediate) {
   std::vector<FunctionArg> args;
   if (arg != nullptr) {
@@ -287,7 +287,7 @@ void create_and_execute_function(ze_device_handle_t device,
 
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
-                                 std::string func_name, int group_size,
+                                 std::string func_name, uint32_t group_size,
                                  const std::vector<FunctionArg> &args,
                                  bool is_immediate) {
 
@@ -305,7 +305,7 @@ void create_and_execute_function(ze_device_handle_t device,
   ze_kernel_properties_t function_properties = get_kernel_properties(function);
   EXPECT_EQ(function_properties.numKernelArgs, args.size());
 
-  int i = 0;
+  uint32_t i = 0U;
   for (auto arg : args) {
     EXPECT_ZE_RESULT_SUCCESS(
         zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));

@@ -33,7 +33,8 @@ std::vector<uint8_t> ZeApp::load_binary_file(const std::string &file_path) {
     std::cout << "Binary file length: " << length << std::endl;
 
   binary_file.resize(length);
-  stream.read(reinterpret_cast<char *>(binary_file.data()), length);
+  stream.read(reinterpret_cast<char *>(binary_file.data()),
+              static_cast<std::streamsize>(length));
   if (verbose)
     std::cout << "Binary file loaded" << std::endl;
 

@@ -452,7 +452,7 @@ LZT_TEST_F(
 static std::vector<float>
 submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
                         uint32_t dim, ze_device_handle_t targetDevice) {
-  int m, k, n;
+  uint32_t m, k, n;
   m = k = n = dim;
   std::vector<float> c(m * n, 0);
   ze_device_handle_t device = targetDevice;
@@ -476,11 +476,9 @@ submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
   std::memcpy(a_buffer, a.data(), a.size() * sizeof(float));
   std::memcpy(b_buffer, b.data(), b.size() * sizeof(float));
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
-  const int group_count_x = m / 16;
-  const int group_count_y = n / 16;
   ze_group_count_t tg;
-  tg.groupCountX = group_count_x;
-  tg.groupCountY = group_count_y;
+  tg.groupCountX = m / 16;
+  tg.groupCountY = n / 16;
   tg.groupCountZ = 1;
   zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0, nullptr);
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
@@ -554,7 +552,7 @@ bool validate_engine_type(ze_event_handle_t event,
 
 bool compute_workload_and_validate(device_handles_t device) {
 
-  int m, k, n;
+  uint32_t m, k, n;
   m = k = n = 512;
   uint32_t count = 0;
   std::vector<float> a(m * k, 1);
@@ -595,11 +593,9 @@ bool compute_workload_and_validate(device_handles_t device) {
                           nullptr);
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
 
-  const int group_count_x = m / 16;
-  const int group_count_y = n / 16;
   ze_group_count_t tg;
-  tg.groupCountX = group_count_x;
-  tg.groupCountY = group_count_y;
+  tg.groupCountX = m / 16;
+  tg.groupCountY = n / 16;
   tg.groupCountZ = 1;
 
   // events creation
@@ -799,7 +795,7 @@ LZT_TEST_F(
   const char *valueString = std::getenv("LZT_SYSMAN_DEVICE_TEST_ITERATIONS");
   uint32_t number_iterations = 2;
   if (valueString != nullptr) {
-    uint32_t _value = to_u32(atoi(valueString));
+    uint32_t _value = to_u32(valueString);
     number_iterations = _value < 0 ? number_iterations : std::min(_value, 300U);
     if (number_iterations != _value) {
       LOG_WARNING << "Number of iterations is capped at 300\n";

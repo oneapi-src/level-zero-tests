@@ -21,7 +21,7 @@ namespace {
 using lzt::to_u8;
 using lzt::to_int;
 using lzt::to_u32;
-using lzt::to_flt;
+using lzt::to_f32;
 
 enum TestType { IMAGE_OBJECT_ONLY, ONE_KERNEL_ONLY, TWO_KERNEL_CONVERT };
 
@@ -74,7 +74,7 @@ public:
       float *ptr1 = static_cast<float *>(buffer_in);
       float *ptr2 = static_cast<float *>(buffer_out);
       for (size_t i = 0; i < buffer_size / sizeof(float); ++i) {
-        ptr1[i] = to_flt((0xff) - (i & 0xff));
+        ptr1[i] = to_f32((0xff) - (i & 0xff));
         ptr2[i] = 0xff;
       }
     } else if (format_type == ZE_IMAGE_FORMAT_TYPE_SNORM) {

@@ -82,7 +82,7 @@ void ZePeer::bidirectional_perform_copy(
 
 void ZePeer::bidirectional_bandwidth_latency(peer_test_t test_type,
                                              peer_transfer_t transfer_type,
-                                             int number_buffer_elements,
+                                             size_t number_buffer_elements,
                                              uint32_t remote_device_id,
                                              uint32_t local_device_id,
                                              uint32_t queue_index) {

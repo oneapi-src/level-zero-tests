@@ -259,17 +259,19 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
   // allow PERCENTAGE environment variable to override argument argument
   const char *valueString = std::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
   if (valueString != nullptr) {
-    uint32_t value = atoi(valueString);
+    uint32_t value = to_u32(valueString);
     percentOfMetricGroupForTest =
         value != 0 ? value : percentOfMetricGroupForTest;
     percentOfMetricGroupForTest = std::min(percentOfMetricGroupForTest, 100u);
   }
   LOG_INFO << "percentage of metric groups " << percentOfMetricGroupForTest;
 
+  double metricGrpTestPerc = to_f64(percentOfMetricGroupForTest) * 0.01;
+
   for (auto const &mapEntry : domainMetricGroupMap) {
-    uint32_t newCount = to_u32(std::max<double>(
-        mapEntry.second.size() * percentOfMetricGroupForTest * 0.01, 1.0));
-    std::copy(mapEntry.second.begin(), mapEntry.second.begin() + newCount,
+    auto grpInfos = mapEntry.second;
+    uint32_t cnt = to_u32(to_f64(grpInfos.size()) * metricGrpTestPerc);
+    std::copy(grpInfos.begin(), grpInfos.begin() + (cnt > 0 ? cnt : 1),
               std::back_inserter(optimizedList));
   }
 

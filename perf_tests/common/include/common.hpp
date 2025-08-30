@@ -83,8 +83,8 @@ inline void validate(ResulT result, const char *message) {
 
 #define SUCCESS_OR_TERMINATE(CALL) validate<true>(CALL, #CALL)
 
-template <typename T> int size_in_bytes(const std::vector<T> &v) {
-  return static_cast<int>(sizeof(T) * v.size());
+template <typename T> size_t size_in_bytes(const std::vector<T> &v) {
+  return sizeof(T) * v.size();
 }
 
 #define ERROR_RETURN(retval)                                                   \

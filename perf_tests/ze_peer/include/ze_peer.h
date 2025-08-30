@@ -161,7 +161,7 @@ public:
 
   void bandwidth_latency_parallel_to_single_target(
       peer_test_t test_type, peer_transfer_t transfer_type,
-      int number_buffer_elements, uint32_t remote_device_id,
+      size_t number_buffer_elements, uint32_t remote_device_id,
       uint32_t local_device_id);
 
   void perform_parallel_copy_to_multiple_targets(
@@ -188,22 +188,22 @@ public:
 
   void bandwidth_latency_parallel_to_pair_targets(
       peer_test_t test_type, peer_transfer_t transfer_type,
-      int number_buffer_elements,
+      size_t number_buffer_elements,
       std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
       bool divide_buffers);
 
   void bandwidth_latency_parallel_to_multiple_targets(
       peer_test_t test_type, peer_transfer_t transfer_type,
-      int number_buffer_elements, std::vector<uint32_t> &remote_device_ids,
+      size_t number_buffer_elements, std::vector<uint32_t> &remote_device_ids,
       std::vector<uint32_t> &local_device_ids, bool divide_buffers);
 
   void bandwidth_latency(peer_test_t test_type, peer_transfer_t transfer_type,
-                         int number_buffer_elements, uint32_t remote_device_id,
+                         size_t number_buffer_elements, uint32_t remote_device_id,
                          uint32_t local_device_id, uint32_t queue_index);
 
   void bidirectional_bandwidth_latency(peer_test_t test_type,
                                        peer_transfer_t transfer_type,
-                                       int number_buffer_elements,
+                                       size_t number_buffer_elements,
                                        uint32_t dst_device_id,
                                        uint32_t src_device_id,
                                        uint32_t queue_index);
@@ -238,7 +238,7 @@ public:
                        char *validate_buffer, void *dst_buffer,
                        char *host_buffer, size_t buffer_size);
 
-  void set_up(int number_buffer_elements,
+  void set_up(size_t number_buffer_elements,
               std::vector<uint32_t> &remote_device_ids,
               std::vector<uint32_t> &local_device_ids, size_t &buffer_size);
 
@@ -257,10 +257,10 @@ public:
   // IPC
   void bandwidth_latency_ipc(peer_test_t test_type,
                              peer_transfer_t transfer_type, bool is_server,
-                             int commSocket, int number_buffer_elements,
+                             int commSocket, size_t number_buffer_elements,
                              uint32_t device_id, uint32_t remote_device_id);
 
-  void set_up_ipc(int number_buffer_elements, uint32_t device_id,
+  void set_up_ipc(size_t number_buffer_elements, uint32_t device_id,
                   size_t &buffer_size, ze_command_queue_handle_t &command_queue,
                   ze_command_list_handle_t &command_list);
 

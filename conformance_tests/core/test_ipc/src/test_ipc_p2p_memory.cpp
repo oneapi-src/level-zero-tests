@@ -356,7 +356,7 @@ class P2PIpcMemoryAccessTest
 LZT_TEST_P(
     P2PIpcMemoryAccessTest,
     GivenTwoDevicesAndL0MemoryAllocatedInDeviceXExportedToDeviceYWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceYCorrectly) {
-  size_t size = std::pow(2, std::get<0>(GetParam()));
+  size_t size = 1UL << std::get<0>(GetParam());
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
   bool is_immediate = std::get<3>(GetParam());
@@ -391,7 +391,7 @@ LZT_TEST_P(
 LZT_TEST_P(
     P2PIpcMemoryAccessTest,
     GivenTwoDevicesAndL0MemoryAllocatedInDeviceXAndDeviceYExportedToEachOtherSequentiallyWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceXAndDeviceYSequentially) {
-  size_t size = std::pow(2, std::get<0>(GetParam()));
+  size_t size = 1UL << std::get<0>(GetParam());
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
   bool is_immediate = std::get<3>(GetParam());

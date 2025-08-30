@@ -34,6 +34,8 @@ namespace bi = boost::interprocess;
 
 namespace {
 
+using lzt::to_nanoseconds;
+
 using lzt::to_u8;
 using lzt::to_u32;
 
@@ -373,7 +375,7 @@ LZT_TEST_F(
         std::getenv("LZT_METRIC_ENABLE_TRACER_MAX_WAIT_TIME");
     uint32_t max_wait_time_in_milliseconds = 10;
     if (value_string != nullptr) {
-      uint32_t value = atoi(value_string);
+      uint32_t value = to_u32(value_string);
       max_wait_time_in_milliseconds =
           value != 0 ? value : max_wait_time_in_milliseconds;
       max_wait_time_in_milliseconds =
@@ -490,7 +492,7 @@ LZT_TEST_F(
         std::getenv("LZT_METRIC_DISABLE_TRACER_MAX_WAIT_TIME");
     uint32_t max_wait_time_in_milliseconds = 10;
     if (value_string != nullptr) {
-      uint32_t value = atoi(value_string);
+      uint32_t value = to_u32(value_string);
       max_wait_time_in_milliseconds =
           value != 0 ? value : max_wait_time_in_milliseconds;
       max_wait_time_in_milliseconds =
@@ -1125,10 +1127,7 @@ LZT_TEST_F(
       std::chrono::steady_clock::time_point endTime =
           std::chrono::steady_clock::now();
 
-      uint64_t elapsedTime =
-          std::chrono::duration_cast<std::chrono::nanoseconds>(endTime -
-                                                               startTime)
-              .count();
+      auto elapsedTime = to_nanoseconds(endTime - startTime);
       LOG_DEBUG << "resumed after synchronizing on the tracer notification "
                    "event, blocked for "
                 << elapsedTime << " nanoseconds";

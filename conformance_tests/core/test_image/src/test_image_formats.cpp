@@ -528,7 +528,7 @@ void zeImageFormatLayoutTests::set_up_buffers(ImageFormatFixture &test,
     // set pixel value to 1 less than max for data type so
     // that when the kernel increments it, it saturates
     // or rolls over
-    in_ptr[i] = ~(0 & in_ptr[i]) - 1;
+    in_ptr[i] = static_cast<T>(~(0 & in_ptr[i]) - 1);
   }
 }
 

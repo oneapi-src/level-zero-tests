@@ -40,6 +40,10 @@ typedef struct _probe_cofig {
   int measure_iteration;
 } probe_config_t;
 
+template <typename T> inline constexpr double to_f64(T val) {
+  return static_cast<double>(val);
+}
+
 template <typename T>
 inline void
 print_probe_output(const std::string prefix, const std::string filename,
@@ -65,12 +69,12 @@ long double _function_call_iter_measure_latency(
     const std::string function_name, const std::string prefix,
     const probe_config_t &probe_setting,
     ze_result_t (*api_function)(Params... params), Args... args) {
-  int iteration_number = probe_setting.measure_iteration;
+  int num_iters = probe_setting.measure_iteration;
   Timer<> timer;
   long double nsec;
 
   timer.start();
-  for (int i = 0; i < iteration_number; i++) {
+  for (int i = 0; i < num_iters; i++) {
     api_function(args...);
   }
   timer.end();
@@ -79,7 +83,7 @@ long double _function_call_iter_measure_latency(
 
   print_probe_output(
       PREFIX_LATENCY + prefix, filename, line_number, function_name,
-      nsec / static_cast<long double>(iteration_number), UNIT_LATENCY);
+      nsec / static_cast<long double>(num_iters), UNIT_LATENCY);
 
   return nsec;
 }
@@ -95,7 +99,7 @@ void _function_call_iter_hardware_counters(
     const std::string function_name, const std::string prefix,
     const probe_config_t &probe_setting,
     ze_result_t (*api_function)(Params... params), Args... args) {
-  int iteration_number = probe_setting.measure_iteration;
+  int num_iters = probe_setting.measure_iteration;
 
   assert(api_static_probe_is_init());
 
@@ -113,26 +117,22 @@ void _function_call_iter_hardware_counters(
   }
 
   hardware_counters->start();
-  for (int i = 0; i < iteration_number; i++) {
+  for (int i = 0; i < num_iters; i++) {
     api_function(args...);
   }
   hardware_counters->end();
 
-  auto total_instruction_count = hardware_counters->counter_instructions();
-  auto total_cycle_count = hardware_counters->counter_cycles();
+  auto total_instr_cnt = to_f64(hardware_counters->counter_instructions());
+  auto total_cycle_cnt = to_f64(hardware_counters->counter_cycles());
 
-  auto normalized_instruction_count =
-      total_instruction_count / iteration_number;
-  auto normalized_cycle_count = total_cycle_count / iteration_number;
-  auto instruction_per_cycle =
-      static_cast<double>(normalized_instruction_count) /
-      normalized_cycle_count;
+  auto avg_instr_cnt = total_instr_cnt / to_f64(num_iters);
+  auto avg_cycle_cnt = total_cycle_cnt / to_f64(num_iters);
+  auto instruction_per_cycle = avg_instr_cnt / avg_cycle_cnt;
 
   print_probe_output(PREFIX_INSTRUCTION + prefix, filename, line_number,
-                     function_name, normalized_instruction_count,
-                     UNIT_INSTRUCTION);
+                     function_name, avg_instr_cnt, UNIT_INSTRUCTION);
   print_probe_output(PREFIX_CYCLES + prefix, filename, line_number,
-                     function_name, normalized_cycle_count, UNIT_CYCLES);
+                     function_name, avg_cycle_cnt, UNIT_CYCLES);
   print_probe_output(PREFIX_IPC + prefix, filename, line_number, function_name,
                      instruction_per_cycle, UNIT_IPC);
 }

@@ -16,7 +16,7 @@ typedef enum {
 
 typedef struct {
   ipc_put_mem_access_test_t test_type;
-  int size;
+  uint32_t size;
   ze_ipc_memory_flags_t flags;
   bool is_immediate;
 } shared_data_t;

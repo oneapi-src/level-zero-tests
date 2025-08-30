@@ -1041,7 +1041,7 @@ LZT_TEST_P(
 
     // device (i - 1) will modify memory allocated for device i
     lzt::create_and_execute_function(
-        dev_instance_[i - 1].dev, module, func_name, 1,
+        dev_instance_[i - 1].dev, module, func_name, 1U,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         is_immediate_);
@@ -1116,7 +1116,7 @@ LZT_TEST_P(
 
       // device (i - 1) will modify memory allocated for device i
       lzt::create_and_execute_function(
-          dev_instance_[i].sub_devices[j - 1].dev, module, func_name, 1,
+          dev_instance_[i].sub_devices[j - 1].dev, module, func_name, 1U,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
@@ -1199,7 +1199,7 @@ LZT_TEST_P(
 
     // device (i - 1) will modify memory allocated for device i
     lzt::create_and_execute_function(dev_instance_[i - 1].dev, module,
-                                     func_name, 1, args, is_immediate_);
+                                     func_name, 1U, args, is_immediate_);
 
     // copy memory to shared region and verify it is correct
     lzt::append_memory_copy(
@@ -1282,7 +1282,7 @@ LZT_TEST_P(
 
       // device (i - 1) will modify memory allocated for device i
       lzt::create_and_execute_function(dev_instance_[i].sub_devices[j - 1].dev,
-                                       module, func_name, 1, args,
+                                       module, func_name, 1U, args,
                                        is_immediate_);
 
       // copy memory to shared region and verify it is correct

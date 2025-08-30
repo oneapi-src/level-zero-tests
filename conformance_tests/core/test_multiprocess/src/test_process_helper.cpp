@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
   }
 
   LOG_INFO << "child";
-  int proc_number = std::stoi(argv[1]);
+  uint32_t proc_number = static_cast<uint32_t>(std::stoi(argv[1]));
   bool is_immediate = std::stoi(argv[2]) == 0 ? false : true;
   bool is_stress_test = std::stoi(argv[3]) == 0 ? false : true;
 
@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
   if (is_stress_test) {
     devices = lzt::get_ze_sub_devices(device_0);
   }
-  int deviceIndex = proc_number % devices.size();
+  size_t deviceIndex = proc_number % devices.size();
   auto device = devices[deviceIndex];
   auto device_properties = lzt::get_device_properties(device);
   auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);

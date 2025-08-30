@@ -22,12 +22,12 @@ void launch_function_no_parameter(ZeApp *benchmark,
   /* Warm up */
   for (int i = 0; i < probe_setting.warm_up_iteration; i++) {
     zeCommandListAppendLaunchKernel(command_list, function, &group_count,
-                                    nullptr, 0, nullptr);
+                                    nullptr, 0U, nullptr);
   }
 
   NANO_PROBE(" Function with no parameters\t", probe_setting,
              zeCommandListAppendLaunchKernel, command_list, function,
-             &group_count, nullptr, 0, nullptr);
+             &group_count, nullptr, 0U, nullptr);
 
   benchmark->functionDestroy(function);
   benchmark->commandListDestroy(command_list);
@@ -49,7 +49,7 @@ void command_list_empty_execute(ZeApp *benchmark,
   }
 
   NANO_PROBE(" Empty command list\t", probe_setting,
-             zeCommandQueueExecuteCommandLists, command_queue, 1, &command_list,
+             zeCommandQueueExecuteCommandLists, command_queue, 1U, &command_list,
              nullptr);
 
   benchmark->commandListDestroy(command_list);
