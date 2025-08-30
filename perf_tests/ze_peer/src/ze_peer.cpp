@@ -109,9 +109,9 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
           peer.number_iterations = 1;
         }
 
-        peer.bandwidth_latency_ipc(
-            test_type, transfer_type, false /* is_server */, sv[1],
-            num_elems, local_device_id, remote_device_id);
+        peer.bandwidth_latency_ipc(test_type, transfer_type,
+                                   false /* is_server */, sv[1], num_elems,
+                                   local_device_id, remote_device_id);
       } else {
         ZePeer peer(remote_device_ids, local_device_ids, pair_device_ids,
                     queues);
@@ -120,9 +120,9 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
           peer.number_iterations = 1;
         }
 
-        peer.bandwidth_latency_ipc(
-            test_type, transfer_type, true /* is_server */, sv[0],
-            num_elems, remote_device_id, local_device_id);
+        peer.bandwidth_latency_ipc(test_type, transfer_type,
+                                   true /* is_server */, sv[0], num_elems,
+                                   remote_device_id, local_device_id);
       }
     } else {
       int child_status;
@@ -174,9 +174,8 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
         ZePeer::parallel_copy_to_single_target == false) {
       if (ZePeer::bidirectional) {
         peer.bidirectional_bandwidth_latency(
-            test_type, transfer_type, num_elems,
-            remote_device_ids.front(), local_device_ids.front(),
-            queues.front());
+            test_type, transfer_type, num_elems, remote_device_ids.front(),
+            local_device_ids.front(), queues.front());
       } else {
         peer.bandwidth_latency(test_type, transfer_type, num_elems,
                                remote_device_ids.front(),
@@ -225,8 +224,8 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
           return;
         }
         peer.bandwidth_latency_parallel_to_single_target(
-            test_type, transfer_type, num_elems,
-            remote_device_ids.front(), local_device_ids.front());
+            test_type, transfer_type, num_elems, remote_device_ids.front(),
+            local_device_ids.front());
       }
     }
     if (size_to_run != -1) {
@@ -440,8 +439,7 @@ int main(int argc, char **argv) {
       i++;
     } else if (strcmp(argv[i], "-z") == 0) {
       if (isdigit(argv[i + 1][0])) {
-        size_to_run = std::min(atoi(argv[i + 1]),
-                               static_cast<int>(max_elems));
+        size_to_run = std::min(atoi(argv[i + 1]), static_cast<int>(max_elems));
       } else {
         std::cout << usage_str;
         exit(-1);

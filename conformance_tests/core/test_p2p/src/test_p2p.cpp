@@ -905,6 +905,7 @@ LZT_TEST_P(
     DevInstance *ptr_dev_src;
     DevInstance *ptr_dev_dst;
     for (size_t i = 1; i < dev_instance_.size(); i++) {
+      auto &sub_devices_j = dev_instance_[i].sub_devices;
 
       for (uint32_t d = 0; d < 2; d++) {
         size_t src_offset, dst_offset;
@@ -917,18 +918,19 @@ LZT_TEST_P(
           dst_offset = offset_;
         }
 
-        for (size_t j = 0U; j < dev_instance_[i].sub_devices.size(); j++) {
-          for (size_t k = 0U; k < dev_instance_[i-1].sub_devices.size(); k++) {
+        for (size_t j = 0U; j < sub_devices_j.size(); j++) {
+          auto &sub_devices_k = dev_instance_[i - 1].sub_devices;
 
-            if (lzt::can_access_peer(dev_instance_[i].sub_devices[j].dev,
-                                     dev_instance_[i-1].sub_devices[k].dev)) {
-              ptr_dev_src = &dev_instance_[i].sub_devices[j];
-              ptr_dev_dst = &dev_instance_[i-1].sub_devices[k];
-            } else if (lzt::can_access_peer(
-                           dev_instance_[i-1].sub_devices[k].dev,
-                           dev_instance_[i].sub_devices[j].dev)) {
-              ptr_dev_src = &dev_instance_[i-1].sub_devices[k];
-              ptr_dev_dst = &dev_instance_[i].sub_devices[j];
+          for (size_t k = 0U; k < sub_devices_k.size(); k++) {
+
+            if (lzt::can_access_peer(sub_devices_j[j].dev,
+                                     sub_devices_k[k].dev)) {
+              ptr_dev_src = &sub_devices_j[j];
+              ptr_dev_dst = &sub_devices_k[k];
+            } else if (lzt::can_access_peer(sub_devices_k[k].dev,
+                                            sub_devices_j[j].dev)) {
+              ptr_dev_src = &sub_devices_k[k];
+              ptr_dev_dst = &sub_devices_j[j];
             } else {
               continue;
             }
