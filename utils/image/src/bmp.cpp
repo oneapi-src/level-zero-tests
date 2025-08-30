@@ -54,6 +54,10 @@ struct BMPRGBQUAD_t {
 
 const uint32_t BI_RGB = 0;
 
+template <typename T> inline constexpr int32_t to_s32(T val) {
+  return static_cast<int32_t>(val);
+}
+
 template <typename T> inline constexpr uint32_t to_u32(T val) {
   return static_cast<uint32_t>(val);
 }
@@ -86,7 +90,7 @@ bool BmpUtils::save_image_as_bmp(uint32_t *ptr, uint32_t width, uint32_t height,
 
   info_header.bi_size_ = sizeof(BMPInfoHeader);
   info_header.bi_width_ = width;
-  info_header.bi_height_ = static_cast<sint32_t>(height);
+  info_header.bi_height_ = to_s32(height);
   info_header.bi_planes_ = 1;
   info_header.bi_bit_count_ = 32;
   info_header.bi_compression_ = BI_RGB;

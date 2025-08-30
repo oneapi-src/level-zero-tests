@@ -351,7 +351,7 @@ endif()
 if (MSVC)
     add_compile_options(/W4)
 else()
-    add_compile_options(-Wsign-compare -Wnarrowing)
+    add_compile_options(-Wsign-compare -Wnarrowing -Wsign-conversion -Wfloat-conversion -Wconversion)
 endif()
 
 option(ENABLE_ZESYSMAN
