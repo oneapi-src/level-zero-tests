@@ -30,7 +30,8 @@ struct BMPFileHeader {
 struct BMPInfoHeader {
   uint32_t bi_size_;      // length of info header
   uint32_t bi_width_;     // width of bitmap in pixels
-  uint32_t bi_height_;    // height of bitmap in pixels
+  sint32_t bi_height_;    // height of bitmap in pixels (negative height means a
+                          // top-down bitmap)
   uint16_t bi_planes_;    // number of color planes - must be 1
   uint16_t bi_bit_count_; // bit depth
   uint32_t bi_compression_;
@@ -52,6 +53,10 @@ struct BMPRGBQUAD_t {
 #pragma pack(pop)
 
 const uint32_t BI_RGB = 0;
+
+template <typename T> inline constexpr uint32_t to_u32(T val) {
+  return static_cast<uint32_t>(val);
+}
 
 bool BmpUtils::save_image_as_bmp(uint32_t *ptr, uint32_t width, uint32_t height,
                                  const char *file_name) {
@@ -81,7 +86,7 @@ bool BmpUtils::save_image_as_bmp(uint32_t *ptr, uint32_t width, uint32_t height,
 
   info_header.bi_size_ = sizeof(BMPInfoHeader);
   info_header.bi_width_ = width;
-  info_header.bi_height_ = height;
+  info_header.bi_height_ = static_cast<sint32_t>(height);
   info_header.bi_planes_ = 1;
   info_header.bi_bit_count_ = 32;
   info_header.bi_compression_ = BI_RGB;
@@ -224,8 +229,8 @@ bool BmpUtils::load_bmp_image(uint8_t *&data, uint32_t &width, uint32_t &height,
   }
 
   width = info_header.bi_width_;
-  height = info_header.bi_height_ > 0 ? info_header.bi_height_
-                                      : -info_header.bi_height_;
+  height = to_u32(info_header.bi_height_ > 0 ? info_header.bi_height_
+                                             : -info_header.bi_height_);
   bits_per_pixel = info_header.bi_bit_count_;
   pitch = info_header.bi_width_ * ((info_header.bi_bit_count_ + 7) / 8);
 
@@ -242,13 +247,12 @@ bool BmpUtils::load_bmp_image(uint8_t *&data, uint32_t &width, uint32_t &height,
   if (info_header.bi_height_ > 0) {
     for (uint32_t h = 0; h < height; h++) {
       uint8_t *dst = data + (height - h - 1) * pitch;
-      if (pitch != static_cast<uint32_t>(fread(dst, 1, pitch, stream))) {
+      if (pitch != to_u32(fread(dst, 1, pitch, stream))) {
         goto error_exit;
       }
     }
   } else {
-    if (height * pitch !=
-        static_cast<uint32_t>(fread(data, 1, height * pitch, stream))) {
+    if (height * pitch != to_u32(fread(data, 1, height * pitch, stream))) {
       goto error_exit;
     }
   }
