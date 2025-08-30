@@ -20,6 +20,8 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 
+using lzt::to_u16;
+
 void print_device(const ze_device_handle_t &device) {
   std::cout << "\n==========================================================="
                "=====================\n\n"
@@ -576,7 +578,7 @@ bool find_multi_event_stopped_threads(
 
   uint8_t attempts = 0;
   uint16_t numEventsReceived = 0;
-  uint16_t numEventsExpected = threadsToCheck.size();
+  uint16_t numEventsExpected = to_u16(threadsToCheck.size());
 
   zet_debug_event_t debugEvent = {};
   stoppedThreadsFound.clear();

@@ -15,6 +15,8 @@ namespace lzt = level_zero_tests;
 #include <ctime>
 #include <thread>
 
+using lzt::to_u32;
+
 ze_kernel_handle_t get_matrix_multiplication_kernel(
     ze_device_handle_t device, ze_group_count_t *tg, void **a_buffer,
     void **b_buffer, void **c_buffer, int dimensions = 1024) {
@@ -78,7 +80,7 @@ void metric_validate_stall_sampling_data(
   uint32_t instrFetchStallOffset = UINT32_MAX;
   uint32_t otherStallOffset = UINT32_MAX;
 
-  for (size_t i = 0; i < metricProperties.size(); i++) {
+  for (uint32_t i = 0; i < to_u32(metricProperties.size()); i++) {
 
     if (strcmp("Active", metricProperties[i].name) == 0) {
       activeOffset = i;
@@ -118,15 +120,15 @@ void metric_validate_stall_sampling_data(
     }
   }
 
-  uint32_t ActiveCount = 0;
-  uint32_t ControlStallCount = 0;
-  uint32_t PipeStallCount = 0;
-  uint32_t SendStallCount = 0;
-  uint32_t DistStallCount = 0;
-  uint32_t SbidStallCount = 0;
-  uint32_t SyncStallCount = 0;
-  uint32_t InstrFetchStallCount = 0;
-  uint32_t OtherStallCount = 0;
+  uint64_t ActiveCount = 0;
+  uint64_t ControlStallCount = 0;
+  uint64_t PipeStallCount = 0;
+  uint64_t SendStallCount = 0;
+  uint64_t DistStallCount = 0;
+  uint64_t SbidStallCount = 0;
+  uint64_t SyncStallCount = 0;
+  uint64_t InstrFetchStallCount = 0;
+  uint64_t OtherStallCount = 0;
 
   uint32_t metricSetStartIndex = 0;
 
@@ -137,7 +139,7 @@ void metric_validate_stall_sampling_data(
     const uint32_t metricCountForDataIndex =
         metricValueSets[metricValueSetIndex];
     const uint32_t reportCount =
-        metricCountForDataIndex / metricProperties.size();
+        to_u32(metricCountForDataIndex / metricProperties.size());
 
     LOG_INFO << "for metricValueSetIndex " << metricValueSetIndex
              << " metricCountForDataIndex " << metricCountForDataIndex
@@ -145,7 +147,7 @@ void metric_validate_stall_sampling_data(
 
     EXPECT_GT(reportCount, 1);
 
-    uint32_t tmpStallCount;
+    uint64_t tmpStallCount;
     bool reportCompleteFlag;
 
     for (uint32_t report = 0; report < reportCount; report++) {
@@ -164,49 +166,50 @@ void metric_validate_stall_sampling_data(
         uint64_t metricValue = metricTypedValue.value.ui64;
         return metricValue;
       };
+      uint32_t metricPropsSize = to_u32(metricProperties.size());
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    activeOffset, metricSetStartIndex);
+      tmpStallCount = getStallCount(report, metricPropsSize, activeOffset,
+                                    metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       ActiveCount += tmpStallCount;
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    controlStallOffset, metricSetStartIndex);
+      tmpStallCount = getStallCount(report, metricPropsSize, controlStallOffset,
+                                    metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       ControlStallCount += tmpStallCount;
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    pipeStallOffset, metricSetStartIndex);
+      tmpStallCount = getStallCount(report, metricPropsSize, pipeStallOffset,
+                                    metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       PipeStallCount += tmpStallCount;
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    sendStallOffset, metricSetStartIndex);
+      tmpStallCount = getStallCount(report, metricPropsSize, sendStallOffset,
+                                    metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       SendStallCount += tmpStallCount;
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    distStallOffset, metricSetStartIndex);
+      tmpStallCount = getStallCount(report, metricPropsSize, distStallOffset,
+                                    metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       DistStallCount += tmpStallCount;
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    sbidStallOffset, metricSetStartIndex);
+      tmpStallCount = getStallCount(report, metricPropsSize, sbidStallOffset,
+                                    metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       SbidStallCount += tmpStallCount;
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    syncStallOffset, metricSetStartIndex);
+      tmpStallCount = getStallCount(report, metricPropsSize, syncStallOffset,
+                                    metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       SyncStallCount += tmpStallCount;
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
+      tmpStallCount = getStallCount(report, metricPropsSize,
                                     instrFetchStallOffset, metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       InstrFetchStallCount += tmpStallCount;
 
-      tmpStallCount = getStallCount(report, metricProperties.size(),
-                                    otherStallOffset, metricSetStartIndex);
+      tmpStallCount = getStallCount(report, metricPropsSize, otherStallOffset,
+                                    metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
       OtherStallCount += tmpStallCount;
 

@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 

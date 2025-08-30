@@ -144,7 +144,8 @@ ze_context_handle_t create_context_ex(ze_driver_handle_t driver,
                                       std::vector<ze_device_handle_t> devices) {
   ze_context_handle_t context;
   ze_context_desc_t ctxtDesc = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
-  EXPECT_ZE_RESULT_SUCCESS(zeContextCreateEx(driver, &ctxtDesc, devices.size(),
+  EXPECT_ZE_RESULT_SUCCESS(zeContextCreateEx(driver, &ctxtDesc,
+                                             to_u32(devices.size()),
                                              devices.data(), &context));
   return context;
 }

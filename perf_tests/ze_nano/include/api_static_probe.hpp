@@ -159,7 +159,7 @@ void _function_call_rate_iter(const std::string filename, const int line_number,
   int function_call_counter = 0;
 
   /* Determine number of function calls per 500 milliseconds */
-  while (timer.has_it_been(period) == false) {
+  while (timer.has_it_been(static_cast<long long>(period)) == false) {
     api_function(args...);
     function_call_counter++;
   }

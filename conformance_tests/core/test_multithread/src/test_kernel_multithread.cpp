@@ -18,6 +18,8 @@
 
 namespace {
 
+using lzt::to_u32;
+
 const int num_threads = 16;
 const int num_iterations = 2000;
 const uint32_t pattern_memory_count = 64;
@@ -167,7 +169,7 @@ void run_functions(lzt::zeCommandBundle &cmd_bundle, bool is_immediate,
   // If groupSize is greater than memory count, then at least one thread group
   // should be dispatched
   uint32_t threadGroup = pattern_memory_count / groupSize > 1
-                             ? pattern_memory_count / groupSize
+                             ? to_u32(pattern_memory_count / groupSize)
                              : 1;
   LOG_DEBUG << "thread group dimension is ::" << threadGroup;
   ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};

@@ -34,6 +34,9 @@ namespace bi = boost::interprocess;
 
 namespace {
 
+using lzt::to_u32;
+using lzt::to_dbl;
+
 static constexpr uint32_t nanoSecToSeconds = 1000000000;
 std::atomic<bool> workloadThreadFlag(false);
 
@@ -327,7 +330,8 @@ LZT_TEST_F(
   }
 
   LOG_DEBUG << "Activating all metrics groups selected for test";
-  lzt::activate_metric_groups(device, test_handles.size(), test_handles.data());
+  lzt::activate_metric_groups(device, to_u32(test_handles.size()),
+                              test_handles.data());
 
   std::vector<zet_metric_group_handle_t> activeGroupHandleList;
   zet_metric_streamer_handle_t streamer;
@@ -1427,8 +1431,7 @@ LZT_TEST_F(
                          nullptr);
 
       double minimumTimeBeforeEventIsExpected =
-          notifyEveryNReports *
-          (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
+          notifyEveryNReports * (to_dbl(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
       double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
@@ -1450,7 +1453,7 @@ LZT_TEST_F(
 
       // Sleep again for the error buffer time to ensure corner cases are
       // avoided.
-      uint32_t sleep = std::ceil(2 * errorBuffer);
+      uint32_t sleep = to_u32(std::ceil(2 * errorBuffer));
       LOG_DEBUG << "additional sleep before expecting event to be ready "
                 << sleep;
       std::this_thread::sleep_for(std::chrono::seconds(sleep));
@@ -1539,8 +1542,7 @@ LZT_TEST_F(
                          nullptr);
 
       double minimumTimeBeforeEventIsExpected =
-          notifyEveryNReports *
-          (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
+          notifyEveryNReports * (to_dbl(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
       double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
@@ -1550,8 +1552,9 @@ LZT_TEST_F(
       // Sleep until event is generated.
       auto currentTime = std::chrono::system_clock::now();
       std::chrono::duration<double> elapsedSeconds = currentTime - startTime;
-      int32_t timeLeft = std::ceil(minimumTimeBeforeEventIsExpected +
-                                   errorBuffer - elapsedSeconds.count());
+      int32_t timeLeft =
+          to_u32(std::ceil(minimumTimeBeforeEventIsExpected +
+                                         errorBuffer - elapsedSeconds.count()));
       if (timeLeft > 0) {
         LOG_DEBUG << "additional sleep before expecting event to be ready "
                   << timeLeft;
@@ -1591,9 +1594,9 @@ LZT_TEST_F(
 LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
-  metric_run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
-                                         samplingPeriod,
-                                         TimeForNReportsComplete);
+  metric_run_ip_sampling_with_validation(
+      false, devices, notifyEveryNReports, samplingPeriod,
+      to_u32(TimeForNReportsComplete));
 }
 
 LZT_TEST_F(

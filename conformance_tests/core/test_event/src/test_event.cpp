@@ -18,6 +18,8 @@
 
 namespace {
 
+using lzt::to_u32;
+
 class zeDeviceCreateEventPoolTests : public lzt::zeEventPoolTests {};
 
 LZT_TEST_F(
@@ -199,7 +201,7 @@ protected:
   void SetUp() override {
     ep_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
     ep_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-    ep_desc.count = num_events;
+    ep_desc.count = to_u32(num_events);
     mode = std::get<0>(GetParam());
     use_immediate = std::get<1>(GetParam());
 
@@ -462,7 +464,7 @@ class zeEventSignalingTests : public lzt::zeEventPoolTests {};
 LZT_TEST_F(
     zeEventSignalingTests,
     GivenOneEventSignaledbyHostWhenQueryStatusThenVerifyOnlyOneEventDetected) {
-  size_t num_event = 10;
+  uint32_t num_event = 10;
   std::vector<ze_event_handle_t> host_event(num_event, nullptr);
 
   ep.InitEventPool(num_event);
@@ -582,14 +584,15 @@ void RunGivenCommandListWaitsForEventsWhenHostAndCommandListSendsSignalsTest(
                           nullptr);
   lzt::append_signal_event(cmd_bundle.list, device_event[1]);
   lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  lzt::append_wait_on_events(cmd_bundle.list, num_event, device_event.data());
+  lzt::append_wait_on_events(cmd_bundle.list, to_u32(num_event),
+                             device_event.data());
   lzt::append_memory_copy(cmd_bundle.list, dst_buff, dev_buff, copy_size,
                           nullptr);
   lzt::close_command_list(cmd_bundle.list);
   if (!is_immediate) {
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
-  for (uint32_t i = 2; i < num_event; i++) {
+  for (size_t i = 2; i < num_event; i++) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(device_event[i]));
   }
   if (is_immediate) {
@@ -598,7 +601,7 @@ void RunGivenCommandListWaitsForEventsWhenHostAndCommandListSendsSignalsTest(
     lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
   }
 
-  for (uint32_t i = 0; i < num_event; i++) {
+  for (size_t i = 0; i < num_event; i++) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(device_event[i]));
   }
 
@@ -658,7 +661,8 @@ void RunGivenEventsSignaledWhenResetTest(zeEventSignalingTests &test,
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(device_event[j]));
     }
     lzt::append_signal_event(cmd_bundle.list, device_event[i]);
-    lzt::append_wait_on_events(cmd_bundle.list, num_event, device_event.data());
+    lzt::append_wait_on_events(cmd_bundle.list, to_u32(num_event),
+                               device_event.data());
     lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_char),
                             static_cast<void *>(src_char), loop_data_size,
                             nullptr);

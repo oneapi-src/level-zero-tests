@@ -95,7 +95,7 @@ inline void init_process(ze_context_handle_t &context,
   auto devices = lzt::get_devices(driver);
 
   if (devices.size() > 1) {
-    if (check_p2p_capabilities(devices) == true) {
+    if (check_p2p_capabilities(devices)) {
       if (is_server) {
         device = devices[device_x];
       } else {

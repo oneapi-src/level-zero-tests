@@ -82,7 +82,7 @@ LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedMemoryWhenMakingMemoryResidentUsingAPIThenMemoryIsMadeResidentAndUpdatedCorrectly) {
 
-  const size_t size = 5;
+  const uint32_t size = 5;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
 
@@ -112,7 +112,7 @@ LZT_TEST_F(
         sizeof(node), 1, device_flags, host_flags, device, context));
     data->value = 0;
     node *temp = data;
-    for (size_t i = 0U; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       temp->next = static_cast<node *>(lzt::allocate_shared_memory(
           sizeof(node), 1, device_flags, host_flags, device, context));
       temp = temp->next;
@@ -125,14 +125,14 @@ LZT_TEST_F(
     group_count.groupCountZ = 1;
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
-    lzt::set_argument_value(kernel, 1, sizeof(size_t), &size);
+    lzt::set_argument_value(kernel, 1, sizeof(uint32_t), &size);
     lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
                                 nullptr);
     lzt::close_command_list(command_list);
 
     temp = data->next;
     node *temp2;
-    for (size_t i = 0U; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       temp2 = temp->next;
       lzt::make_memory_resident(device, temp, sizeof(node));
       temp = temp2;
@@ -142,7 +142,7 @@ LZT_TEST_F(
     lzt::synchronize(command_queue, UINT64_MAX);
 
     temp = data->next;
-    for (size_t i = 0U; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       lzt::evict_memory(device, temp, sizeof(node));
       temp = temp->next;
     }
@@ -150,7 +150,7 @@ LZT_TEST_F(
     // cleanup
     temp = data;
     // total of size elements linked *after* initial element
-    for (size_t i = 0U; i < size + 1; i++) {
+    for (uint32_t i = 0U; i < size + 1; i++) {
       // the kernel increments each node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 
@@ -170,7 +170,7 @@ LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedSystemMemoryWhenMakingMemoryResidentUsingAPIThenMemoryIsMadeResidentAndUpdatedCorrectly) {
 
-  const size_t size = 5;
+  const uint32_t size = 5;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
 
@@ -203,7 +203,7 @@ LZT_TEST_F(
     data->value = 0;
     node *temp = data;
 
-    for (size_t i = 0U; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       temp->next = new node;
 
       temp = temp->next;
@@ -216,14 +216,14 @@ LZT_TEST_F(
     group_count.groupCountZ = 1;
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
-    lzt::set_argument_value(kernel, 1, sizeof(size_t), &size);
+    lzt::set_argument_value(kernel, 1, sizeof(uint32_t), &size);
     lzt::append_launch_function(command_list, kernel, &group_count, nullptr, 0,
                                 nullptr);
     lzt::close_command_list(command_list);
 
     temp = data->next;
     node *temp2;
-    for (size_t i = 0U; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       temp2 = temp->next;
       lzt::make_memory_resident(device, temp, sizeof(node));
       temp = temp2;
@@ -232,7 +232,7 @@ LZT_TEST_F(
     lzt::synchronize(command_queue, UINT64_MAX);
 
     temp = data->next;
-    for (size_t i = 0U; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       lzt::evict_memory(device, temp, sizeof(node));
       temp = temp->next;
     }
@@ -240,7 +240,7 @@ LZT_TEST_F(
     // cleanup
     temp = data;
     // total of size elements linked *after* initial element
-    for (size_t i = 0U; i < size + 1; i++) {
+    for (uint32_t i = 0U; i < size + 1; i++) {
       // kernel should increment node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 
@@ -258,7 +258,7 @@ LZT_TEST_F(
 
 void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     bool is_immediate) {
-  const size_t size = 5;
+  const uint32_t size = 5;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
 
@@ -288,7 +288,7 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
         sizeof(node), 1, device_flags, host_flags, device, context));
     data->value = 0;
     node *temp = data;
-    for (size_t i = 0U; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       temp->next = static_cast<node *>(lzt::allocate_shared_memory(
           sizeof(node), 1, device_flags, host_flags, device, context));
       temp = temp->next;
@@ -304,7 +304,7 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
                                     ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED);
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
-    lzt::set_argument_value(kernel, 1, sizeof(size_t), &size);
+    lzt::set_argument_value(kernel, 1, sizeof(uint32_t), &size);
     lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
                                 0, nullptr);
     lzt::close_command_list(cmd_bundle.list);
@@ -313,7 +313,7 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     // cleanup
     temp = data;
     node *temp2;
-    for (size_t i = 0U; i < size + 1; i++) {
+    for (uint32_t i = 0U; i < size + 1; i++) {
       // kernel should increment each node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 
@@ -342,7 +342,7 @@ LZT_TEST_F(
 
 void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     bool is_immediate) {
-  const size_t size = 5;
+  const uint32_t size = 5;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
 
@@ -376,7 +376,7 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     node *data = new node;
     data->value = 0;
     node *temp = data;
-    for (size_t i = 0U; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       temp->next = new node;
 
       temp = temp->next;
@@ -389,7 +389,7 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     group_count.groupCountZ = 1;
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
-    lzt::set_argument_value(kernel, 1, sizeof(size_t), &size);
+    lzt::set_argument_value(kernel, 1, sizeof(uint32_t), &size);
     lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
                                 0, nullptr);
     lzt::close_command_list(cmd_bundle.list);
@@ -399,7 +399,7 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     temp = data;
     node *temp2;
     // total of size elements linked *after* initial element
-    for (size_t i = 0U; i < size + 1; i++) {
+    for (uint32_t i = 0U; i < size + 1; i++) {
       // kernel should increment node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 

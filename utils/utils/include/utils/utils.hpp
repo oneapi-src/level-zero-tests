@@ -21,6 +21,34 @@
 
 namespace level_zero_tests {
 
+template <typename T> inline constexpr uint8_t to_u8(T val) {
+  return static_cast<uint8_t>(val);
+}
+
+template <typename T> inline constexpr int16_t to_s16(T val) {
+  return static_cast<int16_t>(val);
+}
+template <typename T> inline constexpr uint16_t to_u16(T val) {
+  return static_cast<uint16_t>(val);
+}
+
+template <typename T> inline constexpr int to_int(T val) {
+  return static_cast<int>(val);
+}
+template <typename T> inline constexpr int32_t to_s32(T val) {
+  return static_cast<int32_t>(val);
+}
+template <typename T> inline constexpr uint32_t to_u32(T val) {
+  return static_cast<uint32_t>(val);
+}
+
+template <typename T> inline constexpr float to_flt(T val) {
+  return static_cast<float>(val);
+}
+template <typename T> inline constexpr double to_dbl(T val) {
+  return static_cast<double>(val);
+}
+
 zes_driver_handle_t get_default_zes_driver();
 
 ze_context_handle_t get_default_context();
@@ -56,6 +84,9 @@ std::vector<uint8_t> load_binary_file(const std::string &file_path);
 void save_binary_file(const std::vector<uint8_t> &data,
                       const std::string &file_path);
 uint32_t nextPowerOfTwo(uint32_t value);
+inline uint32_t nextPowerOfTwo(uint64_t value) {
+  return nextPowerOfTwo(to_u32(value));
+}
 
 template <typename T> int size_in_bytes(const std::vector<T> &v) {
   return static_cast<int>(sizeof(T) * v.size());

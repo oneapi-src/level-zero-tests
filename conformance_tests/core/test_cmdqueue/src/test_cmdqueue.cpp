@@ -20,6 +20,10 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u8;
+using lzt::to_int;
+using lzt::to_u32;
+
 void print_cmdqueue_descriptor(const ze_command_queue_desc_t descriptor) {
   LOG_INFO << "VERSION = " << descriptor.stype
            << "   FLAG = " << descriptor.flags
@@ -60,7 +64,7 @@ LZT_TEST_P(zeCommandQueueCreateTests,
   auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
 
   for (size_t i = 0U; i < cmd_q_group_properties.size(); i++) {
-    descriptor.ordinal = i;
+    descriptor.ordinal = to_u32(i);
     print_cmdqueue_descriptor(descriptor);
 
     ze_command_queue_handle_t command_queue = nullptr;
@@ -119,7 +123,7 @@ protected:
     const ze_context_handle_t context = lzt::get_default_context();
     EXPECT_GT(params.num_command_lists, 0);
 
-    print_cmdqueue_exec(params.num_command_lists, params.sync_timeout);
+    print_cmdqueue_exec(params.num_command_lists, to_u32(params.sync_timeout));
 
     for (uint32_t i = 0; i < params.num_command_lists; i++) {
       void *host_shared = nullptr;
@@ -242,7 +246,7 @@ protected:
     const ze_context_handle_t context = lzt::get_default_context();
     EXPECT_GT(params.num_command_lists, 0);
 
-    print_cmdqueue_exec(params.num_command_lists, params.sync_timeout);
+    print_cmdqueue_exec(params.num_command_lists, to_u32(params.sync_timeout));
 
     ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
     auto ordinal = lzt::get_compute_queue_group_ordinals(device)[0];
@@ -740,7 +744,7 @@ public:
         if (cmdq_group_properties[i].numQueues == 0)
           continue;
 
-        copy_ordinal = i;
+        copy_ordinal = to_int(i);
         break;
       }
     }
@@ -974,7 +978,7 @@ LZT_TEST(ConcurrentCommandQueueExecutionTests,
     memset(queue.src_buff, 0, buff_size);
     queue.dst_buff = lzt::allocate_host_memory(buff_size, 1, context);
     memset(queue.dst_buff, 0, buff_size);
-    queue.data = i;
+    queue.data = to_u8(i);
     queues.push_back(queue);
 
     index++;

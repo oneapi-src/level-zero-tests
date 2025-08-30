@@ -18,7 +18,7 @@ namespace lzt = level_zero_tests;
 
 uint16_t get_device_count(ze_device_handle_t device) {
   if (lzt::get_ze_sub_device_count(device)) {
-    int sum = 1; // 1 for this device
+    uint16_t sum = 1; // 1 for this device
     for (auto &subdevice : lzt::get_ze_sub_devices(device)) {
       sum += get_device_count(subdevice);
     }
@@ -30,7 +30,7 @@ uint16_t get_device_count(ze_device_handle_t device) {
 
 uint16_t get_leaf_device_count(ze_device_handle_t device) {
   if (lzt::get_ze_sub_device_count(device)) {
-    int sum = 0;
+    uint16_t sum = 0;
     for (auto &subdevice : lzt::get_ze_sub_devices(device)) {
       sum += get_leaf_device_count(subdevice);
     }

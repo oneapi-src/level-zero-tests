@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 #include "stress_common_func.hpp"
@@ -21,10 +20,12 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class zeDriverMemoryAllocationStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<float, float, uint32_t, ze_memory_type_t>> {
+          std::tuple<double, double, uint32_t, ze_memory_type_t>> {
 protected:
   typedef uint32_t kernel_copy_unit_t;
   const size_t kernel_copy_unit_size = sizeof(kernel_copy_unit_t);
@@ -69,7 +70,8 @@ protected:
       lzt::set_argument_value(kernel_handle, 1, sizeof(dst_allocation),
                               &dst_allocation);
 
-      uint32_t group_count_x = one_case_allocation_count / workgroup_size_x_;
+      uint32_t group_count_x =
+          to_u32(one_case_allocation_count / workgroup_size_x_);
       ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
 
       lzt::append_memory_fill(
@@ -144,7 +146,7 @@ LZT_TEST_P(
 
   const uint32_t used_vectors_in_test =
       test_arguments.memory_type == ZE_MEMORY_TYPE_DEVICE ? 4 : 3;
-  uint32_t number_of_dispatches = test_arguments.multiplier;
+  uint32_t number_of_dispatches = to_u32(test_arguments.multiplier);
   uint64_t number_of_all_allocations =
       used_vectors_in_test * number_of_dispatches;
   uint64_t test_single_allocation_memory_size = 0;
@@ -162,8 +164,7 @@ LZT_TEST_P(
     LOG_INFO << "Need to limit dispatches from : " << number_of_dispatches
              << " to: " << number_of_all_allocations / used_vectors_in_test;
     number_of_dispatches =
-        number_of_all_allocations /
-        used_vectors_in_test; // bacause number_of_all_allocations can change;
+        to_u32(number_of_all_allocations / used_vectors_in_test); // bacause number_of_all_allocations can change;
   }
 
   if (test_single_allocation_memory_size < kernel_copy_unit_size) {

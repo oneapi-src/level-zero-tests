@@ -169,7 +169,7 @@ LZT_TEST_P(
 
   auto cmdq_properties = lzt::get_command_queue_group_properties(device);
 
-  size_t num_cmdq = 0;
+  uint32_t num_cmdq = 0;
   std::vector<uint32_t> num_queues_per_group;
   for (auto properties : cmdq_properties) {
     num_queues_per_group.push_back(properties.numQueues);
@@ -194,7 +194,7 @@ LZT_TEST_P(
 
   uint32_t group_ordinal = 0;
   uint32_t queue_index = 0;
-  for (size_t i = 0; i < num_cmdq; i++) {
+  for (uint32_t i = 0; i < num_cmdq; i++) {
     if (queue_index >= num_queues_per_group[group_ordinal]) {
       group_ordinal++;
       queue_index = 0;
@@ -220,18 +220,18 @@ LZT_TEST_P(
   }
 
   // attempt to execute command queues simutanesously
-  for (size_t i = 0; i < num_cmdq; i++) {
+  for (uint32_t i = 0; i < num_cmdq; i++) {
     lzt::execute_command_lists(cmdq[i], 1, &cmdlist[i], fence[i]);
   }
 
   if (use_event) {
-    for (size_t i = 0; i < num_cmdq; i++) {
+    for (uint32_t i = 0; i < num_cmdq; i++) {
       EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceQueryStatus(fence[i]));
       EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(host_to_dev_event[i]));
     }
   }
 
-  for (size_t i = 0; i < num_cmdq; i++) {
+  for (uint32_t i = 0; i < num_cmdq; i++) {
     lzt::sync_fence(fence[i], UINT64_MAX);
     EXPECT_ZE_RESULT_SUCCESS(zeFenceQueryStatus(fence[i]));
     for (size_t j = 0; j < size; j++) {
@@ -239,7 +239,7 @@ LZT_TEST_P(
     }
   }
 
-  for (size_t i = 0; i < num_cmdq; i++) {
+  for (uint32_t i = 0; i < num_cmdq; i++) {
     if (use_event) {
       ep.destroy_event(host_to_dev_event[i]);
     }

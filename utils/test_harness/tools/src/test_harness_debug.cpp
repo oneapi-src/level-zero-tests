@@ -167,7 +167,7 @@ bool get_register_set_props(ze_device_handle_t device,
 
   bool found = false;
   for (uint32_t i = 0U; i < nRegSets; i++) {
-    if (pRegSets[i].type == type) {
+    if (pRegSets[i].type == to_u32(type)) {
       printRegSetProperties(pRegSets[i]);
       reg = pRegSets[i];
       found = true;

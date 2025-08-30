@@ -8,7 +8,6 @@
 
 #include "../include/ze_peak.h"
 #include "../../common/include/common.hpp"
-#include "../../common/include/common.hpp"
 #include <iomanip>
 
 #include <algorithm>
@@ -105,7 +104,9 @@ void L0Context::create_module(std::vector<uint8_t> binary_file) {
 
 #define MAX_UUID_STRING_SIZE 49
 
-static char hexdigit(int i) { return (i > 9) ? 'a' - 10 + i : '0' + i; }
+constexpr char dec2hex[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                            '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+static char hexdigit(int i) { return dec2hex[i]; }
 
 static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s) {
   int i;

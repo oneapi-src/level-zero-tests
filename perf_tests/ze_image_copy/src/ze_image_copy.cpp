@@ -364,7 +364,7 @@ void ZeImageCopy::measureSerialHost2Device() {
                                               &command_list_a);
     timer.start();
     SUCCESS_OR_TERMINATE(zeEventHostSignal(*first_event));
-    SUCCESS_OR_TERMINATE(zeEventHostSynchronize(*last_event, ~0));
+    SUCCESS_OR_TERMINATE(zeEventHostSynchronize(*last_event, ~0ULL));
     timer.end();
     benchmark->commandQueueSynchronize(command_queue);
 
@@ -455,7 +455,7 @@ void ZeImageCopy::measureSerialDevice2Host() {
 
     timer.start();
     SUCCESS_OR_TERMINATE(zeEventHostSignal(*first_event));
-    SUCCESS_OR_TERMINATE(zeEventHostSynchronize(*last_event, ~0));
+    SUCCESS_OR_TERMINATE(zeEventHostSynchronize(*last_event, ~0ULL));
     timer.end();
     benchmark->commandQueueSynchronize(command_queue);
 

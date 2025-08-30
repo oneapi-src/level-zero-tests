@@ -20,6 +20,8 @@ namespace lzt = level_zero_tests;
 namespace {
 enum MemAccessTestType { ATOMIC, CONCURRENT, CONCURRENT_ATOMIC };
 
+using lzt::to_u32;
+
 class zeP2PMemAccessTests
     : public lzt::zeEventPoolTests,
       public ::testing::WithParamInterface<
@@ -63,7 +65,7 @@ protected:
       skip = true;
       GTEST_SKIP() << "WARNING:  Exiting test due to lack of multiple devices";
     }
-    get_devices_ = devices.size();
+    get_devices_ = to_u32(devices.size());
     LOG_INFO << "Detected " << get_devices_ << " devices";
 
     ze_device_compute_properties_t dev_compute_properties = {
@@ -87,7 +89,7 @@ protected:
       EXPECT_ZE_RESULT_SUCCESS(
           zeDeviceGetComputeProperties(device, &dev_compute_properties));
       instance.group_size_x = std::min(
-          static_cast<uint32_t>(128), dev_compute_properties.maxTotalGroupSize);
+          to_u32(128), dev_compute_properties.maxTotalGroupSize);
       instance.group_count_x = 1;
       instance.dev_mem_properties.pNext = nullptr;
       instance.dev_mem_properties.stype =
@@ -226,22 +228,22 @@ protected:
     if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_DEVICE) {
       dev_access_[0].device_mem_remote = lzt::allocate_device_memory(
           mem_size_, 1, 0,
-          dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev,
+          dev_access_[std::max(1U, (num - 1))].dev,
           lzt::get_default_context());
     } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_SHARED) {
       dev_access_[0].device_mem_remote = lzt::allocate_shared_memory(
           mem_size_, 1, 0, 0,
-          dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev);
+          dev_access_[std::max(1U, (num - 1))].dev);
     } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
       size_t pageSize = 0;
       lzt::query_page_size(
           lzt::get_default_context(),
-          dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev,
+          dev_access_[std::max(1U, (num - 1))].dev,
           mem_size_, &pageSize);
       mem_size_ = lzt::create_page_aligned_size(mem_size_, pageSize);
       lzt::physical_device_memory_allocation(
           lzt::get_default_context(),
-          dev_access_[std::max(static_cast<uint32_t>(1), (num - 1))].dev,
+          dev_access_[std::max(1U, (num - 1))].dev,
           mem_size_, &dev_access_[0].device_mem_remote_physical);
       lzt::virtual_memory_reservation(lzt::get_default_context(), nullptr,
                                       mem_size_,

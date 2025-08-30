@@ -20,6 +20,11 @@
 
 namespace lzt = level_zero_tests;
 
+using lzt::to_u8;
+using lzt::to_u16;
+using lzt::to_int;
+using lzt::to_u32;
+
 static constexpr auto loop_counter_alloc_size = sizeof(unsigned long);
 
 void basic(ze_context_handle_t context, ze_device_handle_t device,
@@ -32,9 +37,8 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = (options.use_custom_module == true)
-                                ? options.module_name_in
-                                : "debug_add.spv";
+  std::string module_name = options.use_custom_module ? options.module_name_in
+                                                      : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
 
@@ -44,7 +48,8 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
-  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+  uint32_t threadCount =
+      to_u32(std::ceil(size / kernel_properties.maxSubgroupSize));
 
   LOG_INFO << "[Application] Problem size: " << size
            << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
@@ -66,14 +71,15 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
+  uint32_t size_x = to_u32(size);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
+  lzt::suggest_group_size(kernel, size_x, 1, 1, group_size_x, group_size_y,
                           group_size_z);
   lzt::set_group_size(kernel, group_size_x, 1, 1);
   ze_group_count_t group_count = {};
-  group_count.groupCountX = size / group_size_x;
+  group_count.groupCountX = size_x / group_size_x;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -89,8 +95,7 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
 
   // validation
   for (size_t i = 0; i < size; i++) {
-    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              static_cast<uint8_t>((i & 0xFF) + addval));
+    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i], to_u8((i & 0xFF) + addval));
     if (::testing::Test::HasFailure()) {
       LOG_ERROR << "[Application] Sanity check did not pass";
       break;
@@ -120,9 +125,8 @@ void attach_after_module_created_test(ze_context_handle_t context,
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = (options.use_custom_module == true)
-                                ? options.module_name_in
-                                : "debug_add.spv";
+  std::string module_name = options.use_custom_module ? options.module_name_in
+                                                      : "debug_add.spv";
 
   LOG_INFO << "[Application] Creating module";
   auto module = lzt::create_module(context, device, module_name,
@@ -135,7 +139,8 @@ void attach_after_module_created_test(ze_context_handle_t context,
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
-  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+  uint32_t threadCount =
+      to_u32(std::ceil(size / kernel_properties.maxSubgroupSize));
 
   LOG_INFO << "[Application] Problem size: " << size
            << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
@@ -153,14 +158,15 @@ void attach_after_module_created_test(ze_context_handle_t context,
   lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
+  uint32_t size_x = to_u32(size);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
+  lzt::suggest_group_size(kernel, size_x, 1, 1, group_size_x, group_size_y,
                           group_size_z);
   lzt::set_group_size(kernel, group_size_x, 1, 1);
   ze_group_count_t group_count = {};
-  group_count.groupCountX = size / group_size_x;
+  group_count.groupCountX = size_x / group_size_x;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -186,8 +192,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
 
   // validation
   for (size_t i = 0; i < size; i++) {
-    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              static_cast<uint8_t>((i & 0xFF) + addval));
+    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i], to_u8((i & 0xFF) + addval));
     if (::testing::Test::HasFailure()) {
       LOG_ERROR << "[Application] Sanity check did not pass";
       break;
@@ -217,9 +222,8 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = (options.use_custom_module == true)
-                                ? options.module_name_in
-                                : "debug_add.spv";
+  std::string module_name = options.use_custom_module ? options.module_name_in
+                                                      : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
 
@@ -229,7 +233,8 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
-  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+  uint32_t threadCount =
+      to_u32(std::ceil(size / kernel_properties.maxSubgroupSize));
 
   LOG_INFO << "[Application] Problem size: " << size
            << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
@@ -247,14 +252,15 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
   lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
+  uint32_t size_x = to_u32(size);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
+  lzt::suggest_group_size(kernel, size_x, 1, 1, group_size_x, group_size_y,
                           group_size_z);
   lzt::set_group_size(kernel, group_size_x, 1, 1);
   ze_group_count_t group_count = {};
-  group_count.groupCountX = size / group_size_x;
+  group_count.groupCountX = size_x / group_size_x;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -283,8 +289,7 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
 
   // validation
   for (size_t i = 0; i < size; i++) {
-    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              static_cast<uint8_t>((i & 0xFF) + addval));
+    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i], to_u8((i & 0xFF) + addval));
 
     if (::testing::Test::HasFailure()) {
       LOG_ERROR << "[Application] Sanity check did not pass";
@@ -315,9 +320,8 @@ void multiple_modules_created_test(ze_context_handle_t context,
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = (options.use_custom_module == true)
-                                ? options.module_name_in
-                                : "debug_add.spv";
+  std::string module_name = options.use_custom_module ? options.module_name_in
+                                                      : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
@@ -337,7 +341,8 @@ void multiple_modules_created_test(ze_context_handle_t context,
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
-  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+  uint32_t threadCount =
+      to_u32(std::ceil(size / kernel_properties.maxSubgroupSize));
 
   LOG_INFO << "[Application] Problem size: " << size
            << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
@@ -355,13 +360,14 @@ void multiple_modules_created_test(ze_context_handle_t context,
   lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
+  uint32_t size_x = to_u32(size);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
+  lzt::suggest_group_size(kernel, size_x, 1, 1, group_size_x, group_size_y,
                           group_size_z);
   lzt::set_group_size(kernel, group_size_x, 1, 1);
-  group_count.groupCountX = size / group_size_x;
+  group_count.groupCountX = size_x / group_size_x;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -377,8 +383,7 @@ void multiple_modules_created_test(ze_context_handle_t context,
 
   // validation
   for (size_t i = 0; i < size; i++) {
-    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              static_cast<uint8_t>((i & 0xFF) + addval));
+    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i], to_u8((i & 0xFF) + addval));
 
     if (::testing::Test::HasFailure()) {
       LOG_ERROR << "[Application] Sanity check did not pass";
@@ -405,15 +410,12 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 
   auto command_list = lzt::create_command_list(device);
   auto command_queue = lzt::create_command_queue(device);
-  std::string module_name = (options.use_custom_module == true)
-                                ? options.module_name_in
-                                : "debug_loop.spv";
+  std::string module_name = options.use_custom_module ? options.module_name_in
+                                                      : "debug_loop.spv";
 
   std::string kernel_name =
-      (options.use_custom_module == true)
-          ? (!options.kernel_name_in.empty() ? options.kernel_name_in
-                                             : "long_kernel")
-          : "long_kernel";
+      options.use_custom_module && !options.kernel_name_in.empty()
+          ? options.kernel_name_in : "long_kernel";
   bool slm = false;
   ze_device_properties_t device_properties = {
       ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
@@ -444,7 +446,8 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
-  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+  uint32_t threadCount =
+      to_u32(std::ceil(size / kernel_properties.maxSubgroupSize));
 
   LOG_INFO << "[Application] Problem size: " << size
            << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
@@ -493,14 +496,15 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
     lzt::set_argument_value(kernel, 4, sizeof(slm_output_s), &slm_output_s);
   }
 
+  uint32_t size_x = to_u32(size);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, size, 1, 1, group_size_x, group_size_y,
+  lzt::suggest_group_size(kernel, size_x, 1, 1, group_size_x, group_size_y,
                           group_size_z);
   lzt::set_group_size(kernel, group_size_x, 1, 1);
   ze_group_count_t group_count = {};
-  group_count.groupCountX = size / group_size_x;
+  group_count.groupCountX = size_x / group_size_x;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -731,15 +735,12 @@ void Job::set_up_work(debug_options &options) {
 
   command_list = lzt::create_command_list(context, device, 0, 0);
 
-  std::string module_name = (options.use_custom_module == true)
-                                ? options.module_name_in
-                                : "debug_loop.spv";
+  std::string module_name = options.use_custom_module ? options.module_name_in
+                                                      : "debug_loop.spv";
 
   std::string kernel_name =
-      (options.use_custom_module == true)
-          ? (!options.kernel_name_in.empty() ? options.kernel_name_in
-                                             : "long_kernel")
-          : "long_kernel";
+      options.use_custom_module && !options.kernel_name_in.empty()
+          ? options.kernel_name_in : "long_kernel";
 
   LOG_INFO << "[Application] Creating Module";
 
@@ -752,7 +753,8 @@ void Job::set_up_work(debug_options &options) {
 
   ze_kernel_properties_t kernel_properties = {};
   EXPECT_ZE_RESULT_SUCCESS(zeKernelGetProperties(kernel, &kernel_properties));
-  int threadCount = std::ceil(size / kernel_properties.maxSubgroupSize);
+  uint32_t threadCount =
+      to_u32(std::ceil(size / kernel_properties.maxSubgroupSize));
 
   LOG_INFO << "[Application] Problem size: " << size
            << ". Kernel maxSubGroupSize: " << kernel_properties.maxSubgroupSize
@@ -1128,7 +1130,8 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  process_synchro synchro(options.enable_synchro, false, options.index_in);
+  process_synchro synchro(options.enable_synchro, false,
+                          to_int(options.index_in));
 
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {

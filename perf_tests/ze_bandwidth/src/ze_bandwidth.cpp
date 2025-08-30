@@ -93,7 +93,7 @@ void ZeBandwidth::transfer_size_test(
     benchmark->memoryAllocHost(buffer_size, &host_buffer_verify1);
     char *host_buffer_verify_char1 = static_cast<char *>(host_buffer_verify1);
     for (uint32_t i = 0; i < buffer_size; i++) {
-      host_buffer_verify_char1[i] = i;
+      host_buffer_verify_char1[i] = static_cast<char>(i);
     }
 
     for (auto device_id : device_ids) {
@@ -704,10 +704,11 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
   }
 
   ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC};
-  event_pool_desc.count = 2 * device_ids.size() + 1;
+  event_pool_desc.count = static_cast<uint32_t>(2 * device_ids.size() + 1);
   event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   SUCCESS_OR_TERMINATE(zeEventPoolCreate(
-      benchmark->context, &event_pool_desc, benchmark->_devices.size(),
+      benchmark->context, &event_pool_desc,
+      static_cast<uint32_t>(benchmark->_devices.size()),
       benchmark->_devices.data(), &event_pool));
 
   ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};

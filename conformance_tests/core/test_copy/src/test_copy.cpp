@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -25,6 +24,9 @@ namespace lzt = level_zero_tests;
 using namespace level_zero_tests;
 
 namespace {
+
+using lzt::to_u8;
+using lzt::to_u32;
 
 class zeCommandListAppendMemoryFillTests : public ::testing::Test {
 protected:
@@ -153,9 +155,9 @@ void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
 
   for (size_t i = 0U; i < cmd_q_group_properties.size(); i++) {
     auto bundle = lzt::create_command_bundle(lzt::get_default_context(), device,
-                                             0, i, is_immediate);
+                                             0, to_u32(i), is_immediate);
     size_t size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
-    int pattern_size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
+    size_t pattern_size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
     if (cmd_q_group_properties[i].maxMemoryFillPatternSize >
         max_alloc_memsize) {
       pattern_size = 1;
@@ -643,12 +645,12 @@ void zeCommandListAppendMemoryFillPatternVerificationTests::
   const bool is_immediate = std::get<1>(GetParam());
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t total_size = (pattern_size * 10) + 5;
-  std::unique_ptr<uint8_t> pattern(new uint8_t[pattern_size]);
+  auto pattern = std::make_unique<uint8_t[]>(pattern_size);
   auto target_memory = lzt::allocate_host_memory_with_allocator_selector(
       total_size, is_shared_system);
 
   for (size_t i = 0U; i < pattern_size; i++) {
-    pattern.get()[i] = i;
+    pattern[i] = to_u8(i);
   }
 
   append_memory_fill(cmd_bundle.list, target_memory, pattern.get(),
@@ -807,7 +809,7 @@ protected:
     const char *dst_memory_type = is_dst_shared_system ? "SVM" : "USM";
 
     printf("src_memory (%s)= %p dst_memory (%s)= %p immediate = %d isCopyOnly "
-           "= %d size = %ld\n",
+           "= %d size = %zu\n",
            src_memory_type, src_memory, dst_memory_type, dst_memory,
            is_immediate, isCopyOnly, size);
 
@@ -1051,15 +1053,18 @@ protected:
   void test_copy_region() {
     void *verification_memory = allocate_host_memory(memory_size);
 
-    std::array<size_t, 3> widths = {1, columns / 2, columns};
-    std::array<size_t, 3> heights = {1, rows / 2, rows};
-    std::array<size_t, 3> depths = {1, slices / 2, slices};
+    uint32_t wdth = to_u32(columns);
+    uint32_t hght = to_u32(rows);
+    uint32_t dpth = to_u32(slices);
+    std::array<uint32_t, 3> widths = {1, wdth / 2, wdth};
+    std::array<uint32_t, 3> heights = {1, hght / 2, hght};
+    std::array<uint32_t, 3> depths = {1, dpth / 2, dpth};
 
     for (int region = 0; region < 3; region++) {
       // Define region to be copied from/to
-      size_t width = widths[region];
-      size_t height = heights[region];
-      size_t depth = depths[region];
+      uint32_t width = widths[region];
+      uint32_t height = heights[region];
+      uint32_t depth = depths[region];
 
       ze_copy_region_t src_region;
       src_region.originX = 0;
@@ -1078,9 +1083,8 @@ protected:
       dest_region.depth = depth;
 
       append_memory_copy_region(cmd_bundle.list, destination_memory,
-                                &dest_region, columns, columns * rows,
-                                source_memory, &src_region, columns,
-                                columns * rows, nullptr);
+                                &dest_region, wdth, wdth * hght, source_memory,
+                                &src_region, wdth, wdth * hght, nullptr);
       append_barrier(cmd_bundle.list);
       append_memory_copy(cmd_bundle.list, verification_memory,
                          destination_memory, memory_size);
@@ -1161,15 +1165,18 @@ protected:
 
     void *verification_memory = allocate_host_memory(memory_size);
 
-    std::array<size_t, 3> widths = {1, columns / 2, columns};
-    std::array<size_t, 3> heights = {1, rows / 2, rows};
-    std::array<size_t, 3> depths = {1, slices / 2, slices};
+    uint32_t wdth = to_u32(columns);
+    uint32_t hght = to_u32(rows);
+    uint32_t dpth = to_u32(slices);
+    std::array<uint32_t, 3> widths = {1, wdth / 2, wdth};
+    std::array<uint32_t, 3> heights = {1, hght / 2, hght};
+    std::array<uint32_t, 3> depths = {1, dpth / 2, dpth};
 
     for (int region = 0; region < 3; region++) {
       // Define region to be copied from/to
-      size_t width = widths[region];
-      size_t height = heights[region];
-      size_t depth = depths[region];
+      uint32_t width = widths[region];
+      uint32_t height = heights[region];
+      uint32_t depth = depths[region];
 
       ze_copy_region_t src_region;
       src_region.originX = 0;
@@ -1188,9 +1195,8 @@ protected:
       dest_region.depth = depth;
 
       append_memory_copy_region(cmd_bundle.list, destination_memory,
-                                &dest_region, columns, columns * rows,
-                                source_memory, &src_region, columns,
-                                columns * rows, nullptr);
+                                &dest_region, wdth, wdth * hght, source_memory,
+                                &src_region, wdth, wdth * hght, nullptr);
       append_barrier(cmd_bundle.list);
       append_memory_copy(cmd_bundle.list, verification_memory,
                          destination_memory, memory_size);

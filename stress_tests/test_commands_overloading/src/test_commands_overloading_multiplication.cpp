@@ -20,10 +20,12 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class zeDriverMultiplyObjectsStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<float, float, uint32_t, ze_memory_type_t, uint64_t,
+          std::tuple<double, double, uint32_t, ze_memory_type_t, uint64_t,
                      uint64_t, uint64_t, uint64_t, bool, bool>> {
 protected:
   ze_kernel_handle_t create_kernel(ze_module_handle_t module,
@@ -176,9 +178,9 @@ LZT_TEST_P(zeDriverMultiplyObjectsStressTest,
   uint64_t number_of_all_allocations =
       used_vectors_in_test * requested_dispatches;
 
-  float total_memory_size_limit =
+  double total_memory_size_limit =
       test_arguments.base_arguments.total_memory_size_limit;
-  float one_allocation_size_limit =
+  double one_allocation_size_limit =
       test_arguments.base_arguments.one_allocation_size_limit;
 
   uint64_t test_single_allocation_memory_size = 0;
@@ -224,7 +226,8 @@ LZT_TEST_P(zeDriverMultiplyObjectsStressTest,
                            test_arguments.multiply_command_queues;
   }
 
-  uint32_t tmp_count = test_single_allocation_memory_size / sizeof(uint32_t);
+  uint32_t tmp_count =
+      to_u32(test_single_allocation_memory_size / sizeof(uint32_t));
   uint32_t test_single_allocation_count =
       tmp_count - tmp_count % workgroup_size_x_;
 
@@ -295,7 +298,7 @@ LZT_TEST_P(zeDriverMultiplyObjectsStressTest,
     }
     lzt::append_command_lists_immediate_exp(
         immediate_for_registered_command_lists,
-        multiple_command_list_handle.size(),
+        to_u32(multiple_command_list_handle.size()),
         multiple_command_list_handle.data());
     lzt::synchronize_command_list_host(immediate_for_registered_command_lists,
                                        UINT64_MAX);

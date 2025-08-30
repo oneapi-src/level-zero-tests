@@ -47,7 +47,7 @@ long double ZePeak::_transfer_bw_gpu_copy(L0Context &context,
     SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(cmd_q, UINT64_MAX));
   }
   timer.end();
-  double timed = timer.period_minus_overhead();
+  long double timed = timer.period_minus_overhead();
   timed /= static_cast<long double>(iters);
 
   return calculate_gbps(timed, static_cast<long double>(buffer_size));

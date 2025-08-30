@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -20,6 +19,8 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 
 namespace {
+
+using lzt::to_int;
 
 enum shared_memory_type { SHARED_LOCAL, SHARED_CROSS, SHARED_SYSTEM };
 enum test_memory_type {
@@ -624,7 +625,7 @@ LZT_TEST_P(
   EXPECT_GE(devices[0].size(), 1);
 
   test_indirect_memory_kernel_copy(0, 0, src_mem_type, src_ptr_mem_type,
-                                   dst_mem_type, dst_ptr_mem_type, offset,
+                                   dst_mem_type, dst_ptr_mem_type, to_int(offset),
                                    src_shr_type, src_ptr_shr_type, dst_shr_type,
                                    dst_ptr_shr_type, is_immediate);
 }

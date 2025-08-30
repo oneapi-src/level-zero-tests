@@ -323,7 +323,7 @@ void ZeApp::hostSynchronize(ze_event_handle_t hEvent, uint32_t timeout) {
 
 void ZeApp::hostSynchronize(ze_event_handle_t hEvent) {
 
-  SUCCESS_OR_TERMINATE(zeEventHostSynchronize(hEvent, ~0));
+  SUCCESS_OR_TERMINATE(zeEventHostSynchronize(hEvent, ~0ULL));
 }
 
 void ZeApp::commandQueueCreate(const uint32_t command_queue_id,
@@ -458,7 +458,7 @@ void ZeApp::singleDeviceInit(void) { initCountDevices(1); }
 
 uint32_t ZeApp::allDevicesInit(void) {
   initCountDevices(0);
-  return _devices.size();
+  return static_cast<uint32_t>(_devices.size());
 }
 
 void ZeApp::cleanupDevices(void) {

@@ -8,7 +8,6 @@
 
 #include "test_harness/test_harness.hpp"
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "gtest/gtest.h"
 #include <level_zero/ze_api.h>
 #include <thread>
@@ -24,7 +23,7 @@ create_program_module(ze_context_handle_t context, ze_device_handle_t device,
 
   ze_module_program_exp_desc_t module_program_desc = {};
   module_program_desc.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
-  module_program_desc.count = modules_in.size();
+  module_program_desc.count = to_u32(modules_in.size());
 
   std::vector<size_t> input_sizes;
   std::vector<char *> build_flags;
@@ -117,7 +116,7 @@ ze_module_handle_t create_module(ze_context_handle_t context,
 
   module_description.pNext = nullptr;
   module_description.format = format;
-  module_description.inputSize = static_cast<uint32_t>(binary_file.size());
+  module_description.inputSize = to_u32(binary_file.size());
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = build_flags;
   module_description.pConstants = &module_constants;

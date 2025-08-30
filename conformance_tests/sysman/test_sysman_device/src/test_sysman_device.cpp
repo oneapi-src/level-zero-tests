@@ -26,6 +26,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 struct device_handles_t {
   ze_device_handle_t core_handle;
   zes_device_handle_t sysman_handle;
@@ -231,7 +233,7 @@ LZT_TEST_F(
         lzt::get_sysman_device_by_uuid(driver, device_uuid, on_sub_device,
                                        sub_device_id);
     EXPECT_EQ(device_handle_from_uuid, device);
-    if (on_sub_device == true) {
+    if (on_sub_device) {
       EXPECT_LT(sub_device_id, sub_devices_count);
     }
   }
@@ -394,7 +396,7 @@ LZT_TEST_F(
     if (processes.size() > 0) {
       for (auto process : processes) {
         EXPECT_GT(process.processId, 0u);
-        if (process.processId == static_cast<uint32_t>(pid)) {
+        if (process.processId == to_u32(pid)) {
           pid_found = 1;
         }
       }
@@ -529,7 +531,7 @@ bool is_compute_engine_used(int pid, zes_device_handle_t device) {
   auto processes = lzt::get_processes_state(device, count);
 
   for (const auto &process : processes) {
-    if (process.processId == static_cast<uint32_t>(pid) &&
+    if (process.processId == to_u32(pid) &&
         process.engines == ZES_ENGINE_TYPE_FLAG_COMPUTE) {
       return true;
     }
@@ -797,7 +799,7 @@ LZT_TEST_F(
   const char *valueString = std::getenv("LZT_SYSMAN_DEVICE_TEST_ITERATIONS");
   uint32_t number_iterations = 2;
   if (valueString != nullptr) {
-    uint32_t _value = static_cast<uint32_t>(atoi(valueString));
+    uint32_t _value = to_u32(atoi(valueString));
     number_iterations = _value < 0 ? number_iterations : std::min(_value, 300U);
     if (number_iterations != _value) {
       LOG_WARNING << "Number of iterations is capped at 300\n";

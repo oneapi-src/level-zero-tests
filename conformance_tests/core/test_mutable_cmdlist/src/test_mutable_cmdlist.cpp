@@ -18,6 +18,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class zeMutableCommandListTests : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -68,7 +70,7 @@ protected:
     auto driver_extension_properties = lzt::get_extension_properties(driver);
     for (auto &extension : driver_extension_properties) {
       if (strcmp(extension.name, ZE_MUTABLE_COMMAND_LIST_EXP_NAME) == 0) {
-        if (version <= extension.version) {
+        if (to_u32(version) <= extension.version) {
           LOG_INFO << "Detected extension version "
                    << ZE_MAJOR_VERSION(extension.version) << "."
                    << ZE_MINOR_VERSION(extension.version)
@@ -480,8 +482,8 @@ LZT_TEST_F(
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION;
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-      &mutableKernelCommandId));
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()),
+      kernels.data(), &mutableKernelCommandId));
 
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, nullptr,
@@ -584,8 +586,8 @@ LZT_TEST_F(
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION;
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
-      &mutableKernelCommandId));
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()),
+      kernels.data(), &mutableKernelCommandId));
 
   ze_group_count_t groupCount{bufferSize / groupSizeX, 1, 1};
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, events[0],
@@ -704,7 +706,7 @@ LZT_TEST_F(
                         ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE |
                         ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION;
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()), kernels.data(),
       &mutableKernelCommandId));
 
   lzt::append_launch_function(mutableCmdList, mulKernel, &groupCount, nullptr,
@@ -832,7 +834,7 @@ LZT_TEST_F(
   lzt::set_argument_value(addKernel, 0, sizeof(void *), &inOutBuffer1);
   lzt::set_argument_value(addKernel, 1, sizeof(addVal), &addVal);
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()), kernels.data(),
       &kernelCommandId1));
   lzt::append_launch_function(mutableCmdList, addKernel, &groupCount, events[0],
                               0, nullptr);
@@ -842,7 +844,7 @@ LZT_TEST_F(
   lzt::set_argument_value(mulKernel, 1, sizeof(mulVal), &mulVal);
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()), kernels.data(),
       &kernelCommandId2));
   lzt::append_launch_function(mutableCmdList, mulKernel, &groupCount, events[1],
                               1, &events[0]);
@@ -852,7 +854,7 @@ LZT_TEST_F(
   lzt::set_argument_value(subKernel, 1, sizeof(subVal), &subVal);
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()), kernels.data(),
       &kernelCommandId3));
   lzt::append_launch_function(mutableCmdList, subKernel, &groupCount, nullptr,
                               2, &events[0]);
@@ -1353,7 +1355,7 @@ LZT_TEST_F(
   lzt::set_argument_value(add_kernel, 0, sizeof(void *), &in_out_buffer_1);
   lzt::set_argument_value(add_kernel, 1, sizeof(add_val), &add_val);
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()), kernels.data(),
       &kernel_command_id_1));
   lzt::append_launch_function(mutableCmdList, add_kernel, &group_count,
                               events[0], 0, nullptr);
@@ -1365,7 +1367,7 @@ LZT_TEST_F(
   lzt::set_argument_value(mul_kernel, 1, sizeof(mul_val), &mul_val);
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()), kernels.data(),
       &kernel_command_id_2));
   lzt::append_launch_function(mutableCmdList, mul_kernel, &group_count,
                               events[1], 1, &events[0]);
@@ -1377,7 +1379,7 @@ LZT_TEST_F(
   lzt::set_argument_value(sub_kernel, 1, sizeof(sub_val), &sub_val);
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListGetNextCommandIdWithKernelsExp(
-      mutableCmdList, &commandIdDesc, kernels.size(), kernels.data(),
+      mutableCmdList, &commandIdDesc, to_u32(kernels.size()), kernels.data(),
       &kernel_command_id_3));
   lzt::append_launch_function(mutableCmdList, sub_kernel, &group_count, nullptr,
                               2, &events[0]);

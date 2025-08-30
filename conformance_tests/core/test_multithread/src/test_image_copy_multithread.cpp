@@ -20,6 +20,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 const int thread_iters = 200;
 const size_t num_threads = 16;
 
@@ -76,19 +78,20 @@ void image_copy_thread(const ze_command_queue_handle_t &command_queue) {
 
   image1 = lzt::create_ze_image(img_desc);
   image2 = lzt::create_ze_image(img_desc);
-  lzt::ImagePNG32Bit source_image(img_desc.width, img_desc.height),
-      dest_image(img_desc.width, img_desc.height);
+  uint32_t wdth = to_u32(img_desc.width),
+           hght = to_u32(img_desc.height);
+  lzt::ImagePNG32Bit src_img(wdth, hght), dst_img(wdth, hght);
 
   for (int i = 0; i < thread_iters; i++) {
 
-    lzt::write_image_data_pattern(source_image, 1);
+    lzt::write_image_data_pattern(src_img, 1);
     lzt::append_image_copy_from_mem(command_list, image1,
-                                    source_image.raw_data(), nullptr);
+                                    src_img.raw_data(), nullptr);
 
     lzt::append_barrier(command_list);
     lzt::append_image_copy(command_list, image2, image1, nullptr);
     lzt::append_barrier(command_list);
-    lzt::append_image_copy_to_mem(command_list, dest_image.raw_data(), image2,
+    lzt::append_image_copy_to_mem(command_list, dst_img.raw_data(), image2,
                                   nullptr);
     lzt::append_barrier(command_list);
 
@@ -97,8 +100,8 @@ void image_copy_thread(const ze_command_queue_handle_t &command_queue) {
     lzt::synchronize(command_queue, UINT64_MAX);
     lzt::reset_command_list(command_list);
 
-    ASSERT_EQ(0, memcmp(source_image.raw_data(), dest_image.raw_data(),
-                        source_image.size_in_bytes()));
+    ASSERT_EQ(0, memcmp(src_img.raw_data(), dst_img.raw_data(),
+                        src_img.size_in_bytes()));
   }
 
   lzt::destroy_ze_image(image1);

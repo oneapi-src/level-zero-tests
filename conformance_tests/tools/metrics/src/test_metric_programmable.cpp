@@ -33,6 +33,8 @@ namespace bi = boost::interprocess;
 
 namespace {
 
+using lzt::to_u32;
+
 class zetMetricMetricProgrammableTest : public ::testing::Test {
 protected:
   std::vector<lzt::metric_programmable_handle_list_for_device>
@@ -132,7 +134,7 @@ protected:
     uint32_t metric_group_handles_count = 0;
 
     ASSERT_ZE_RESULT_SUCCESS(zetDeviceCreateMetricGroupsFromMetricsExp(
-        device_handle, metric_handles.size(), metric_handles.data(),
+        device_handle, to_u32(metric_handles.size()), metric_handles.data(),
         metric_group_name_prefix.c_str(), metric_group_description.c_str(),
         &metric_group_handles_count, nullptr));
     ASSERT_GT(metric_group_handles_count, 0)
@@ -152,7 +154,7 @@ protected:
 
     metric_group_handles.resize(metric_group_handles_subset_size);
     ASSERT_ZE_RESULT_SUCCESS(zetDeviceCreateMetricGroupsFromMetricsExp(
-        device_handle, metric_handles.size(), metric_handles.data(),
+        device_handle, to_u32(metric_handles.size()), metric_handles.data(),
         metric_group_name_prefix.c_str(), metric_group_description.c_str(),
         &metric_group_handles_subset_size, metric_group_handles.data()));
 
@@ -248,9 +250,9 @@ LZT_TEST_F(zetMetricMetricProgrammableTest,
           << ZET_MAX_METRIC_PROGRAMMABLE_COMPONENT_EXP;
 
       constexpr uint32_t invalid_sampling_types =
-          ~(ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED |
-            ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED |
-            ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EXP_TRACER_BASED);
+          to_u32(~(ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED |
+                   ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED |
+                   ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EXP_TRACER_BASED));
 
       uint32_t test_invalid_sampling_types =
           metric_programmable_properties.samplingType & invalid_sampling_types;

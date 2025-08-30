@@ -22,6 +22,10 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u8;
+using lzt::to_int;
+using lzt::to_u32;
+
 using cmdListVec = std::vector<ze_command_list_handle_t>;
 using cmdQueueVec = std::vector<ze_command_queue_handle_t>;
 
@@ -186,7 +190,7 @@ protected:
     ze_kernel_handle_t kernel =
         lzt::create_function(module, "cmdlist_add_constant");
     lzt::set_group_size(kernel, 1, 1, 1);
-    ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+    ze_group_count_t args = {to_u32(size), 1, 1};
 
     const int addval = 10;
     auto kernel_buffer = lzt::allocate_shared_memory(size * sizeof(int));
@@ -447,7 +451,7 @@ void RunWhenResetThenVerifyOnlySubsequentInstructionsExecuted(
   std::vector<uint8_t> val;
   for (size_t i = 0; i < num_instr; i++) {
     buffer.push_back(lzt::allocate_shared_memory(size));
-    val.push_back(static_cast<uint8_t>(i + 1));
+    val.push_back(to_u8(i + 1));
   }
 
   // Begin with num_instr command list instructions, reset and reduce by one
@@ -597,7 +601,7 @@ RunGivenCommandListWithMultipleAppendMemoryCopiesFollowedByResetInLoopTest(
     temp1 = static_cast<uint8_t *>(host_memory_src);
     temp2 = static_cast<uint8_t *>(host_memory_dst);
     for (uint32_t i = 0; i < max_copy_count; i++) {
-      temp1[i] = i;
+      temp1[i] = to_u8(i);
       temp2[i] = 0;
     }
     for (uint32_t i = 0; i < max_copy_count; i++) {
@@ -765,7 +769,8 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
                           &offsetBuffer);
   // if groupSize is greater then memory count, then at least one thread group
   // should be dispatched
-  uint32_t threadGroup = arraySize / groupSize > 1 ? arraySize / groupSize : 1;
+  uint32_t threadGroup = arraySize / groupSize > 1 ?
+                             to_u32(arraySize / groupSize) : 1;
   ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
 
   for (uint32_t i = 0; i < num_iterations; i++) {
@@ -955,7 +960,7 @@ static void RunAppendLaunchKernelEvent(cmdListVec cmdlist, cmdQueueVec cmdqueue,
     lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
     lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
     ze_group_count_t tg;
-    tg.groupCountX = static_cast<uint32_t>(size);
+    tg.groupCountX = to_u32(size);
     tg.groupCountY = 1;
     tg.groupCountZ = 1;
 
@@ -1070,7 +1075,7 @@ RunAppendLaunchKernelEventLoop(cmdListVec cmdlist, cmdQueueVec cmdqueue,
   constexpr size_t size = 16;
   for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
-    func(cmdlist, cmdqueue, event, i, size);
+    func(cmdlist, cmdqueue, event, to_int(i), size);
   }
 }
 

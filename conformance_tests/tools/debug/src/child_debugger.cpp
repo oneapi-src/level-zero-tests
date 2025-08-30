@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
 
   LOG_DEBUG << "[Child Debugger] INDEX:  " << options.index_in;
   auto index = options.index_in;
-  process_synchro synchro(true, true, index);
+  process_synchro synchro(true, true, static_cast<int>(index));
 
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {

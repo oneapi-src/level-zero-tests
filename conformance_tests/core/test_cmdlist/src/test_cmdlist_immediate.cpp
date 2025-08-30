@@ -20,6 +20,11 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u8;
+using lzt::to_int;
+using lzt::to_u32;
+using lzt::to_flt;
+
 class zeImmediateCommandListInOrderExecutionTests
     : public lzt::zeEventPoolTests {
 protected:
@@ -223,7 +228,7 @@ void zeImmediateCommandListExecutionTests::
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
   // setting event on following instruction should flush memory
@@ -292,7 +297,7 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
@@ -375,7 +380,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
     lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
     lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
     ze_group_count_t tg;
-    tg.groupCountX = static_cast<uint32_t>(size);
+    tg.groupCountX = to_u32(size);
     tg.groupCountY = 1;
     tg.groupCountZ = 1;
 
@@ -424,7 +429,7 @@ LZT_TEST_F(
   }
   for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
-    RunAppendLaunchKernelEvent(cmdlist, event0, i, false);
+    RunAppendLaunchKernelEvent(cmdlist, event0, to_int(i), false);
   }
 }
 
@@ -440,7 +445,7 @@ LZT_TEST_F(
   }
   for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
-    RunAppendLaunchKernelEvent(cmdlist, event0, i, true);
+    RunAppendLaunchKernelEvent(cmdlist, event0, to_int(i), true);
   }
 }
 
@@ -561,7 +566,7 @@ LZT_TEST_P(
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
 
     buffer[i] = lzt::allocate_shared_memory(size);
-    val[i] = static_cast<uint8_t>(i + 1);
+    val[i] = to_u8(i + 1);
     event_desc.index = i;
     host_to_dev_event[i] = lzt::create_event(event_pool_handle, event_desc);
 
@@ -620,7 +625,7 @@ static void RunMultipleAppendMemoryCopy(ze_command_queue_mode_t mode) {
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
 
     buffer[i] = lzt::allocate_shared_memory(size);
-    val[i] = static_cast<uint8_t>(i + 1);
+    val[i] = to_u8(i + 1);
 
     // This should execute immediately
     lzt::append_memory_set(mulcmdlist_immediate[i], buffer[i], &val[i], size,
@@ -1278,7 +1283,7 @@ LZT_TEST_P(
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
@@ -1381,7 +1386,7 @@ RunIclAndRclAppendOperations(ze_command_list_handle_t cmdlist_immediate,
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
@@ -1533,7 +1538,7 @@ protected:
 
     const int add_value = 7;
     lzt::set_group_size(kernel, 1, 1, 1);
-    ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+    ze_group_count_t args = {to_u32(size), 1, 1};
     lzt::set_argument_value(kernel, 0, sizeof(buf_dev), &buf_dev);
     lzt::set_argument_value(kernel, 1, sizeof(add_value), &add_value);
 
@@ -1597,7 +1602,7 @@ LZT_TEST_P(
 
   const uint64_t wall_time =
       std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-  const float ratio = static_cast<float>(wall_time) / timeout;
+  const float ratio = to_flt(wall_time) / timeout;
   // Tolerance: 2%
   EXPECT_GE(ratio, 0.98f);
   EXPECT_LE(ratio, 1.02f);

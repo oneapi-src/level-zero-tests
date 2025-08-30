@@ -12,7 +12,6 @@
 #include <cstdint>
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "random/random.hpp"
 #include "logging/logging.hpp"

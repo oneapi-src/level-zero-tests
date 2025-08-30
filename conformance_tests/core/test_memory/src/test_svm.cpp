@@ -12,6 +12,8 @@
 
 namespace lzt = level_zero_tests;
 
+using lzt::to_u32;
+
 class SharedSystemMemoryTests
     : public testing::TestWithParam<
           std::tuple<std::pair<bool, bool>, bool, bool, size_t>> {
@@ -69,7 +71,8 @@ LZT_TEST_P(
   lzt::zeCommandBundle cmd_bundle =
       lzt::create_command_bundle(use_immediate_cmdlist);
 
-  const uint32_t group_count_x = buffer_size / (sizeof(int) * group_size);
+  const uint32_t group_count_x =
+      to_u32(buffer_size / (sizeof(int) * group_size));
   ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
   lzt::append_launch_function(cmd_bundle.list, function,
                               &thread_group_dimensions, nullptr, 0, nullptr);

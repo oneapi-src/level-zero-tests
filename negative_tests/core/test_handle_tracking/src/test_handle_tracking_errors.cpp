@@ -23,6 +23,9 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u8;
+using lzt::to_u32;
+
 class HandleTests : public ::testing::Test {
 
 protected:
@@ -234,14 +237,16 @@ LZT_TEST_F(
   ASSERT_ZE_RESULT_SUCCESS(
       zeKernelSetArgumentValue(kernel, 1, sizeof(addval), &addval));
 
+  uint32_t size_x = to_u32(size);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
-            zeKernelSuggestGroupSize(invalid_kernel, size, 1, 1, &group_size_x,
-                                     &group_size_y, &group_size_z));
+            zeKernelSuggestGroupSize(invalid_kernel, size_x, 1, 1,
+                                     &group_size_x, &group_size_y,
+                                     &group_size_z));
   ASSERT_ZE_RESULT_SUCCESS(zeKernelSuggestGroupSize(
-      kernel, size, 1, 1, &group_size_x, &group_size_y, &group_size_z));
+      kernel, size_x, 1, 1, &group_size_x, &group_size_y, &group_size_z));
 
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeKernelSetGroupSize(invalid_kernel, group_size_x, group_size_y,
@@ -250,7 +255,7 @@ LZT_TEST_F(
       zeKernelSetGroupSize(kernel, group_size_x, group_size_y, group_size_z));
 
   ze_group_count_t group_count = {};
-  group_count.groupCountX = size / group_size_x;
+  group_count.groupCountX = size_x / group_size_x;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -325,8 +330,7 @@ LZT_TEST_F(
   // validation
   LOG_DEBUG << "Validating results";
   for (size_t i = 0U; i < size; i++) {
-    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              static_cast<uint8_t>((i & 0xFF) + addval));
+    EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i], to_u8((i & 0xFF) + addval));
     if (::testing::Test::HasFailure()) {
       LOG_ERROR << "[Application] Sanity check did not pass";
       break;

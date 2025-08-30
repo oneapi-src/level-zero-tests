@@ -119,7 +119,7 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if (capabilities.isOcSupported == true) {
+        if (capabilities.isOcSupported) {
           auto freqTarget = lzt::get_oc_freq_target(freq_handle);
           EXPECT_PRED_FORMAT2(::testing::DoubleLE, freqTarget,
                               capabilities.maxOcFrequency);
@@ -149,7 +149,7 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if (capabilities.isOcSupported == true) {
+        if (capabilities.isOcSupported) {
           double init_freq_target = lzt::get_oc_freq_target(freq_handle);
           double set_freq_target = 0;
           set_freq_target = capabilities.maxOcFrequency;
@@ -183,9 +183,9 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if (capabilities.isOcSupported == true) {
-          if ((capabilities.isHighVoltModeCapable == true) &&
-              (capabilities.isHighVoltModeEnabled == true)) {
+        if (capabilities.isOcSupported) {
+          if ((capabilities.isHighVoltModeCapable) &&
+              (capabilities.isHighVoltModeEnabled)) {
             auto voltageTarget = lzt::get_oc_voltage_target(freq_handle);
             auto voltageOffset = lzt::get_oc_voltage_offset(freq_handle);
             EXPECT_PRED_FORMAT2(::testing::DoubleLE, voltageTarget,
@@ -219,9 +219,9 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if (capabilities.isOcSupported == true) {
-          if ((capabilities.isHighVoltModeCapable == true) &&
-              (capabilities.isHighVoltModeEnabled == true)) {
+        if (capabilities.isOcSupported) {
+          if ((capabilities.isHighVoltModeCapable) &&
+              (capabilities.isHighVoltModeEnabled)) {
             auto capabilities = lzt::get_oc_capabilities(freq_handle);
             auto voltageTargetInitial = lzt::get_oc_voltage_target(freq_handle);
             auto voltageOffsetInitial = lzt::get_oc_voltage_offset(freq_handle);
@@ -260,7 +260,7 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if (capabilities.isOcSupported == true) {
+        if (capabilities.isOcSupported) {
           auto mode = lzt::get_oc_mode(freq_handle);
           EXPECT_GE(mode, ZES_OC_MODE_OFF);
           EXPECT_LE(mode, ZES_OC_MODE_FIXED);
@@ -288,7 +288,7 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if (capabilities.isOcSupported == true) {
+        if (capabilities.isOcSupported) {
           auto initialMode = lzt::get_oc_mode(freq_handle);
           zes_oc_mode_t setMode = ZES_OC_MODE_OFF;
           auto getMode = lzt::get_oc_mode(freq_handle);
@@ -326,8 +326,7 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if ((capabilities.isOcSupported == true) &&
-            (capabilities.isIccMaxSupported == true)) {
+        if (capabilities.isOcSupported && capabilities.isIccMaxSupported) {
           auto icmax = lzt::get_oc_iccmax(freq_handle);
           EXPECT_GT(icmax, 0);
         }
@@ -353,8 +352,7 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if ((capabilities.isOcSupported == true) &&
-            (capabilities.isIccMaxSupported == true)) {
+        if (capabilities.isOcSupported && capabilities.isIccMaxSupported) {
           auto icmax_initial = lzt::get_oc_iccmax(freq_handle);
           EXPECT_GT(icmax_initial, 0);
           lzt::set_oc_iccmax(freq_handle, icmax_initial);
@@ -383,8 +381,7 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if ((capabilities.isOcSupported == true) &&
-            (capabilities.isTjMaxSupported == true)) {
+        if (capabilities.isOcSupported && capabilities.isTjMaxSupported) {
           auto tjmax = lzt::get_oc_tjmax(freq_handle);
           EXPECT_GT(tjmax, 0);
         }
@@ -410,8 +407,7 @@ LZT_TEST_F(
       for (auto freq_handle : freq_handles) {
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
-        if ((capabilities.isOcSupported == true) &&
-            (capabilities.isTjMaxSupported == true)) {
+        if (capabilities.isOcSupported && capabilities.isTjMaxSupported) {
           auto tjmaxInitial = lzt::get_oc_tjmax(freq_handle);
           EXPECT_GT(tjmaxInitial, 0);
           lzt::set_oc_tjmax(freq_handle, tjmaxInitial);

@@ -29,6 +29,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u16;
+
 std::string get_result(bp::ipstream &stream) {
 
   std::string result;
@@ -122,7 +124,7 @@ void print_devices(ze_device_handle_t device, int level) {
 
 uint16_t get_device_count(ze_device_handle_t device) {
   if (lzt::get_ze_sub_device_count(device)) {
-    int sum = 1; // 1 for this device
+    uint16_t sum = 1; // 1 for this device
     for (auto &subdevice : lzt::get_ze_sub_devices(device)) {
       sum += get_device_count(subdevice);
     }
@@ -134,7 +136,7 @@ uint16_t get_device_count(ze_device_handle_t device) {
 
 uint16_t get_leaf_device_count(ze_device_handle_t device) {
   if (lzt::get_ze_sub_device_count(device)) {
-    int sum = 0;
+    uint16_t sum = 0;
     for (auto &subdevice : lzt::get_ze_sub_devices(device)) {
       sum += get_leaf_device_count(subdevice);
     }
@@ -149,7 +151,7 @@ std::string get_affinity_mask_string(ze_device_handle_t device,
                                      uint16_t parent_index, uint16_t my_index,
                                      uint16_t &devices_present,
                                      bool sub_devices_as_devices,
-                                     size_t sub_device_count) {
+                                     uint16_t sub_device_count) {
 
   std::stringstream output_mask;
   auto device_count = get_device_count(device);
@@ -168,13 +170,13 @@ std::string get_affinity_mask_string(ze_device_handle_t device,
     input_mask >>= 1;
   } else { // device has subdevices
     std::stringstream temp_output_mask;
-    auto sub_device_index = 0;
+    uint16_t sub_device_index = 0;
     devices_present = 0;
     auto subdevices = lzt::get_ze_sub_devices(device);
     for (auto &sub_device : subdevices) {
       auto result = get_affinity_mask_string(
           sub_device, input_mask, my_index, sub_device_index, devices_present,
-          sub_devices_as_devices, subdevices.size());
+          sub_devices_as_devices, to_u16(subdevices.size()));
       if (!result.empty()) {
         temp_output_mask << result + ",";
       }
@@ -258,7 +260,7 @@ LZT_TEST(
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[device_idx], temp_mask, parent_index, device_idx,
+            devices[device_idx], temp_mask, parent_index, to_u16(device_idx),
             device_present, false, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -320,7 +322,7 @@ LZT_TEST(
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[device_idx], temp_mask, parent_index, device_idx,
+            devices[device_idx], temp_mask, parent_index, to_u16(device_idx),
             device_present, true, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -380,7 +382,7 @@ LZT_TEST(
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[device_idx], temp_mask, parent_index, device_idx,
+            devices[device_idx], temp_mask, parent_index, to_u16(device_idx),
             device_present, true, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -440,7 +442,7 @@ LZT_TEST(
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[device_idx], temp_mask, parent_index, device_idx,
+            devices[device_idx], temp_mask, parent_index, to_u16(device_idx),
             device_present, false, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {

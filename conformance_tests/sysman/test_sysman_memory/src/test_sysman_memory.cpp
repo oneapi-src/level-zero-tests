@@ -19,6 +19,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 #ifdef USE_ZESINIT
 class MemoryModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
@@ -273,12 +275,12 @@ uint64_t get_free_memory_state(ze_device_handle_t device) {
 
 ze_result_t copy_workload(ze_device_handle_t device,
                           ze_device_mem_alloc_desc_t *device_desc,
-                          void *src_ptr, void *dst_ptr, int32_t local_size) {
+                          void *src_ptr, void *dst_ptr, uint32_t local_size) {
 
   ze_result_t result = ZE_RESULT_SUCCESS;
   void *src_buffer = src_ptr;
   void *dst_buffer = dst_ptr;
-  int32_t offset = 0;
+  uint32_t offset = 0;
 
   ze_module_handle_t module = lzt::create_module(
       device, "copy_module.spv", ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
@@ -287,13 +289,13 @@ ze_result_t copy_workload(ze_device_handle_t device,
   lzt::set_group_size(function, 1, 1, 1);
   lzt::set_argument_value(function, 0, sizeof(src_buffer), &src_buffer);
   lzt::set_argument_value(function, 1, sizeof(dst_buffer), &dst_buffer);
-  lzt::set_argument_value(function, 2, sizeof(int32_t), &offset);
-  lzt::set_argument_value(function, 3, sizeof(int32_t), &local_size);
+  lzt::set_argument_value(function, 2, sizeof(uint32_t), &offset);
+  lzt::set_argument_value(function, 3, sizeof(uint32_t), &local_size);
 
   ze_command_list_handle_t cmd_list = lzt::create_command_list(device);
 
-  const int32_t group_count_x = 1;
-  const int32_t group_count_y = 1;
+  const uint32_t group_count_x = 1;
+  const uint32_t group_count_y = 1;
   ze_group_count_t tg;
   tg.groupCountX = group_count_x;
   tg.groupCountY = group_count_y;
@@ -377,7 +379,7 @@ LZT_TEST_F(
 
     result = copy_workload(device, &device_desc, local_mem,
                            static_cast<int *>(local_mem) + alloc_size / 2,
-                           alloc_size / 2);
+                           to_u32(alloc_size / 2));
     EXPECT_ZE_RESULT_SUCCESS(result);
 
     result = zeMemFree(lzt::get_default_context(), local_mem);
@@ -402,7 +404,7 @@ LZT_TEST_F(
 
       result = copy_workload(device, &device_desc, local_mem,
                              static_cast<uint8_t *>(local_mem) + alloc_size / 2,
-                             alloc_size / 2);
+                             to_u32(alloc_size / 2));
       count++;
     } while (result != ZE_RESULT_SUCCESS || count < 10);
 

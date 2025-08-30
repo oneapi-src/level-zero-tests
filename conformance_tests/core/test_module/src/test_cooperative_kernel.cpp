@@ -18,6 +18,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_int;
+
 class CooperativeKernelTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<int, bool>> {
@@ -45,7 +47,7 @@ void CooperativeKernelTests::
   for (size_t i = 0; i < command_queue_group_properties.size(); i++) {
     if (command_queue_group_properties[i].flags &
         ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS) {
-      ordinal = i;
+      ordinal = to_int(i);
       break;
     }
   }

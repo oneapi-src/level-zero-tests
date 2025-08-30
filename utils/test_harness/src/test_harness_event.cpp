@@ -51,8 +51,9 @@ create_event_pool(ze_context_handle_t context, ze_event_pool_desc_t desc,
 
   auto context_initial = context;
   auto devices_initial = devices;
-  EXPECT_ZE_RESULT_SUCCESS(zeEventPoolCreate(context, &desc, devices.size(),
-                                             devices.data(), &event_pool));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventPoolCreate(context, &desc, to_u32(devices.size()), devices.data(),
+                        &event_pool));
   EXPECT_EQ(context, context_initial);
   for (size_t i = 0U; i < devices.size(); i++) {
     EXPECT_EQ(devices[i], devices_initial[i]);
@@ -132,9 +133,9 @@ get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
-    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
+    timer_period = (1000000000.0 / to_dbl(timestamp_freq));
   } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
-    timer_period = static_cast<double>(timestamp_freq);
+    timer_period = to_dbl(timestamp_freq);
   } else {
     LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
   }
@@ -164,9 +165,9 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
-    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
+    timer_period = (1000000000.0 / to_dbl(timestamp_freq));
   } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
-    timer_period = static_cast<double>(timestamp_freq);
+    timer_period = to_dbl(timestamp_freq);
   } else {
     LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
   }
@@ -294,7 +295,7 @@ uint32_t find_index(const std::vector<bool> &indexes_available) {
   for (uint32_t i = 0; i < indexes_available.size(); i++)
     if (indexes_available[i])
       return i;
-  return -1;
+  return -1U;
 }
 
 void zeEventPool::create_event(ze_event_handle_t &event) {

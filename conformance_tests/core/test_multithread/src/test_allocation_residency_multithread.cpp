@@ -22,6 +22,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 constexpr size_t size_ = 1024;
 constexpr size_t num_threads = 16;
 constexpr size_t thread_iters = 200;
@@ -83,7 +85,7 @@ void make_resident_evict_API(ze_module_handle_t module) {
       temp->next = static_cast<node *>(lzt::allocate_shared_memory(
           sizeof(node), 1, device_flags, host_flags, device, context));
       temp = temp->next;
-      temp->value = i + 1;
+      temp->value = to_u32(i + 1);
     }
 
     ze_group_count_t group_count;
@@ -155,7 +157,7 @@ void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
   // init
   temp = data;
   for (size_t i = 0U; i < size + 1; i++) {
-    temp->value = i;
+    temp->value = to_u32(i);
     temp = temp->next;
   }
 

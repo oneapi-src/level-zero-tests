@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "random/random.hpp"
 #include "logging/logging.hpp"
@@ -25,6 +24,9 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 
 namespace {
+
+using lzt::to_u8;
+using lzt::to_u32;
 
 enum TestType { FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT };
 
@@ -42,9 +44,9 @@ std::vector<ze_module_handle_t> create_module_vector_and_log(
   auto start = std::chrono::system_clock::now();
   auto end = std::chrono::system_clock::now();
   // Create pseudo-random integer to add to native binary filename
-  srand(time(NULL) +
+  srand(static_cast<unsigned>(time(NULL) +
         std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-            .count());
+            .count()));
   std::string filename_native =
       filename_prefix + std::to_string(lzt::generate_value<uint16_t>()) +
       ".native";
@@ -430,7 +432,7 @@ void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest(
 
   module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
-  module_description.inputSize = static_cast<uint32_t>(binary_file.size());
+  module_description.inputSize = to_u32(binary_file.size());
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = nullptr;
   module_description.pConstants = &specConstants;
@@ -481,7 +483,7 @@ void zeModuleCreateTests::
   module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
-  module_description.inputSize = static_cast<uint32_t>(binary_file.size());
+  module_description.inputSize = to_u32(binary_file.size());
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = nullptr;
   module_description.pConstants = &spec_constants;
@@ -498,8 +500,8 @@ void zeModuleCreateTests::
   uint64_t *output = static_cast<uint64_t *>(buff_spec);
 
   for (uint32_t i = 0U; i < spec_constants_num; i++) {
-    int expected = (i + 1) * 11 + 1;
-    int actual = output[i];
+    uint32_t expected = (i + 1) * 11 + 1;
+    uint32_t actual = to_u32(output[i]);
     EXPECT_EQ(expected, actual);
   }
 
@@ -664,9 +666,9 @@ LZT_TEST_F(
   auto start = std::chrono::system_clock::now();
   auto end = std::chrono::system_clock::now();
   // Create pseudo-random integer to add to native binary filename
-  srand(time(NULL) +
+  srand(static_cast<unsigned>(time(NULL) +
         std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-            .count());
+            .count()));
   std::string filename_native =
       "module_add" + std::to_string(lzt::generate_value<uint16_t>()) +
       ".native";
@@ -789,7 +791,7 @@ protected:
                 uint32_t group_size_z, bool signal_to_host,
                 bool signal_from_host, enum TestType type, bool is_immediate,
                 bool is_shared_system) {
-    uint32_t num_events = std::min(group_size_x, static_cast<uint32_t>(6));
+    uint32_t num_events = std::min(group_size_x, to_u32(6));
     ze_event_handle_t event_kernel_to_host = nullptr;
     ze_kernel_handle_t function;
     ze_kernel_handle_t mult_function;
@@ -1347,7 +1349,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
     size = device_properties.maxMemAllocSize;
   } else {
     head = std::min(difference, head);
-    size = std::max(static_cast<uint64_t>(1UL << 32) /*4 GiB*/,
+    size = std::max(1ULL << 32 /*4 GiB*/,
                     device_properties.maxMemAllocSize) +
            head;
   }
@@ -1389,8 +1391,8 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, head, 1, 1, group_size_x, group_size_y,
-                          group_size_z);
+  lzt::suggest_group_size(kernel, to_u32(head), 1, 1,
+                          group_size_x, group_size_y, group_size_z);
   if (group_size_x > device_compute_properties.maxGroupSizeX) {
     LOG_WARNING << "Suggested group size is larger than max group size, "
                    "setting to max";
@@ -1399,7 +1401,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
 
   lzt::set_group_size(kernel, group_size_x, 1, 1);
   ze_group_count_t group_count = {};
-  group_count.groupCountX = head / group_size_x;
+  group_count.groupCountX = to_u32(head / group_size_x);
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
@@ -1593,9 +1595,9 @@ LZT_TEST_P(
 
         uint8_t val = 0;
         if (x >= offset_x && y >= offset_y && z >= offset_z) {
-          val = static_cast<uint8_t>((index & 0xFF) + addval);
+          val = to_u8((index & 0xFF) + addval);
         } else {
-          val = static_cast<uint8_t>(index & 0xFF);
+          val = to_u8(index & 0xFF);
         }
         ASSERT_EQ(static_cast<uint8_t *>(buffer_a)[index], val);
       }
@@ -1718,7 +1720,7 @@ void zeModuleCreateTests::RunGivenModuleWithGlobalVariableWhenWritingGlobalData(
   module_description.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
   module_description.pNext = nullptr;
   module_description.format = ZE_MODULE_FORMAT_IL_SPIRV;
-  module_description.inputSize = static_cast<uint32_t>(binary_file.size());
+  module_description.inputSize = to_u32(binary_file.size());
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = nullptr;
   module_description.pConstants = nullptr;

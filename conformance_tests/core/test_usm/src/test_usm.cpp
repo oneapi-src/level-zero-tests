@@ -18,6 +18,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class zeDriverMemoryMigrationPageFaultTestsMultiDevice
     : public ::testing::Test,
       public ::testing::WithParamInterface<
@@ -40,7 +42,7 @@ public:
     // occupied
     uint32_t groupSizeX, groupSizeY, groupSizeZ;
     size_t groupSize;
-    lzt::suggest_group_size(fill_function, pattern_memory_count, 1, 1,
+    lzt::suggest_group_size(fill_function, to_u32(pattern_memory_count), 1, 1,
                             groupSizeX, groupSizeY, groupSizeZ);
 
     groupSize = groupSizeX * groupSizeY * groupSizeZ;
@@ -84,7 +86,7 @@ public:
     // if groupSize is greater then memory count, then at least one thread group
     // should be dispatched
     uint32_t threadGroup = pattern_memory_count / groupSize > 1
-                               ? pattern_memory_count / groupSize
+                               ? to_u32(pattern_memory_count / groupSize)
                                : 1;
     LOG_DEBUG << "thread group dimension is ::" << threadGroup;
     ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};

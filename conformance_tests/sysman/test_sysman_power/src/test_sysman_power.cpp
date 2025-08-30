@@ -17,6 +17,9 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
+  
+using lzt::to_u32;
+
 #ifdef USE_ZESINIT
 class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
@@ -88,7 +91,7 @@ LZT_TEST_F(
       if (p_count > 1) {
         tcount = p_count - 1;
         auto p_power_handles = lzt::get_power_handles(device, tcount);
-        EXPECT_EQ(static_cast<uint32_t>(p_power_handles.size()), tcount);
+        EXPECT_EQ(to_u32(p_power_handles.size()), tcount);
       }
     } else {
       LOG_INFO << "No power handles found for this device! ";
@@ -1002,7 +1005,7 @@ LZT_TEST_F(
       auto p_power_handles = lzt::get_power_handles(device, count);
       for (auto p_power_handle : p_power_handles) {
         auto p_properties = lzt::get_power_properties(p_power_handle);
-        if (p_properties.onSubdevice == true) {
+        if (p_properties.onSubdevice) {
           continue;
         }
         uint32_t count_power = 0;
@@ -1102,7 +1105,7 @@ LZT_TEST_F(
       auto p_power_handles = lzt::get_power_handles(device, count);
       for (auto p_power_handle : p_power_handles) {
         auto p_properties = lzt::get_power_properties(p_power_handle);
-        if (p_properties.onSubdevice == true) {
+        if (p_properties.onSubdevice) {
           continue;
         }
         uint32_t count_power = 0;
@@ -1290,7 +1293,7 @@ LZT_TEST_F(
       auto p_power_handles = lzt::get_power_handles(device, count);
       for (auto p_power_handle : p_power_handles) {
         auto p_properties = lzt::get_power_properties(p_power_handle);
-        if (p_properties.onSubdevice == true) {
+        if (p_properties.onSubdevice) {
           continue;
         }
         uint32_t perf_count = 0;

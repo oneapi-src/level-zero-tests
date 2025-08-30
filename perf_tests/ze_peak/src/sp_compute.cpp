@@ -12,7 +12,7 @@ void ZePeak::ze_peak_sp_compute(L0Context &context) {
   long double gflops, timed;
   ze_result_t result = ZE_RESULT_SUCCESS;
   TimingMeasurement type = is_bandwidth_with_event_timer();
-  float flops_per_work_item = 4096;
+  uint32_t flops_per_work_item = 4096;
   struct ZeWorkGroups workgroup_info;
   float input_value = 1.3f;
 
