@@ -30,7 +30,7 @@ struct BMPFileHeader {
 struct BMPInfoHeader {
   uint32_t bi_size_;      // length of info header
   uint32_t bi_width_;     // width of bitmap in pixels
-  sint32_t bi_height_;    // height of bitmap in pixels (negative height means a
+  int32_t bi_height_;     // height of bitmap in pixels (negative height means a
                           // top-down bitmap)
   uint16_t bi_planes_;    // number of color planes - must be 1
   uint16_t bi_bit_count_; // bit depth
