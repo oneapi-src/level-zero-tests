@@ -29,7 +29,7 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
     ASSERT_EQ(ZE_RESULT_SUCCESS, lzt_assert_ze_result_success_macro)           \
         << " --> " << #val;                                                    \
   }
- 
+
 #define EXPECT_ZE_RESULT_SUCCESS(val)                                          \
   {                                                                            \
     const auto lzt_expect_ze_result_success_macro = val;                       \
