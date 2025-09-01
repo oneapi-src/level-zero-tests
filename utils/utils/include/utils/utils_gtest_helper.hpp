@@ -39,7 +39,7 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
         throw LztGtestSkipExectuionException("Unsupported API version");       \
       }                                                                        \
     } catch (const LztGtestSkipExectuionException &e) {                        \
-      std::cerr << "Error: " << e.what() << std::endl;                         \
+      std::cerr << "Exception is: " << e.what() << std::endl;                  \
     }                                                                          \
     EXPECT_EQ(ZE_RESULT_SUCCESS, lzt_expect_ze_result_success_macro)           \
         << " --> " << #val;                                                    \
