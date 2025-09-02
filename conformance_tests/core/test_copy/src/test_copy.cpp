@@ -26,7 +26,7 @@ using namespace level_zero_tests;
 
 namespace {
 
-static void get_copy_and_compute_ordinals(
+void get_copy_and_compute_ordinals(
     const std::vector<ze_command_queue_group_properties_t>
         &cmd_queue_group_props,
     int &compute_ordinal, int &copy_ordinal) {
@@ -69,9 +69,8 @@ void zeCommandListAppendMemoryFillTests::
   int compute_ordinal = -1, copy_ordinal = -1;
   get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
                                 copy_ordinal);
-  if (use_copy_engine && copy_ordinal < 0) {
-    GTEST_SKIP() << "Device does not support copy queue, skipping the test";
-  }
+  ASSERT_TRUE((use_copy_engine && copy_ordinal >= 0) ||
+              (!use_copy_engine && compute_ordinal >= 0));
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -213,9 +212,8 @@ void zeCommandListAppendMemoryFillTests::
   int compute_ordinal = -1, copy_ordinal = -1;
   get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
                                 copy_ordinal);
-  if (use_copy_engine && copy_ordinal < 0) {
-    GTEST_SKIP() << "Device does not support copy queue";
-  }
+  ASSERT_TRUE((use_copy_engine && copy_ordinal >= 0) ||
+              (!use_copy_engine && compute_ordinal >= 0));
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -309,9 +307,8 @@ void zeCommandListAppendMemoryFillTests::
   int compute_ordinal = -1, copy_ordinal = -1;
   get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
                                 copy_ordinal);
-  if (use_copy_engine && copy_ordinal < 0) {
-    GTEST_SKIP() << "Device does not support copy queue";
-  }
+  ASSERT_TRUE((use_copy_engine && copy_ordinal >= 0) ||
+              (!use_copy_engine && compute_ordinal >= 0));
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -1366,9 +1363,8 @@ void zeCommandListAppendMemoryCopyTests::
   int compute_ordinal = -1, copy_ordinal = -1;
   get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
                                 copy_ordinal);
-  if (use_copy_engine && copy_ordinal < 0) {
-    GTEST_SKIP() << "Device does not support copy queue, skipping the test";
-  }
+  ASSERT_TRUE((use_copy_engine && copy_ordinal >= 0) ||
+              (!use_copy_engine && compute_ordinal >= 0));
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -1449,9 +1445,8 @@ void zeCommandListAppendMemoryCopyTests::
   int compute_ordinal = -1, copy_ordinal = -1;
   get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
                                 copy_ordinal);
-  if (use_copy_engine && copy_ordinal < 0) {
-    GTEST_SKIP() << "Device does not support copy queue, skipping the test";
-  }
+  ASSERT_TRUE((use_copy_engine && copy_ordinal >= 0) ||
+              (!use_copy_engine && compute_ordinal >= 0));
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -1544,9 +1539,8 @@ void zeCommandListAppendMemoryCopyTests::
   int compute_ordinal = -1, copy_ordinal = -1;
   get_copy_and_compute_ordinals(cmd_queue_group_props, compute_ordinal,
                                 copy_ordinal);
-  if (use_copy_engine && copy_ordinal < 0) {
-    GTEST_SKIP() << "Device does not support copy queue, skipping the test";
-  }
+  ASSERT_TRUE((use_copy_engine && copy_ordinal >= 0) ||
+              (!use_copy_engine && compute_ordinal >= 0));
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
