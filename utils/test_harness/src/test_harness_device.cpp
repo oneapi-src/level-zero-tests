@@ -319,6 +319,31 @@ get_cache_properties(ze_device_handle_t device) {
   return properties;
 }
 
+std::vector<ze_cache_reservation_ext_desc_t>
+get_cache_reservation_properties_ext(ze_device_handle_t device) {
+  std::vector<ze_device_cache_properties_t> properties;
+  std::vector<ze_cache_reservation_ext_desc_t> cacheReservationProperties;
+  uint32_t count = 0;
+  auto device_initial = device;
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetCacheProperties(device, &count, nullptr));
+  properties.resize(count);
+  cacheReservationProperties.resize(count);
+  memset(properties.data(), 0, sizeof(ze_device_cache_properties_t) * count);
+  memset(cacheReservationProperties.data(), 0,
+         sizeof(ze_cache_reservation_ext_desc_t) * count);
+  for (auto i = 0; i < count; i++) {
+    properties[i].stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
+    cacheReservationProperties[i].stype =
+        ZE_STRUCTURE_TYPE_CACHE_RESERVATION_EXT_DESC;
+    properties[i].pNext = &cacheReservationProperties[i];
+  }
+
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceGetCacheProperties(device, &count, properties.data()));
+  EXPECT_EQ(device, device_initial);
+  return cacheReservationProperties;
+}
+
 ze_device_image_properties_t get_image_properties(ze_device_handle_t device) {
   ze_device_image_properties_t properties;
   memset(&properties, 0, sizeof(properties));
