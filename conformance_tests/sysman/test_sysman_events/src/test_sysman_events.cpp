@@ -245,8 +245,9 @@ static void eventListenThread(ze_driver_handle_t hDriver,
   uint32_t numDeviceEvents = std::numeric_limits<int32_t>::max();
   std::vector<zes_event_type_flags_t> events(devices.size(), 0);
   LOG_INFO << "Listening for device being detached ...";
-  lzt::listen_eventEx(hDriver, timeout, devices.size(), devices.data(),
-                      &numDeviceEvents, events.data());
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_eventEx(hDriver, timeout, devices.size(),
+                                               devices.data(), &numDeviceEvents,
+                                               events.data()));
   *numEventsGenerated = numDeviceEvents;
 }
 
