@@ -33,13 +33,9 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
 #define EXPECT_ZE_RESULT_SUCCESS(val)                                          \
   {                                                                            \
     const auto lzt_expect_ze_result_success_macro = val;                       \
-    try {                                                                      \
-      if (lzt_expect_ze_result_success_macro ==                                \
-          ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                               \
-        throw LztGtestSkipExectuionException("Unsupported API version");       \
-      }                                                                        \
-    } catch (const LztGtestSkipExectuionException &e) {                        \
-      std::cerr << "Exception is: " << e.what() << std::endl;                  \
+    if (lzt_expect_ze_result_success_macro ==                                  \
+        ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {                                 \
+      throw LztGtestSkipExectuionException("Unsupported API version");         \
     }                                                                          \
     EXPECT_EQ(ZE_RESULT_SUCCESS, lzt_expect_ze_result_success_macro)           \
         << " --> " << #val;                                                    \
