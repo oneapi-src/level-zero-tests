@@ -76,6 +76,8 @@ get_memory_access_properties(ze_device_handle_t device);
 bool is_concurrent_memory_access_supported(ze_device_handle_t device);
 std::vector<ze_device_cache_properties_t>
 get_cache_properties(ze_device_handle_t device);
+std::vector<ze_cache_reservation_ext_desc_t>
+get_cache_reservation_properties_ext(ze_device_handle_t device);
 ze_device_image_properties_t get_image_properties(ze_device_handle_t device);
 ze_device_module_properties_t
 get_device_module_properties(ze_device_handle_t device);
