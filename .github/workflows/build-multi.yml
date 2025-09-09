@@ -202,6 +202,9 @@ jobs:
         ${{ runner.os == 'Windows' && '  \
           --memory 16G ' || '  '
         }}\
+        ${{ runner.os == 'Windows' && '  \
+          --isolation=hyperv ' || '  '
+        }}\
         ${{ matrix.os.vmaj != '' && format('  \
           --build-arg VMAJ={0} \
           --build-arg VMIN={1} ', matrix.os.vmaj, matrix.os.vmin) || '  '
@@ -215,6 +218,9 @@ jobs:
         docker run \
           --rm \
           --interactive \
+        ${{ runner.os == 'Windows' && '  \
+          --isolation=hyperv ' || '  '
+        }}\
           -v '${{ github.workspace }}':${MOUNT_TARGET} \
           -w ${MOUNT_TARGET}/level-zero/build \
           -e CCACHE_BASEDIR=${MOUNT_TARGET} \
@@ -243,6 +249,9 @@ jobs:
         docker run \
           --rm \
           --interactive \
+        ${{ runner.os == 'Windows' && '  \
+          --isolation=hyperv ' || '  '
+        }}\
           -v '${{ github.workspace }}':${MOUNT_TARGET} \
           -w ${MOUNT_TARGET}/build \
           -e CCACHE_BASEDIR=${MOUNT_TARGET} \
