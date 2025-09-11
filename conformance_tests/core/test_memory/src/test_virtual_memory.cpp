@@ -344,7 +344,7 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
   lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
-  for (int i = 0; i < test.allocationSize; i++) {
+  for (size_t i = 0U; i < test.allocationSize; i++) {
     ASSERT_EQ(data[i], pattern);
   }
 
@@ -418,7 +418,7 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
   test.allocationSize = test.pageSize;
   test.allocationSize =
       lzt::create_page_aligned_size(test.allocationSize, test.pageSize);
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     lzt::physical_device_memory_allocation(test.context, devices[i],
                                            test.allocationSize,
                                            &reservedPhysicalMemoryArray[i]);
@@ -432,7 +432,7 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
   EXPECT_NE(nullptr, test.reservedVirtualMemory);
 
   size_t offset = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
         reinterpret_cast<uint64_t>(test.reservedVirtualMemory) + offset);
     ASSERT_ZE_RESULT_SUCCESS(
@@ -453,11 +453,11 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
   lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
-  for (int i = 0; i < totalAllocationSize; i++) {
+  for (size_t i = 0U; i < totalAllocationSize; i++) {
     ASSERT_EQ(data[i], pattern);
   }
   offset = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
         reinterpret_cast<uint64_t>(test.reservedVirtualMemory) + offset);
     lzt::virtual_memory_unmap(test.context, reservedVirtualMemoryOffset,
@@ -487,12 +487,12 @@ LZT_TEST_F(
 
 void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKernel(
     zeVirtualMemoryTests &test, bool is_immediate) {
-  int numDevices = lzt::get_ze_device_count();
+  uint32_t numDevices = lzt::get_ze_device_count();
   std::vector<ze_device_handle_t> devices;
   std::vector<ze_physical_mem_handle_t> reservedPhysicalMemoryArray;
   devices = lzt::get_ze_devices(numDevices);
   reservedPhysicalMemoryArray.resize(numDevices);
-  if (numDevices == 1) {
+  if (numDevices == 1U) {
     reservedPhysicalMemoryArray.resize(2);
     devices.resize(2);
     devices[0] = test.device;
@@ -505,7 +505,7 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   test.allocationSize = test.pageSize;
   test.allocationSize =
       lzt::create_page_aligned_size(test.allocationSize, test.pageSize);
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     lzt::physical_device_memory_allocation(test.context, devices[i],
                                            test.allocationSize,
                                            &reservedPhysicalMemoryArray[i]);
@@ -518,7 +518,7 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   EXPECT_NE(nullptr, test.reservedVirtualMemory);
 
   size_t offset = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
         reinterpret_cast<uint64_t>(test.reservedVirtualMemory) + offset);
     ASSERT_ZE_RESULT_SUCCESS(
@@ -588,7 +588,7 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   lzt::destroy_function(function);
   lzt::destroy_module(module);
   offset = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
         reinterpret_cast<uint64_t>(test.reservedVirtualMemory) + offset);
     lzt::virtual_memory_unmap(test.context, reservedVirtualMemoryOffset,
@@ -667,7 +667,7 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
 
   lzt::query_page_size(context, rootDevice, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     lzt::physical_device_memory_allocation(context, devices[i], allocationSize,
                                            &reservedPhysicalMemory[i]);
   }
@@ -678,7 +678,7 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
   EXPECT_NE(nullptr, reservedVirtualMemory);
 
   size_t offset = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     uint64_t offsetAddr =
         reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
     ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
@@ -692,7 +692,7 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
       lzt::allocate_host_memory(allocationSize * devices.size(), pageSize);
 
   offset = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     uint64_t offsetAddr =
         reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
     lzt::append_memory_fill(bundle.list, reinterpret_cast<void *>(offsetAddr),
@@ -703,7 +703,7 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
 
   offset = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     uint64_t offsetAddr =
         reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
     uint64_t offsetHostAddr = reinterpret_cast<uint64_t>(memory) + offset;
@@ -716,14 +716,14 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
   lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
-  for (int i = 0; i < allocationSize * devices.size(); i++) {
+  for (size_t i = 0U; i < allocationSize * devices.size(); i++) {
     ASSERT_EQ(data[i], pattern);
   }
 
   lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
 
   offset = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     uint64_t offsetAddr =
         reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
     lzt::virtual_memory_unmap(context, reinterpret_cast<void *>(offsetAddr),

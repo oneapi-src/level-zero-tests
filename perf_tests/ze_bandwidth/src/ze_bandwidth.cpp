@@ -434,7 +434,7 @@ void ZeBandwidth::test_host2device(void) {
   for (auto size : transfer_size) {
     long double total_time_nsec = 0;
     std::vector<long double> device_times_nsec(benchmark->_devices.size());
-    for (int i = 0; i < device_times_nsec.size(); i++) {
+    for (size_t i = 0U; i < device_times_nsec.size(); i++) {
       device_times_nsec[i] = 0;
     }
 
@@ -484,7 +484,7 @@ void ZeBandwidth::test_device2host(void) {
   for (auto size : transfer_size) {
     long double total_time_nsec = 0;
     std::vector<long double> device_times_nsec(benchmark->_devices.size());
-    for (int i = 0; i < device_times_nsec.size(); i++) {
+    for (size_t i = 0U; i < device_times_nsec.size(); i++) {
       device_times_nsec[i] = 0;
     }
 
@@ -536,7 +536,7 @@ void ZeBandwidth::test_bidir(void) {
   for (auto size : transfer_size) {
     long double total_time_nsec = 0;
     std::vector<long double> device_times_nsec(benchmark->_devices.size());
-    for (int i = 0; i < device_times_nsec.size(); i++) {
+    for (size_t i = 0U; i < device_times_nsec.size(); i++) {
       device_times_nsec[i] = 0;
     }
 

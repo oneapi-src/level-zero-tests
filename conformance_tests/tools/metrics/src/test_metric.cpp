@@ -1658,7 +1658,7 @@ LZT_TEST_F(
       std::vector<uint8_t> rawData;
       ze_result_t result;
       constexpr uint32_t maxAttempts = 6;
-      uint64_t timeForNextIterationSec = 10;
+      time_t timeForNextIterationSec = 10;
 
       for (uint32_t i = 0; i < maxAttempts; i++) {
         // Busy wait before trying to read to increase chanceof  buffer overflow

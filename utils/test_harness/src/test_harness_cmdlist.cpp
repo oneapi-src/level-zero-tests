@@ -141,10 +141,10 @@ void append_command_lists_immediate_exp(
       numWaitEvents, phWaitEvents));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < numCommandLists; i++) {
+  for (uint32_t i = 0U; i < numCommandLists; i++) {
     EXPECT_EQ(phCommandLists[i], command_lists_initial[i]);
   }
-  for (int i = 0; i < numWaitEvents; i++) {
+  for (uint32_t i = 0U; i < numWaitEvents; i++) {
     EXPECT_EQ(phWaitEvents[i], wait_events_initial[i]);
   }
 }
@@ -281,7 +281,7 @@ void append_memory_fill(ze_command_list_handle_t cl, void *dstptr,
       wait_events));
   EXPECT_EQ(cl, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -313,7 +313,7 @@ void append_memory_copy(ze_command_list_handle_t cl, void *dstptr,
 
   EXPECT_EQ(cl, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -336,7 +336,7 @@ void append_memory_copy(ze_context_handle_t src_context,
 
   EXPECT_EQ(cl, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -374,7 +374,7 @@ void append_memory_copy_region(ze_command_list_handle_t hCommandList,
 
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -390,7 +390,7 @@ void append_barrier(ze_command_list_handle_t cl, ze_event_handle_t hSignalEvent,
       cl, hSignalEvent, numWaitEvents, phWaitEvents));
   EXPECT_EQ(cl, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < numWaitEvents; i++) {
+  for (uint32_t i = 0U; i < numWaitEvents; i++) {
     EXPECT_EQ(phWaitEvents[i], wait_events_initial[i]);
   }
 }
@@ -420,7 +420,7 @@ void append_memory_ranges_barrier(ze_command_list_handle_t hCommandList,
       numWaitEvents, phWaitEvents));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < numWaitEvents; i++) {
+  for (uint32_t i = 0U; i < numWaitEvents; i++) {
     EXPECT_EQ(phWaitEvents[i], wait_events_initial[i]);
   }
 }
@@ -445,7 +445,7 @@ void append_launch_function(ze_command_list_handle_t hCommandList,
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hFunction, function_initial);
   EXPECT_EQ(hSignalEvent, signal_event_initial);
-  for (int i = 0; i < numWaitEvents && phWaitEvents; i++) {
+  for (uint32_t i = 0U; i < numWaitEvents && phWaitEvents; i++) {
     EXPECT_EQ(phWaitEvents[i], wait_events_initial[i]);
   }
 }
@@ -470,7 +470,7 @@ void append_wait_on_events(ze_command_list_handle_t hCommandList,
   EXPECT_ZE_RESULT_SUCCESS(
       zeCommandListAppendWaitOnEvents(hCommandList, numEvents, phEvents));
   EXPECT_EQ(hCommandList, command_list_initial);
-  for (int i = 0; i < numEvents; i++) {
+  for (uint32_t i = 0U; i < numEvents; i++) {
     EXPECT_EQ(phEvents[i], events_initial[i]);
   }
 }
@@ -514,7 +514,7 @@ void append_image_copy(ze_command_list_handle_t hCommandList,
   EXPECT_EQ(hEvent, signal_event_initial);
   EXPECT_EQ(dst, dst_initial);
   EXPECT_EQ(src, src_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -541,7 +541,7 @@ void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(src, src_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -568,7 +568,7 @@ void append_image_copy_to_mem(ze_command_list_handle_t hCommandList, void *dst,
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(src, src_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -606,7 +606,7 @@ void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(dst, dst_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -628,7 +628,7 @@ void append_image_copy_from_mem(ze_command_list_handle_t hCommandList,
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(dst, dst_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -671,7 +671,7 @@ void append_image_copy_to_mem_ext(
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(src, src_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -694,7 +694,7 @@ void append_image_copy_to_mem_ext(
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(src, src_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -727,7 +727,7 @@ void append_image_copy_from_mem_ext(
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(dst, dst_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -762,7 +762,7 @@ void append_image_copy_from_mem_ext(
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(dst, dst_initial);
   EXPECT_EQ(hEvent, signal_event_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }
@@ -808,7 +808,7 @@ void append_image_copy_region(ze_command_list_handle_t hCommandList,
   EXPECT_EQ(hEvent, signal_event_initial);
   EXPECT_EQ(dst, dst_initial);
   EXPECT_EQ(src, src_initial);
-  for (int i = 0; i < num_wait_events; i++) {
+  for (uint32_t i = 0U; i < num_wait_events; i++) {
     EXPECT_EQ(wait_events[i], wait_events_initial[i]);
   }
 }

@@ -82,8 +82,8 @@ LZT_TEST_F(
 
     ASSERT_GT(device_with_metric_group_handles
                   .activatable_metric_group_handle_list.size(),
-              0u);
-    for (int32_t i = 0; i < device_with_metric_group_handles
+              0U);
+    for (size_t i = 0U; i < device_with_metric_group_handles
                                 .activatable_metric_group_handle_list.size();
          i++) {
 
@@ -701,8 +701,8 @@ LZT_TEST_F(
 
     ASSERT_GT(device_with_metric_group_handles
                   .activatable_metric_group_handle_list.size(),
-              0u);
-    for (int32_t i = 0; i < device_with_metric_group_handles
+              0U);
+    for (size_t i = 0U; i < device_with_metric_group_handles
                                 .activatable_metric_group_handle_list.size();
          i++) {
 
@@ -748,8 +748,8 @@ LZT_TEST_F(
 
     ASSERT_GT(device_with_metric_group_handles
                   .activatable_metric_group_handle_list.size(),
-              0u);
-    for (int32_t i = 0; i < device_with_metric_group_handles
+              0U);
+    for (size_t i = 0U; i < device_with_metric_group_handles
                                 .activatable_metric_group_handle_list.size();
          i++) {
 
@@ -893,8 +893,8 @@ void run_metric_tracer_read_test(
 
     ASSERT_GT(device_with_metric_group_handles
                   .activatable_metric_group_handle_list.size(),
-              0u);
-    for (int32_t i = 0; i < device_with_metric_group_handles
+              0U);
+    for (size_t i = 0U; i < device_with_metric_group_handles
                                 .activatable_metric_group_handle_list.size();
          i++) {
 
@@ -1123,8 +1123,8 @@ LZT_TEST_F(zetMetricTracerTest,
            "value "
            "for the count of decodable metrics";
 
-    ASSERT_GT(num_decodable_metrics, 0u);
-    for (int i = 0; i < num_decodable_metrics; i++) {
+    ASSERT_GT(num_decodable_metrics, 0U);
+    for (uint32_t i = 0U; i < num_decodable_metrics; i++) {
       bool valid_type;
       zet_metric_properties_t metric_properties;
       lzt::get_metric_properties(metric_handles[i], &metric_properties);
@@ -1169,8 +1169,8 @@ LZT_TEST_F(
 
     ASSERT_GT(device_with_metric_group_handles
                   .activatable_metric_group_handle_list.size(),
-              0u);
-    for (int32_t i = 0; i < device_with_metric_group_handles
+              0U);
+    for (size_t i = 0U; i < device_with_metric_group_handles
                                 .activatable_metric_group_handle_list.size();
          i++) {
 

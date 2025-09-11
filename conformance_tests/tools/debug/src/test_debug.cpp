@@ -878,13 +878,13 @@ void verify_single_application_host_thread(
   ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
 
   LOG_INFO << "[Debugger] Waiting for application module load debug events";
-  for (int i = 0; i < num_expected_module_events; i++) {
+  for (uint32_t i = 0; i < num_expected_module_events; i++) {
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
     ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD);
     lzt::debug_ack_event(debug_session, &debug_event);
   }
   LOG_INFO << "[Debugger] Waiting for application module load debug events";
-  for (int i = 0; i < num_expected_module_events; i++) {
+  for (uint32_t i = 0; i < num_expected_module_events; i++) {
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
     ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD);
   }
@@ -905,7 +905,7 @@ void read_and_verify_events_multithreaded_app(
 
   auto num_application_host_threads_to_verify = 2;
   auto broken = false;
-  for (int i = 0; i < (num_expected_module_events * 2 * 2); i++) {
+  for (uint32_t i = 0; i < (num_expected_module_events * 2 * 2); i++) {
     // module load and unload events can be interleaved if threads run
     // concurrently if threads run sequentially we will expect a process exit
     // event in this loop
@@ -1298,7 +1298,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
       int regSetNumber = 1;
 
       for (auto &register_set : register_set_properties) {
-        auto buffer_size = register_set.byteSize * register_set.count;
+        uint32_t buffer_size = register_set.byteSize * register_set.count;
         void *buffer = lzt::allocate_host_memory(register_set.byteSize *
                                                  register_set.count);
         void *buffer_copy = lzt::allocate_host_memory(register_set.byteSize *
@@ -1334,7 +1334,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
                                       register_set.type, 0, register_set.count,
                                       buffer);
 
-            for (int i = 0; i < buffer_size; i++) {
+            for (uint32_t i = 0U; i < buffer_size; i++) {
               if (static_cast<char>(0xaa) != static_cast<char *>(buffer)[i]) {
                 delete[] kernel_buffer;
                 auto found_val = static_cast<char *>(buffer)[i];

@@ -122,12 +122,12 @@ LZT_TEST(
 
   std::vector<std::unique_ptr<std::thread>> threads;
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
         new std::thread(image_create_destroy_thread)));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 }
@@ -146,12 +146,12 @@ LZT_TEST(
   auto command_queue = lzt::create_command_queue();
   std::vector<std::unique_ptr<std::thread>> threads;
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads.push_back(std::unique_ptr<std::thread>(
         new std::thread(image_copy_thread, command_queue)));
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 

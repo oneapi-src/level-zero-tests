@@ -237,8 +237,8 @@ LZT_TEST(
 
     // in each mask, either a device is present or it is not,
     // so for N devices there are 2^N possible masks
-    auto num_masks = 1 << num_leaf_devices;
-    for (uint32_t mask = 0; mask < num_masks; mask++) {
+    uint32_t num_masks = 1U << num_leaf_devices;
+    for (uint32_t mask = 0U; mask < num_masks; mask++) {
       uint32_t num_devices_mask = 0;
       auto temp = mask;
       while (temp) {
@@ -254,11 +254,11 @@ LZT_TEST(
       auto temp_mask = mask;
       std::string affinity_mask_string;
       uint16_t parent_index = 0;
-      for (int root_device = 0; root_device < devices.size(); root_device++) {
+      for (size_t device_idx = 0U; device_idx < devices.size(); device_idx++) {
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[root_device], temp_mask, parent_index, root_device,
+            devices[device_idx], temp_mask, parent_index, device_idx,
             device_present, false, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -299,9 +299,9 @@ LZT_TEST(
 
     // in each mask, either a device is present or it is not,
     // so for N devices there are 2^N possible masks
-    auto num_masks = 1 << num_leaf_devices;
-    for (uint32_t mask = 0; mask < num_masks; mask++) {
-      uint32_t num_devices_mask = 0;
+    uint32_t num_masks = 1U << num_leaf_devices;
+    for (uint32_t mask = 0U; mask < num_masks; mask++) {
+      uint32_t num_devices_mask = 0U;
       auto temp = mask;
       while (temp) {
         num_devices_mask += temp & 0x1;
@@ -316,11 +316,11 @@ LZT_TEST(
       auto temp_mask = mask;
       std::string affinity_mask_string;
       uint16_t parent_index = 0;
-      for (int root_device = 0; root_device < devices.size(); root_device++) {
+      for (size_t device_idx = 0U; device_idx < devices.size(); device_idx++) {
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[root_device], temp_mask, parent_index, root_device,
+            devices[device_idx], temp_mask, parent_index, device_idx,
             device_present, true, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -359,9 +359,9 @@ LZT_TEST(
 
     // in each mask, either a device is present or it is not,
     // so for N devices there are 2^N possible masks
-    auto num_masks = 1 << num_leaf_devices;
-    for (uint32_t mask = 0; mask < num_masks; mask++) {
-      uint32_t num_devices_mask = 0;
+    uint32_t num_masks = 1U << num_leaf_devices;
+    for (uint32_t mask = 0U; mask < num_masks; mask++) {
+      uint32_t num_devices_mask = 0U;
       auto temp = mask;
       while (temp) {
         num_devices_mask += temp & 0x1;
@@ -376,11 +376,11 @@ LZT_TEST(
       auto temp_mask = mask;
       std::string affinity_mask_string;
       uint16_t parent_index = 0;
-      for (int root_device = 0; root_device < devices.size(); root_device++) {
+      for (size_t device_idx = 0U; device_idx < devices.size(); device_idx++) {
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[root_device], temp_mask, parent_index, root_device,
+            devices[device_idx], temp_mask, parent_index, device_idx,
             device_present, true, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -419,9 +419,9 @@ LZT_TEST(
 
     // in each mask, either a device is present or it is not,
     // so for N devices there are 2^N possible masks
-    auto num_masks = 1 << num_leaf_devices;
-    for (uint32_t mask = 0; mask < num_masks; mask++) {
-      uint32_t num_devices_mask = 0;
+    uint32_t num_masks = 1U << num_leaf_devices;
+    for (uint32_t mask = 0U; mask < num_masks; mask++) {
+      uint32_t num_devices_mask = 0U;
       auto temp = mask;
       while (temp) {
         num_devices_mask += temp & 0x1;
@@ -436,11 +436,11 @@ LZT_TEST(
       auto temp_mask = mask;
       std::string affinity_mask_string;
       uint16_t parent_index = 0;
-      for (int root_device = 0; root_device < devices.size(); root_device++) {
+      for (size_t device_idx = 0U; device_idx < devices.size(); device_idx++) {
         uint16_t device_present = 0;
 
         auto temp_string = get_affinity_mask_string(
-            devices[root_device], temp_mask, parent_index, root_device,
+            devices[device_idx], temp_mask, parent_index, device_idx,
             device_present, false, 0);
         if (!temp_string.empty()) {
           if (!affinity_mask_string.empty()) {
@@ -475,7 +475,7 @@ LZT_TEST(
   }
 
   uint32_t num_leaf_devices = 0;
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     num_leaf_devices += get_leaf_device_count(devices[i]);
   }
 

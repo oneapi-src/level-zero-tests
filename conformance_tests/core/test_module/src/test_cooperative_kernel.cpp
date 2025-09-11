@@ -42,7 +42,7 @@ void CooperativeKernelTests::
 
   auto command_queue_group_properties =
       lzt::get_command_queue_group_properties(device);
-  for (int i = 0; i < command_queue_group_properties.size(); i++) {
+  for (size_t i = 0; i < command_queue_group_properties.size(); i++) {
     if (command_queue_group_properties[i].flags &
         ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS) {
       ordinal = i;
@@ -66,7 +66,7 @@ void CooperativeKernelTests::
 
   memcpy(input_data, kernel_data, data_size * sizeof(uint64_t));
 
-  auto row_num = std::get<0>(GetParam());
+  uint32_t row_num = std::get<0>(GetParam());
   uint32_t groups_x = 1;
 
   module = lzt::create_module(context, device, "cooperative_kernel.spv",
@@ -99,7 +99,7 @@ void CooperativeKernelTests::
 
   // Validate the kernel completed successfully and correctly
   uint64_t val = 0;
-  for (int i = 0; i <= row_num; i++) {
+  for (uint32_t i = 0U; i <= row_num; i++) {
     val = i + row_num;
     ASSERT_EQ(static_cast<uint64_t *>(input_data)[i], val);
   }

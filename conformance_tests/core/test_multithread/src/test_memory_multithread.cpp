@@ -274,7 +274,7 @@ LZT_TEST(
         std::make_unique<std::thread>(host_memory_create_destroy_thread);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 }
@@ -286,12 +286,12 @@ LZT_TEST(
 
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
-  for (uint32_t i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i] =
         std::make_unique<std::thread>(shared_memory_create_destroy_thread);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 }
@@ -303,12 +303,12 @@ LZT_TEST(
 
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
-  for (uint32_t i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i] =
         std::make_unique<std::thread>(device_memory_create_destroy_thread);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 }
@@ -322,12 +322,12 @@ LZT_TEST(
 
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
-  for (uint32_t i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i] =
         std::make_unique<std::thread>(all_memory_create_destroy_thread, cq);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 
@@ -348,7 +348,7 @@ LZT_TEST(
         all_memory_create_destroy_submissions_thread, cq);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 
@@ -366,7 +366,7 @@ LZT_TEST(
     threads[i] = std::make_unique<std::thread>(perform_memory_manipulation);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 }

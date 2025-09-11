@@ -988,11 +988,11 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
     auto command_queue_groups = lzt::get_command_queue_group_properties(device);
 
     // we want to test copies with differing engines
-    std::vector<int> copy_ordinals;
-    for (int i = 0; i < command_queue_groups.size(); i++) {
+    std::vector<uint32_t> copy_ordinals;
+    for (size_t i = 0U; i < command_queue_groups.size(); i++) {
       if (command_queue_groups[i].flags &
           ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) {
-        copy_ordinals.push_back(i);
+        copy_ordinals.push_back(static_cast<uint32_t>(i));
       }
     }
 

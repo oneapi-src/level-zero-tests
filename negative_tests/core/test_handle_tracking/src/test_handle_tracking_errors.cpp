@@ -185,7 +185,7 @@ LZT_TEST_F(
             zeKernelCreate(invalid_module, &kernel_desc, &kernel));
   ASSERT_ZE_RESULT_SUCCESS(zeKernelCreate(module, &kernel_desc, &kernel));
 
-  auto size = 8192;
+  size_t size = 8192;
   ze_kernel_properties_t kernel_properties = {
       ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES, nullptr};
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
@@ -217,7 +217,7 @@ LZT_TEST_F(
       zeMemAllocDevice(context, &device_desc, size, 1, device, &buffer_b));
 
   std::memset(buffer_a, 0, size);
-  for (size_t i = 0; i < size; i++) {
+  for (size_t i = 0U; i < size; i++) {
     static_cast<uint8_t *>(buffer_a)[i] = (i & 0xFF);
   }
 
@@ -324,7 +324,7 @@ LZT_TEST_F(
 
   // validation
   LOG_DEBUG << "Validating results";
-  for (size_t i = 0; i < size; i++) {
+  for (size_t i = 0U; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(buffer_a)[i],
               static_cast<uint8_t>((i & 0xFF) + addval));
     if (::testing::Test::HasFailure()) {

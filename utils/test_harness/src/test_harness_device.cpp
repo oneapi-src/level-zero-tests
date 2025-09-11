@@ -220,7 +220,7 @@ std::vector<ze_device_memory_properties_t> get_memory_properties_ext(
     std::vector<ze_device_memory_ext_properties_t> &extProperties) {
   std::vector<ze_device_memory_properties_t> properties(count);
   memset(properties.data(), 0, sizeof(ze_device_memory_properties_t) * count);
-  for (int i = 0; i < count; i++) {
+  for (uint32_t i = 0U; i < count; i++) {
     properties[i].stype = ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
     extProperties[i].stype = ZE_STRUCTURE_TYPE_DEVICE_MEMORY_EXT_PROPERTIES;
     properties[i].pNext = &extProperties[i];

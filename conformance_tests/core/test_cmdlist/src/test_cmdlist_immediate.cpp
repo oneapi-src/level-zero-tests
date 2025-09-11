@@ -422,7 +422,7 @@ LZT_TEST_F(
     GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
                  << " not supported";
   }
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, event0, i, false);
   }
@@ -438,7 +438,7 @@ LZT_TEST_F(
     GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
                  << " not supported";
   }
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, event0, i, true);
   }

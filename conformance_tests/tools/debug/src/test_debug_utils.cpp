@@ -70,7 +70,7 @@ bool check_events_unordered(const zet_debug_session_handle_t &debug_session,
 
   zet_debug_event_t debugEvent;
 
-  for (int i = 0; i < eventTypes.size(); i++) {
+  for (size_t i = 0U; i < eventTypes.size(); i++) {
     lzt::debug_read_event(debug_session, debugEvent, eventsTimeoutMS, false);
 
     // note: this should be modified if eventTypes contains duplicates
@@ -380,7 +380,7 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
     EXPECT_EQ(elf_buffer[2], 'L');
     EXPECT_EQ(elf_buffer[3], 'F');
 
-    for (int i = 0; i < elf_size; i++) {
+    for (size_t i = 0U; i < elf_size; i++) {
       if (elf_buffer[i] != 0xaa) {
         read_success = true;
       }
@@ -392,7 +392,7 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
     desc.address += offset; // add intentional missalignment
     lzt::debug_read_memory(debug_session, thread, desc, elf_size - offset,
                            elf_buffer);
-    for (int i = 0; i < elf_size; i++) {
+    for (size_t i = 0U; i < elf_size; i++) {
       if (elf_buffer[i] != 0xaa) {
         read_success = true;
       }
@@ -417,7 +417,7 @@ int get_numCQs_per_ordinal(ze_device_handle_t &device,
       numQueueGroups);
   queueProperties = lzt::get_command_queue_group_properties(device);
 
-  for (int i = 0; i < numQueueGroups; i++) {
+  for (uint32_t i = 0U; i < numQueueGroups; i++) {
     ordinalCQs[i] = queueProperties[i].numQueues;
 
     LOG_DEBUG << "ordinal: " << i << " CQs: " << queueProperties[i].numQueues;

@@ -456,7 +456,7 @@ LZT_TEST_P(
   }
   kernel_name_ = std::get<0>(GetParam());
   p2p_memory_ = std::get<1>(GetParam());
-  int num_concurrent_devices = std::get<2>(GetParam());
+  uint32_t num_concurrent_devices = std::get<2>(GetParam());
 
   uint32_t base_index = 0;
   uint32_t concurrent_index = 0;
@@ -542,7 +542,7 @@ LZT_TEST_P(
 
   kernel_name_ = std::get<0>(GetParam());
   p2p_memory_ = std::get<1>(GetParam());
-  int num_concurrent_devices = std::get<2>(GetParam());
+  uint32_t num_concurrent_devices = std::get<2>(GetParam());
 
   uint32_t base_index = 0;
   uint32_t concurrent_index = 0;

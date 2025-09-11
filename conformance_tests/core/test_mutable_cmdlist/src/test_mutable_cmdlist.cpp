@@ -271,11 +271,11 @@ LZT_TEST_F(
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
-  int32_t smallerBufferSize = groupSizeX * groupSizeY * groupSizeZ;
-  for (size_t i = 0; i < smallerBufferSize; i++) {
+  uint32_t smallerBufferSize = groupSizeX * groupSizeY * groupSizeZ;
+  for (uint32_t i = 0U; i < smallerBufferSize; i++) {
     EXPECT_EQ(inOutBuffer[i], i + i);
   }
-  for (size_t i = smallerBufferSize; i < bufferSize; i++) {
+  for (uint32_t i = smallerBufferSize; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer[i], i);
   }
   EXPECT_EQ(globalSizesBuffer[0], groupSizeX);
@@ -295,20 +295,20 @@ LZT_TEST_F(
                     "supported";
   }
 
-  const int32_t bufferSizeX = 128;
-  const int32_t bufferSizeY = 32;
-  const int32_t bufferSizeZ = 8;
-  const int32_t bufferSize = bufferSizeX * bufferSizeY * bufferSizeZ;
-  const int32_t dimensions = 3;
+  const uint32_t bufferSizeX = 128;
+  const uint32_t bufferSizeY = 32;
+  const uint32_t bufferSizeZ = 8;
+  const uint32_t bufferSize = bufferSizeX * bufferSizeY * bufferSizeZ;
+  const uint32_t dimensions = 3;
 
   int32_t *inOutBuffer = reinterpret_cast<int32_t *>(
       lzt::allocate_host_memory(bufferSize * sizeof(int32_t)));
-  for (size_t i = 0; i < bufferSize; i++) {
+  for (uint32_t i = 0U; i < bufferSize; i++) {
     inOutBuffer[i] = 0;
   }
   int32_t *localSizesBuffer = reinterpret_cast<int32_t *>(
       lzt::allocate_host_memory(dimensions * sizeof(int32_t)));
-  for (size_t i = 0; i < dimensions; i++) {
+  for (uint32_t i = 0U; i < dimensions; i++) {
     localSizesBuffer[i] = 0;
   }
 
@@ -340,7 +340,7 @@ LZT_TEST_F(
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
-  for (size_t i = 0; i < bufferSize; i++) {
+  for (uint32_t i = 0U; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer[i], i);
   }
   EXPECT_EQ(localSizesBuffer[0], groupSizeX);
@@ -361,10 +361,10 @@ LZT_TEST_F(
   lzt::execute_command_lists(queue, 1, &mutableCmdList, nullptr);
   lzt::synchronize(queue, std::numeric_limits<uint64_t>::max());
 
-  for (size_t i = 0; i < bufferSize / 2; i++) {
+  for (uint32_t i = 0U; i < bufferSize / 2; i++) {
     EXPECT_EQ(inOutBuffer[i], i + i);
   }
-  for (size_t i = bufferSize / 2; i < bufferSize; i++) {
+  for (uint32_t i = bufferSize / 2; i < bufferSize; i++) {
     EXPECT_EQ(inOutBuffer[i], i);
   }
   EXPECT_EQ(localSizesBuffer[0], groupSizeX / 2);
@@ -384,10 +384,10 @@ LZT_TEST_F(
                     "supported";
   }
 
-  const int32_t dimensions = 3;
-  int32_t *globalOffsetsBuffer = reinterpret_cast<int32_t *>(
-      lzt::allocate_host_memory(dimensions * sizeof(int32_t)));
-  for (size_t i = 0; i < dimensions; i++) {
+  const uint32_t dimensions = 3;
+  uint32_t *globalOffsetsBuffer = reinterpret_cast<uint32_t *>(
+      lzt::allocate_host_memory(dimensions * sizeof(uint32_t)));
+  for (uint32_t i = 0U; i < dimensions; i++) {
     globalOffsetsBuffer[i] = 0;
   }
 

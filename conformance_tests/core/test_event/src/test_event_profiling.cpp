@@ -296,7 +296,7 @@ LZT_TEST_P(EventProfilingCacheCoherencyTests,
   std::unique_ptr<uint8_t> output(new uint8_t[size]);
   memcpy(output.get(), buffer5, size);
 
-  for (int i = 0; i < size; i++) {
+  for (uint32_t i = 0U; i < size; i++) {
     ASSERT_EQ(output.get()[i], value);
   }
 
@@ -378,7 +378,7 @@ void RunGivenKernelEventWhenUsingEventToSyncTest(bool is_immediate) {
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::event_host_synchronize(event, UINT64_MAX);
 
-  for (int i = 0; i < elems_nb; i++) {
+  for (uint32_t i = 0U; i < elems_nb; i++) {
     int value = ((int *)src_buffer)[i];
     ASSERT_EQ(value, addval);
   }

@@ -54,7 +54,7 @@ create_event_pool(ze_context_handle_t context, ze_event_pool_desc_t desc,
   EXPECT_ZE_RESULT_SUCCESS(zeEventPoolCreate(context, &desc, devices.size(),
                                              devices.data(), &event_pool));
   EXPECT_EQ(context, context_initial);
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     EXPECT_EQ(devices[i], devices_initial[i]);
   }
   EXPECT_NE(nullptr, event_pool);
@@ -128,7 +128,7 @@ get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
   auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
-      ~(-1L << device_properties.kernelTimestampValidBits);
+      ~(-1ULL << device_properties.kernelTimestampValidBits);
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {

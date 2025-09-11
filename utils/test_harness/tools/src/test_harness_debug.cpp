@@ -160,13 +160,13 @@ bool get_register_set_props(ze_device_handle_t device,
   zetDebugGetRegisterSetProperties(device, &nRegSets, nullptr);
   zet_debug_regset_properties_t *pRegSets =
       new zet_debug_regset_properties_t[nRegSets];
-  for (int i = 0; i < nRegSets; i++) {
+  for (uint32_t i = 0U; i < nRegSets; i++) {
     pRegSets[i] = {ZET_STRUCTURE_TYPE_DEBUG_REGSET_PROPERTIES, nullptr};
   }
   zetDebugGetRegisterSetProperties(device, &nRegSets, pRegSets);
 
   bool found = false;
-  for (int i = 0; i < nRegSets; i++) {
+  for (uint32_t i = 0U; i < nRegSets; i++) {
     if (pRegSets[i].type == type) {
       printRegSetProperties(pRegSets[i]);
       reg = pRegSets[i];

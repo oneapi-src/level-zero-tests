@@ -33,7 +33,7 @@ void thread_func(const ze_command_queue_handle_t cq) {
 
   void *output_buffer = lzt::allocate_shared_memory(memory_size);
 
-  for (int i = 0; i < num_iterations; i++) {
+  for (size_t i = 0U; i < num_iterations; i++) {
     ze_fence_handle_t fence_ = lzt::create_fence(cq);
 
     const uint8_t pattern_base = lzt::generate_value<uint8_t>();
@@ -81,14 +81,14 @@ LZT_TEST(
 
   std::vector<std::thread *> threads;
 
-  for (int i = 0; i < num_threads; i++)
+  for (size_t i = 0U; i < num_threads; i++)
     threads.push_back(new std::thread(thread_func, cq));
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     threads[i]->join();
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (size_t i = 0U; i < num_threads; i++) {
     delete threads[i];
   }
 

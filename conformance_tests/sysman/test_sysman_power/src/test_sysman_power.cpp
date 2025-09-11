@@ -616,7 +616,7 @@ LZT_TEST_F(
             power_limits_descriptors_initial; // preserve initial power limit
                                               // descriptors for restoration
                                               // later
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           power_limits_descriptors[i] = {
               ZES_STRUCTURE_TYPE_POWER_LIMIT_EXT_DESC, nullptr};
           power_limits_descriptors_initial.push_back(
@@ -716,7 +716,7 @@ LZT_TEST_F(
             power_limits_descriptors_initial; // preserve initial power limit
                                               // descriptors for restoration
                                               // later
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           power_limits_descriptors_initial.push_back(
               power_limits_descriptors[i]);
 
@@ -804,7 +804,7 @@ LZT_TEST_F(
                                               // descriptors for restoration
                                               // later
 
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           power_limits_descriptors_initial.push_back(
               power_limits_descriptors[i]);
           if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_BURST) {
@@ -890,7 +890,7 @@ LZT_TEST_F(
                                               // descriptors for restoration
                                               // later
 
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           power_limits_descriptors_initial.push_back(
               power_limits_descriptors[i]);
           if (power_limits_descriptors[i].level ==
@@ -1018,7 +1018,7 @@ LZT_TEST_F(
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_SUSTAINED) {
             sustained_limit_available = true;
             power_sustained_Max = power_limits_descriptors[i];
@@ -1116,7 +1116,7 @@ LZT_TEST_F(
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           zes_power_limit_ext_desc_t power_peak_initial = {};
           zes_power_limit_ext_desc_t power_peak_Max = {};
           zes_power_limit_ext_desc_t power_peak_getMax = {};

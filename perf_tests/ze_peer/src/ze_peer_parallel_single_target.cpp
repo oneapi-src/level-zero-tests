@@ -64,7 +64,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_single_target(
   Timer<std::chrono::microseconds::period> timer;
 
   /* Warm up */
-  for (int i = 0; i < warm_up_iterations; i++) {
+  for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
     for (size_t e = 0; e < num_engines; e++) {
       SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
@@ -88,7 +88,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_single_target(
 
   do {
     timer.start();
-    for (int i = 0; i < number_iterations; i++) {
+    for (uint32_t i = 0U; i < number_iterations; i++) {
       for (size_t e = 0; e < num_engines; e++) {
         SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
             ze_peer_devices[local_device_id].engines[queues[e]].first, 1,
@@ -157,7 +157,7 @@ void ZePeer::perform_parallel_copy_to_single_target(
   Timer<std::chrono::microseconds::period> timer;
 
   /* Warm up */
-  for (int i = 0; i < warm_up_iterations; i++) {
+  for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     for (size_t e = 0; e < num_engines; e++) {
       SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
           ze_peer_devices[queue_device_id].engines[queues[e]].first, 1,
@@ -178,7 +178,7 @@ void ZePeer::perform_parallel_copy_to_single_target(
 
   do {
     long double time_usec = 0;
-    for (int i = 0; i < number_iterations; i++) {
+    for (uint32_t i = 0U; i < number_iterations; i++) {
       for (size_t e = 0; e < num_engines; e++) {
         SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
             ze_peer_devices[queue_device_id].engines[queues[e]].first, 1,

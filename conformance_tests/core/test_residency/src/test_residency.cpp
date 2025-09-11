@@ -112,7 +112,7 @@ LZT_TEST_F(
         sizeof(node), 1, device_flags, host_flags, device, context));
     data->value = 0;
     node *temp = data;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       temp->next = static_cast<node *>(lzt::allocate_shared_memory(
           sizeof(node), 1, device_flags, host_flags, device, context));
       temp = temp->next;
@@ -132,7 +132,7 @@ LZT_TEST_F(
 
     temp = data->next;
     node *temp2;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       temp2 = temp->next;
       lzt::make_memory_resident(device, temp, sizeof(node));
       temp = temp2;
@@ -142,7 +142,7 @@ LZT_TEST_F(
     lzt::synchronize(command_queue, UINT64_MAX);
 
     temp = data->next;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       lzt::evict_memory(device, temp, sizeof(node));
       temp = temp->next;
     }
@@ -150,7 +150,7 @@ LZT_TEST_F(
     // cleanup
     temp = data;
     // total of size elements linked *after* initial element
-    for (int i = 0; i < size + 1; i++) {
+    for (size_t i = 0U; i < size + 1; i++) {
       // the kernel increments each node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 
@@ -203,7 +203,7 @@ LZT_TEST_F(
     data->value = 0;
     node *temp = data;
 
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       temp->next = new node;
 
       temp = temp->next;
@@ -223,7 +223,7 @@ LZT_TEST_F(
 
     temp = data->next;
     node *temp2;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       temp2 = temp->next;
       lzt::make_memory_resident(device, temp, sizeof(node));
       temp = temp2;
@@ -232,7 +232,7 @@ LZT_TEST_F(
     lzt::synchronize(command_queue, UINT64_MAX);
 
     temp = data->next;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       lzt::evict_memory(device, temp, sizeof(node));
       temp = temp->next;
     }
@@ -240,7 +240,7 @@ LZT_TEST_F(
     // cleanup
     temp = data;
     // total of size elements linked *after* initial element
-    for (int i = 0; i < size + 1; i++) {
+    for (size_t i = 0U; i < size + 1; i++) {
       // kernel should increment node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 
@@ -288,7 +288,7 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
         sizeof(node), 1, device_flags, host_flags, device, context));
     data->value = 0;
     node *temp = data;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       temp->next = static_cast<node *>(lzt::allocate_shared_memory(
           sizeof(node), 1, device_flags, host_flags, device, context));
       temp = temp->next;
@@ -313,7 +313,7 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     // cleanup
     temp = data;
     node *temp2;
-    for (int i = 0; i < size + 1; i++) {
+    for (size_t i = 0U; i < size + 1; i++) {
       // kernel should increment each node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 
@@ -376,7 +376,7 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     node *data = new node;
     data->value = 0;
     node *temp = data;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0U; i < size; i++) {
       temp->next = new node;
 
       temp = temp->next;
@@ -399,7 +399,7 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     temp = data;
     node *temp2;
     // total of size elements linked *after* initial element
-    for (int i = 0; i < size + 1; i++) {
+    for (size_t i = 0U; i < size + 1; i++) {
       // kernel should increment node's value by 1
       ASSERT_EQ(temp->value, i + 1);
 

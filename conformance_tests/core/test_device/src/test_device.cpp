@@ -80,7 +80,7 @@ static void run_child_process(uint32_t device_count,
 
   const std::string child_fail = "zeInit failed";
   std::vector<std::string> bdfString(device_count);
-  for (int i = 0; i < device_count; i++) {
+  for (uint32_t i = 0U; i < device_count; i++) {
     std::getline(child_output, bdfString[i]);
     // trim trailing whitespace from result_string
     bdfString[i].erase(std::find_if(bdfString[i].rbegin(), bdfString[i].rend(),
@@ -95,7 +95,7 @@ static void run_child_process(uint32_t device_count,
   std::vector<std::string> bdfStringSorted(bdfString.begin(), bdfString.end());
   std::sort(bdfStringSorted.begin(), bdfStringSorted.end(),
             comparePciIdBusNumber);
-  for (auto i = 0; i < device_count; i++) {
+  for (uint32_t i = 0U; i < device_count; i++) {
     EXPECT_STREQ(bdfString[i].c_str(), bdfStringSorted[i].c_str());
   }
 }
@@ -741,7 +741,7 @@ LZT_TEST_F(DevicePropertiesTest,
          iterSkuHandles->deviceHandlesForSku) {
       auto iterDeviceProperties = lzt::get_cache_properties(iterDeviceHandle);
       ASSERT_EQ(iterDeviceProperties.size(), firstDeviceProperties.size());
-      for (int i = 0; i < iterDeviceProperties.size(); i++) {
+      for (size_t i = 0U; i < iterDeviceProperties.size(); i++) {
         EXPECT_EQ(iterDeviceProperties[i].flags,
                   firstDeviceProperties[i].flags);
         EXPECT_EQ(iterDeviceProperties[i].cacheSize,
@@ -891,12 +891,12 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   LOG_DEBUG << "Timestamps0: " << std::get<0>(timestamps) << "......"
             << std::get<1>(timestamps) << std::endl;
 
-  auto size = 10000000;
+  size_t size = 10000000;
   auto buffer_a = lzt::allocate_shared_memory(size, 0, 0, 0, device, context);
   auto buffer_b = lzt::allocate_device_memory(size, 0, 0, 0, device, context);
 
   std::memset(buffer_a, 0, size);
-  for (size_t i = 0; i < size; i++) {
+  for (size_t i = 0U; i < size; i++) {
     static_cast<uint8_t *>(buffer_a)[i] = (i & 0xFF);
   }
 
@@ -954,7 +954,7 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   EXPECT_NE(device_time_0, device_time_1);
 
   // validation
-  for (size_t i = 0; i < size; i++) {
+  for (size_t i = 0U; i < size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(buffer_a)[i],
               static_cast<uint8_t>((i & 0xFF) + addval));
   }
@@ -1021,7 +1021,7 @@ LZT_TEST(
         lzt::get_command_queue_group_properties(device);
     EXPECT_EQ(cmd_q_group_properties_0.size(), cmd_q_group_properties_1.size());
 
-    for (int i = 0; i < cmd_q_group_properties_0.size(); i++) {
+    for (size_t i = 0U; i < cmd_q_group_properties_0.size(); i++) {
       EXPECT_EQ(cmd_q_group_properties_0[i].flags,
                 cmd_q_group_properties_1[i].flags);
       EXPECT_EQ(cmd_q_group_properties_0[i].maxMemoryFillPatternSize,
@@ -1049,7 +1049,7 @@ LZT_TEST(
       EXPECT_EQ(cmd_q_group_properties_0.size(),
                 cmd_q_group_properties_1.size());
 
-      for (int i = 0; i < cmd_q_group_properties_0.size(); i++) {
+      for (size_t i = 0U; i < cmd_q_group_properties_0.size(); i++) {
         EXPECT_EQ(cmd_q_group_properties_0[i].flags,
                   cmd_q_group_properties_1[i].flags);
         EXPECT_EQ(cmd_q_group_properties_0[i].maxMemoryFillPatternSize,
