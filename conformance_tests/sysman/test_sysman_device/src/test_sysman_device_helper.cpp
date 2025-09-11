@@ -51,7 +51,7 @@ UUID get_ze_device_uuid(ze_device_handle_t ze_device) {
 
 UUID get_ze_root_uuid(ze_device_handle_t ze_device,
                       const char *device_hierarchy) {
-  ze_device_handle_t ze_root_device;
+  ze_device_handle_t ze_root_device = nullptr;
   if (strcmp(device_hierarchy, "COMBINED") == 0) {
     ze_root_device = lzt::get_root_device(ze_device);
     if (ze_root_device == nullptr) {
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
   // We must retrieve the SysMan Drivers on the system, then verify that the
   // driver has valid devices. The first driver with valid devices will be used.
   auto zes_drivers = lzt::get_all_zes_driver_handles();
-  zes_driver_handle_t zes_driver_used;
+  zes_driver_handle_t zes_driver_used = nullptr;
   for (const auto &zes_driver : zes_drivers) {
     auto device_count = lzt::get_zes_device_count(zes_driver);
     if (device_count > 0) {
