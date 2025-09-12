@@ -526,7 +526,8 @@ void zeModuleCreateTests::
   std::vector<lzt::FunctionArg> args;
   ze_module_handle_t module = lzt::create_module(
       lzt::get_default_context(), device, "module_fptr_call.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      ZE_MODULE_FORMAT_IL_SPIRV,
+      "-ze-take-global-address -ze-library-compilation", nullptr);
 
   const std::string function_pointer_name = "add_int";
   const std::string function_name = "module_call_fptr";
