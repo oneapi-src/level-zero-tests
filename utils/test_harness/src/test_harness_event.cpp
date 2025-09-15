@@ -118,17 +118,12 @@ void get_event_kernel_timestamps_from_mapped_timestamp_event(
       zeEventQueryKernelTimestampsExt(event, device, &count, &properties));
 }
 
-double
-get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
-                              const ze_device_handle_t &device,
-                              const ze_driver_handle_t driver,
-                              const ze_structure_type_t property_type) {
-
-  double global_time_ns;
-  auto device_properties = lzt::get_device_properties(device, property_type);
-  uint64_t timestamp_freq = device_properties.timerResolution;
-  uint64_t timestamp_max_val =
-      ~(-1L << device_properties.kernelTimestampValidBits);
+double get_timestamp_time(const ze_kernel_timestamp_data_t *timestamp,
+                          uint64_t timer_resolution,
+                          uint64_t kernel_timestamp_valid_bits,
+                          const ze_structure_type_t property_type) {
+  uint64_t timestamp_freq = timer_resolution;
+  uint64_t timestamp_max_val = ~(-1L << kernel_timestamp_valid_bits);
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
@@ -138,16 +133,30 @@ get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
   } else {
     LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
   }
-
-  global_time_ns =
-      (timestamp->global.kernelEnd >= timestamp->global.kernelStart)
-          ? (timestamp->global.kernelEnd - timestamp->global.kernelStart) *
-                timer_period
-          : ((timestamp_max_val - timestamp->global.kernelStart) +
-             timestamp->global.kernelEnd + 1) *
+  const auto time_ns =
+      (timestamp->kernelEnd >= timestamp->kernelStart)
+          ? (timestamp->kernelEnd - timestamp->kernelStart) * timer_period
+          : ((timestamp_max_val - timestamp->kernelStart) +
+             timestamp->kernelEnd + 1) *
                 timer_period;
 
-  return global_time_ns;
+  return time_ns;
+}
+
+double
+get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
+                              const ze_device_handle_t &device,
+                              const ze_driver_handle_t driver,
+                              const ze_structure_type_t property_type) {
+
+  auto device_properties = lzt::get_device_properties(device, property_type);
+  uint64_t timestamp_freq = device_properties.timerResolution;
+  uint64_t timestamp_max_val =
+      ~(-1L << device_properties.kernelTimestampValidBits);
+
+  return lzt::get_timestamp_time(&timestamp->global, timestamp_freq,
+                                 device_properties.kernelTimestampValidBits,
+                                 property_type);
 }
 
 double
@@ -155,31 +164,14 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
                                const ze_device_handle_t &device,
                                const ze_driver_handle_t driver,
                                const ze_structure_type_t property_type) {
-
-  double context_time_ns;
   auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
   uint64_t timestamp_max_val =
       ~(-1L << device_properties.kernelTimestampValidBits);
 
-  double timer_period = 0;
-  if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
-    timer_period = (1000000000.0 / static_cast<double>(timestamp_freq));
-  } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
-    timer_period = static_cast<double>(timestamp_freq);
-  } else {
-    LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
-  }
-
-  context_time_ns =
-      (timestamp->context.kernelEnd >= timestamp->context.kernelStart)
-          ? (timestamp->context.kernelEnd - timestamp->context.kernelStart) *
-                timer_period
-          : ((timestamp_max_val - timestamp->context.kernelStart) +
-             timestamp->context.kernelEnd + 1) *
-                timer_period;
-
-  return context_time_ns;
+  return lzt::get_timestamp_time(&timestamp->context, timestamp_freq,
+                                 device_properties.kernelTimestampValidBits,
+                                 property_type);
 }
 
 #ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
