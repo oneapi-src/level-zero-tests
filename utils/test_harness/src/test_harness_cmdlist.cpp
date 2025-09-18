@@ -450,6 +450,31 @@ void append_launch_function(ze_command_list_handle_t hCommandList,
   }
 }
 
+void append_launch_cooperative_function(ze_command_list_handle_t hCommandList,
+                                        ze_kernel_handle_t hFunction,
+                                        const ze_group_count_t *pLaunchFuncArgs,
+                                        ze_event_handle_t hSignalEvent,
+                                        uint32_t numWaitEvents,
+                                        ze_event_handle_t *phWaitEvents) {
+  auto command_list_initial = hCommandList;
+  auto function_initial = hFunction;
+  auto signal_event_initial = hSignalEvent;
+  std::vector<ze_event_handle_t> wait_events_initial(numWaitEvents);
+  if (phWaitEvents) {
+    std::memcpy(wait_events_initial.data(), phWaitEvents,
+                sizeof(ze_event_handle_t) * numWaitEvents);
+  }
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchCooperativeKernel(
+      hCommandList, hFunction, pLaunchFuncArgs, hSignalEvent, numWaitEvents,
+      phWaitEvents));
+  EXPECT_EQ(hCommandList, command_list_initial);
+  EXPECT_EQ(hFunction, function_initial);
+  EXPECT_EQ(hSignalEvent, signal_event_initial);
+  for (int i = 0; i < numWaitEvents && phWaitEvents; i++) {
+    EXPECT_EQ(phWaitEvents[i], wait_events_initial[i]);
+  }
+}
+
 void append_signal_event(ze_command_list_handle_t hCommandList,
                          ze_event_handle_t hEvent) {
   auto command_list_initial = hCommandList;
