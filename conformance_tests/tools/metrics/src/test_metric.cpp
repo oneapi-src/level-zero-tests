@@ -2167,7 +2167,10 @@ LZT_TEST(
   fs::path helper_path(fs::current_path() / "metrics");
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
+  paths.push_back(fs::current_path());
   fs::path helper = bp::search_path("test_metric_helper", paths);
+  ASSERT_FALSE(helper.empty())
+      << "Could not find test_metric_helper in current or ./metrics/ directory";
   bp::child metric_helper(helper);
 
   // start monitor
@@ -2251,7 +2254,11 @@ LZT_TEST(
   fs::path helper_path(fs::current_path() / "metrics");
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
+  paths.push_back(fs::current_path());
   fs::path helper = bp::search_path("test_metric_helper", paths);
+  ASSERT_FALSE(helper.empty())
+      << "Could not find test_metric_helper in current or ./metrics/ directory";
+
   bp::opstream child_input;
   bp::child metric_helper(helper, "-i", bp::std_in < child_input);
 
