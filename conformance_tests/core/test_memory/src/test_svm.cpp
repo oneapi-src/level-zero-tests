@@ -127,7 +127,7 @@ struct SharedSystemMemoryTestsNameSuffix {
       return "";
     }(buffer_size);
 
-    ss << (is_src_shared_system ? "_SVM" : "_USM");
+    ss << (is_src_shared_system ? "SVM" : "USM");
     ss << "to";
     ss << (is_dst_shared_system ? "SVM" : "USM");
     ss << (use_atomic_kernel ? "_Atomic" : "_NonAtomic");
@@ -177,8 +177,6 @@ LZT_TEST_P(
   const size_t num_elements = buffer_size / sizeof(int);
   LOG_INFO << "Num elements: " << num_elements;
 
-  // if (num_elements > 1024) GTEST_SKIP();
-
   auto compute_properties = lzt::get_compute_properties(device);
 
   void *input = lzt::allocate_shared_memory_with_allocator_selector(
@@ -196,8 +194,7 @@ LZT_TEST_P(
   ze_kernel_handle_t function = lzt::create_function(module, function_name);
 
   uint32_t max_coop_group_count = 1;
-  ASSERT_ZE_RESULT_SUCCESS(
-      zeKernelSuggestMaxCooperativeGroupCount(function, &max_coop_group_count));
+  lzt::suggest_max_cooperative_group_count(function, max_coop_group_count);
   ASSERT_GT(max_coop_group_count, 0);
 
   uint32_t suggested_group_count = [](uint32_t n) {
