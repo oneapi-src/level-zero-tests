@@ -7,85 +7,55 @@
  */
 
 __kernel void cooperative_reduction(__global const int* input, __global int* output,
-                                    __global int* shared_buffer, const int elements_per_group) {
+                                    __local int* local_sums) {
   int gid = get_global_id(0);
   int group_id = get_group_id(0);
   int lid = get_local_id(0);
+  int local_size = get_local_size(0);
 
-  // Each workgroup computes a partial sum
-  int partial_sum = 0;
-  int start = group_id * elements_per_group;
-  int end = start + elements_per_group;
-  for (int i = start + lid; i < end; i += get_local_size(0)) {
-    partial_sum += input[i];
-  }
-
-  // Reduce within workgroup
-  __local float local_sums[256]; // adjust size as needed
-  local_sums[lid] = partial_sum;
+  local_sums[lid] = input[gid];
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  // Final reduction in workgroup
   if (lid == 0) {
-    float group_sum = 0.0f;
-    for (int i = 0; i < get_local_size(0); ++i) {
-      group_sum += local_sums[i];
+    for (uint i = 1; i < local_size; i++) {
+      local_sums[0] += local_sums[i];
     }
-    shared_buffer[group_id] = group_sum;
+    output[group_id] = local_sums[0];
   }
 
   // Device-wide barrier: synchronize all workgroups
-  work_group_barrier(CLK_GLOBAL_MEM_FENCE, memory_scope_device);
+  global_barrier();
 
-  // One workgroup performs final reduction
   if (group_id == 0 && lid == 0) {
-    float total = 0.0f;
-    int num_groups = get_num_groups(0);
-    for (int i = 0; i < num_groups; ++i) {
-      total += shared_buffer[i];
+    for (uint i = 1; i < get_num_groups(0); i++) {
+      output[0] += output[i];
     }
-    output[0] = total;
   }
 }
 
 __kernel void cooperative_reduction_atomic(__global const int* input, __global int* output,
-                                    __global int* shared_buffer, const int elements_per_group) {
+                                           __local int* local_sums) {
   int gid = get_global_id(0);
   int group_id = get_group_id(0);
   int lid = get_local_id(0);
+  int local_size = get_local_size(0);
 
-  // Each workgroup computes a partial sum
-  int partial_sum = 0;
-  int start = group_id * elements_per_group;
-  int end = start + elements_per_group;
-  for (int i = start + lid; i < end; i += get_local_size(0)) {
-    partial_sum += input[i];
-  }
-
-  // Reduce within workgroup
-  __local float local_sums[256]; // adjust size as needed
-  local_sums[lid] = partial_sum;
+  local_sums[lid] = input[gid];
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  // Final reduction in workgroup
   if (lid == 0) {
-    float group_sum = 0.0f;
-    for (int i = 0; i < get_local_size(0); ++i) {
-      group_sum += local_sums[i];
+    for (uint i = 1; i < local_size; i++) {
+      atomic_add(&local_sums[0], local_sums[i]);
     }
-    shared_buffer[group_id] = group_sum;
+    output[group_id] = local_sums[0];
   }
 
   // Device-wide barrier: synchronize all workgroups
-  work_group_barrier(CLK_GLOBAL_MEM_FENCE, memory_scope_device);
+  global_barrier();
 
-  // One workgroup performs final reduction
   if (group_id == 0 && lid == 0) {
-    float total = 0.0f;
-    int num_groups = get_num_groups(0);
-    for (int i = 0; i < num_groups; ++i) {
-      total += shared_buffer[i];
+    for (uint i = 1; i < get_num_groups(0); i++) {
+      atomic_add(&output[0], output[i]);
     }
-    output[0] = total;
   }
 }
