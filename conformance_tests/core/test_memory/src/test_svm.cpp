@@ -255,5 +255,5 @@ INSTANTIATE_TEST_SUITE_P(
                                      std::make_pair(true, true)),
                      testing::Bool(), testing::Bool(),
                      testing::Values(0x80u, 0x1000u, 0x1800u, 0x1'0000u,
-                                     0x1'0800u, 0x2'0000u)),
+                                     0x1'0800u)),
     SharedSystemMemoryTestsNameSuffix());

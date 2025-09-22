@@ -58,7 +58,8 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (test_name.find("Thread") != -1) or \
                     (test_name.find("Affinity") != -1) or \
                     (test_name.find("Luid") != -1) or \
-                    (test_name.find("ParamSVMAllocationTests_SharedSystemMemoryTests") != -1) or \
+                    (test_name.find("SharedSystemMemoryLaunchKernelTests") != -1) or \
+                    (test_name.find("SharedSystemMemoryLaunchCooperativeKernelTests") != -1) or \
                     (re.search('concurrent', test_name, re.IGNORECASE)) or \
                     (re.search('context', test_name, re.IGNORECASE)) or \
                     (re.search('KernelOffset', test_name, re.IGNORECASE)) or \
