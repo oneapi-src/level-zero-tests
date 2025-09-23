@@ -792,24 +792,244 @@ struct zeTestMixedCMDListsIndependentOverlappingTestNameSuffix {
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    IndependentCMDListsOverlappingParameterization,
+    IndependentCMDListsOverlappingParameterizationSyncQueueWithEvents,
     zeTestMixedCMDListsIndependentOverlapping,
     ::testing::Combine(
-        ::testing::Values(static_cast<ze_command_queue_flag_t>(0),
-                          ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
-        ::testing::Values(static_cast<ze_command_queue_flag_t>(0),
-                          ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
-        ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                          ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-                          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
         ::testing::Values(static_cast<ze_command_list_flag_t>(0),
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
                           ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
                               ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
-        ::testing::Values(true, false)),
+        ::testing::Values(true)),
     zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
 
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationCopyExplicitSyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitSyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitCopyExplicithSyncWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationAsyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationCopyExplicitAsyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitAsyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitCopyExplicithAsyncWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationSyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationCopyExplicitSyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitSyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitCopyExplicithSyncWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationAsyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationCopyExplicitAsyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitAsyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitCopyExplicitAsyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
 class zeTestMixedCMDListsInterdependPairSameEngineType
     : public zeMixedCMDListsTests,
       public ::testing::WithParamInterface<std::tuple<

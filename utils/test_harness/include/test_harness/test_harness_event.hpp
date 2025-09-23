@@ -83,6 +83,11 @@ void destroy_event(ze_event_handle_t event);
 void destroy_event_pool(ze_event_pool_handle_t event_pool);
 ze_kernel_timestamp_result_t
 get_event_kernel_timestamp(ze_event_handle_t event);
+double get_timestamp_time(const ze_kernel_timestamp_data_t *timestamp,
+                          uint64_t timer_resolution,
+                          uint64_t kernel_timestamp_valid_bits,
+                          const ze_structure_type_t property_type =
+                              ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES);
 double
 get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
                               const ze_device_handle_t &device,

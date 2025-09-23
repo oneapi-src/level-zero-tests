@@ -1,12 +1,13 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
 
 #include "gtest/gtest.h"
+#include "helpers_test_image.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -27,677 +28,306 @@ void check_image_properties(ze_image_properties_t imageprop) {
                to_u32(ZE_IMAGE_SAMPLER_FILTER_FLAG_LINEAR)));
 }
 
-void image_create_test_1d(ze_image_format_type_t format_type,
-                          ze_image_format_layout_t layout, bool useArrayImage,
-                          bool properties_only) {
+enum class ImageSize { min, large };
 
-  for (auto image_rw_flag : lzt::image_rw_flags) {
-    for (auto image_cache_flag : lzt::image_cache_flags) {
-      for (auto image_width : lzt::image_widths) {
-
-        ze_image_type_t image_type;
-        uint32_t array_levels;
-        if (useArrayImage) {
-          image_type = ZE_IMAGE_TYPE_1DARRAY;
-          array_levels = 1;
-        } else {
-          image_type = ZE_IMAGE_TYPE_1D;
-          array_levels = 0;
-        }
-
-        ze_image_handle_t image;
-        ze_image_format_t format_descriptor = {
-            layout,                    // layout
-            format_type,               // type
-            ZE_IMAGE_FORMAT_SWIZZLE_R, // x
-            ZE_IMAGE_FORMAT_SWIZZLE_G, // y
-            ZE_IMAGE_FORMAT_SWIZZLE_B, // z
-            ZE_IMAGE_FORMAT_SWIZZLE_A  // w
-        };
-        ze_image_flag_t flags =
-            (ze_image_flag_t)(image_rw_flag | image_cache_flag);
-        ze_image_desc_t image_descriptor = {};
-        image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-        image_descriptor.flags = flags;
-        image_descriptor.type = image_type;
-        image_descriptor.format = format_descriptor;
-        image_descriptor.width = image_width;
-        image_descriptor.height = 1;
-        image_descriptor.depth = 1;
-        image_descriptor.arraylevels = array_levels;
-        image_descriptor.miplevels = 0;
-
-        lzt::print_image_descriptor(image_descriptor);
-        if (properties_only) {
-          check_image_properties(
-              lzt::get_ze_image_properties(image_descriptor));
-        } else {
-          image = lzt::create_ze_image(image_descriptor);
-          if (image) {
-            lzt::destroy_ze_image(image);
-          }
-        }
-      }
-    }
-  }
-}
-
-void image_create_test_2d(ze_image_format_type_t format_type,
-                          ze_image_format_layout_t layout, bool useArrayImage,
-                          bool properties_only) {
-
-  for (auto image_rw_flag : lzt::image_rw_flags) {
-    for (auto image_cache_flag : lzt::image_cache_flags) {
-      for (auto image_width : lzt::image_widths) {
-        for (auto image_height : lzt::image_heights) {
-
-          ze_image_type_t image_type;
-          uint32_t array_levels;
-          if (useArrayImage) {
-            image_type = ZE_IMAGE_TYPE_2DARRAY;
-            array_levels = 2;
-          } else {
-            image_type = ZE_IMAGE_TYPE_2D;
-            array_levels = 0;
-          }
-
-          ze_image_handle_t image;
-          ze_image_format_t format_descriptor = {
-              layout,                    // layout
-              format_type,               // type
-              ZE_IMAGE_FORMAT_SWIZZLE_R, // x
-              ZE_IMAGE_FORMAT_SWIZZLE_G, // y
-              ZE_IMAGE_FORMAT_SWIZZLE_B, // z
-              ZE_IMAGE_FORMAT_SWIZZLE_A  // w
-          };
-          ze_image_flag_t flags =
-              (ze_image_flag_t)(image_rw_flag | image_cache_flag);
-          ze_image_desc_t image_descriptor = {};
-          image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-          image_descriptor.flags = flags;
-          image_descriptor.type = image_type;
-          image_descriptor.format = format_descriptor;
-          image_descriptor.width = image_width;
-          image_descriptor.height = image_height;
-          image_descriptor.depth = 1;
-          image_descriptor.arraylevels = array_levels;
-          image_descriptor.miplevels = 0;
-
-          lzt::print_image_descriptor(image_descriptor);
-          if (properties_only) {
-            check_image_properties(
-                lzt::get_ze_image_properties(image_descriptor));
-          } else {
-            image = lzt::create_ze_image(image_descriptor);
-            if (image) {
-              lzt::destroy_ze_image(image);
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-void image_create_test_3d(ze_image_format_type_t format_type,
-                          ze_image_format_layout_t layout,
-                          bool properties_only) {
-
-  for (auto image_rw_flag : lzt::image_rw_flags) {
-    for (auto image_cache_flag : lzt::image_cache_flags) {
-      for (auto image_width : lzt::image_widths) {
-        for (auto image_height : lzt::image_heights) {
-          for (auto image_depth : lzt::image_depths) {
-
-            ze_image_type_t image_type = ZE_IMAGE_TYPE_3D;
-            ze_image_handle_t image;
-            ze_image_format_t format_descriptor = {
-                layout,                    // layout
-                format_type,               // type
-                ZE_IMAGE_FORMAT_SWIZZLE_R, // x
-                ZE_IMAGE_FORMAT_SWIZZLE_G, // y
-                ZE_IMAGE_FORMAT_SWIZZLE_B, // z
-                ZE_IMAGE_FORMAT_SWIZZLE_A  // w
-            };
-            ze_image_flag_t flags =
-                (ze_image_flag_t)(image_rw_flag | image_cache_flag);
-            ze_image_desc_t image_descriptor = {};
-            image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-            image_descriptor.flags = flags;
-            image_descriptor.type = image_type;
-            image_descriptor.format = format_descriptor;
-            image_descriptor.width = image_width;
-            image_descriptor.height = image_height;
-            image_descriptor.depth = image_depth;
-            image_descriptor.arraylevels = 0;
-            image_descriptor.miplevels = 0;
-
-            lzt::print_image_descriptor(image_descriptor);
-            if (properties_only) {
-              check_image_properties(
-                  lzt::get_ze_image_properties(image_descriptor));
-            } else {
-              image = lzt::create_ze_image(image_descriptor);
-              if (image) {
-                lzt::destroy_ze_image(image);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-class zeImageCreateTests : public ::testing::Test {};
-
-LZT_TEST(
-    zeImageCreateTests,
-    GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = false;
-
-  for (auto layout : lzt::image_format_layout_uint) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageCreateTests,
-    GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = false;
-
-  for (auto layout : lzt::image_format_layout_sint) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageCreateTests,
-    GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = false;
-
-  for (auto layout : lzt::image_format_layout_unorm) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageCreateTests,
-    GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = false;
-
-  for (auto layout : lzt::image_format_layout_snorm) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageCreateTests,
-    GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = false;
-
-  for (auto layout : lzt::image_format_layout_float) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageCreateTests,
-    GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = false;
-
-  for (auto layout : lzt::image_format_media_layouts) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
-  }
-}
-
-class zeImageGetPropertiesTests : public ::testing::Test {};
-
-LZT_TEST(
-    zeImageGetPropertiesTests,
-    GivenValidDescriptorWhenCreatingUINTImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = true;
-
-  for (auto layout : lzt::image_format_layout_uint) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UINT, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageGetPropertiesTests,
-    GivenValidDescriptorWhenCreatingSINTImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = true;
-
-  for (auto layout : lzt::image_format_layout_sint) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SINT, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageGetPropertiesTests,
-    GivenValidDescriptorWhenCreatingUNORMImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = true;
-
-  for (auto layout : lzt::image_format_layout_unorm) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_UNORM, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageGetPropertiesTests,
-    GivenValidDescriptorWhenCreatingSNORMImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = true;
-
-  for (auto layout : lzt::image_format_layout_snorm) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_SNORM, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageGetPropertiesTests,
-    GivenValidDescriptorWhenCreatingFLOATImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = true;
-
-  for (auto layout : lzt::image_format_layout_float) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
-  }
-}
-
-LZT_TEST(
-    zeImageGetPropertiesTests,
-    GivenValidDescriptorWhenCreatingMediaImageThenNotNullPointerIsReturned) {
-  if (!(lzt::image_support())) {
-    LOG_INFO << "device does not support images, cannot run test";
-    GTEST_SKIP();
-  }
-  bool properties_only = true;
-
-  for (auto layout : lzt::image_format_media_layouts) {
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
-                         properties_only);
-    image_create_test_1d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, true,
-                         properties_only);
-    image_create_test_2d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, false,
-                         properties_only);
-    image_create_test_3d(ZE_IMAGE_FORMAT_TYPE_FLOAT, layout, properties_only);
-  }
-}
-
-class zeImageGetAllocPropertiesExtTests
+class zeImageDescriptorTest
     : public ::testing::Test,
-      public ::testing::WithParamInterface<
-          std::tuple<ze_image_type_t, ze_image_format_type_t>> {};
+      public ::testing::WithParamInterface<std::tuple<
+          ze_image_format_type_t, ze_image_format_layout_t, ze_image_flags_t,
+          ze_image_flags_t, ze_image_type_t, ImageSize>> {
+public:
+  void SetUp() override {
+    if (!(lzt::image_support())) {
+      LOG_INFO << "device does not support images, cannot run test";
+      GTEST_SKIP();
+    }
+    format_type = std::get<0>(GetParam());
+    layout = std::get<1>(GetParam());
+    image_rw_flag = std::get<2>(GetParam());
+    image_cache_flag = std::get<3>(GetParam());
+    image_type = std::get<4>(GetParam());
+    image_size = std::get<5>(GetParam());
+    auto supported_image_types = get_supported_image_types(
+        lzt::zeDevice::get_instance()->get_device(), false, false);
+    if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                  image_type) == supported_image_types.end()) {
+      GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+    }
 
-LZT_TEST_P(zeImageGetAllocPropertiesExtTests,
-           GivenValidImageThenSuccessIsReturned) {
+    ze_image_format_t format_descriptor = {
+        layout,                    // layout
+        format_type,               // type
+        ZE_IMAGE_FORMAT_SWIZZLE_R, // x
+        ZE_IMAGE_FORMAT_SWIZZLE_G, // y
+        ZE_IMAGE_FORMAT_SWIZZLE_B, // z
+        ZE_IMAGE_FORMAT_SWIZZLE_A  // w
+    };
+    ze_image_flag_t flags = (ze_image_flag_t)(image_rw_flag | image_cache_flag);
+    uint32_t array_levels = 0;
+    if (image_type == ZE_IMAGE_TYPE_1DARRAY) {
+      array_levels = 1;
+    }
+    if (image_type == ZE_IMAGE_TYPE_2DARRAY) {
+      array_levels = 2;
+    }
+    uint64_t width = 1;
+    uint32_t height = 1, depth = 1;
+    if (image_size == ImageSize::min) {
+      width = lzt::image_widths[0];
+      height = lzt::image_heights[0];
+      depth = lzt::image_depths[0];
+    } else if (image_size == ImageSize::large) {
+      switch (image_type) {
+      case ZE_IMAGE_TYPE_3D:
+        depth = lzt::image_depths[1];
+      case ZE_IMAGE_TYPE_2D:
+      case ZE_IMAGE_TYPE_2DARRAY:
+        height = lzt::image_heights[1];
+      case ZE_IMAGE_TYPE_1D:
+      case ZE_IMAGE_TYPE_1DARRAY:
+        width = lzt::image_widths[1];
+        break;
+      }
+    }
+
+    image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+    image_descriptor.flags = flags;
+    image_descriptor.type = image_type;
+    image_descriptor.format = format_descriptor;
+    image_descriptor.width = width;
+    image_descriptor.height = height;
+    image_descriptor.depth = depth;
+    image_descriptor.arraylevels = array_levels;
+    image_descriptor.miplevels = 0;
+  }
+
+  ze_image_format_type_t format_type;
+  ze_image_format_layout_t layout;
+  ze_image_flags_t image_rw_flag;
+  ze_image_flags_t image_cache_flag;
+  ze_image_type_t image_type;
+  ImageSize image_size;
+  ze_image_desc_t image_descriptor = {};
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
+};
 
-  const ze_image_type_t img_type = std::get<0>(GetParam());
-  const ze_image_format_type_t img_fmt_type = std::get<1>(GetParam());
-
-  std::vector<ze_image_format_layout_t> img_fmt_layouts;
-  switch (img_fmt_type) {
-  case ZE_IMAGE_FORMAT_TYPE_UINT: {
-    img_fmt_layouts = lzt::image_format_layout_uint;
-  } break;
-  case ZE_IMAGE_FORMAT_TYPE_SINT: {
-    img_fmt_layouts = lzt::image_format_layout_sint;
-  } break;
-  case ZE_IMAGE_FORMAT_TYPE_UNORM: {
-    img_fmt_layouts = lzt::image_format_layout_unorm;
-  } break;
-  case ZE_IMAGE_FORMAT_TYPE_SNORM: {
-    img_fmt_layouts = lzt::image_format_layout_snorm;
-  } break;
-  case ZE_IMAGE_FORMAT_TYPE_FLOAT: {
-    img_fmt_layouts = lzt::image_format_layout_float;
-  } break;
-  default: {
-    EXPECT_TRUE(false);
-  } break;
-  }
-
-  ze_device_image_properties_t device_img_properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
-  EXPECT_ZE_RESULT_SUCCESS(
-      zeDeviceGetImageProperties(device, &device_img_properties));
-
-  uint32_t img_width = 1;
-  uint32_t img_height = 1;
-  uint32_t img_depth = 1;
-  uint32_t array_levels = 0;
-  if ((img_type == ZE_IMAGE_TYPE_1D) || (img_type == ZE_IMAGE_TYPE_1DARRAY)) {
-    img_width = device_img_properties.maxImageDims1D >> 1;
-  } else if ((img_type == ZE_IMAGE_TYPE_2D) ||
-             (img_type == ZE_IMAGE_TYPE_2DARRAY)) {
-    img_width = device_img_properties.maxImageDims2D >> 2;
-    img_height = device_img_properties.maxImageDims2D >> 2;
-  } else if (img_type == ZE_IMAGE_TYPE_3D) {
-    img_width = device_img_properties.maxImageDims3D >> 4;
-    img_height = device_img_properties.maxImageDims3D >> 4;
-    img_depth = device_img_properties.maxImageDims3D >> 4;
-  } else {
-    EXPECT_EQ(img_type, ZE_IMAGE_TYPE_BUFFER);
-    img_width = to_u32(device_img_properties.maxImageBufferSize >> 1);
-  }
-
-  if (img_type == ZE_IMAGE_TYPE_1DARRAY) {
-    array_levels = std::min(1u, device_img_properties.maxImageArraySlices);
-  } else if (img_type == ZE_IMAGE_TYPE_2DARRAY) {
-    array_levels = std::min(2u, device_img_properties.maxImageArraySlices);
-  }
-
-  for (auto img_rw_flag : lzt::image_rw_flags) {
-    for (auto img_cache_flag : lzt::image_cache_flags) {
-      for (auto img_fmt_layout : img_fmt_layouts) {
-        ze_image_format_t img_fmt = {};
-        img_fmt.layout = img_fmt_layout;
-        img_fmt.type = img_fmt_type;
-        img_fmt.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
-        img_fmt.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
-        img_fmt.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
-        img_fmt.w = ZE_IMAGE_FORMAT_SWIZZLE_A;
-
-        ze_image_desc_t img_desc = {};
-        img_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-        img_desc.pNext = nullptr;
-        img_desc.flags = img_rw_flag | img_cache_flag;
-        img_desc.type = img_type;
-        img_desc.format = img_fmt;
-        img_desc.width = img_width;
-        img_desc.height = img_height;
-        img_desc.depth = img_depth;
-        img_desc.arraylevels = array_levels;
-        img_desc.miplevels = 0;
-
-        auto img = lzt::create_ze_image(context, device, img_desc);
-        if (img == nullptr) {
-          continue;
-        }
-        ze_image_allocation_ext_properties_t img_alloc_ext_properties = {};
-        img_alloc_ext_properties.stype =
-            ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES;
-        EXPECT_ZE_RESULT_SUCCESS(zeImageGetAllocPropertiesExt(
-            context, img, &img_alloc_ext_properties));
-        lzt::destroy_ze_image(img);
-      }
-    }
+LZT_TEST_P(zeImageDescriptorTest,
+           GivenValidDescriptorWhenCreatingImageThenNotNullPointerIsReturned) {
+  lzt::print_image_descriptor(image_descriptor);
+  auto image = lzt::create_ze_image(context, device, image_descriptor);
+  if (image) {
+    lzt::destroy_ze_image(image);
   }
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    ImageGetAllocPropertiesExtTestsParameterization,
-    zeImageGetAllocPropertiesExtTests,
-    ::testing::Combine(
-        ::testing::Values(ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_1DARRAY,
-                          ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_2DARRAY,
-                          ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_BUFFER),
-        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT,
-                          ZE_IMAGE_FORMAT_TYPE_UNORM,
-                          ZE_IMAGE_FORMAT_TYPE_SNORM,
-                          ZE_IMAGE_FORMAT_TYPE_FLOAT)));
-
-class zeImageMemoryPropertiesExpTests
-    : public ::testing::Test,
-      public ::testing::WithParamInterface<
-          std::tuple<ze_image_type_t, ze_image_format_type_t>> {};
 
 LZT_TEST_P(
-    zeImageMemoryPropertiesExpTests,
-    GivenValidImageWhenGettingMemoryPropertiesThenValidMemoryPropertiesIsReturned) {
-  ze_context_handle_t context = lzt::get_default_context();
-  ze_device_handle_t device =
-      lzt::get_default_device(lzt::get_default_driver());
-
-  if (!lzt::check_if_extension_supported(lzt::get_default_driver(),
-                                         ZE_IMAGE_MEMORY_PROPERTIES_EXP_NAME)) {
-    GTEST_SKIP() << "Extension " << ZE_IMAGE_MEMORY_PROPERTIES_EXP_NAME
-                 << " not supported";
-  }
-
-  const ze_image_type_t img_type = std::get<0>(GetParam());
-  const ze_image_format_type_t img_fmt_type = std::get<1>(GetParam());
-
-  std::vector<ze_image_format_layout_t> img_fmt_layouts;
-  switch (img_fmt_type) {
-  case ZE_IMAGE_FORMAT_TYPE_UINT: {
-    img_fmt_layouts = lzt::image_format_layout_uint;
-  } break;
-  case ZE_IMAGE_FORMAT_TYPE_SINT: {
-    img_fmt_layouts = lzt::image_format_layout_sint;
-  } break;
-  case ZE_IMAGE_FORMAT_TYPE_UNORM: {
-    img_fmt_layouts = lzt::image_format_layout_unorm;
-  } break;
-  case ZE_IMAGE_FORMAT_TYPE_SNORM: {
-    img_fmt_layouts = lzt::image_format_layout_snorm;
-  } break;
-  case ZE_IMAGE_FORMAT_TYPE_FLOAT: {
-    img_fmt_layouts = lzt::image_format_layout_float;
-  } break;
-  default: {
-    EXPECT_TRUE(false);
-  } break;
-  }
-
-  ze_device_image_properties_t device_img_properties = {
-      ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
-  EXPECT_ZE_RESULT_SUCCESS(
-      zeDeviceGetImageProperties(device, &device_img_properties));
-
-  uint32_t img_width = 1;
-  uint32_t img_height = 1;
-  uint32_t img_depth = 1;
-  uint32_t array_levels = 0;
-  if ((img_type == ZE_IMAGE_TYPE_1D) || (img_type == ZE_IMAGE_TYPE_1DARRAY)) {
-    img_width = device_img_properties.maxImageDims1D >> 1;
-  } else if ((img_type == ZE_IMAGE_TYPE_2D) ||
-             (img_type == ZE_IMAGE_TYPE_2DARRAY)) {
-    img_width = device_img_properties.maxImageDims2D >> 2;
-    img_height = device_img_properties.maxImageDims2D >> 2;
-  } else if (img_type == ZE_IMAGE_TYPE_3D) {
-    img_width = device_img_properties.maxImageDims3D >> 4;
-    img_height = device_img_properties.maxImageDims3D >> 4;
-    img_depth = device_img_properties.maxImageDims3D >> 4;
-  } else {
-    EXPECT_EQ(img_type, ZE_IMAGE_TYPE_BUFFER);
-    img_width = to_u32(device_img_properties.maxImageBufferSize >> 1);
-  }
-
-  if (img_type == ZE_IMAGE_TYPE_1DARRAY) {
-    array_levels = std::min(1u, device_img_properties.maxImageArraySlices);
-  } else if (img_type == ZE_IMAGE_TYPE_2DARRAY) {
-    array_levels = std::min(2u, device_img_properties.maxImageArraySlices);
-  }
-
-  for (auto img_rw_flag : lzt::image_rw_flags) {
-    for (auto img_cache_flag : lzt::image_cache_flags) {
-      for (auto img_fmt_layout : img_fmt_layouts) {
-        ze_image_format_t img_fmt = {};
-        img_fmt.layout = img_fmt_layout;
-        img_fmt.type = img_fmt_type;
-        img_fmt.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
-        img_fmt.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
-        img_fmt.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
-        img_fmt.w = ZE_IMAGE_FORMAT_SWIZZLE_A;
-
-        ze_image_desc_t img_desc = {};
-        img_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-        img_desc.pNext = nullptr;
-        img_desc.flags = img_rw_flag | img_cache_flag;
-        img_desc.type = img_type;
-        img_desc.format = img_fmt;
-        img_desc.width = img_width;
-        img_desc.height = img_height;
-        img_desc.depth = img_depth;
-        img_desc.arraylevels = array_levels;
-        img_desc.miplevels = 0;
-
-        auto img = lzt::create_ze_image(context, device, img_desc);
-        if (img == nullptr) {
-          continue;
-        }
-        ze_image_memory_properties_exp_t image_mem_properties = {};
-        image_mem_properties.stype =
-            ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES;
-        image_mem_properties.pNext = nullptr;
-        EXPECT_ZE_RESULT_SUCCESS(
-            zeImageGetMemoryPropertiesExp(img, &image_mem_properties));
-        EXPECT_GE(0u, image_mem_properties.rowPitch);
-        EXPECT_GE(0u, image_mem_properties.size);
-        EXPECT_GE(0u, image_mem_properties.slicePitch);
-        lzt::destroy_ze_image(img);
-      }
-    }
-  }
+    zeImageDescriptorTest,
+    GivenValidDescriptorWhenCheckingImagePropertiesThenNotNullPointerIsReturned) {
+  lzt::print_image_descriptor(image_descriptor);
+  check_image_properties(lzt::get_ze_image_properties(image_descriptor));
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    ImageMemoryPropertiesExpTestsParameterization,
-    zeImageMemoryPropertiesExpTests,
-    ::testing::Combine(
-        ::testing::Values(ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_1DARRAY,
-                          ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_2DARRAY,
-                          ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_BUFFER),
-        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT,
-                          ZE_IMAGE_FORMAT_TYPE_UNORM,
-                          ZE_IMAGE_FORMAT_TYPE_SNORM,
-                          ZE_IMAGE_FORMAT_TYPE_FLOAT)));
+    TestDescriptorUIntFormat, zeImageDescriptorTest,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT),
+                       ::testing::ValuesIn(lzt::image_format_layout_uint),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ImageSize::min, ImageSize::large)));
 
+INSTANTIATE_TEST_SUITE_P(
+    TestDescriptorSIntFormat, zeImageDescriptorTest,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_SINT),
+                       ::testing::ValuesIn(lzt::image_format_layout_sint),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ImageSize::min, ImageSize::large)));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDescriptorUNormFormat, zeImageDescriptorTest,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_UNORM),
+                       ::testing::ValuesIn(lzt::image_format_layout_unorm),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ImageSize::min, ImageSize::large)));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDescriptorSNormFormat, zeImageDescriptorTest,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_SNORM),
+                       ::testing::ValuesIn(lzt::image_format_layout_snorm),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ImageSize::min, ImageSize::large)));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDescriptorFloatFormat, zeImageDescriptorTest,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
+                       ::testing::ValuesIn(lzt::image_format_layout_float),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ImageSize::min, ImageSize::large)));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDescriptorMediaFormat, zeImageDescriptorTest,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
+                       ::testing::ValuesIn(lzt::image_format_media_layouts),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ImageSize::min, ImageSize::large)));
+
+class zeImagePropertiesTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_image_format_type_t, ze_image_format_layout_t,
+                     ze_image_flags_t, ze_image_flags_t, ze_image_type_t>> {
+public:
+  void SetUp() override {
+    if (!(lzt::image_support())) {
+      LOG_INFO << "device does not support images, cannot run test";
+      GTEST_SKIP();
+    }
+    format_type = std::get<0>(GetParam());
+    layout = std::get<1>(GetParam());
+    image_rw_flag = std::get<2>(GetParam());
+    image_cache_flag = std::get<3>(GetParam());
+    image_type = std::get<4>(GetParam());
+    auto supported_image_types = get_supported_image_types(
+        lzt::zeDevice::get_instance()->get_device(), false, false);
+    if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                  image_type) == supported_image_types.end()) {
+      GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+    }
+
+    ze_device_image_properties_t device_img_properties = {
+        ZE_STRUCTURE_TYPE_DEVICE_IMAGE_PROPERTIES, nullptr};
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeDeviceGetImageProperties(device, &device_img_properties));
+
+    uint64_t img_width = 1;
+    uint32_t img_height = 1;
+    uint32_t img_depth = 1;
+    uint32_t array_levels = 0;
+    if ((image_type == ZE_IMAGE_TYPE_1D) ||
+        (image_type == ZE_IMAGE_TYPE_1DARRAY)) {
+      img_width = device_img_properties.maxImageDims1D >> 1;
+    } else if ((image_type == ZE_IMAGE_TYPE_2D) ||
+               (image_type == ZE_IMAGE_TYPE_2DARRAY)) {
+      img_width = device_img_properties.maxImageDims2D >> 2;
+      img_height = device_img_properties.maxImageDims2D >> 2;
+    } else if (image_type == ZE_IMAGE_TYPE_3D) {
+      img_width = device_img_properties.maxImageDims3D >> 4;
+      img_height = device_img_properties.maxImageDims3D >> 4;
+      img_depth = device_img_properties.maxImageDims3D >> 4;
+    } else {
+      EXPECT_EQ(image_type, ZE_IMAGE_TYPE_BUFFER);
+      img_width = device_img_properties.maxImageBufferSize >> 1;
+    }
+
+    if (image_type == ZE_IMAGE_TYPE_1DARRAY) {
+      array_levels = std::min(1u, device_img_properties.maxImageArraySlices);
+    } else if (image_type == ZE_IMAGE_TYPE_2DARRAY) {
+      array_levels = std::min(2u, device_img_properties.maxImageArraySlices);
+    }
+
+    ze_image_format_t img_fmt = {};
+    img_fmt.layout = layout;
+    img_fmt.type = format_type;
+    img_fmt.x = ZE_IMAGE_FORMAT_SWIZZLE_R;
+    img_fmt.y = ZE_IMAGE_FORMAT_SWIZZLE_G;
+    img_fmt.z = ZE_IMAGE_FORMAT_SWIZZLE_B;
+    img_fmt.w = ZE_IMAGE_FORMAT_SWIZZLE_A;
+
+    image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+    image_desc.pNext = nullptr;
+    image_desc.flags = image_rw_flag | image_cache_flag;
+    image_desc.type = image_type;
+    image_desc.format = img_fmt;
+    image_desc.width = img_width;
+    image_desc.height = img_height;
+    image_desc.depth = img_depth;
+    image_desc.arraylevels = array_levels;
+    image_desc.miplevels = 0;
+  }
+
+protected:
+  ze_image_format_type_t format_type;
+  ze_image_format_layout_t layout;
+  ze_image_flags_t image_rw_flag;
+  ze_image_flags_t image_cache_flag;
+  ze_image_type_t image_type;
+  ze_image_desc_t image_desc;
+  ze_context_handle_t context = lzt::get_default_context();
+  ze_device_handle_t device =
+      lzt::get_default_device(lzt::get_default_driver());
+};
+
+LZT_TEST_P(zeImagePropertiesTests,
+           GivenValidImageWhenGettingAllocPropertiesThenSuccessIsReturned) {
+  auto img = lzt::create_ze_image(context, device, image_desc);
+
+  lzt::get_ze_image_alloc_properties_ext(img);
+
+  lzt::destroy_ze_image(img);
+}
+
+LZT_TEST_P(
+    zeImagePropertiesTests,
+    GivenValidImageWhenGettingMemoryPropertiesThenValidMemoryPropertiesIsReturned) {
+  auto img = lzt::create_ze_image(context, device, image_desc);
+
+  auto image_mem_properties = lzt::get_ze_image_mem_properties_exp(img);
+
+  EXPECT_GT(image_mem_properties.rowPitch, 0u);
+  EXPECT_GT(image_mem_properties.size, 0u);
+  EXPECT_GT(image_mem_properties.slicePitch, 0u);
+  lzt::destroy_ze_image(img);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    UInt, zeImagePropertiesTests,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT),
+                       ::testing::ValuesIn(lzt::image_format_layout_uint),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types)));
+
+INSTANTIATE_TEST_SUITE_P(
+    SInt, zeImagePropertiesTests,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_SINT),
+                       ::testing::ValuesIn(lzt::image_format_layout_sint),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types)));
+
+INSTANTIATE_TEST_SUITE_P(
+    UNorm, zeImagePropertiesTests,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_UNORM),
+                       ::testing::ValuesIn(lzt::image_format_layout_unorm),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types)));
+
+INSTANTIATE_TEST_SUITE_P(
+    SNorm, zeImagePropertiesTests,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_SNORM),
+                       ::testing::ValuesIn(lzt::image_format_layout_snorm),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types)));
+
+INSTANTIATE_TEST_SUITE_P(
+    Float, zeImagePropertiesTests,
+    ::testing::Combine(::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
+                       ::testing::ValuesIn(lzt::image_format_layout_float),
+                       ::testing::ValuesIn(lzt::image_rw_flags),
+                       ::testing::ValuesIn(lzt::image_cache_flags),
+                       ::testing::ValuesIn(lzt::image_types)));
 } // namespace

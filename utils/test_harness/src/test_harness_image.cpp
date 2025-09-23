@@ -211,6 +211,26 @@ get_ze_image_properties(ze_image_desc_t image_descriptor) {
   return image_properties;
 }
 
+ze_image_allocation_ext_properties_t
+get_ze_image_alloc_properties_ext(ze_image_handle_t image) {
+  ze_image_allocation_ext_properties_t image_alloc_properties = {};
+  image_alloc_properties.stype =
+      ZE_STRUCTURE_TYPE_IMAGE_ALLOCATION_EXT_PROPERTIES;
+  EXPECT_ZE_RESULT_SUCCESS(zeImageGetAllocPropertiesExt(
+      lzt::get_default_context(), image, &image_alloc_properties));
+  return image_alloc_properties;
+}
+
+ze_image_memory_properties_exp_t
+get_ze_image_mem_properties_exp(ze_image_handle_t image) {
+  ze_image_memory_properties_exp_t image_mem_properties = {};
+  image_mem_properties.stype = ZE_STRUCTURE_TYPE_IMAGE_MEMORY_EXP_PROPERTIES;
+  image_mem_properties.pNext = nullptr;
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeImageGetMemoryPropertiesExp(image, &image_mem_properties));
+  return image_mem_properties;
+}
+
 static inline uint32_t mask_and_shift(int8_t v, uint8_t m, size_t s) {
   return static_cast<uint32_t>(v & m) << s;
 }

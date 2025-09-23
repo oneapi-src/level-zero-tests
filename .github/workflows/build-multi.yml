@@ -129,14 +129,13 @@ jobs:
     # be indented for readability in the workflow output.
     if: github.repository_owner == 'oneapi-src'
     needs: [config, build-quick]
-    runs-on: ${{ matrix.os.name == 'windows' && 'windows-latest' || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.os.name == 'windows' && 'windows-2022' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
         os: [
           {name: ubuntu, vmaj: 22, vmin: '04'},
           {name: ubuntu, vmaj: 24, vmin: '04'},
-          {name: ubuntu, vmaj: 24, vmin: '10'},
           {name: sles, vmaj: 15, vmin: 2},
           {name: sles, vmaj: 15, vmin: 3},
           {name: sles, vmaj: 15, vmin: 4},

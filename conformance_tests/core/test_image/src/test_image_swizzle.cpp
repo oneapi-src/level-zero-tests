@@ -21,10 +21,6 @@ namespace {
 
 using lzt::to_u32;
 
-const std::vector<ze_image_type_t> tested_image_types = {
-    ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_1DARRAY,
-    ZE_IMAGE_TYPE_2DARRAY};
-
 class zeCommandListAppendImageCopyWithSwizzleTests
     : public ::testing::TestWithParam<std::tuple<ze_image_type_t, bool>> {
 protected:
@@ -192,7 +188,7 @@ LZT_TEST_P(
 
 INSTANTIATE_TEST_SUITE_P(
     SwizzleTestsParam, zeCommandListAppendImageCopyWithSwizzleTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Bool()));
 
 } // namespace
