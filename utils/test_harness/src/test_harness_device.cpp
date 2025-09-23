@@ -331,7 +331,7 @@ get_cache_reservation_properties_ext(ze_device_handle_t device) {
   memset(properties.data(), 0, sizeof(ze_device_cache_properties_t) * count);
   memset(cacheReservationProperties.data(), 0,
          sizeof(ze_cache_reservation_ext_desc_t) * count);
-  for (auto i = 0; i < count; i++) {
+  for (uint32_t i = 0U; i < count; i++) {
     properties[i].stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
     cacheReservationProperties[i].stype =
         ZE_STRUCTURE_TYPE_CACHE_RESERVATION_EXT_DESC;

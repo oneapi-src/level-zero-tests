@@ -37,14 +37,14 @@ void get_copy_and_compute_ordinals(
     if (cmd_queue_group_props[i].flags &
             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE &&
         compute_ordinal < 0) {
-      compute_ordinal = i;
+      compute_ordinal = to_int(i);
     }
     if (cmd_queue_group_props[i].flags &
             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY &&
         !(cmd_queue_group_props[i].flags &
           ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
         copy_ordinal < 0) {
-      copy_ordinal = i;
+      copy_ordinal = to_int(i);
     }
     if (compute_ordinal >= 0 && copy_ordinal >= 0) {
       break;
@@ -61,6 +61,7 @@ protected:
       bool is_immediate, bool is_shared_system, bool use_copy_engine);
   void RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
       bool is_immediate, bool is_shared_system, bool use_copy_engine);
+};
 
 void zeCommandListAppendMemoryFillTests::
     RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(
@@ -1374,7 +1375,7 @@ void zeCommandListAppendMemoryCopyTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
 
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
@@ -1456,7 +1457,7 @@ void zeCommandListAppendMemoryCopyTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
 
   lzt::zeEventPool ep;
   const size_t size = 16;
@@ -1550,7 +1551,7 @@ void zeCommandListAppendMemoryCopyTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
 
   lzt::zeEventPool ep;
   const size_t size = 16;

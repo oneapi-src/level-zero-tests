@@ -136,10 +136,9 @@ double get_timestamp_time(const ze_kernel_timestamp_data_t *timestamp,
   }
   const auto time_ns =
       (timestamp->kernelEnd >= timestamp->kernelStart)
-          ? (timestamp->kernelEnd - timestamp->kernelStart) * timer_period
-          : ((timestamp_max_val - timestamp->kernelStart) +
-             timestamp->kernelEnd + 1) *
-                timer_period;
+          ? to_f64(timestamp->kernelEnd - timestamp->kernelStart) * timer_period
+          : to_f64((timestamp_max_val - timestamp->kernelStart) +
+                   timestamp->kernelEnd + 1) * timer_period;
 
   return time_ns;
 }
