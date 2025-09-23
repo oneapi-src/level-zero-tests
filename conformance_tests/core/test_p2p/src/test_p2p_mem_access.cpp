@@ -88,8 +88,8 @@ protected:
           ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
       EXPECT_ZE_RESULT_SUCCESS(
           zeDeviceGetComputeProperties(device, &dev_compute_properties));
-      instance.group_size_x = std::min(
-          to_u32(128), dev_compute_properties.maxTotalGroupSize);
+      instance.group_size_x =
+          std::min(to_u32(128), dev_compute_properties.maxTotalGroupSize);
       instance.group_count_x = 1;
       instance.dev_mem_properties.pNext = nullptr;
       instance.dev_mem_properties.stype =
@@ -227,23 +227,19 @@ protected:
 
     if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_DEVICE) {
       dev_access_[0].device_mem_remote = lzt::allocate_device_memory(
-          mem_size_, 1, 0,
-          dev_access_[std::max(1U, (num - 1))].dev,
+          mem_size_, 1, 0, dev_access_[std::max(1U, (num - 1))].dev,
           lzt::get_default_context());
     } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_SHARED) {
       dev_access_[0].device_mem_remote = lzt::allocate_shared_memory(
-          mem_size_, 1, 0, 0,
-          dev_access_[std::max(1U, (num - 1))].dev);
+          mem_size_, 1, 0, 0, dev_access_[std::max(1U, (num - 1))].dev);
     } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
       size_t pageSize = 0;
-      lzt::query_page_size(
-          lzt::get_default_context(),
-          dev_access_[std::max(1U, (num - 1))].dev,
-          mem_size_, &pageSize);
+      lzt::query_page_size(lzt::get_default_context(),
+                           dev_access_[std::max(1U, (num - 1))].dev, mem_size_,
+                           &pageSize);
       mem_size_ = lzt::create_page_aligned_size(mem_size_, pageSize);
       lzt::physical_device_memory_allocation(
-          lzt::get_default_context(),
-          dev_access_[std::max(1U, (num - 1))].dev,
+          lzt::get_default_context(), dev_access_[std::max(1U, (num - 1))].dev,
           mem_size_, &dev_access_[0].device_mem_remote_physical);
       lzt::virtual_memory_reservation(lzt::get_default_context(), nullptr,
                                       mem_size_,

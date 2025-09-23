@@ -22,12 +22,12 @@ namespace {
 
 using lzt::to_nanoseconds;
 
-using lzt::to_u8;
+using lzt::to_f32;
+using lzt::to_f64;
 using lzt::to_int;
 using lzt::to_u32;
 using lzt::to_u64;
-using lzt::to_f32;
-using lzt::to_f64;
+using lzt::to_u8;
 
 class zeImmediateCommandListInOrderExecutionTests
     : public lzt::zeEventPoolTests {

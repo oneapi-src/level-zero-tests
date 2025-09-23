@@ -246,8 +246,8 @@ LZT_TEST_P(
                                    is_immediate);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name_inkernel, 1U, args_inkernel,
-                                   is_immediate);
+                                   module, func_name_inkernel, 1U,
+                                   args_inkernel, is_immediate);
 
   lzt::copy_image_to_mem(output_xeimage_host, output_inhost);
   lzt::copy_image_to_mem(output_xeimage_kernel, output_inkernel);

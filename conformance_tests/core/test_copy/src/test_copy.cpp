@@ -25,9 +25,9 @@ using namespace level_zero_tests;
 
 namespace {
 
-using lzt::to_u8;
 using lzt::to_int;
 using lzt::to_u32;
+using lzt::to_u8;
 
 void get_copy_and_compute_ordinals(
     const std::vector<ze_command_queue_group_properties_t>

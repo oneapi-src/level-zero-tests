@@ -99,8 +99,9 @@ void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, uint32_t x,
   return;
 }
 
-uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image, uint32_t x,
-                                              uint32_t y, bool is_immediate) {
+uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image,
+                                              uint32_t x, uint32_t y,
+                                              bool is_immediate) {
 
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   lzt::ImagePNG32Bit temp_png(img_width, img_height);
@@ -169,8 +170,8 @@ void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest(
 
   // For each image, pixel value at coord ([imagenum],[imagenum])
   // will be written to coord ([imagenum+10],[imagenum+10])
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U, args,
-                                   is_immediate);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
+                                   args, is_immediate);
 
   for (uint32_t i = 0U; i < num_images; i++) {
     uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1, is_immediate);
@@ -234,8 +235,8 @@ void KernelArgumentTests::RunGivenSeveralSamplersWhenPassingToKernelTest(
   }
 
   // sampler kernel is a noop, nothing to check
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U, args,
-                                   is_immediate);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
+                                   args, is_immediate);
 
   for (int i = 0; i < num_samplers; i++) {
     lzt::destroy_sampler(samplers[i]);
@@ -326,8 +327,8 @@ void KernelArgumentTests::
   // buffers[1] copied to buffers[3] using local mem as staging area
   // For each image, pixel value at coord ([imagenum],[imagenum])
   //   will be written to coord ([imagenum+10],[imagenum+10]) using sampler
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U, args,
-                                   is_immediate);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
+                                   args, is_immediate);
 
   EXPECT_EQ(*static_cast<int *>(buffers[0]), *static_cast<int *>(buffers[2]));
   EXPECT_EQ(*static_cast<int *>(buffers[1]), *static_cast<int *>(buffers[3]));

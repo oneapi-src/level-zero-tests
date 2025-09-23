@@ -198,8 +198,9 @@ public:
       std::vector<uint32_t> &local_device_ids, bool divide_buffers);
 
   void bandwidth_latency(peer_test_t test_type, peer_transfer_t transfer_type,
-                         size_t number_buffer_elements, uint32_t remote_device_id,
-                         uint32_t local_device_id, uint32_t queue_index);
+                         size_t number_buffer_elements,
+                         uint32_t remote_device_id, uint32_t local_device_id,
+                         uint32_t queue_index);
 
   void bidirectional_bandwidth_latency(peer_test_t test_type,
                                        peer_transfer_t transfer_type,

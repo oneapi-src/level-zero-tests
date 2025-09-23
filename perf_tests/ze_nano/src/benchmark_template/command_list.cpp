@@ -49,8 +49,8 @@ void command_list_empty_execute(ZeApp *benchmark,
   }
 
   NANO_PROBE(" Empty command list\t", probe_setting,
-             zeCommandQueueExecuteCommandLists, command_queue, 1U, &command_list,
-             nullptr);
+             zeCommandQueueExecuteCommandLists, command_queue, 1U,
+             &command_list, nullptr);
 
   benchmark->commandListDestroy(command_list);
   benchmark->commandQueueDestroy(command_queue);

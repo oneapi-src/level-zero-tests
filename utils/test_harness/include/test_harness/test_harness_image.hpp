@@ -153,20 +153,18 @@ void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
 
 // Returns number of errors found, assumes default color order:
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
-                         const lzt::ImagePNG32Bit &imagepng2,
-                         uint32_t origin1X, uint32_t origin1Y,
-                         uint32_t width1, uint32_t height1,
-                         uint32_t origin2X, uint32_t origin2Y,
-                         uint32_t width2, uint32_t height2);
+                         const lzt::ImagePNG32Bit &imagepng2, uint32_t origin1X,
+                         uint32_t origin1Y, uint32_t width1, uint32_t height1,
+                         uint32_t origin2X, uint32_t origin2Y, uint32_t width2,
+                         uint32_t height2);
 // Returns number of errors found, color order for both images are
 // define in the image_format parameters:
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
                          const ze_image_format_t &image1_format,
                          const lzt::ImagePNG32Bit &imagepng2,
                          const ze_image_format_t &image2_format,
-                         uint32_t origin1X, uint32_t origin1Y,
-                         uint32_t width1, uint32_t height1,
-                         uint32_t origin2X, uint32_t origin2Y,
+                         uint32_t origin1X, uint32_t origin1Y, uint32_t width1,
+                         uint32_t height1, uint32_t origin2X, uint32_t origin2Y,
                          uint32_t width2, uint32_t height2);
 
 // The following function, compares all of the pixels in image

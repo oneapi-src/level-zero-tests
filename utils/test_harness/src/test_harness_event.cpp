@@ -51,9 +51,8 @@ create_event_pool(ze_context_handle_t context, ze_event_pool_desc_t desc,
 
   auto context_initial = context;
   auto devices_initial = devices;
-  EXPECT_ZE_RESULT_SUCCESS(
-      zeEventPoolCreate(context, &desc, to_u32(devices.size()), devices.data(),
-                        &event_pool));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventPoolCreate(
+      context, &desc, to_u32(devices.size()), devices.data(), &event_pool));
   EXPECT_EQ(context, context_initial);
   for (size_t i = 0U; i < devices.size(); i++) {
     EXPECT_EQ(devices[i], devices_initial[i]);
@@ -138,7 +137,8 @@ double get_timestamp_time(const ze_kernel_timestamp_data_t *timestamp,
       (timestamp->kernelEnd >= timestamp->kernelStart)
           ? to_f64(timestamp->kernelEnd - timestamp->kernelStart) * timer_period
           : to_f64((timestamp_max_val - timestamp->kernelStart) +
-                   timestamp->kernelEnd + 1) * timer_period;
+                   timestamp->kernelEnd + 1) *
+                timer_period;
 
   return time_ns;
 }

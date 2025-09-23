@@ -20,10 +20,10 @@
 
 namespace lzt = level_zero_tests;
 
-using lzt::to_u8;
-using lzt::to_u16;
 using lzt::to_int;
+using lzt::to_u16;
 using lzt::to_u32;
+using lzt::to_u8;
 
 static constexpr auto loop_counter_alloc_size = sizeof(unsigned long);
 
@@ -37,8 +37,8 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = options.use_custom_module ? options.module_name_in
-                                                      : "debug_add.spv";
+  std::string module_name =
+      options.use_custom_module ? options.module_name_in : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
 
@@ -125,8 +125,8 @@ void attach_after_module_created_test(ze_context_handle_t context,
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = options.use_custom_module ? options.module_name_in
-                                                      : "debug_add.spv";
+  std::string module_name =
+      options.use_custom_module ? options.module_name_in : "debug_add.spv";
 
   LOG_INFO << "[Application] Creating module";
   auto module = lzt::create_module(context, device, module_name,
@@ -222,8 +222,8 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = options.use_custom_module ? options.module_name_in
-                                                      : "debug_add.spv";
+  std::string module_name =
+      options.use_custom_module ? options.module_name_in : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
 
@@ -320,8 +320,8 @@ void multiple_modules_created_test(ze_context_handle_t context,
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   auto command_list = lzt::create_command_list(context, device, 0, 0);
-  std::string module_name = options.use_custom_module ? options.module_name_in
-                                                      : "debug_add.spv";
+  std::string module_name =
+      options.use_custom_module ? options.module_name_in : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
@@ -410,12 +410,13 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
 
   auto command_list = lzt::create_command_list(device);
   auto command_queue = lzt::create_command_queue(device);
-  std::string module_name = options.use_custom_module ? options.module_name_in
-                                                      : "debug_loop.spv";
+  std::string module_name =
+      options.use_custom_module ? options.module_name_in : "debug_loop.spv";
 
   std::string kernel_name =
       options.use_custom_module && !options.kernel_name_in.empty()
-          ? options.kernel_name_in : "long_kernel";
+          ? options.kernel_name_in
+          : "long_kernel";
   bool slm = false;
   ze_device_properties_t device_properties = {
       ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
@@ -735,12 +736,13 @@ void Job::set_up_work(debug_options &options) {
 
   command_list = lzt::create_command_list(context, device, 0, 0);
 
-  std::string module_name = options.use_custom_module ? options.module_name_in
-                                                      : "debug_loop.spv";
+  std::string module_name =
+      options.use_custom_module ? options.module_name_in : "debug_loop.spv";
 
   std::string kernel_name =
       options.use_custom_module && !options.kernel_name_in.empty()
-          ? options.kernel_name_in : "long_kernel";
+          ? options.kernel_name_in
+          : "long_kernel";
 
   LOG_INFO << "[Application] Creating Module";
 

@@ -22,9 +22,9 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-using lzt::to_u8;
 using lzt::to_int;
 using lzt::to_u32;
+using lzt::to_u8;
 
 using cmdListVec = std::vector<ze_command_list_handle_t>;
 using cmdQueueVec = std::vector<ze_command_queue_handle_t>;
@@ -235,12 +235,12 @@ protected:
     if (execute_all_commands || is_immediate) {
       lzt::validate_data_pattern(host_mem, size, 1);
       if (lzt::image_support()) {
-        EXPECT_EQ(0, compare_data_pattern(*dest_host_image_ptr,
-                                          img_ptr->dflt_host_image_, 0U, 0U,
-                                          img_ptr->dflt_host_image_.width(),
-                                          img_ptr->dflt_host_image_.height(), 0U,
-                                          0U, img_ptr->dflt_host_image_.width(),
-                                          img_ptr->dflt_host_image_.height()));
+        EXPECT_EQ(0, compare_data_pattern(
+                         *dest_host_image_ptr, img_ptr->dflt_host_image_, 0U,
+                         0U, img_ptr->dflt_host_image_.width(),
+                         img_ptr->dflt_host_image_.height(), 0U, 0U,
+                         img_ptr->dflt_host_image_.width(),
+                         img_ptr->dflt_host_image_.height()));
         delete img_ptr;
         delete dest_host_image_ptr;
       }
@@ -256,12 +256,12 @@ protected:
         EXPECT_EQ(static_cast<uint8_t *>(memory_fill_mem)[i], 0);
       }
       if (lzt::image_support()) {
-        EXPECT_NE(0, compare_data_pattern(*dest_host_image_ptr,
-                                          img_ptr->dflt_host_image_, 0U, 0U,
-                                          img_ptr->dflt_host_image_.width(),
-                                          img_ptr->dflt_host_image_.height(), 0U,
-                                          0U, img_ptr->dflt_host_image_.width(),
-                                          img_ptr->dflt_host_image_.height()));
+        EXPECT_NE(0, compare_data_pattern(
+                         *dest_host_image_ptr, img_ptr->dflt_host_image_, 0U,
+                         0U, img_ptr->dflt_host_image_.width(),
+                         img_ptr->dflt_host_image_.height(), 0U, 0U,
+                         img_ptr->dflt_host_image_.width(),
+                         img_ptr->dflt_host_image_.height()));
         delete img_ptr;
         delete dest_host_image_ptr;
       }
@@ -769,8 +769,8 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
                           &offsetBuffer);
   // if groupSize is greater then memory count, then at least one thread group
   // should be dispatched
-  uint32_t threadGroup = arraySize / groupSize > 1 ?
-                             to_u32(arraySize / groupSize) : 1;
+  uint32_t threadGroup =
+      arraySize / groupSize > 1 ? to_u32(arraySize / groupSize) : 1;
   ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
 
   for (uint32_t i = 0; i < num_iterations; i++) {
@@ -935,8 +935,9 @@ protected:
 };
 
 static void RunAppendLaunchKernelEvent(cmdListVec cmdlist, cmdQueueVec cmdqueue,
-                                       ze_event_handle_t event, size_t num_cmdlist,
-                                       void *buffer, const size_t size) {
+                                       ze_event_handle_t event,
+                                       size_t num_cmdlist, void *buffer,
+                                       const size_t size) {
 
   const int addval = 10;
   const uint32_t num_iterations = 100;

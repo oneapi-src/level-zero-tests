@@ -32,8 +32,9 @@ namespace {
 using lzt::to_u32;
 
 #ifdef __linux__
-static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, size_t size,
-                                    bool reserved, ze_ipc_memory_flags_t flags,
+static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type,
+                                    size_t size, bool reserved,
+                                    ze_ipc_memory_flags_t flags,
                                     bool is_immediate) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -52,8 +53,8 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, size_t size
   boost::process::child c("./ipc/test_ipc_memory_helper");
 
   ze_ipc_mem_handle_t ipc_handle = {};
-  shared_data_t test_data = {test_type, TEST_SOCK, to_u32(size), flags,
-                             is_immediate, ipc_handle};
+  shared_data_t test_data = {test_type, TEST_SOCK,    to_u32(size),
+                             flags,     is_immediate, ipc_handle};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_memory_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));

@@ -27,9 +27,9 @@ namespace {
 
 using lzt::to_nanoseconds;
 
-using lzt::to_u8;
 using lzt::to_u32;
 using lzt::to_u64;
+using lzt::to_u8;
 
 enum TestType { FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT };
 
@@ -1391,8 +1391,8 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
-  lzt::suggest_group_size(kernel, to_u32(head), 1, 1,
-                          group_size_x, group_size_y, group_size_z);
+  lzt::suggest_group_size(kernel, to_u32(head), 1, 1, group_size_x,
+                          group_size_y, group_size_z);
   if (group_size_x > device_compute_properties.maxGroupSizeX) {
     LOG_WARNING << "Suggested group size is larger than max group size, "
                    "setting to max";

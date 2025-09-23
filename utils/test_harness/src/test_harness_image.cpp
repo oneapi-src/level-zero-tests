@@ -320,11 +320,10 @@ static inline uint32_t get_pixel(const uint32_t *image, uint32_t x, uint32_t y,
 }
 
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
-                         const lzt::ImagePNG32Bit &imagepng2,
-                         uint32_t origin1X, uint32_t origin1Y,
-                         uint32_t width1, uint32_t height1,
-                         uint32_t origin2X, uint32_t origin2Y,
-                         uint32_t width2, uint32_t height2) {
+                         const lzt::ImagePNG32Bit &imagepng2, uint32_t origin1X,
+                         uint32_t origin1Y, uint32_t width1, uint32_t height1,
+                         uint32_t origin2X, uint32_t origin2Y, uint32_t width2,
+                         uint32_t height2) {
   ze_image_desc_t img_desc = zeImageCreateCommon::dflt_ze_image_desc;
 
   return compare_data_pattern(imagepng1, img_desc.format, imagepng2,
@@ -332,9 +331,9 @@ int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
                               height1, origin2X, origin2Y, width2, height2);
 }
 
-static void decompose_pixel(uint32_t pixel, uint8_t &r, uint8_t r_idx, uint8_t &g,
-                            uint8_t g_idx, uint8_t &b, uint8_t b_idx, uint8_t &a,
-                            uint8_t a_idx) {
+static void decompose_pixel(uint32_t pixel, uint8_t &r, uint8_t r_idx,
+                            uint8_t &g, uint8_t g_idx, uint8_t &b,
+                            uint8_t b_idx, uint8_t &a, uint8_t a_idx) {
   r = (pixel >> r_idx) & 0xff;
   g = (pixel >> g_idx) & 0xff;
   b = (pixel >> b_idx) & 0xff;
@@ -347,9 +346,8 @@ int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
                          const ze_image_format_t &image1_format,
                          const lzt::ImagePNG32Bit &imagepng2,
                          const ze_image_format_t &image2_format,
-                         uint32_t origin1X, uint32_t origin1Y,
-                         uint32_t width1, uint32_t height1,
-                         uint32_t origin2X, uint32_t origin2Y,
+                         uint32_t origin1X, uint32_t origin1Y, uint32_t width1,
+                         uint32_t height1, uint32_t origin2X, uint32_t origin2Y,
                          uint32_t width2, uint32_t height2) {
   uint8_t r1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_R, image1_format);
   uint8_t g1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_G, image1_format);
@@ -410,9 +408,8 @@ int compare_data_pattern(
     const lzt::ImagePNG32Bit &image, const ze_image_region_t *region,
     const lzt::ImagePNG32Bit &expected_fg, // expected foreground
     const lzt::ImagePNG32Bit &expected_bg) {
-  const ze_image_region_t full_image_region = {0U, 0U, 0U,
-                                               image.width(), image.height(),
-                                               1U};
+  const ze_image_region_t full_image_region = {
+      0U, 0U, 0U, image.width(), image.height(), 1U};
   if (region == nullptr) {
     region = &full_image_region;
   }

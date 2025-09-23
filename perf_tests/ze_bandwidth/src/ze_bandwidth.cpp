@@ -706,10 +706,10 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
   ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC};
   event_pool_desc.count = static_cast<uint32_t>(2 * device_ids.size() + 1);
   event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-  SUCCESS_OR_TERMINATE(zeEventPoolCreate(
-      benchmark->context, &event_pool_desc,
-      static_cast<uint32_t>(benchmark->_devices.size()),
-      benchmark->_devices.data(), &event_pool));
+  SUCCESS_OR_TERMINATE(
+      zeEventPoolCreate(benchmark->context, &event_pool_desc,
+                        static_cast<uint32_t>(benchmark->_devices.size()),
+                        benchmark->_devices.data(), &event_pool));
 
   ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
   event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;

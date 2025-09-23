@@ -34,9 +34,9 @@ namespace bi = boost::interprocess;
 
 namespace {
 
+using lzt::to_f64;
 using lzt::to_s32;
 using lzt::to_u32;
-using lzt::to_f64;
 
 static constexpr uint32_t nanoSecToSeconds = 1000000000;
 std::atomic<bool> workloadThreadFlag(false);
@@ -1554,8 +1554,8 @@ LZT_TEST_F(
       auto currentTime = std::chrono::system_clock::now();
       std::chrono::duration<double> elapsedSeconds = currentTime - startTime;
       int32_t timeLeft =
-          to_s32(std::ceil(minimumTimeBeforeEventIsExpected +
-                                         errorBuffer - elapsedSeconds.count()));
+          to_s32(std::ceil(minimumTimeBeforeEventIsExpected + errorBuffer -
+                           elapsedSeconds.count()));
       if (timeLeft > 0) {
         LOG_DEBUG << "additional sleep before expecting event to be ready "
                   << timeLeft;
@@ -1595,9 +1595,9 @@ LZT_TEST_F(
 LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
-  metric_run_ip_sampling_with_validation(
-      false, devices, notifyEveryNReports, samplingPeriod,
-      to_u32(TimeForNReportsComplete));
+  metric_run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
+                                         samplingPeriod,
+                                         to_u32(TimeForNReportsComplete));
 }
 
 LZT_TEST_F(

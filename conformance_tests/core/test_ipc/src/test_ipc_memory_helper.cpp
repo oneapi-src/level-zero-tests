@@ -64,7 +64,8 @@ static void child_device_access_test(size_t size, ze_ipc_memory_flags_t flags,
   }
 }
 
-static void child_subdevice_access_test(size_t size, ze_ipc_memory_flags_t flags,
+static void child_subdevice_access_test(size_t size,
+                                        ze_ipc_memory_flags_t flags,
                                         bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);

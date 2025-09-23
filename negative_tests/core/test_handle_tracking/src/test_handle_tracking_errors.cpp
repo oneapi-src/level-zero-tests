@@ -23,8 +23,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-using lzt::to_u8;
 using lzt::to_u32;
+using lzt::to_u8;
 
 class HandleTests : public ::testing::Test {
 

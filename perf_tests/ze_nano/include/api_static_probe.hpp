@@ -81,9 +81,9 @@ long double _function_call_iter_measure_latency(
 
   nsec = timer.period_minus_overhead();
 
-  print_probe_output(
-      PREFIX_LATENCY + prefix, filename, line_number, function_name,
-      nsec / static_cast<long double>(num_iters), UNIT_LATENCY);
+  print_probe_output(PREFIX_LATENCY + prefix, filename, line_number,
+                     function_name, nsec / static_cast<long double>(num_iters),
+                     UNIT_LATENCY);
 
   return nsec;
 }

@@ -2174,10 +2174,10 @@ void MultiDeviceDebugTest::
   // need to ensure app has started
   // this second debugger won't be able to attach until 1st has detached
   LOG_DEBUG << "[Debugger] Launching child debugger";
-  auto debugger_1 = launch_child_debugger_process(
-      USE_TWO_DEVICES /*should be ignored*/,
-      lzt::to_string(device_properties_1.uuid), true, 1,
-                     to_u32(debugHelper.id()));
+  auto debugger_1 =
+      launch_child_debugger_process(USE_TWO_DEVICES /*should be ignored*/,
+                                    lzt::to_string(device_properties_1.uuid),
+                                    true, 1, to_u32(debugHelper.id()));
 
   LOG_DEBUG << "[Debugger] Using synchro for child debugger";
 

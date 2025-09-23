@@ -1083,10 +1083,10 @@ LZT_TEST_F(
   zeCommandListReset(command_list);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeCommandListAppendMemoryRangesBarrier(
-                                command_list, to_u32(ranges.size()),
-                                range_sizes.data(), ranges.data(), nullptr, 0,
-                                nullptr));
+  ASSERT_EQ(initial_result,
+            zeCommandListAppendMemoryRangesBarrier(
+                command_list, to_u32(ranges.size()), range_sizes.data(),
+                ranges.data(), nullptr, 0, nullptr));
 
   for (auto &range : ranges)
     lzt::free_memory(range);

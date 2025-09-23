@@ -694,22 +694,22 @@ uint64_t ZePeak::set_workgroups(L0Context &context,
   uint32_t group_size_z = 1;
   uint64_t work_items = to_u64(group_size_x) * group_size_y * group_size_z;
 
-  uint32_t group_count_x = to_u32(total_work_items_requested / work_items) ;
-  group_count_x = std::min(group_count_x,
-                           context.device_compute_property.maxGroupCountX);
+  uint32_t group_count_x = to_u32(total_work_items_requested / work_items);
+  group_count_x =
+      std::min(group_count_x, context.device_compute_property.maxGroupCountX);
   work_items *= group_count_x;
   auto remaining_items = total_work_items_requested - work_items;
 
   uint32_t group_count_y = to_u32(remaining_items / work_items);
-  group_count_y = std::min(group_count_y,
-                           context.device_compute_property.maxGroupCountY);
+  group_count_y =
+      std::min(group_count_y, context.device_compute_property.maxGroupCountY);
   group_count_y = std::max(group_count_y, 1U);
   work_items *= group_count_y;
   remaining_items = total_work_items_requested - work_items;
 
   uint32_t group_count_z = to_u32(remaining_items / work_items);
-  group_count_z = std::min(group_count_z,
-                           context.device_compute_property.maxGroupCountZ);
+  group_count_z =
+      std::min(group_count_z, context.device_compute_property.maxGroupCountZ);
   group_count_z = std::max(group_count_z, 1U);
   work_items *= group_count_z;
 
@@ -1836,9 +1836,10 @@ long double ZePeak::context_time_in_us(L0Context &context,
   context_time_ns =
       (ts_result.global.kernelEnd >= ts_result.global.kernelStart)
           ? to_f80(ts_result.global.kernelEnd - ts_result.global.kernelStart) *
-            to_f80(timestamp_freq)
+                to_f80(timestamp_freq)
           : (to_f80(timestamp_max_value - ts_result.global.kernelStart) +
-            to_f80(ts_result.global.kernelEnd + 1)) * to_f80(timestamp_freq);
+             to_f80(ts_result.global.kernelEnd + 1)) *
+                to_f80(timestamp_freq);
 
   return (context_time_ns / 1000.0L); // time is returned in microseconds
 }

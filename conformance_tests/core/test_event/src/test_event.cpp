@@ -20,9 +20,9 @@ namespace {
 
 using lzt::to_nanoseconds;
 
+using lzt::to_f64;
 using lzt::to_u32;
 using lzt::to_u64;
-using lzt::to_f64;
 
 class zeDeviceCreateEventPoolTests : public lzt::zeEventPoolTests {};
 

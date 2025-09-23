@@ -18,10 +18,10 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-using lzt::to_u8;
+using lzt::to_f32;
 using lzt::to_int;
 using lzt::to_u32;
-using lzt::to_f32;
+using lzt::to_u8;
 
 enum TestType { IMAGE_OBJECT_ONLY, ONE_KERNEL_ONLY, TWO_KERNEL_CONVERT };
 
@@ -103,8 +103,8 @@ public:
       uint32_t group_size_x, group_size_y, group_size_z;
 
       lzt::suggest_group_size(kernel, to_u32(image_dims.width),
-                              image_dims.height, image_dims.depth,
-                              group_size_x, group_size_y, group_size_z);
+                              image_dims.height, image_dims.depth, group_size_x,
+                              group_size_y, group_size_z);
       lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
       lzt::set_argument_value(kernel, 0, sizeof(image_in), &image_in);

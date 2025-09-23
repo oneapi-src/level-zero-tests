@@ -33,8 +33,8 @@ namespace {
 namespace bipc = boost::interprocess;
 
 static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
-                                    uint32_t size, bool reserved, bool getFromFd,
-                                    ze_ipc_memory_flags_t flags,
+                                    uint32_t size, bool reserved,
+                                    bool getFromFd, ze_ipc_memory_flags_t flags,
                                     bool is_immediate) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {

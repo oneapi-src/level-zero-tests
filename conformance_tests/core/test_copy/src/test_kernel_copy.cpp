@@ -62,10 +62,10 @@ LZT_TEST_P(KernelCopyTests,
         input_data = static_cast<int *>(lzt::allocate_host_memory(num_bytes));
         output_data = static_cast<int *>(lzt::allocate_host_memory(num_bytes));
       } else {
-        input_data = static_cast<int *>(
-            lzt::allocate_shared_memory(num_bytes, device));
-        output_data = static_cast<int *>(
-            lzt::allocate_shared_memory(num_bytes, device));
+        input_data =
+            static_cast<int *>(lzt::allocate_shared_memory(num_bytes, device));
+        output_data =
+            static_cast<int *>(lzt::allocate_shared_memory(num_bytes, device));
       }
 
       lzt::write_data_pattern(input_data, num_bytes, 1);
@@ -126,10 +126,10 @@ LZT_TEST_P(KernelCopyTests,
             lzt::allocate_host_memory(size * sizeof(copy_data)));
 
         for (uint32_t i = 0U; i < size; i++) {
-          input_data[i].data = static_cast<uint32_t *>(
-              lzt::allocate_host_memory(num_bytes));
-          output_data[i].data = static_cast<uint32_t *>(
-              lzt::allocate_host_memory(num_bytes));
+          input_data[i].data =
+              static_cast<uint32_t *>(lzt::allocate_host_memory(num_bytes));
+          output_data[i].data =
+              static_cast<uint32_t *>(lzt::allocate_host_memory(num_bytes));
         }
       } else { // shared memory
         input_data = static_cast<copy_data *>(
@@ -414,12 +414,12 @@ protected:
     size_t num_bytes = size * sizeof(uint32_t);
 
     for (uint32_t i = 0U; i < size; i++) {
-      src_data_ptr_array.push_back(static_cast<uint32_t *>(allocate_memory(
-          driver_index, device_index, cross_device_index, src_mem_type,
-          src_shr_type, num_bytes, context)));
-      dst_data_ptr_array.push_back(static_cast<uint32_t *>(allocate_memory(
-          driver_index, device_index, cross_device_index, dst_mem_type,
-          dst_shr_type, num_bytes, context)));
+      src_data_ptr_array.push_back(static_cast<uint32_t *>(
+          allocate_memory(driver_index, device_index, cross_device_index,
+                          src_mem_type, src_shr_type, num_bytes, context)));
+      dst_data_ptr_array.push_back(static_cast<uint32_t *>(
+          allocate_memory(driver_index, device_index, cross_device_index,
+                          dst_mem_type, dst_shr_type, num_bytes, context)));
       if (src_data_ptr_array[i] == nullptr ||
           dst_data_ptr_array[i] == nullptr) {
         // deallocate all previous memory allocations before skipping the test

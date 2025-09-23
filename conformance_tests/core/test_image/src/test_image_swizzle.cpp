@@ -85,8 +85,8 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   lzt::append_image_copy_from_mem(bundle.list, img_in, inbuff, nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   lzt::suggest_group_size(kernel, to_u32(image_dims.width), image_dims.height,
-                         image_dims.depth, group_size_x, group_size_y,
-                         group_size_z);
+                          image_dims.depth, group_size_x, group_size_y,
+                          group_size_z);
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
   lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);

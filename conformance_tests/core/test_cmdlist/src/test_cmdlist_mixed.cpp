@@ -21,9 +21,9 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-using lzt::to_u8;
 using lzt::to_int;
 using lzt::to_u32;
+using lzt::to_u8;
 
 static const size_t vec_sz = 1UL << 16;
 

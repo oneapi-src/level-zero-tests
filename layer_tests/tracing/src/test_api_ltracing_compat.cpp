@@ -1551,16 +1551,17 @@ LZT_TEST_F(
       lzt::allocate_device_memory(range_sizes[1] * 2)};
 
   ze_result_t initial_result = zeCommandListAppendMemoryRangesBarrier(
-      command_list, to_u32(ranges.size()), range_sizes.data(), ranges.data(), nullptr,
-      0, nullptr);
+      command_list, to_u32(ranges.size()), range_sizes.data(), ranges.data(),
+      nullptr, 0, nullptr);
 
   zeCommandListReset(command_list);
 
   lzt::enable_ltracer(tracer_handle);
 
-  ASSERT_EQ(initial_result, zeCommandListAppendMemoryRangesBarrier(
-                                command_list, to_u32(ranges.size()), range_sizes.data(),
-                                ranges.data(), nullptr, 0, nullptr));
+  ASSERT_EQ(initial_result,
+            zeCommandListAppendMemoryRangesBarrier(
+                command_list, to_u32(ranges.size()), range_sizes.data(),
+                ranges.data(), nullptr, 0, nullptr));
 
   for (auto &range : ranges)
     lzt::free_memory(range);

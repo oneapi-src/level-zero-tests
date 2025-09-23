@@ -17,7 +17,7 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
-  
+
 using lzt::to_u32;
 
 #ifdef USE_ZESINIT

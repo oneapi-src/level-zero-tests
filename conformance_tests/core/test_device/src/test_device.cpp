@@ -25,10 +25,10 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-using lzt::to_u8;
+using lzt::to_f64;
 using lzt::to_u32;
 using lzt::to_u64;
-using lzt::to_f64;
+using lzt::to_u8;
 
 bool comparePciIdBusNumber(std::string &bdfString1, std::string &bdfString2) {
   // bdf1[0] would be domain, bdf1[1] would be bus, bdf1[2] would be device
@@ -909,7 +909,7 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   lzt::set_argument_value(kernel, 0, sizeof(buffer_b), &buffer_b);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
-  uint32_t size_x = to_u32(size); 
+  uint32_t size_x = to_u32(size);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
@@ -961,8 +961,7 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
 
   // validation
   for (size_t i = 0U; i < size; i++) {
-    ASSERT_EQ(static_cast<uint8_t *>(buffer_a)[i],
-              to_u8((i & 0xFF) + addval));
+    ASSERT_EQ(static_cast<uint8_t *>(buffer_a)[i], to_u8((i & 0xFF) + addval));
   }
 
   // cleanup

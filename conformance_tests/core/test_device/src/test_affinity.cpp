@@ -161,7 +161,8 @@ std::string get_affinity_mask_string(ze_device_handle_t device,
       devices_present++;
       // add this device to output mask
       if (sub_devices_as_devices) {
-        uint16_t sub_device_index = to_u16(sub_device_count * parent_index + my_index);
+        uint16_t sub_device_index =
+            to_u16(sub_device_count * parent_index + my_index);
         output_mask << sub_device_index;
       } else {
         output_mask << my_index;

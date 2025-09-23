@@ -22,12 +22,12 @@ namespace {
 
 using lzt::to_nanoseconds;
 
-using lzt::to_u8;
+using lzt::to_f32;
+using lzt::to_f64;
 using lzt::to_int;
 using lzt::to_u32;
 using lzt::to_u64;
-using lzt::to_f32;
-using lzt::to_f64;
+using lzt::to_u8;
 
 void print_cmdqueue_descriptor(const ze_command_queue_desc_t descriptor) {
   LOG_INFO << "VERSION = " << descriptor.stype
@@ -766,8 +766,8 @@ public:
                                          ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
                                          to_u32(copy_ordinal));
 
-    cmdlist = lzt::create_command_list(context, device, 0,
-                                       to_u32(copy_ordinal));
+    cmdlist =
+        lzt::create_command_list(context, device, 0, to_u32(copy_ordinal));
 
     return true;
   }

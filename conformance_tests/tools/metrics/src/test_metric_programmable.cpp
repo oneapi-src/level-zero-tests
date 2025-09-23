@@ -71,7 +71,7 @@ protected:
     if (metric_handles_limit_value_string != nullptr) {
       LOG_DEBUG << "metric_handles_limit_value_string "
                 << metric_handles_limit_value_string;
-     metric_handles_limit = to_u32(metric_handles_limit_value_string);
+      metric_handles_limit = to_u32(metric_handles_limit_value_string);
     }
 
     const char *info_limit_value_string =

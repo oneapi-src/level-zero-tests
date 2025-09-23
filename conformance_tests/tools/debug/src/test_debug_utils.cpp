@@ -20,9 +20,9 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 
-using lzt::to_u8;
 using lzt::to_u16;
 using lzt::to_u32;
+using lzt::to_u8;
 
 void print_device(const ze_device_handle_t &device) {
   std::cout << "\n==========================================================="
@@ -740,8 +740,8 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
     debugHelper = launch_process(helper_test_type, device, use_sub_devices);
 
     zet_debug_event_t module_event;
-    attach_and_get_module_event(to_u32(debugHelper.id()), synchro, device, debugSession,
-                                module_event);
+    attach_and_get_module_event(to_u32(debugHelper.id()), synchro, device,
+                                debugSession, module_event);
 
     if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
       LOG_DEBUG << "[Debugger] Acking event: "

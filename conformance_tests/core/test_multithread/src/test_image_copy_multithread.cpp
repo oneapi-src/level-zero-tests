@@ -78,15 +78,14 @@ void image_copy_thread(const ze_command_queue_handle_t &command_queue) {
 
   image1 = lzt::create_ze_image(img_desc);
   image2 = lzt::create_ze_image(img_desc);
-  uint32_t wdth = to_u32(img_desc.width),
-           hght = to_u32(img_desc.height);
+  uint32_t wdth = to_u32(img_desc.width), hght = to_u32(img_desc.height);
   lzt::ImagePNG32Bit src_img(wdth, hght), dst_img(wdth, hght);
 
   for (int i = 0; i < thread_iters; i++) {
 
     lzt::write_image_data_pattern(src_img, 1);
-    lzt::append_image_copy_from_mem(command_list, image1,
-                                    src_img.raw_data(), nullptr);
+    lzt::append_image_copy_from_mem(command_list, image1, src_img.raw_data(),
+                                    nullptr);
 
     lzt::append_barrier(command_list);
     lzt::append_image_copy(command_list, image2, image1, nullptr);

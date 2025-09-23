@@ -36,8 +36,8 @@ namespace {
 
 using lzt::to_nanoseconds;
 
-using lzt::to_u8;
 using lzt::to_u32;
+using lzt::to_u8;
 
 class zetMetricTracerTest : public ::testing::Test {
 protected:
@@ -680,8 +680,8 @@ LZT_TEST_F(
 
       zet_metric_tracer_exp_handle_t metric_tracer_handle;
       lzt::metric_tracer_create(lzt::get_default_context(), device, i + 1,
-                               grp_handles.data(), &tracer_descriptor, nullptr,
-                               &metric_tracer_handle);
+                                grp_handles.data(), &tracer_descriptor, nullptr,
+                                &metric_tracer_handle);
 
       lzt::metric_tracer_enable(metric_tracer_handle, true);
 
@@ -1083,9 +1083,9 @@ LZT_TEST_F(
       lzt::activate_metric_groups(device, i + 1, grp_handles.data());
 
       zet_metric_tracer_exp_handle_t metric_tracer_handle;
-      lzt::metric_tracer_create(
-          lzt::get_default_context(), device, i + 1, grp_handles.data(),
-          &tracer_descriptor, notification_event, &metric_tracer_handle);
+      lzt::metric_tracer_create(lzt::get_default_context(), device, i + 1,
+                                grp_handles.data(), &tracer_descriptor,
+                                notification_event, &metric_tracer_handle);
 
       lzt::metric_tracer_enable(metric_tracer_handle, true);
 

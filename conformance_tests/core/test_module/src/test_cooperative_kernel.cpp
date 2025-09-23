@@ -58,8 +58,9 @@ void CooperativeKernelTests::
     GTEST_SKIP();
   }
   auto is_immediate = std::get<1>(GetParam());
-  auto cmd_bundle = lzt::create_command_bundle(
-      context, device, flags, mode, priority, 0, to_u32(ordinal), 0, is_immediate);
+  auto cmd_bundle =
+      lzt::create_command_bundle(context, device, flags, mode, priority, 0,
+                                 to_u32(ordinal), 0, is_immediate);
 
   // Set up input vector data
   const size_t data_size = 4096;

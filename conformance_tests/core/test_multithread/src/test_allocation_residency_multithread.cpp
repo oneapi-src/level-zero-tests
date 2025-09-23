@@ -74,8 +74,8 @@ void make_resident_evict_API(ze_module_handle_t module) {
     auto command_queue = lzt::create_command_queue(device);
     kernel = lzt::create_function(module, "residency_function");
 
-  ze_device_mem_alloc_flags_t device_flags = 0U;
-  ze_host_mem_alloc_flags_t host_flags = 0U;
+    ze_device_mem_alloc_flags_t device_flags = 0U;
+    ze_host_mem_alloc_flags_t host_flags = 0U;
 
     node *data = static_cast<node *>(lzt::allocate_shared_memory(
         sizeof(node), 1, device_flags, host_flags, device, context));

@@ -61,9 +61,9 @@ template <typename T> inline constexpr double to_f64(T val) {
 
 using nanosec = std::chrono::nanoseconds;
 
-template <typename D>
-uint64_t to_nanoseconds(D&& dur) {
-  return to_u64(std::chrono::duration_cast<nanosec>(std::forward<D>(dur)).count());
+template <typename D> uint64_t to_nanoseconds(D &&dur) {
+  return to_u64(
+      std::chrono::duration_cast<nanosec>(std::forward<D>(dur)).count());
 }
 
 zes_driver_handle_t get_default_zes_driver();
