@@ -764,7 +764,7 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
   uint32_t group_size_x, group_size_y, group_size_z;
   lzt::suggest_group_size(scratch_function, array_size, 1, 1, group_size_x,
                           group_size_y, group_size_z);
-  uint32_t groupSize = group_size_x * group_size_y * group_size_z;
+  uint32_t group_size = group_size_x * group_size_y * group_size_z;
   lzt::set_group_size(scratch_function, group_size_x, group_size_y,
                       group_size_z);
   lzt::set_argument_value(scratch_function, 0, sizeof(src_buffer), &src_buffer);
@@ -773,9 +773,9 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
                           &offset_buffer);
   // if groupSize is greater then memory count, then at least one thread group
   // should be dispatched
-  uint32_t threadGroup =
-      array_size / groupSize > 1 ? array_size / groupSize : 1;
-  ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
+  uint32_t thread_group =
+      array_size / group_size > 1 ? array_size / group_size : 1;
+  ze_group_count_t thread_group_dimensions = {thread_group, 1, 1};
 
   for (uint32_t i = 0; i < num_iterations; i++) {
     // Initialize memory
