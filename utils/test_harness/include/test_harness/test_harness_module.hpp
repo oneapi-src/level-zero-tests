@@ -65,6 +65,8 @@ void suggest_group_size(ze_kernel_handle_t hFunction, uint32_t globalSizeX,
                         uint32_t globalSizeY, uint32_t globalSizeZ,
                         uint32_t &groupSizeX, uint32_t &groupSizeY,
                         uint32_t &groupSizeZ);
+void suggest_max_cooperative_group_count(ze_kernel_handle_t hFunction,
+                                         uint32_t &max_cooperative_group_count);
 void set_group_size(ze_kernel_handle_t hFunction, uint32_t groupSizeX,
                     uint32_t groupSizeY, uint32_t groupSizeZ);
 ze_kernel_handle_t create_function(ze_module_handle_t module,

@@ -232,6 +232,14 @@ void suggest_group_size(ze_kernel_handle_t hFunction, uint32_t globalSizeX,
   EXPECT_EQ(hFunction, function_initial);
 }
 
+void suggest_max_cooperative_group_count(
+    ze_kernel_handle_t hFunction, uint32_t &max_cooperative_group_count) {
+  auto function_initial = hFunction;
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSuggestMaxCooperativeGroupCount(
+      hFunction, &max_cooperative_group_count));
+  EXPECT_EQ(hFunction, function_initial);
+}
+
 void destroy_module(ze_module_handle_t module) {
   EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module));
 }
