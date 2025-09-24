@@ -14,7 +14,7 @@
 
 ze_kernel_handle_t get_matrix_multiplication_kernel(
     ze_device_handle_t device, ze_group_count_t *tg, void **a_buffer,
-    void **b_buffer, void **c_buffer, int dimensions = 1024);
+    void **b_buffer, void **c_buffer, uint32_t dimensions = 1024);
 
 void metric_validate_stall_sampling_data(
     std::vector<zet_metric_properties_t> &metricProperties,

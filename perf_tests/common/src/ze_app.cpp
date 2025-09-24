@@ -33,7 +33,8 @@ std::vector<uint8_t> ZeApp::load_binary_file(const std::string &file_path) {
     std::cout << "Binary file length: " << length << std::endl;
 
   binary_file.resize(length);
-  stream.read(reinterpret_cast<char *>(binary_file.data()), length);
+  stream.read(reinterpret_cast<char *>(binary_file.data()),
+              static_cast<std::streamsize>(length));
   if (verbose)
     std::cout << "Binary file loaded" << std::endl;
 
@@ -323,7 +324,7 @@ void ZeApp::hostSynchronize(ze_event_handle_t hEvent, uint32_t timeout) {
 
 void ZeApp::hostSynchronize(ze_event_handle_t hEvent) {
 
-  SUCCESS_OR_TERMINATE(zeEventHostSynchronize(hEvent, ~0));
+  SUCCESS_OR_TERMINATE(zeEventHostSynchronize(hEvent, ~0ULL));
 }
 
 void ZeApp::commandQueueCreate(const uint32_t command_queue_id,
@@ -448,7 +449,7 @@ void ZeApp::initCountDevices(const uint32_t count) {
 
   if (_module_path.size() != 0) {
     _modules.resize(device_count);
-    for (int i = 0; i < device_count; i++) {
+    for (uint32_t i = 0U; i < device_count; i++) {
       moduleCreate(_devices[i], &_modules[i]);
     }
   }
@@ -458,12 +459,12 @@ void ZeApp::singleDeviceInit(void) { initCountDevices(1); }
 
 uint32_t ZeApp::allDevicesInit(void) {
   initCountDevices(0);
-  return _devices.size();
+  return static_cast<uint32_t>(_devices.size());
 }
 
 void ZeApp::cleanupDevices(void) {
   if (_module_path.size() != 0) {
-    for (int i = 0; i < _devices.size(); i++) {
+    for (size_t i = 0U; i < _devices.size(); i++) {
       moduleDestroy(_modules[i]);
     }
   }

@@ -74,20 +74,20 @@ int ZeImageCopy::parse_command_line(int argc, char **argv) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     exit(0);
-  } else if (Imagelayout == -1) {
+  } else if (Imagelayout == ZE_IMAGE_FORMAT_LAYOUT_FORCE_UINT32) {
     std::cout << "unknown format layout" << std::endl;
     std::cout << desc << std::endl;
     return 1;
-  } else if (Imageflags == -1) {
+  } else if (Imageflags == static_cast<uint32_t>(-1)) {
     std::cout << "unknown image flags" << std::endl;
     std::cout << desc << std::endl;
     return 1;
-  } else if (Imageformat == -1) {
-    std::cout << "unknown  Imageformat" << std::endl;
+  } else if (Imageformat == ZE_IMAGE_FORMAT_TYPE_FORCE_UINT32) {
+    std::cout << "unknown image format" << std::endl;
     std::cout << desc << std::endl;
     return 1;
-  } else if (Imagetype == -1) {
-    std::cout << "unknown  Imagetype" << std::endl;
+  } else if (Imagetype == ZE_IMAGE_TYPE_FORCE_UINT32) {
+    std::cout << "unknown image type" << std::endl;
     std::cout << desc << std::endl;
     return 1;
   }

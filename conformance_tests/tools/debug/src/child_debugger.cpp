@@ -15,6 +15,8 @@
 
 namespace po = boost::program_options;
 
+using lzt::to_u32;
+
 struct debugger_options {
 public:
   void parse_options(int argc, char **argv) {
@@ -85,7 +87,7 @@ int main(int argc, char **argv) {
 
   LOG_DEBUG << "[Child Debugger] INDEX:  " << options.index_in;
   auto index = options.index_in;
-  process_synchro synchro(true, true, index);
+  process_synchro synchro(true, true, static_cast<int>(index));
 
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -120,7 +122,7 @@ int main(int argc, char **argv) {
     debug_helper =
         launcher.launch_process(options.test_selected, device,
                                 options.use_sub_devices, "", index, false);
-    debug_config.pid = debug_helper.id();
+    debug_config.pid = to_u32(debug_helper.id());
   }
 
   // we have the device, now create a debug session

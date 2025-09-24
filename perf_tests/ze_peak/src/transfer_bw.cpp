@@ -47,7 +47,7 @@ long double ZePeak::_transfer_bw_gpu_copy(L0Context &context,
     SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(cmd_q, UINT64_MAX));
   }
   timer.end();
-  double timed = timer.period_minus_overhead();
+  long double timed = timer.period_minus_overhead();
   timed /= static_cast<long double>(iters);
 
   return calculate_gbps(timed, static_cast<long double>(buffer_size));
@@ -186,7 +186,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
   gflops = 0;
   if (context.sub_device_count) {
     current_sub_device_id = 0;
-    for (auto i = 0; i < context.sub_device_count; i++) {
+    for (uint32_t i = 0U; i < context.sub_device_count; i++) {
       gflops +=
           _transfer_bw_gpu_copy(context, shared_buf[i], local_memory,
                                 local_memory_size / context.sub_device_count);
@@ -203,7 +203,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
   gflops = 0;
   if (context.sub_device_count) {
     current_sub_device_id = 0;
-    for (auto i = 0; i < context.sub_device_count; i++) {
+    for (uint32_t i = 0U; i < context.sub_device_count; i++) {
       gflops +=
           _transfer_bw_gpu_copy(context, local_memory, shared_buf[i],
                                 local_memory_size / context.sub_device_count);
@@ -220,7 +220,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
   gflops = 0;
   if (context.sub_device_count) {
     current_sub_device_id = 0;
-    for (auto i = 0; i < context.sub_device_count; i++) {
+    for (uint32_t i = 0U; i < context.sub_device_count; i++) {
       gflops += _transfer_bw_host_copy(
           context, shared_buf[i], local_memory,
           local_memory_size / context.sub_device_count, true);
@@ -237,7 +237,7 @@ void ZePeak::_transfer_bw_shared_memory(L0Context &context,
   gflops = 0;
   if (context.sub_device_count) {
     current_sub_device_id = 0;
-    for (auto i = 0; i < context.sub_device_count; i++) {
+    for (uint32_t i = 0U; i < context.sub_device_count; i++) {
       gflops += _transfer_bw_host_copy(
           context, local_memory, shared_buf[i],
           local_memory_size / context.sub_device_count, false);
@@ -333,7 +333,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
   gflops = 0;
   if (context.sub_device_count) {
     current_sub_device_id = 0;
-    for (auto i = 0; i < context.sub_device_count; i++) {
+    for (uint32_t i = 0U; i < context.sub_device_count; i++) {
       gflops +=
           _transfer_bw_gpu_copy(context, dev_out_buf[i], host_memory,
                                 local_memory_size / context.sub_device_count);
@@ -350,7 +350,7 @@ void ZePeak::ze_peak_transfer_bw(L0Context &context) {
   gflops = 0;
   if (context.sub_device_count) {
     current_sub_device_id = 0;
-    for (auto i = 0; i < context.sub_device_count; i++) {
+    for (uint32_t i = 0U; i < context.sub_device_count; i++) {
       gflops +=
           _transfer_bw_gpu_copy(context, host_memory, dev_out_buf[i],
                                 local_memory_size / context.sub_device_count);

@@ -107,8 +107,8 @@ static void parent_device_signals(ze_event_handle_t hEvent,
 ze_kernel_handle_t get_matrix_multiplication_kernel(
     const ze_context_handle_t &context, ze_device_handle_t device,
     ze_group_count_t *tg, void **a_buffer, void **b_buffer, void **c_buffer,
-    int dimensions = 1024) {
-  int m, k, n;
+    uint32_t dimensions = 1024) {
+  uint32_t m, k, n;
   m = k = n = dimensions;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
@@ -120,11 +120,8 @@ ze_kernel_handle_t get_matrix_multiplication_kernel(
   std::memcpy(*a_buffer, a.data(), a.size() * sizeof(float));
   std::memcpy(*b_buffer, b.data(), b.size() * sizeof(float));
 
-  int group_count_x = m / 16;
-  int group_count_y = n / 16;
-
-  tg->groupCountX = group_count_x;
-  tg->groupCountY = group_count_y;
+  tg->groupCountX = m / 16;
+  tg->groupCountY = n / 16;
   tg->groupCountZ = 1;
 
   ze_module_handle_t module =
@@ -158,7 +155,7 @@ static void run_workload(ze_event_handle_t &timestamp_event,
   const auto max_threads =
       device_properties.numSlices * device_properties.numSubslicesPerSlice *
       device_properties.numEUsPerSubslice * device_properties.numThreadsPerEU;
-  auto dimensions = max_threads > 4096 ? 1024 : 16;
+  uint32_t dimensions = max_threads > 4096 ? 1024 : 16;
   ze_group_count_t group_count;
   void *a_buffer, *b_buffer, *c_buffer;
   auto kernel =

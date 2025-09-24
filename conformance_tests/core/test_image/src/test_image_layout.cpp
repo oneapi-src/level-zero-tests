@@ -18,6 +18,11 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_f32;
+using lzt::to_int;
+using lzt::to_u32;
+using lzt::to_u8;
+
 enum TestType { IMAGE_OBJECT_ONLY, ONE_KERNEL_ONLY, TWO_KERNEL_CONVERT };
 
 class ImageLayoutFixture : public ::testing::Test {
@@ -65,21 +70,21 @@ public:
       float *ptr1 = static_cast<float *>(buffer_in);
       float *ptr2 = static_cast<float *>(buffer_out);
       for (size_t i = 0; i < buffer_size / sizeof(float); ++i) {
-        ptr1[i] = static_cast<float>((0xff) - (i & 0xff));
+        ptr1[i] = to_f32((0xff) - (i & 0xff));
         ptr2[i] = 0xff;
       }
     } else if (format_type == ZE_IMAGE_FORMAT_TYPE_SNORM) {
       int *ptr1 = static_cast<int *>(buffer_in);
       int *ptr2 = static_cast<int *>(buffer_out);
       for (size_t i = 0; i < buffer_size / sizeof(int); ++i) {
-        ptr1[i] = std::norm((0xff) - (i & 0xff));
+        ptr1[i] = to_int(std::norm((0xff) - (i & 0xff)));
         ptr2[i] = 0xff;
       }
     } else {
       uint8_t *ptr1 = static_cast<uint8_t *>(buffer_in);
       uint8_t *ptr2 = static_cast<uint8_t *>(buffer_out);
       for (size_t i = 0; i < buffer_size / sizeof(uint8_t); ++i) {
-        ptr1[i] = static_cast<uint8_t>((0xff) - (i & 0xff));
+        ptr1[i] = to_u8((0xff) - (i & 0xff));
         ptr2[i] = 0xff;
       }
     }
@@ -97,18 +102,17 @@ public:
       // call kernel to copy image_in -> image_convert
       uint32_t group_size_x, group_size_y, group_size_z;
 
-      lzt::suggest_group_size(kernel, image_dims.width, image_dims.height,
-                              image_dims.depth, group_size_x, group_size_y,
-                              group_size_z);
+      lzt::suggest_group_size(kernel, to_u32(image_dims.width),
+                              image_dims.height, image_dims.depth, group_size_x,
+                              group_size_y, group_size_z);
       lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
       lzt::set_argument_value(kernel, 0, sizeof(image_in), &image_in);
       lzt::set_argument_value(kernel, 1, sizeof(image_convert), &image_convert);
 
-      ze_group_count_t group_dems = {
-          (static_cast<uint32_t>(image_dims.width) / group_size_x),
-          (image_dims.height / group_size_y),
-          (image_dims.depth / group_size_z)};
+      ze_group_count_t group_dems = {to_u32(image_dims.width / group_size_x),
+                                     image_dims.height / group_size_y,
+                                     image_dims.depth / group_size_z};
 
       lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr,
                                   0, nullptr);
@@ -121,18 +125,18 @@ public:
       } else {
         LOG_DEBUG << "TWO_KERNEL_CONVERT";
         // call kernel to copy image_convert -> image_out
-        lzt::suggest_group_size(kernel, image_dims.width, image_dims.height,
-                                image_dims.depth, group_size_x, group_size_y,
-                                group_size_z);
+        lzt::suggest_group_size(kernel, to_u32(image_dims.width),
+                                image_dims.height, image_dims.depth,
+                                group_size_x, group_size_y, group_size_z);
         lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
         lzt::set_argument_value(kernel, 0, sizeof(image_convert),
                                 &image_convert);
         lzt::set_argument_value(kernel, 1, sizeof(image_out), &image_out);
 
-        group_dems = {(static_cast<uint32_t>(image_dims.width) / group_size_x),
-                      (image_dims.height / group_size_y),
-                      (image_dims.depth / group_size_z)};
+        group_dems = {to_u32(image_dims.width / group_size_x),
+                      image_dims.height / group_size_y,
+                      image_dims.depth / group_size_z};
 
         lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems,
                                     nullptr, 0, nullptr);

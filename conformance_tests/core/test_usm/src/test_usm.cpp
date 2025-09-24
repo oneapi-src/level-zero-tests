@@ -18,6 +18,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class zeDriverMemoryMigrationPageFaultTestsMultiDevice
     : public ::testing::Test,
       public ::testing::WithParamInterface<
@@ -40,7 +42,7 @@ public:
     // occupied
     uint32_t groupSizeX, groupSizeY, groupSizeZ;
     size_t groupSize;
-    lzt::suggest_group_size(fill_function, pattern_memory_count, 1, 1,
+    lzt::suggest_group_size(fill_function, to_u32(pattern_memory_count), 1, 1,
                             groupSizeX, groupSizeY, groupSizeZ);
 
     groupSize = groupSizeX * groupSizeY * groupSizeZ;
@@ -84,7 +86,7 @@ public:
     // if groupSize is greater then memory count, then at least one thread group
     // should be dispatched
     uint32_t threadGroup = pattern_memory_count / groupSize > 1
-                               ? pattern_memory_count / groupSize
+                               ? to_u32(pattern_memory_count / groupSize)
                                : 1;
     LOG_DEBUG << "thread group dimension is ::" << threadGroup;
     ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
@@ -166,7 +168,7 @@ public:
     }
     // For each combination of memory, iterate through all the valid devices
 
-    for (int i = 0; i < driver_info->number_device_handles; i++) {
+    for (uint32_t i = 0U; i < driver_info->number_device_handles; i++) {
       device_in_driver_index = i;
 
       ze_device_handle_t device_handle =
@@ -260,7 +262,7 @@ public:
       EXPECT_EQ(false, memory_test_failure);
 
       // Logic to assign the peer which will access the shared memory
-      int index =
+      uint32_t index =
           (device_in_driver_index + 1) % driver_info->number_device_handles;
       ze_device_handle_t device_handle_1 = driver_info->device_handles[index];
 
@@ -418,7 +420,7 @@ public:
 
     // For each combination of memory, iterate through all the valid devices
 
-    for (int i = 0; i < driver_info->number_device_handles; i++) {
+    for (uint32_t i = 0U; i < driver_info->number_device_handles; i++) {
       device_in_driver_index = i;
 
       ze_device_handle_t device_handle =
@@ -681,7 +683,7 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices,
                     }),
                 devices.end());
 
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     if (!lzt::can_access_peer(devices[0], devices[i])) {
       LOG_WARNING << "P2P Access not supported between devices, skipping test";
       GTEST_SKIP();
@@ -699,7 +701,7 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices,
   const int pattern_size = 1;
   uint8_t pattern = 0x01;
 
-  for (int i = 0; i < devices.size(); i++) {
+  for (size_t i = 0U; i < devices.size(); i++) {
     auto cmd_bundle = lzt::create_command_bundle(devices[i], is_immediate);
     lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size,
                             memory_size, nullptr);
@@ -707,7 +709,7 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices,
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
     lzt::destroy_command_bundle(cmd_bundle);
 
-    for (int j = 0; j < memory_size; j++) {
+    for (size_t j = 0U; j < memory_size; j++) {
       ASSERT_EQ(static_cast<uint8_t *>(memory)[j], pattern);
     }
     pattern++;

@@ -147,10 +147,12 @@ LZT_TEST_F(PCI_TEST,
     auto pci_stats_initial = lzt::get_pci_stats(device);
     EXPECT_LE(pci_stats_initial.txCounter, UINT64_MAX);
     EXPECT_LE(pci_stats_initial.rxCounter, UINT64_MAX);
-    if (pciProps.haveReplayCounters == true)
+    if (pciProps.haveReplayCounters) {
       EXPECT_LE(pci_stats_initial.replayCounter, UINT64_MAX);
-    if (pciProps.havePacketCounters == true)
+    }
+    if (pciProps.havePacketCounters) {
       EXPECT_LE(pci_stats_initial.packetCounter, UINT64_MAX);
+    }
     EXPECT_LE(pci_stats_initial.timestamp, UINT64_MAX);
     ze_command_list_handle_t command_list = lzt::create_command_list();
     ze_command_queue_handle_t cq = lzt::create_command_queue();
@@ -205,14 +207,14 @@ LZT_TEST_F(PCI_TEST,
     EXPECT_LE(pci_stats_later.replayCounter, UINT64_MAX);
     EXPECT_LE(pci_stats_later.packetCounter, UINT64_MAX);
     EXPECT_LE(pci_stats_later.timestamp, UINT64_MAX);
-    if (pciProps.haveBandwidthCounters == true) {
+    if (pciProps.haveBandwidthCounters) {
       EXPECT_GT(pci_stats_later.txCounter, pci_stats_initial.txCounter);
       EXPECT_GT(pci_stats_later.rxCounter, pci_stats_initial.rxCounter);
     }
-    if (pciProps.havePacketCounters == true) {
+    if (pciProps.havePacketCounters) {
       EXPECT_GT(pci_stats_later.packetCounter, pci_stats_initial.packetCounter);
     }
-    if (pciProps.haveReplayCounters == true) {
+    if (pciProps.haveReplayCounters) {
       EXPECT_GE(pci_stats_later.replayCounter, pci_stats_initial.replayCounter);
     }
     EXPECT_GT(pci_stats_later.timestamp, pci_stats_initial.timestamp);

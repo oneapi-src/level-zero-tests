@@ -36,17 +36,17 @@ protected:
     }
   }
 
-  void set_image_pixel(ze_image_handle_t image, int x, int y, uint32_t val,
-                       bool is_immediate);
-  uint32_t get_image_pixel(ze_image_handle_t image, int x, int y,
+  void set_image_pixel(ze_image_handle_t image, uint32_t x, uint32_t y,
+                       uint32_t val, bool is_immediate);
+  uint32_t get_image_pixel(ze_image_handle_t image, uint32_t x, uint32_t y,
                            bool is_immediate);
 
   ze_device_handle_t device_;
   ze_module_handle_t module_;
   ze_module_handle_t image_module_;
 
-  const int img_height = 20;
-  const int img_width = 20;
+  const uint32_t img_height = 20;
+  const uint32_t img_width = 20;
 
   void RunGivenSeveralBuffersWhenPassingToKernelTest(bool is_immediate);
   void RunGivenSeveral2DImagesWhenPassingToKernelTest(bool is_immediate);
@@ -56,7 +56,8 @@ protected:
   void RunGivenManyLocalArgsWhenPassingToKernelTest(bool is_immediate);
 };
 
-static ze_image_handle_t create_2d_uint_test_image(int width, int height) {
+static ze_image_handle_t create_2d_uint_test_image(uint32_t width,
+                                                   uint32_t height) {
   ze_image_desc_t image_description = {};
   image_description.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8;
@@ -82,8 +83,9 @@ static ze_image_handle_t create_2d_uint_test_image(int width, int height) {
   return image;
 }
 
-void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, int x, int y,
-                                          uint32_t val, bool is_immediate) {
+void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, uint32_t x,
+                                          uint32_t y, uint32_t val,
+                                          bool is_immediate) {
 
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   lzt::ImagePNG32Bit temp_png(img_width, img_height);
@@ -97,8 +99,9 @@ void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, int x, int y,
   return;
 }
 
-uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image, int x,
-                                              int y, bool is_immediate) {
+uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image,
+                                              uint32_t x, uint32_t y,
+                                              bool is_immediate) {
 
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   lzt::ImagePNG32Bit temp_png(img_width, img_height);
@@ -127,7 +130,7 @@ void KernelArgumentTests::RunGivenSeveralBuffersWhenPassingToKernelTest(
     args.push_back(arg);
   }
   // Kernel should set buffers to values 1,2,3,4,5.
-  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args,
+  lzt::create_and_execute_function(device_, module_, kernel_name, 1U, args,
                                    is_immediate);
 
   for (int i = 0; i < num_bufs; i++) {
@@ -153,10 +156,10 @@ void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest(
   std::string kernel_name = "many_2d_images";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
-  const int num_images = 5;
+  const uint32_t num_images = 5;
   ze_image_handle_t images[num_images];
 
-  for (int i = 0; i < num_images; i++) {
+  for (uint32_t i = 0U; i < num_images; i++) {
     images[i] = create_2d_uint_test_image(img_width, img_height);
     // set pixel to test value;
     set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
@@ -167,10 +170,10 @@ void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest(
 
   // For each image, pixel value at coord ([imagenum],[imagenum])
   // will be written to coord ([imagenum+10],[imagenum+10])
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1, args,
-                                   is_immediate);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
+                                   args, is_immediate);
 
-  for (int i = 0; i < num_images; i++) {
+  for (uint32_t i = 0U; i < num_images; i++) {
     uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1, is_immediate);
     EXPECT_EQ(pixel, i + 1);
     pixel = get_image_pixel(images[i], i + 11, i + 11, is_immediate);
@@ -232,8 +235,8 @@ void KernelArgumentTests::RunGivenSeveralSamplersWhenPassingToKernelTest(
   }
 
   // sampler kernel is a noop, nothing to check
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1, args,
-                                   is_immediate);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
+                                   args, is_immediate);
 
   for (int i = 0; i < num_samplers; i++) {
     lzt::destroy_sampler(samplers[i]);
@@ -263,10 +266,10 @@ void KernelArgumentTests::
   std::string kernel_name = "many_args_all_types";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
-  const int num_global_bufs = 4;
+  const uint32_t num_global_bufs = 4;
   void *buffers[num_global_bufs];
 
-  for (int i = 0; i < num_global_bufs; i++) {
+  for (uint32_t i = 0; i < num_global_bufs; i++) {
     buffers[i] = lzt::allocate_host_memory(sizeof(int));
   }
   memset(buffers[0], 0x22, sizeof(int));
@@ -296,10 +299,10 @@ void KernelArgumentTests::
   args.push_back(arg);
 
   // Add 5 images
-  const int num_images = 5;
+  const uint32_t num_images = 5;
   ze_image_handle_t images[num_images];
 
-  for (int i = 0; i < num_images; i++) {
+  for (uint32_t i = 0; i < num_images; i++) {
     images[i] = create_2d_uint_test_image(img_width, img_height);
     // set pixel to test value;
     set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
@@ -309,9 +312,9 @@ void KernelArgumentTests::
   }
 
   // Add 2 samplers
-  const int num_samplers = 2;
+  const uint32_t num_samplers = 2;
   ze_sampler_handle_t samplers[num_samplers];
-  for (int i = 0; i < num_samplers; i++) {
+  for (uint32_t i = 0; i < num_samplers; i++) {
     samplers[i] = lzt::create_sampler(ZE_SAMPLER_ADDRESS_MODE_NONE,
                                       ZE_SAMPLER_FILTER_MODE_LINEAR, true);
     arg.arg_size = sizeof(samplers[i]);
@@ -324,18 +327,18 @@ void KernelArgumentTests::
   // buffers[1] copied to buffers[3] using local mem as staging area
   // For each image, pixel value at coord ([imagenum],[imagenum])
   //   will be written to coord ([imagenum+10],[imagenum+10]) using sampler
-  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1, args,
-                                   is_immediate);
+  lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
+                                   args, is_immediate);
 
   EXPECT_EQ(*static_cast<int *>(buffers[0]), *static_cast<int *>(buffers[2]));
   EXPECT_EQ(*static_cast<int *>(buffers[1]), *static_cast<int *>(buffers[3]));
-  for (int i = 0; i < num_global_bufs; i++) {
+  for (uint32_t i = 0; i < num_global_bufs; i++) {
     lzt::free_memory(buffers[i]);
   }
-  for (int i = 0; i < num_samplers; i++) {
+  for (uint32_t i = 0; i < num_samplers; i++) {
     lzt::destroy_sampler(samplers[i]);
   }
-  for (int i = 0; i < num_images; i++) {
+  for (uint32_t i = 0; i < num_images; i++) {
     uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1, is_immediate);
     EXPECT_EQ(pixel, i + 1);
     pixel = get_image_pixel(images[i], i + 11, i + 11, is_immediate);
@@ -392,7 +395,7 @@ void KernelArgumentTests::RunGivenManyLocalArgsWhenPassingToKernelTest(
   args.push_back(arg);
 
   // Kernel should set global buffer to value 0x55
-  lzt::create_and_execute_function(device_, module_, kernel_name, 1, args,
+  lzt::create_and_execute_function(device_, module_, kernel_name, 1U, args,
                                    is_immediate);
 
   // Kernel should set all bytes to 0x55

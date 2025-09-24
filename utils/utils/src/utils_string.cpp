@@ -310,7 +310,7 @@ ze_image_format_layout_t to_layout(const std::string layout) {
     return ZE_IMAGE_FORMAT_LAYOUT_P216;
   } else {
     std::cout << "Unknown ze_image_format_layout_t value: " << layout;
-    return static_cast<ze_image_format_layout_t>(-1);
+    return ZE_IMAGE_FORMAT_LAYOUT_FORCE_UINT32;
   }
 }
 
@@ -344,7 +344,7 @@ ze_image_format_type_t to_format_type(const std::string format_type) {
     return ZE_IMAGE_FORMAT_TYPE_FLOAT;
   } else {
     std::cout << "Unknown ze_image_format_type_t value: ";
-    return (static_cast<ze_image_format_type_t>(-1));
+    return ZE_IMAGE_FORMAT_TYPE_FORCE_UINT32;
   }
 }
 
@@ -483,7 +483,7 @@ ze_image_type_t to_image_type(const std::string type) {
     return ZE_IMAGE_TYPE_2DARRAY;
   } else {
     std::cout << "Unknown ze_image_type_t value: ";
-    return (static_cast<ze_image_type_t>(-1));
+    return ZE_IMAGE_TYPE_FORCE_UINT32;
   }
 }
 
@@ -556,7 +556,9 @@ std::string to_string(const ze_device_property_flag_t flags) {
   return to_string_helper(bitfield).str();
 }
 
-static char hexdigit(int i) { return (i > 9) ? 'a' - 10 + i : '0' + i; }
+constexpr char dec2hex[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                            '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+static char hexdigit(int i) { return dec2hex[i]; }
 template <typename T> static void uuid_to_string(T uuid, int bytes, char *s) {
   int i;
 
@@ -643,7 +645,7 @@ std::ostream &operator<<(std::ostream &os, const ze_image_type_t &x) {
   return os << level_zero_tests::to_string(x);
 }
 
-std::ostream &operator<<(std::ostream &os, const ze_device_fp_flags_t &x) {
+std::ostream &operator<<(std::ostream &os, const ze_device_fp_flag_t &x) {
   return os << level_zero_tests::to_string(x);
 }
 

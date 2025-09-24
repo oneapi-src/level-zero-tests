@@ -26,6 +26,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 struct device_handles_t {
   ze_device_handle_t core_handle;
   zes_device_handle_t sysman_handle;
@@ -231,7 +233,7 @@ LZT_TEST_F(
         lzt::get_sysman_device_by_uuid(driver, device_uuid, on_sub_device,
                                        sub_device_id);
     EXPECT_EQ(device_handle_from_uuid, device);
-    if (on_sub_device == true) {
+    if (on_sub_device) {
       EXPECT_LT(sub_device_id, sub_devices_count);
     }
   }
@@ -394,7 +396,7 @@ LZT_TEST_F(
     if (processes.size() > 0) {
       for (auto process : processes) {
         EXPECT_GT(process.processId, 0u);
-        if (process.processId == pid) {
+        if (process.processId == to_u32(pid)) {
           pid_found = 1;
         }
       }
@@ -450,7 +452,7 @@ LZT_TEST_F(
 static std::vector<float>
 submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
                         uint32_t dim, ze_device_handle_t targetDevice) {
-  int m, k, n;
+  uint32_t m, k, n;
   m = k = n = dim;
   std::vector<float> c(m * n, 0);
   ze_device_handle_t device = targetDevice;
@@ -474,11 +476,9 @@ submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
   std::memcpy(a_buffer, a.data(), a.size() * sizeof(float));
   std::memcpy(b_buffer, b.data(), b.size() * sizeof(float));
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
-  const int group_count_x = m / 16;
-  const int group_count_y = n / 16;
   ze_group_count_t tg;
-  tg.groupCountX = group_count_x;
-  tg.groupCountY = group_count_y;
+  tg.groupCountX = m / 16;
+  tg.groupCountY = n / 16;
   tg.groupCountZ = 1;
   zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0, nullptr);
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
@@ -503,10 +503,10 @@ static std::vector<float>
 perform_matrix_multiplication_on_cpu(std::vector<float> a, std::vector<float> b,
                                      uint32_t n) {
   std::vector<float> c_cpu(n * n, 0);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
+  for (uint32_t i = 0U; i < n; i++) {
+    for (uint32_t j = 0U; j < n; j++) {
       float sum = 0;
-      for (int kl = 0; kl < n; kl++) {
+      for (uint32_t kl = 0U; kl < n; kl++) {
         sum += a[i * n + kl] * b[kl * n + j];
       }
       c_cpu[i * n + j] = sum;
@@ -516,7 +516,7 @@ perform_matrix_multiplication_on_cpu(std::vector<float> a, std::vector<float> b,
 }
 
 static void compare_results(std::vector<float> c, std::vector<float> c_cpu) {
-  for (int i = 0; i < c.size(); i++) {
+  for (size_t i = 0U; i < c.size(); i++) {
     if (c[i] != c_cpu[i]) {
       EXPECT_EQ(c[i], c_cpu[i]);
     }
@@ -529,7 +529,7 @@ bool is_compute_engine_used(int pid, zes_device_handle_t device) {
   auto processes = lzt::get_processes_state(device, count);
 
   for (const auto &process : processes) {
-    if (process.processId == pid &&
+    if (process.processId == to_u32(pid) &&
         process.engines == ZES_ENGINE_TYPE_FLAG_COMPUTE) {
       return true;
     }
@@ -552,7 +552,7 @@ bool validate_engine_type(ze_event_handle_t event,
 
 bool compute_workload_and_validate(device_handles_t device) {
 
-  int m, k, n;
+  uint32_t m, k, n;
   m = k = n = 512;
   uint32_t count = 0;
   std::vector<float> a(m * k, 1);
@@ -593,11 +593,9 @@ bool compute_workload_and_validate(device_handles_t device) {
                           nullptr);
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
 
-  const int group_count_x = m / 16;
-  const int group_count_y = n / 16;
   ze_group_count_t tg;
-  tg.groupCountX = group_count_x;
-  tg.groupCountY = group_count_y;
+  tg.groupCountX = m / 16;
+  tg.groupCountY = n / 16;
   tg.groupCountZ = 1;
 
   // events creation
@@ -797,15 +795,15 @@ LZT_TEST_F(
   const char *valueString = std::getenv("LZT_SYSMAN_DEVICE_TEST_ITERATIONS");
   uint32_t number_iterations = 2;
   if (valueString != nullptr) {
-    auto _value = atoi(valueString);
-    number_iterations = _value < 0 ? number_iterations : std::min(_value, 300);
+    uint32_t _value = to_u32(valueString);
+    number_iterations = _value < 0 ? number_iterations : std::min(_value, 300U);
     if (number_iterations != _value) {
       LOG_WARNING << "Number of iterations is capped at 300\n";
     }
   }
 
   for (auto device : devices) {
-    for (int i = 0; i < number_iterations; i++) {
+    for (uint32_t i = 0U; i < number_iterations; i++) {
       // Perform workload execution before reset
 #ifdef USE_ZESINIT
       auto sysman_device_properties = lzt::get_sysman_device_properties(device);

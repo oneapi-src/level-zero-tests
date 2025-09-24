@@ -20,6 +20,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class ImageFormatFixture : public ::testing::Test {
 public:
   void SetUp() override {
@@ -89,7 +91,7 @@ void ImageFormatFixture::run_test(
 
   lzt::append_image_copy_from_mem(cmd_bundle.list, img_in, inbuff, nullptr);
   lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  lzt::suggest_group_size(kernel, image_dims.width, image_dims.height,
+  lzt::suggest_group_size(kernel, to_u32(image_dims.width), image_dims.height,
                           image_dims.depth, group_size_x, group_size_y,
                           group_size_z);
 
@@ -98,9 +100,9 @@ void ImageFormatFixture::run_test(
   lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);
   lzt::set_argument_value(kernel, 1, sizeof(img_out), &img_out);
 
-  ze_group_count_t group_dems = {
-      (static_cast<uint32_t>(image_dims.width) / group_size_x),
-      (image_dims.height / group_size_y), (image_dims.depth / group_size_z)};
+  ze_group_count_t group_dems = {to_u32(image_dims.width / group_size_x),
+                                 image_dims.height / group_size_y,
+                                 image_dims.depth / group_size_z};
 
   lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr, 0,
                               nullptr);
@@ -156,7 +158,7 @@ void zeImageFormatTypeTests::setup_buffers(ImageFormatFixture &test,
   test.outbuff = lzt::allocate_host_memory_with_allocator_selector(
       test.image_size * sizeof(T), is_shared_system);
   T *in_ptr = static_cast<T *>(test.inbuff);
-  for (int i = 0; i < test.image_size; i++) {
+  for (size_t i = 0U; i < test.image_size; i++) {
     in_ptr[i] = value;
   }
 }
@@ -168,7 +170,7 @@ void zeImageFormatTypeTests::setup_buffers_float(ImageFormatFixture &test,
   test.outbuff = lzt::allocate_host_memory_with_allocator_selector(
       test.image_size * sizeof(float), is_shared_system);
   float *in_ptr = static_cast<float *>(test.inbuff);
-  for (int i = 0; i < test.image_size; i++) {
+  for (size_t i = 0U; i < test.image_size; i++) {
     in_ptr[i] = float_pixel_input;
   }
 }
@@ -176,14 +178,14 @@ void zeImageFormatTypeTests::setup_buffers_float(ImageFormatFixture &test,
 template <typename T, T value>
 void zeImageFormatTypeTests::verify_outbuffer(ImageFormatFixture &test) {
   T *out_ptr = static_cast<T *>(test.outbuff);
-  for (int i = 0; i < test.image_size; i++) {
+  for (size_t i = 0U; i < test.image_size; i++) {
     EXPECT_EQ(out_ptr[i], value);
   }
 }
 
 void zeImageFormatTypeTests::verify_outbuffer_float(ImageFormatFixture &test) {
   float *out_ptr = static_cast<float *>(test.outbuff);
-  for (int i = 0; i < test.image_size; i++) {
+  for (size_t i = 0U; i < test.image_size; i++) {
     EXPECT_LT(out_ptr[i], 3.5);
     EXPECT_GT(out_ptr[i], 3.0);
   }
@@ -423,9 +425,9 @@ class zeImageFormatLayoutTests
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_layout_t, bool>> {
 public:
-  template <typename T, int size_multiplier = 1>
+  template <typename T, size_t size_multiplier = 1>
   static void set_up_buffers(ImageFormatFixture &test, bool is_shared_system);
-  template <typename T, bool saturates = true, int size_multiplier = 1>
+  template <typename T, bool saturates = true, size_t size_multiplier = 1>
   static void verify_buffer(ImageFormatFixture &test);
   template <typename T, bool saturates = true>
   static void verify_buffer_float(ImageFormatFixture &test);
@@ -510,7 +512,7 @@ void zeImageFormatLayoutTests::get_kernel(ze_image_type_t image_type,
   kernel_name += '_' + shortened_string(image_type);
 }
 
-template <typename T, int size_multiplier>
+template <typename T, size_t size_multiplier>
 void zeImageFormatLayoutTests::set_up_buffers(ImageFormatFixture &test,
                                               bool is_shared_system) {
   test.inbuff = lzt::allocate_host_memory_with_allocator_selector(
@@ -518,19 +520,19 @@ void zeImageFormatLayoutTests::set_up_buffers(ImageFormatFixture &test,
   test.outbuff = lzt::allocate_host_memory_with_allocator_selector(
       (test.image_size * sizeof(T) * size_multiplier), is_shared_system);
   T *in_ptr = static_cast<T *>(test.inbuff);
-  for (int i = 0; i < (test.image_size * size_multiplier); i++) {
+  for (size_t i = 0U; i < (test.image_size * size_multiplier); i++) {
     // set pixel value to 1 less than max for data type so
     // that when the kernel increments it, it saturates
     // or rolls over
-    in_ptr[i] = ~(0 & in_ptr[i]) - 1;
+    in_ptr[i] = static_cast<T>(~(0 & in_ptr[i]) - 1);
   }
 }
 
-template <typename T, bool saturates, int size_multiplier>
+template <typename T, bool saturates, size_t size_multiplier>
 void zeImageFormatLayoutTests::verify_buffer(ImageFormatFixture &test) {
   auto max_val = std::numeric_limits<T>::max();
   T *out_ptr = static_cast<T *>(test.outbuff);
-  for (int i = 0; i < (test.image_size * size_multiplier); i++) {
+  for (size_t i = 0U; i < (test.image_size * size_multiplier); i++) {
     if (saturates) {
       ASSERT_EQ(out_ptr[i], max_val);
     } else if (max_val == std::numeric_limits<uint64_t>::max()) {
@@ -546,7 +548,7 @@ void zeImageFormatLayoutTests::verify_buffer(ImageFormatFixture &test) {
 template <typename T, bool saturates>
 void zeImageFormatLayoutTests::verify_buffer_float(ImageFormatFixture &test) {
   T *out_ptr = static_cast<T *>(test.outbuff);
-  for (int i = 0; i < test.image_size; i++) {
+  for (size_t i = 0U; i < test.image_size; i++) {
     if (saturates) {
       ASSERT_EQ(out_ptr[i], std::numeric_limits<T>::max());
     } else {

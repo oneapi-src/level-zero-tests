@@ -20,6 +20,15 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_nanoseconds;
+
+using lzt::to_f32;
+using lzt::to_f64;
+using lzt::to_int;
+using lzt::to_u32;
+using lzt::to_u64;
+using lzt::to_u8;
+
 void print_cmdqueue_descriptor(const ze_command_queue_desc_t descriptor) {
   LOG_INFO << "VERSION = " << descriptor.stype
            << "   FLAG = " << descriptor.flags
@@ -59,8 +68,8 @@ LZT_TEST_P(zeCommandQueueCreateTests,
 
   auto cmd_q_group_properties = lzt::get_command_queue_group_properties(device);
 
-  for (int i = 0; i < cmd_q_group_properties.size(); i++) {
-    descriptor.ordinal = i;
+  for (size_t i = 0U; i < cmd_q_group_properties.size(); i++) {
+    descriptor.ordinal = to_u32(i);
     print_cmdqueue_descriptor(descriptor);
 
     ze_command_queue_handle_t command_queue = nullptr;
@@ -119,7 +128,7 @@ protected:
     const ze_context_handle_t context = lzt::get_default_context();
     EXPECT_GT(params.num_command_lists, 0);
 
-    print_cmdqueue_exec(params.num_command_lists, params.sync_timeout);
+    print_cmdqueue_exec(params.num_command_lists, to_u32(params.sync_timeout));
 
     for (uint32_t i = 0; i < params.num_command_lists; i++) {
       void *host_shared = nullptr;
@@ -221,7 +230,7 @@ LZT_TEST_P(
   EXPECT_ZE_RESULT_SUCCESS(
       zeCommandQueueExecuteCommandLists(command_queue, params.num_command_lists,
                                         list_of_command_lists.data(), nullptr));
-  for (int i = 0; i < list_of_command_lists.size(); i++) {
+  for (size_t i = 0U; i < list_of_command_lists.size(); i++) {
     ASSERT_EQ(list_of_command_lists[i], command_lists_initial[i]);
   }
   ze_result_t sync_status = ZE_RESULT_NOT_READY;
@@ -242,7 +251,7 @@ protected:
     const ze_context_handle_t context = lzt::get_default_context();
     EXPECT_GT(params.num_command_lists, 0);
 
-    print_cmdqueue_exec(params.num_command_lists, params.sync_timeout);
+    print_cmdqueue_exec(params.num_command_lists, to_u32(params.sync_timeout));
 
     ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
     auto ordinal = lzt::get_compute_queue_group_ordinals(device)[0];
@@ -530,8 +539,8 @@ LZT_TEST_F(
 LZT_TEST(
     CommandQueuePriorityTest,
     GivenConcurrentLogicalCommandQueuesWhenStartSynchronizedThenHighPriorityCompletesFirst) {
-  const int buff_size_high = 1 << 10;
-  const int buff_size_low = 1 << 20;
+  const uint32_t buff_size_high = 1 << 10;
+  const uint32_t buff_size_low = 1 << 20;
   const uint8_t value_high = 0x55;
   const uint8_t value_low = 0x22;
   std::vector<ze_device_handle_t> devices;
@@ -586,7 +595,7 @@ LZT_TEST(
       std::vector<ze_command_list_handle_t> cmdlist_compute_lows;
 
       std::vector<void *> buffer_compute_lows;
-      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+      for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
         auto cmdqueue_compute_low = lzt::create_command_queue(
             device, static_cast<ze_command_queue_flag_t>(0),
             ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
@@ -612,7 +621,7 @@ LZT_TEST(
                              &value_high, buff_size_high, event_compute_high);
       lzt::close_command_list(cmdlist_compute_high);
 
-      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+      for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
         auto cmdlist_compute_low = cmdlist_compute_lows[i];
         auto buffer_compute_low = buffer_compute_lows[i];
         auto event_compute_low = event_compute_lows[i];
@@ -622,7 +631,7 @@ LZT_TEST(
         lzt::close_command_list(cmdlist_compute_low);
       }
 
-      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+      for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
         auto cmdqueue_compute_low = cmdqueue_compute_lows[i];
         auto cmdlist_compute_low = cmdlist_compute_lows[i];
 
@@ -633,21 +642,21 @@ LZT_TEST(
                                  &cmdlist_compute_high, nullptr);
       lzt::signal_event_from_host(event_sync);
 
-      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+      for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
         auto cmdqueue_compute_low = cmdqueue_compute_lows[i];
         lzt::synchronize(cmdqueue_compute_low, UINT64_MAX);
       }
       lzt::synchronize(cmdqueue_compute_high, UINT64_MAX);
 
       uint8_t *uchar_compute_high = static_cast<uint8_t *>(buffer_compute_high);
-      for (size_t i = 0; i < buff_size_high; i++) {
+      for (uint32_t i = 0U; i < buff_size_high; i++) {
         EXPECT_EQ(value_high, uchar_compute_high[i]);
       }
 
-      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+      for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
         auto buffer_compute_low = buffer_compute_lows[i];
         uint8_t *uchar_compute_low = static_cast<uint8_t *>(buffer_compute_low);
-        for (size_t i = 0; i < buff_size_low; i++) {
+        for (uint32_t i = 0U; i < buff_size_low; i++) {
           EXPECT_EQ(value_low, uchar_compute_low[i]);
         }
       }
@@ -659,7 +668,7 @@ LZT_TEST(
 
       uint32_t
           number_of_low_priority_queues_finished_after_high_priority_queue = 0;
-      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+      for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
         auto event_compute_low = event_compute_lows[i];
         EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(event_compute_low));
         ze_kernel_timestamp_result_t event_compute_low_timestamp =
@@ -686,7 +695,7 @@ LZT_TEST(
           << number_of_low_priority_queues_finished_after_high_priority_queue;
       /*cleanup*/
 
-      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+      for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
         auto cmdqueue_compute_low = cmdqueue_compute_lows[i];
         lzt::destroy_command_queue(cmdqueue_compute_low);
         auto cmdlist_compute_low = cmdlist_compute_lows[i];
@@ -701,7 +710,7 @@ LZT_TEST(
 
       lzt::destroy_event(event_compute_high);
 
-      for (int i = 0; i < num_low_priority_compute_queues; i++) {
+      for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
         auto event_compute_low = event_compute_lows[i];
         lzt::destroy_event(event_compute_low);
       }
@@ -731,7 +740,7 @@ public:
     auto cmdq_group_properties =
         lzt::get_command_queue_group_properties(device);
     int copy_ordinal = -1;
-    for (int i = 0; i < cmdq_group_properties.size(); i++) {
+    for (size_t i = 0U; i < cmdq_group_properties.size(); i++) {
       if ((cmdq_group_properties[i].flags &
            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
           !(cmdq_group_properties[i].flags &
@@ -740,7 +749,7 @@ public:
         if (cmdq_group_properties[i].numQueues == 0)
           continue;
 
-        copy_ordinal = i;
+        copy_ordinal = to_int(i);
         break;
       }
     }
@@ -755,9 +764,10 @@ public:
 
     cmdqueue = lzt::create_command_queue(context, device, 0, mode,
                                          ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-                                         copy_ordinal);
+                                         to_u32(copy_ordinal));
 
-    cmdlist = lzt::create_command_list(context, device, 0, copy_ordinal);
+    cmdlist =
+        lzt::create_command_list(context, device, 0, to_u32(copy_ordinal));
 
     return true;
   }
@@ -946,7 +956,7 @@ LZT_TEST(ConcurrentCommandQueueExecutionTests,
   auto device = lzt::get_default_device(driver);
   auto cmdq_groups = lzt::get_command_queue_group_properties(device);
 
-  std::vector<int> num_queues_per_group;
+  std::vector<uint32_t> num_queues_per_group;
   for (auto properties : cmdq_groups) {
     num_queues_per_group.push_back(properties.numQueues);
   }
@@ -963,7 +973,7 @@ LZT_TEST(ConcurrentCommandQueueExecutionTests,
   for (size_t i = 0; i < num_queues; i++) {
     if (index >= num_queues_per_group[ordinal]) {
       index = 0;
-      ordinal = (ordinal + 1) % cmdq_groups.size();
+      ordinal = to_u32((ordinal + 1) % cmdq_groups.size());
     }
     queue_data_t queue;
     queue.cmdqueue = lzt::create_command_queue(
@@ -974,7 +984,7 @@ LZT_TEST(ConcurrentCommandQueueExecutionTests,
     memset(queue.src_buff, 0, buff_size);
     queue.dst_buff = lzt::allocate_host_memory(buff_size, 1, context);
     memset(queue.dst_buff, 0, buff_size);
-    queue.data = i;
+    queue.data = to_u8(i);
     queues.push_back(queue);
 
     index++;
@@ -1052,8 +1062,8 @@ protected:
 
     const uint64_t responsiveness = measure_device_responsiveness();
     const double min_ratio = 0.02;
-    if (responsiveness > static_cast<uint64_t>(min_ratio * timeout)) {
-      timeout = static_cast<uint64_t>(responsiveness / min_ratio);
+    if (responsiveness > to_u64(min_ratio * to_f64(timeout))) {
+      timeout = to_u64(to_f64(responsiveness) / min_ratio);
       LOG_INFO << "Device responsiveness: " << responsiveness
                << " ns, setting timeout to: " << timeout << " ns";
     }
@@ -1085,7 +1095,7 @@ protected:
 
     const int add_value = 7;
     lzt::set_group_size(kernel, 1, 1, 1);
-    ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+    ze_group_count_t args = {to_u32(size), 1, 1};
     lzt::set_argument_value(kernel, 0, sizeof(buf_dev), &buf_dev);
     lzt::set_argument_value(kernel, 1, sizeof(buf_dev), &buf_dev);
     lzt::set_argument_value(kernel, 2, sizeof(add_value), &add_value);
@@ -1117,8 +1127,7 @@ protected:
     lzt::destroy_command_list(cmd_list);
     lzt::destroy_context(context);
 
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0)
-        .count();
+    return to_nanoseconds(t1 - t0);
   }
 
   void TearDown() override {
@@ -1158,9 +1167,8 @@ LZT_TEST_P(zeCommandQueueSynchronizeTimeoutTests,
     EXPECT_EQ(ZE_RESULT_NOT_READY, zeFenceHostSynchronize(fence, timeout));
     const auto t1 = std::chrono::steady_clock::now();
 
-    const uint64_t wall_time =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-    const float ratio_fence = static_cast<float>(wall_time) / timeout;
+    const uint64_t wall_time = to_nanoseconds(t1 - t0);
+    const float ratio_fence = to_f32(wall_time) / to_f32(timeout);
     // Tolerance: 2%
     EXPECT_GE(ratio_fence, 0.98f);
     EXPECT_LE(ratio_fence, 1.02f);
@@ -1170,9 +1178,8 @@ LZT_TEST_P(zeCommandQueueSynchronizeTimeoutTests,
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeCommandQueueSynchronize(cq, timeout));
   const auto t1 = std::chrono::steady_clock::now();
 
-  const uint64_t wall_time =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-  const float ratio_cq = static_cast<float>(wall_time) / timeout;
+  const uint64_t wall_time = to_nanoseconds(t1 - t0);
+  const float ratio_cq = to_f32(wall_time) / to_f32(timeout);
   // Tolerance: 2%
   EXPECT_GE(ratio_cq, 0.98f);
   EXPECT_LE(ratio_cq, 1.02f);

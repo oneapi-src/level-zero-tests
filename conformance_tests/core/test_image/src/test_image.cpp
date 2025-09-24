@@ -15,15 +15,17 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 void check_image_properties(ze_image_properties_t imageprop) {
 
-  EXPECT_TRUE((static_cast<uint32_t>(imageprop.samplerFilterFlags) == 0) ||
-              ((static_cast<uint32_t>(imageprop.samplerFilterFlags) &
-                static_cast<uint32_t>(ZE_IMAGE_SAMPLER_FILTER_FLAG_POINT)) ==
-               static_cast<uint32_t>(ZE_IMAGE_SAMPLER_FILTER_FLAG_POINT)) ||
-              ((static_cast<uint32_t>(imageprop.samplerFilterFlags) &
-                static_cast<uint32_t>(ZE_IMAGE_SAMPLER_FILTER_FLAG_LINEAR)) ==
-               static_cast<uint32_t>(ZE_IMAGE_SAMPLER_FILTER_FLAG_LINEAR)));
+  EXPECT_TRUE((to_u32(imageprop.samplerFilterFlags) == 0) ||
+              ((to_u32(imageprop.samplerFilterFlags) &
+                to_u32(ZE_IMAGE_SAMPLER_FILTER_FLAG_POINT)) ==
+               to_u32(ZE_IMAGE_SAMPLER_FILTER_FLAG_POINT)) ||
+              ((to_u32(imageprop.samplerFilterFlags) &
+                to_u32(ZE_IMAGE_SAMPLER_FILTER_FLAG_LINEAR)) ==
+               to_u32(ZE_IMAGE_SAMPLER_FILTER_FLAG_LINEAR)));
 }
 
 enum class ImageSize { min, large };

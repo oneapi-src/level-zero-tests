@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 #include "stress_common_func.hpp"
@@ -20,11 +19,13 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class zeDriverSpreadKernelsStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<float, float, uint32_t, ze_memory_type_t, bool, bool, bool,
-                     bool, bool>> {
+          std::tuple<double, double, uint32_t, ze_memory_type_t, bool, bool,
+                     bool, bool, bool>> {
 protected:
   void dispatch_kernels(const ze_device_handle_t device,
                         const std::vector<ze_module_handle_t> &module,
@@ -44,7 +45,7 @@ protected:
 
     ze_command_queue_handle_t current_command_queue = nullptr;
     std::vector<ze_command_queue_handle_t> command_queues;
-    bool case_with_immediate = is_immediate | is_registered_on_immediate;
+    bool case_with_immediate = is_immediate || is_registered_on_immediate;
     ze_command_list_handle_t immediate_for_registered_command_lists = nullptr;
 
     if (separate_command_lists || separate_command_queues) {
@@ -137,8 +138,8 @@ protected:
           lzt::close_command_list(command_list);
         }
         lzt::append_command_lists_immediate_exp(
-            immediate_for_registered_command_lists, command_lists.size(),
-            command_lists.data());
+            immediate_for_registered_command_lists,
+            to_u32(command_lists.size()), command_lists.data());
       } else {
         for (auto command_list : command_lists) {
           if (separate_command_queues) {
@@ -176,7 +177,8 @@ protected:
           current_command_lists.emplace_back(current_command_list);
           lzt::append_command_lists_immediate_exp(
               immediate_for_registered_command_lists,
-              current_command_lists.size(), current_command_lists.data());
+              to_u32(current_command_lists.size()),
+              current_command_lists.data());
         } else {
           lzt::execute_command_lists(current_command_queue, 1,
                                      &current_command_list, nullptr);
@@ -278,11 +280,11 @@ LZT_TEST_P(
       lzt::get_memory_properties(device);
 
   const uint32_t used_vectors_in_test = 3;
-  const uint32_t multiplier = test_arguments.base_arguments.multiplier;
+  const uint32_t multiplier = to_u32(test_arguments.base_arguments.multiplier);
   uint64_t number_of_all_allocations = used_vectors_in_test * multiplier;
-  float total_memory_size_limit =
+  double total_memory_size_limit =
       test_arguments.base_arguments.total_memory_size_limit;
-  float one_allocation_size_limit =
+  double one_allocation_size_limit =
       test_arguments.base_arguments.one_allocation_size_limit;
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
@@ -345,7 +347,8 @@ LZT_TEST_P(
   LOG_INFO << "call dispatch_kernels";
   dispatch_kernels(device, multiple_module_handle, output_allocations,
                    data_for_all_dispatches, test_kernel_names,
-                   number_of_requested_dispatches, test_single_allocation_count,
+                   number_of_requested_dispatches,
+                   to_u32(test_single_allocation_count),
                    context, test_arguments.separate_command_lists,
                    test_arguments.separate_command_queues,
                    test_arguments.separate_modules, test_arguments.is_immediate,

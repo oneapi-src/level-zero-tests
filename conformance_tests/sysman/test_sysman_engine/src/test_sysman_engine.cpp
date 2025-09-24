@@ -251,7 +251,7 @@ LZT_TEST_F(
 }
 
 static void workload_for_device(ze_device_handle_t device) {
-  int m, k, n;
+  uint32_t m, k, n;
   m = k = n = 5000;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
@@ -275,11 +275,9 @@ static void workload_for_device(ze_device_handle_t device) {
   std::memcpy(a_buffer, a.data(), a.size() * sizeof(float));
   std::memcpy(b_buffer, b.data(), b.size() * sizeof(float));
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);
-  const int group_count_x = m / 16;
-  const int group_count_y = n / 16;
   ze_group_count_t tg;
-  tg.groupCountX = group_count_x;
-  tg.groupCountY = group_count_y;
+  tg.groupCountX = m / 16;
+  tg.groupCountY = n / 16;
   tg.groupCountZ = 1;
   zeCommandListAppendLaunchKernel(cmd_list, function, &tg, nullptr, 0, nullptr);
   lzt::append_barrier(cmd_list, nullptr, 0, nullptr);

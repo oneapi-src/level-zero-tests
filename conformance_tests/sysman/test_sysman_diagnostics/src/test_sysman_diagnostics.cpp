@@ -208,7 +208,7 @@ LZT_TEST_F(
       for (auto diag_handle : diag_handles) {
         ASSERT_NE(nullptr, diag_handle);
         auto properties = lzt::get_diag_properties(diag_handle);
-        if (properties.haveTests == true) {
+        if (properties.haveTests) {
           count = 0;
           auto tests = lzt::get_diag_tests(diag_handle, count);
           ASSERT_EQ(tests.size(), 0);
@@ -262,7 +262,7 @@ LZT_TEST_F(
       for (auto diag_handle : diag_handles) {
         ASSERT_NE(nullptr, diag_handle);
         auto properties = lzt::get_diag_properties(diag_handle);
-        if (properties.haveTests == true) {
+        if (properties.haveTests) {
           count = 0;
           auto tests = lzt::get_diag_tests(diag_handle, count);
           ASSERT_GT(tests.size(), 0);

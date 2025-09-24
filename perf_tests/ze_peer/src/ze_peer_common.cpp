@@ -89,7 +89,7 @@ void ZePeer::print_results(bool bidirectional, peer_test_t test_type,
   }
   long double total_bandwidth = total_data_transfer / total_time_s;
 
-  int buffer_size_formatted;
+  size_t buffer_size_formatted;
   std::string buffer_format_str;
 
   if (buffer_size >= (1024 * 1024)) {
@@ -117,7 +117,7 @@ void ZePeer::print_results(bool bidirectional, peer_test_t test_type,
   }
 }
 
-void ZePeer::set_up(int number_buffer_elements,
+void ZePeer::set_up(size_t number_buffer_elements,
                     std::vector<uint32_t> &remote_device_ids,
                     std::vector<uint32_t> &local_device_ids,
                     size_t &buffer_size) {

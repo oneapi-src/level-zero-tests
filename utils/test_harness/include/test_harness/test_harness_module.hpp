@@ -80,7 +80,7 @@ ze_kernel_properties_t get_kernel_properties(ze_kernel_handle_t kernel);
 // This function is useful when only a single argument is needed.
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
-                                 std::string func_name, int group_size,
+                                 std::string func_name, uint32_t group_size,
                                  void *arg, bool is_immediate);
 void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
                                 ze_kernel_indirect_access_flags_t flags);
@@ -98,7 +98,7 @@ struct FunctionArg {
 // Accepts arbitrary amounts of function arguments
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
-                                 std::string func_name, int group_size,
+                                 std::string func_name, uint32_t group_size,
                                  const std::vector<FunctionArg> &args,
                                  bool is_immediate);
 

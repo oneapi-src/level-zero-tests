@@ -25,11 +25,16 @@
 
 namespace bipc = boost::interprocess;
 
+namespace lzt = level_zero_tests;
+
 namespace {
 
+using lzt::to_u32;
+
 #ifdef __linux__
-static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
-                                    bool reserved, ze_ipc_memory_flags_t flags,
+static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type,
+                                    size_t size, bool reserved,
+                                    ze_ipc_memory_flags_t flags,
                                     bool is_immediate) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -48,7 +53,7 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
   boost::process::child c("./ipc/test_ipc_memory_helper");
 
   ze_ipc_mem_handle_t ipc_handle = {};
-  shared_data_t test_data = {test_type, TEST_SOCK,    size,
+  shared_data_t test_data = {test_type, TEST_SOCK,    to_u32(size),
                              flags,     is_immediate, ipc_handle};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_memory_test",
                                  bipc::read_write);
@@ -107,7 +112,7 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type, int size,
 #endif // __linux__
 
 static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
-                                           int size, bool reserved,
+                                           size_t size, bool reserved,
                                            ze_ipc_memory_flags_t flags,
                                            bool is_immediate) {
   ze_result_t result = zeInit(0);
@@ -169,7 +174,7 @@ static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
   bipc::mapped_region region(shm, bipc::read_write);
 
   // copy ipc handle data to shm
-  shared_data_t test_data = {test_type, TEST_NONSOCK, size,
+  shared_data_t test_data = {test_type, TEST_NONSOCK, to_u32(size),
                              flags,     is_immediate, ipc_handle};
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 

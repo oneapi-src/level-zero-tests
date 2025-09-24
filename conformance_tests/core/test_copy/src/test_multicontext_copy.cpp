@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -49,7 +48,7 @@ LZT_TEST(
   auto context0 = lzt::create_context(driver);
   auto context1 = lzt::create_context(driver);
 
-  auto size = 1024;
+  uint32_t size = 1024;
   auto verification_buffer = new uint8_t[size];
 
   auto buffer_0_0 = lzt::allocate_device_memory(size, 0, 0, device0, context0);
@@ -100,7 +99,7 @@ LZT_TEST(
   lzt::execute_command_lists(command_queue1, 1, &command_list1, nullptr);
   lzt::synchronize(command_queue1, UINT64_MAX);
 
-  for (int i = 0; i < size; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(verification_buffer[i], 0xAB);
   }
 
@@ -119,7 +118,7 @@ LZT_TEST(
   lzt::execute_command_lists(command_queue0, 1, &command_list0, nullptr);
   lzt::synchronize(command_queue0, UINT64_MAX);
 
-  for (int i = 0; i < size; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(verification_buffer[i], 0xAB);
   }
 
@@ -155,7 +154,7 @@ LZT_TEST(
   lzt::execute_command_lists(command_queue0, 1, &command_list0, nullptr);
   lzt::synchronize(command_queue0, UINT64_MAX);
 
-  for (int i = 0; i < size; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(verification_buffer[i], pattern);
   }
 
@@ -182,7 +181,7 @@ LZT_TEST(
   lzt::execute_command_lists(command_queue1, 1, &command_list1, nullptr);
   lzt::synchronize(command_queue1, UINT64_MAX);
 
-  for (int i = 0; i < size; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     ASSERT_EQ(verification_buffer[i], pattern);
   }
 

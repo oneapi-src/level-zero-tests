@@ -246,7 +246,7 @@ LZT_TEST_F(
         auto initial_config = lzt::get_temp_config(temp_handle);
         auto temp = lzt::get_temp_state(temp_handle);
         zes_temp_config_t setConfig = {};
-        if (properties.isCriticalTempSupported == true) {
+        if (properties.isCriticalTempSupported) {
           setConfig.enableCritical = true;
           lzt::set_temp_config(temp_handle, setConfig);
           auto get_config = lzt::get_temp_config(temp_handle);
@@ -256,7 +256,7 @@ LZT_TEST_F(
           EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
           EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
         }
-        if (properties.isThreshold1Supported == true) {
+        if (properties.isThreshold1Supported) {
           setConfig.threshold1.enableLowToHigh = true;
           setConfig.threshold1.enableHighToLow = false;
           setConfig.threshold1.threshold = temp;
@@ -272,7 +272,7 @@ LZT_TEST_F(
           EXPECT_EQ(get_config.threshold2.enableLowToHigh, false);
           EXPECT_EQ(get_config.threshold2.enableHighToLow, false);
         }
-        if (properties.isThreshold1Supported == true) {
+        if (properties.isThreshold1Supported) {
           setConfig.threshold2.enableLowToHigh = true;
           setConfig.threshold2.enableHighToLow = false;
           setConfig.threshold2.threshold = temp;
