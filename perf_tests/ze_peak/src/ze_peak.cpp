@@ -136,6 +136,16 @@ static void generic_uuid_to_string(const uint8_t *id, int bytes, char *s) {
   *s = '\0';
 }
 
+template <typename T>
+static void calculate_timestamp_mask(T &timestamp_mask,
+                                     uint32_t timestamp_bits) {
+  if (timestamp_bits >= sizeof(T) * CHAR_BIT) {
+    timestamp_mask = std::numeric_limits<T>::max();
+  } else {
+    timestamp_mask = (1ULL << timestamp_bits) - 1;
+  }
+}
+
 //---------------------------------------------------------------------
 // Utility function to print the device properties from zeDeviceGetProperties.
 //---------------------------------------------------------------------
@@ -1314,7 +1324,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
       }
 
       // don't know if this is correct.  seems a little odd.
-      uint64_t timestamp_mask = (1ull << timestamp_bits) - 1;
+      uint64_t timestamp_mask = 0;
+      calculate_timestamp_mask(timestamp_mask, timestamp_bits);
       uint64_t masked_device_time = device_timestamp & timestamp_mask;
       uint64_t masked_kernel_time =
           kernel_timestamp.global.kernelStart & timestamp_mask;
@@ -1496,7 +1507,8 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
                                  std::to_string(result));
       }
 
-      uint64_t timestamp_mask = (1ull << timestamp_bits) - 1;
+      uint64_t timestamp_mask = 0;
+      calculate_timestamp_mask(timestamp_mask, timestamp_bits);
       uint64_t masked_device_time = device_timestamp & timestamp_mask;
       uint64_t masked_kernel_time =
           kernel_timestamp.global.kernelStart & timestamp_mask;
