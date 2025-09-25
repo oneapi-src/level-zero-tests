@@ -139,7 +139,7 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
   }
 
   /* Warm up */
-  for (int i = 0; i < warm_up_iterations; i++) {
+  for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     queue_index_iter = 0;
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
@@ -203,21 +203,21 @@ void ZePeer::perform_bidirectional_parallel_copy_to_multiple_targets(
   Timer<std::chrono::microseconds::period> timer;
   std::vector<std::vector<Timer<std::chrono::microseconds::period>>> timers(
       ze_peer_devices.size());
-  for (int i = 0; i < timers.size(); i++) {
+  for (size_t i = 0U; i < timers.size(); i++) {
     timers[i].resize(ze_peer_devices.size());
   }
 
   std::vector<std::vector<long double>> times(ze_peer_devices.size());
-  for (int i = 0; i < times.size(); i++) {
+  for (size_t i = 0U; i < times.size(); i++) {
     times[i].resize(ze_peer_devices.size());
-    for (int j = 0; j < times.size(); j++) {
+    for (size_t j = 0U; j < times.size(); j++) {
       times[i][j] = 0;
     }
   }
 
   do {
     timer.start();
-    for (int i = 0; i < number_iterations; i++) {
+    for (uint32_t i = 0U; i < number_iterations; i++) {
       queue_index_iter = 0;
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
@@ -472,7 +472,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
 
   /* Warm up */
   queue_index_iter = 0;
-  for (int i = 0; i < warm_up_iterations; i++) {
+  for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     for (size_t local_device_id_iter = 0;
          local_device_id_iter < local_device_ids.size();
          local_device_id_iter++) {
@@ -532,21 +532,21 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
   Timer<std::chrono::microseconds::period> timer;
   std::vector<std::vector<Timer<std::chrono::microseconds::period>>> timers(
       ze_peer_devices.size());
-  for (int i = 0; i < timers.size(); i++) {
+  for (size_t i = 0U; i < timers.size(); i++) {
     timers[i].resize(ze_peer_devices.size());
   }
 
   std::vector<std::vector<long double>> times(ze_peer_devices.size());
-  for (int i = 0; i < times.size(); i++) {
+  for (size_t i = 0U; i < times.size(); i++) {
     times[i].resize(ze_peer_devices.size());
-    for (int j = 0; j < times.size(); j++) {
+    for (size_t j = 0U; j < times.size(); j++) {
       times[i][j] = 0;
     }
   }
 
   do {
     timer.start();
-    for (int i = 0; i < number_iterations; i++) {
+    for (uint32_t i = 0U; i < number_iterations; i++) {
       queue_index_iter = 0;
       for (size_t local_device_id_iter = 0;
            local_device_id_iter < local_device_ids.size();
@@ -717,7 +717,7 @@ void ZePeer::perform_parallel_copy_to_multiple_targets(
 
 void ZePeer::bandwidth_latency_parallel_to_multiple_targets(
     peer_test_t test_type, peer_transfer_t transfer_type,
-    int number_buffer_elements, std::vector<uint32_t> &remote_device_ids,
+    size_t number_buffer_elements, std::vector<uint32_t> &remote_device_ids,
     std::vector<uint32_t> &local_device_ids, bool divide_buffers) {
 
   size_t buffer_size = 0;

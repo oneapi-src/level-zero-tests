@@ -20,6 +20,15 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_nanoseconds;
+
+using lzt::to_f32;
+using lzt::to_f64;
+using lzt::to_int;
+using lzt::to_u32;
+using lzt::to_u64;
+using lzt::to_u8;
+
 class zeImmediateCommandListInOrderExecutionTests
     : public lzt::zeEventPoolTests {
 protected:
@@ -223,7 +232,7 @@ void zeImmediateCommandListExecutionTests::
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
   // setting event on following instruction should flush memory
@@ -292,7 +301,7 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
@@ -347,7 +356,7 @@ LZT_TEST_F(
 
 static void
 RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
-                           ze_event_handle_t event, int num_cmdlist,
+                           ze_event_handle_t event, size_t num_cmdlist,
                            bool is_shared_system) {
   const size_t size = 16;
   const int addval = 10;
@@ -369,13 +378,13 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 
   memset(buffer, 0x0, num_cmdlist * size * sizeof(int));
 
-  for (int n = 0; n < num_cmdlist; n++) {
+  for (size_t n = 0; n < num_cmdlist; n++) {
     int *p_dev = static_cast<int *>(buffer);
     p_dev += (n * size);
     lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
     lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
     ze_group_count_t tg;
-    tg.groupCountX = static_cast<uint32_t>(size);
+    tg.groupCountX = to_u32(size);
     tg.groupCountY = 1;
     tg.groupCountZ = 1;
 
@@ -383,7 +392,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 
     totalVal[n] = 0;
 
-    for (int i = 0; i < (num_iterations - 1); i++) {
+    for (size_t i = 0; i < (num_iterations - 1); i++) {
       addval2 = lzt::generate_value<int>() & 0xFFFF;
       totalVal[n] += addval2;
       lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -402,7 +411,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
   }
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(event, timeout));
 
-  for (int n = 0; n < num_cmdlist; n++) {
+  for (size_t n = 0; n < num_cmdlist; n++) {
     for (size_t i = 0; i < size; i++) {
       EXPECT_EQ(static_cast<int *>(buffer)[(n * size) + i],
                 (addval + totalVal[n]));
@@ -422,7 +431,7 @@ LZT_TEST_F(
     GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
                  << " not supported";
   }
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, event0, i, false);
   }
@@ -438,7 +447,7 @@ LZT_TEST_F(
     GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
                  << " not supported";
   }
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, event0, i, true);
   }
@@ -561,7 +570,7 @@ LZT_TEST_P(
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
 
     buffer[i] = lzt::allocate_shared_memory(size);
-    val[i] = static_cast<uint8_t>(i + 1);
+    val[i] = to_u8(i + 1);
     event_desc.index = i;
     host_to_dev_event[i] = lzt::create_event(event_pool_handle, event_desc);
 
@@ -620,7 +629,7 @@ static void RunMultipleAppendMemoryCopy(ze_command_queue_mode_t mode) {
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0);
 
     buffer[i] = lzt::allocate_shared_memory(size);
-    val[i] = static_cast<uint8_t>(i + 1);
+    val[i] = to_u8(i + 1);
 
     // This should execute immediately
     lzt::append_memory_set(mulcmdlist_immediate[i], buffer[i], &val[i], size,
@@ -718,8 +727,8 @@ LZT_TEST_P(
   // If the operation is a straight image copy, or the second region is null
   // then the result should be the same:
   EXPECT_EQ(0, compare_data_pattern(dest_host_image_upper, img.dflt_host_image_,
-                                    0, 0, img.dflt_host_image_.width(),
-                                    img.dflt_host_image_.height(), 0, 0,
+                                    0U, 0U, img.dflt_host_image_.width(),
+                                    img.dflt_host_image_.height(), 0U, 0U,
                                     img.dflt_host_image_.width(),
                                     img.dflt_host_image_.height()));
 }
@@ -762,8 +771,8 @@ static void RunAppendImageCopy(ze_command_list_handle_t cmdlist_immediate,
   // If the operation is a straight image copy, or the second region is null
   // then the result should be the same:
   EXPECT_EQ(0, compare_data_pattern(dest_host_image_upper, img.dflt_host_image_,
-                                    0, 0, img.dflt_host_image_.width(),
-                                    img.dflt_host_image_.height(), 0, 0,
+                                    0U, 0U, img.dflt_host_image_.width(),
+                                    img.dflt_host_image_.height(), 0U, 0U,
                                     img.dflt_host_image_.width(),
                                     img.dflt_host_image_.height()));
 }
@@ -1082,7 +1091,7 @@ LZT_TEST_F(
   RunAppendMemAdvise(cmdlist_immediate_async_mode, timeout, true);
 }
 
-static ze_image_handle_t create_test_image(int height, int width) {
+static ze_image_handle_t create_test_image(uint32_t height, uint32_t width) {
   ze_image_desc_t image_description = {};
   image_description.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
@@ -1112,8 +1121,8 @@ LZT_TEST_P(
   }
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
-  int width = input.width();
-  int height = input.height();
+  uint32_t width = input.width();
+  uint32_t height = input.height();
   lzt::ImagePNG32Bit output(width, height);
   auto input_xeimage = create_test_image(height, width);
   auto output_xeimage = create_test_image(height, width);
@@ -1188,8 +1197,8 @@ LZT_TEST_P(
 static void RunMultipleDependentCommandLists(ze_command_queue_mode_t mode) {
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
-  int width = input.width();
-  int height = input.height();
+  uint32_t width = input.width();
+  uint32_t height = input.height();
   lzt::ImagePNG32Bit output(width, height);
   auto input_xeimage = create_test_image(height, width);
   auto output_xeimage = create_test_image(height, width);
@@ -1278,7 +1287,7 @@ LZT_TEST_P(
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
@@ -1381,7 +1390,7 @@ RunIclAndRclAppendOperations(ze_command_list_handle_t cmdlist_immediate,
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
@@ -1500,8 +1509,8 @@ protected:
 
     const uint64_t responsiveness = measure_device_responsiveness();
     const double min_ratio = 0.02;
-    if (responsiveness > static_cast<uint64_t>(min_ratio * timeout)) {
-      timeout = static_cast<uint64_t>(responsiveness / min_ratio);
+    if (responsiveness > to_u64(min_ratio * to_f64(timeout))) {
+      timeout = to_u64(to_f64(responsiveness) / min_ratio);
       LOG_INFO << "Device responsiveness: " << responsiveness
                << " ns, setting timeout to: " << timeout << " ns";
     }
@@ -1533,7 +1542,7 @@ protected:
 
     const int add_value = 7;
     lzt::set_group_size(kernel, 1, 1, 1);
-    ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};
+    ze_group_count_t args = {to_u32(size), 1, 1};
     lzt::set_argument_value(kernel, 0, sizeof(buf_dev), &buf_dev);
     lzt::set_argument_value(kernel, 1, sizeof(add_value), &add_value);
 
@@ -1564,8 +1573,7 @@ protected:
     lzt::destroy_command_list(cmd_list);
     lzt::destroy_context(context);
 
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0)
-        .count();
+    return to_nanoseconds(t1 - t0);
   }
 
   void TearDown() override {
@@ -1595,9 +1603,8 @@ LZT_TEST_P(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeCommandListHostSynchronize(cl, timeout));
   const auto t1 = std::chrono::steady_clock::now();
 
-  const uint64_t wall_time =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-  const float ratio = static_cast<float>(wall_time) / timeout;
+  const uint64_t wall_time = to_nanoseconds(t1 - t0);
+  const float ratio = to_f32(wall_time) / to_f32(timeout);
   // Tolerance: 2%
   EXPECT_GE(ratio, 0.98f);
   EXPECT_LE(ratio, 1.02f);

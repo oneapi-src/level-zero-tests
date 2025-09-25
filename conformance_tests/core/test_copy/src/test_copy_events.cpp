@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -787,7 +786,7 @@ LZT_TEST_P(
       *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()));
 }
 
-static ze_image_handle_t create_test_image(int height, int width) {
+static ze_image_handle_t create_test_image(uint32_t height, uint32_t width) {
   ze_image_desc_t image_description = {};
   image_description.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   image_description.format.layout = ZE_IMAGE_FORMAT_LAYOUT_32;
@@ -818,8 +817,8 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
-  int width = input.width();
-  int height = input.height();
+  uint32_t width = input.width();
+  uint32_t height = input.height();
   lzt::ImagePNG32Bit output(width, height);
   auto input_xeimage = create_test_image(height, width);
   auto output_xeimage = create_test_image(height, width);
@@ -900,8 +899,8 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
-  int width = input.width();
-  int height = input.height();
+  uint32_t width = input.width();
+  uint32_t height = input.height();
   lzt::ImagePNG32Bit output(width, height);
   auto input_xeimage = create_test_image(height, width);
   auto output_xeimage = create_test_image(height, width);
@@ -988,11 +987,11 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
     auto command_queue_groups = lzt::get_command_queue_group_properties(device);
 
     // we want to test copies with differing engines
-    std::vector<int> copy_ordinals;
-    for (int i = 0; i < command_queue_groups.size(); i++) {
+    std::vector<uint32_t> copy_ordinals;
+    for (size_t i = 0U; i < command_queue_groups.size(); i++) {
       if (command_queue_groups[i].flags &
           ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) {
-        copy_ordinals.push_back(i);
+        copy_ordinals.push_back(static_cast<uint32_t>(i));
       }
     }
 
@@ -1090,7 +1089,7 @@ LZT_TEST(
     zeCommandListCopyEventTest,
     GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  for (int i = 1; i < 8; ++i) {
+  for (uint32_t i = 1; i < 8; ++i) {
     std::bitset<3> bits(i);
     RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
         false, bits[2], bits[1], bits[0]);
@@ -1101,7 +1100,7 @@ LZT_TEST(
     zeCommandListCopyEventTest,
     GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsThenCopiesCompleteSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  for (int i = 1; i < 8; ++i) {
+  for (uint32_t i = 1; i < 8; ++i) {
     std::bitset<3> bits(i);
     RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
         true, bits[2], bits[1], bits[0]);

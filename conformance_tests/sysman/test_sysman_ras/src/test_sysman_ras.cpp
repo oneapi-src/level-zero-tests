@@ -17,6 +17,9 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
+
+using lzt::to_u32;
+
 void validate_ras_state(zes_ras_state_t detailedThresholds) {
   EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_RESET], UINT64_MAX);
   EXPECT_LT(detailedThresholds.category[ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS],
@@ -346,13 +349,13 @@ LZT_TEST_F(
         auto ras_states = lzt::ras_get_state_exp(ras_handle);
         for (auto state : ras_states) {
           validate_ras_state_exp(state);
-          initial_errors += state.errorCounter;
+          initial_errors += to_u32(state.errorCounter);
           lzt::ras_clear_state_exp(ras_handle, state.category);
         }
         ras_states = lzt::ras_get_state_exp(ras_handle);
         for (auto state : ras_states) {
           validate_ras_state_exp(state);
-          errors_after_clear += state.errorCounter;
+          errors_after_clear += to_u32(state.errorCounter);
         }
         EXPECT_LE(errors_after_clear, initial_errors);
       }

@@ -15,9 +15,12 @@
 #include <algorithm>
 
 namespace level_zero_tests {
+
+using rand_t = std::default_random_engine::result_type;
+
 template <typename T>
 T generate_value(const T min, const T max, const int seed) {
-  static std::default_random_engine engine(seed);
+  static std::default_random_engine engine(static_cast<rand_t>(seed));
   std::uniform_int_distribution<T> distribution(min, max);
   return distribution(engine);
 }
@@ -45,7 +48,7 @@ template <typename T> T generate_value(const int seed) {
 }
 
 template <typename T>
-std::vector<T> generate_vector(const int size, const T min, const T max,
+std::vector<T> generate_vector(const size_t size, const T min, const T max,
                                const int seed) {
   std::vector<T> data(size);
   std::generate(data.begin(), data.end(),
@@ -54,7 +57,7 @@ std::vector<T> generate_vector(const int size, const T min, const T max,
 }
 
 template <typename T>
-std::vector<T> generate_vector(const int size, const int seed) {
+std::vector<T> generate_vector(const size_t size, const int seed) {
   std::vector<T> data(size);
   std::generate(data.begin(), data.end(),
                 [&] { return generate_value<T>(seed); });

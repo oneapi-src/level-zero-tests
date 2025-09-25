@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 
   // allocate device memory and export
   void *exported_memory;
-  auto size = 1024;
+  size_t size = 1024;
 
   ze_external_memory_export_desc_t export_desc = {};
   export_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_EXPORT_DESC;

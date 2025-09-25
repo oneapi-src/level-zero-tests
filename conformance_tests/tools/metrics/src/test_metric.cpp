@@ -34,6 +34,10 @@ namespace bi = boost::interprocess;
 
 namespace {
 
+using lzt::to_f64;
+using lzt::to_s32;
+using lzt::to_u32;
+
 static constexpr uint32_t nanoSecToSeconds = 1000000000;
 std::atomic<bool> workloadThreadFlag(false);
 
@@ -246,8 +250,8 @@ void zetMetricGroupTest::run_activate_deactivate_test(bool reactivate) {
   metric_group_properties.pNext = nullptr;
   EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
       groupHandleList[0], &metric_group_properties));
-  auto domain = metric_group_properties.domain;
-  auto domain_2 = 0;
+  uint32_t domain = metric_group_properties.domain;
+  uint32_t domain_2 = 0U;
   std::vector<zet_metric_group_handle_t> test_handles{groupHandleList[0]};
   for (zet_metric_group_handle_t groupHandle : groupHandleList) {
     metric_group_properties = {};
@@ -327,7 +331,8 @@ LZT_TEST_F(
   }
 
   LOG_DEBUG << "Activating all metrics groups selected for test";
-  lzt::activate_metric_groups(device, test_handles.size(), test_handles.data());
+  lzt::activate_metric_groups(device, to_u32(test_handles.size()),
+                              test_handles.data());
 
   std::vector<zet_metric_group_handle_t> activeGroupHandleList;
   zet_metric_streamer_handle_t streamer;
@@ -1427,8 +1432,7 @@ LZT_TEST_F(
                          nullptr);
 
       double minimumTimeBeforeEventIsExpected =
-          notifyEveryNReports *
-          (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
+          notifyEveryNReports * (to_f64(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
       double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
@@ -1450,7 +1454,7 @@ LZT_TEST_F(
 
       // Sleep again for the error buffer time to ensure corner cases are
       // avoided.
-      uint32_t sleep = std::ceil(2 * errorBuffer);
+      uint32_t sleep = to_u32(std::ceil(2 * errorBuffer));
       LOG_DEBUG << "additional sleep before expecting event to be ready "
                 << sleep;
       std::this_thread::sleep_for(std::chrono::seconds(sleep));
@@ -1539,8 +1543,7 @@ LZT_TEST_F(
                          nullptr);
 
       double minimumTimeBeforeEventIsExpected =
-          notifyEveryNReports *
-          (static_cast<double>(samplingPeriod) / nanoSecToSeconds);
+          notifyEveryNReports * (to_f64(samplingPeriod) / nanoSecToSeconds);
       // Initializing the error buffer to prevent corner cases
       double errorBuffer = 0.05 * minimumTimeBeforeEventIsExpected;
       LOG_DEBUG << "minimumTimeBeforeEventIsExpected "
@@ -1550,8 +1553,9 @@ LZT_TEST_F(
       // Sleep until event is generated.
       auto currentTime = std::chrono::system_clock::now();
       std::chrono::duration<double> elapsedSeconds = currentTime - startTime;
-      int32_t timeLeft = std::ceil(minimumTimeBeforeEventIsExpected +
-                                   errorBuffer - elapsedSeconds.count());
+      int32_t timeLeft =
+          to_s32(std::ceil(minimumTimeBeforeEventIsExpected + errorBuffer -
+                           elapsedSeconds.count()));
       if (timeLeft > 0) {
         LOG_DEBUG << "additional sleep before expecting event to be ready "
                   << timeLeft;
@@ -1593,7 +1597,7 @@ LZT_TEST_F(
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
   metric_run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
                                          samplingPeriod,
-                                         TimeForNReportsComplete);
+                                         to_u32(TimeForNReportsComplete));
 }
 
 LZT_TEST_F(
@@ -1658,7 +1662,7 @@ LZT_TEST_F(
       std::vector<uint8_t> rawData;
       ze_result_t result;
       constexpr uint32_t maxAttempts = 6;
-      uint64_t timeForNextIterationSec = 10;
+      time_t timeForNextIterationSec = 10;
 
       for (uint32_t i = 0; i < maxAttempts; i++) {
         // Busy wait before trying to read to increase chanceof  buffer overflow
@@ -1929,7 +1933,7 @@ LZT_TEST_F(
             std::getenv("LZT_METRIC_READ_DATA_MAX_DURATION_MS");
         uint32_t max_wait_time_in_milliseconds = 10;
         if (value_string != nullptr) {
-          uint32_t value = atoi(value_string);
+          uint32_t value = to_u32(value_string);
           max_wait_time_in_milliseconds =
               value != 0 ? value : max_wait_time_in_milliseconds;
           max_wait_time_in_milliseconds =
@@ -2167,7 +2171,10 @@ LZT_TEST(
   fs::path helper_path(fs::current_path() / "metrics");
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
+  paths.push_back(fs::current_path());
   fs::path helper = bp::search_path("test_metric_helper", paths);
+  ASSERT_FALSE(helper.empty())
+      << "Could not find test_metric_helper in current or ./metrics/ directory";
   bp::child metric_helper(helper);
 
   // start monitor
@@ -2251,7 +2258,11 @@ LZT_TEST(
   fs::path helper_path(fs::current_path() / "metrics");
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
+  paths.push_back(fs::current_path());
   fs::path helper = bp::search_path("test_metric_helper", paths);
+  ASSERT_FALSE(helper.empty())
+      << "Could not find test_metric_helper in current or ./metrics/ directory";
+
   bp::opstream child_input;
   bp::child metric_helper(helper, "-i", bp::std_in < child_input);
 
@@ -2359,7 +2370,7 @@ LZT_TEST_F(
                                device_properties.numEUsPerSubslice *
                                device_properties.numThreadsPerEU;
       LOG_INFO << "Available threads: " << max_threads;
-      const auto dimensions = (max_threads > 4096 ? 1024 : 2);
+      const uint32_t dimensions = (max_threads > 4096 ? 1024 : 2);
       ze_kernel_handle_t function = get_matrix_multiplication_kernel(
           device, &tg, &a_buffer, &b_buffer, &c_buffer, dimensions);
 

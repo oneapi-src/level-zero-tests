@@ -202,12 +202,13 @@ std::vector<zet_metric_group_handle_t> get_one_metric_group_per_domain(
   if (metricGroupHandleList.size() != 0) {
     uint32_t concurrentGroupCount = 0;
     EXPECT_ZE_RESULT_SUCCESS(zetDeviceGetConcurrentMetricGroupsExp(
-        device, metricGroupHandleList.size(), metricGroupHandleList.data(),
-        nullptr, &concurrentGroupCount));
+        device, to_u32(metricGroupHandleList.size()),
+        metricGroupHandleList.data(), nullptr, &concurrentGroupCount));
     std::vector<uint32_t> countPerConcurrentGroup(concurrentGroupCount);
     EXPECT_ZE_RESULT_SUCCESS(zetDeviceGetConcurrentMetricGroupsExp(
-        device, metricGroupHandleList.size(), metricGroupHandleList.data(),
-        countPerConcurrentGroup.data(), &concurrentGroupCount));
+        device, to_u32(metricGroupHandleList.size()),
+        metricGroupHandleList.data(), countPerConcurrentGroup.data(),
+        &concurrentGroupCount));
 
     uint32_t metricGroupCountInConcurrentGroup = countPerConcurrentGroup[0];
 
@@ -258,17 +259,19 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
   // allow PERCENTAGE environment variable to override argument argument
   const char *valueString = std::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
   if (valueString != nullptr) {
-    uint32_t value = atoi(valueString);
+    uint32_t value = to_u32(valueString);
     percentOfMetricGroupForTest =
         value != 0 ? value : percentOfMetricGroupForTest;
     percentOfMetricGroupForTest = std::min(percentOfMetricGroupForTest, 100u);
   }
   LOG_INFO << "percentage of metric groups " << percentOfMetricGroupForTest;
 
+  double metricGrpTestPerc = to_f64(percentOfMetricGroupForTest) * 0.01;
+
   for (auto const &mapEntry : domainMetricGroupMap) {
-    uint32_t newCount = static_cast<uint32_t>(std::max<double>(
-        mapEntry.second.size() * percentOfMetricGroupForTest * 0.01, 1.0));
-    std::copy(mapEntry.second.begin(), mapEntry.second.begin() + newCount,
+    auto grpInfos = mapEntry.second;
+    uint32_t cnt = to_u32(to_f64(grpInfos.size()) * metricGrpTestPerc);
+    std::copy(grpInfos.begin(), grpInfos.begin() + (cnt > 0 ? cnt : 1),
               std::back_inserter(optimizedList));
   }
 
@@ -609,7 +612,7 @@ void metric_streamer_read_data(
   metricData->resize(metricSize);
   EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
       metricStreamerHandle, UINT32_MAX, &metricSize, metricData->data()));
-  rawDataSize = metricSize;
+  rawDataSize = to_u32(metricSize);
 }
 
 void metric_streamer_read_data(
@@ -1035,7 +1038,7 @@ void metric_validate_streamer_marker_data(
 
     const uint32_t metricCountForDataIndex = metricValueSets[dataIndex];
     const uint32_t reportCount =
-        metricCountForDataIndex / metricProperties.size();
+        metricCountForDataIndex / to_u32(metricProperties.size());
     uint32_t streamer_marker_values_index_per_set =
         streamer_marker_values_index;
 
@@ -1074,7 +1077,7 @@ void metric_validate_streamer_marker_data(
   // Expecting that an equal number of markers have been validated for each set.
   EXPECT_FALSE(validated_markers_count % metricValueSets.size());
   streamer_marker_values_index =
-      validated_markers_count / metricValueSets.size();
+      validated_markers_count / to_u32(metricValueSets.size());
 }
 
 void generate_activatable_metric_group_list_for_device(
@@ -1519,16 +1522,16 @@ void generate_param_value_info_list_from_param_info(
       std::make_unique<zet_metric_programmable_param_value_info_exp_t[]>(
           value_info_count);
 
-  auto count = value_info_count;
+  uint32_t count = value_info_count;
   uint32_t index = 0;
   if (include_value_info_desc) {
-    for (auto i = 0; i < static_cast<int>(count); i++) {
+    for (uint32_t i = 0U; i < count; i++) {
       value_info_desc[i].stype =
           ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
       value_info_desc[i].pNext = nullptr;
     }
   }
-  for (auto i = 0; i < static_cast<int>(count); i++) {
+  for (uint32_t i = 0U; i < count; i++) {
     value_info[i].stype =
         ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_PARAM_VALUE_INFO_EXP;
     value_info[i].pNext =
@@ -1580,7 +1583,7 @@ void generate_metric_handles_list_from_param_values(
 
   ASSERT_ZE_RESULT_SUCCESS(zetMetricCreateFromProgrammableExp(
       metric_programmable_handle, parameter_values.data(),
-      parameter_values.size(), name.c_str(), description.c_str(),
+      to_u32(parameter_values.size()), name.c_str(), description.c_str(),
       &metric_handles_count, nullptr));
   LOG_INFO
       << "zetMetricCreateFromProgrammableExp returned metric handle count: "
@@ -1607,7 +1610,7 @@ void generate_metric_handles_list_from_param_values(
 
   ASSERT_ZE_RESULT_SUCCESS(zetMetricCreateFromProgrammableExp(
       metric_programmable_handle, parameter_values.data(),
-      parameter_values.size(), name.c_str(), description.c_str(),
+      to_u32(parameter_values.size()), name.c_str(), description.c_str(),
       &metric_handles_subset_size, metric_handles.data()));
 
   for (uint32_t handle_index = 0; handle_index < metric_handles_subset_size;

@@ -18,8 +18,10 @@
 
 namespace {
 
-const int num_threads = 16;
-const int num_iterations = 2000;
+using lzt::to_u32;
+
+const uint32_t num_threads = 16;
+const uint32_t num_iterations = 2000;
 const uint32_t pattern_memory_count = 64;
 const uint32_t pattern_memory_size = pattern_memory_count * sizeof(uint64_t);
 const uint32_t output_count = pattern_memory_count;
@@ -66,7 +68,7 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle,
     host_found_output_buffer = new uint64_t[output_count]();
   }
 
-  for (int i = 0; i < num_iterations; i++) {
+  for (uint32_t i = 0; i < num_iterations; i++) {
     std::fill(host_expected_output_buffer,
               host_expected_output_buffer + output_count, 0);
     std::fill(host_found_output_buffer, host_found_output_buffer + output_count,
@@ -167,7 +169,7 @@ void run_functions(lzt::zeCommandBundle &cmd_bundle, bool is_immediate,
   // If groupSize is greater than memory count, then at least one thread group
   // should be dispatched
   uint32_t threadGroup = pattern_memory_count / groupSize > 1
-                             ? pattern_memory_count / groupSize
+                             ? to_u32(pattern_memory_count / groupSize)
                              : 1;
   LOG_DEBUG << "thread group dimension is ::" << threadGroup;
   ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
@@ -203,7 +205,7 @@ void run_functions(lzt::zeCommandBundle &cmd_bundle, bool is_immediate,
 }
 
 void thread_module_create_destroy() {
-  for (int i = 0; i < num_iterations; i++) {
+  for (uint32_t i = 0; i < num_iterations; i++) {
     auto driver = lzt::get_default_driver();
     auto device = lzt::get_default_device(driver);
     ze_module_handle_t module_handle =
@@ -220,11 +222,11 @@ LZT_TEST_F(
   LOG_DEBUG << "Total number of threads spawned ::" << num_threads;
   std::array<std::unique_ptr<std::thread>, num_threads> threads;
 
-  for (int i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_module_create_destroy);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     threads[i]->join();
   }
 }
@@ -240,12 +242,12 @@ LZT_TEST_F(
   ze_module_handle_t module_handle =
       lzt::create_module(device, "test_fill_device_memory_multi_thread.spv");
 
-  for (int i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
                                                module_handle, i, false);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     threads[i]->join();
   }
 
@@ -263,12 +265,12 @@ LZT_TEST_F(
   ze_module_handle_t module_handle =
       lzt::create_module(device, "test_fill_device_memory_multi_thread.spv");
 
-  for (int i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
                                                module_handle, i, true);
   }
 
-  for (int i = 0; i < num_threads; i++) {
+  for (uint32_t i = 0; i < num_threads; i++) {
     threads[i]->join();
   }
 

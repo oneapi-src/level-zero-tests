@@ -18,8 +18,11 @@
 namespace lzt = level_zero_tests;
 namespace level_zero_tests {
 
-const ze_image_flags_t image_rw_flags[2] = {0, ZE_IMAGE_FLAG_KERNEL_WRITE};
-const ze_image_flags_t image_cache_flags[2] = {0, ZE_IMAGE_FLAG_BIAS_UNCACHED};
+const std::vector<ze_image_flags_t> image_rw_flags = {
+    0, ZE_IMAGE_FLAG_KERNEL_WRITE};
+
+const std::vector<ze_image_flags_t> image_cache_flags = {
+    0, ZE_IMAGE_FLAG_BIAS_UNCACHED};
 
 const std::vector<uint64_t> image_widths = {1, 1920};
 
@@ -29,10 +32,10 @@ const std::vector<uint32_t> image_depths = {1, 8};
 
 const std::vector<uint32_t> image_array_levels = {0, 3};
 
-const auto image_format_types =
-    ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT,
-                      ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM,
-                      ZE_IMAGE_FORMAT_TYPE_FLOAT);
+const std::vector<ze_image_format_type_t> image_format_types = {
+    ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_TYPE_SINT,
+    ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_TYPE_SNORM,
+    ZE_IMAGE_FORMAT_TYPE_FLOAT};
 
 const std::vector<ze_image_format_layout_t> image_format_layout_uint = {
     ZE_IMAGE_FORMAT_LAYOUT_8,           ZE_IMAGE_FORMAT_LAYOUT_8_8,
@@ -83,6 +86,14 @@ const std::vector<ze_image_format_layout_t> image_format_media_layouts = {
     ZE_IMAGE_FORMAT_LAYOUT_444P, ZE_IMAGE_FORMAT_LAYOUT_RGBP,
     ZE_IMAGE_FORMAT_LAYOUT_BRGP};
 
+const std::vector<ze_image_type_t> image_types = {
+    ZE_IMAGE_TYPE_1D,      ZE_IMAGE_TYPE_1DARRAY, ZE_IMAGE_TYPE_2D,
+    ZE_IMAGE_TYPE_2DARRAY, ZE_IMAGE_TYPE_3D,      ZE_IMAGE_TYPE_BUFFER};
+
+const std::vector<ze_image_type_t> image_types_buffer_excluded = {
+    ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_1DARRAY, ZE_IMAGE_TYPE_2D,
+    ZE_IMAGE_TYPE_2DARRAY, ZE_IMAGE_TYPE_3D};
+
 const std::vector<ze_image_format_swizzle_t> image_format_swizzles_all = {
     ZE_IMAGE_FORMAT_SWIZZLE_R, ZE_IMAGE_FORMAT_SWIZZLE_G,
     ZE_IMAGE_FORMAT_SWIZZLE_B, ZE_IMAGE_FORMAT_SWIZZLE_A,
@@ -107,6 +118,12 @@ ze_image_handle_t create_ze_image(ze_image_desc_t image_descriptor);
 void destroy_ze_image(ze_image_handle_t image);
 
 ze_image_properties_t get_ze_image_properties(ze_image_desc_t image_descriptor);
+
+ze_image_allocation_ext_properties_t
+get_ze_image_alloc_properties_ext(ze_image_handle_t image);
+
+ze_image_memory_properties_exp_t
+get_ze_image_mem_properties_exp(ze_image_handle_t image);
 
 void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output);
 void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output);
@@ -136,17 +153,19 @@ void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
 
 // Returns number of errors found, assumes default color order:
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
-                         const lzt::ImagePNG32Bit &imagepng2, int origin1X,
-                         int origin1Y, int width1, int height1, int origin2X,
-                         int origin2Y, int width2, int height2);
+                         const lzt::ImagePNG32Bit &imagepng2, uint32_t origin1X,
+                         uint32_t origin1Y, uint32_t width1, uint32_t height1,
+                         uint32_t origin2X, uint32_t origin2Y, uint32_t width2,
+                         uint32_t height2);
 // Returns number of errors found, color order for both images are
 // define in the image_format parameters:
 int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
                          const ze_image_format_t &image1_format,
                          const lzt::ImagePNG32Bit &imagepng2,
-                         const ze_image_format_t &image2_format, int origin1X,
-                         int origin1Y, int width1, int height1, int origin2X,
-                         int origin2Y, int width2, int height2);
+                         const ze_image_format_t &image2_format,
+                         uint32_t origin1X, uint32_t origin1Y, uint32_t width1,
+                         uint32_t height1, uint32_t origin2X, uint32_t origin2Y,
+                         uint32_t width2, uint32_t height2);
 
 // The following function, compares all of the pixels in image
 // against the pixels that are expected in the foreground and background of the

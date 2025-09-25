@@ -19,9 +19,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-const std::vector<ze_image_type_t> tested_image_types = {
-    ZE_IMAGE_TYPE_1D, ZE_IMAGE_TYPE_2D, ZE_IMAGE_TYPE_3D, ZE_IMAGE_TYPE_1DARRAY,
-    ZE_IMAGE_TYPE_2DARRAY};
+using lzt::to_u32;
 
 class zeCommandListAppendImageCopyWithSwizzleTests
     : public ::testing::TestWithParam<std::tuple<ze_image_type_t, bool>> {
@@ -76,7 +74,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
       (uint32_t *)lzt::allocate_host_memory_with_allocator_selector(
           image_size * sizeof(uint32_t), is_shared_system);
 
-  for (int i = 0; i < image_size; i++) {
+  for (size_t i = 0U; i < image_size; i++) {
     inbuff[i] = 0x12345678;
   }
 
@@ -86,7 +84,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
   lzt::append_image_copy_from_mem(bundle.list, img_in, inbuff, nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::suggest_group_size(kernel, image_dims.width, image_dims.height,
+  lzt::suggest_group_size(kernel, to_u32(image_dims.width), image_dims.height,
                           image_dims.depth, group_size_x, group_size_y,
                           group_size_z);
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
@@ -94,9 +92,9 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);
   lzt::set_argument_value(kernel, 1, sizeof(img_out), &img_out);
 
-  ze_group_count_t group_dems = {
-      (static_cast<uint32_t>(image_dims.width) / group_size_x),
-      (image_dims.height / group_size_y), (image_dims.depth / group_size_z)};
+  ze_group_count_t group_dems = {to_u32(image_dims.width / group_size_x),
+                                 image_dims.height / group_size_y,
+                                 image_dims.depth / group_size_z};
   lzt::append_launch_function(bundle.list, kernel, &group_dems, nullptr, 0,
                               nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
@@ -104,7 +102,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
-  for (int i = 0; i < image_size; i++) {
+  for (size_t i = 0U; i < image_size; i++) {
     EXPECT_EQ(outbuff[i], 0x78563412); // After swizzle from RGBA to AGBR the
                                        // data format will be reversed from 12
                                        // 34 56 78 -> 78 56 34 12
@@ -190,7 +188,7 @@ LZT_TEST_P(
 
 INSTANTIATE_TEST_SUITE_P(
     SwizzleTestsParam, zeCommandListAppendImageCopyWithSwizzleTests,
-    ::testing::Combine(::testing::ValuesIn(tested_image_types),
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Bool()));
 
 } // namespace

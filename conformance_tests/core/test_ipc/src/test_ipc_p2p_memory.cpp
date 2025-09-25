@@ -53,9 +53,10 @@ void init_driver() {
   LOG_DEBUG << "Driver initialized\n";
 }
 
-void fill_expected_buffer(char *expected_buffer, const int size,
-                          const int concurrency_offset, const bool is_server) {
-  if (concurrency_offset > 0) {
+void fill_expected_buffer(char *expected_buffer, const size_t size,
+                          const size_t concurrency_offset,
+                          const bool is_server) {
+  if (concurrency_offset > 0U) {
     for (size_t i = 0; i < size - concurrency_offset; ++i) {
       if (is_server) {
         expected_buffer[i] = client_pattern;
@@ -71,7 +72,7 @@ void fill_expected_buffer(char *expected_buffer, const int size,
       }
     }
   } else {
-    for (size_t i = 0; i < size; ++i) {
+    for (size_t i = 0U; i < size; ++i) {
       if (is_server) {
         expected_buffer[i] = client_pattern;
       } else {
@@ -85,7 +86,7 @@ inline void init_process(ze_context_handle_t &context,
                          ze_device_handle_t &device,
                          std::vector<lzt::zeCommandBundle> &cmd_bundles,
                          bool is_server, uint32_t device_x, uint32_t device_y,
-                         int concurrency_offset, bool is_immediate) {
+                         size_t concurrency_offset, bool is_immediate) {
   init_driver();
 
   auto driver = lzt::get_default_driver();
@@ -94,7 +95,7 @@ inline void init_process(ze_context_handle_t &context,
   auto devices = lzt::get_devices(driver);
 
   if (devices.size() > 1) {
-    if (check_p2p_capabilities(devices) == true) {
+    if (check_p2p_capabilities(devices)) {
       if (is_server) {
         device = devices[device_x];
       } else {
@@ -108,7 +109,7 @@ inline void init_process(ze_context_handle_t &context,
     std::exit(0);
   }
 
-  if (concurrency_offset > 0) {
+  if (concurrency_offset > 0U) {
     ze_device_p2p_properties_t peerProperties = {};
     peerProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_P2P_PROPERTIES;
 
@@ -154,8 +155,8 @@ inline void init_process(ze_context_handle_t &context,
   }
 }
 
-void run_server(int size, uint32_t device_x, uint32_t device_y,
-                int concurrency_offset, bool bidirectional, pid_t pid,
+void run_server(size_t size, uint32_t device_x, uint32_t device_y,
+                size_t concurrency_offset, bool bidirectional, pid_t pid,
                 bool is_immediate) {
   ze_context_handle_t context;
   ze_device_handle_t device;
@@ -186,7 +187,7 @@ void run_server(int size, uint32_t device_x, uint32_t device_y,
     lzt::get_ipc_handle(context, &ipc_handle, memory);
     lzt::send_ipc_handle(ipc_handle);
 
-    if (concurrency_offset > 0) {
+    if (concurrency_offset > 0U) {
       void *buffer = lzt::allocate_device_memory(size - concurrency_offset, 1,
                                                  0, device, context);
       lzt::append_memory_fill(cb.list, buffer, &server_pattern,
@@ -258,8 +259,8 @@ void run_server(int size, uint32_t device_x, uint32_t device_y,
   std::exit(0);
 }
 
-void run_client(int size, uint32_t device_x, uint32_t device_y,
-                int concurrency_offset, bool bidirectional, pid_t ppid,
+void run_client(size_t size, uint32_t device_x, uint32_t device_y,
+                size_t concurrency_offset, bool bidirectional, pid_t ppid,
                 bool is_immediate) {
   ze_context_handle_t context;
   ze_device_handle_t device;
@@ -355,7 +356,7 @@ class P2PIpcMemoryAccessTest
 LZT_TEST_P(
     P2PIpcMemoryAccessTest,
     GivenTwoDevicesAndL0MemoryAllocatedInDeviceXExportedToDeviceYWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceYCorrectly) {
-  size_t size = std::pow(2, std::get<0>(GetParam()));
+  size_t size = 1UL << std::get<0>(GetParam());
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
   bool is_immediate = std::get<3>(GetParam());
@@ -380,9 +381,9 @@ LZT_TEST_P(
     if (pid < 0) {
       throw std::runtime_error("Failed to fork child process");
     } else if (pid > 0) {
-      run_server(size, device_x, device_y, 0, false, pid, is_immediate);
+      run_server(size, device_x, device_y, 0U, false, pid, is_immediate);
     } else {
-      run_client(size, device_x, device_y, 0, false, ppid, is_immediate);
+      run_client(size, device_x, device_y, 0U, false, ppid, is_immediate);
     }
   }
 }
@@ -390,7 +391,7 @@ LZT_TEST_P(
 LZT_TEST_P(
     P2PIpcMemoryAccessTest,
     GivenTwoDevicesAndL0MemoryAllocatedInDeviceXAndDeviceYExportedToEachOtherSequentiallyWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByDeviceXAndDeviceYSequentially) {
-  size_t size = std::pow(2, std::get<0>(GetParam()));
+  size_t size = 1UL << std::get<0>(GetParam());
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
   bool is_immediate = std::get<3>(GetParam());
@@ -415,9 +416,9 @@ LZT_TEST_P(
     if (pid < 0) {
       throw std::runtime_error("Failed to fork child process");
     } else if (pid > 0) {
-      run_server(size, device_x, device_y, 0, true, pid, is_immediate);
+      run_server(size, device_x, device_y, 0U, true, pid, is_immediate);
     } else {
-      run_client(size, device_x, device_y, 0, true, ppid, is_immediate);
+      run_client(size, device_x, device_y, 0U, true, ppid, is_immediate);
     }
   }
 }
@@ -425,8 +426,8 @@ LZT_TEST_P(
 LZT_TEST_P(
     P2PIpcMemoryAccessTest,
     GivenTwoDevicesAndL0MemoryAllocatedInDeviceXExportedToDeviceYWhenUsingL0IPCP2PThenExportedMemoryAllocationUpdatedByBothDeviceXAndDeviceYConcurrently) {
-  size_t size = std::pow(2, std::get<0>(GetParam()));
-  size_t concurrency_offset = std::pow(2, std::get<0>(GetParam()) - 1);
+  size_t size = 1UL << std::get<0>(GetParam());
+  size_t concurrency_offset = size >> 1;
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
   bool is_immediate = std::get<3>(GetParam());

@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -20,6 +19,8 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 
 namespace {
+
+using lzt::to_int;
 
 enum shared_memory_type { SHARED_LOCAL, SHARED_CROSS, SHARED_SYSTEM };
 enum test_memory_type {
@@ -30,7 +31,7 @@ enum test_memory_type {
   USM_SHARED_SYSTEM
 };
 
-const size_t size = 8;
+const uint32_t size = 8;
 
 struct copy_data {
   uint32_t *data;
@@ -38,12 +39,12 @@ struct copy_data {
 
 class KernelCopyTests : public ::testing::Test,
                         public ::testing::WithParamInterface<
-                            std::tuple<ze_memory_type_t, int, bool>> {};
+                            std::tuple<ze_memory_type_t, uint32_t, bool>> {};
 
 LZT_TEST_P(KernelCopyTests,
            GivenDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
   ze_memory_type_t memory_type = std::get<0>(GetParam());
-  int offset = std::get<1>(GetParam());
+  uint32_t offset = std::get<1>(GetParam());
   bool is_immediate = std::get<2>(GetParam());
 
   for (auto driver : lzt::get_all_driver_handles()) {
@@ -54,26 +55,26 @@ LZT_TEST_P(KernelCopyTests,
       auto module = lzt::create_module(device, "copy_module.spv");
       auto kernel = lzt::create_function(module, "copy_data");
 
+      size_t num_bytes = size * sizeof(int);
+
       int *input_data, *output_data;
       if (memory_type == ZE_MEMORY_TYPE_HOST) {
-        input_data =
-            static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
-        output_data =
-            static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
+        input_data = static_cast<int *>(lzt::allocate_host_memory(num_bytes));
+        output_data = static_cast<int *>(lzt::allocate_host_memory(num_bytes));
       } else {
-        input_data = static_cast<int *>(
-            lzt::allocate_shared_memory(size * sizeof(int), device));
-        output_data = static_cast<int *>(
-            lzt::allocate_shared_memory(size * sizeof(int), device));
+        input_data =
+            static_cast<int *>(lzt::allocate_shared_memory(num_bytes, device));
+        output_data =
+            static_cast<int *>(lzt::allocate_shared_memory(num_bytes, device));
       }
 
-      lzt::write_data_pattern(input_data, size * sizeof(int), 1);
-      memset(output_data, 0, size * sizeof(int));
+      lzt::write_data_pattern(input_data, num_bytes, 1);
+      memset(output_data, 0, num_bytes);
 
       lzt::set_argument_value(kernel, 0, sizeof(input_data), &input_data);
       lzt::set_argument_value(kernel, 1, sizeof(output_data), &output_data);
-      lzt::set_argument_value(kernel, 2, sizeof(int), &offset);
-      lzt::set_argument_value(kernel, 3, sizeof(int), &size);
+      lzt::set_argument_value(kernel, 2, sizeof(offset), &offset);
+      lzt::set_argument_value(kernel, 3, sizeof(size), &size);
 
       lzt::set_group_size(kernel, 1, 1, 1);
 
@@ -104,7 +105,7 @@ LZT_TEST_P(KernelCopyTests,
 LZT_TEST_P(KernelCopyTests,
            GivenInDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
   ze_memory_type_t memory_type = std::get<0>(GetParam());
-  int offset = std::get<1>(GetParam());
+  size_t offset = std::get<1>(GetParam());
   bool is_immediate = std::get<2>(GetParam());
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
@@ -116,6 +117,7 @@ LZT_TEST_P(KernelCopyTests,
 
       // Set up input/output data as containers of memory buffers
       copy_data *input_data, *output_data;
+      size_t num_bytes = size * sizeof(uint32_t);
 
       if (memory_type == ZE_MEMORY_TYPE_HOST) {
         input_data = static_cast<copy_data *>(
@@ -123,11 +125,11 @@ LZT_TEST_P(KernelCopyTests,
         output_data = static_cast<copy_data *>(
             lzt::allocate_host_memory(size * sizeof(copy_data)));
 
-        for (int i = 0; i < size; i++) {
-          input_data[i].data = static_cast<uint32_t *>(
-              lzt::allocate_host_memory(size * sizeof(uint32_t)));
-          output_data[i].data = static_cast<uint32_t *>(
-              lzt::allocate_host_memory(size * sizeof(uint32_t)));
+        for (uint32_t i = 0U; i < size; i++) {
+          input_data[i].data =
+              static_cast<uint32_t *>(lzt::allocate_host_memory(num_bytes));
+          output_data[i].data =
+              static_cast<uint32_t *>(lzt::allocate_host_memory(num_bytes));
         }
       } else { // shared memory
         input_data = static_cast<copy_data *>(
@@ -135,25 +137,24 @@ LZT_TEST_P(KernelCopyTests,
         output_data = static_cast<copy_data *>(
             lzt::allocate_shared_memory(size * sizeof(copy_data), device));
 
-        for (int i = 0; i < size; i++) {
+        for (uint32_t i = 0U; i < size; i++) {
           input_data[i].data = static_cast<uint32_t *>(
-              lzt::allocate_shared_memory(size * sizeof(uint32_t), device));
+              lzt::allocate_shared_memory(num_bytes, device));
           output_data[i].data = static_cast<uint32_t *>(
-              lzt::allocate_shared_memory(size * sizeof(uint32_t), device));
+              lzt::allocate_shared_memory(num_bytes, device));
         }
       }
 
-      for (int i = 0; i < size; i++) {
-        memset(static_cast<copy_data *>(output_data)[i].data, 0,
-               size * sizeof(uint32_t));
+      for (uint32_t i = 0U; i < size; i++) {
+        memset(static_cast<copy_data *>(output_data)[i].data, 0, num_bytes);
         lzt::write_data_pattern(static_cast<copy_data *>(input_data)[i].data,
-                                size * sizeof(uint32_t), 1);
+                                num_bytes, 1);
       }
 
       lzt::set_argument_value(kernel, 0, sizeof(input_data), &input_data);
       lzt::set_argument_value(kernel, 1, sizeof(output_data), &output_data);
-      lzt::set_argument_value(kernel, 2, sizeof(int), &offset);
-      lzt::set_argument_value(kernel, 3, sizeof(int), &size);
+      lzt::set_argument_value(kernel, 2, sizeof(offset), &offset);
+      lzt::set_argument_value(kernel, 3, sizeof(size), &size);
 
       ze_kernel_indirect_access_flags_t indirect_flags =
           (memory_type == ZE_MEMORY_TYPE_HOST)
@@ -181,13 +182,13 @@ LZT_TEST_P(KernelCopyTests,
       lzt::close_command_list(cmd_bundle.list);
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         ASSERT_EQ(0, memcmp(input_data[i].data, output_data[i].data + offset,
                             (size - offset) * sizeof(uint32_t)));
       }
 
       // cleanup
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         lzt::free_memory(input_data[i].data);
         lzt::free_memory(output_data[i].data);
       }
@@ -204,25 +205,25 @@ INSTANTIATE_TEST_SUITE_P(
     LZT, KernelCopyTests,
     ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_HOST,
                                          ZE_MEMORY_TYPE_SHARED),
-                       ::testing::Values(0, 1, size / 4, size / 2),
+                       ::testing::Values(0U, 1U, size / 4, size / 2),
                        ::testing::Bool()));
 
 class KernelCopyTestsWithIndirectMemoryTypes
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<test_memory_type, test_memory_type, test_memory_type,
-                     test_memory_type, int, bool>> {
+                     test_memory_type, uint32_t, bool>> {
 
 protected:
   void SetUp() override {
     drivers = lzt::get_all_driver_handles();
-    for (int i = 0; i < drivers.size(); i++) {
+    for (size_t i = 0U; i < drivers.size(); i++) {
       devices.push_back(std::vector<ze_device_handle_t>());
       devices[i] = lzt::get_devices(drivers[i]);
       contexts.push_back(lzt::create_context(drivers[i]));
       memory_access_properties.push_back(
           std::vector<ze_device_memory_access_properties_t>());
-      for (int j = 0; j < devices[i].size(); j++) {
+      for (size_t j = 0U; j < devices[i].size(); j++) {
         ze_device_memory_access_properties_t mem_access_properties{
             ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES, nullptr};
         EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetMemoryAccessProperties(
@@ -235,22 +236,22 @@ protected:
   void TearDown() override {
     drivers.clear();
     devices.clear();
-    for (int i = 0; i < contexts.size(); i++) {
+    for (size_t i = 0U; i < contexts.size(); i++) {
       lzt::destroy_context(contexts[i]);
     }
     contexts.clear();
     memory_access_properties.clear();
   }
 
-  void *allocate_memory(int driver_index, int device_index,
-                        int cross_device_index, ze_memory_type_t mem_type,
+  void *allocate_memory(uint32_t driver_index, uint32_t device_index,
+                        uint32_t cross_device_index, ze_memory_type_t mem_type,
                         shared_memory_type shr_type, size_t size) {
     return allocate_memory(driver_index, device_index, cross_device_index,
                            mem_type, shr_type, size, contexts[driver_index]);
   }
 
-  void *allocate_memory(int driver_index, int device_index,
-                        int cross_device_index, ze_memory_type_t mem_type,
+  void *allocate_memory(uint32_t driver_index, uint32_t device_index,
+                        uint32_t cross_device_index, ze_memory_type_t mem_type,
                         shared_memory_type shr_type, size_t size,
                         ze_context_handle_t context) {
 
@@ -321,8 +322,9 @@ protected:
     }
   }
 
-  int get_cross_device_index(int driver_index, int device_index) {
-    for (int i = 0; i < devices.size(); i++) {
+  uint32_t get_cross_device_index(uint32_t driver_index,
+                                  uint32_t device_index) {
+    for (uint32_t i = 0U; i < devices.size(); i++) {
       if (i != device_index) {
         return i;
       }
@@ -362,10 +364,10 @@ protected:
   }
 
   void test_indirect_memory_kernel_copy(
-      int driver_index, int device_index, ze_memory_type_t src_mem_type,
-      ze_memory_type_t src_ptr_mem_type, ze_memory_type_t dst_mem_type,
-      ze_memory_type_t dst_ptr_mem_type, int offset,
-      shared_memory_type src_shr_type = SHARED_LOCAL,
+      uint32_t driver_index, uint32_t device_index,
+      ze_memory_type_t src_mem_type, ze_memory_type_t src_ptr_mem_type,
+      ze_memory_type_t dst_mem_type, ze_memory_type_t dst_ptr_mem_type,
+      uint32_t offset, shared_memory_type src_shr_type = SHARED_LOCAL,
       shared_memory_type src_ptr_shr_type = SHARED_LOCAL,
       shared_memory_type dst_shr_type = SHARED_LOCAL,
       shared_memory_type dst_ptr_shr_type = SHARED_LOCAL,
@@ -375,7 +377,8 @@ protected:
     auto device = devices[driver_index][device_index];
     auto context = contexts[device_index];
 
-    int cross_device_index = get_cross_device_index(driver_index, device_index);
+    uint32_t cross_device_index =
+        get_cross_device_index(driver_index, device_index);
     if (cross_device_index == device_index &&
         (src_shr_type == SHARED_CROSS || src_ptr_shr_type == SHARED_CROSS ||
          dst_shr_type == SHARED_CROSS || dst_ptr_shr_type == SHARED_CROSS)) {
@@ -408,17 +411,19 @@ protected:
       return;
     }
 
-    for (int i = 0; i < size; i++) {
-      src_data_ptr_array.push_back(static_cast<uint32_t *>(allocate_memory(
-          driver_index, device_index, cross_device_index, src_mem_type,
-          src_shr_type, size * sizeof(uint32_t), context)));
-      dst_data_ptr_array.push_back(static_cast<uint32_t *>(allocate_memory(
-          driver_index, device_index, cross_device_index, dst_mem_type,
-          dst_shr_type, size * sizeof(uint32_t), context)));
+    size_t num_bytes = size * sizeof(uint32_t);
+
+    for (uint32_t i = 0U; i < size; i++) {
+      src_data_ptr_array.push_back(static_cast<uint32_t *>(
+          allocate_memory(driver_index, device_index, cross_device_index,
+                          src_mem_type, src_shr_type, num_bytes, context)));
+      dst_data_ptr_array.push_back(static_cast<uint32_t *>(
+          allocate_memory(driver_index, device_index, cross_device_index,
+                          dst_mem_type, dst_shr_type, num_bytes, context)));
       if (src_data_ptr_array[i] == nullptr ||
           dst_data_ptr_array[i] == nullptr) {
         // deallocate all previous memory allocations before skipping the test
-        for (int j = 0; j < i; j++) {
+        for (size_t j = 0U; j < i; j++) {
           free_memory(src_data_ptr_array[j], context, src_mem_type,
                       src_shr_type);
           free_memory(dst_data_ptr_array[j], context, dst_mem_type,
@@ -444,39 +449,37 @@ protected:
     input_data = new copy_data[size];
     output_data = new copy_data[size];
 
-    for (int i = 0; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       input_data[i].data = new uint32_t[size];
       output_data[i].data = new uint32_t[size];
-      memset(output_data[i].data, 0, size * sizeof(uint32_t));
-      lzt::write_data_pattern(input_data[i].data, size * sizeof(uint32_t), 1);
+      memset(output_data[i].data, 0, num_bytes);
+      lzt::write_data_pattern(input_data[i].data, num_bytes, 1);
     }
 
     // copy input data to src_data
     if (src_mem_type == ZE_MEMORY_TYPE_DEVICE) {
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         lzt::append_memory_copy(cmd_bundle.list, src_data_ptr_array[i],
-                                input_data[i].data, size * sizeof(uint32_t),
-                                nullptr);
+                                input_data[i].data, num_bytes, nullptr);
       }
       lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     } else {
-      for (int i = 0; i < size; i++) {
-        memcpy(src_data_ptr_array[i], input_data[i].data,
-               size * sizeof(uint32_t));
+      for (uint32_t i = 0U; i < size; i++) {
+        memcpy(src_data_ptr_array[i], input_data[i].data, num_bytes);
       }
     }
     // handling pointers in src_data[i].data
     if (src_ptr_mem_type == ZE_MEMORY_TYPE_DEVICE) {
       // generate copy_data array in host and copy the array to device
       src_data_host_ptr = new copy_data[size];
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         src_data_host_ptr[i].data = src_data_ptr_array[i];
       }
       lzt::append_memory_copy(cmd_bundle.list, src_data, src_data_host_ptr,
                               size * sizeof(copy_data), nullptr);
       lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     } else {
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         src_data[i].data = src_data_ptr_array[i];
       }
     }
@@ -484,14 +487,14 @@ protected:
     if (dst_ptr_mem_type == ZE_MEMORY_TYPE_DEVICE) {
       // generate copy_data array in host and copy the array to device
       dst_data_host_ptr = new copy_data[size];
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         dst_data_host_ptr[i].data = dst_data_ptr_array[i];
       }
       lzt::append_memory_copy(cmd_bundle.list, dst_data, dst_data_host_ptr,
                               size * sizeof(copy_data), nullptr);
       lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     } else {
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         dst_data[i].data = dst_data_ptr_array[i];
       }
     }
@@ -499,8 +502,8 @@ protected:
     // set kernel_copy
     lzt::set_argument_value(kernel, 0, sizeof(src_data), &src_data);
     lzt::set_argument_value(kernel, 1, sizeof(dst_data), &dst_data);
-    lzt::set_argument_value(kernel, 2, sizeof(int), &offset);
-    lzt::set_argument_value(kernel, 3, sizeof(int), &size);
+    lzt::set_argument_value(kernel, 2, sizeof(offset), &offset);
+    lzt::set_argument_value(kernel, 3, sizeof(size), &size);
 
     ze_kernel_indirect_access_flags_t indirect_flags = 0;
     if (src_mem_type == ZE_MEMORY_TYPE_HOST ||
@@ -535,10 +538,9 @@ protected:
     // copy dst_data to output_data for device memory
     if (dst_mem_type == ZE_MEMORY_TYPE_DEVICE) {
       lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         lzt::append_memory_copy(cmd_bundle.list, output_data[i].data,
-                                dst_data_ptr_array[i], size * sizeof(uint32_t),
-                                nullptr);
+                                dst_data_ptr_array[i], num_bytes, nullptr);
       }
       lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     }
@@ -548,15 +550,14 @@ protected:
 
     // copy dst_data to output_data for non-device memory
     if (dst_mem_type != ZE_MEMORY_TYPE_DEVICE) {
-      for (int i = 0; i < size; i++) {
+      for (uint32_t i = 0U; i < size; i++) {
         // if dst_data is device mem, dst_data[i].data won't work.
         // so, we are using dst_data_ptr_array[i] instead
-        memcpy(output_data[i].data, dst_data_ptr_array[i],
-               size * sizeof(uint32_t));
+        memcpy(output_data[i].data, dst_data_ptr_array[i], num_bytes);
       }
     }
 
-    for (int i = 0; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       EXPECT_EQ(0, memcmp(input_data[i].data, output_data[i].data + offset,
                           (size - offset) * sizeof(uint32_t)));
       // break to cleanup
@@ -566,7 +567,7 @@ protected:
     }
 
     // cleanup
-    for (int i = 0; i < size; i++) {
+    for (uint32_t i = 0U; i < size; i++) {
       delete[] input_data[i].data;
       delete[] output_data[i].data;
       free_memory(src_data_ptr_array[i], context, src_mem_type, src_shr_type);
@@ -599,7 +600,7 @@ LZT_TEST_P(
   test_memory_type src_ptr_test_type = std::get<1>(GetParam());
   test_memory_type dst_test_type = std::get<2>(GetParam());
   test_memory_type dst_ptr_test_type = std::get<3>(GetParam());
-  int offset = std::get<4>(GetParam());
+  uint32_t offset = std::get<4>(GetParam());
   bool is_immediate = std::get<5>(GetParam());
 
   ze_memory_type_t src_mem_type;
@@ -637,6 +638,6 @@ INSTANTIATE_TEST_SUITE_P(
                                          USM_SHARED_CROSS, USM_SHARED_SYSTEM),
                        ::testing::Values(USM_HOST, USM_DEVICE, USM_SHARED_LOCAL,
                                          USM_SHARED_CROSS, USM_SHARED_SYSTEM),
-                       ::testing::Values(0), ::testing::Bool()));
+                       ::testing::Values(0U), ::testing::Bool()));
 
 } // namespace

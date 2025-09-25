@@ -160,14 +160,14 @@ bool get_register_set_props(ze_device_handle_t device,
   zetDebugGetRegisterSetProperties(device, &nRegSets, nullptr);
   zet_debug_regset_properties_t *pRegSets =
       new zet_debug_regset_properties_t[nRegSets];
-  for (int i = 0; i < nRegSets; i++) {
+  for (uint32_t i = 0U; i < nRegSets; i++) {
     pRegSets[i] = {ZET_STRUCTURE_TYPE_DEBUG_REGSET_PROPERTIES, nullptr};
   }
   zetDebugGetRegisterSetProperties(device, &nRegSets, pRegSets);
 
   bool found = false;
-  for (int i = 0; i < nRegSets; i++) {
-    if (pRegSets[i].type == type) {
+  for (uint32_t i = 0U; i < nRegSets; i++) {
+    if (pRegSets[i].type == to_u32(type)) {
       printRegSetProperties(pRegSets[i]);
       reg = pRegSets[i];
       found = true;
@@ -196,7 +196,7 @@ void clear_exceptions(const ze_device_handle_t &device,
       debug_session, device_thread, ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
       cr_reg_prop.count, cr_values));
 
-  uint32_values[1] &= ~((1 << 26) | (1 << 30));
+  uint32_values[1] &= ~((1U << 26) | (1U << 30));
   ASSERT_ZE_RESULT_SUCCESS(zetDebugWriteRegisters(
       debug_session, device_thread, ZET_DEBUG_REGSET_TYPE_CR_INTEL_GPU, 0,
       cr_reg_prop.count, cr_values));

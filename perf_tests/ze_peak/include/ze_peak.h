@@ -165,7 +165,12 @@ private:
   void _transfer_bw_shared_memory(L0Context &context, size_t local_memory_size,
                                   void *local_memory);
   TimingMeasurement is_bandwidth_with_event_timer(void);
+
   long double calculate_gbps(long double period, long double buffer_size);
+  long double calculate_gbps(long double period, uint64_t buffer_size) {
+    return calculate_gbps(period, static_cast<long double>(buffer_size));
+  }
+
   long double context_time_in_us(L0Context &context, ze_event_handle_t &event);
 };
 

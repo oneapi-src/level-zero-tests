@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 #include "stress_common_func.hpp"
@@ -21,10 +20,12 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class zeDriverMultiplyEventsStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<float, float, uint64_t, ze_memory_type_t>> {
+          std::tuple<double, double, uint64_t, ze_memory_type_t>> {
 protected:
   ze_kernel_handle_t create_kernel(ze_module_handle_t module,
                                    const std::string &kernel_name,
@@ -139,10 +140,11 @@ LZT_TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
                          ZE_MODULE_FORMAT_IL_SPIRV,
                          "-ze-opt-greater-than-4GB-buffer-required", nullptr);
   std::string kernel_name = "test_device_memory1";
-  ze_kernel_handle_t kernel_handle = create_kernel(
-      module_handle, kernel_name, output_allocations, dispatch_id);
+  ze_kernel_handle_t kernel_handle =
+      create_kernel(module_handle, kernel_name, output_allocations,
+                    to_u32(dispatch_id));
 
-  uint32_t final_events_count = 3 * test_arguments.multiplier;
+  uint32_t final_events_count = to_u32(3 * test_arguments.multiplier);
   LOG_INFO << "Test events count: " << final_events_count;
   ze_event_pool_desc_t event_pool_desc = {
       ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
@@ -175,9 +177,10 @@ LZT_TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
 
   LOG_INFO << "call commands to copy memory in number == "
            << test_arguments.multiplier << " of steps";
-  for (uint32_t data_idx = 0; data_idx < test_arguments.multiplier;
+  for (uint64_t data_idx = 0U; data_idx < test_arguments.multiplier;
        data_idx++) {
-    uint32_t group_count_x = test_single_allocation_count / workgroup_size_x_;
+    uint32_t group_count_x =
+        to_u32(test_single_allocation_count / workgroup_size_x_);
     ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
 
     lzt::append_memory_fill(command_list, output_allocations[dispatch_id],
@@ -300,7 +303,7 @@ LZT_TEST_P(zeDriverMultiplyEventsStressTest, RunCopyBytesWithEvents) {
              << (float)test_single_allocation_memory_size / (1024 * 1024)
              << "MB";
   }
-  uint32_t final_events_count = 2 * test_single_allocation_count;
+  uint32_t final_events_count =to_u32(2 * test_single_allocation_count);
 
   LOG_INFO << "Test one allocation data count: "
            << test_single_allocation_count;

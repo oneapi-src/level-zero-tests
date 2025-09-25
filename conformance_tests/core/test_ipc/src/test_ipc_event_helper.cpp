@@ -141,7 +141,7 @@ static void child_host_query_timestamp(const ze_event_pool_handle_t &hEventPool,
     lzt::get_event_kernel_timestamps_from_mapped_timestamp_event(
         hEvent, device, kernel_timestamp_buffer, synchronized_timestamp_buffer);
 
-    for (int i = 0; i < kernel_timestamp_buffer.size(); i++) {
+    for (size_t i = 0U; i < kernel_timestamp_buffer.size(); i++) {
       if (!i) {
         LOG_INFO << "IPC Child set timestamp value";
         shared_data.start_time =

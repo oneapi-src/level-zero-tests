@@ -363,7 +363,7 @@ LZT_TEST(
     }
   }
 
-  if (is_sub_device_connected == true) {
+  if (is_sub_device_connected) {
     ze_fabric_vertex_handle_t vertex_a{};
     EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetFabricVertexExp(devices[0], &vertex_a));
     ze_fabric_vertex_handle_t vertex_b{};
@@ -458,7 +458,7 @@ LZT_TEST(zeFabricEdgeGetTests,
         lzt::get_ze_fabric_edge_properties(edge);
     const bool unique_status = is_uuid_unique(property.uuid);
     EXPECT_TRUE(unique_status);
-    if (unique_status == true) {
+    if (unique_status) {
       uuids.push_back(property.uuid);
     } else {
       break;

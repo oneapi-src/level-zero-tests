@@ -23,7 +23,7 @@ uint8_t generate_value<uint8_t>(const uint8_t min, const uint8_t max,
 
 template <>
 float generate_value<float>(const float min, const float max, const int seed) {
-  static std::default_random_engine engine(seed);
+  static std::default_random_engine engine(static_cast<rand_t>(seed));
   std::uniform_real_distribution<float> distribution(
       min, std::nextafter(max, std::numeric_limits<float>::max()));
   return distribution(engine);
@@ -32,7 +32,7 @@ float generate_value<float>(const float min, const float max, const int seed) {
 template <>
 double generate_value<double>(const double min, const double max,
                               const int seed) {
-  static std::default_random_engine engine(seed);
+  static std::default_random_engine engine(static_cast<rand_t>(seed));
   std::uniform_real_distribution<double> distribution(
       min, std::nextafter(max, std::numeric_limits<double>::max()));
   return distribution(engine);

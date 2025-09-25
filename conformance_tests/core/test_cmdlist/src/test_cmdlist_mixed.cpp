@@ -21,6 +21,10 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_int;
+using lzt::to_u32;
+using lzt::to_u8;
+
 static const size_t vec_sz = 1UL << 16;
 
 class zeMixedCMDListsTests : public ::testing::Test {
@@ -130,7 +134,7 @@ LZT_TEST_P(
     host_vecs_compute.push_back(lzt::allocate_host_memory(vec_sz));
     device_vecs_compute.push_back(lzt::allocate_device_memory(vec_sz));
 
-    patterns_compute.push_back(cls_compute.size() - 1);
+    patterns_compute.push_back(to_u8(cls_compute.size() - 1));
   }
 
   // Create copy engine immediate CMD lists, events and host/device buffers
@@ -147,26 +151,26 @@ LZT_TEST_P(
     ze_event_desc_t ev_desc = {};
     ev_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
     ev_desc.pNext = nullptr;
-    ev_desc.index = cls_copy_imm.size() - 1;
+    ev_desc.index = to_u32(cls_copy_imm.size() - 1);
     ev_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
     ev_desc.wait = ZE_EVENT_SCOPE_FLAG_DEVICE;
     events_fill.push_back(lzt::create_event(event_pool, ev_desc));
 
-    ev_desc.index = cls_copy_imm.size() - 1 + event_pool_sz / 2;
+    ev_desc.index = to_u32(cls_copy_imm.size() - 1 + event_pool_sz / 2);
     ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
     events_copy.push_back(lzt::create_event(event_pool, ev_desc));
 
     host_vecs_copy.push_back(lzt::allocate_host_memory(vec_sz));
     device_vecs_copy.push_back(lzt::allocate_device_memory(vec_sz));
 
-    patterns_copy.push_back(42 + cls_copy_imm.size() - 1);
+    patterns_copy.push_back(to_u8(42 + cls_copy_imm.size() - 1));
   }
 
   // Fill compute engine CMD lists with tasks
   lzt::set_group_size(kernel, 8, 1, 1);
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
 
-  for (int i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     const auto cl = cls_compute[i];
     void *h_vec = host_vecs_compute[i];
     void *d_vec = device_vecs_compute[i];
@@ -188,15 +192,15 @@ LZT_TEST_P(
   }
 
   // Submit compute engine CMD lists, ASYNC execution
-  for (int i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     lzt::execute_command_lists(cqs_compute[i], 1, &cls_compute[i], nullptr);
   }
 
   // Submit tasks to copy engine immediate CMD lists
   const int log_blk_len = 8;
   const int blk_sz = (1u << log_blk_len);
-  for (int i = 0; i < (vec_sz >> log_blk_len); i++) {
-    for (int j = 0; j < cls_copy_imm.size(); j++) {
+  for (size_t i = 0U; i < (vec_sz >> log_blk_len); i++) {
+    for (size_t j = 0U; j < cls_copy_imm.size(); j++) {
       const auto cl = cls_copy_imm[j];
       const auto device_ptr =
           reinterpret_cast<uint8_t *>(device_vecs_copy[j]) + i * blk_sz;
@@ -207,7 +211,7 @@ LZT_TEST_P(
       lzt::append_memory_copy(cl, host_ptr, device_ptr, blk_sz, events_copy[j],
                               1, &events_fill[j]);
     }
-    for (int j = 0; j < cls_copy_imm.size(); j++) {
+    for (size_t j = 0U; j < cls_copy_imm.size(); j++) {
       if (use_events_sync) {
         EXPECT_ZE_RESULT_SUCCESS(
             zeEventHostSynchronize(events_copy[j], UINT64_MAX));
@@ -221,14 +225,14 @@ LZT_TEST_P(
   }
 
   // Sync with compute engine queues
-  for (int i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     lzt::synchronize(cqs_compute[i], UINT64_MAX);
   }
 
   // Verify compute engine results
-  for (uint8_t i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_compute[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 2) {
         EXPECT_TRUE(false);
         break;
@@ -237,9 +241,9 @@ LZT_TEST_P(
   }
 
   // Verify copy engine results
-  for (uint8_t i = 0; i < cls_copy_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_copy_imm.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_copy[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 42) {
         EXPECT_TRUE(false);
         break;
@@ -248,14 +252,14 @@ LZT_TEST_P(
   }
 
   // Cleanup
-  for (int i = 0; i < cls_compute.size(); i++) {
+  for (size_t i = 0U; i < cls_compute.size(); i++) {
     lzt::free_memory(host_vecs_compute[i]);
     lzt::free_memory(device_vecs_compute[i]);
     lzt::destroy_command_list(cls_compute[i]);
     lzt::destroy_command_queue(cqs_compute[i]);
   }
 
-  for (int i = 0; i < cls_copy_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_copy_imm.size(); i++) {
     lzt::free_memory(host_vecs_copy[i]);
     lzt::free_memory(device_vecs_copy[i]);
     lzt::destroy_command_list(cls_copy_imm[i]);
@@ -298,7 +302,7 @@ LZT_TEST_P(
     ze_event_desc_t ev_desc = {};
     ev_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
     ev_desc.pNext = nullptr;
-    ev_desc.index = cls_compute_imm.size() - 1;
+    ev_desc.index = to_u32(cls_compute_imm.size() - 1);
     ev_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
     ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
     events.push_back(lzt::create_event(event_pool, ev_desc));
@@ -306,7 +310,7 @@ LZT_TEST_P(
     host_vecs_compute.push_back(lzt::allocate_host_memory(vec_sz));
     device_vecs_compute.push_back(lzt::allocate_device_memory(vec_sz));
 
-    patterns_compute.push_back(cls_compute_imm.size() - 1);
+    patterns_compute.push_back(to_u8(cls_compute_imm.size() - 1));
   }
 
   // Create copy engine CMD queues, lists and host/device buffers
@@ -329,15 +333,15 @@ LZT_TEST_P(
     host_vecs_copy.push_back(lzt::allocate_host_memory(vec_sz));
     device_vecs_copy.push_back(lzt::allocate_device_memory(vec_sz));
 
-    patterns_copy.push_back(42 + cls_copy.size() - 1);
+    patterns_copy.push_back(to_u8(42 + cls_copy.size() - 1));
   }
 
   // Fill copy engine CMD lists with tasks
   const int log_blk_len = 1;
   const int blk_sz = (1u << log_blk_len);
-  for (int j = 0; j < cls_copy.size(); j++) {
+  for (size_t j = 0U; j < cls_copy.size(); j++) {
     const auto cl = cls_copy[j];
-    for (int i = 0; i < (vec_sz >> log_blk_len); i++) {
+    for (size_t i = 0U; i < (vec_sz >> log_blk_len); i++) {
       const auto device_ptr =
           reinterpret_cast<uint8_t *>(device_vecs_copy[j]) + i * blk_sz;
       const auto host_ptr =
@@ -352,12 +356,12 @@ LZT_TEST_P(
   }
 
   // Submit copy engine CMD lists, ASYNC execution
-  for (int i = 0; i < cls_copy.size(); i++) {
+  for (size_t i = 0U; i < cls_copy.size(); i++) {
     lzt::execute_command_lists(cqs_copy[i], 1, &cls_copy[i], nullptr);
   }
 
   // Submit tasks to compute engine immediate CMD lists
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     lzt::append_memory_fill(cls_compute_imm[i], device_vecs_compute[i],
                             &patterns_compute[i], 1, vec_sz, nullptr);
     lzt::append_barrier(cls_compute_imm[i]);
@@ -366,18 +370,18 @@ LZT_TEST_P(
   lzt::set_group_size(kernel, 8, 1, 1);
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
 
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     lzt::set_argument_value(kernel, 0, sizeof(void *), &device_vecs_compute[i]);
     lzt::append_launch_function(cls_compute_imm[i], kernel, &dispatch, nullptr,
                                 0, nullptr);
     lzt::append_barrier(cls_compute_imm[i]);
   }
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     lzt::append_memory_copy(cls_compute_imm[i], host_vecs_compute[i],
                             device_vecs_compute[i], vec_sz, events[i]);
     lzt::append_barrier(cls_compute_imm[i]);
   }
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     if (use_events_sync) {
       lzt::event_host_synchronize(events[i], UINT64_MAX);
     } else {
@@ -387,14 +391,14 @@ LZT_TEST_P(
   }
 
   // Sync with copy engine queues
-  for (int i = 0; i < cls_copy.size(); i++) {
+  for (size_t i = 0U; i < cls_copy.size(); i++) {
     lzt::synchronize(cqs_copy[i], UINT64_MAX);
   }
 
   // Verify copy engine results
-  for (uint8_t i = 0; i < cls_copy.size(); i++) {
+  for (size_t i = 0U; i < cls_copy.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_copy[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 42) {
         EXPECT_TRUE(false);
         break;
@@ -403,9 +407,9 @@ LZT_TEST_P(
   }
 
   // Verify compute engine results
-  for (uint8_t i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_compute[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 1) {
         EXPECT_TRUE(false);
         break;
@@ -414,13 +418,13 @@ LZT_TEST_P(
   }
 
   // Cleanup
-  for (int i = 0; i < cls_compute_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_compute_imm.size(); i++) {
     lzt::free_memory(host_vecs_compute[i]);
     lzt::free_memory(device_vecs_compute[i]);
     lzt::destroy_command_list(cls_compute_imm[i]);
     lzt::destroy_event(events[i]);
   }
-  for (int i = 0; i < cls_copy.size(); i++) {
+  for (size_t i = 0U; i < cls_copy.size(); i++) {
     lzt::free_memory(host_vecs_copy[i]);
     lzt::free_memory(device_vecs_copy[i]);
     lzt::destroy_command_list(cls_copy[i]);
@@ -476,7 +480,7 @@ LZT_TEST_P(
     ze_event_desc_t ev_desc = {};
     ev_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
     ev_desc.pNext = nullptr;
-    ev_desc.index = cls_imm.size() - 1;
+    ev_desc.index = to_u32(cls_imm.size() - 1);
     ev_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
     ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
     events.push_back(lzt::create_event(event_pool, ev_desc));
@@ -487,15 +491,15 @@ LZT_TEST_P(
     device_vecs.push_back(lzt::allocate_device_memory(vec_sz));
     device_vecs_imm.push_back(lzt::allocate_device_memory(vec_sz));
 
-    patterns.push_back(cls.size() - 1);
-    patterns_imm.push_back(42 + cls_imm.size() - 1);
+    patterns.push_back(to_u8(cls.size() - 1));
+    patterns_imm.push_back(to_u8(42 + cls_imm.size() - 1));
   }
 
   lzt::set_group_size(kernel, 8, 1, 1);
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
 
   // Fill regular CMD lists
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     const auto cl = cls[i];
     void *h_vec = host_vecs[i];
     void *d_vec = device_vecs[i];
@@ -516,28 +520,28 @@ LZT_TEST_P(
   }
 
   // Submit regular CMD lists, ASYNC execution
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::execute_command_lists(cqs[i], 1, &cls[i], nullptr);
   }
 
   // Submit tasks to the immediate CMD lists
-  for (int i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     lzt::append_memory_fill(cls_imm[i], device_vecs_imm[i], &patterns_imm[i], 1,
                             vec_sz, nullptr);
     lzt::append_barrier(cls_imm[i]);
   }
-  for (int i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     lzt::set_argument_value(kernel, 0, sizeof(void *), &device_vecs_imm[i]);
     lzt::append_launch_function(cls_imm[i], kernel, &dispatch, nullptr, 0,
                                 nullptr);
     lzt::append_barrier(cls_imm[i]);
   }
-  for (int i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     lzt::append_memory_copy(cls_imm[i], host_vecs_imm[i], device_vecs_imm[i],
                             vec_sz, events[i]);
     lzt::append_barrier(cls_imm[i]);
   }
-  for (int i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     if (use_events_sync) {
       lzt::event_host_synchronize(events[i], UINT64_MAX);
     } else {
@@ -547,14 +551,14 @@ LZT_TEST_P(
   }
 
   // Sync with regular CMD lists
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::synchronize(cqs[i], UINT64_MAX);
   }
 
   // Verify regular CMD lists' results
-  for (uint8_t i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 2) {
         EXPECT_TRUE(false);
         break;
@@ -563,9 +567,9 @@ LZT_TEST_P(
   }
 
   // Verify immediate CMD lists' results
-  for (uint8_t i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_imm[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 43) {
         EXPECT_TRUE(false);
         break;
@@ -574,7 +578,7 @@ LZT_TEST_P(
   }
 
   // Cleanup
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::free_memory(host_vecs[i]);
     lzt::free_memory(host_vecs_imm[i]);
     lzt::free_memory(device_vecs[i]);
@@ -635,12 +639,12 @@ LZT_TEST_P(
     ze_event_desc_t ev_desc = {};
     ev_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
     ev_desc.pNext = nullptr;
-    ev_desc.index = cls_imm.size() - 1;
+    ev_desc.index = to_u32(cls_imm.size() - 1);
     ev_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
     ev_desc.wait = ZE_EVENT_SCOPE_FLAG_DEVICE;
     events_fill.push_back(lzt::create_event(event_pool, ev_desc));
 
-    ev_desc.index = cls_imm.size() - 1 + event_pool_sz / 2;
+    ev_desc.index = to_u32(cls_imm.size() - 1 + event_pool_sz / 2);
     ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
     events_copy.push_back(lzt::create_event(event_pool, ev_desc));
 
@@ -650,17 +654,17 @@ LZT_TEST_P(
     device_vecs.push_back(lzt::allocate_device_memory(vec_sz));
     device_vecs_imm.push_back(lzt::allocate_device_memory(vec_sz));
 
-    patterns.push_back(cls.size());
-    patterns_imm.push_back(42 + cls_imm.size() - 1);
+    patterns.push_back(to_u8(cls.size()));
+    patterns_imm.push_back(to_u8(42 + cls_imm.size() - 1));
   }
 
   const int log_blk_len = 6;
   const int blk_sz = (1u << log_blk_len);
 
   // Fill regular CMD lists
-  for (int j = 0; j < cls.size(); j++) {
+  for (size_t j = 0U; j < cls.size(); j++) {
     const auto cl = cls[j];
-    for (int i = 0; i < (vec_sz >> log_blk_len); i++) {
+    for (size_t i = 0U; i < (vec_sz >> log_blk_len); i++) {
       const auto device_ptr =
           reinterpret_cast<uint8_t *>(device_vecs[j]) + i * blk_sz;
       const auto host_ptr =
@@ -674,13 +678,13 @@ LZT_TEST_P(
   }
 
   // Submit regular CMD lists, ASYNC execution
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::execute_command_lists(cqs[i], 1, &cls[i], nullptr);
   }
 
   // Submit tasks to immediate CMD lists
-  for (int i = 0; i < (vec_sz >> log_blk_len); i++) {
-    for (int j = 0; j < cls_imm.size(); j++) {
+  for (size_t i = 0U; i < (vec_sz >> log_blk_len); i++) {
+    for (size_t j = 0U; j < cls_imm.size(); j++) {
       const auto cl = cls_imm[j];
       const auto device_ptr =
           reinterpret_cast<uint8_t *>(device_vecs_imm[j]) + i * blk_sz;
@@ -691,7 +695,7 @@ LZT_TEST_P(
       lzt::append_memory_copy(cl, host_ptr, device_ptr, blk_sz, events_copy[j],
                               1, &events_fill[j]);
     }
-    for (int j = 0; j < cls_imm.size(); j++) {
+    for (size_t j = 0U; j < cls_imm.size(); j++) {
       if (use_events_sync) {
         EXPECT_ZE_RESULT_SUCCESS(
             zeEventHostSynchronize(events_copy[j], UINT64_MAX));
@@ -706,14 +710,14 @@ LZT_TEST_P(
   }
 
   // Sync with regular CMD lists' queues
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::synchronize(cqs[i], UINT64_MAX);
   }
 
   // Verify regular CMD lists' results
-  for (uint8_t i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 1) {
         EXPECT_TRUE(false);
         break;
@@ -722,9 +726,9 @@ LZT_TEST_P(
   }
 
   // Verify immediate CMD lists' results
-  for (uint8_t i = 0; i < cls_imm.size(); i++) {
+  for (size_t i = 0U; i < cls_imm.size(); i++) {
     const uint8_t *vec = reinterpret_cast<uint8_t *>(host_vecs_imm[i]);
-    for (size_t j = 0; j < vec_sz; j++) {
+    for (size_t j = 0U; j < vec_sz; j++) {
       if (vec[j] != i + 42) {
         EXPECT_TRUE(false);
         break;
@@ -733,7 +737,7 @@ LZT_TEST_P(
   }
 
   // Cleanup
-  for (int i = 0; i < cls.size(); i++) {
+  for (size_t i = 0U; i < cls.size(); i++) {
     lzt::free_memory(host_vecs[i]);
     lzt::free_memory(host_vecs_imm[i]);
     lzt::free_memory(device_vecs[i]);
@@ -752,19 +756,19 @@ std::string event_to_str(bool use_event) {
 
 std::string command_list_flag_to_str(ze_command_list_flag_t flag) {
   std::stringstream ss;
-  ss << "_cmd_list_flag_" << static_cast<uint32_t>(flag);
+  ss << "_cmd_list_flag_" << to_u32(flag);
   return ss.str();
 }
 
 std::string command_queue_flag_to_str(ze_command_queue_flag_t flag) {
   std::stringstream ss;
-  ss << "_cmd_queue_flag_" << static_cast<uint32_t>(flag);
+  ss << "_cmd_queue_flag_" << to_u32(flag);
   return ss.str();
 }
 
 std::string queue_mode_to_str(ze_command_queue_mode_t queue_mode) {
   std::stringstream ss;
-  ss << "_queue_mode_" << static_cast<uint32_t>(queue_mode);
+  ss << "_queue_mode_" << to_u32(queue_mode);
   return ss.str();
 }
 
@@ -788,24 +792,244 @@ struct zeTestMixedCMDListsIndependentOverlappingTestNameSuffix {
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    IndependentCMDListsOverlappingParameterization,
+    IndependentCMDListsOverlappingParameterizationSyncQueueWithEvents,
     zeTestMixedCMDListsIndependentOverlapping,
     ::testing::Combine(
-        ::testing::Values(static_cast<ze_command_queue_flag_t>(0),
-                          ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
-        ::testing::Values(static_cast<ze_command_queue_flag_t>(0),
-                          ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
-        ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                          ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-                          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
         ::testing::Values(static_cast<ze_command_list_flag_t>(0),
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
                           ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
                           ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
                               ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
-        ::testing::Values(true, false)),
+        ::testing::Values(true)),
     zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
 
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationCopyExplicitSyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitSyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitCopyExplicithSyncWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationAsyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationCopyExplicitAsyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitAsyncQueueWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitCopyExplicithAsyncWithEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(true)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationSyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationCopyExplicitSyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitSyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitCopyExplicithSyncWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationAsyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationCopyExplicitAsyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitAsyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(static_cast<ze_command_queue_flag_t>(0)),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
+
+INSTANTIATE_TEST_SUITE_P(
+    IndependentCMDListsOverlappingParameterizationComputeExplicitCopyExplicitAsyncQueueWithoutEvents,
+    zeTestMixedCMDListsIndependentOverlapping,
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(static_cast<ze_command_list_flag_t>(0),
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+                          ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+                          ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING |
+                              ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT),
+        ::testing::Values(false)),
+    zeTestMixedCMDListsIndependentOverlappingTestNameSuffix());
 class zeTestMixedCMDListsInterdependPairSameEngineType
     : public zeMixedCMDListsTests,
       public ::testing::WithParamInterface<std::tuple<
@@ -997,7 +1221,7 @@ protected:
 
   uint8_t *vec_hst;
   uint8_t *vec_dev;
-  const int n_iters = 8;
+  const uint32_t n_iters = 8;
 };
 
 LZT_TEST_P(
@@ -1070,7 +1294,7 @@ LZT_TEST_P(
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
   lzt::set_argument_value(kernel, 0, sizeof(void *), &vec_dev);
 
-  for (int i = 0; i < n_iters; i++) {
+  for (uint32_t i = 0U; i < n_iters; i++) {
     // Copy to device and signal kernel launch
     lzt::append_memory_copy(cl_h2d_imm, vec_dev, vec_hst, vec_sz, nullptr, 1,
                             &ev_h2d);
@@ -1113,7 +1337,7 @@ LZT_TEST_P(
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
   lzt::query_event(ev_d2h, ZE_RESULT_NOT_READY);
 
-  for (int i = 0; i < vec_sz; i++) {
+  for (size_t i = 0U; i < vec_sz; i++) {
     if (vec_hst[i] != n_iters) {
       EXPECT_TRUE(false);
       break;
@@ -1201,7 +1425,7 @@ LZT_TEST_P(
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
   lzt::set_argument_value(kernel, 0, sizeof(void *), &vec_dev);
 
-  for (int i = 0; i < n_iters; i++) {
+  for (uint32_t i = 0U; i < n_iters; i++) {
     // Copy to device and signal kernel launch
     lzt::append_memory_copy(cl_h2d, vec_dev, vec_hst, vec_sz, nullptr, 1,
                             &ev_h2d);
@@ -1244,7 +1468,7 @@ LZT_TEST_P(
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
   lzt::query_event(ev_d2h, ZE_RESULT_NOT_READY);
 
-  for (int i = 0; i < vec_sz; i++) {
+  for (size_t i = 0U; i < vec_sz; i++) {
     if (vec_hst[i] != n_iters) {
       EXPECT_TRUE(false);
       break;
@@ -1338,7 +1562,7 @@ LZT_TEST_P(
   const ze_group_count_t dispatch = {vec_sz / 8, 1, 1};
   lzt::set_argument_value(kernel, 0, sizeof(void *), &vec_dev);
 
-  for (int i = 0; i < n_iters; i++) {
+  for (uint32_t i = 0U; i < n_iters; i++) {
     // Copy to device and signal kernel launch
     lzt::append_memory_copy(cl_h2d_imm, vec_dev, vec_hst, vec_sz, nullptr, 1,
                             &ev_h2d);
@@ -1380,7 +1604,7 @@ LZT_TEST_P(
   lzt::query_event(ev_compute, ZE_RESULT_NOT_READY);
   lzt::query_event(ev_d2h, ZE_RESULT_NOT_READY);
 
-  for (int i = 0; i < vec_sz; i++) {
+  for (size_t i = 0U; i < vec_sz; i++) {
     if (vec_hst[i] != n_iters) {
       EXPECT_TRUE(false);
       break;
@@ -1455,9 +1679,9 @@ LZT_TEST_P(
   ev_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
   auto ev_copy = lzt::create_event(event_pool, ev_desc);
 
-  const int blk_sz = vec_sz / n_iters;
+  const uint32_t blk_sz = to_u32(vec_sz / n_iters);
 
-  for (int i = 0; i < n_iters; i++) {
+  for (uint32_t i = 0U; i < n_iters; i++) {
     // Fill the device buffer block
     lzt::append_memory_fill(cl_fill, vec_dev + i * blk_sz, &n_iters, 1, blk_sz,
                             nullptr, 1, &ev_fill);
@@ -1492,7 +1716,7 @@ LZT_TEST_P(
   lzt::query_event(ev_fill, ZE_RESULT_SUCCESS);
   lzt::query_event(ev_copy, ZE_RESULT_NOT_READY);
 
-  for (int i = 0; i < blk_sz * n_iters; i++) {
+  for (uint32_t i = 0U; i < blk_sz * n_iters; i++) {
     if (vec_hst[i] != n_iters) {
       EXPECT_TRUE(false);
       break;
@@ -1607,11 +1831,11 @@ protected:
 static void
 RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
                            std::vector<ze_command_queue_handle_t> cmdqueue,
-                           ze_event_handle_t event, int num_cmdlist,
+                           ze_event_handle_t event, size_t num_cmdlist,
                            bool is_shared_system) {
   const size_t size = 16;
   const int addval = 10;
-  const int num_iterations = 100;
+  const uint32_t num_iterations = 100;
   int addval2 = 0;
   const uint64_t timeout = UINT64_MAX - 1;
 
@@ -1629,20 +1853,20 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 
   memset(buffer, 0x0, num_cmdlist * size * sizeof(int));
 
-  for (int n = 0; n < num_cmdlist; n++) {
+  for (size_t n = 0; n < num_cmdlist; n++) {
     int *p_dev = static_cast<int *>(buffer);
     p_dev += (n * size);
     lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
     lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
     ze_group_count_t tg;
-    tg.groupCountX = static_cast<uint32_t>(size);
+    tg.groupCountX = to_u32(size);
     tg.groupCountY = 1;
     tg.groupCountZ = 1;
 
     lzt::append_launch_function(cmdlist[n], kernel, &tg, nullptr, 0, nullptr);
 
     totalVal[n] = 0;
-    for (int i = 0; i < (num_iterations - 1); i++) {
+    for (uint32_t i = 0; i < (num_iterations - 1); i++) {
       addval2 = lzt::generate_value<int>() & 0xFFFF;
       totalVal[n] += addval2;
       lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -1669,7 +1893,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(event, timeout));
 
-  for (int n = 0; n < num_cmdlist; n++) {
+  for (size_t n = 0; n < num_cmdlist; n++) {
     for (size_t i = 0; i < size; i++) {
       EXPECT_EQ(static_cast<int *>(buffer)[(n * size) + i],
                 (addval + totalVal[n]));
@@ -1693,7 +1917,7 @@ LZT_TEST_F(
     GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
                  << " not supported";
   }
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, false);
   }
@@ -1708,7 +1932,7 @@ LZT_TEST_F(
     GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
                  << " not supported";
   }
-  for (int i = 1; i <= cmdlist.size(); i++) {
+  for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Testing " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, cmdqueue, event0, i, true);
   }
@@ -1789,10 +2013,10 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
     std::vector<ze_command_queue_handle_t> cmdqueue,
     ze_event_handle_t counter_event, ze_event_handle_t event, bool is_immediate,
     bool is_shared_system) {
-  int num_cmdlist = 2;
+  uint32_t num_cmdlist = 2;
   const size_t size = 16;
   const int addval = 10;
-  const int num_iterations = 100;
+  const uint32_t num_iterations = 100;
   int addval2 = 0;
   const uint64_t timeout = UINT64_MAX - 1;
 
@@ -1815,7 +2039,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   lzt::set_argument_value(kernel, 0, sizeof(p_dev), &p_dev);
   lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
   ze_group_count_t tg;
-  tg.groupCountX = static_cast<uint32_t>(size);
+  tg.groupCountX = to_u32(size);
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
@@ -1823,7 +2047,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   lzt::append_launch_function(cmdlist[0], kernel, &tg, nullptr, 0, nullptr);
 
   totalVal[0] = 0;
-  for (int i = 0; i < (num_iterations - 1); i++) {
+  for (uint32_t i = 0; i < num_iterations - 1; i++) {
     addval2 = lzt::generate_value<int>() & 0xFFFF;
     totalVal[0] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -1853,7 +2077,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   lzt::append_barrier(cmdlist[1]);
 
   totalVal[1] = 0;
-  for (int i = 0; i < (num_iterations - 1); i++) {
+  for (uint32_t i = 0; i < (num_iterations - 1); i++) {
     addval2 = lzt::generate_value<int>() & 0xFFFF;
     totalVal[1] += addval2;
     lzt::set_argument_value(kernel, 1, sizeof(addval2), &addval2);
@@ -1874,7 +2098,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
   }
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(event, timeout));
 
-  for (int n = 0; n < num_cmdlist; n++) {
+  for (uint32_t n = 0; n < num_cmdlist; n++) {
     for (size_t i = 0; i < size; i++) {
       EXPECT_EQ(static_cast<int *>(buffer)[(n * size) + i],
                 (addval + totalVal[n]));

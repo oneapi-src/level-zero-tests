@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -141,7 +140,7 @@ public:
                                             uint32_t image_height,
                                             uint32_t row_pitch) {
     if (image_width <= row_pitch) {
-      for (int row = 0; row < image_height; row++) {
+      for (uint32_t row = 0U; row < image_height; row++) {
         std::copy(padded_buffer + (row * row_pitch),
                   padded_buffer + (row * row_pitch) + image_width,
                   src_image_data + (row * image_width));
@@ -281,7 +280,7 @@ public:
     lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-    for (int i = 0; i < (image_size / 4); i++) {
+    for (uint32_t i = 0U; i < (image_size / 4); i++) {
       ASSERT_EQ(png_img_src.raw_data()[i], png_img_dest.raw_data()[i])
           << "i is " << i;
     }
@@ -300,12 +299,12 @@ public:
     lzt::ImagePNG32Bit out_image =
         lzt::ImagePNG32Bit(out_region.width, out_region.height);
 
-    for (auto y = 0; y < in_region.height; y++)
-      for (auto x = 0; x < in_region.width; x++)
+    for (uint32_t y = 0U; y < in_region.height; y++)
+      for (uint32_t x = 0U; x < in_region.width; x++)
         in_image.set_pixel(x, y, x + (y * in_region.width));
 
-    for (auto y = 0; y < out_region.height; y++)
-      for (auto x = 0; x < out_region.width; x++)
+    for (uint32_t y = 0U; y < out_region.height; y++)
+      for (uint32_t x = 0U; x < out_region.width; x++)
         out_image.set_pixel(x, y, 0xffffffff);
 
     // Copy from host image to to device image region
@@ -333,7 +332,7 @@ public:
     // We may pass negative origin coordinates to compare_data_pattern; in that
     // case, it will skip over any negative-index pixels.
     EXPECT_EQ(0, lzt::compare_data_pattern(
-                     in_image, out_image, 0, 0, in_region.width,
+                     in_image, out_image, 0U, 0U, in_region.width,
                      in_region.height, in_region.originX - out_region.originX,
                      in_region.originY - out_region.originY, out_region.width,
                      out_region.height));
@@ -874,8 +873,8 @@ LZT_TEST_F(
   }
 
   img_ptr = new zeImageCreateCommon;
-  int full_width = img_ptr->dflt_host_image_.width();
-  int full_height = img_ptr->dflt_host_image_.height();
+  uint32_t full_width = img_ptr->dflt_host_image_.width();
+  uint32_t full_height = img_ptr->dflt_host_image_.height();
 
   EXPECT_GE(full_width, 10);
   EXPECT_GE(full_height, 10);
@@ -899,8 +898,8 @@ LZT_TEST_F(
   }
 
   img_ptr = new zeImageCreateCommon;
-  int full_width = img_ptr->dflt_host_image_.width();
-  int full_height = img_ptr->dflt_host_image_.height();
+  uint32_t full_width = img_ptr->dflt_host_image_.width();
+  uint32_t full_height = img_ptr->dflt_host_image_.height();
 
   EXPECT_GE(full_width, 10);
   EXPECT_GE(full_height, 10);

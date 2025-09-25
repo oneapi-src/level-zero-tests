@@ -12,7 +12,6 @@
 #include <cstdint>
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "random/random.hpp"
 #include "logging/logging.hpp"
@@ -329,17 +328,17 @@ LZT_TEST_P(
   void *verification_memory2 = lzt::allocate_host_memory(mem_size_ + offset_);
 
   uint8_t *src = static_cast<uint8_t *>(initial_pattern_memory);
-  for (uint32_t i = 0; i < mem_size_ + offset_; i++) {
+  for (size_t i = 0U; i < mem_size_ + offset_; i++) {
     src[i] = i & 0xff;
   }
 
-  for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+  for (size_t i = 0U; i < dev_instance_.size(); i++) {
     if (dev_instance_[i].sub_devices.size() < 2) {
       LOG_INFO << "Test cannot be run with less than 2 SubDevices";
       GTEST_SKIP();
     }
 
-    for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
+    for (size_t j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                 dev_instance_[i].sub_devices[j].dev)) {
         LOG_INFO
@@ -475,7 +474,7 @@ LZT_TEST_P(
     GTEST_SKIP();
   }
 
-  for (uint32_t i = 1; i < dev_instance_.size(); i++) {
+  for (size_t i = 1; i < dev_instance_.size(); i++) {
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
       LOG_INFO << "FAILURE:  Device-to-Device access disabled";
       FAIL();
@@ -530,12 +529,12 @@ LZT_TEST_P(
     zeP2PTests,
     GivenP2PSubDevicesWhenSettingAndCopyingMemoryToRemoteSubDeviceThenRemoteSubDeviceGetsCorrectMemory) {
 
-  for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+  for (size_t i = 0U; i < dev_instance_.size(); i++) {
     if (dev_instance_[i].sub_devices.size() < 2) {
       LOG_INFO << "Test cannot be run with less than 2 SubDevices";
       GTEST_SKIP();
     }
-    for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
+    for (size_t j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                 dev_instance_[i].sub_devices[j].dev)) {
         LOG_INFO
@@ -609,20 +608,20 @@ LZT_TEST_P(
 
   lzt::write_data_pattern(initial_pattern_memory, mem_size_ + offset_, 1);
 
-  std::array<size_t, num_regions> widths = {1, columns / 2, columns};
-  std::array<size_t, num_regions> heights = {1, rows / 2, rows};
-  std::array<size_t, num_regions> depths = {1, slices / 2, slices};
+  std::array<uint32_t, num_regions> widths = {1, columns / 2, columns};
+  std::array<uint32_t, num_regions> heights = {1, rows / 2, rows};
+  std::array<uint32_t, num_regions> depths = {1, slices / 2, slices};
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 devices";
     GTEST_SKIP();
   }
 
-  for (int region = 0; region < num_regions; region++) {
+  for (size_t region = 0U; region < num_regions; region++) {
     // Define region to be copied from/to
-    auto width = widths[region];
-    auto height = heights[region];
-    auto depth = depths[region];
+    uint32_t width = widths[region];
+    uint32_t height = heights[region];
+    uint32_t depth = depths[region];
 
     ze_copy_region_t src_region;
     src_region.originX = 0;
@@ -643,7 +642,7 @@ LZT_TEST_P(
     DevInstance *ptr_dev_src;
     DevInstance *ptr_dev_dst;
 
-    for (int i = 1; i < dev_instance_.size(); i++) {
+    for (size_t i = 1; i < dev_instance_.size(); i++) {
 
       for (uint32_t d = 0; d < 2; d++) {
         size_t src_offset, dst_offset;
@@ -697,9 +696,9 @@ LZT_TEST_P(
                                              UINT64_MAX);
         lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
 
-        for (int z = 0; z < depth; z++) {
-          for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
+        for (uint32_t z = 0U; z < depth; z++) {
+          for (uint32_t y = 0U; y < height; y++) {
+            for (uint32_t x = 0U; x < width; x++) {
               // index calculated based on memory sized by rows * columns *
               // slices
               size_t index = z * columns * rows + y * columns + x;
@@ -731,22 +730,22 @@ LZT_TEST_P(
     GivenP2PSubDevicesWhenCopyingMemoryRegionToSubDeviceOnSameDeviceThenRemoteSubDeviceGetsCorrectMemory) {
 
   int test_count = 0;
-  const size_t num_regions = 3;
+  const uint32_t num_regions = 3;
 
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
   void *verification_memory = lzt::allocate_host_memory(mem_size_ + offset_);
 
   lzt::write_data_pattern(initial_pattern_memory, mem_size_ + offset_, 1);
 
-  std::array<size_t, num_regions> widths = {1, columns / 2, columns};
-  std::array<size_t, num_regions> heights = {1, rows / 2, rows};
-  std::array<size_t, num_regions> depths = {1, slices / 2, slices};
+  std::array<uint32_t, num_regions> widths = {1, columns / 2, columns};
+  std::array<uint32_t, num_regions> heights = {1, rows / 2, rows};
+  std::array<uint32_t, num_regions> depths = {1, slices / 2, slices};
 
-  for (int region = 0; region < num_regions; region++) {
+  for (uint32_t region = 0U; region < num_regions; region++) {
     // Define region to be copied from/to
-    auto width = widths[region];
-    auto height = heights[region];
-    auto depth = depths[region];
+    uint32_t width = widths[region];
+    uint32_t height = heights[region];
+    uint32_t depth = depths[region];
 
     ze_copy_region_t src_region;
     src_region.originX = 0;
@@ -766,7 +765,7 @@ LZT_TEST_P(
 
     DevInstance *ptr_dev_src;
     DevInstance *ptr_dev_dst;
-    for (int i = 0; i < dev_instance_.size(); i++) {
+    for (size_t i = 0U; i < dev_instance_.size(); i++) {
 
       for (uint32_t d = 0; d < 2; d++) {
         size_t src_offset, dst_offset;
@@ -784,7 +783,7 @@ LZT_TEST_P(
           GTEST_SKIP();
         }
 
-        for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
+        for (size_t j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
 
           if (lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                    dev_instance_[i].sub_devices[j].dev)) {
@@ -829,9 +828,9 @@ LZT_TEST_P(
                                                UINT64_MAX);
           lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
 
-          for (int z = 0; z < depth; z++) {
-            for (int y = 0; y < height; y++) {
-              for (int x = 0; x < width; x++) {
+          for (uint32_t z = 0U; z < depth; z++) {
+            for (uint32_t y = 0U; y < height; y++) {
+              for (uint32_t x = 0U; x < width; x++) {
                 // index calculated based on memory sized by rows * columns *
                 // slices
                 size_t index = z * columns * rows + y * columns + x;
@@ -864,27 +863,27 @@ LZT_TEST_P(
     GivenP2PSubDevicesWhenCopyingMemoryRegionToSubDeviceOnDifferentDeviceThenRemoteSubDeviceGetsCorrectMemory) {
 
   int test_count = 0;
-  const size_t num_regions = 3;
+  const uint32_t num_regions = 3;
 
   void *initial_pattern_memory = lzt::allocate_host_memory(mem_size_ + offset_);
   void *verification_memory = lzt::allocate_host_memory(mem_size_ + offset_);
 
   lzt::write_data_pattern(initial_pattern_memory, mem_size_ + offset_, 1);
 
-  std::array<size_t, num_regions> widths = {1, columns / 2, columns};
-  std::array<size_t, num_regions> heights = {1, rows / 2, rows};
-  std::array<size_t, num_regions> depths = {1, slices / 2, slices};
+  std::array<uint32_t, num_regions> widths = {1, columns / 2, columns};
+  std::array<uint32_t, num_regions> heights = {1, rows / 2, rows};
+  std::array<uint32_t, num_regions> depths = {1, slices / 2, slices};
 
   if (dev_instance_.size() < 2) {
     LOG_INFO << "Test cannot be run with less than 2 Devices";
     GTEST_SKIP();
   }
 
-  for (int region = 0; region < num_regions; region++) {
+  for (uint32_t region = 0U; region < num_regions; region++) {
     // Define region to be copied from/to
-    auto width = widths[region];
-    auto height = heights[region];
-    auto depth = depths[region];
+    uint32_t width = widths[region];
+    uint32_t height = heights[region];
+    uint32_t depth = depths[region];
 
     ze_copy_region_t src_region;
     src_region.originX = 0;
@@ -904,7 +903,8 @@ LZT_TEST_P(
 
     DevInstance *ptr_dev_src;
     DevInstance *ptr_dev_dst;
-    for (int i = 1; i < dev_instance_.size(); i++) {
+    for (size_t i = 1; i < dev_instance_.size(); i++) {
+      auto &sub_devices_j = dev_instance_[i].sub_devices;
 
       for (uint32_t d = 0; d < 2; d++) {
         size_t src_offset, dst_offset;
@@ -917,18 +917,19 @@ LZT_TEST_P(
           dst_offset = offset_;
         }
 
-        for (int j = 0; j < dev_instance_[i].sub_devices.size(); j++) {
-          for (int k = 0; k < dev_instance_[i - 1].sub_devices.size(); k++) {
+        for (size_t j = 0U; j < sub_devices_j.size(); j++) {
+          auto &sub_devices_k = dev_instance_[i - 1].sub_devices;
 
-            if (lzt::can_access_peer(dev_instance_[i].sub_devices[j].dev,
-                                     dev_instance_[i - 1].sub_devices[k].dev)) {
-              ptr_dev_src = &dev_instance_[i].sub_devices[j];
-              ptr_dev_dst = &dev_instance_[i - 1].sub_devices[k];
-            } else if (lzt::can_access_peer(
-                           dev_instance_[i - 1].sub_devices[k].dev,
-                           dev_instance_[i].sub_devices[j].dev)) {
-              ptr_dev_src = &dev_instance_[i - 1].sub_devices[k];
-              ptr_dev_dst = &dev_instance_[i].sub_devices[j];
+          for (size_t k = 0U; k < sub_devices_k.size(); k++) {
+
+            if (lzt::can_access_peer(sub_devices_j[j].dev,
+                                     sub_devices_k[k].dev)) {
+              ptr_dev_src = &sub_devices_j[j];
+              ptr_dev_dst = &sub_devices_k[k];
+            } else if (lzt::can_access_peer(sub_devices_k[k].dev,
+                                            sub_devices_j[j].dev)) {
+              ptr_dev_src = &sub_devices_k[k];
+              ptr_dev_dst = &sub_devices_j[j];
             } else {
               continue;
             }
@@ -963,9 +964,9 @@ LZT_TEST_P(
                                                  UINT64_MAX);
             lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
 
-            for (int z = 0; z < depth; z++) {
-              for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
+            for (uint32_t z = 0U; z < depth; z++) {
+              for (uint32_t y = 0U; y < height; y++) {
+                for (uint32_t x = 0U; x < width; x++) {
                   // index calculated based on memory sized by rows * columns *
                   // slices
                   size_t index = z * columns * rows + y * columns + x;
@@ -1001,14 +1002,14 @@ LZT_TEST_P(
   std::string module_name = "p2p_test_offset_pointer.spv";
   std::string func_name = "multi_device_function";
 
-  uint32_t dev_instance_size = dev_instance_.size();
+  uint32_t dev_instance_size = static_cast<uint32_t>(dev_instance_.size());
 
-  if (dev_instance_.size() < 2) {
+  if (dev_instance_size < 2) {
     LOG_INFO << "Test cannot be run with less than 2 Devices";
     GTEST_SKIP();
   }
 
-  for (uint32_t i = 1; i < dev_instance_.size(); i++) {
+  for (uint32_t i = 1; i < dev_instance_size; i++) {
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
       LOG_INFO << "FAILURE:  Device-to-Device access disabled";
       FAIL();
@@ -1040,7 +1041,7 @@ LZT_TEST_P(
 
     // device (i - 1) will modify memory allocated for device i
     lzt::create_and_execute_function(
-        dev_instance_[i - 1].dev, module, func_name, 1,
+        dev_instance_[i - 1].dev, module, func_name, 1U,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         is_immediate_);
@@ -1069,16 +1070,16 @@ LZT_TEST_P(
   std::string module_name = "p2p_test_offset_pointer.spv";
   std::string func_name = "multi_device_function";
 
-  uint32_t dev_instance_size = dev_instance_.size();
+  uint32_t dev_instance_size = static_cast<uint32_t>(dev_instance_.size());
 
-  for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+  for (uint32_t i = 0U; i < dev_instance_size; i++) {
 
     if (dev_instance_[i].sub_devices.size() < 2) {
       LOG_INFO << "Test cannot be run with less than 2 SubDevices";
       GTEST_SKIP();
     }
 
-    for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
+    for (size_t j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                 dev_instance_[i].sub_devices[j].dev)) {
         LOG_INFO
@@ -1115,7 +1116,7 @@ LZT_TEST_P(
 
       // device (i - 1) will modify memory allocated for device i
       lzt::create_and_execute_function(
-          dev_instance_[i].sub_devices[j - 1].dev, module, func_name, 1,
+          dev_instance_[i].sub_devices[j - 1].dev, module, func_name, 1U,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
@@ -1148,14 +1149,14 @@ LZT_TEST_P(
   std::string module_name = "p2p_test.spv";
   std::string func_name = "multi_device_function";
 
-  uint32_t dev_instance_size = dev_instance_.size();
+  uint32_t dev_instance_size = static_cast<uint32_t>(dev_instance_.size());
 
-  if (dev_instance_.size() < 2) {
+  if (dev_instance_size < 2) {
     LOG_INFO << "Test cannot be run with less than 2 Devices";
     GTEST_SKIP();
   }
 
-  for (uint32_t i = 1; i < dev_instance_.size(); i++) {
+  for (uint32_t i = 1; i < dev_instance_size; i++) {
     if (!lzt::can_access_peer(dev_instance_[i - 1].dev, dev_instance_[i].dev)) {
       LOG_INFO << "FAILURE:  Device-to-Device access disabled";
       FAIL();
@@ -1198,7 +1199,7 @@ LZT_TEST_P(
 
     // device (i - 1) will modify memory allocated for device i
     lzt::create_and_execute_function(dev_instance_[i - 1].dev, module,
-                                     func_name, 1, args, is_immediate_);
+                                     func_name, 1U, args, is_immediate_);
 
     // copy memory to shared region and verify it is correct
     lzt::append_memory_copy(
@@ -1224,16 +1225,16 @@ LZT_TEST_P(
   std::string module_name = "p2p_test.spv";
   std::string func_name = "multi_device_function";
 
-  uint32_t dev_instance_size = dev_instance_.size();
+  uint32_t dev_instance_size = static_cast<uint32_t>(dev_instance_.size());
 
-  for (uint32_t i = 0; i < dev_instance_.size(); i++) {
+  for (uint32_t i = 0; i < dev_instance_size; i++) {
 
     if (dev_instance_[i].sub_devices.size() < 2) {
       LOG_INFO << "Test cannot be run with less than 2 SubDevices";
       GTEST_SKIP();
     }
 
-    for (int j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
+    for (size_t j = 1; j < dev_instance_[i].sub_devices.size(); j++) {
       if (!lzt::can_access_peer(dev_instance_[i].sub_devices[j - 1].dev,
                                 dev_instance_[i].sub_devices[j].dev)) {
         LOG_INFO
@@ -1281,7 +1282,7 @@ LZT_TEST_P(
 
       // device (i - 1) will modify memory allocated for device i
       lzt::create_and_execute_function(dev_instance_[i].sub_devices[j - 1].dev,
-                                       module, func_name, 1, args,
+                                       module, func_name, 1U, args,
                                        is_immediate_);
 
       // copy memory to shared region and verify it is correct

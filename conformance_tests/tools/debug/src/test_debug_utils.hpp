@@ -10,6 +10,9 @@
 #define TEST_DEBUG_UTILS_HPP
 
 #include "test_debug_common.hpp"
+
+using MapNumCmdQueue = std::map<uint32_t, uint32_t>;
+
 void print_device(const ze_device_handle_t &device);
 
 bool check_event(const zet_debug_session_handle_t &debug_session,
@@ -32,8 +35,8 @@ void readWriteModuleMemory(const zet_debug_session_handle_t &debug_session,
                            const ze_device_thread_t &thread,
                            zet_debug_event_t &module_event, bool access_elf);
 
-int get_numCQs_per_ordinal(ze_device_handle_t &device,
-                           std::map<int, int> &ordinalCQs);
+uint32_t get_numCQs_per_ordinal(ze_device_handle_t &device,
+                                MapNumCmdQueue &ordinalCQs);
 bool read_register(const zet_debug_session_handle_t &debug_session,
                    const ze_device_thread_t &device_thread,
                    const zet_debug_regset_properties_t &regset, bool printerr);

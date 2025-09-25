@@ -20,6 +20,8 @@ namespace fs = boost::filesystem;
 namespace bp = boost::process;
 namespace bi = boost::interprocess;
 
+using lzt::to_u32;
+
 LZT_TEST(
     zetDeviceGetDebugPropertiesTest,
     GivenValidDeviceWhenGettingDebugPropertiesThenPropertiesReturnedSuccessfully) {
@@ -62,7 +64,7 @@ void zetDebugAttachDetachTest::run_test(
     synchro->clear_debugger_signal();
     debugHelper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debugHelper.id();
+    debug_config.pid = to_u32(debugHelper.id());
 
     if (!reattach) {
       debugSession = lzt::debug_attach(device, debug_config);
@@ -179,7 +181,7 @@ void zetDebugAttachDetachTest::run_multidevice_test(
             << " " << device_properties.name;
   debugHelper = launch_process(BASIC, devices[0], use_sub_devices);
   zet_debug_config_t debug_config = {};
-  debug_config.pid = debugHelper.id();
+  debug_config.pid = to_u32(debugHelper.id());
   LOG_DEBUG << "[Debugger] Launched application with PID:  " << debugHelper.id()
             << " using " << device_properties.uuid << " "
             << device_properties.name;
@@ -296,10 +298,10 @@ void zetDebugAttachDetachTest::
   auto debug_helper_1 = launch_process(BASIC, device1, use_sub_devices);
 
   zet_debug_config_t debug_config_0 = {};
-  debug_config_0.pid = debug_helper_0.id();
+  debug_config_0.pid = to_u32(debug_helper_0.id());
 
   zet_debug_config_t debug_config_1 = {};
-  debug_config_1.pid = debug_helper_1.id();
+  debug_config_1.pid = to_u32(debug_helper_1.id());
 
   LOG_DEBUG << "[Debugger] Attaching to application 1 at pid="
             << debug_config_0.pid;
@@ -404,7 +406,7 @@ void zetDebugAttachDetachTest::run_use_same_device_test(
       BASIC, lzt::to_string(device_properties.uuid), use_sub_devices, 1);
 
   zet_debug_config_t debug_config = {};
-  debug_config.pid = debugHelper.id();
+  debug_config.pid = to_u32(debugHelper.id());
 
   // Second debugger waits until first has run and exited
   LOG_INFO << "[Debugger] Waiting for first debugger to finish";
@@ -477,7 +479,7 @@ void zetDebugAttachDetachTest::run_new_debugger_attach_test(
     // launch debugger 1 using synchro 1
     auto debugger = launch_child_debugger_process(
         LONG_RUNNING_KERNEL_INTERRUPTED, lzt::to_string(device_properties.uuid),
-        false, 1, debugHelper.id(), verify_events);
+        false, 1, to_u32(debugHelper.id()), verify_events);
     LOG_DEBUG << "[Debugger] Launched debugger with PID:  " << debugger.id()
               << " using " << device_properties.uuid << " "
               << device_properties.name;
@@ -496,7 +498,7 @@ void zetDebugAttachDetachTest::run_new_debugger_attach_test(
     // launch debugger 2 using synchro 1
     auto debugger_2 = launch_child_debugger_process(
         LONG_RUNNING_KERNEL_INTERRUPTED, lzt::to_string(device_properties.uuid),
-        false, 1, debugHelper.id(), verify_events);
+        false, 1, to_u32(debugHelper.id()), verify_events);
     LOG_DEBUG << "[Debugger] Launched new debugger with PID:  "
               << debugger_2.id() << " using " << device_properties.uuid << " "
               << device_properties.name;
@@ -560,7 +562,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
     debugHelper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debugHelper.id();
+    debug_config.pid = to_u32(debugHelper.id());
     debugSession = lzt::debug_attach(device, debug_config);
     if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
@@ -627,7 +629,7 @@ void zetDebugEventReadTest::run_attach_after_module_created_destroyed_test(
     synchro->clear_debugger_signal();
     debugHelper = launch_process(test_type, device, use_sub_devices);
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debugHelper.id();
+    debug_config.pid = to_u32(debugHelper.id());
 
     synchro->wait_for_application_signal();
 
@@ -675,13 +677,13 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
     if (!is_debug_supported(device))
       continue;
 
-    std::map<int, int> ordinalCQs;
-    int totalNumCQs = get_numCQs_per_ordinal(device, ordinalCQs);
+    MapNumCmdQueue ordinalCQs;
+    uint32_t totalNumCQs = get_numCQs_per_ordinal(device, ordinalCQs);
     synchro->clear_debugger_signal();
     debugHelper = launch_process(test_type, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debugHelper.id();
+    debug_config.pid = to_u32(debugHelper.id());
     debugSession = lzt::debug_attach(device, debug_config);
     if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
@@ -700,7 +702,7 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
       EXPECT_EQ(result, ZE_RESULT_NOT_READY);
 
       // check CQs creation
-      for (int queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
+      for (uint32_t queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
 
         // let the app create a CQ
         synchro->notify_application();
@@ -723,7 +725,7 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
       synchro->notify_application();
 
       // check CQs destruction
-      for (int queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
+      for (uint32_t queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
 
         synchro->wait_for_application_signal();
         synchro->clear_application_signal();
@@ -761,8 +763,8 @@ void zetDebugEventReadTest::run_detach_no_ack_module_create_test(
     synchro->clear_debugger_signal();
     debugHelper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_event_t module_event;
-    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
-                                module_event);
+    attach_and_get_module_event(to_u32(debugHelper.id()), synchro, device,
+                                debugSession, module_event);
 
     lzt::debug_detach(debugSession);
     debugHelper.wait();
@@ -878,13 +880,13 @@ void verify_single_application_host_thread(
   ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY);
 
   LOG_INFO << "[Debugger] Waiting for application module load debug events";
-  for (int i = 0; i < num_expected_module_events; i++) {
+  for (uint32_t i = 0; i < num_expected_module_events; i++) {
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
     ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD);
     lzt::debug_ack_event(debug_session, &debug_event);
   }
   LOG_INFO << "[Debugger] Waiting for application module load debug events";
-  for (int i = 0; i < num_expected_module_events; i++) {
+  for (uint32_t i = 0; i < num_expected_module_events; i++) {
     lzt::debug_read_event(debug_session, debug_event, eventsTimeoutMS, false);
     ASSERT_EQ(debug_event.type, ZET_DEBUG_EVENT_TYPE_MODULE_UNLOAD);
   }
@@ -905,7 +907,7 @@ void read_and_verify_events_multithreaded_app(
 
   auto num_application_host_threads_to_verify = 2;
   auto broken = false;
-  for (int i = 0; i < (num_expected_module_events * 2 * 2); i++) {
+  for (uint32_t i = 0; i < (num_expected_module_events * 2 * 2); i++) {
     // module load and unload events can be interleaved if threads run
     // concurrently if threads run sequentially we will expect a process exit
     // event in this loop
@@ -957,7 +959,7 @@ void zetDebugEventReadTest::run_multithreaded_application_test(
     debugHelper = launch_process(MULTIPLE_THREADS, device, use_sub_devices);
 
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debugHelper.id();
+    debug_config.pid = to_u32(debugHelper.id());
     debugSession = lzt::debug_attach(device, debug_config);
     if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
@@ -965,7 +967,7 @@ void zetDebugEventReadTest::run_multithreaded_application_test(
 
     synchro->notify_application();
 
-    auto num_expected_module_events =
+    uint32_t num_expected_module_events =
         one_event_per_kernel ? 5 /*debug_add module has 5 kernels*/ : 1;
 
     read_and_verify_events_multithreaded_app(debugSession,
@@ -1076,7 +1078,7 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
                                  use_sub_devices);
 
     zet_debug_config_t debug_config = {};
-    debug_config.pid = debugHelper.id();
+    debug_config.pid = to_u32(debugHelper.id());
     debugSession = lzt::debug_attach(device, debug_config);
     if (!debugSession) {
       FAIL() << "[Debugger] Failed to attach to start a debug session";
@@ -1163,8 +1165,8 @@ void zetDebugMemAccessTest::run_module_isa_elf_test(
     synchro->clear_debugger_signal();
     debugHelper = launch_process(BASIC, device, use_sub_devices);
     zet_debug_event_t module_event;
-    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
-                                module_event);
+    attach_and_get_module_event(to_u32(debugHelper.id()), synchro, device,
+                                debugSession, module_event);
 
     // ALL threads
     ze_device_thread_t thread;
@@ -1249,8 +1251,8 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
                                  use_sub_devices);
 
     zet_debug_event_t module_event;
-    attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
-                                module_event);
+    attach_and_get_module_event(to_u32(debugHelper.id()), synchro, device,
+                                debugSession, module_event);
 
     if (module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK) {
       LOG_DEBUG << "[Debugger] Acking event: "
@@ -1298,7 +1300,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
       int regSetNumber = 1;
 
       for (auto &register_set : register_set_properties) {
-        auto buffer_size = register_set.byteSize * register_set.count;
+        uint32_t buffer_size = register_set.byteSize * register_set.count;
         void *buffer = lzt::allocate_host_memory(register_set.byteSize *
                                                  register_set.count);
         void *buffer_copy = lzt::allocate_host_memory(register_set.byteSize *
@@ -1334,7 +1336,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
                                       register_set.type, 0, register_set.count,
                                       buffer);
 
-            for (int i = 0; i < buffer_size; i++) {
+            for (uint32_t i = 0U; i < buffer_size; i++) {
               if (static_cast<char>(0xaa) != static_cast<char *>(buffer)[i]) {
                 delete[] kernel_buffer;
                 auto found_val = static_cast<char *>(buffer)[i];
@@ -1405,8 +1407,8 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
                                use_sub_devices, use_many_threads);
 
   zet_debug_event_t module_event;
-  attach_and_get_module_event(debugHelper.id(), synchro, device, debugSession,
-                              module_event);
+  attach_and_get_module_event(to_u32(debugHelper.id()), synchro, device,
+                              debugSession, module_event);
 
   ASSERT_TRUE(module_event.flags & ZET_DEBUG_EVENT_FLAG_NEED_ACK);
   LOG_DEBUG << "[Debugger] Acking event: "
@@ -2011,7 +2013,7 @@ void MultiDeviceDebugTest::run_multidevice_single_application_test(
 
   debugHelper = launch_process(USE_TWO_DEVICES, nullptr, use_sub_devices);
   zet_debug_config_t debug_config = {};
-  debug_config.pid = debugHelper.id();
+  debug_config.pid = to_u32(debugHelper.id());
   LOG_DEBUG << "[Debugger] Launched application with PID:  "
             << debugHelper.id();
 
@@ -2159,7 +2161,7 @@ void MultiDeviceDebugTest::
   debugHelper = launch_process(USE_TWO_DEVICES, nullptr, use_sub_devices);
 
   zet_debug_config_t debug_config{};
-  debug_config.pid = debugHelper.id();
+  debug_config.pid = to_u32(debugHelper.id());
 
   debugSession = lzt::debug_attach(device0, debug_config);
 
@@ -2172,9 +2174,10 @@ void MultiDeviceDebugTest::
   // need to ensure app has started
   // this second debugger won't be able to attach until 1st has detached
   LOG_DEBUG << "[Debugger] Launching child debugger";
-  auto debugger_1 = launch_child_debugger_process(
-      USE_TWO_DEVICES /*should be ignored*/,
-      lzt::to_string(device_properties_1.uuid), true, 1, debugHelper.id());
+  auto debugger_1 =
+      launch_child_debugger_process(USE_TWO_DEVICES /*should be ignored*/,
+                                    lzt::to_string(device_properties_1.uuid),
+                                    true, 1, to_u32(debugHelper.id()));
 
   LOG_DEBUG << "[Debugger] Using synchro for child debugger";
 

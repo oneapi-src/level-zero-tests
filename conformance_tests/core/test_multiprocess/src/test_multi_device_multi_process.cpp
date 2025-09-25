@@ -32,7 +32,7 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
   std::vector<fs::path> paths;
   paths.push_back(helper_path);
 
-  for (int i = 0; i < num_processes; i++) {
+  for (size_t i = 0U; i < num_processes; i++) {
     auto env = boost::this_process::environment();
     bp::environment child_env = env;
     child_env["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = "1";
@@ -46,7 +46,7 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
   }
 
   // verification
-  for (int i = 0; i < num_processes; i++) {
+  for (size_t i = 0U; i < num_processes; i++) {
     processes[i].wait();
     int result = processes[i].exit_code();
     EXPECT_EQ(result, 0);

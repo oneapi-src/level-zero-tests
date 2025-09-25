@@ -17,6 +17,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 class zeCommandListAppendBarrierTests : public ::testing::Test {
 public:
   void run(bool isImmediate) {
@@ -79,7 +81,7 @@ void RunAppendingBarrierWithEvents(bool isImmediate) {
   auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(
-      bundle.list, nullptr, events.size(), events.data()));
+      bundle.list, nullptr, to_u32(events.size()), events.data()));
   for (auto &ev : events) {
     lzt::signal_event_from_host(ev);
   }
@@ -114,11 +116,11 @@ void RunAppendingBarrierWithSignalEventAndWaitEvents(bool isImmediate) {
   auto bundle = lzt::create_command_bundle(context, device, 0, isImmediate);
   auto events_initial = events;
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(
-      bundle.list, event, events.size(), events.data()));
+      bundle.list, event, to_u32(events.size()), events.data()));
   for (auto &ev : events) {
     lzt::signal_event_from_host(ev);
   }
-  for (int i = 0; i < events.size(); i++) {
+  for (size_t i = 0U; i < events.size(); i++) {
     ASSERT_EQ(events[i], events_initial[i]);
   }
   ep.destroy_events(events);
@@ -151,8 +153,8 @@ void AppendMemoryRangesBarrierTest(
                                   context)};
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemoryRangesBarrier(
-      command_list, ranges.size(), range_sizes.data(), ranges.data(),
-      signaling_event, waiting_events.size(), waiting_events.data()));
+      command_list, to_u32(ranges.size()), range_sizes.data(), ranges.data(),
+      signaling_event, to_u32(waiting_events.size()), waiting_events.data()));
 
   for (auto &ev : waiting_events) {
     lzt::signal_event_from_host(ev);
@@ -233,7 +235,7 @@ void RunAppendingMemoryRangesBarrierWaitEvents(bool isImmediate) {
   auto wait_events_initial = waiting_events;
   AppendMemoryRangesBarrierTest(context, device, bundle.list, nullptr,
                                 waiting_events);
-  for (int i = 0; i < waiting_events.size(); i++) {
+  for (size_t i = 0U; i < waiting_events.size(); i++) {
     ASSERT_EQ(waiting_events[i], wait_events_initial[i]);
   }
   ep.destroy_events(waiting_events);
@@ -427,7 +429,7 @@ void RunEventSignaledWhenAppendingMemoryRangesBarrierThenHostDetectsEvent(
                   ZE_EVENT_SCOPE_FLAG_HOST);
   lzt::append_memory_copy(bundle.list, dev_mem, inpa.data(), xfer_size,
                           nullptr);
-  lzt::append_memory_ranges_barrier(bundle.list, ranges.size(),
+  lzt::append_memory_ranges_barrier(bundle.list, to_u32(ranges.size()),
                                     range_sizes.data(), ranges.data(),
                                     event_barrier_to_host, 0, nullptr);
   lzt::append_memory_copy(bundle.list, host_mem, dev_mem, xfer_size, nullptr);
@@ -484,7 +486,7 @@ void RunAppendingMemoryRangesBarrierWaitsForEventsWhenHostAndSendSignals(
   lzt::append_memory_copy(bundle.list, dev_mem, inpa.data(), xfer_size,
                           nullptr);
   lzt::append_signal_event(bundle.list, events_to_barrier[1]);
-  lzt::append_memory_ranges_barrier(bundle.list, ranges.size(),
+  lzt::append_memory_ranges_barrier(bundle.list, to_u32(ranges.size()),
                                     range_sizes.data(), ranges.data(), nullptr,
                                     num_events, events_to_barrier.data());
   lzt::append_memory_copy(bundle.list, host_mem, dev_mem, xfer_size, nullptr);
@@ -546,7 +548,7 @@ LZT_TEST_P(
   auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, isImmediate);
-  size_t num_int = 1000;
+  uint32_t num_int = 1000;
   void *dev_buff = lzt::allocate_device_memory((num_int * sizeof(int)), 1, 0, 0,
                                                device, context);
   void *host_buff =
@@ -559,7 +561,7 @@ LZT_TEST_P(
   const int addval_1 = -100;
   const int val_1 = 50000;
   int val = val_1;
-  for (size_t i = 0; i < num_int; i++) {
+  for (uint32_t i = 0; i < num_int; i++) {
     p_host[i] = val;
     val += addval_1;
   }
@@ -616,7 +618,7 @@ LZT_TEST_P(
     const std::vector<size_t> range_sizes{num_int * sizeof(int),
                                           num_int * sizeof(int)};
     std::vector<const void *> ranges{dev_buff, host_buff};
-    lzt::append_memory_ranges_barrier(bundle.list, ranges.size(),
+    lzt::append_memory_ranges_barrier(bundle.list, to_u32(ranges.size()),
                                       range_sizes.data(), ranges.data(),
                                       nullptr, 0, nullptr);
   } else if (barrier_type == BT_GLOBAL_BARRIER) {
@@ -640,7 +642,7 @@ LZT_TEST_P(
   lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   val = (2 * val_1) + addval_2;
-  for (size_t i = 0; i < num_int; i++) {
+  for (uint32_t i = 0; i < num_int; i++) {
     EXPECT_EQ(p_host[i], val);
     val += (2 * addval_1);
   }

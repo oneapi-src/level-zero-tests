@@ -45,8 +45,8 @@ T *allocate_memory(const ze_context_handle_t &context,
 };
 
 typedef struct TestArguments {
-  float total_memory_size_limit;
-  float one_allocation_size_limit;
+  double total_memory_size_limit;
+  double one_allocation_size_limit;
   uint64_t multiplier;
   ze_memory_type_t memory_type;
 
@@ -73,16 +73,16 @@ void adjust_max_memory_allocation(
 
 void get_mem_page_size(const ze_driver_handle_t &driver,
                        ze_memory_type_t mem_type, size_t &page_size);
-extern float one_percent;
-extern float five_percent;
-extern float ten_percent;
-extern float twenty_percent;
-extern float thirty_percent;
-extern float fourty_percent;
-extern float fifty_percent;
-extern float sixty_percent;
-extern float seventy_percent;
-extern float eighty_percent;
-extern float ninety_percent;
-extern float hundred_percent;
+extern double one_percent;
+extern double five_percent;
+extern double ten_percent;
+extern double twenty_percent;
+extern double thirty_percent;
+extern double fourty_percent;
+extern double fifty_percent;
+extern double sixty_percent;
+extern double seventy_percent;
+extern double eighty_percent;
+extern double ninety_percent;
+extern double hundred_percent;
 #endif /* _STRESS_COMMON_FUNC_HPP_*/

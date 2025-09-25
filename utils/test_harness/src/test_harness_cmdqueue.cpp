@@ -130,7 +130,7 @@ void execute_command_lists(ze_command_queue_handle_t cq,
       cq, numCommandLists, phCommandLists, hFence));
   EXPECT_EQ(cq, command_queue_initial);
   EXPECT_EQ(hFence, fence_initial);
-  for (int i = 0; i < numCommandLists; i++) {
+  for (uint32_t i = 0U; i < numCommandLists; i++) {
     EXPECT_EQ(phCommandLists[i], command_lists_initial[i]);
   }
 }

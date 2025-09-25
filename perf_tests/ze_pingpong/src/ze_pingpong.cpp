@@ -212,12 +212,11 @@ std::vector<uint8_t> L0Context::load_binary_file(const std::string &file_path) {
     return binary_file;
   }
 
-  size_t length = 0;
   stream.seekg(0, stream.end);
-  length = static_cast<size_t>(stream.tellg());
+  auto length = stream.tellg();
   stream.seekg(0, stream.beg);
 
-  binary_file.resize(length);
+  binary_file.resize(static_cast<size_t>(length));
   stream.read(reinterpret_cast<char *>(binary_file.data()), length);
   stream.close();
 

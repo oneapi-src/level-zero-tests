@@ -95,7 +95,7 @@ static void run_child_process(uint32_t num_devices,
                   << result_string;
   } else {
     num_devices_child =
-        std::stoul(result_string.substr(result_string.find(":") + 1));
+        std::stoi(result_string.substr(result_string.find(":") + 1));
     EXPECT_EQ(num_devices_child, num_devices);
   }
 }

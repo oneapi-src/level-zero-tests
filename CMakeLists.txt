@@ -348,6 +348,11 @@ else()
     set(CMAKE_NEWLINE "\n")
 endif()
 
+if (MSVC)
+    add_compile_options(/W4)
+else()
+    add_compile_options(-Wsign-compare -Wnarrowing -Wsign-conversion -Wfloat-conversion -Wconversion)
+endif()
 
 option(ENABLE_ZESYSMAN
   "Enables build of zesysman"

@@ -20,6 +20,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 #ifdef USE_ZESINIT
 class EventsZesTest : public lzt::ZesSysmanCtsClass {
 public:
@@ -102,14 +104,15 @@ LZT_TEST_F(
     FAIL() << "No temperature handles found on any of the devices!";
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO
       << "Listening for Critical or threshold cross temperature events ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL) {
       LOG_INFO << "Event received as device crossed critical temperature";
     } else if (events[i] & ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1) {
@@ -129,13 +132,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device reset required event ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED) {
       LOG_INFO << "Event received as device reset is required";
     } else if (events[i] != 0) {
@@ -152,13 +156,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device reset required event ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_RESET_REQUIRED) {
       LOG_INFO << "Event received as device reset is required";
     } else if (events[i] != 0) {
@@ -175,13 +180,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_DETACH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device being detached ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_DETACH) {
       LOG_INFO << "Event received as device is detached";
     } else if (events[i] != 0) {
@@ -198,13 +204,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_DETACH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device being detached ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_DETACH) {
       LOG_INFO << "Event received as device is detached";
     } else if (events[i] != 0) {
@@ -221,13 +228,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device being attached ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH) {
       LOG_INFO << "Event received as device is detached";
     } else if (events[i] != 0) {
@@ -240,12 +248,13 @@ LZT_TEST_F(
 static void eventListenThread(ze_driver_handle_t hDriver,
                               std::vector<ze_device_handle_t> devices,
                               uint32_t *numEventsGenerated) {
-  auto timeout = 5000;
+  uint64_t timeout = 5000U;
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t numDeviceEvents = std::numeric_limits<int32_t>::max();
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device being detached ...";
-  lzt::listen_eventEx(hDriver, timeout, devices.size(), devices.data(),
+  lzt::listen_eventEx(hDriver, timeout, num_devices, devices.data(),
                       &numDeviceEvents, events.data());
   *numEventsGenerated = numDeviceEvents;
 }
@@ -290,13 +299,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device being attached ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_ATTACH) {
       LOG_INFO << "Event received as device is detached";
     } else if (events[i] != 0) {
@@ -313,13 +323,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device entering into deep sleep state event  ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER) {
       LOG_INFO << "Event received as device entered into deep sleep state";
     } else if (events[i] != 0) {
@@ -336,13 +347,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device entering into deep sleep state event  ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_ENTER) {
       LOG_INFO << "Event received as device entered into deep sleep state";
     } else if (events[i] != 0) {
@@ -359,13 +371,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device exitiing into deep sleep state event  ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT) {
       LOG_INFO << "Event received as device exited into deep sleep state";
     } else if (events[i] != 0) {
@@ -382,13 +395,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for device exitiing into deep sleep state event  ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_DEVICE_SLEEP_STATE_EXIT) {
       LOG_INFO << "Event received as device exited into deep sleep state";
     } else if (events[i] != 0) {
@@ -405,13 +419,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event after frequency starts throttling  ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED) {
       LOG_INFO << "Event received as frequency starts being throttled";
     } else if (events[i] != 0) {
@@ -428,13 +443,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event after frequency starts throttling  ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_FREQ_THROTTLED) {
       LOG_INFO << "Event received as frequency starts being throttled";
     } else if (events[i] != 0) {
@@ -482,13 +498,14 @@ LZT_TEST_F(
   }
 
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event after crossing energy threshold ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED) {
       LOG_INFO << "Event received as Energy consumption threshold crossed";
     } else if (events[i] != 0) {
@@ -535,13 +552,14 @@ LZT_TEST_F(
   }
 
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event after crossing energy threshold ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_ENERGY_THRESHOLD_CROSSED) {
       LOG_INFO << "Event received as Energy consumption threshold crossed";
     } else if (events[i] != 0) {
@@ -558,13 +576,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_MEM_HEALTH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event if device memory health changes  ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_MEM_HEALTH) {
       LOG_INFO << "Event received as change in device memory health occurred";
     } else if (events[i] != 0) {
@@ -581,13 +600,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_MEM_HEALTH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event if device memory health changes  ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_MEM_HEALTH) {
       LOG_INFO << "Event received as change in device memory health occurred";
     } else if (events[i] != 0) {
@@ -604,13 +624,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event if fabric port health changes  ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH) {
       LOG_INFO << "Event received as change in fabric port health occurred";
     } else if (events[i] != 0) {
@@ -627,13 +648,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event if fabric port health changes  ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_FABRIC_PORT_HEALTH) {
       LOG_INFO << "Event received as change in fabric port health occurred";
     } else if (events[i] != 0) {
@@ -650,13 +672,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event if pci link health changes  ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH) {
       LOG_INFO << "Event received as change in pci link health occurred";
     } else if (events[i] != 0) {
@@ -673,13 +696,14 @@ LZT_TEST_F(
     lzt::register_event(device, ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH);
   }
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event if pci link health changes  ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_PCI_LINK_HEALTH) {
       LOG_INFO << "Event received as change in pci link health occurred";
     } else if (events[i] != 0) {
@@ -705,8 +729,10 @@ LZT_TEST_F(
         auto config = lzt::get_ras_config(ras_handle);
         // Aim to receive event for RAS errors after setting RAS threshold 20%
         // more than current threshold
-        if (1.20 * (config.totalThreshold) < UINT64_MAX) {
-          config.totalThreshold = 1.20 * (config.totalThreshold);
+        uint64_t addThreshold =
+            static_cast<uint64_t>(0.20L * config.totalThreshold + 0.5L);
+        if (addThreshold < UINT64_MAX - config.totalThreshold) {
+          config.totalThreshold += addThreshold;
         }
         lzt::set_ras_config(ras_handle, config);
         zes_event_type_flags_t setEvent = 0;
@@ -731,13 +757,14 @@ LZT_TEST_F(
   }
 
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event if pci link health changes  ...";
-  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, devices.size(),
+  ASSERT_ZE_RESULT_SUCCESS(lzt::listen_event(hDriver, timeout, num_devices,
                                              devices.data(), &num_device_events,
                                              events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS) {
       LOG_INFO << "Event received RAS correctable errors threshold crossed";
     } else if (events[i] & ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS) {
@@ -765,8 +792,10 @@ LZT_TEST_F(
         auto config = lzt::get_ras_config(ras_handle);
         // Aim to receive event for RAS errors after setting RAS threshold 20%
         // more than current threshold
-        if (1.20 * (config.totalThreshold) < UINT64_MAX) {
-          config.totalThreshold = 1.20 * (config.totalThreshold);
+        uint64_t addThreshold =
+            static_cast<uint64_t>(0.20L * config.totalThreshold + 0.5L);
+        if (addThreshold < UINT64_MAX - config.totalThreshold) {
+          config.totalThreshold += addThreshold;
         }
 
         lzt::set_ras_config(ras_handle, config);
@@ -792,13 +821,14 @@ LZT_TEST_F(
   }
 
   // If we registered to receive events on any devices, start listening now
+  uint32_t num_devices = to_u32(devices.size());
   uint32_t num_device_events = 0;
-  std::vector<zes_event_type_flags_t> events(devices.size(), 0);
+  std::vector<zes_event_type_flags_t> events(num_devices, 0);
   LOG_INFO << "Listening for event if pci link health changes  ...";
   ASSERT_ZE_RESULT_SUCCESS(
-      lzt::listen_eventEx(hDriver, timeoutEx, devices.size(), devices.data(),
+      lzt::listen_eventEx(hDriver, timeoutEx, num_devices, devices.data(),
                           &num_device_events, events.data()));
-  for (uint32_t i = 0; i < devices.size(); i++) {
+  for (uint32_t i = 0; i < num_devices; i++) {
     if (events[i] & ZES_EVENT_TYPE_FLAG_RAS_CORRECTABLE_ERRORS) {
       LOG_INFO << "Event received RAS correctable errors threshold crossed";
     } else if (events[i] & ZES_EVENT_TYPE_FLAG_RAS_UNCORRECTABLE_ERRORS) {

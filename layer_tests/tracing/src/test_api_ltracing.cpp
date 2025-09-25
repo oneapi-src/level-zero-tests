@@ -25,6 +25,8 @@ namespace bipc = boost::interprocess;
 
 namespace {
 
+using lzt::to_u32;
+
 #ifdef USE_RUNTIME_TRACING
 class LDynamicTracingCreateTests : public ::testing::Test {
 protected:
@@ -393,7 +395,7 @@ protected:
   ze_module_desc_t module_desc = {ZE_STRUCTURE_TYPE_MODULE_DESC,
                                   nullptr,
                                   ZE_MODULE_FORMAT_IL_SPIRV,
-                                  static_cast<uint32_t>(binary_file.size()),
+                                  to_u32(binary_file.size()),
                                   binary_file.data(),
                                   "",
                                   nullptr};
@@ -1075,15 +1077,16 @@ LZT_TEST_F(
       lzt::allocate_device_memory(range_sizes[1] * 2)};
 
   ze_result_t initial_result = zeCommandListAppendMemoryRangesBarrier(
-      command_list, ranges.size(), range_sizes.data(), ranges.data(), nullptr,
-      0, nullptr);
+      command_list, to_u32(ranges.size()), range_sizes.data(), ranges.data(),
+      nullptr, 0, nullptr);
 
   zeCommandListReset(command_list);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
-  ASSERT_EQ(initial_result, zeCommandListAppendMemoryRangesBarrier(
-                                command_list, ranges.size(), range_sizes.data(),
-                                ranges.data(), nullptr, 0, nullptr));
+  ASSERT_EQ(initial_result,
+            zeCommandListAppendMemoryRangesBarrier(
+                command_list, to_u32(ranges.size()), range_sizes.data(),
+                ranges.data(), nullptr, 0, nullptr));
 
   for (auto &range : ranges)
     lzt::free_memory(range);

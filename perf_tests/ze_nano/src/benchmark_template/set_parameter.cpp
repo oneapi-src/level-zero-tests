@@ -36,10 +36,10 @@ void parameter_buffer(ZeApp *benchmark, probe_config_t &probe_setting) {
   }
 
   NANO_PROBE(" Argument index 0\t", probe_setting, zeKernelSetArgumentValue,
-             function, 0, sizeof(input_buffer), &input_buffer);
+             function, 0U, sizeof(input_buffer), &input_buffer);
 
   NANO_PROBE(" Argument index 5\t", probe_setting, zeKernelSetArgumentValue,
-             function, 5, sizeof(input_buffer), &input_buffer);
+             function, 5U, sizeof(input_buffer), &input_buffer);
 
   benchmark->functionDestroy(function);
   benchmark->memoryFree(input_buffer);
@@ -68,10 +68,10 @@ void parameter_integer(ZeApp *benchmark, probe_config_t &probe_setting) {
   }
 
   NANO_PROBE(" Argument index 0\t", probe_setting, zeKernelSetArgumentValue,
-             function, 0, sizeof(input_a), &input_a);
+             function, 0U, sizeof(input_a), &input_a);
 
   NANO_PROBE(" Argument index 5\t", probe_setting, zeKernelSetArgumentValue,
-             function, 5, sizeof(input_a), &input_a);
+             function, 5U, sizeof(input_a), &input_a);
 
   benchmark->functionDestroy(function);
 }
@@ -100,10 +100,10 @@ void parameter_image(ZeApp *benchmark, probe_config_t &probe_setting) {
   }
 
   NANO_PROBE(" Argument index 0\t", probe_setting, zeKernelSetArgumentValue,
-             function, 0, sizeof(input_a), &input_a);
+             function, 0U, sizeof(input_a), &input_a);
 
   NANO_PROBE(" Argument index 5\t", probe_setting, zeKernelSetArgumentValue,
-             function, 5, sizeof(input_a), &input_a);
+             function, 5U, sizeof(input_a), &input_a);
 
   benchmark->functionDestroy(function);
 }

@@ -244,8 +244,8 @@ LZT_TEST_F(
         zes_fabric_port_config_t setConfig = {};
         // To validate if set_fabric_port_config API is really working, try to
         // toggle config as compared to defaultConfig
-        setConfig.beaconing = (defaultConfig.beaconing == true) ? false : true;
-        setConfig.enabled = (defaultConfig.enabled == true) ? false : true;
+        setConfig.beaconing = defaultConfig.beaconing ? false : true;
+        setConfig.enabled = defaultConfig.enabled ? false : true;
         lzt::set_fabric_port_config(fabric_port_handle, setConfig);
         auto get_config = lzt::get_fabric_port_config(fabric_port_handle);
         EXPECT_EQ(setConfig.beaconing, get_config.beaconing);

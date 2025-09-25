@@ -34,6 +34,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 typedef enum class _test_memory_type_t {
   TEST_MEMORY_TYPE_HOST = 0,
   TEST_MEMORY_TYPE_DEVICE = 1,
@@ -54,7 +56,7 @@ bool verify_external_memory_type_flag_support(
     ze_external_memory_type_flag_t external_memory_type_flag) {
   auto external_memory_properties = lzt::get_external_memory_properties(device);
   if (!(external_memory_properties.memoryAllocationExportTypes &
-        external_memory_type_flag)) {
+        to_u32(external_memory_type_flag))) {
     switch (external_memory_type_flag) {
     case ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF:
       LOG_WARNING << "Device does not support exporting DMA_BUF";
@@ -294,7 +296,8 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
   }
 
   if (bind(receive_socket, (struct sockaddr *)&local_addr,
-           strlen(local_addr.sun_path) + sizeof(local_addr.sun_family)) < 0) {
+           static_cast<socklen_t>(strlen(local_addr.sun_path) +
+                                  sizeof(local_addr.sun_family))) < 0) {
     close(receive_socket);
     perror("Socket Bind Error");
     throw std::runtime_error("Could not bind to socket");
@@ -515,7 +518,7 @@ void memory_import_thread(thread_args *args) {
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, args->is_immediate);
 
-  auto size = 1024;
+  size_t size = 1024;
   void *imported_memory = nullptr;
   ze_image_handle_t image_handle;
   ASSERT_ZE_RESULT_SUCCESS(import_memory(context, device, size, args->fd,
@@ -534,7 +537,7 @@ void memory_import_thread(thread_args *args) {
   lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  for (size_t i = 0; i < size; i++) {
+  for (size_t i = 0U; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(verification_memory)[i],
               0xAB); // this pattern is written in test_import_helper
   }
@@ -659,7 +662,7 @@ void zeDeviceGetExternalMemoryProperties::
       get_imported_fd(lzt::to_string(driver_properties.uuid), child_input,
                       is_immediate, test_memory_type);
 
-  auto size = 1024;
+  size_t size = 1024;
   void *imported_memory = nullptr;
   ze_image_handle_t image_handle;
   ASSERT_ZE_RESULT_SUCCESS(import_memory(context, device, size, imported_fd,
@@ -683,7 +686,7 @@ void zeDeviceGetExternalMemoryProperties::
   child_input << "Done"
               << std::endl; // The content of this message doesn't really matter
 
-  for (size_t i = 0; i < size; i++) {
+  for (size_t i = 0U; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(verification_memory)[i],
               0xAB); // this pattern is written in test_import_helper
   }

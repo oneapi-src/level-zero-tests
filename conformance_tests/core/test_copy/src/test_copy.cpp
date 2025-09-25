@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -26,6 +25,10 @@ using namespace level_zero_tests;
 
 namespace {
 
+using lzt::to_int;
+using lzt::to_u32;
+using lzt::to_u8;
+
 void get_copy_and_compute_ordinals(
     const std::vector<ze_command_queue_group_properties_t>
         &cmd_queue_group_props,
@@ -34,14 +37,14 @@ void get_copy_and_compute_ordinals(
     if (cmd_queue_group_props[i].flags &
             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE &&
         compute_ordinal < 0) {
-      compute_ordinal = i;
+      compute_ordinal = to_int(i);
     }
     if (cmd_queue_group_props[i].flags &
             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY &&
         !(cmd_queue_group_props[i].flags &
           ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) &&
         copy_ordinal < 0) {
-      copy_ordinal = i;
+      copy_ordinal = to_int(i);
     }
     if (compute_ordinal >= 0 && copy_ordinal >= 0) {
       break;
@@ -74,7 +77,7 @@ void zeCommandListAppendMemoryFillTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -150,11 +153,11 @@ void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
   auto device_properties = lzt::get_device_properties(device);
   auto max_alloc_memsize = device_properties.maxMemAllocSize;
 
-  for (int i = 0; i < cmd_q_group_properties.size(); i++) {
+  for (size_t i = 0U; i < cmd_q_group_properties.size(); i++) {
     auto bundle = lzt::create_command_bundle(lzt::get_default_context(), device,
-                                             0, i, is_immediate);
+                                             0, to_u32(i), is_immediate);
     size_t size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
-    int pattern_size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
+    size_t pattern_size = cmd_q_group_properties[i].maxMemoryFillPatternSize;
     if (cmd_q_group_properties[i].maxMemoryFillPatternSize >
         max_alloc_memsize) {
       pattern_size = 1;
@@ -217,7 +220,7 @@ void zeCommandListAppendMemoryFillTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -312,7 +315,7 @@ void zeCommandListAppendMemoryFillTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -603,7 +606,7 @@ LZT_TEST_P(
       lzt::close_command_list(cmd_bundle.list);
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-      for (int i = 0; i < size; i++) {
+      for (size_t i = 0U; i < size; i++) {
         ASSERT_EQ(static_cast<uint8_t *>(host_memory)[i], pattern)
             << "Memory Fill did not match on sub-device";
       }
@@ -636,16 +639,16 @@ protected:
 
 void zeCommandListAppendMemoryFillPatternVerificationTests::
     RunGivenPatternSizeWhenExecutingAMemoryFillTest(bool is_shared_system) {
-  const int pattern_size = std::get<0>(GetParam());
+  const size_t pattern_size = std::get<0>(GetParam());
   const bool is_immediate = std::get<1>(GetParam());
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   const size_t total_size = (pattern_size * 10) + 5;
-  std::unique_ptr<uint8_t> pattern(new uint8_t[pattern_size]);
+  auto pattern = std::make_unique<uint8_t[]>(pattern_size);
   auto target_memory = lzt::allocate_host_memory_with_allocator_selector(
       total_size, is_shared_system);
 
-  for (uint32_t i = 0; i < pattern_size; i++) {
-    pattern.get()[i] = i;
+  for (size_t i = 0U; i < pattern_size; i++) {
+    pattern[i] = to_u8(i);
   }
 
   append_memory_fill(cmd_bundle.list, target_memory, pattern.get(),
@@ -654,7 +657,7 @@ void zeCommandListAppendMemoryFillPatternVerificationTests::
   close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  for (uint32_t i = 0; i < total_size; i++) {
+  for (size_t i = 0U; i < total_size; i++) {
     ASSERT_EQ(static_cast<uint8_t *>(target_memory)[i], i % pattern_size)
         << "Memory Fill did not match.";
   }
@@ -787,7 +790,7 @@ protected:
   void RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(
       bool is_src_shared_system, bool is_dst_shared_system, bool is_immediate,
       bool isCopyOnly, size_t size) {
-    const uint8_t value = (rand()) & 0xFF;
+    const uint8_t value = to_u8(rand()) & 0xFF;
     const uint8_t init = (value + 0x22) & 0xFF;
 
     void *src_memory = lzt::allocate_shared_memory_with_allocator_selector(
@@ -804,7 +807,7 @@ protected:
     const char *dst_memory_type = is_dst_shared_system ? "SVM" : "USM";
 
     printf("src_memory (%s)= %p dst_memory (%s)= %p immediate = %d isCopyOnly "
-           "= %d size = %ld\n",
+           "= %d size = %zu\n",
            src_memory_type, src_memory, dst_memory_type, dst_memory,
            is_immediate, isCopyOnly, size);
 
@@ -1048,15 +1051,18 @@ protected:
   void test_copy_region() {
     void *verification_memory = allocate_host_memory(memory_size);
 
-    std::array<size_t, 3> widths = {1, columns / 2, columns};
-    std::array<size_t, 3> heights = {1, rows / 2, rows};
-    std::array<size_t, 3> depths = {1, slices / 2, slices};
+    uint32_t wdth = to_u32(columns);
+    uint32_t hght = to_u32(rows);
+    uint32_t dpth = to_u32(slices);
+    std::array<uint32_t, 3> widths = {1, wdth / 2, wdth};
+    std::array<uint32_t, 3> heights = {1, hght / 2, hght};
+    std::array<uint32_t, 3> depths = {1, dpth / 2, dpth};
 
-    for (int region = 0; region < 3; region++) {
+    for (uint32_t region = 0; region < 3; region++) {
       // Define region to be copied from/to
-      auto width = widths[region];
-      auto height = heights[region];
-      auto depth = depths[region];
+      uint32_t width = widths[region];
+      uint32_t height = heights[region];
+      uint32_t depth = depths[region];
 
       ze_copy_region_t src_region;
       src_region.originX = 0;
@@ -1075,9 +1081,8 @@ protected:
       dest_region.depth = depth;
 
       append_memory_copy_region(cmd_bundle.list, destination_memory,
-                                &dest_region, columns, columns * rows,
-                                source_memory, &src_region, columns,
-                                columns * rows, nullptr);
+                                &dest_region, wdth, wdth * hght, source_memory,
+                                &src_region, wdth, wdth * hght, nullptr);
       append_barrier(cmd_bundle.list);
       append_memory_copy(cmd_bundle.list, verification_memory,
                          destination_memory, memory_size);
@@ -1085,9 +1090,9 @@ protected:
       execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
       reset_command_list(cmd_bundle.list);
 
-      for (int z = 0; z < depth; z++) {
-        for (int y = 0; y < height; y++) {
-          for (int x = 0; x < width; x++) {
+      for (size_t z = 0U; z < depth; z++) {
+        for (size_t y = 0U; y < height; y++) {
+          for (size_t x = 0U; x < width; x++) {
             // index calculated based on memory sized by rows * columns * slices
             size_t index = z * columns * rows + y * columns + x;
             uint8_t dest_val =
@@ -1158,15 +1163,18 @@ protected:
 
     void *verification_memory = allocate_host_memory(memory_size);
 
-    std::array<size_t, 3> widths = {1, columns / 2, columns};
-    std::array<size_t, 3> heights = {1, rows / 2, rows};
-    std::array<size_t, 3> depths = {1, slices / 2, slices};
+    uint32_t wdth = to_u32(columns);
+    uint32_t hght = to_u32(rows);
+    uint32_t dpth = to_u32(slices);
+    std::array<uint32_t, 3> widths = {1, wdth / 2, wdth};
+    std::array<uint32_t, 3> heights = {1, hght / 2, hght};
+    std::array<uint32_t, 3> depths = {1, dpth / 2, dpth};
 
-    for (int region = 0; region < 3; region++) {
+    for (uint32_t region = 0; region < 3; region++) {
       // Define region to be copied from/to
-      auto width = widths[region];
-      auto height = heights[region];
-      auto depth = depths[region];
+      uint32_t width = widths[region];
+      uint32_t height = heights[region];
+      uint32_t depth = depths[region];
 
       ze_copy_region_t src_region;
       src_region.originX = 0;
@@ -1185,9 +1193,8 @@ protected:
       dest_region.depth = depth;
 
       append_memory_copy_region(cmd_bundle.list, destination_memory,
-                                &dest_region, columns, columns * rows,
-                                source_memory, &src_region, columns,
-                                columns * rows, nullptr);
+                                &dest_region, wdth, wdth * hght, source_memory,
+                                &src_region, wdth, wdth * hght, nullptr);
       append_barrier(cmd_bundle.list);
       append_memory_copy(cmd_bundle.list, verification_memory,
                          destination_memory, memory_size);
@@ -1195,9 +1202,9 @@ protected:
       execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
       reset_command_list(cmd_bundle.list);
 
-      for (int z = 0; z < depth; z++) {
-        for (int y = 0; y < height; y++) {
-          for (int x = 0; x < width; x++) {
+      for (size_t z = 0U; z < depth; z++) {
+        for (size_t y = 0U; y < height; y++) {
+          for (size_t x = 0U; x < width; x++) {
             // index calculated based on memory sized by rows * columns * slices
             size_t index = z * columns * rows + y * columns + x;
             uint8_t dest_val =
@@ -1368,7 +1375,7 @@ void zeCommandListAppendMemoryCopyTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
 
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
@@ -1450,7 +1457,7 @@ void zeCommandListAppendMemoryCopyTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
 
   lzt::zeEventPool ep;
   const size_t size = 16;
@@ -1544,7 +1551,7 @@ void zeCommandListAppendMemoryCopyTests::
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      use_copy_engine ? copy_ordinal : compute_ordinal, is_immediate);
+      to_u32(use_copy_engine ? copy_ordinal : compute_ordinal), is_immediate);
 
   lzt::zeEventPool ep;
   const size_t size = 16;

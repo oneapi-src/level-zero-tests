@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 #include "stress_common_func.hpp"
@@ -21,6 +20,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+using lzt::to_u32;
+
 typedef struct AtomicCases {
   std::string module_name;
   std::string kernel_name;
@@ -30,7 +31,7 @@ typedef struct AtomicCases {
 class zeDriverAtomicsStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<float, float, uint32_t, ze_memory_type_t, AtomicCases_t>> {
+          std::tuple<double, double, uint32_t, ze_memory_type_t, AtomicCases_t>> {
 protected:
   typedef struct AtomicsTestArguments {
     TestArguments base_arguments;
@@ -64,9 +65,9 @@ LZT_TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
       lzt::get_memory_properties(device);
 
   uint64_t number_of_all_allocations = 2;
-  float total_memory_size_limit =
+  double total_memory_size_limit =
       test_arguments.base_arguments.total_memory_size_limit;
-  float one_allocation_size_limit =
+  double one_allocation_size_limit =
       test_arguments.base_arguments.one_allocation_size_limit;
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
@@ -111,7 +112,8 @@ LZT_TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
   lzt::set_argument_value(test_function, 0, sizeof(input_allocation),
                           &input_allocation);
 
-  uint32_t group_count_x = test_single_allocation_count / workgroup_size_x_;
+  uint32_t group_count_x =
+      to_u32(test_single_allocation_count / workgroup_size_x_);
 
   ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
 

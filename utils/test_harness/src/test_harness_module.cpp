@@ -8,7 +8,6 @@
 
 #include "test_harness/test_harness.hpp"
 #include "utils/utils.hpp"
-#include "utils/utils.hpp"
 #include "gtest/gtest.h"
 #include <level_zero/ze_api.h>
 #include <thread>
@@ -24,7 +23,7 @@ create_program_module(ze_context_handle_t context, ze_device_handle_t device,
 
   ze_module_program_exp_desc_t module_program_desc = {};
   module_program_desc.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
-  module_program_desc.count = modules_in.size();
+  module_program_desc.count = to_u32(modules_in.size());
 
   std::vector<size_t> input_sizes;
   std::vector<char *> build_flags;
@@ -117,7 +116,7 @@ ze_module_handle_t create_module(ze_context_handle_t context,
 
   module_description.pNext = nullptr;
   module_description.format = format;
-  module_description.inputSize = static_cast<uint32_t>(binary_file.size());
+  module_description.inputSize = to_u32(binary_file.size());
   module_description.pInputModule = binary_file.data();
   module_description.pBuildFlags = build_flags;
   module_description.pConstants = &module_constants;
@@ -173,7 +172,7 @@ void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
          sizeof(ze_module_handle_t) * num_modules);
   *result = zeModuleDynamicLink(num_modules, modules, link_log);
   EXPECT_ZE_RESULT_SUCCESS(*result);
-  for (int i = 0; i < num_modules; i++) {
+  for (uint32_t i = 0U; i < num_modules; i++) {
     EXPECT_EQ(modules[i], modules_initial[i]);
   }
 }
@@ -232,6 +231,14 @@ void suggest_group_size(ze_kernel_handle_t hFunction, uint32_t globalSizeX,
   EXPECT_EQ(hFunction, function_initial);
 }
 
+void suggest_max_cooperative_group_count(
+    ze_kernel_handle_t hFunction, uint32_t &max_cooperative_group_count) {
+  auto function_initial = hFunction;
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSuggestMaxCooperativeGroupCount(
+      hFunction, &max_cooperative_group_count));
+  EXPECT_EQ(hFunction, function_initial);
+}
+
 void destroy_module(ze_module_handle_t module) {
   EXPECT_ZE_RESULT_SUCCESS(zeModuleDestroy(module));
 }
@@ -275,7 +282,7 @@ ze_kernel_properties_t get_kernel_properties(ze_kernel_handle_t kernel) {
 // Expand as needed.
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
-                                 std::string func_name, int group_size,
+                                 std::string func_name, uint32_t group_size,
                                  void *arg, bool is_immediate) {
   std::vector<FunctionArg> args;
   if (arg != nullptr) {
@@ -288,7 +295,7 @@ void create_and_execute_function(ze_device_handle_t device,
 
 void create_and_execute_function(ze_device_handle_t device,
                                  ze_module_handle_t module,
-                                 std::string func_name, int group_size,
+                                 std::string func_name, uint32_t group_size,
                                  const std::vector<FunctionArg> &args,
                                  bool is_immediate) {
 
@@ -306,7 +313,7 @@ void create_and_execute_function(ze_device_handle_t device,
   ze_kernel_properties_t function_properties = get_kernel_properties(function);
   EXPECT_EQ(function_properties.numKernelArgs, args.size());
 
-  int i = 0;
+  uint32_t i = 0U;
   for (auto arg : args) {
     EXPECT_ZE_RESULT_SUCCESS(
         zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));

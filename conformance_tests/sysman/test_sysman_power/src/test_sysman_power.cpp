@@ -17,6 +17,9 @@ namespace lzt = level_zero_tests;
 #include <level_zero/zes_api.h>
 
 namespace {
+
+using lzt::to_u32;
+
 #ifdef USE_ZESINIT
 class PowerModuleZesTest : public lzt::ZesSysmanCtsClass {
 public:
@@ -88,7 +91,7 @@ LZT_TEST_F(
       if (p_count > 1) {
         tcount = p_count - 1;
         auto p_power_handles = lzt::get_power_handles(device, tcount);
-        EXPECT_EQ(static_cast<uint32_t>(p_power_handles.size()), tcount);
+        EXPECT_EQ(to_u32(p_power_handles.size()), tcount);
       }
     } else {
       LOG_INFO << "No power handles found for this device! ";
@@ -616,7 +619,7 @@ LZT_TEST_F(
             power_limits_descriptors_initial; // preserve initial power limit
                                               // descriptors for restoration
                                               // later
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           power_limits_descriptors[i] = {
               ZES_STRUCTURE_TYPE_POWER_LIMIT_EXT_DESC, nullptr};
           power_limits_descriptors_initial.push_back(
@@ -716,7 +719,7 @@ LZT_TEST_F(
             power_limits_descriptors_initial; // preserve initial power limit
                                               // descriptors for restoration
                                               // later
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           power_limits_descriptors_initial.push_back(
               power_limits_descriptors[i]);
 
@@ -804,7 +807,7 @@ LZT_TEST_F(
                                               // descriptors for restoration
                                               // later
 
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           power_limits_descriptors_initial.push_back(
               power_limits_descriptors[i]);
           if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_BURST) {
@@ -890,7 +893,7 @@ LZT_TEST_F(
                                               // descriptors for restoration
                                               // later
 
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           power_limits_descriptors_initial.push_back(
               power_limits_descriptors[i]);
           if (power_limits_descriptors[i].level ==
@@ -1002,7 +1005,7 @@ LZT_TEST_F(
       auto p_power_handles = lzt::get_power_handles(device, count);
       for (auto p_power_handle : p_power_handles) {
         auto p_properties = lzt::get_power_properties(p_power_handle);
-        if (p_properties.onSubdevice == true) {
+        if (p_properties.onSubdevice) {
           continue;
         }
         uint32_t count_power = 0;
@@ -1018,7 +1021,7 @@ LZT_TEST_F(
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           if (power_limits_descriptors[i].level == ZES_POWER_LEVEL_SUSTAINED) {
             sustained_limit_available = true;
             power_sustained_Max = power_limits_descriptors[i];
@@ -1102,7 +1105,7 @@ LZT_TEST_F(
       auto p_power_handles = lzt::get_power_handles(device, count);
       for (auto p_power_handle : p_power_handles) {
         auto p_properties = lzt::get_power_properties(p_power_handle);
-        if (p_properties.onSubdevice == true) {
+        if (p_properties.onSubdevice) {
           continue;
         }
         uint32_t count_power = 0;
@@ -1116,7 +1119,7 @@ LZT_TEST_F(
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        for (int i = 0; i < power_limits_descriptors.size(); i++) {
+        for (size_t i = 0U; i < power_limits_descriptors.size(); i++) {
           zes_power_limit_ext_desc_t power_peak_initial = {};
           zes_power_limit_ext_desc_t power_peak_Max = {};
           zes_power_limit_ext_desc_t power_peak_getMax = {};
@@ -1290,7 +1293,7 @@ LZT_TEST_F(
       auto p_power_handles = lzt::get_power_handles(device, count);
       for (auto p_power_handle : p_power_handles) {
         auto p_properties = lzt::get_power_properties(p_power_handle);
-        if (p_properties.onSubdevice == true) {
+        if (p_properties.onSubdevice) {
           continue;
         }
         uint32_t perf_count = 0;

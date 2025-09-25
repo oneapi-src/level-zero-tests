@@ -21,7 +21,7 @@
 namespace bipc = boost::interprocess;
 
 #ifdef __linux__
-static void child_put_device_test(int size, ze_ipc_memory_flags_t flags,
+static void child_put_device_test(size_t size, ze_ipc_memory_flags_t flags,
                                   bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -59,14 +59,14 @@ static void child_put_device_test(int size, ze_ipc_memory_flags_t flags,
   }
 }
 
-static void child_put_subdevice_test(int size, ze_ipc_memory_flags_t flags,
+static void child_put_subdevice_test(size_t size, ze_ipc_memory_flags_t flags,
                                      bool is_immediate) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
   auto sub_devices = lzt::get_ze_sub_devices(device);
 
-  auto sub_device_count = sub_devices.size();
+  size_t sub_device_count = sub_devices.size();
 
   ze_ipc_mem_handle_t ipc_handle;
   void *memory = nullptr;
@@ -84,7 +84,7 @@ static void child_put_subdevice_test(int size, ze_ipc_memory_flags_t flags,
   memset(buffer, 0, size);
 
   // For each sub device found, use IPC buffer in a copy operation and validate
-  for (auto i = 0; i < sub_device_count; i++) {
+  for (size_t i = 0U; i < sub_device_count; i++) {
     auto cmd_bundle =
         lzt::create_command_bundle(context, sub_devices[i], is_immediate);
 
