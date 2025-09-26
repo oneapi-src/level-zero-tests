@@ -19,8 +19,6 @@
 #include "utils/utils_string.hpp"
 #include "utils/utils_gtest_helper.hpp"
 
-#include <boost/core/span.hpp>
-
 namespace level_zero_tests {
 
 template <typename T> inline constexpr uint8_t to_u8(T val) {
@@ -94,8 +92,8 @@ uint32_t get_driver_handle_count();
 uint32_t get_sub_device_count(ze_device_handle_t device);
 
 std::optional<uint32_t>
-get_queue_ordinal(boost::span<const ze_command_queue_group_properties_t>
-                      cmd_queue_group_props,
+get_queue_ordinal(const std::vector<ze_command_queue_group_properties_t>
+                      &cmd_queue_group_props,
                   ze_command_queue_group_property_flags_t include_flags,
                   ze_command_queue_group_property_flags_t exclude_flags);
 
