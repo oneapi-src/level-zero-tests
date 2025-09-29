@@ -12,6 +12,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <optional>
 
 #include <level_zero/zet_api.h>
 #include <level_zero/zes_api.h>
