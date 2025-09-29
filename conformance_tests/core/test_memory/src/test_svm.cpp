@@ -157,17 +157,12 @@ class SharedSystemMemoryLaunchCooperativeKernelTests
 LZT_TEST_P(
     SharedSystemMemoryLaunchCooperativeKernelTests,
     GivenSharedSystemMemoryAllocationsAsKernelArgumentsWhenCooperativeKernelExecutesThenValueIsCorrect) {
-  int ordinal = -1;
   auto command_queue_group_properties =
       lzt::get_command_queue_group_properties(device);
-  for (int i = 0; i < command_queue_group_properties.size(); i++) {
-    if (command_queue_group_properties[i].flags &
-        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS) {
-      ordinal = i;
-      break;
-    }
-  }
-  if (ordinal < 0) {
+  auto ordinal = lzt::get_queue_ordinal(
+      command_queue_group_properties,
+      ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS, 0);
+  if (!ordinal) {
     LOG_WARNING << "No command queues that support cooperative kernels";
     GTEST_SKIP();
   }
@@ -209,15 +204,15 @@ LZT_TEST_P(
     return n - (n >> 1);
   }(max_coop_group_count);
 
-  uint32_t group_count = (num_elements < suggested_group_count)
-                             ? num_elements
+  uint32_t group_count = (lzt::to_u32(num_elements) < suggested_group_count)
+                             ? lzt::to_u32(num_elements)
                              : suggested_group_count;
   LOG_INFO << "Group count: " << group_count;
 
   void *output = lzt::allocate_shared_memory_with_allocator_selector(
       group_count * sizeof(int), 1, 0, 0, device, is_dst_shared_system);
 
-  uint32_t group_size = num_elements / group_count;
+  uint32_t group_size = lzt::to_u32(num_elements) / group_count;
   LOG_INFO << "Group size: " << group_size;
   ASSERT_LE(group_size, compute_properties.maxGroupSizeX);
 
@@ -227,7 +222,7 @@ LZT_TEST_P(
   lzt::set_argument_value(function, 2, group_size * sizeof(int), nullptr);
 
   lzt::zeCommandBundle cmd_bundle = lzt::create_command_bundle(
-      lzt::get_default_context(), device, 0, ordinal, use_immediate_cmdlist);
+      lzt::get_default_context(), device, 0, *ordinal, use_immediate_cmdlist);
 
   ze_group_count_t thread_group_dimensions = {group_count, 1, 1};
   lzt::append_launch_cooperative_function(
