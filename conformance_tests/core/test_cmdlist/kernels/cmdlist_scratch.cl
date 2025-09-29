@@ -6,7 +6,6 @@
  *
  */
 
-#define SIZE 1280
 #define NO_TAIL()
 
 #define LEXP_0(eval_macro, tail_macro) tail_macro()
@@ -2064,9 +2063,9 @@
 #define _STR(x) LEXP_##x
 #define STR(x) _STR(x)
 
-kernel void spill_test(global const int *in, global int *out,
+kernel void spill_test(global const uint *in, global uint *out,
                        global const uint *offset) {
-#define read_input(idx) int _data##idx = in[get_global_id(0) + offset[idx]];
+#define read_input(idx) uint _data##idx = in[get_global_id(0) + offset[idx]];
 #define sum_nonaff_data(idx) _data##idx *idx +
 #define sum_nonaff_data_tail() 0
 

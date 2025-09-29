@@ -662,7 +662,6 @@ void RunAppendingWriteGlobalTimestampThenSuccessIsReturned(bool is_immediate) {
 
   auto bundle = lzt::create_command_bundle(is_immediate);
   uint64_t dst_timestamp;
-  ze_event_handle_t wait_event_before, wait_event_after;
   auto wait_event_initial = event;
 
   ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendWriteGlobalTimestamp(
@@ -693,33 +692,61 @@ static void
 RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
     bool is_shared_system_scratch_kernel, bool is_shared_system_src,
     bool is_shared_system_dst) {
-  // Create buffers for scratch kernel
-  uint32_t arraySize = 32;
-  uint32_t typeSize = sizeof(uint32_t);
-  uint32_t expectedMemorySize = (arraySize * 2 + 1) * typeSize - 4;
-  uint32_t inMemorySize = expectedMemorySize;
-  uint32_t outMemorySize = expectedMemorySize;
-  uint32_t offsetMemorySize = 1281 * typeSize;
+  auto context = lzt::get_default_context();
+  auto driver = lzt::get_default_driver();
+  auto device = lzt::get_default_device(driver);
 
-  ze_device_mem_alloc_desc_t deviceDesc = {};
-  deviceDesc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
-  deviceDesc.flags = ZE_DEVICE_MEM_ALLOC_FLAG_BIAS_UNCACHED;
-  deviceDesc.ordinal = 0;
-  ze_host_mem_alloc_desc_t hostDesc = {};
-  hostDesc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
-  hostDesc.flags = ZE_HOST_MEM_ALLOC_FLAG_BIAS_UNCACHED;
+  uint32_t array_size = 32;
+  uint32_t type_size = sizeof(uint32_t);
 
-  void *srcBuffer = lzt::allocate_host_memory_with_allocator_selector(
-      inMemorySize, is_shared_system_scratch_kernel);
-  void *dstBuffer = lzt::allocate_host_memory_with_allocator_selector(
-      outMemorySize, is_shared_system_scratch_kernel);
-  void *offsetBuffer = lzt::allocate_host_memory_with_allocator_selector(
-      offsetMemorySize, is_shared_system_scratch_kernel);
-  void *expectedMemory = lzt::allocate_host_memory_with_allocator_selector(
-      expectedMemorySize, is_shared_system_scratch_kernel);
+  ze_module_handle_t module_handle = nullptr;
+  ze_kernel_handle_t scratch_function = nullptr;
 
-  // create two buffers for append fill/ copy kernel
-  size_t size = 1280;
+  for (;;) {
+    if (scratch_function)
+      lzt::destroy_function(scratch_function);
+    if (module_handle)
+      lzt::destroy_module(module_handle);
+    module_handle = lzt::create_module(
+        device, "cmdlist_scratch_" + std::to_string(array_size) + ".spv");
+    ze_kernel_flags_t flag = 0;
+    scratch_function = lzt::create_function(module_handle, flag, "spill_test");
+
+    auto kernel_properties = lzt::get_kernel_properties(scratch_function);
+    if (kernel_properties.spillMemSize != 0u) {
+      LOG_INFO << "Buffer size (elements) = " << array_size
+               << " Scratch size (bytes) = " << kernel_properties.spillMemSize;
+      break;
+    }
+
+    if (array_size < 96)
+      array_size += 16;
+    else if (array_size < 192)
+      array_size += 32;
+    else if (array_size < 256)
+      array_size += 64;
+    else if (array_size < 1536)
+      array_size += 256;
+    else
+      throw std::runtime_error("SIZE bigger than 1536 is not supported.");
+  }
+
+  uint32_t in_memory_size = array_size * type_size;
+  uint32_t out_memory_size = in_memory_size * 2;
+  uint32_t offset_memory_size = in_memory_size;
+  uint32_t expected_memory_size = in_memory_size * 2;
+
+  void *src_buffer = lzt::allocate_host_memory_with_allocator_selector(
+      in_memory_size, is_shared_system_scratch_kernel);
+  void *dst_buffer = lzt::allocate_host_memory_with_allocator_selector(
+      out_memory_size, is_shared_system_scratch_kernel);
+  void *offset_buffer = lzt::allocate_host_memory_with_allocator_selector(
+      offset_memory_size, is_shared_system_scratch_kernel);
+  void *expected_memory = lzt::allocate_host_memory_with_allocator_selector(
+      expected_memory_size, is_shared_system_scratch_kernel);
+
+  // create two buffers for append fill/copy kernel
+  size_t size = 1536;
   void *device_memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system_src);
   void *host_memory = lzt::allocate_host_memory_with_allocator_selector(
@@ -728,26 +755,6 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
   uint8_t pattern = 0xAB;
   const size_t pattern_size = 1;
   uint32_t num_iterations = 2;
-
-  auto context = lzt::get_default_context();
-  auto driver = lzt::get_default_driver();
-  auto device = lzt::get_default_device(driver);
-
-  ze_module_handle_t module_handle =
-      lzt::create_module(device, "cmdlist_scratch.spv");
-  ze_kernel_flags_t flag = 0;
-  /* Prepare the fill function */
-  ze_kernel_handle_t scratch_function =
-      lzt::create_function(module_handle, flag, "spill_test");
-  ze_kernel_properties_t kernelProperties = {};
-  kernelProperties.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
-  zeKernelGetProperties(scratch_function, &kernelProperties);
-  std::cout << "Scratch size = " << kernelProperties.spillMemSize << "\n";
-  if (kernelProperties.spillMemSize == 0) {
-    lzt::destroy_function(scratch_function);
-    lzt::destroy_module(module_handle);
-    GTEST_SKIP() << "Kernel does not use scratch space\n";
-  }
 
   auto cmd_list0 = lzt::create_command_list();
   auto cmd_list1 = lzt::create_command_list();
@@ -758,37 +765,40 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
     cmd_queue[i] = queue_handle;
   }
 
-  uint32_t groupSizeX, groupSizeY, groupSizeZ;
-  lzt::suggest_group_size(scratch_function, arraySize, 1, 1, groupSizeX,
-                          groupSizeY, groupSizeZ);
-  size_t groupSize = groupSizeX * groupSizeY * groupSizeZ;
-  lzt::set_group_size(scratch_function, groupSizeX, groupSizeY, groupSizeZ);
-  lzt::set_argument_value(scratch_function, 0, sizeof(srcBuffer), &srcBuffer);
-  lzt::set_argument_value(scratch_function, 1, sizeof(dstBuffer), &dstBuffer);
-  lzt::set_argument_value(scratch_function, 2, sizeof(offsetBuffer),
-                          &offsetBuffer);
+  uint32_t group_size_x, group_size_y, group_size_z;
+  lzt::suggest_group_size(scratch_function, array_size, 1, 1, group_size_x,
+                          group_size_y, group_size_z);
+  uint32_t group_size = group_size_x * group_size_y * group_size_z;
+  lzt::set_group_size(scratch_function, group_size_x, group_size_y,
+                      group_size_z);
+  lzt::set_argument_value(scratch_function, 0, sizeof(src_buffer), &src_buffer);
+  lzt::set_argument_value(scratch_function, 1, sizeof(dst_buffer), &dst_buffer);
+  lzt::set_argument_value(scratch_function, 2, sizeof(offset_buffer),
+                          &offset_buffer);
   // if groupSize is greater then memory count, then at least one thread group
   // should be dispatched
-  uint32_t threadGroup =
-      arraySize / groupSize > 1 ? to_u32(arraySize / groupSize) : 1;
-  ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
+  uint32_t thread_group =
+      array_size / group_size > 1 ? array_size / group_size : 1;
+  ze_group_count_t thread_group_dimensions = {thread_group, 1, 1};
 
   for (uint32_t i = 0; i < num_iterations; i++) {
     // Initialize memory
-    memset(srcBuffer, 0, inMemorySize);
-    memset(dstBuffer, 0, outMemorySize);
-    memset(offsetBuffer, 0, offsetMemorySize);
-    memset(expectedMemory, 0, expectedMemorySize);
+    memset(src_buffer, 0, in_memory_size);
+    memset(dst_buffer, 0, out_memory_size);
+    memset(offset_buffer, 0, offset_memory_size);
+    memset(expected_memory, 0, expected_memory_size);
 
-    auto srcBufferInt = static_cast<uint32_t *>(srcBuffer);
-    auto expectedMemoryInt = static_cast<uint32_t *>(expectedMemory);
-    constexpr int expectedVal1 = 16256;
-    constexpr int expectedVal2 = 512;
+    auto src_buffer_uint = static_cast<uint32_t *>(src_buffer);
+    auto expected_memory_uint = static_cast<uint32_t *>(expected_memory);
+    const uint32_t in_value = 2u;
+    const uint32_t expected_val1 =
+        in_value * (array_size - 1u) * array_size / 2u;
+    const uint32_t expected_val2 = in_value * in_value * array_size;
 
-    for (uint32_t i = 0; i < arraySize; ++i) {
-      srcBufferInt[i] = 2;
-      expectedMemoryInt[i * 2] = expectedVal1;
-      expectedMemoryInt[i * 2 + 1] = expectedVal2;
+    for (uint32_t i = 0; i < array_size; ++i) {
+      src_buffer_uint[i] = in_value;
+      expected_memory_uint[i * 2] = expected_val1;
+      expected_memory_uint[i * 2 + 1] = expected_val2;
     }
 
     memset(host_memory, 0, size);
@@ -812,26 +822,22 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
     lzt::synchronize(cmd_queue[i], UINT64_MAX);
 
     // Validate
-
+    auto dst_buffer_uint = static_cast<uint32_t *>(dst_buffer);
     bool outputValidationSuccessful = true;
-    if (memcmp(dstBuffer, expectedMemory, expectedMemorySize)) {
+    if (memcmp(dst_buffer, expected_memory, expected_memory_size)) {
       outputValidationSuccessful = false;
-      uint8_t *srcCharBuffer = static_cast<uint8_t *>(expectedMemory);
-      uint8_t *dstCharBuffer = static_cast<uint8_t *>(dstBuffer);
-      for (size_t i = 0; i < expectedMemorySize; i++) {
-        if (srcCharBuffer[i] != dstCharBuffer[i]) {
-          std::cout << "srcBuffer[" << i
-                    << "] = " << static_cast<unsigned int>(srcCharBuffer[i])
+      for (size_t i = 0; i < expected_memory_size / type_size; i++) {
+        if (dst_buffer_uint[i] != expected_memory_uint[i]) {
+          std::cout << "dstBuffer[" << i << "] = " << dst_buffer_uint[i]
                     << " not equal to "
-                    << "dstBuffer[" << i
-                    << "] = " << static_cast<unsigned int>(dstCharBuffer[i])
-                    << "\n";
+                    << "expectedMemory[" << i
+                    << "] = " << expected_memory_uint[i] << "\n";
           break;
         }
       }
     }
 
-    for (uint32_t i = 0; i < size; i++) {
+    for (uint32_t i = 0; i < size / sizeof(uint8_t); i++) {
       ASSERT_EQ(static_cast<uint8_t *>(host_memory)[i], pattern);
     }
 
@@ -845,16 +851,18 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
     lzt::destroy_command_queue(cmd_queue[i]);
   }
   cmd_queue.clear();
-  lzt::free_memory_with_allocator_selector(dstBuffer,
+  lzt::free_memory_with_allocator_selector(dst_buffer,
                                            is_shared_system_scratch_kernel);
-  lzt::free_memory_with_allocator_selector(srcBuffer,
+  lzt::free_memory_with_allocator_selector(src_buffer,
                                            is_shared_system_scratch_kernel);
-  lzt::free_memory_with_allocator_selector(offsetBuffer,
+  lzt::free_memory_with_allocator_selector(offset_buffer,
                                            is_shared_system_scratch_kernel);
-  lzt::free_memory_with_allocator_selector(expectedMemory,
+  lzt::free_memory_with_allocator_selector(expected_memory,
                                            is_shared_system_scratch_kernel);
   lzt::free_memory_with_allocator_selector(device_memory, is_shared_system_src);
   lzt::free_memory_with_allocator_selector(host_memory, is_shared_system_dst);
+  lzt::destroy_function(scratch_function);
+  lzt::destroy_module(module_handle);
 }
 
 LZT_TEST(

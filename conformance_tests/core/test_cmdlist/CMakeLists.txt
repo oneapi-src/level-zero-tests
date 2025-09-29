@@ -16,7 +16,20 @@ add_lzt_test(
     level_zero_tests::random
   KERNELS
     cmdlist_add
-    cmdlist_scratch
+    cmdlist_scratch_32
+    cmdlist_scratch_48
+    cmdlist_scratch_64
+    cmdlist_scratch_80
+    cmdlist_scratch_96
+    cmdlist_scratch_128
+    cmdlist_scratch_160
+    cmdlist_scratch_192
+    cmdlist_scratch_256
+    cmdlist_scratch_512
+    cmdlist_scratch_768
+    cmdlist_scratch_1024
+    cmdlist_scratch_1280
+    cmdlist_scratch_1536
     cmdlist_verify
     cmdlist_and_functions
   MEDIA
