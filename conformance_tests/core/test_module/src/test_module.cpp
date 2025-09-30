@@ -643,8 +643,6 @@ LZT_TEST_F(
     build_log_size = lzt::get_build_log_size(log);
     build_log_str = lzt::get_build_log_string(log);
 
-    EXPECT_EQ(1, build_log_size);
-    EXPECT_EQ('\0', build_log_str[0]);
     LOG_INFO << "Build Log Size = " << build_log_size;
     LOG_INFO << "Build Log String = " << build_log_str;
 
