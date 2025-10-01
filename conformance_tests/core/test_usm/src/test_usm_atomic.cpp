@@ -352,7 +352,7 @@ LZT_TEST_F(AtomicAccessTests,
       context, device, alloc_data, size,
       ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_SYSTEM_ATOMICS);
 
-  if (!(memory_access_properties.sharedSingleDeviceAllocCapabilities &
+  if (!(memory_access_properties.sharedSystemAllocCapabilities &
         ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC)) {
     EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT, result);
   } else {
