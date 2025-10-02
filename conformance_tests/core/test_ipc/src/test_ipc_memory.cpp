@@ -112,7 +112,7 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type,
 #endif // __linux__
 
 static void run_ipc_dev_mem_access_test_opaque(ipc_mem_access_test_t test_type,
-                                               int size, bool reserved,
+                                               size_t size, bool reserved,
                                                ze_ipc_memory_flags_t flags,
                                                bool is_immediate) {
   ze_result_t result = zeInit(0);
@@ -196,7 +196,7 @@ static void run_ipc_dev_mem_access_test_opaque(ipc_mem_access_test_t test_type,
   lzt::destroy_context(context);
 }
 
-static void run_ipc_host_mem_access_test_opaque(int size,
+static void run_ipc_host_mem_access_test_opaque(size_t size,
                                                 ze_ipc_memory_flags_t flags) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -246,7 +246,7 @@ static void run_ipc_host_mem_access_test_opaque(int size,
   bipc::mapped_region region(shm, bipc::read_write);
 
   // Copy ipc handle data to shm
-  shared_data_t test_data = {TEST_HOST_ACCESS, TEST_NONSOCK, size,
+  shared_data_t test_data = {TEST_HOST_ACCESS, TEST_NONSOCK, to_u32(size),
                              flags, false, ipc_handle};
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
