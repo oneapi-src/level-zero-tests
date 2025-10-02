@@ -246,8 +246,8 @@ static void run_ipc_host_mem_access_test_opaque(size_t size,
   bipc::mapped_region region(shm, bipc::read_write);
 
   // Copy ipc handle data to shm
-  shared_data_t test_data = {TEST_HOST_ACCESS, TEST_NONSOCK, to_u32(size),
-                             flags, false, ipc_handle};
+  shared_data_t test_data = {
+      TEST_HOST_ACCESS, TEST_NONSOCK, to_u32(size), flags, false, ipc_handle};
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
   // Free device memory once receiver is done
