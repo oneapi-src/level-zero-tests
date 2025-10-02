@@ -307,14 +307,13 @@ LZT_TEST_F(AtomicAccessTests, SetAndGetAccessTypeForSharedAllocation) {
   lzt::free_memory(context, alloc_data);
 }
 
-LZT_TEST_F(AtomicAccessTests,
-           SetAndGetPositiveAccessTypeWithSharedSystemAllocator) {
-  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+static void RunSetAndGetPositiveAccessTypeTest(bool is_shared_system) {
   auto context = lzt::get_default_context();
   auto device = lzt::get_default_device(lzt::get_default_driver());
 
   auto alloc_data =
-      static_cast<int *>(lzt::aligned_malloc(size * sizeof(int), 1));
+      static_cast<int *>(lzt::allocate_shared_memory_with_allocator_selector(
+          size * sizeof(int), is_shared_system));
 
   auto memory_access_properties = lzt::get_memory_access_properties(device);
   ze_memory_atomic_attr_exp_flags_t access_type;
@@ -352,8 +351,6 @@ LZT_TEST_F(AtomicAccessTests,
       context, device, alloc_data, size,
       ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_SYSTEM_ATOMICS);
 
-  auto is_shared_system =
-      lzt::supports_shared_system_alloc(memory_access_properties);
   auto capabilities =
       is_shared_system
           ? memory_access_properties.sharedSystemAllocCapabilities
@@ -367,7 +364,13 @@ LZT_TEST_F(AtomicAccessTests,
         context, device, alloc_data, size, &access_type));
     EXPECT_EQ(ZE_MEMORY_ATOMIC_ATTR_EXP_FLAG_SYSTEM_ATOMICS, access_type);
   }
-  lzt::aligned_free(alloc_data);
+  lzt::free_memory_with_allocator_selector(alloc_data, is_shared_system);
+}
+
+LZT_TEST_F(AtomicAccessTests,
+           SetAndGetPositiveAccessTypeWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunSetAndGetPositiveAccessTypeTest(true);
 }
 
 } // namespace
