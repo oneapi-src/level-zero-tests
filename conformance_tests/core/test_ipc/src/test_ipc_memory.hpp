@@ -11,7 +11,8 @@
 
 typedef enum {
   TEST_DEVICE_ACCESS,
-  TEST_SUBDEVICE_ACCESS
+  TEST_SUBDEVICE_ACCESS,
+  TEST_HOST_ACCESS
 } ipc_mem_access_test_t;
 
 typedef enum { TEST_SOCK, TEST_NONSOCK } ipc_mem_access_test_sock_t;

@@ -198,6 +198,30 @@ static void child_subdevice_access_test_opaque(size_t size,
   }
 }
 
+static void child_host_access_test_opaque(size_t size,
+                                          ze_ipc_memory_flags_t flags,
+                                          ze_ipc_mem_handle_t ipc_handle) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+  void *buffer = nullptr;
+
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemOpenIpcHandle(context, device, ipc_handle, flags, &buffer));
+
+  LOG_DEBUG << "[Child] Validating buffer received correctly";
+  lzt::validate_data_pattern(buffer, size, 1);
+
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, buffer));
+  lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+
 int main() {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -233,8 +257,8 @@ int main() {
       child_device_access_test_opaque(shared_data.size, shared_data.flags,
                                       shared_data.is_immediate,
                                       shared_data.ipc_handle);
-    } else {
 #ifdef __linux__
+    } else {
       child_device_access_test(shared_data.size, shared_data.flags,
                                shared_data.is_immediate);
 #endif
@@ -248,6 +272,10 @@ int main() {
     } else {
       break; // Currently supporting only device access test scenario
     }
+    break;
+  case TEST_HOST_ACCESS:
+    child_host_access_test_opaque(shared_data.size, shared_data.flags,
+                                  shared_data.ipc_handle);
     break;
   default:
     LOG_DEBUG << "Unrecognized test case";

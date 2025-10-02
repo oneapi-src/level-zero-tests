@@ -111,10 +111,10 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type,
 }
 #endif // __linux__
 
-static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
-                                           size_t size, bool reserved,
-                                           ze_ipc_memory_flags_t flags,
-                                           bool is_immediate) {
+static void run_ipc_dev_mem_access_test_opaque(ipc_mem_access_test_t test_type,
+                                               int size, bool reserved,
+                                               ze_ipc_memory_flags_t flags,
+                                               bool is_immediate) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Parent zeInit failed: " +
@@ -196,6 +196,71 @@ static void run_ipc_mem_access_test_opaque(ipc_mem_access_test_t test_type,
   lzt::destroy_context(context);
 }
 
+static void run_ipc_host_mem_access_test_opaque(int size,
+                                                ze_ipc_memory_flags_t flags) {
+  ze_result_t result = zeInit(0);
+  if (result != ZE_RESULT_SUCCESS) {
+    throw std::runtime_error("Parent zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_DEBUG << "[Parent] Driver initialized\n";
+  lzt::print_platform_overview();
+
+  // Ensure shared memory object is removed in case it already exists
+  // -- can happen if previous test exited abnormally
+  bipc::shared_memory_object::remove("ipc_memory_test");
+
+  ze_ipc_mem_handle_t ipc_handle = {};
+
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+
+  void *buffer = lzt::allocate_host_memory(size, 1, context);
+  memset(buffer, 0, size);
+  lzt::write_data_pattern(buffer, size, 1);
+
+  ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, buffer, &ipc_handle));
+
+  ze_ipc_mem_handle_t ipc_handle_zero{};
+  ASSERT_NE(0, memcmp((void *)&ipc_handle, (void *)&ipc_handle_zero,
+                      sizeof(ipc_handle)));
+
+  // Launch child
+#ifdef _WIN32
+  std::string helper_path = ".\\ipc\\test_ipc_memory_helper.exe";
+#else
+  std::string helper_path = "./ipc/test_ipc_memory_helper";
+#endif
+  boost::process::child c;
+  try {
+    c = boost::process::child(helper_path);
+  } catch (const boost::process::process_error &e) {
+    std::cerr << "Failed to launch child process: " << e.what() << std::endl;
+    throw;
+  }
+
+  bipc::shared_memory_object shm(bipc::create_only, "ipc_memory_test",
+                                 bipc::read_write);
+  shm.truncate(sizeof(shared_data_t));
+  bipc::mapped_region region(shm, bipc::read_write);
+
+  // Copy ipc handle data to shm
+  shared_data_t test_data = {TEST_HOST_ACCESS, TEST_NONSOCK, size,
+                             flags, is_immediate, ipc_handle};
+  std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
+
+  // Free device memory once receiver is done
+  c.wait();
+  EXPECT_EQ(c.exit_code(), 0);
+
+  ASSERT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context, ipc_handle));
+  bipc::shared_memory_object::remove("ipc_memory_test");
+
+  lzt::free_memory(context, buffer);
+  lzt::destroy_context(context);
+}
+
 #ifdef __linux__
 LZT_TEST(
     IpcMemoryAccessTest,
@@ -271,71 +336,83 @@ LZT_TEST(
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
-  run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_dev_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCOnImmediateCmdListThenParentProcessReadsMemoryCorrectly) {
-  run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_dev_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCThenParentProcessReadsMemoryCorrectly) {
-  run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
+  run_ipc_dev_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0MemoryAllocatedInChildProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenParentProcessReadsMemoryCorrectly) {
-  run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
+  run_ipc_dev_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, false,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
-  run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_dev_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
-  run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_dev_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectly) {
-  run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
+  run_ipc_dev_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
-  run_ipc_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
+  run_ipc_dev_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, true,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleSubDevice,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
-  run_ipc_mem_access_test_opaque(TEST_SUBDEVICE_ACCESS, 4096, true,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_dev_mem_access_test_opaque(TEST_SUBDEVICE_ACCESS, 4096, true,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleSubDevice,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
-  run_ipc_mem_access_test_opaque(TEST_SUBDEVICE_ACCESS, 4096, true,
-                                 ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_dev_mem_access_test_opaque(TEST_SUBDEVICE_ACCESS, 4096, true,
+                                     ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandle,
+    GivenUncachedHostMemoryAllocatedInParentProcessIPCThenChildProcessReadsMemoryCorrectly) {
+  run_ipc_host_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandle,
+    GivenCachedHostMemoryAllocatedInParentProcessIPCThenChildProcessReadsMemoryCorrectly) {
+  run_ipc_host_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 } // namespace
