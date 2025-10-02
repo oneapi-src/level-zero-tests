@@ -247,7 +247,7 @@ static void run_ipc_host_mem_access_test_opaque(int size,
 
   // Copy ipc handle data to shm
   shared_data_t test_data = {TEST_HOST_ACCESS, TEST_NONSOCK, size,
-                             flags, is_immediate, ipc_handle};
+                             flags, false, ipc_handle};
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
   // Free device memory once receiver is done
@@ -405,14 +405,14 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
-    GivenUncachedHostMemoryAllocatedInParentProcessIPCThenChildProcessReadsMemoryCorrectly) {
-  run_ipc_host_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
+    GivenUncachedHostMemoryAllocatedInParentProcessThenChildProcessReadsMemoryCorrectly) {
+  run_ipc_host_mem_access_test_opaque(4096, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandle,
-    GivenCachedHostMemoryAllocatedInParentProcessIPCThenChildProcessReadsMemoryCorrectly) {
-  run_ipc_host_mem_access_test_opaque(TEST_DEVICE_ACCESS, 4096, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
+    GivenCachedHostMemoryAllocatedInParentProcessThenChildProcessReadsMemoryCorrectly) {
+  run_ipc_host_mem_access_test_opaque(4096, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 } // namespace
