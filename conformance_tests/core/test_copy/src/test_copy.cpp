@@ -1132,12 +1132,31 @@ INSTANTIATE_TEST_SUITE_P(
 class AppendMemoryCopyRegionWithSharedSystem
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<size_t, size_t, size_t, bool>> {
+          std::tuple<size_t, size_t, size_t, bool, bool>> {
 protected:
   void RunMemoryCopyRegionTest() {
 
     is_immediate = std::get<3>(GetParam());
-    cmd_bundle = lzt::create_command_bundle(is_immediate);
+    use_copy_engine = std::get<4>(GetParam());
+
+    auto cmd_queue_group_props = get_command_queue_group_properties(
+        zeDevice::get_instance()->get_device());
+
+    const ze_command_queue_group_property_flags_t queue_group_flags_set =
+        use_copy_engine
+            ? ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY
+            : (ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE |
+               ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS);
+    const ze_command_queue_group_property_flags_t queue_group_flags_not_set =
+        use_copy_engine ? ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE : 0;
+    auto ordinal =
+        lzt::get_queue_ordinal(cmd_queue_group_props, queue_group_flags_set,
+                               queue_group_flags_not_set);
+    ASSERT_TRUE(ordinal);
+
+    auto cmd_bundle = lzt::create_command_bundle(
+        lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
+        *ordinal, is_immediate);
 
     // Set up memory buffers for test
     // Device memory has to be copied in so
@@ -1225,6 +1244,7 @@ protected:
   size_t columns;
   size_t slices;
   bool is_immediate;
+  bool use_copy_engine;
   size_t memory_size;
 };
 
@@ -1338,6 +1358,7 @@ INSTANTIATE_TEST_SUITE_P(MemoryCopies, AppendMemoryCopyRegionWithSharedSystem,
                                             ::testing::Values(8, 64), // Cols
                                             ::testing::Values(1, 8,
                                                               64), // Slices
+                                            ::testing::Bool(),
                                             ::testing::Bool()));
 
 class zeCommandListAppendMemoryCopyTests : public ::testing::Test {
