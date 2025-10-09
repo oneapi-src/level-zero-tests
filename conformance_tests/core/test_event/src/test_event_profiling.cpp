@@ -725,7 +725,7 @@ LZT_TEST_F(
     "ZE_EVENT_QUERY_TIMESTAMPS_EXP support not found, not building tests for it"
 #else
 #pragma message(                                                               \
-    "warning: ZE_EVENT_QUERY_TIMESTAMPS_EXP support not found, not building tests for it")
+        "warning: ZE_EVENT_QUERY_TIMESTAMPS_EXP support not found, not building tests for it")
 #endif
 #endif // ifdef ZE_EVENT_QUERY_TIMESTAMPS_EXP_NAME
 
