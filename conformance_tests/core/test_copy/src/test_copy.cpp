@@ -1901,8 +1901,7 @@ protected:
     memset(memory, 0xaa, size);
     auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
-    EXPECT_ZE_RESULT_SUCCESS(
-        zeCommandListAppendMemoryPrefetch(cmd_bundle.list, memory, size));
+    lzt::append_memory_prefetch(cmd_bundle.list, memory, size);
     lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
     lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -1963,9 +1962,9 @@ void zeCommandListAppendMemAdviseTests::
 
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
 
-  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendMemAdvise(
-      cmd_bundle.list, zeDevice::get_instance()->get_device(), memory, size,
-      mem_advice));
+  lzt::append_memory_advise(cmd_bundle.list,
+                            lzt::zeDevice::get_instance()->get_device(), memory,
+                            size, mem_advice);
 
   lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
   lzt::close_command_list(cmd_bundle.list);
