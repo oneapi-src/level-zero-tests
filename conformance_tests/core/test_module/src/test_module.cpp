@@ -938,11 +938,9 @@ protected:
     }
 
     if (is_immediate) {
-      EXPECT_ZE_RESULT_SUCCESS(
-          zeCommandListHostSynchronize(bundle.list, UINT64_MAX));
+      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
     } else {
-      EXPECT_ZE_RESULT_SUCCESS(
-          zeCommandQueueSynchronize(bundle.queue, UINT64_MAX));
+      lzt::synchronize(bundle.queue, UINT64_MAX);
     }
 
     if (signal_to_host) {
