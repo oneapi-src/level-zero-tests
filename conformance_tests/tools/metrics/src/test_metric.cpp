@@ -452,7 +452,7 @@ LZT_TEST_F(
     "ZET_EXPORT_METRICS_DATA_EXP_NAME support not found, not building tests for it"
 #else
 #pragma message(                                                               \
-    "warning: ZET_EXPORT_METRICS_DATA_EXP_NAME support not found, not building tests for it")
+        "warning: ZET_EXPORT_METRICS_DATA_EXP_NAME support not found, not building tests for it")
 #endif
 #endif // ifdef ZET_EXPORT_METRICS_DATA_EXP_NAME
 
