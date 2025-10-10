@@ -163,6 +163,7 @@ int main(int argc, char **argv) {
       device_thread.eu = UINT32_MAX;
       device_thread.thread = UINT32_MAX;
 
+      synchro0.wait_for_application_signal();
       LOG_INFO << "[Child Debugger] Sleeping to wait for device threads";
       std::this_thread::sleep_for(std::chrono::seconds(6));
 
@@ -180,7 +181,6 @@ int main(int argc, char **argv) {
       LOG_DEBUG << "[Child Debugger] Writing to memory";
       zet_debug_memory_space_desc_t memory_space_desc = {};
       uint64_t gpu_buffer_va = 0;
-      synchro0.wait_for_application_signal();
       if (!synchro0.get_app_gpu_buffer_address(gpu_buffer_va)) {
         LOG_DEBUG << "[Child Debugger] Could not get a valid GPU buffer VA";
         exit(1);
