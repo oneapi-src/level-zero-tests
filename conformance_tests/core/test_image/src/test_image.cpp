@@ -72,22 +72,40 @@ public:
     }
     uint64_t width = 1;
     uint32_t height = 1, depth = 1;
-    if (image_size == ImageSize::min) {
-      width = lzt::image_widths[0];
-      height = lzt::image_heights[0];
-      depth = lzt::image_depths[0];
-    } else if (image_size == ImageSize::large) {
-      switch (image_type) {
-      case ZE_IMAGE_TYPE_3D:
-        depth = lzt::image_depths[1];
-      case ZE_IMAGE_TYPE_2D:
-      case ZE_IMAGE_TYPE_2DARRAY:
-        height = lzt::image_heights[1];
-      case ZE_IMAGE_TYPE_1D:
-      case ZE_IMAGE_TYPE_1DARRAY:
+    switch (image_type) {
+    case ZE_IMAGE_TYPE_3D:
+      if (image_size == ImageSize::min) {
+        width = lzt::image_widths[0];
+        height = lzt::image_heights[0];
+        depth = lzt::image_depths[0];
+      } else if (image_size == ImageSize::large) {
         width = lzt::image_widths[1];
-        break;
+        height = lzt::image_heights[1];
+        depth = lzt::image_depths[1];
       }
+      break;
+    case ZE_IMAGE_TYPE_2D:
+      [[fallthrough]];
+    case ZE_IMAGE_TYPE_2DARRAY:
+      if (image_size == ImageSize::min) {
+        width = lzt::image_widths[0];
+        height = lzt::image_heights[0];
+      } else if (image_size == ImageSize::large) {
+        width = lzt::image_widths[1];
+        height = lzt::image_heights[1];
+      }
+      break;
+    case ZE_IMAGE_TYPE_1D:
+      [[fallthrough]];
+    case ZE_IMAGE_TYPE_1DARRAY:
+      if (image_size == ImageSize::min) {
+        width = lzt::image_widths[0];
+      } else if (image_size == ImageSize::large) {
+        width = lzt::image_widths[1];
+      }
+      break;
+    default:
+      break;
     }
 
     image_descriptor.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
