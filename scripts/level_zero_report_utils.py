@@ -304,6 +304,18 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeDeviceGetModulePropertiesTests_GivenValidDeviceWhenRetrievingFloatAtomicPropertiesThenValidPropertiesReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDevicePciGetPropertiesTests_GivenValidDeviceWhenRetrievingPciSpeedPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceP2PBandwidthExpProperties_GivenValidDevicesWhenRetrievingP2PBandwidthPropertiesThenValidPropertiesAreReturned', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeCommandListAppendMemoryFillTests_GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator', test_name, re.IGNORECASE)) or \
                     (test_name.find("ParamAppendMemCopy")!= -1) or \
                     (test_name.find("ParamSharedSystemMemCopy")!= -1) or \
                     (test_name.find("zeVirtualMemoryTests")!= -1) or \
