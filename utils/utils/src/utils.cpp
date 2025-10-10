@@ -344,6 +344,20 @@ void sort_devices(std::vector<ze_device_handle_t> &devices) {
             });
 }
 
+std::optional<uint32_t>
+get_queue_ordinal(const std::vector<ze_command_queue_group_properties_t>
+                      &cmd_queue_group_props,
+                  ze_command_queue_group_property_flags_t include_flags,
+                  ze_command_queue_group_property_flags_t exclude_flags) {
+  for (uint32_t i = 0; i < cmd_queue_group_props.size(); i++) {
+    if ((cmd_queue_group_props[i].flags & include_flags) == include_flags &&
+        (cmd_queue_group_props[i].flags & exclude_flags) == 0) {
+      return i;
+    }
+  }
+  return std::nullopt;
+}
+
 void print_driver_version(ze_driver_handle_t driver) {
   ze_driver_properties_t properties = {};
 

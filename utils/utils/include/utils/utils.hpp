@@ -12,6 +12,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <optional>
 
 #include <level_zero/zet_api.h>
 #include <level_zero/zes_api.h>
@@ -90,6 +91,12 @@ std::vector<ze_device_handle_t> get_all_sub_devices();
 uint32_t get_device_count(ze_driver_handle_t driver);
 uint32_t get_driver_handle_count();
 uint32_t get_sub_device_count(ze_device_handle_t device);
+
+std::optional<uint32_t>
+get_queue_ordinal(const std::vector<ze_command_queue_group_properties_t>
+                      &cmd_queue_group_props,
+                  ze_command_queue_group_property_flags_t include_flags,
+                  ze_command_queue_group_property_flags_t exclude_flags);
 
 void print_driver_version();
 void print_driver_overview(const ze_driver_handle_t driver);
