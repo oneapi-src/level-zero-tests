@@ -211,8 +211,24 @@ public:
   }
 
   void test_image_mem_copy_no_regions(void *source_buff, void *dest_buff,
-                                      bool is_immediate) {
-    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+                                      bool is_immediate, bool use_copy_engine) {
+    auto cmd_queue_group_props = get_command_queue_group_properties(
+        zeDevice::get_instance()->get_device());
+
+    auto compute_ordinal = lzt::get_queue_ordinal(
+        cmd_queue_group_props,
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE |
+            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS,
+        0);
+    auto copy_ordinal = lzt::get_queue_ordinal(
+        cmd_queue_group_props, ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY,
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE);
+    ASSERT_TRUE((use_copy_engine && copy_ordinal) ||
+                (!use_copy_engine && compute_ordinal));
+
+    auto cmd_bundle = lzt::create_command_bundle(
+        lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
+        use_copy_engine ? *copy_ordinal : *compute_ordinal, is_immediate);
 
     // Copies proceeds as follows:
     // png -> source_buff -> image -> dest_buff ->png
@@ -240,8 +256,25 @@ public:
   void test_image_mem_copy_use_regions(void *source_buff_bot,
                                        void *source_buff_top,
                                        void *dest_buff_bot, void *dest_buff_top,
-                                       bool is_immediate) {
-    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+                                       bool is_immediate,
+                                       bool use_copy_engine) {
+    auto cmd_queue_group_props = get_command_queue_group_properties(
+        zeDevice::get_instance()->get_device());
+
+    auto compute_ordinal = lzt::get_queue_ordinal(
+        cmd_queue_group_props,
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE |
+            ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS,
+        0);
+    auto copy_ordinal = lzt::get_queue_ordinal(
+        cmd_queue_group_props, ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY,
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE);
+    ASSERT_TRUE((use_copy_engine && copy_ordinal) ||
+                (!use_copy_engine && compute_ordinal));
+
+    auto cmd_bundle = lzt::create_command_bundle(
+        lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
+        use_copy_engine ? *copy_ordinal : *compute_ordinal, is_immediate);
 
     ze_image_region_t bot_region = {0, 0, 0, image_width, image_height / 2, 1};
     ze_image_region_t top_region = {0,           image_height / 2, 0,
@@ -509,7 +542,7 @@ LZT_TEST_F(
   void *buff_in_bot = lzt::allocate_host_memory(image_size);
   void *buff_out_top = lzt::allocate_host_memory(image_size);
   test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
-                                  buff_out_top, false);
+                                  buff_out_top, false, false);
   lzt::free_memory(buff_in_bot);
   lzt::free_memory(buff_in_top);
   lzt::free_memory(buff_out_bot);
@@ -527,7 +560,43 @@ LZT_TEST_F(
   void *buff_in_bot = lzt::allocate_host_memory(image_size);
   void *buff_out_top = lzt::allocate_host_memory(image_size);
   test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
-                                  buff_out_top, true);
+                                  buff_out_top, true, false);
+  lzt::free_memory(buff_in_bot);
+  lzt::free_memory(buff_in_top);
+  lzt::free_memory(buff_out_bot);
+  lzt::free_memory(buff_out_top);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingCopyEngineAndHostMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::allocate_host_memory(image_size);
+  void *buff_out_bot = lzt::allocate_host_memory(image_size);
+  void *buff_in_bot = lzt::allocate_host_memory(image_size);
+  void *buff_out_top = lzt::allocate_host_memory(image_size);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, false, true);
+  lzt::free_memory(buff_in_bot);
+  lzt::free_memory(buff_in_top);
+  lzt::free_memory(buff_out_bot);
+  lzt::free_memory(buff_out_top);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingCopyEngineAndHostMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::allocate_host_memory(image_size);
+  void *buff_out_bot = lzt::allocate_host_memory(image_size);
+  void *buff_in_bot = lzt::allocate_host_memory(image_size);
+  void *buff_out_top = lzt::allocate_host_memory(image_size);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, true, true);
   lzt::free_memory(buff_in_bot);
   lzt::free_memory(buff_in_top);
   lzt::free_memory(buff_out_bot);
@@ -542,7 +611,7 @@ LZT_TEST_F(
   }
   void *buff_in = lzt::allocate_host_memory(image_size);
   void *buff_out = lzt::allocate_host_memory(image_size);
-  test_image_mem_copy_no_regions(buff_in, buff_out, false);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false, false);
   lzt::free_memory(buff_in);
   lzt::free_memory(buff_out);
 }
@@ -555,7 +624,33 @@ LZT_TEST_F(
   }
   void *buff_in = lzt::allocate_host_memory(image_size);
   void *buff_out = lzt::allocate_host_memory(image_size);
-  test_image_mem_copy_no_regions(buff_in, buff_out, true);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true, false);
+  lzt::free_memory(buff_in);
+  lzt::free_memory(buff_out);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingCopyEngineAndHostMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::allocate_host_memory(image_size);
+  void *buff_out = lzt::allocate_host_memory(image_size);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false, true);
+  lzt::free_memory(buff_in);
+  lzt::free_memory(buff_out);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyToImmediateCmdListFromMemoryUsingCopyEngineAndHostMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::allocate_host_memory(image_size);
+  void *buff_out = lzt::allocate_host_memory(image_size);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true, true);
   lzt::free_memory(buff_in);
   lzt::free_memory(buff_out);
 }
@@ -571,7 +666,7 @@ LZT_TEST_F(
   void *buff_in_bot = lzt::allocate_device_memory(image_size);
   void *buff_out_top = lzt::allocate_device_memory(image_size);
   test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
-                                  buff_out_top, false);
+                                  buff_out_top, false, false);
   lzt::free_memory(buff_in_bot);
   lzt::free_memory(buff_in_top);
   lzt::free_memory(buff_out_bot);
@@ -589,7 +684,43 @@ LZT_TEST_F(
   void *buff_in_bot = lzt::allocate_device_memory(image_size);
   void *buff_out_top = lzt::allocate_device_memory(image_size);
   test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
-                                  buff_out_top, true);
+                                  buff_out_top, true, false);
+  lzt::free_memory(buff_in_bot);
+  lzt::free_memory(buff_in_top);
+  lzt::free_memory(buff_out_bot);
+  lzt::free_memory(buff_out_top);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingCopyEngineAndDeviceMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::allocate_device_memory(image_size);
+  void *buff_out_bot = lzt::allocate_device_memory(image_size);
+  void *buff_in_bot = lzt::allocate_device_memory(image_size);
+  void *buff_out_top = lzt::allocate_device_memory(image_size);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, false, true);
+  lzt::free_memory(buff_in_bot);
+  lzt::free_memory(buff_in_top);
+  lzt::free_memory(buff_out_bot);
+  lzt::free_memory(buff_out_top);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingCopyEngineAndDeviceMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::allocate_device_memory(image_size);
+  void *buff_out_bot = lzt::allocate_device_memory(image_size);
+  void *buff_in_bot = lzt::allocate_device_memory(image_size);
+  void *buff_out_top = lzt::allocate_device_memory(image_size);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, true, true);
   lzt::free_memory(buff_in_bot);
   lzt::free_memory(buff_in_top);
   lzt::free_memory(buff_out_bot);
@@ -604,7 +735,7 @@ LZT_TEST_F(
   }
   void *buff_in = lzt::allocate_device_memory(image_size);
   void *buff_out = lzt::allocate_device_memory(image_size);
-  test_image_mem_copy_no_regions(buff_in, buff_out, false);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false, false);
   lzt::free_memory(buff_in);
   lzt::free_memory(buff_out);
 }
@@ -617,7 +748,33 @@ LZT_TEST_F(
   }
   void *buff_in = lzt::allocate_device_memory(image_size);
   void *buff_out = lzt::allocate_device_memory(image_size);
-  test_image_mem_copy_no_regions(buff_in, buff_out, true);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true, false);
+  lzt::free_memory(buff_in);
+  lzt::free_memory(buff_out);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingCopyEngineAndDeviceMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::allocate_device_memory(image_size);
+  void *buff_out = lzt::allocate_device_memory(image_size);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false, true);
+  lzt::free_memory(buff_in);
+  lzt::free_memory(buff_out);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingCopyEngineAndDeviceMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::allocate_device_memory(image_size);
+  void *buff_out = lzt::allocate_device_memory(image_size);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true, true);
   lzt::free_memory(buff_in);
   lzt::free_memory(buff_out);
 }
@@ -633,7 +790,7 @@ LZT_TEST_F(
   void *buff_in_bot = lzt::allocate_shared_memory(image_size);
   void *buff_out_top = lzt::allocate_shared_memory(image_size);
   test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
-                                  buff_out_top, false);
+                                  buff_out_top, false, false);
   lzt::free_memory(buff_in_bot);
   lzt::free_memory(buff_in_top);
   lzt::free_memory(buff_out_bot);
@@ -651,7 +808,43 @@ LZT_TEST_F(
   void *buff_in_bot = lzt::allocate_shared_memory(image_size);
   void *buff_out_top = lzt::allocate_shared_memory(image_size);
   test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
-                                  buff_out_top, true);
+                                  buff_out_top, true, false);
+  lzt::free_memory(buff_in_bot);
+  lzt::free_memory(buff_in_top);
+  lzt::free_memory(buff_out_bot);
+  lzt::free_memory(buff_out_top);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingCopyEngineAndSharedMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::allocate_shared_memory(image_size);
+  void *buff_out_bot = lzt::allocate_shared_memory(image_size);
+  void *buff_in_bot = lzt::allocate_shared_memory(image_size);
+  void *buff_out_top = lzt::allocate_shared_memory(image_size);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, false, true);
+  lzt::free_memory(buff_in_bot);
+  lzt::free_memory(buff_in_top);
+  lzt::free_memory(buff_out_bot);
+  lzt::free_memory(buff_out_top);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingCopyEngineAndSharedMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::allocate_shared_memory(image_size);
+  void *buff_out_bot = lzt::allocate_shared_memory(image_size);
+  void *buff_in_bot = lzt::allocate_shared_memory(image_size);
+  void *buff_out_top = lzt::allocate_shared_memory(image_size);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, true, true);
   lzt::free_memory(buff_in_bot);
   lzt::free_memory(buff_in_top);
   lzt::free_memory(buff_out_bot);
@@ -666,7 +859,7 @@ LZT_TEST_F(
   }
   void *buff_in = lzt::allocate_shared_memory(image_size);
   void *buff_out = lzt::allocate_shared_memory(image_size);
-  test_image_mem_copy_no_regions(buff_in, buff_out, false);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false, false);
   lzt::free_memory(buff_in);
   lzt::free_memory(buff_out);
 }
@@ -679,7 +872,33 @@ LZT_TEST_F(
   }
   void *buff_in = lzt::allocate_shared_memory(image_size);
   void *buff_out = lzt::allocate_shared_memory(image_size);
-  test_image_mem_copy_no_regions(buff_in, buff_out, true);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true, false);
+  lzt::free_memory(buff_in);
+  lzt::free_memory(buff_out);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingCopyEngineAndSharedMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::allocate_shared_memory(image_size);
+  void *buff_out = lzt::allocate_shared_memory(image_size);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false, true);
+  lzt::free_memory(buff_in);
+  lzt::free_memory(buff_out);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingCopyEngineAndSharedMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturned) {
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::allocate_shared_memory(image_size);
+  void *buff_out = lzt::allocate_shared_memory(image_size);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true, true);
   lzt::free_memory(buff_in);
   lzt::free_memory(buff_out);
 }
@@ -696,7 +915,26 @@ LZT_TEST_F(
   void *buff_in_bot = lzt::aligned_malloc(image_size, 1);
   void *buff_out_top = lzt::aligned_malloc(image_size, 1);
   test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
-                                  buff_out_top, false);
+                                  buff_out_top, false, false);
+  lzt::aligned_free(buff_in_bot);
+  lzt::aligned_free(buff_in_top);
+  lzt::aligned_free(buff_out_bot);
+  lzt::aligned_free(buff_out_top);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingCopyEngineAndSharedSystemMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::aligned_malloc(image_size, 1);
+  void *buff_out_bot = lzt::aligned_malloc(image_size, 1);
+  void *buff_in_bot = lzt::aligned_malloc(image_size, 1);
+  void *buff_out_top = lzt::aligned_malloc(image_size, 1);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, false, true);
   lzt::aligned_free(buff_in_bot);
   lzt::aligned_free(buff_in_top);
   lzt::aligned_free(buff_out_bot);
@@ -715,7 +953,26 @@ LZT_TEST_F(
   void *buff_in_bot = lzt::aligned_malloc(image_size, 1);
   void *buff_out_top = lzt::aligned_malloc(image_size, 1);
   test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
-                                  buff_out_top, true);
+                                  buff_out_top, true, false);
+  lzt::aligned_free(buff_in_bot);
+  lzt::aligned_free(buff_in_top);
+  lzt::aligned_free(buff_out_bot);
+  lzt::aligned_free(buff_out_top);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryToImmediateCmdListUsingCopyEngineAndSharedSystemMemoryWithNonNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in_top = lzt::aligned_malloc(image_size, 1);
+  void *buff_out_bot = lzt::aligned_malloc(image_size, 1);
+  void *buff_in_bot = lzt::aligned_malloc(image_size, 1);
+  void *buff_out_top = lzt::aligned_malloc(image_size, 1);
+  test_image_mem_copy_use_regions(buff_in_bot, buff_in_top, buff_out_bot,
+                                  buff_out_top, true, true);
   lzt::aligned_free(buff_in_bot);
   lzt::aligned_free(buff_in_top);
   lzt::aligned_free(buff_out_bot);
@@ -731,7 +988,7 @@ LZT_TEST_F(
   }
   void *buff_in = lzt::aligned_malloc(image_size, 1);
   void *buff_out = lzt::aligned_malloc(image_size, 1);
-  test_image_mem_copy_no_regions(buff_in, buff_out, false);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false, false);
   lzt::aligned_free(buff_in);
   lzt::aligned_free(buff_out);
 }
@@ -745,7 +1002,35 @@ LZT_TEST_F(
   }
   void *buff_in = lzt::aligned_malloc(image_size, 1);
   void *buff_out = lzt::aligned_malloc(image_size, 1);
-  test_image_mem_copy_no_regions(buff_in, buff_out, true);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true, false);
+  lzt::aligned_free(buff_in);
+  lzt::aligned_free(buff_out);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyFromMemoryUsingCopyEngineAndSharedSystemMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::aligned_malloc(image_size, 1);
+  void *buff_out = lzt::aligned_malloc(image_size, 1);
+  test_image_mem_copy_no_regions(buff_in, buff_out, false, true);
+  lzt::aligned_free(buff_in);
+  lzt::aligned_free(buff_out);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendImageCopyTests,
+    GivenDeviceImageAndHostImageWhenAppendingImageCopyToImmediateCmdListFromMemoryUsingCopyEngineAndSharedSystemMemoryWithNullRegionsThenImageIsCorrectAndSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  if (!(lzt::image_support())) {
+    GTEST_SKIP();
+  }
+  void *buff_in = lzt::aligned_malloc(image_size, 1);
+  void *buff_out = lzt::aligned_malloc(image_size, 1);
+  test_image_mem_copy_no_regions(buff_in, buff_out, true, true);
   lzt::aligned_free(buff_in);
   lzt::aligned_free(buff_out);
 }
