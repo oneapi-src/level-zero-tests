@@ -1,6 +1,6 @@
 # escape=`
 
-ARG BASE_IMAGE=mcr.microsoft.com/dotnet/framework/runtime:4.8
+ARG BASE_IMAGE=mcr.microsoft.com/dotnet/framework/runtime:4.8.1
 FROM ${BASE_IMAGE}
 
 SHELL ["powershell"]
