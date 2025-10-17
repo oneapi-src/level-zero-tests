@@ -247,6 +247,17 @@ zeCommandBundle create_command_bundle(
   return {queue, list};
 }
 
+void append_memory_advise(ze_command_list_handle_t cl,
+                          ze_device_handle_t device, const void *ptr,
+                          size_t size, ze_memory_advice_t advice) {
+  auto command_list_initial = cl;
+  auto device_initial = device;
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeCommandListAppendMemAdvise(cl, device, ptr, size, advice));
+  EXPECT_EQ(cl, command_list_initial);
+  EXPECT_EQ(device, device_initial);
+}
+
 void append_memory_set(ze_command_list_handle_t cl, void *dstptr,
                        const uint8_t *value, size_t size) {
   append_memory_set(cl, dstptr, value, size, nullptr);

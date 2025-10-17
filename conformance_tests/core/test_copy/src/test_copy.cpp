@@ -776,12 +776,12 @@ LZT_TEST_F(
 class zeCommandListAppendMemoryBackToBackTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<bool, bool, bool, bool, size_t>> {
+          std::tuple<bool, bool, bool, bool, bool, size_t>> {
 
 protected:
   void RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(
       bool is_src_shared_system, bool is_dst_shared_system, bool is_immediate,
-      bool isCopyOnly, size_t size) {
+      bool is_copy_only, bool use_madvise, size_t size) {
     const uint8_t value = to_u8(rand()) & 0xFF;
     const uint8_t init = (value + 0x22) & 0xFF;
 
@@ -791,25 +791,39 @@ protected:
         size, is_dst_shared_system);
 
     uint32_t ordinal = 0;
-    if (isCopyOnly) {
+    if (is_copy_only) {
       ordinal = 1;
     }
 
     const char *src_memory_type = is_src_shared_system ? "SVM" : "USM";
     const char *dst_memory_type = is_dst_shared_system ? "SVM" : "USM";
 
-    printf("src_memory (%s)= %p dst_memory (%s)= %p immediate = %d isCopyOnly "
-           "= %d size = %zu\n",
-           src_memory_type, src_memory, dst_memory_type, dst_memory,
-           is_immediate, isCopyOnly, size);
+    LOG_INFO << "src_memory (" << src_memory_type << ")= " << src_memory
+             << " dst_memory (" << dst_memory_type << ")= " << dst_memory
+             << " immediate = " << is_immediate
+             << " is_copy_only = " << is_copy_only
+             << " use_madvise = " << use_madvise << " size = " << size;
 
     memset(src_memory, value, size);
     memset(dst_memory, init, size);
 
+    auto device = zeDevice::get_instance()->get_device();
     auto cmd_bundle = lzt::create_command_bundle(
-        lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
+        lzt::get_default_context(), device, 0,
         ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0,
         ordinal, 0, is_immediate);
+
+    if (is_src_shared_system && use_madvise) {
+      lzt::append_memory_advise(
+          cmd_bundle.list, device, src_memory, size,
+          ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+    }
+
+    if (is_dst_shared_system && use_madvise) {
+      lzt::append_memory_advise(
+          cmd_bundle.list, device, dst_memory, size,
+          ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+    }
 
     lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_memory),
                             static_cast<void *>(src_memory), size);
@@ -827,15 +841,21 @@ LZT_TEST_P(
     zeCommandListAppendMemoryBackToBackTests,
     GivenAllUsmAndSvmPermutationsConfirmSuccessfulExecutionBackToBackWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  bool is_src_shared_system = std::get<0>(GetParam());
+  bool is_dst_shared_system = std::get<1>(GetParam());
+  bool use_madvise = std::get<4>(GetParam());
+  if (use_madvise && !is_src_shared_system && !is_dst_shared_system) {
+    GTEST_SKIP() << "Skipping redundant case.";
+  }
   RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(
-      std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
-      std::get<3>(GetParam()), std::get<4>(GetParam()));
+      is_src_shared_system, is_dst_shared_system, std::get<2>(GetParam()),
+      std::get<3>(GetParam()), use_madvise, std::get<5>(GetParam()));
 }
 
 INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, zeCommandListAppendMemoryBackToBackTests,
     ::testing::Combine(::testing::Bool(), ::testing::Bool(), ::testing::Bool(),
-                       ::testing::Bool(),
+                       ::testing::Bool(), ::testing::Bool(),
                        ::testing::Values(10, 10 * 1024, 32 * 1024 * 1024)));
 
 class zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests
