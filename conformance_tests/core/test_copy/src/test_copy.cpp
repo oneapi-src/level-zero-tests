@@ -1154,13 +1154,15 @@ class AppendMemoryCopyRegionWithSharedSystem
       public ::testing::WithParamInterface<
           std::tuple<size_t, size_t, size_t, bool, bool>> {
 protected:
-  void RunMemoryCopyRegionTest() {
+  enum class MemoryAdvice { None, Source, Destination, Both };
+
+  void RunMemoryCopyRegionTest(MemoryAdvice advice) {
 
     is_immediate = std::get<3>(GetParam());
     use_copy_engine = std::get<4>(GetParam());
 
-    auto cmd_queue_group_props = get_command_queue_group_properties(
-        zeDevice::get_instance()->get_device());
+    auto device = zeDevice::get_instance()->get_device();
+    auto cmd_queue_group_props = get_command_queue_group_properties(device);
 
     const ze_command_queue_group_property_flags_t queue_group_flags_set =
         use_copy_engine
@@ -1175,8 +1177,7 @@ protected:
     ASSERT_TRUE(ordinal);
 
     auto cmd_bundle = lzt::create_command_bundle(
-        lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-        *ordinal, is_immediate);
+        lzt::get_default_context(), device, 0, *ordinal, is_immediate);
 
     // Set up memory buffers for test
     // Device memory has to be copied in so
@@ -1202,6 +1203,18 @@ protected:
     std::array<uint32_t, 3> depths = {1, dpth / 2, dpth};
 
     for (uint32_t region = 0; region < 3; region++) {
+      if (advice == MemoryAdvice::Source || advice == MemoryAdvice::Both) {
+        lzt::append_memory_advise(
+            cmd_bundle.list, device, source_memory, memory_size,
+            ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+      }
+
+      if (advice == MemoryAdvice::Destination | advice == MemoryAdvice::Both) {
+        lzt::append_memory_advise(
+            cmd_bundle.list, device, destination_memory, memory_size,
+            ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+      }
+
       // Define region to be copied from/to
       uint32_t width = widths[region];
       uint32_t height = heights[region];
@@ -1249,6 +1262,7 @@ protected:
         }
       }
     }
+
     destroy_command_bundle(cmd_bundle);
     free_memory(temp_src);
     free_memory(temp_dest);
@@ -1278,7 +1292,22 @@ LZT_TEST_P(
   memory_size = rows * columns * slices;
   source_memory = lzt::aligned_malloc(memory_size, 1);
   destination_memory = lzt::allocate_host_memory(memory_size);
-  RunMemoryCopyRegionTest();
+  RunMemoryCopyRegionTest(MemoryAdvice::None);
+  lzt::aligned_free(source_memory);
+  lzt::free_memory(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidAdvisedSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToHostMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::aligned_malloc(memory_size, 1);
+  destination_memory = lzt::allocate_host_memory(memory_size);
+  RunMemoryCopyRegionTest(MemoryAdvice::Source);
   lzt::aligned_free(source_memory);
   lzt::free_memory(destination_memory);
 }
@@ -1293,7 +1322,22 @@ LZT_TEST_P(
   memory_size = rows * columns * slices;
   source_memory = lzt::aligned_malloc(memory_size, 1);
   destination_memory = lzt::allocate_shared_memory(memory_size);
-  RunMemoryCopyRegionTest();
+  RunMemoryCopyRegionTest(MemoryAdvice::None);
+  lzt::aligned_free(source_memory);
+  lzt::free_memory(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidAdvisedSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToSharedMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::aligned_malloc(memory_size, 1);
+  destination_memory = lzt::allocate_shared_memory(memory_size);
+  RunMemoryCopyRegionTest(MemoryAdvice::Source);
   lzt::aligned_free(source_memory);
   lzt::free_memory(destination_memory);
 }
@@ -1308,7 +1352,22 @@ LZT_TEST_P(
   memory_size = rows * columns * slices;
   source_memory = lzt::aligned_malloc(memory_size, 1);
   destination_memory = lzt::allocate_device_memory(memory_size);
-  RunMemoryCopyRegionTest();
+  RunMemoryCopyRegionTest(MemoryAdvice::None);
+  lzt::aligned_free(source_memory);
+  lzt::free_memory(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidAdvisedSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToDeviceMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::aligned_malloc(memory_size, 1);
+  destination_memory = lzt::allocate_device_memory(memory_size);
+  RunMemoryCopyRegionTest(MemoryAdvice::Source);
   lzt::aligned_free(source_memory);
   lzt::free_memory(destination_memory);
 }
@@ -1323,7 +1382,52 @@ LZT_TEST_P(
   memory_size = rows * columns * slices;
   source_memory = lzt::aligned_malloc(memory_size, 1);
   destination_memory = lzt::aligned_malloc(memory_size, 1);
-  RunMemoryCopyRegionTest();
+  RunMemoryCopyRegionTest(MemoryAdvice::None);
+  lzt::aligned_free(source_memory);
+  lzt::aligned_free(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidAdvisedSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::aligned_malloc(memory_size, 1);
+  destination_memory = lzt::aligned_malloc(memory_size, 1);
+  RunMemoryCopyRegionTest(MemoryAdvice::Source);
+  lzt::aligned_free(source_memory);
+  lzt::aligned_free(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToAdvisedSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::aligned_malloc(memory_size, 1);
+  destination_memory = lzt::aligned_malloc(memory_size, 1);
+  RunMemoryCopyRegionTest(MemoryAdvice::Destination);
+  lzt::aligned_free(source_memory);
+  lzt::aligned_free(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidAdvisedSharedSystemMemoryWhenAppendingMemoryCopyWithRegionToAdvisedSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::aligned_malloc(memory_size, 1);
+  destination_memory = lzt::aligned_malloc(memory_size, 1);
+  RunMemoryCopyRegionTest(MemoryAdvice::Both);
   lzt::aligned_free(source_memory);
   lzt::aligned_free(destination_memory);
 }
@@ -1338,7 +1442,22 @@ LZT_TEST_P(
   memory_size = rows * columns * slices;
   source_memory = lzt::allocate_host_memory(memory_size);
   destination_memory = lzt::aligned_malloc(memory_size, 1);
-  RunMemoryCopyRegionTest();
+  RunMemoryCopyRegionTest(MemoryAdvice::None);
+  lzt::free_memory(source_memory);
+  lzt::aligned_free(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidHostMemoryWhenAppendingMemoryCopyWithRegionToAdvisedSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::allocate_host_memory(memory_size);
+  destination_memory = lzt::aligned_malloc(memory_size, 1);
+  RunMemoryCopyRegionTest(MemoryAdvice::Destination);
   lzt::free_memory(source_memory);
   lzt::aligned_free(destination_memory);
 }
@@ -1353,7 +1472,22 @@ LZT_TEST_P(
   memory_size = rows * columns * slices;
   source_memory = lzt::allocate_shared_memory(memory_size);
   destination_memory = lzt::aligned_malloc(memory_size, 1);
-  RunMemoryCopyRegionTest();
+  RunMemoryCopyRegionTest(MemoryAdvice::None);
+  lzt::free_memory(source_memory);
+  lzt::aligned_free(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidSharedMemoryWhenAppendingMemoryCopyWithRegionToAdvisedSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::allocate_shared_memory(memory_size);
+  destination_memory = lzt::aligned_malloc(memory_size, 1);
+  RunMemoryCopyRegionTest(MemoryAdvice::Destination);
   lzt::free_memory(source_memory);
   lzt::aligned_free(destination_memory);
 }
@@ -1368,7 +1502,22 @@ LZT_TEST_P(
   memory_size = rows * columns * slices;
   source_memory = lzt::allocate_device_memory(memory_size);
   destination_memory = lzt::aligned_malloc(memory_size, 1);
-  RunMemoryCopyRegionTest();
+  RunMemoryCopyRegionTest(MemoryAdvice::None);
+  lzt::free_memory(source_memory);
+  lzt::aligned_free(destination_memory);
+}
+
+LZT_TEST_P(
+    AppendMemoryCopyRegionWithSharedSystem,
+    GivenValidDeviceMemoryWhenAppendingMemoryCopyWithRegionToAdvisedSharedSystemMemoryThenSuccessIsReturnedAndCopyIsCorrectWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  rows = std::get<0>(GetParam());
+  columns = std::get<1>(GetParam());
+  slices = std::get<2>(GetParam());
+  memory_size = rows * columns * slices;
+  source_memory = lzt::allocate_device_memory(memory_size);
+  destination_memory = lzt::aligned_malloc(memory_size, 1);
+  RunMemoryCopyRegionTest(MemoryAdvice::Destination);
   lzt::free_memory(source_memory);
   lzt::aligned_free(destination_memory);
 }

@@ -10,25 +10,36 @@
 
 #include "test_harness/test_harness.hpp"
 
-namespace lzt = level_zero_tests;
-
 using lzt::to_u32;
 
+namespace {
+
 class SharedSystemMemoryTests
-    : public testing::TestWithParam<
-          std::tuple<std::pair<bool, bool>, bool, bool, size_t>> {
+    : public ::testing::TestWithParam<
+          std::tuple<std::pair<bool, bool>, bool, bool, bool, size_t>> {
 protected:
   void SetUp() override {
     device = lzt::zeDevice::get_instance()->get_device();
 
-    bool is_dst_shared_system = std::get<0>(GetParam()).first;
-    bool is_src_shared_system = std::get<0>(GetParam()).second;
+    is_dst_shared_system = std::get<0>(GetParam()).first;
+    is_src_shared_system = std::get<0>(GetParam()).second;
     if (is_dst_shared_system || is_src_shared_system) {
       SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
     }
+
+    use_atomic_kernel = std::get<1>(GetParam());
+    use_immediate_cmdlist = std::get<2>(GetParam());
+    use_madvise = std::get<3>(GetParam());
+    buffer_size = std::get<4>(GetParam());
   }
 
   ze_device_handle_t device;
+  bool is_dst_shared_system;
+  bool is_src_shared_system;
+  bool use_atomic_kernel;
+  bool use_immediate_cmdlist;
+  bool use_madvise;
+  size_t buffer_size;
 };
 
 class SharedSystemMemoryLaunchKernelTests : public SharedSystemMemoryTests {};
@@ -36,12 +47,6 @@ class SharedSystemMemoryLaunchKernelTests : public SharedSystemMemoryTests {};
 LZT_TEST_P(
     SharedSystemMemoryLaunchKernelTests,
     GivenSharedSystemMemoryAllocationsAsKernelArgumentsWhenKernelExecutesThenValuesAreCorrect) {
-  bool is_dst_shared_system = std::get<0>(GetParam()).first;
-  bool is_src_shared_system = std::get<0>(GetParam()).second;
-  bool use_atomic_kernel = std::get<1>(GetParam());
-  bool use_immediate_cmdlist = std::get<2>(GetParam());
-  size_t buffer_size = std::get<3>(GetParam());
-
   constexpr size_t group_size = 32;
   ASSERT_EQ(buffer_size % (sizeof(int) * group_size), 0);
 
@@ -74,6 +79,18 @@ LZT_TEST_P(
   lzt::zeCommandBundle cmd_bundle =
       lzt::create_command_bundle(use_immediate_cmdlist);
 
+  if (is_src_shared_system && use_madvise) {
+    lzt::append_memory_advise(
+        cmd_bundle.list, device, source, buffer_size,
+        ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  }
+
+  if (is_dst_shared_system && use_madvise) {
+    lzt::append_memory_advise(
+        cmd_bundle.list, device, result, buffer_size,
+        ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  }
+
   const uint32_t group_count_x =
       to_u32(buffer_size / (sizeof(int) * group_size));
   ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
@@ -104,7 +121,8 @@ struct SharedSystemMemoryTestsNameSuffix {
     bool is_src_shared_system = std::get<0>(info.param).second;
     bool use_atomic_kernel = std::get<1>(info.param);
     bool use_immediate_cmdlist = std::get<2>(info.param);
-    size_t buffer_size = std::get<3>(info.param);
+    bool use_madvise = std::get<3>(info.param);
+    size_t buffer_size = std::get<4>(info.param);
 
     const char *buffer_size_str = [](size_t size) -> const char * {
       switch (size) {
@@ -130,8 +148,14 @@ struct SharedSystemMemoryTestsNameSuffix {
       return "";
     }(buffer_size);
 
+    const char *advisedStr = use_madvise ? "Advised" : "";
+
+    if (is_src_shared_system)
+      ss << advisedStr;
     ss << (is_src_shared_system ? "SVM" : "USM");
     ss << "to";
+    if (is_dst_shared_system)
+      ss << advisedStr;
     ss << (is_dst_shared_system ? "SVM" : "USM");
     ss << (use_atomic_kernel ? "_Atomic" : "_NonAtomic");
     ss << (use_immediate_cmdlist ? "_Immediate" : "_Regular");
@@ -143,12 +167,13 @@ struct SharedSystemMemoryTestsNameSuffix {
 
 INSTANTIATE_TEST_SUITE_P(
     ParamSVMAllocationLaunchKernelTests, SharedSystemMemoryLaunchKernelTests,
-    testing::Combine(testing::Values(std::make_pair(true, false),
-                                     std::make_pair(false, true),
-                                     std::make_pair(true, true)),
-                     testing::Bool(), testing::Bool(),
-                     testing::Values(0x80u, 0x1000u, 0x1800u, 0x10'0000u,
-                                     0x10'0800u, 0x4000'0000u, 0x4000'0800u)),
+    ::testing::Combine(::testing::Values(std::make_pair(true, false),
+                                         std::make_pair(false, true),
+                                         std::make_pair(true, true)),
+                       ::testing::Bool(), ::testing::Bool(), ::testing::Bool(),
+                       ::testing::Values(0x80u, 0x1000u, 0x1800u, 0x10'0000u,
+                                         0x10'0800u, 0x4000'0000u,
+                                         0x4000'0800u)),
     SharedSystemMemoryTestsNameSuffix());
 
 class SharedSystemMemoryLaunchCooperativeKernelTests
@@ -167,11 +192,6 @@ LZT_TEST_P(
     GTEST_SKIP();
   }
 
-  const bool is_dst_shared_system = std::get<0>(GetParam()).first;
-  const bool is_src_shared_system = std::get<0>(GetParam()).second;
-  const bool use_atomic_kernel = std::get<1>(GetParam());
-  const bool use_immediate_cmdlist = std::get<2>(GetParam());
-  const size_t buffer_size = std::get<3>(GetParam());
   const size_t num_elements = buffer_size / sizeof(int);
   LOG_INFO << "Num elements: " << num_elements;
 
@@ -209,8 +229,9 @@ LZT_TEST_P(
                              : suggested_group_count;
   LOG_INFO << "Group count: " << group_count;
 
+  size_t output_size = group_count * sizeof(int);
   void *output = lzt::allocate_shared_memory_with_allocator_selector(
-      group_count * sizeof(int), 1, 0, 0, device, is_dst_shared_system);
+      output_size, 1, 0, 0, device, is_dst_shared_system);
 
   uint32_t group_size = lzt::to_u32(num_elements) / group_count;
   LOG_INFO << "Group size: " << group_size;
@@ -223,6 +244,18 @@ LZT_TEST_P(
 
   lzt::zeCommandBundle cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), device, 0, *ordinal, use_immediate_cmdlist);
+
+  if (is_src_shared_system && use_madvise) {
+    lzt::append_memory_advise(
+        cmd_bundle.list, device, input, buffer_size,
+        ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  }
+
+  if (is_dst_shared_system && use_madvise) {
+    lzt::append_memory_advise(
+        cmd_bundle.list, device, output, output_size,
+        ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  }
 
   ze_group_count_t thread_group_dimensions = {group_count, 1, 1};
   lzt::append_launch_cooperative_function(
@@ -245,10 +278,12 @@ LZT_TEST_P(
 INSTANTIATE_TEST_SUITE_P(
     ParamSVMAllocationLaunchCooperativeKernelTests,
     SharedSystemMemoryLaunchCooperativeKernelTests,
-    testing::Combine(testing::Values(std::make_pair(true, false),
-                                     std::make_pair(false, true),
-                                     std::make_pair(true, true)),
-                     testing::Bool(), testing::Bool(),
-                     testing::Values(0x80u, 0x1000u, 0x1800u, 0x1'0000u,
-                                     0x1'0800u)),
+    ::testing::Combine(::testing::Values(std::make_pair(true, false),
+                                         std::make_pair(false, true),
+                                         std::make_pair(true, true)),
+                       ::testing::Bool(), ::testing::Bool(), ::testing::Bool(),
+                       ::testing::Values(0x80u, 0x1000u, 0x1800u, 0x1'0000u,
+                                         0x1'0800u)),
     SharedSystemMemoryTestsNameSuffix());
+
+} // namespace
