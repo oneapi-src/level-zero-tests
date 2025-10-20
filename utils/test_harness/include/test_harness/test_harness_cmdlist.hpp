@@ -96,6 +96,9 @@ void append_memory_advise(ze_command_list_handle_t cl,
                           ze_device_handle_t device, const void *ptr,
                           size_t size, ze_memory_advice_t advice);
 
+void append_memory_prefetch(ze_command_list_handle_t cl, const void *ptr,
+                            size_t size);
+
 void append_memory_set(ze_command_list_handle_t cl, void *dstptr,
                        const uint8_t *value, size_t size);
 void append_memory_set(ze_command_list_handle_t cl, void *dstptr,

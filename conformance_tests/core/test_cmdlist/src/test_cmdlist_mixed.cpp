@@ -216,8 +216,7 @@ LZT_TEST_P(
         EXPECT_ZE_RESULT_SUCCESS(
             zeEventHostSynchronize(events_copy[j], UINT64_MAX));
       } else {
-        EXPECT_ZE_RESULT_SUCCESS(
-            zeCommandListHostSynchronize(cls_copy_imm[j], UINT64_MAX));
+        lzt::synchronize_command_list_host(cls_copy_imm[j], UINT64_MAX);
       }
       EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events_copy[j]));
       EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events_fill[j]));
@@ -385,8 +384,7 @@ LZT_TEST_P(
     if (use_events_sync) {
       lzt::event_host_synchronize(events[i], UINT64_MAX);
     } else {
-      EXPECT_ZE_RESULT_SUCCESS(
-          zeCommandListHostSynchronize(cls_compute_imm[i], UINT64_MAX));
+      lzt::synchronize_command_list_host(cls_compute_imm[i], UINT64_MAX);
     }
   }
 
@@ -545,8 +543,7 @@ LZT_TEST_P(
     if (use_events_sync) {
       lzt::event_host_synchronize(events[i], UINT64_MAX);
     } else {
-      EXPECT_ZE_RESULT_SUCCESS(
-          zeCommandListHostSynchronize(cls_imm[i], UINT64_MAX));
+      lzt::synchronize_command_list_host(cls_imm[i], UINT64_MAX);
     }
   }
 
@@ -700,8 +697,7 @@ LZT_TEST_P(
         EXPECT_ZE_RESULT_SUCCESS(
             zeEventHostSynchronize(events_copy[j], UINT64_MAX));
       } else {
-        EXPECT_ZE_RESULT_SUCCESS(
-            zeCommandListHostSynchronize(cls_imm[j], UINT64_MAX));
+        lzt::synchronize_command_list_host(cls_imm[j], UINT64_MAX);
       }
 
       EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(events_copy[j]));
@@ -1111,7 +1107,7 @@ LZT_TEST_P(
   if (use_events_sync) {
     lzt::event_host_synchronize(ev0, UINT64_MAX);
   } else {
-    zeCommandListHostSynchronize(cl_imm, UINT64_MAX);
+    lzt::synchronize_command_list_host(cl_imm, UINT64_MAX);
   }
 
   lzt::query_event(ev0, ZE_RESULT_SUCCESS);
@@ -1159,7 +1155,7 @@ LZT_TEST_P(
   lzt::execute_command_lists(cq, 1, &cl, nullptr);
 
   if (!use_events_sync) {
-    EXPECT_ZE_RESULT_SUCCESS(zeCommandListHostSynchronize(cl_imm, UINT64_MAX));
+    lzt::synchronize_command_list_host(cl_imm, UINT64_MAX);
   }
   lzt::synchronize(cq, UINT64_MAX);
   lzt::event_host_synchronize(ev0, UINT64_MAX);
@@ -1329,8 +1325,7 @@ LZT_TEST_P(
   if (use_events_sync) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(ev_h2d, UINT64_MAX));
   } else {
-    EXPECT_ZE_RESULT_SUCCESS(
-        zeCommandListHostSynchronize(cl_d2h_imm, UINT64_MAX));
+    lzt::synchronize_command_list_host(cl_d2h_imm, UINT64_MAX);
   }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
@@ -1460,8 +1455,7 @@ LZT_TEST_P(
   // The results should be back once the last copy queue is done
   EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueSynchronize(cq_d2h, UINT64_MAX));
   if (!use_events_sync) {
-    EXPECT_ZE_RESULT_SUCCESS(
-        zeCommandListHostSynchronize(cl_compute_imm, UINT64_MAX));
+    lzt::synchronize_command_list_host(cl_compute_imm, UINT64_MAX);
   }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
@@ -1596,8 +1590,7 @@ LZT_TEST_P(
   if (use_events_sync) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(ev_h2d, UINT64_MAX));
   } else {
-    EXPECT_ZE_RESULT_SUCCESS(
-        zeCommandListHostSynchronize(cl_d2h_imm, UINT64_MAX));
+    lzt::synchronize_command_list_host(cl_d2h_imm, UINT64_MAX);
   }
 
   lzt::query_event(ev_h2d, ZE_RESULT_SUCCESS);
@@ -1710,7 +1703,7 @@ LZT_TEST_P(
   if (use_events_sync) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(ev_fill, UINT64_MAX));
   } else {
-    EXPECT_ZE_RESULT_SUCCESS(zeCommandListHostSynchronize(cl_copy, UINT64_MAX));
+    lzt::synchronize_command_list_host(cl_copy, UINT64_MAX);
   }
 
   lzt::query_event(ev_fill, ZE_RESULT_SUCCESS);
