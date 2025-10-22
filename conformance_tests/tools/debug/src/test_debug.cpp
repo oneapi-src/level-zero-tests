@@ -1044,17 +1044,11 @@ void read_and_verify_events_debugger_thread(
 
   uint8_t *buffer = new uint8_t[1];
   buffer[0] = 0;
-
-  for (auto &stopped_thread : stopped_threads) {
-    uint8_t *buffer = new uint8_t[1];
-    buffer[0] = 0;
-    LOG_INFO << "[Debugger] Writing to address: " << std::hex << *gpu_buffer_va;
-    lzt::debug_write_memory(debug_session, stopped_thread, memory_space_desc, 1,
-                            buffer);
-    print_thread("Resuming device thread ", stopped_thread, DEBUG);
-    lzt::debug_resume(debug_session, stopped_thread);
-    delete[] buffer;
-  }
+  LOG_INFO << "[Debugger] Writing to address: " << std::hex << *gpu_buffer_va;
+  lzt::debug_write_memory(debug_session, device_thread, memory_space_desc, 1,
+                          buffer);
+  lzt::debug_resume(debug_session, device_thread);
+  delete[] buffer;
 
   LOG_INFO << "[Debugger] Waiting for module unload and process exit events";
 
