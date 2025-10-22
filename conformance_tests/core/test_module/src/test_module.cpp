@@ -186,12 +186,19 @@ void zeModuleCreateTests::
     *typed_global_pointer = expected_value;
     lzt::append_memory_copy(bundle.list, global_pointer, memory,
                             sizeof(expected_value));
-    lzt::close_command_list(bundle.list);
+    if (!is_immediate) {
+      lzt::close_command_list(bundle.list);
+    }
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     *typed_global_pointer = ~expected_value;
+    if (!is_immediate) {
+      lzt::reset_command_list(bundle.list);
+    }
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_value));
-    lzt::close_command_list(bundle.list);
+    if (!is_immediate) {
+      lzt::close_command_list(bundle.list);
+    }
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     EXPECT_EQ(expected_value, *typed_global_pointer);
     lzt::free_memory(memory);
