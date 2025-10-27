@@ -30,7 +30,7 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
   std::vector<float> arr(static_cast<uint32_t>(numItems));
   for (uint32_t i = 0; i < numItems; i++) {
-    arr[i] = static_cast<float>(i);
+    arr[i] = static_cast<float>(rand()) / RAND_MAX;
   }
 
   if (context.sub_device_count) {
