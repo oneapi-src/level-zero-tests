@@ -78,7 +78,7 @@ void metric_validate_stall_sampling_data(
   uint32_t sbidStallOffset = UINT32_MAX;
   uint32_t syncStallOffset = UINT32_MAX;
   uint32_t instrFetchStallOffset = UINT32_MAX;
-  uint32_t otherStallOffset = UINT32_MAX;  
+  uint32_t otherStallOffset = UINT32_MAX;
 
   for (uint32_t i = 0; i < to_u32(metricProperties.size()); i++) {
 
@@ -133,7 +133,7 @@ void metric_validate_stall_sampling_data(
   uint64_t SbidStallCount = 0;
   uint64_t SyncStallCount = 0;
   uint64_t InstrFetchStallCount = 0;
-  uint64_t OtherStallCount = 0;  
+  uint64_t OtherStallCount = 0;
 
   uint32_t metricSetStartIndex = 0;
 
@@ -174,8 +174,7 @@ void metric_validate_stall_sampling_data(
       uint32_t metricPropsSize = to_u32(metricProperties.size());
 
       IpAddress =
-          getStallCount(report, metricPropsSize, ipOffset,
-                                    metricSetStartIndex);
+          getStallCount(report, metricPropsSize, ipOffset, metricSetStartIndex);
 
       tmpStallCount = getStallCount(report, metricPropsSize, activeOffset,
                                     metricSetStartIndex);
@@ -223,8 +222,8 @@ void metric_validate_stall_sampling_data(
       OtherStallCount += tmpStallCount;
 
       if (!reportCompleteFlag) {
-        LOG_INFO << "Report number " << report << " with IP address " << IpAddress
-                  << " has zero for all stall counts";      
+        LOG_INFO << "Report number " << report << " with IP address "
+                 << IpAddress << " has zero for all stall counts";
       }
     }
 
