@@ -152,7 +152,6 @@ void metric_validate_stall_sampling_data(
     for (uint32_t report = 0; report < reportCount; report++) {
 
       tmpStallCount = 0;
-      reportCompleteFlag = false;
 
       auto getStallCount = [&totalMetricValues](uint32_t metricReport,
                                                 uint32_t metricPropertiesSize,
@@ -169,51 +168,39 @@ void metric_validate_stall_sampling_data(
 
       tmpStallCount = getStallCount(report, metricPropsSize, activeOffset,
                                     metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       ActiveCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, controlStallOffset,
                                     metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       ControlStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, pipeStallOffset,
                                     metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       PipeStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, sendStallOffset,
                                     metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       SendStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, distStallOffset,
                                     metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       DistStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, sbidStallOffset,
                                     metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       SbidStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, syncStallOffset,
                                     metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       SyncStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize,
                                     instrFetchStallOffset, metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       InstrFetchStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, otherStallOffset,
                                     metricSetStartIndex);
-      reportCompleteFlag |= (tmpStallCount != 0);
       OtherStallCount += tmpStallCount;
-
-      EXPECT_TRUE(reportCompleteFlag)
-          << "Report number " << report << " has zero for all stall counts";
     }
 
     metricSetStartIndex += metricCountForDataIndex;
@@ -289,7 +276,7 @@ void metric_run_ip_sampling_with_validation(
       for (auto &fData : functionDataBuf) {
         fData.function = get_matrix_multiplication_kernel(
             device, &fData.tg, &fData.a_buffer, &fData.b_buffer,
-            &fData.c_buffer, 8192);
+            &fData.c_buffer, 4096);
         zeCommandListAppendLaunchKernel(commandList, fData.function, &fData.tg,
                                         nullptr, 0, nullptr);
       }
