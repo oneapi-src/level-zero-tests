@@ -69,6 +69,7 @@ void metric_validate_stall_sampling_data(
     std::vector<zet_typed_value_t> &totalMetricValues,
     std::vector<uint32_t> &metricValueSets) {
 
+  uint32_t ipOffset = UINT32_MAX;
   uint32_t activeOffset = UINT32_MAX;
   uint32_t controlStallOffset = UINT32_MAX;
   uint32_t pipeStallOffset = UINT32_MAX;
@@ -77,10 +78,14 @@ void metric_validate_stall_sampling_data(
   uint32_t sbidStallOffset = UINT32_MAX;
   uint32_t syncStallOffset = UINT32_MAX;
   uint32_t instrFetchStallOffset = UINT32_MAX;
-  uint32_t otherStallOffset = UINT32_MAX;
+  uint32_t otherStallOffset = UINT32_MAX;  
 
   for (uint32_t i = 0; i < to_u32(metricProperties.size()); i++) {
 
+    if (strcmp("IP", metricProperties[i].name) == 0) {
+      ipOffset = i;
+      continue;
+    }
     if (strcmp("Active", metricProperties[i].name) == 0) {
       activeOffset = i;
       continue;
@@ -119,6 +124,7 @@ void metric_validate_stall_sampling_data(
     }
   }
 
+  uint64_t IpAddress = 0;
   uint64_t ActiveCount = 0;
   uint64_t ControlStallCount = 0;
   uint64_t PipeStallCount = 0;
@@ -127,7 +133,7 @@ void metric_validate_stall_sampling_data(
   uint64_t SbidStallCount = 0;
   uint64_t SyncStallCount = 0;
   uint64_t InstrFetchStallCount = 0;
-  uint64_t OtherStallCount = 0;
+  uint64_t OtherStallCount = 0;  
 
   uint32_t metricSetStartIndex = 0;
 
@@ -152,6 +158,7 @@ void metric_validate_stall_sampling_data(
     for (uint32_t report = 0; report < reportCount; report++) {
 
       tmpStallCount = 0;
+      reportCompleteFlag = false;
 
       auto getStallCount = [&totalMetricValues](uint32_t metricReport,
                                                 uint32_t metricPropertiesSize,
@@ -166,41 +173,59 @@ void metric_validate_stall_sampling_data(
       };
       uint32_t metricPropsSize = to_u32(metricProperties.size());
 
+      IpAddress =
+          getStallCount(report, metricPropsSize, ipOffset,
+                                    metricSetStartIndex);
+
       tmpStallCount = getStallCount(report, metricPropsSize, activeOffset,
                                     metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       ActiveCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, controlStallOffset,
                                     metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       ControlStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, pipeStallOffset,
                                     metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       PipeStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, sendStallOffset,
                                     metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       SendStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, distStallOffset,
                                     metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       DistStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, sbidStallOffset,
                                     metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       SbidStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, syncStallOffset,
                                     metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       SyncStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize,
                                     instrFetchStallOffset, metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       InstrFetchStallCount += tmpStallCount;
 
       tmpStallCount = getStallCount(report, metricPropsSize, otherStallOffset,
                                     metricSetStartIndex);
+      reportCompleteFlag |= (tmpStallCount != 0);
       OtherStallCount += tmpStallCount;
+
+      if (!reportCompleteFlag) {
+        LOG_INFO << "Report number " << report << " with IP address " << IpAddress
+                  << " has zero for all stall counts";      
+      }
     }
 
     metricSetStartIndex += metricCountForDataIndex;
