@@ -1597,7 +1597,7 @@ LZT_TEST_F(
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedWithNoOverflowThenValidateStallSampleData) {
   metric_run_ip_sampling_with_validation(false, devices, notifyEveryNReports,
                                          samplingPeriod,
-                                         to_u32(TimeForNReportsComplete));
+                                         to_u32(TimeForNReportsComplete), 4096);
 }
 
 LZT_TEST_F(

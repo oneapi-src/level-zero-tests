@@ -244,7 +244,7 @@ void metric_validate_stall_sampling_data(
 void metric_run_ip_sampling_with_validation(
     bool enableOverflow, const std::vector<ze_device_handle_t> &devices,
     uint32_t notifyEveryNReports, uint32_t samplingPeriod,
-    uint32_t timeForNReportsComplete) {
+    uint32_t timeForNReportsComplete, uint32_t dimensions = 8192) {
 
   uint32_t numberOfFunctionCalls;
   if (enableOverflow) {
@@ -300,7 +300,7 @@ void metric_run_ip_sampling_with_validation(
       for (auto &fData : functionDataBuf) {
         fData.function = get_matrix_multiplication_kernel(
             device, &fData.tg, &fData.a_buffer, &fData.b_buffer,
-            &fData.c_buffer, 4096);
+            &fData.c_buffer, dimensions);
         zeCommandListAppendLaunchKernel(commandList, fData.function, &fData.tg,
                                         nullptr, 0, nullptr);
       }
