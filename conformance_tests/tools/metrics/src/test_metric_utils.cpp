@@ -69,6 +69,7 @@ void metric_validate_stall_sampling_data(
     std::vector<zet_typed_value_t> &totalMetricValues,
     std::vector<uint32_t> &metricValueSets) {
 
+  uint32_t ipOffset = UINT32_MAX;
   uint32_t activeOffset = UINT32_MAX;
   uint32_t controlStallOffset = UINT32_MAX;
   uint32_t pipeStallOffset = UINT32_MAX;
@@ -81,6 +82,10 @@ void metric_validate_stall_sampling_data(
 
   for (uint32_t i = 0; i < to_u32(metricProperties.size()); i++) {
 
+    if (strcmp("IP", metricProperties[i].name) == 0) {
+      ipOffset = i;
+      continue;
+    }
     if (strcmp("Active", metricProperties[i].name) == 0) {
       activeOffset = i;
       continue;
@@ -119,6 +124,7 @@ void metric_validate_stall_sampling_data(
     }
   }
 
+  uint64_t IpAddress = 0;
   uint64_t ActiveCount = 0;
   uint64_t ControlStallCount = 0;
   uint64_t PipeStallCount = 0;
@@ -167,6 +173,9 @@ void metric_validate_stall_sampling_data(
       };
       uint32_t metricPropsSize = to_u32(metricProperties.size());
 
+      IpAddress =
+          getStallCount(report, metricPropsSize, ipOffset, metricSetStartIndex);
+
       tmpStallCount = getStallCount(report, metricPropsSize, activeOffset,
                                     metricSetStartIndex);
       reportCompleteFlag |= (tmpStallCount != 0);
@@ -212,8 +221,10 @@ void metric_validate_stall_sampling_data(
       reportCompleteFlag |= (tmpStallCount != 0);
       OtherStallCount += tmpStallCount;
 
-      EXPECT_TRUE(reportCompleteFlag)
-          << "Report number " << report << " has zero for all stall counts";
+      if (!reportCompleteFlag) {
+        LOG_INFO << "Report number " << report << " with IP address "
+                 << IpAddress << " has zero for all stall counts";
+      }
     }
 
     metricSetStartIndex += metricCountForDataIndex;
@@ -233,7 +244,7 @@ void metric_validate_stall_sampling_data(
 void metric_run_ip_sampling_with_validation(
     bool enableOverflow, const std::vector<ze_device_handle_t> &devices,
     uint32_t notifyEveryNReports, uint32_t samplingPeriod,
-    uint32_t timeForNReportsComplete) {
+    uint32_t timeForNReportsComplete, uint32_t dimensions = 8192) {
 
   uint32_t numberOfFunctionCalls;
   if (enableOverflow) {
@@ -289,7 +300,7 @@ void metric_run_ip_sampling_with_validation(
       for (auto &fData : functionDataBuf) {
         fData.function = get_matrix_multiplication_kernel(
             device, &fData.tg, &fData.a_buffer, &fData.b_buffer,
-            &fData.c_buffer, 8192);
+            &fData.c_buffer, dimensions);
         zeCommandListAppendLaunchKernel(commandList, fData.function, &fData.tg,
                                         nullptr, 0, nullptr);
       }

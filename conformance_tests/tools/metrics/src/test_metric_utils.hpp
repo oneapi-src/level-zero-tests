@@ -24,6 +24,6 @@ void metric_validate_stall_sampling_data(
 void metric_run_ip_sampling_with_validation(
     bool enableOverflow, const std::vector<ze_device_handle_t> &devices,
     uint32_t notifyEveryNReports, uint32_t samplingPeriod,
-    uint32_t timeForNReportsComplete);
+    uint32_t timeForNReportsComplete, uint32_t dimensions = 8192);
 
 #endif // TEST_METRIC_UTILS_HPP
