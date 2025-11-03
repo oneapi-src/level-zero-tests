@@ -69,7 +69,7 @@ void zeCommandListAppendMemoryFillTests::
       use_copy_engine ? ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE : 0;
   auto ordinal = lzt::get_queue_ordinal(
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
-  ASSERT_TRUE(ordinal);
+  ASSERT_NE(ordinal, std::nullopt);
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -279,7 +279,7 @@ void zeCommandListAppendMemoryFillTests::
       use_copy_engine ? ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE : 0;
   auto ordinal = lzt::get_queue_ordinal(
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
-  ASSERT_TRUE(ordinal);
+  ASSERT_NE(ordinal, std::nullopt);
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -418,7 +418,7 @@ void zeCommandListAppendMemoryFillTests::
       use_copy_engine ? ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE : 0;
   auto ordinal = lzt::get_queue_ordinal(
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
-  ASSERT_TRUE(ordinal);
+  ASSERT_NE(ordinal, std::nullopt);
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -1327,7 +1327,7 @@ protected:
     auto ordinal =
         lzt::get_queue_ordinal(cmd_queue_group_props, queue_group_flags_set,
                                queue_group_flags_not_set);
-    ASSERT_TRUE(ordinal);
+    ASSERT_NE(ordinal, std::nullopt);
 
     auto cmd_bundle = lzt::create_command_bundle(
         lzt::get_default_context(), device, 0, *ordinal, is_immediate);
@@ -1711,7 +1711,7 @@ void zeCommandListAppendMemoryCopyTests::
       use_copy_engine ? ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE : 0;
   auto ordinal = lzt::get_queue_ordinal(
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
-  ASSERT_TRUE(ordinal);
+  ASSERT_NE(ordinal, std::nullopt);
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -1798,7 +1798,7 @@ void zeCommandListAppendMemoryCopyTests::
       use_copy_engine ? ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE : 0;
   auto ordinal = lzt::get_queue_ordinal(
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
-  ASSERT_TRUE(ordinal);
+  ASSERT_NE(ordinal, std::nullopt);
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
@@ -1897,7 +1897,7 @@ void zeCommandListAppendMemoryCopyTests::
       use_copy_engine ? ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE : 0;
   auto ordinal = lzt::get_queue_ordinal(
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
-  ASSERT_TRUE(ordinal);
+  ASSERT_NE(ordinal, std::nullopt);
 
   auto cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
