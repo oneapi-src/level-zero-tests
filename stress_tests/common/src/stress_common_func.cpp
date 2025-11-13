@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -43,7 +43,7 @@ uint64_t total_available_host_memory() {
   stat.dwLength = sizeof(stat);
   GlobalMemoryStatusEx(&stat);
 
-  return stat.ullAvailVirtual;
+  return stat.ullAvailPhys;
 }
 uint64_t get_page_size() {
   SYSTEM_INFO si;
