@@ -621,12 +621,12 @@ void metric_streamer_read_data(
   ASSERT_NE(nullptr, metricData);
   ze_result_t result = zetMetricStreamerReadData(
       metricStreamerHandle, reports, &rawDataSize, metricData->data());
-    if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
-      EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
-      metricStreamerHandle, reports, &rawDataSize, metricData->data()));
-    } else {
-      EXPECT_ZE_RESULT_SUCCESS(result);
-    }
+  if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
+        metricStreamerHandle, reports, &rawDataSize, metricData->data()));
+  } else {
+    EXPECT_ZE_RESULT_SUCCESS(result);
+  }
 }
 
 void activate_metric_groups(
