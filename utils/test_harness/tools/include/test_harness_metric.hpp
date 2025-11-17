@@ -143,7 +143,8 @@ void metric_streamer_read_data(
 
 void metric_streamer_read_data(
     zet_metric_streamer_handle_t metricStreamerHandle, uint32_t reports,
-    size_t &rawDataSize, std::vector<uint8_t> *metricData);
+    size_t &rawDataSize, std::vector<uint8_t> *metricData,
+    zet_metric_group_handle_t metricGroupHandle = nullptr);
 
 std::vector<zet_metric_group_handle_t>
 get_metric_groups_with_different_domains(const ze_device_handle_t device,
