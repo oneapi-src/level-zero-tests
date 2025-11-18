@@ -1242,7 +1242,8 @@ LZT_TEST_F(
       EXPECT_GT(rawDataSize, 0);
       rawData.resize(rawDataSize);
       lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
-                                     rawDataSize, &rawData);
+                                     rawDataSize, &rawData,
+                                     groupInfo.metricGroupHandle);
 
       LOG_INFO << "raw data size " << rawDataSize;
       EXPECT_GT(rawDataSize, 0);
@@ -1339,8 +1340,9 @@ LZT_TEST_F(
       EXPECT_GT(rawDataSize, 0);
       rawData.resize(rawDataSize);
       for (uint32_t count = 0; count < maxReadAttempts; count++) {
-        lzt::metric_streamer_read_data(
-            metricStreamerHandle, notifyEveryNReports, rawDataSize, &rawData);
+        lzt::metric_streamer_read_data(metricStreamerHandle,
+                                       notifyEveryNReports, rawDataSize,
+                                       &rawData, groupInfo.metricGroupHandle);
         if (rawDataSize > 0) {
           break;
         } else {
@@ -2203,7 +2205,8 @@ LZT_TEST(
     EXPECT_GT(rawDataSize, 0);
     rawData.resize(rawDataSize);
     lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
-                                   rawDataSize, &rawData);
+                                   rawDataSize, &rawData,
+                                   groupInfo.metricGroupHandle);
     lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                           rawData.data());
 
@@ -2290,7 +2293,8 @@ LZT_TEST(
   EXPECT_GT(rawDataSize, 0);
   rawData.resize(rawDataSize);
   lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
-                                 rawDataSize, &rawData);
+                                 rawDataSize, &rawData,
+                                 groupInfo.metricGroupHandle);
   lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                         rawData.data());
 
@@ -2735,8 +2739,9 @@ LZT_TEST_F(
       EXPECT_GT(rawDataSize, 0);
       rawData.resize(rawDataSize);
       for (uint32_t count = 0; count < maxReadAttempts; count++) {
-        lzt::metric_streamer_read_data(
-            metricStreamerHandle, notifyEveryNReports, rawDataSize, &rawData);
+        lzt::metric_streamer_read_data(metricStreamerHandle,
+                                       notifyEveryNReports, rawDataSize,
+                                       &rawData, groupInfo.metricGroupHandle);
         if (rawDataSize > 0) {
           break;
         } else {
@@ -2834,8 +2839,9 @@ LZT_TEST_F(
       EXPECT_GT(rawDataSize, 0);
       rawData.resize(rawDataSize);
       for (uint32_t count = 0; count < maxReadAttempts; count++) {
-        lzt::metric_streamer_read_data(
-            metricStreamerHandle, notifyEveryNReports, rawDataSize, &rawData);
+        lzt::metric_streamer_read_data(metricStreamerHandle,
+                                       notifyEveryNReports, rawDataSize,
+                                       &rawData, groupInfo.metricGroupHandle);
         if (rawDataSize > 0) {
           std::vector<zet_typed_value_t> metricValues;
           std::vector<uint32_t> metricValueSets;

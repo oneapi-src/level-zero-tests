@@ -617,10 +617,23 @@ void metric_streamer_read_data(
 
 void metric_streamer_read_data(
     zet_metric_streamer_handle_t metricStreamerHandle, uint32_t reports,
-    size_t &rawDataSize, std::vector<uint8_t> *metricData) {
+    size_t &rawDataSize, std::vector<uint8_t> *metricData,
+    zet_metric_group_handle_t metricGroupHandle) {
   ASSERT_NE(nullptr, metricData);
-  EXPECT_ZE_RESULT_SUCCESS(zetMetricStreamerReadData(
-      metricStreamerHandle, reports, &rawDataSize, metricData->data()));
+
+  bool isIpMetricGroup = false;
+  if (metricGroupHandle != nullptr) {
+    isIpMetricGroup = check_metric_type_ip(metricGroupHandle, false);
+  }
+
+  ze_result_t result = zetMetricStreamerReadData(
+      metricStreamerHandle, reports, &rawDataSize, metricData->data());
+
+  if (isIpMetricGroup && result == ZE_RESULT_WARNING_DROPPED_DATA) {
+    result = zetMetricStreamerReadData(metricStreamerHandle, reports,
+                                       &rawDataSize, metricData->data());
+  }
+  EXPECT_ZE_RESULT_SUCCESS(result);
 }
 
 void activate_metric_groups(

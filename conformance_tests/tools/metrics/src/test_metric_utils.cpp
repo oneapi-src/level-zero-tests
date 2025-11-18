@@ -344,7 +344,8 @@ void metric_run_ip_sampling_with_validation(
       EXPECT_GT(rawDataSize, 0);
       rawData.resize(rawDataSize);
       lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
-                                     rawDataSize, &rawData);
+                                     rawDataSize, &rawData,
+                                     groupInfo.metricGroupHandle);
       lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
                             rawData.data(), false);
       rawData.resize(rawDataSize);
