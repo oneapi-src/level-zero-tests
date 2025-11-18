@@ -621,7 +621,6 @@ void metric_streamer_read_data(
     zet_metric_group_handle_t metricGroupHandle) {
   ASSERT_NE(nullptr, metricData);
 
-  // Check if this is an IP metric group when metricGroupHandle is provided
   bool isIpMetricGroup = false;
   if (metricGroupHandle != nullptr) {
     isIpMetricGroup = check_metric_type_ip(metricGroupHandle, false);
@@ -631,7 +630,6 @@ void metric_streamer_read_data(
       metricStreamerHandle, reports, &rawDataSize, metricData->data());
 
   if (isIpMetricGroup && result == ZE_RESULT_WARNING_DROPPED_DATA) {
-    // Special handling for IP metric groups - allow retry on dropped data
     result = zetMetricStreamerReadData(metricStreamerHandle, reports,
                                        &rawDataSize, metricData->data());
   }
