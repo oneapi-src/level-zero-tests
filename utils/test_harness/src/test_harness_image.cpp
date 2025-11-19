@@ -48,11 +48,14 @@ size_t get_format_component_count(ze_image_format_layout_t layout) {
 }
 
 bool image_support() {
+  return image_support(lzt::zeDevice::get_instance()->get_device());
+}
+
+bool image_support(ze_device_handle_t device) {
   ze_device_image_properties_t properties{};
   properties.stype = ZE_STRUCTURE_TYPE_IMAGE_PROPERTIES;
   properties.pNext = nullptr;
-  ze_result_t result = zeDeviceGetImageProperties(
-      lzt::zeDevice::get_instance()->get_device(), &properties);
+  ze_result_t result = zeDeviceGetImageProperties(device, &properties);
   if ((result != ZE_RESULT_SUCCESS) ||
       ((properties.maxImageDims1D == 0) && (properties.maxImageDims2D == 0) &&
        (properties.maxImageDims3D == 0) &&

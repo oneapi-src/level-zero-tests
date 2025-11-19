@@ -102,6 +102,7 @@ const std::vector<ze_image_format_swizzle_t> image_format_swizzles_all = {
 
 size_t get_format_component_count(ze_image_format_layout_t layout);
 bool image_support();
+bool image_support(ze_device_handle_t device);
 void print_image_format_descriptor(const ze_image_format_t descriptor);
 void print_image_descriptor(const ze_image_desc_t descriptor);
 void print_image_descriptor_unsupported(const ze_image_desc_t descriptor);
