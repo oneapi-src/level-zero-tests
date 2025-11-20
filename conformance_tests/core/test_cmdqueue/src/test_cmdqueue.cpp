@@ -376,6 +376,56 @@ INSTANTIATE_TEST_SUITE_P(
     zeCommandListImmediateAppendCommandListsExpTestsHostSynchronize,
     testing::ValuesIn(synchronize_test_input));
 
+class zeCommandListImmediateAppendCommandListsExpTestsEventSynchronize
+    : public zeImmediateCommandListAppendCommandListsExpTests {};
+
+LZT_TEST_P(
+    zeCommandListImmediateAppendCommandListsExpTestsEventSynchronize,
+    GivenCommandListImmediateAppendCommandListsExpAndSyncUsingEventHostSynchronizeThenCallSucceeds) {
+  lzt::zeEventPool ep;
+  ze_event_handle_t hSignalEvent;
+
+  ep.create_event(hSignalEvent, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hSignalEvent, 0));
+
+  lzt::append_command_lists_immediate_exp(
+      command_list_immediate, params.num_command_lists,
+      list_of_command_lists.data(), hSignalEvent);
+
+  lzt::event_host_synchronize(hSignalEvent, params.sync_timeout);
+}
+
+LZT_TEST_P(
+    zeCommandListImmediateAppendCommandListsExpTestsEventSynchronize,
+    GivenCommandListImmediateAppendCommandListsExpWithWaitAndSignalEventsThenVerifyBuffersValid) {
+  lzt::zeEventPool ep;
+  ze_event_handle_t hSignalEvent;
+
+  ep.create_event(hSignalEvent, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+
+  EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(hSignalEvent, 0));
+
+  lzt::append_command_lists_immediate_exp(
+      command_list_immediate, params.num_command_lists / 2,
+      list_of_command_lists.data(), hSignalEvent);
+  lzt::append_command_lists_immediate_exp(
+      command_list_immediate, params.num_command_lists / 2,
+      list_of_command_lists.data() + (params.num_command_lists / 2), nullptr, 1,
+      &hSignalEvent);
+
+  lzt::synchronize_command_list_host(command_list_immediate, UINT64_MAX);
+}
+
+CustomExecuteParams event_test_input[] = {
+    {2, UINT64_MAX},  {4, UINT64_MAX},  {8, UINT64_MAX},  {16, UINT64_MAX},
+    {32, UINT64_MAX}, {64, UINT64_MAX}, {100, UINT64_MAX}};
+
+INSTANTIATE_TEST_SUITE_P(
+    TestIncreasingNumberCommandListImmediateAppendCommandListsExpWithEventSynchronize,
+    zeCommandListImmediateAppendCommandListsExpTestsEventSynchronize,
+    testing::ValuesIn(event_test_input));
+
 class zeCommandQueueExecuteCommandListTestsFence
     : public zeCommandQueueExecuteCommandListTests {};
 
