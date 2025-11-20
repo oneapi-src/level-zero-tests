@@ -154,12 +154,12 @@ LZT_TEST_F(PCI_TEST,
       EXPECT_LE(pci_stats_initial.packetCounter, UINT64_MAX);
     }
     EXPECT_LE(pci_stats_initial.timestamp, UINT64_MAX);
-    ze_command_list_handle_t command_list = lzt::create_command_list();
-    ze_command_queue_handle_t cq = lzt::create_command_queue();
+    lzt::zeCommandBundle cmd_bundle = lzt::create_command_bundle(device, false);
     const size_t size = 4096;
     std::vector<uint8_t> host_memory1(size), host_memory2(size, 0);
     void *device_memory =
-        lzt::allocate_device_memory(lzt::size_in_bytes(host_memory1));
+        lzt::allocate_device_memory(lzt::size_in_bytes(host_memory1), 1, 0,
+                                    device, lzt::get_default_context());
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
     ze_device_handle_t core_device =
@@ -172,20 +172,18 @@ LZT_TEST_F(PCI_TEST,
                               lzt::size_in_bytes(host_memory1));
 #endif
     lzt::write_data_pattern(host_memory1.data(), size, 1);
-    lzt::append_memory_copy(command_list, device_memory, host_memory1.data(),
+    lzt::append_memory_copy(cmd_bundle.list, device_memory, host_memory1.data(),
                             lzt::size_in_bytes(host_memory1), nullptr);
-    lzt::append_barrier(command_list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(command_list, host_memory2.data(), device_memory,
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.list, host_memory2.data(), device_memory,
                             lzt::size_in_bytes(host_memory2), nullptr);
-    lzt::append_barrier(command_list, nullptr, 0, nullptr);
-    lzt::close_command_list(command_list);
-    lzt::execute_command_lists(cq, 1, &command_list, nullptr);
-    lzt::synchronize(cq, UINT64_MAX);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     lzt::validate_data_pattern(host_memory2.data(), size, 1);
     lzt::free_memory(device_memory);
-    lzt::destroy_command_queue(cq);
-    lzt::destroy_command_list(command_list);
+    lzt::destroy_command_bundle(cmd_bundle);
 
     zes_pci_stats_t pci_stats_later{};
     uint32_t wait = 0;
