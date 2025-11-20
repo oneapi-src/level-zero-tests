@@ -14,6 +14,16 @@
 
 bool verbose = false;
 
+uint64_t isolate_lower_nbits(const uint64_t value,
+                             const uint64_t bits_to_isolate) {
+  if (bits_to_isolate >= 64) {
+    return value;
+  }
+  uint64_t mask;
+  mask = (1ull << bits_to_isolate) - 1;
+  return value & mask;
+}
+
 template <typename T> inline constexpr uint32_t to_u32(T val) {
   return static_cast<uint32_t>(val);
 }
@@ -1313,14 +1323,22 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
                                  std::to_string(result));
       }
 
-      // don't know if this is correct.  seems a little odd.
-      uint64_t timestamp_mask = (1ull << timestamp_bits) - 1;
-      uint64_t masked_device_time = device_timestamp & timestamp_mask;
-      uint64_t masked_kernel_time =
-          kernel_timestamp.global.kernelStart & timestamp_mask;
+      uint64_t kernel_timestamp_mask = (1ull << kernel_timestamp_bits) - 1;
+      uint64_t masked_device_time =
+          isolate_lower_nbits(device_timestamp, timestamp_bits);
+      uint64_t masked_kernel_time = isolate_lower_nbits(
+          kernel_timestamp.global.kernelStart, timestamp_bits);
 
-      timed += to_f80(masked_kernel_time - masked_device_time) *
-               to_f80(timer_resolution_ns) / 1e3L; // returned in microseconds
+      uint64_t u64_timed = 0;
+      if (masked_kernel_time > masked_device_time) {
+        u64_timed =
+            (masked_kernel_time - masked_device_time) * (timer_resolution_ns);
+      } else {
+        u64_timed = ((kernel_timestamp_mask + 1L) +
+                     (masked_kernel_time - masked_device_time)) *
+                    (timer_resolution_ns);
+      }
+      timed += to_f80(u64_timed) / 1e3L;
 
       result = zeEventHostReset(kernel_launch_event);
       if (result) {
@@ -1496,13 +1514,22 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
                                  std::to_string(result));
       }
 
-      uint64_t timestamp_mask = (1ull << timestamp_bits) - 1;
-      uint64_t masked_device_time = device_timestamp & timestamp_mask;
-      uint64_t masked_kernel_time =
-          kernel_timestamp.global.kernelStart & timestamp_mask;
+      uint64_t kernel_timestamp_mask = (1ull << kernel_timestamp_bits) - 1;
+      uint64_t masked_device_time =
+          isolate_lower_nbits(device_timestamp, timestamp_bits);
+      uint64_t masked_kernel_time = isolate_lower_nbits(
+          kernel_timestamp.global.kernelStart, timestamp_bits);
 
-      timed += to_f80(masked_kernel_time - masked_device_time) *
-               to_f80(timer_resolution_ns) / 1e3; // returned in microseconds
+      uint64_t u64_timed = 0;
+      if (masked_kernel_time > masked_device_time) {
+        u64_timed =
+            (masked_kernel_time - masked_device_time) * (timer_resolution_ns);
+      } else {
+        u64_timed = ((kernel_timestamp_mask + 1L) +
+                     (masked_kernel_time - masked_device_time)) *
+                    (timer_resolution_ns);
+      }
+      timed += to_f80(u64_timed) / 1e3L;
 
       result = zeEventHostReset(kernel_launch_event);
       if (result) {
