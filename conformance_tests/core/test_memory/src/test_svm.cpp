@@ -14,31 +14,44 @@ using lzt::to_u32;
 
 namespace {
 
+enum class MemoryHint {
+  None,
+  AdviseSourceToSystem,
+  AdviseDestinationToSystem,
+  AdviseBothToSystem,
+  PrefetchSource,
+  PrefetchDestination,
+  PrefetchBoth
+};
+
+struct AllocationParams {
+  bool is_src_shared_system;
+  bool is_dst_shared_system;
+  MemoryHint memory_hint;
+};
+
 class SharedSystemMemoryTests
     : public ::testing::TestWithParam<
-          std::tuple<std::pair<bool, bool>, bool, bool, bool, size_t>> {
+          std::tuple<AllocationParams, bool, bool, size_t>> {
 protected:
   void SetUp() override {
     device = lzt::zeDevice::get_instance()->get_device();
 
-    is_dst_shared_system = std::get<0>(GetParam()).first;
-    is_src_shared_system = std::get<0>(GetParam()).second;
-    if (is_dst_shared_system || is_src_shared_system) {
+    alloc_params = std::get<0>(GetParam());
+    if (alloc_params.is_dst_shared_system ||
+        alloc_params.is_src_shared_system) {
       SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
     }
 
     use_atomic_kernel = std::get<1>(GetParam());
     use_immediate_cmdlist = std::get<2>(GetParam());
-    use_madvise = std::get<3>(GetParam());
-    buffer_size = std::get<4>(GetParam());
+    buffer_size = std::get<3>(GetParam());
   }
 
   ze_device_handle_t device;
-  bool is_dst_shared_system;
-  bool is_src_shared_system;
+  AllocationParams alloc_params;
   bool use_atomic_kernel;
   bool use_immediate_cmdlist;
-  bool use_madvise;
   size_t buffer_size;
 };
 
@@ -55,9 +68,9 @@ LZT_TEST_P(
   const size_t num_elements = buffer_size / sizeof(int);
 
   void *result = lzt::allocate_shared_memory_with_allocator_selector(
-      buffer_size, 1, 0, 0, device, is_dst_shared_system);
+      buffer_size, 1, 0, 0, device, alloc_params.is_dst_shared_system);
   void *source = lzt::allocate_shared_memory_with_allocator_selector(
-      buffer_size, 1, 0, 0, device, is_src_shared_system);
+      buffer_size, 1, 0, 0, device, alloc_params.is_src_shared_system);
 
   memset(result, 0, buffer_size);
   int *source_as_int = reinterpret_cast<int *>(source);
@@ -79,16 +92,34 @@ LZT_TEST_P(
   lzt::zeCommandBundle cmd_bundle =
       lzt::create_command_bundle(use_immediate_cmdlist);
 
-  if (is_src_shared_system && use_madvise) {
-    lzt::append_memory_advise(
-        cmd_bundle.list, device, source, buffer_size,
-        ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  if (alloc_params.is_src_shared_system) {
+    switch (alloc_params.memory_hint) {
+    case MemoryHint::AdviseSourceToSystem:
+    case MemoryHint::AdviseBothToSystem:
+      lzt::append_memory_advise(
+          cmd_bundle.list, device, source, buffer_size,
+          ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+      break;
+    case MemoryHint::PrefetchSource:
+    case MemoryHint::PrefetchBoth:
+      lzt::append_memory_prefetch(cmd_bundle.list, source, buffer_size);
+      break;
+    }
   }
 
-  if (is_dst_shared_system && use_madvise) {
-    lzt::append_memory_advise(
-        cmd_bundle.list, device, result, buffer_size,
-        ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  if (alloc_params.is_dst_shared_system) {
+    switch (alloc_params.memory_hint) {
+    case MemoryHint::AdviseDestinationToSystem:
+    case MemoryHint::AdviseBothToSystem:
+      lzt::append_memory_advise(
+          cmd_bundle.list, device, result, buffer_size,
+          ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+      break;
+    case MemoryHint::PrefetchDestination:
+    case MemoryHint::PrefetchBoth:
+      lzt::append_memory_prefetch(cmd_bundle.list, result, buffer_size);
+      break;
+    }
   }
 
   const uint32_t group_count_x =
@@ -109,20 +140,20 @@ LZT_TEST_P(
   lzt::destroy_function(function);
   lzt::destroy_module(module);
 
-  lzt::free_memory_with_allocator_selector(source, is_src_shared_system);
-  lzt::free_memory_with_allocator_selector(result, is_dst_shared_system);
+  lzt::free_memory_with_allocator_selector(source,
+                                           alloc_params.is_src_shared_system);
+  lzt::free_memory_with_allocator_selector(result,
+                                           alloc_params.is_dst_shared_system);
 }
 
 struct SharedSystemMemoryTestsNameSuffix {
   template <class ParamType>
   std::string operator()(const testing::TestParamInfo<ParamType> &info) const {
     std::stringstream ss;
-    bool is_dst_shared_system = std::get<0>(info.param).first;
-    bool is_src_shared_system = std::get<0>(info.param).second;
+    AllocationParams alloc_params = std::get<0>(info.param);
     bool use_atomic_kernel = std::get<1>(info.param);
     bool use_immediate_cmdlist = std::get<2>(info.param);
-    bool use_madvise = std::get<3>(info.param);
-    size_t buffer_size = std::get<4>(info.param);
+    size_t buffer_size = std::get<3>(info.param);
 
     const char *buffer_size_str = [](size_t size) -> const char * {
       switch (size) {
@@ -148,15 +179,37 @@ struct SharedSystemMemoryTestsNameSuffix {
       return "";
     }(buffer_size);
 
-    const char *advisedStr = use_madvise ? "Advised" : "";
+    const char *src_hint_str = [](MemoryHint memory_hint) {
+      switch (memory_hint) {
+      case MemoryHint::AdviseSourceToSystem:
+      case MemoryHint::AdviseBothToSystem:
+        return "Advised";
+      case MemoryHint::PrefetchSource:
+      case MemoryHint::PrefetchBoth:
+        return "Prefetched";
+      }
+      return "";
+    }(alloc_params.memory_hint);
 
-    if (is_src_shared_system)
-      ss << advisedStr;
-    ss << (is_src_shared_system ? "SVM" : "USM");
+    const char *dst_hint_str = [](MemoryHint memory_hint) {
+      switch (memory_hint) {
+      case MemoryHint::AdviseDestinationToSystem:
+      case MemoryHint::AdviseBothToSystem:
+        return "Advised";
+      case MemoryHint::PrefetchDestination:
+      case MemoryHint::PrefetchBoth:
+        return "Prefetched";
+      }
+      return "";
+    }(alloc_params.memory_hint);
+
+    if (alloc_params.is_src_shared_system)
+      ss << src_hint_str;
+    ss << (alloc_params.is_src_shared_system ? "SVM" : "USM");
     ss << "to";
-    if (is_dst_shared_system)
-      ss << advisedStr;
-    ss << (is_dst_shared_system ? "SVM" : "USM");
+    if (alloc_params.is_dst_shared_system)
+      ss << dst_hint_str;
+    ss << (alloc_params.is_dst_shared_system ? "SVM" : "USM");
     ss << (use_atomic_kernel ? "_Atomic" : "_NonAtomic");
     ss << (use_immediate_cmdlist ? "_Immediate" : "_Regular");
     ss << buffer_size_str;
@@ -167,13 +220,25 @@ struct SharedSystemMemoryTestsNameSuffix {
 
 INSTANTIATE_TEST_SUITE_P(
     ParamSVMAllocationLaunchKernelTests, SharedSystemMemoryLaunchKernelTests,
-    ::testing::Combine(::testing::Values(std::make_pair(true, false),
-                                         std::make_pair(false, true),
-                                         std::make_pair(true, true)),
-                       ::testing::Bool(), ::testing::Bool(), ::testing::Bool(),
-                       ::testing::Values(0x80u, 0x1000u, 0x1800u, 0x10'0000u,
-                                         0x10'0800u, 0x4000'0000u,
-                                         0x4000'0800u)),
+    ::testing::Combine(
+        ::testing::Values(
+            AllocationParams{true, false, MemoryHint::None},
+            AllocationParams{true, false, MemoryHint::AdviseSourceToSystem},
+            AllocationParams{true, false, MemoryHint::PrefetchSource},
+            AllocationParams{false, true, MemoryHint::None},
+            AllocationParams{false, true,
+                             MemoryHint::AdviseDestinationToSystem},
+            AllocationParams{false, true, MemoryHint::PrefetchDestination},
+            AllocationParams{true, true, MemoryHint::None},
+            AllocationParams{true, true, MemoryHint::AdviseSourceToSystem},
+            AllocationParams{true, true, MemoryHint::PrefetchSource},
+            AllocationParams{true, true, MemoryHint::AdviseDestinationToSystem},
+            AllocationParams{true, true, MemoryHint::PrefetchDestination},
+            AllocationParams{true, true, MemoryHint::AdviseBothToSystem},
+            AllocationParams{true, true, MemoryHint::PrefetchBoth}),
+        ::testing::Bool(), ::testing::Bool(),
+        ::testing::Values(0x80u, 0x1000u, 0x1800u, 0x10'0000u, 0x10'0800u,
+                          0x4000'0000u, 0x4000'0800u)),
     SharedSystemMemoryTestsNameSuffix());
 
 class SharedSystemMemoryLaunchCooperativeKernelTests
@@ -198,7 +263,7 @@ LZT_TEST_P(
   auto compute_properties = lzt::get_compute_properties(device);
 
   void *input = lzt::allocate_shared_memory_with_allocator_selector(
-      buffer_size, 1, 0, 0, device, is_src_shared_system);
+      buffer_size, 1, 0, 0, device, alloc_params.is_src_shared_system);
 
   int *input_as_int = reinterpret_cast<int *>(input);
   for (size_t i = 0; i < num_elements; i++) {
@@ -231,7 +296,7 @@ LZT_TEST_P(
 
   size_t output_size = group_count * sizeof(int);
   void *output = lzt::allocate_shared_memory_with_allocator_selector(
-      output_size, 1, 0, 0, device, is_dst_shared_system);
+      output_size, 1, 0, 0, device, alloc_params.is_dst_shared_system);
 
   uint32_t group_size = lzt::to_u32(num_elements) / group_count;
   LOG_INFO << "Group size: " << group_size;
@@ -245,16 +310,34 @@ LZT_TEST_P(
   lzt::zeCommandBundle cmd_bundle = lzt::create_command_bundle(
       lzt::get_default_context(), device, 0, *ordinal, use_immediate_cmdlist);
 
-  if (is_src_shared_system && use_madvise) {
-    lzt::append_memory_advise(
-        cmd_bundle.list, device, input, buffer_size,
-        ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  if (alloc_params.is_src_shared_system) {
+    switch (alloc_params.memory_hint) {
+    case MemoryHint::AdviseSourceToSystem:
+    case MemoryHint::AdviseBothToSystem:
+      lzt::append_memory_advise(
+          cmd_bundle.list, device, input, buffer_size,
+          ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+      break;
+    case MemoryHint::PrefetchSource:
+    case MemoryHint::PrefetchBoth:
+      lzt::append_memory_prefetch(cmd_bundle.list, input, buffer_size);
+      break;
+    }
   }
 
-  if (is_dst_shared_system && use_madvise) {
-    lzt::append_memory_advise(
-        cmd_bundle.list, device, output, output_size,
-        ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+  if (alloc_params.is_dst_shared_system) {
+    switch (alloc_params.memory_hint) {
+    case MemoryHint::AdviseDestinationToSystem:
+    case MemoryHint::AdviseBothToSystem:
+      lzt::append_memory_advise(
+          cmd_bundle.list, device, output, output_size,
+          ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
+      break;
+    case MemoryHint::PrefetchDestination:
+    case MemoryHint::PrefetchBoth:
+      lzt::append_memory_prefetch(cmd_bundle.list, output, output_size);
+      break;
+    }
   }
 
   ze_group_count_t thread_group_dimensions = {group_count, 1, 1};
@@ -271,19 +354,33 @@ LZT_TEST_P(
   lzt::destroy_function(function);
   lzt::destroy_module(module);
 
-  lzt::free_memory_with_allocator_selector(output, is_dst_shared_system);
-  lzt::free_memory_with_allocator_selector(input, is_src_shared_system);
+  lzt::free_memory_with_allocator_selector(output,
+                                           alloc_params.is_dst_shared_system);
+  lzt::free_memory_with_allocator_selector(input,
+                                           alloc_params.is_src_shared_system);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     ParamSVMAllocationLaunchCooperativeKernelTests,
     SharedSystemMemoryLaunchCooperativeKernelTests,
-    ::testing::Combine(::testing::Values(std::make_pair(true, false),
-                                         std::make_pair(false, true),
-                                         std::make_pair(true, true)),
-                       ::testing::Bool(), ::testing::Bool(), ::testing::Bool(),
-                       ::testing::Values(0x80u, 0x1000u, 0x1800u, 0x1'0000u,
-                                         0x1'0800u)),
+    ::testing::Combine(
+        ::testing::Values(
+            AllocationParams{true, false, MemoryHint::None},
+            AllocationParams{true, false, MemoryHint::AdviseSourceToSystem},
+            AllocationParams{true, false, MemoryHint::PrefetchSource},
+            AllocationParams{false, true, MemoryHint::None},
+            AllocationParams{false, true,
+                             MemoryHint::AdviseDestinationToSystem},
+            AllocationParams{false, true, MemoryHint::PrefetchDestination},
+            AllocationParams{true, true, MemoryHint::None},
+            AllocationParams{true, true, MemoryHint::AdviseSourceToSystem},
+            AllocationParams{true, true, MemoryHint::PrefetchSource},
+            AllocationParams{true, true, MemoryHint::AdviseDestinationToSystem},
+            AllocationParams{true, true, MemoryHint::PrefetchDestination},
+            AllocationParams{true, true, MemoryHint::AdviseBothToSystem},
+            AllocationParams{true, true, MemoryHint::PrefetchBoth}),
+        ::testing::Bool(), ::testing::Bool(),
+        ::testing::Values(0x80u, 0x1000u, 0x1800u, 0x1'0000u, 0x1'0800u)),
     SharedSystemMemoryTestsNameSuffix());
 
 } // namespace
