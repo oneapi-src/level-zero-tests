@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,6 +18,8 @@ namespace lzt = level_zero_tests;
 namespace {
 
 using lzt::to_u32;
+
+enum class zeCmdListMode { Regular = 0, Immediate, ImmediateAppendRegular };
 
 class zeCommandListAppendBarrierTests : public ::testing::Test {
 public:
@@ -533,9 +535,9 @@ enum BarrierType {
   BT_EVENTS_BARRIER
 };
 
-class zeBarrierKernelTests
-    : public lzt::zeEventPoolTests,
-      public ::testing::WithParamInterface<std::tuple<enum BarrierType, bool>> {
+class zeBarrierKernelTests : public lzt::zeEventPoolTests,
+                             public ::testing::WithParamInterface<
+                                 std::tuple<enum BarrierType, zeCmdListMode>> {
 };
 
 LZT_TEST_P(
@@ -544,10 +546,17 @@ LZT_TEST_P(
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   ze_context_handle_t context = lzt::create_context();
 
-  const bool isImmediate = std::get<1>(GetParam());
-  auto bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, isImmediate);
+  const auto cmd_list_mode = std::get<1>(GetParam());
+  const bool is_immediate =
+      (cmd_list_mode == zeCmdListMode::Immediate ||
+       cmd_list_mode == zeCmdListMode::ImmediateAppendRegular);
+  auto bundle = lzt::create_command_bundle(context, device, is_immediate);
+  ze_command_list_handle_t append_list = nullptr;
+  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+    append_list = lzt::create_command_list(context, device);
+  } else {
+    append_list = bundle.list;
+  }
   uint32_t num_int = 1000;
   void *dev_buff = lzt::allocate_device_memory((num_int * sizeof(int)), 1, 0, 0,
                                                device, context);
@@ -611,24 +620,24 @@ LZT_TEST_P(
   tg.groupCountY = 1;
   tg.groupCountZ = 1;
 
-  lzt::append_memory_copy(bundle.list, dev_buff, host_buff,
+  lzt::append_memory_copy(append_list, dev_buff, host_buff,
                           num_int * sizeof(int), signal_event_copy);
   // Memory barrier to ensure memory coherency after copy to device memory
   if (barrier_type == BT_MEMORY_RANGES_BARRIER) {
     const std::vector<size_t> range_sizes{num_int * sizeof(int),
                                           num_int * sizeof(int)};
     std::vector<const void *> ranges{dev_buff, host_buff};
-    lzt::append_memory_ranges_barrier(bundle.list, to_u32(ranges.size()),
+    lzt::append_memory_ranges_barrier(append_list, to_u32(ranges.size()),
                                       range_sizes.data(), ranges.data(),
                                       nullptr, 0, nullptr);
   } else if (barrier_type == BT_GLOBAL_BARRIER) {
-    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(append_list, nullptr, 0, nullptr);
   }
-  lzt::append_launch_function(bundle.list, function_1, &tg, signal_event_func1,
+  lzt::append_launch_function(append_list, function_1, &tg, signal_event_func1,
                               num_wait, p_wait_event_func1);
   // Execution barrier to ensure function_1 completes before function_2 starts
   if (barrier_type != BT_EVENTS_BARRIER) {
-    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(append_list, nullptr, 0, nullptr);
   }
   ze_kernel_handle_t function_2 =
       lzt::create_function(module, "barrier_add_two_arrays");
@@ -636,11 +645,20 @@ LZT_TEST_P(
 
   lzt::set_argument_value(function_2, 0, sizeof(p_host), &p_host);
   lzt::set_argument_value(function_2, 1, sizeof(p_dev), &p_dev);
-  lzt::append_launch_function(bundle.list, function_2, &tg, nullptr, num_wait,
+  lzt::append_launch_function(append_list, function_2, &tg, nullptr, num_wait,
                               p_wait_event_func2);
 
-  lzt::close_command_list(bundle.list);
+  if (cmd_list_mode == zeCmdListMode::Regular ||
+      cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+    lzt::close_command_list(append_list);
+  }
+
+  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+    lzt::append_command_lists_immediate_exp(bundle.list, 1, &append_list);
+  }
+
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+
   val = (2 * val_1) + addval_2;
   for (uint32_t i = 0; i < num_int; i++) {
     EXPECT_EQ(p_host[i], val);
@@ -650,6 +668,9 @@ LZT_TEST_P(
   lzt::destroy_function(function_2);
   lzt::destroy_function(function_1);
   lzt::destroy_module(module);
+  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+    lzt::destroy_command_list(append_list);
+  }
   lzt::destroy_command_bundle(bundle);
   lzt::free_memory(context, host_buff);
   lzt::free_memory(context, dev_buff);
@@ -659,9 +680,9 @@ LZT_TEST_P(
 
 INSTANTIATE_TEST_SUITE_P(
     TestKernelWithBarrierAndMemoryRangesBarrier, zeBarrierKernelTests,
-    ::testing::Combine(::testing::Values(BT_GLOBAL_BARRIER,
-                                         BT_MEMORY_RANGES_BARRIER,
-                                         BT_EVENTS_BARRIER),
-                       ::testing::Bool()));
-
+    ::testing::Combine(
+        ::testing::Values(BT_GLOBAL_BARRIER, BT_MEMORY_RANGES_BARRIER,
+                          BT_EVENTS_BARRIER),
+        ::testing::Values(zeCmdListMode::Regular, zeCmdListMode::Immediate,
+                          zeCmdListMode::ImmediateAppendRegular)));
 } // namespace

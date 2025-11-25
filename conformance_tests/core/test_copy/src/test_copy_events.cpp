@@ -22,6 +22,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+enum class zeCmdListMode { Regular = 0, Immediate, ImmediateAppendRegular };
+
 class zeCommandListEventTests
     : public ::testing::TestWithParam<std::tuple<bool, bool>> {
 public:
@@ -892,11 +894,20 @@ LZT_TEST_F(
 }
 
 void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate) {
+    zeCommandListEventTests &test, zeCmdListMode cmd_list_mode) {
   if (!(lzt::image_support())) {
     GTEST_SKIP() << "device does not support images, cannot run test";
   }
+  const bool is_immediate =
+      (cmd_list_mode == zeCmdListMode::Immediate ||
+       cmd_list_mode == zeCmdListMode::ImmediateAppendRegular);
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  ze_command_list_handle_t append_list = nullptr;
+  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+    append_list = lzt::create_command_list();
+  } else {
+    append_list = cmd_bundle.list;
+  }
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
   uint32_t width = input.width();
@@ -911,25 +922,33 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   test.ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
   test.ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
-  lzt::append_signal_event(cmd_bundle.list, hEvent0);
+  lzt::append_signal_event(append_list, hEvent0);
 
   // Use ImageCopyFromMemory to upload ImageA
-  lzt::append_image_copy_from_mem(cmd_bundle.list, input_xeimage,
-                                  input.raw_data(), hEvent1, 1, &hEvent0);
+  lzt::append_image_copy_from_mem(append_list, input_xeimage, input.raw_data(),
+                                  hEvent1, 1, &hEvent0);
   // use ImageCopy to copy A -> B
-  lzt::append_image_copy(cmd_bundle.list, output_xeimage, input_xeimage,
-                         hEvent2, 1, &hEvent1);
+  lzt::append_image_copy(append_list, output_xeimage, input_xeimage, hEvent2, 1,
+                         &hEvent1);
   // use ImageCopyRegion to copy part of A -> B
   ze_image_region_t sr = {0, 0, 0, 1, 1, 1};
   ze_image_region_t dr = {0, 0, 0, 1, 1, 1};
-  lzt::append_image_copy_region(cmd_bundle.list, output_xeimage, input_xeimage,
-                                &dr, &sr, hEvent3, 1, &hEvent2);
+  lzt::append_image_copy_region(append_list, output_xeimage, input_xeimage, &dr,
+                                &sr, hEvent3, 1, &hEvent2);
   // use ImageCopyToMemory to dowload ImageB
-  lzt::append_image_copy_to_mem(cmd_bundle.list, output.raw_data(),
-                                output_xeimage, hEvent4, 1, &hEvent3);
-  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent4);
+  lzt::append_image_copy_to_mem(append_list, output.raw_data(), output_xeimage,
+                                hEvent4, 1, &hEvent3);
+  lzt::append_wait_on_events(append_list, 1, &hEvent4);
   // execute commands
-  lzt::close_command_list(cmd_bundle.list);
+  if (cmd_list_mode == zeCmdListMode::Regular ||
+      cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+    lzt::close_command_list(append_list);
+  }
+
+  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+    lzt::append_command_lists_immediate_exp(cmd_bundle.list, 1, &append_list);
+  }
+
   if (!is_immediate) {
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
@@ -958,24 +977,39 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   test.ep.destroy_event(hEvent4);
   lzt::destroy_ze_image(input_xeimage);
   lzt::destroy_ze_image(output_xeimage);
+  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+    lzt::destroy_command_list(append_list);
+  }
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(*this, false);
+  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
+      *this, zeCmdListMode::Regular);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(*this, true);
+  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
+      *this, zeCmdListMode::Immediate);
+}
+
+LZT_TEST_F(
+    zeCommandListEventTests,
+    GivenImageCopyThatWaitsOnEventWhenExecutingImmediateCommandListAppendCmdListsThenCommandWaitsAndCompletesSuccessfully) {
+  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
+      *this, zeCmdListMode::ImmediateAppendRegular);
 }
 
 void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-    bool is_immediate, bool is_shared_system_src, bool is_shared_system_temp,
-    bool is_shared_system_dst) {
+    zeCmdListMode cmd_list_mode, bool is_shared_system_src,
+    bool is_shared_system_temp, bool is_shared_system_dst) {
+  const bool is_immediate =
+      (cmd_list_mode == zeCmdListMode::Immediate ||
+       cmd_list_mode == zeCmdListMode::ImmediateAppendRegular);
   const size_t size = 1024;
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -1003,9 +1037,23 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
     auto cmd_bundle_0 = lzt::create_command_bundle(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, copy_ordinals[0], 0, is_immediate);
+    ze_command_list_handle_t append_list_0 = nullptr;
+    if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+      append_list_0 =
+          lzt::create_command_list(context, device, 0, copy_ordinals[0]);
+    } else {
+      append_list_0 = cmd_bundle_0.list;
+    }
     auto cmd_bundle_1 = lzt::create_command_bundle(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, copy_ordinals[1], 0, is_immediate);
+    ze_command_list_handle_t append_list_1 = nullptr;
+    if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+      append_list_1 =
+          lzt::create_command_list(context, device, 0, copy_ordinals[1]);
+    } else {
+      append_list_1 = cmd_bundle_1.list;
+    }
 
     ze_event_pool_desc_t event_pool_desc = {};
     event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
@@ -1029,13 +1077,24 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
     memset(dst_buffer, 0x0, size);
 
     // Execute and verify GPU reads event
-    lzt::append_memory_copy(cmd_bundle_0.list, temp_buffer, src_buffer, size,
-                            event, 0, nullptr);
-    lzt::append_memory_copy(cmd_bundle_1.list, dst_buffer, temp_buffer, size,
+    lzt::append_memory_copy(append_list_0, temp_buffer, src_buffer, size, event,
+                            0, nullptr);
+    lzt::append_memory_copy(append_list_1, dst_buffer, temp_buffer, size,
                             nullptr, 1, &event);
 
-    lzt::close_command_list(cmd_bundle_0.list);
-    lzt::close_command_list(cmd_bundle_1.list);
+    if (cmd_list_mode == zeCmdListMode::Regular ||
+        cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+      lzt::close_command_list(append_list_0);
+      lzt::close_command_list(append_list_1);
+    }
+
+    if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+      lzt::append_command_lists_immediate_exp(cmd_bundle_0.list, 1,
+                                              &append_list_0);
+      lzt::append_command_lists_immediate_exp(cmd_bundle_1.list, 1,
+                                              &append_list_1);
+    }
+
     if (is_immediate) {
       lzt::synchronize_command_list_host(cmd_bundle_0.list, UINT64_MAX);
       lzt::synchronize_command_list_host(cmd_bundle_1.list, UINT64_MAX);
@@ -1061,13 +1120,17 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
                                              is_shared_system_dst);
     lzt::destroy_event(event);
     lzt::destroy_event_pool(event_pool);
+    if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
+      lzt::destroy_command_list(append_list_0);
+      lzt::destroy_command_list(append_list_1);
+    }
     lzt::destroy_command_bundle(cmd_bundle_0);
     lzt::destroy_command_bundle(cmd_bundle_1);
   }
   lzt::destroy_context(context);
 
   if (!test_run) {
-    LOG_WARNING << "Less than 2 engines that support copy, test not run";
+    GTEST_SKIP() << "Less than 2 engines that support copy, test not run";
   }
 }
 
@@ -1075,14 +1138,21 @@ LZT_TEST(
     zeCommandListCopyEventTest,
     GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfully) {
   RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-      false, false, false, false);
+      zeCmdListMode::Regular, false, false, false);
 }
 
 LZT_TEST(
     zeCommandListCopyEventTest,
     GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsThenCopiesCompleteSuccessfully) {
   RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-      true, false, false, false);
+      zeCmdListMode::Immediate, false, false, false);
+}
+
+LZT_TEST(
+    zeCommandListCopyEventTest,
+    GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsAppendCmdListsExpThenCopiesCompleteSuccessfully) {
+  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
+      zeCmdListMode::ImmediateAppendRegular, false, false, false);
 }
 
 LZT_TEST(
@@ -1092,7 +1162,7 @@ LZT_TEST(
   for (uint32_t i = 1; i < 8; ++i) {
     std::bitset<3> bits(i);
     RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-        false, bits[2], bits[1], bits[0]);
+        zeCmdListMode::Regular, bits[2], bits[1], bits[0]);
   }
 }
 
@@ -1103,7 +1173,18 @@ LZT_TEST(
   for (uint32_t i = 1; i < 8; ++i) {
     std::bitset<3> bits(i);
     RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-        true, bits[2], bits[1], bits[0]);
+        zeCmdListMode::Immediate, bits[2], bits[1], bits[0]);
+  }
+}
+
+LZT_TEST(
+    zeCommandListCopyEventTest,
+    GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsAppendCmdListsExpThenCopiesCompleteSuccessfullyWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  for (uint32_t i = 1; i < 8; ++i) {
+    std::bitset<3> bits(i);
+    RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
+        zeCmdListMode::ImmediateAppendRegular, bits[2], bits[1], bits[0]);
   }
 }
 
