@@ -1100,7 +1100,7 @@ void zetDebugEventReadTest::run_read_events_in_separate_thread_test(
     module_load_cv.wait(lk, [] { return module_loaded; });
     lk.unlock();
     LOG_INFO << "[Debugger] Main thread sleeping to wait for device threads";
-    std::this_thread::sleep_for(std::chrono::seconds(60));
+    std::this_thread::sleep_for(std::chrono::seconds(6));
 
     LOG_INFO << "[Debugger] Sending interrupt from main thread";
     lzt::debug_interrupt(debugSession, device_thread);
@@ -1277,7 +1277,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
 
     LOG_INFO << "[Debugger] Stopping all device threads";
     // give time to app to launch the kernel
-    std::this_thread::sleep_for(std::chrono::seconds(60));
+    std::this_thread::sleep_for(std::chrono::seconds(6));
 
     lzt::debug_interrupt(debugSession, device_threads);
 
@@ -1427,7 +1427,7 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
 
   LOG_INFO << "[Debugger] Interrupting all threads";
   // give time to app to launch the kernel
-  std::this_thread::sleep_for(std::chrono::seconds(60));
+  std::this_thread::sleep_for(std::chrono::seconds(6));
 
   lzt::debug_interrupt(debugSession, thread);
   stopped_threads = {};
