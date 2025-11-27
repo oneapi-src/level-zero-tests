@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -85,4 +85,15 @@ kernel void testGlobalOffset(global int *globalOffsets) {
     globalOffsets[1] += get_global_offset(1);
     globalOffsets[2] += get_global_offset(2);
   }
+}
+
+kernel void test_slm_mutation(global uint *out, local uint *slm_1, local uint *slm_2, uint value) {
+    uint gsize = get_global_size(0);
+    uint gid = get_global_id(0);
+    uint lid = get_local_id(0);
+
+    slm_1[lid] = lid + value;
+    slm_2[lid] = -lid + value;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    out[gid] = gsize + slm_1[lid] + slm_2[lid];
 }
