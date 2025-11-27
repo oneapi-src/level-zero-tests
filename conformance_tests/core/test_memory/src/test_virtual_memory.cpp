@@ -404,14 +404,25 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
     zeVirtualMemoryTests &test, bool is_immediate) {
   uint32_t numDevices = lzt::get_ze_device_count();
   std::vector<ze_device_handle_t> devices;
+  std::vector<ze_device_handle_t> potential_devices =
+      lzt::get_ze_devices(numDevices);
   std::vector<ze_physical_mem_handle_t> reservedPhysicalMemoryArray;
-  devices = lzt::get_ze_devices(numDevices);
-  reservedPhysicalMemoryArray.resize(numDevices);
-  if (numDevices == 1) {
+  devices.push_back(potential_devices[0]);
+  for (int i = 1; i < numDevices; i++) {
+    if (lzt::can_access_peer(devices[0], potential_devices[i])) {
+      devices.push_back(potential_devices[i]);
+    }
+  }
+  if (devices.size() == 1u) {
+    if (numDevices > 1) {
+      LOG_INFO << "Devices cannot access each other, using one device.";
+    }
     reservedPhysicalMemoryArray.resize(2);
     devices.resize(2);
     devices[0] = test.device;
     devices[1] = test.device;
+  } else {
+    reservedPhysicalMemoryArray.resize(devices.size());
   }
   auto bundle =
       lzt::create_command_bundle(test.context, devices[0], is_immediate);
@@ -491,14 +502,25 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
     zeVirtualMemoryTests &test, bool is_immediate) {
   uint32_t numDevices = lzt::get_ze_device_count();
   std::vector<ze_device_handle_t> devices;
+  std::vector<ze_device_handle_t> potential_devices =
+      lzt::get_ze_devices(numDevices);
   std::vector<ze_physical_mem_handle_t> reservedPhysicalMemoryArray;
-  devices = lzt::get_ze_devices(numDevices);
-  reservedPhysicalMemoryArray.resize(numDevices);
-  if (numDevices == 1U) {
+  devices.push_back(potential_devices[0]);
+  for (int i = 1; i < numDevices; i++) {
+    if (lzt::can_access_peer(devices[0], potential_devices[i])) {
+      devices.push_back(potential_devices[i]);
+    }
+  }
+  if (devices.size() == 1u) {
+    if (numDevices > 1) {
+      LOG_INFO << "Devices cannot access each other, using one device.";
+    }
     reservedPhysicalMemoryArray.resize(2);
     devices.resize(2);
     devices[0] = test.device;
     devices[1] = test.device;
+  } else {
+    reservedPhysicalMemoryArray.resize(devices.size());
   }
   auto bundle =
       lzt::create_command_bundle(test.context, devices[0], is_immediate);
