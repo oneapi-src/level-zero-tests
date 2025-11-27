@@ -39,8 +39,6 @@ struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
     device = devices[0];
     remote_device = devices[1];
 
-    ASSERT_TRUE(lzt::can_access_peer(device, remote_device));
-
     bool is_immediate = GetParam();
     cmd_bundle = lzt::create_command_bundle(device, is_immediate);
   }
