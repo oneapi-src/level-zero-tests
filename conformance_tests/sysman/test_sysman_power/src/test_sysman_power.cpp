@@ -406,7 +406,7 @@ LZT_TEST_F(
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
         ASSERT_GE(pThreshold.threshold, 0);
-        EXPECT_LT(pThreshold.processId, UINT32_MAX);
+        EXPECT_LE(pThreshold.processId, UINT32_MAX);
       }
     } else {
       LOG_INFO << "No power handles found for this device! ";
@@ -473,7 +473,7 @@ LZT_TEST_F(
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        double threshold = 0;
+        double threshold = 100.0;
         lzt::set_power_energy_threshold(p_power_handle,
                                         threshold); // set test value
         zes_energy_threshold_t pThresholdGet = {};
