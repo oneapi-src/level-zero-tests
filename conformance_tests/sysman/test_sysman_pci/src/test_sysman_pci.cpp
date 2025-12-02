@@ -143,6 +143,16 @@ LZT_TEST_F(
 LZT_TEST_F(PCI_TEST,
            GivenSysmanHandleWhenRetrievingPCIStatsThenStatsAreReturned) {
   for (auto device : devices) {
+    ze_device_handle_t alloc_device = nullptr;
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    alloc_device = core_device;
+#else
+    alloc_device = device;
+#endif
     auto pciProps = lzt::get_pci_properties(device);
     auto pci_stats_initial = lzt::get_pci_stats(device);
     EXPECT_LE(pci_stats_initial.txCounter, UINT64_MAX);
@@ -154,23 +164,15 @@ LZT_TEST_F(PCI_TEST,
       EXPECT_LE(pci_stats_initial.packetCounter, UINT64_MAX);
     }
     EXPECT_LE(pci_stats_initial.timestamp, UINT64_MAX);
-    lzt::zeCommandBundle cmd_bundle = lzt::create_command_bundle(device, false);
+    lzt::zeCommandBundle cmd_bundle =
+        lzt::create_command_bundle(alloc_device, false);
     const size_t size = 4096;
     std::vector<uint8_t> host_memory1(size), host_memory2(size, 0);
     void *device_memory =
         lzt::allocate_device_memory(lzt::size_in_bytes(host_memory1), 1, 0,
-                                    device, lzt::get_default_context());
-#ifdef USE_ZESINIT
-    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
-    ze_device_handle_t core_device =
-        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
-    EXPECT_NE(core_device, nullptr);
-    lzt::make_memory_resident(core_device, device_memory,
+                                    alloc_device, lzt::get_default_context());
+    lzt::make_memory_resident(alloc_device, device_memory,
                               lzt::size_in_bytes(host_memory1));
-#else
-    lzt::make_memory_resident(device, device_memory,
-                              lzt::size_in_bytes(host_memory1));
-#endif
     lzt::write_data_pattern(host_memory1.data(), size, 1);
     lzt::append_memory_copy(cmd_bundle.list, device_memory, host_memory1.data(),
                             lzt::size_in_bytes(host_memory1), nullptr);
