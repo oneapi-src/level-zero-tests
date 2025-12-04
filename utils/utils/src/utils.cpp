@@ -15,6 +15,44 @@
 
 namespace level_zero_tests {
 
+#if defined(unix) || defined(__unix__) || defined(__unix)
+
+#include <unistd.h>
+
+uint64_t total_available_host_memory() {
+  const uint64_t page_count = to_u64(sysconf(_SC_AVPHYS_PAGES));
+  const uint64_t page_size = to_u64(sysconf(_SC_PAGE_SIZE));
+  return page_count * page_size;
+}
+
+uint64_t get_page_size() { return to_u64(sysconf(_SC_PAGE_SIZE)); }
+#endif
+
+#if defined(_WIN64) || defined(_WIN32)
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <Sysinfoapi.h>
+
+uint64_t total_available_host_memory() {
+  MEMORYSTATUSEX stat;
+  stat.dwLength = sizeof(stat);
+  GlobalMemoryStatusEx(&stat);
+
+  return stat.ullAvailPhys;
+}
+
+uint64_t get_page_size() {
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  const long page_size = si.dwPageSize;
+  return page_size;
+}
+
+#endif
+
 uint32_t get_zes_driver_handle_count() {
   uint32_t count = 0;
   ze_result_t result = zesDriverGet(&count, nullptr);
