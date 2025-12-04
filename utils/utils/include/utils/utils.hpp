@@ -22,6 +22,9 @@
 
 namespace level_zero_tests {
 
+uint64_t total_available_host_memory();
+uint64_t get_page_size();
+
 template <typename T> inline constexpr uint8_t to_u8(T val) {
   return static_cast<uint8_t>(val);
 }

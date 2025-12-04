@@ -1331,39 +1331,35 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
 
   auto mem_properties = lzt::get_memory_properties(device);
   auto total_mem = mem_properties[0].totalSize;
+  uint64_t available_host_mem = lzt::total_available_host_memory();
+
+  size_t alloc_size = (1ULL << 30) * 5ULL /*5 GiB*/;
 
   size_t head = 4096;
-  const auto scale = 1000; // copying bigger chunks will reduce test time
+  size_t reference_buffer_size = 4096 * 1024;
+
   LOG_DEBUG << "Memory Properties: " << mem_properties.size();
   LOG_DEBUG << "Total available memory: " << total_mem;
+  LOG_DEBUG << "Available host memory: " << available_host_mem;
   LOG_DEBUG << "Max Mem alloc size: " << device_properties.maxMemAllocSize;
+  LOG_DEBUG << "Allocation size: " << alloc_size;
 
-  if (device_properties.maxMemAllocSize > mem_properties[0].totalSize) {
-    GTEST_SKIP()
-        << "Device max memory allocation size is greater than total memory, "
-           "skipping test";
+  if (alloc_size > available_host_mem) {
+    GTEST_SKIP() << "Required allocation size is greater than available host "
+                    "memory, skipping test";
   }
+
+  if (alloc_size > mem_properties[0].totalSize) {
+    GTEST_SKIP() << "Required allocation size is greater than total memory, "
+                    "skipping test";
+  }
+
   size_t difference =
       mem_properties[0].totalSize - device_properties.maxMemAllocSize;
-  LOG_DEBUG << "Difference between total memory and max mem alloc size: "
-            << difference;
-  size_t size = 0;
-  if (difference == 0) {
-    size = device_properties.maxMemAllocSize;
-  } else {
-    head = std::min(difference, head);
-    size = std::max(static_cast<uint64_t>(1ULL) << 32 /*4 GiB*/,
-                    device_properties.maxMemAllocSize) +
-           head;
-  }
-  auto validation_buffer_size = head;
 
-  LOG_DEBUG << "Request device memory allocation size: " << size;
-
-  uint8_t *validation_buffer, *reference_buffer, *head_buffer;
+  uint8_t *reference_buffer, *head_buffer;
   try {
-    validation_buffer = new uint8_t[validation_buffer_size * scale];
-    reference_buffer = new uint8_t[validation_buffer_size * scale];
+    reference_buffer = new uint8_t[reference_buffer_size];
     head_buffer =
         new uint8_t[head]; // reference buffer for the first <head> bytes
   } catch (std::bad_alloc &ba_exception) {
@@ -1371,16 +1367,14 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   }
 
   uint8_t pattern = 0xAB;
-  memset(validation_buffer, 0, validation_buffer_size * scale);
-  memset(reference_buffer, pattern, validation_buffer_size * scale);
+  memset(reference_buffer, pattern, reference_buffer_size);
   memset(head_buffer, 0xAE, head);
 
-  auto device_buffer =
-      lzt::allocate_device_memory(size, 0, 0, pNext, 0, device, context);
+  auto device_buffer = lzt::allocate_shared_memory(alloc_size, 0, context);
+  std::memset(device_buffer, pattern, alloc_size);
 
   if (::testing::Test::HasFailure()) {
     delete[] reference_buffer;
-    delete[] validation_buffer;
     delete[] head_buffer;
     FAIL() << "Error allocating device memory";
   }
@@ -1408,9 +1402,6 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
-  lzt::append_memory_fill(bundle.list, device_buffer, &pattern, sizeof(pattern),
-                          size, nullptr);
-  lzt::append_barrier(bundle.list);
   lzt::append_launch_function(bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
   lzt::close_command_list(bundle.list);
@@ -1419,61 +1410,42 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   // validate
   size_t offset;
   auto break_error = false;
-  for (offset = 0; offset <= size - validation_buffer_size;
-       offset += validation_buffer_size) {
-    lzt::reset_command_list(bundle.list);
-    lzt::append_memory_copy(
-        bundle.list, validation_buffer,
-        static_cast<void *>(static_cast<uint8_t *>(device_buffer) + offset),
-        validation_buffer_size);
-    lzt::close_command_list(bundle.list);
-    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
-    if (offset) {
-      auto comparison =
-          memcmp(validation_buffer, reference_buffer, validation_buffer_size);
-      EXPECT_EQ(0, comparison);
-
-      if (comparison) {
-        LOG_DEBUG << "Failed at offset: " << offset << std::endl;
-        LOG_DEBUG << "Finding Incorrect Value";
-        for (size_t j = 0U; j < validation_buffer_size; j++) {
-          if (validation_buffer[j] != reference_buffer[j]) {
-            LOG_DEBUG << "index: " << std::dec << j << " val: " << std::hex
-                      << (int)validation_buffer[j] << "\tref: " << std::hex
-                      << (int)reference_buffer[j] << "\n";
-
-            break_error = true;
-            break;
-          }
+  ASSERT_EQ(0, memcmp(device_buffer, head_buffer, head));
+  uint8_t *device_buffer_ptr = static_cast<uint8_t *>(device_buffer);
+  for (offset = head; offset <= alloc_size - reference_buffer_size;
+       offset += reference_buffer_size) {
+    auto comparison = memcmp(device_buffer_ptr + offset, reference_buffer,
+                             reference_buffer_size);
+    EXPECT_EQ(0, comparison);
+    if (comparison) {
+      LOG_DEBUG << "Failed at offset: " << offset << std::endl;
+      LOG_DEBUG << "Finding Incorrect Value";
+      for (size_t j = 0; j < alloc_size; j++) {
+        if (device_buffer_ptr[offset + j] != reference_buffer[j]) {
+          LOG_DEBUG << "index: " << std::dec << offset + j
+                    << " val: " << std::hex
+                    << (int)device_buffer_ptr[offset + j]
+                    << "\tref: " << std::hex << (int)reference_buffer[j]
+                    << "\n";
+          break_error = true;
+          break;
         }
       }
-
-      if (break_error) {
-        FAIL() << "Done";
-      }
-    } else {
-      ASSERT_EQ(0, memcmp(validation_buffer, head_buffer, head));
-      validation_buffer_size *= scale;
-      delete[] head_buffer;
+    }
+    if (break_error) {
+      FAIL() << "Done";
     }
   }
 
-  if (offset < size) {
-    lzt::reset_command_list(bundle.list);
-    lzt::append_memory_copy(
-        bundle.list, validation_buffer,
-        static_cast<void *>(static_cast<uint8_t *>(device_buffer) + offset),
-        size - offset);
-    lzt::close_command_list(bundle.list);
-    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
-
-    ASSERT_EQ(0, memcmp(validation_buffer, reference_buffer, (size - offset)));
+  if (offset < alloc_size) {
+    ASSERT_EQ(0, memcmp(static_cast<uint8_t *>(device_buffer) + offset,
+                        reference_buffer, (alloc_size - offset)));
   }
 
   // cleanup
+  delete[] head_buffer;
   delete[] reference_buffer;
-  delete[] validation_buffer;
   lzt::free_memory(context, device_buffer);
   lzt::destroy_function(kernel);
   lzt::destroy_module(module);
