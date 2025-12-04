@@ -320,6 +320,18 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
     if (verbose)
       std::cout << "Device Compute Properties retrieved\n";
 
+    device_memory_access_property.stype =
+        ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES;
+    device_memory_access_property.pNext = nullptr;
+    result = zeDeviceGetMemoryAccessProperties(device,
+                                               &device_memory_access_property);
+    if (result) {
+      throw std::runtime_error("zeDeviceGetMemoryAccessProperties failed: " +
+                               std::to_string(result));
+    }
+    if (verbose)
+      std::cout << "Device Memory Access Properties retrieved\n";
+
     zeDeviceGetSubDevices(device, &sub_device_count, nullptr);
     if (verbose)
       std::cout << "Sub Device Count retrieved\n";
