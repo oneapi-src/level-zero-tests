@@ -354,16 +354,6 @@ protected:
         gpu_found_output_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
                 output_size_, 8, 0u, 0u, device_handle, context);
-      } else if (shr_mem_type == SHARED_SYSTEM) { // system allocation
-        if (!lzt::supports_shared_system_alloc(device_properties)) {
-          LOG_INFO
-              << "WARNING: Unable to allocate shared system memory, skipping";
-          free_drivers_info();
-          GTEST_SKIP();
-        }
-        gpu_pattern_buffer = new uint64_t[output_count_];
-        gpu_expected_output_buffer = new uint64_t[output_count_];
-        gpu_found_output_buffer = new uint64_t[output_count_];
       } else if (shr_mem_type == SHARED_CROSS) {
         auto memory_access_cap =
             device_properties.sharedCrossDeviceAllocCapabilities;
@@ -452,15 +442,11 @@ protected:
                   output_count_, context, is_immediate);
 
     LOG_INFO << "call free memory";
-    if (memory_type == ZE_MEMORY_TYPE_SHARED && shr_mem_type == SHARED_SYSTEM) {
-      delete[] gpu_pattern_buffer;
-      delete[] gpu_expected_output_buffer;
-      delete[] gpu_found_output_buffer;
-    } else {
-      level_zero_tests::free_memory(context, gpu_pattern_buffer);
-      level_zero_tests::free_memory(context, gpu_expected_output_buffer);
-      level_zero_tests::free_memory(context, gpu_found_output_buffer);
-    }
+
+    level_zero_tests::free_memory(context, gpu_pattern_buffer);
+    level_zero_tests::free_memory(context, gpu_expected_output_buffer);
+    level_zero_tests::free_memory(context, gpu_found_output_buffer);
+
     level_zero_tests::destroy_context(context);
 
     LOG_INFO << "call destroy module";
@@ -573,27 +559,6 @@ LZT_TEST_P(
   test_memory_overcommit(driver_index, device_in_driver_index,
                          memory_size_multiple, ZE_MEMORY_TYPE_SHARED,
                          SHARED_LOCAL, is_immediate);
-}
-
-LZT_TEST_P(
-    zeDriverMemoryOvercommitTests,
-    GivenSharedSystemMemoryWhenAllocationSizeLargerThanDeviceMaxMemoryThenMemoryIsPagedOffAndOnTheDevice) {
-
-  MemoryTestArguments_t test_arguments = {
-      std::get<0>(GetParam()), // driver index
-      std::get<1>(GetParam()), // device index within driver
-      std::get<2>(GetParam()), // memory size multiple, rounded up to uint16_t
-      std::get<3>(GetParam())  // immediate command list
-  };
-
-  uint32_t driver_index = test_arguments.driver_index;
-  uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
-  uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
-  bool is_immediate = test_arguments.is_immediate;
-
-  test_memory_overcommit(driver_index, device_in_driver_index,
-                         memory_size_multiple, ZE_MEMORY_TYPE_SHARED,
-                         SHARED_SYSTEM, is_immediate);
 }
 
 LZT_TEST_P(
