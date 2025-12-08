@@ -354,6 +354,16 @@ protected:
         gpu_found_output_buffer =
             (uint64_t *)level_zero_tests::allocate_shared_memory(
                 output_size_, 8, 0u, 0u, device_handle, context);
+      } else if (shr_mem_type == SHARED_SYSTEM) { // system allocation
+        if (!lzt::supports_shared_system_alloc(device_properties)) {
+          LOG_INFO
+              << "WARNING: Unable to allocate shared system memory, skipping";
+          free_drivers_info();
+          GTEST_SKIP();
+        }
+        gpu_pattern_buffer = new uint64_t[pattern_memory_count];
+        gpu_expected_output_buffer = new uint64_t[output_count_];
+        gpu_found_output_buffer = new uint64_t[output_count_];
       } else if (shr_mem_type == SHARED_CROSS) {
         auto memory_access_cap =
             device_properties.sharedCrossDeviceAllocCapabilities;
@@ -442,11 +452,15 @@ protected:
                   output_count_, context, is_immediate);
 
     LOG_INFO << "call free memory";
-
-    level_zero_tests::free_memory(context, gpu_pattern_buffer);
-    level_zero_tests::free_memory(context, gpu_expected_output_buffer);
-    level_zero_tests::free_memory(context, gpu_found_output_buffer);
-
+    if (memory_type == ZE_MEMORY_TYPE_SHARED && shr_mem_type == SHARED_SYSTEM) {
+      delete[] gpu_pattern_buffer;
+      delete[] gpu_expected_output_buffer;
+      delete[] gpu_found_output_buffer;
+    } else {
+      level_zero_tests::free_memory(context, gpu_pattern_buffer);
+      level_zero_tests::free_memory(context, gpu_expected_output_buffer);
+      level_zero_tests::free_memory(context, gpu_found_output_buffer);
+    }
     level_zero_tests::destroy_context(context);
 
     LOG_INFO << "call destroy module";
