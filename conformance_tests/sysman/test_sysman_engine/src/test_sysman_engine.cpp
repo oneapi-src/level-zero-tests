@@ -320,6 +320,12 @@ LZT_TEST_F(
                                static_cast<double>(s1.timestamp));
           }
 
+          if(pre_utilization > 0.05) {
+            LOG_INFO << "Pre-utilization is already high: "
+                     << pre_utilization * 100 << "%, skipping workload test.";
+            continue;
+          }
+
           // submit workload and measure  utilization
 #ifdef USE_ZESINIT
           auto sysman_device_properties =
