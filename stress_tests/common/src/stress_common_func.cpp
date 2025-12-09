@@ -15,45 +15,6 @@ namespace lzt = level_zero_tests;
 using lzt::to_u64;  // Available from utils.hpp through test_harness.hpp,
 using lzt::to_f64;  //    through test_harness_image.hpp.
 
-#if defined(unix) || defined(__unix__) || defined(__unix)
-
-#include <unistd.h>
-
-uint64_t total_available_host_memory() {
-  const uint64_t page_count = to_u64(sysconf(_SC_AVPHYS_PAGES));
-  const uint64_t page_size = to_u64(sysconf(_SC_PAGE_SIZE));
-  return page_count * page_size;
-}
-
-uint64_t get_page_size() {
-  return to_u64(sysconf(_SC_PAGE_SIZE));
-}
-#endif
-
-#if defined(_WIN64) || defined(_WIN64) || defined(_WIN32)
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <Sysinfoapi.h>
-
-uint64_t total_available_host_memory() {
-  MEMORYSTATUSEX stat;
-  stat.dwLength = sizeof(stat);
-  GlobalMemoryStatusEx(&stat);
-
-  return stat.ullAvailPhys;
-}
-uint64_t get_page_size() {
-  SYSTEM_INFO si;
-  GetSystemInfo(&si);
-  const long page_size = si.dwPageSize;
-  return page_size;
-}
-
-#endif
-
 // limit total or one allocation size, do not change number of allocations
 void adjust_max_memory_allocation(
     const ze_driver_handle_t &driver,
@@ -65,7 +26,7 @@ void adjust_max_memory_allocation(
 
   // NEO return always one property that why index 0.
   uint64_t device_total_memory_size = device_memory_properties[0].totalSize;
-  uint64_t host_available_memory_size = total_available_host_memory();
+  uint64_t host_available_memory_size = lzt::total_available_host_memory();
   uint64_t total_available_memory = device_total_memory_size;
 
   LOG_INFO << "Device total memory size == "
