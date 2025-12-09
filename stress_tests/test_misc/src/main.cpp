@@ -12,11 +12,12 @@
 #if defined(unix) || defined(__unix__) || defined(__unix)
 #include <sys/mman.h>
 #endif
-#include "stress_common_func.hpp"
+
+namespace lzt = level_zero_tests;
 
 void reserve_memory(bool release) {
-  size_t page_size = get_page_size();
-  size_t single_alloc_size = 1024UL * 1024UL * get_page_size();
+  size_t page_size = lzt::get_page_size();
+  size_t single_alloc_size = 1024UL * 1024UL * lzt::get_page_size();
   size_t initial_alloc_size = single_alloc_size;
   size_t total_alloc_size = 0;
   uint64_t *ptr;
