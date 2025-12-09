@@ -1912,11 +1912,11 @@ void zeCommandListAppendMemoryCopyTests::
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size_in_bytes(host_memory), is_shared_system);
 
-  append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
-                     size_in_bytes(host_memory), nullptr);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  }
+  lzt::append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
+                          size_in_bytes(host_memory), nullptr);
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>().max());
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
 }
@@ -2002,11 +2002,11 @@ void zeCommandListAppendMemoryCopyTests::
   ze_event_handle_t hEvent = nullptr;
 
   ep.create_event(hEvent);
-  append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
-                     size_in_bytes(host_memory), hEvent);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  }
+  lzt::append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
+                          size_in_bytes(host_memory), hEvent);
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>().max());
   ep.destroy_event(hEvent);
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
@@ -2103,12 +2103,12 @@ void zeCommandListAppendMemoryCopyTests::
   ep.create_event(hEvent);
   auto hEvent_before = hEvent;
   lzt::signal_event_from_host(hEvent);
-  append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
-                     size_in_bytes(host_memory), nullptr, 1, &hEvent);
+  lzt::append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
+                          size_in_bytes(host_memory), nullptr, 1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>().max());
   ep.destroy_event(hEvent);
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
@@ -2191,13 +2191,13 @@ void zeCommandListAppendMemoryCopyTests::
   ep.create_event(hEvent);
   auto hEvent_before = hEvent;
   lzt::signal_event_from_host(hEvent);
-  append_memory_copy_region(cmd_bundle.list, memory, &dstRegion, 0, 0,
-                            host_memory.data(), &srcRegion, 0, 0, nullptr, 1,
-                            &hEvent);
+  lzt::append_memory_copy_region(cmd_bundle.list, memory, &dstRegion, 0, 0,
+                                 host_memory.data(), &srcRegion, 0, 0, nullptr,
+                                 1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>().max());
   ep.destroy_event(hEvent);
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
