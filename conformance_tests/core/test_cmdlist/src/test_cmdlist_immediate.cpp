@@ -1597,4 +1597,127 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_QUEUE_FLAG_IN_ORDER),
         ::testing::Bool()));
 
+enum class EventType { None, Regular, CounterBased };
+
+class zeImmediateCommandListInOrderCopyOffloadExecutionTests
+    : public lzt::zeEventPoolTests,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_command_queue_mode_t, EventType>> {
+protected:
+  void SetUp() override {
+    module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
+                                "cmdlist_add.spv", ZE_MODULE_FORMAT_IL_SPIRV,
+                                nullptr, nullptr);
+    kernel = lzt::create_function(module, "cmdlist_add_constant");
+
+    if (event_type == EventType::Regular) {
+      ep.InitEventPool(1);
+    } else if (event_type == EventType::CounterBased) {
+      if (!lzt::check_if_extension_supported(
+              lzt::get_default_driver(),
+              ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
+        GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
+                     << " not supported";
+      }
+      ze_event_pool_desc_t eventPoolDesc = {};
+      eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+      eventPoolDesc.count = 1;
+      ze_event_pool_counter_based_exp_desc_t counterBasedExtension = {
+          ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
+      counterBasedExtension.flags =
+          ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE;
+      eventPoolDesc.pNext = &counterBasedExtension;
+      ep.InitEventPool(eventPoolDesc);
+    }
+
+    if (event_type != EventType::None) {
+      ep.create_event(event, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+    }
+
+    cmdlist_immediate = lzt::create_immediate_command_list(
+        lzt::zeDevice::get_instance()->get_device(),
+        ZE_COMMAND_QUEUE_FLAG_IN_ORDER |
+            ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT,
+        mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
+  }
+
+  void TearDown() override {
+    lzt::destroy_command_list(cmdlist_immediate);
+    if (event_type != EventType::None) {
+      ep.destroy_event(event);
+    }
+    lzt::destroy_function(kernel);
+    lzt::destroy_module(module);
+  }
+
+  ze_command_queue_mode_t mode = std::get<0>(GetParam());
+  EventType event_type = std::get<1>(GetParam());
+  ze_command_list_handle_t cmdlist_immediate = nullptr;
+  ze_event_handle_t event = nullptr;
+  ze_module_handle_t module = nullptr;
+  ze_kernel_handle_t kernel = nullptr;
+};
+
+LZT_TEST_P(
+    zeImmediateCommandListInOrderCopyOffloadExecutionTests,
+    GivenInOrderImmediateCommandListWithCopyOffloadHintWhenAppendMemoryCopyThenVerifySuccessful) {
+  size_t size = 4096;
+  auto host_buffer = lzt::allocate_host_memory(size);
+  auto device_buffer_1 = lzt::allocate_device_memory(size);
+  auto device_buffer_2 = lzt::allocate_device_memory(size);
+
+  const uint32_t buffer_value = static_cast<uint32_t>(0xABABABAB);
+  const uint32_t add_val = 0x01010101;
+  const uint32_t expected_value = buffer_value + add_val;
+
+  std::memset(host_buffer, static_cast<int>(buffer_value), size);
+
+  lzt::set_argument_value(kernel, 0, sizeof(void *), &host_buffer);
+  lzt::set_argument_value(kernel, 1, sizeof(uint32_t), &add_val);
+
+  uint32_t group_size_x = 0, group_size_y = 0, group_size_z = 0;
+  lzt::suggest_group_size(kernel, to_u32(size), 1, 1, group_size_x,
+                          group_size_y, group_size_z);
+
+  lzt::set_group_size(kernel, group_size_x, 1, 1);
+  ze_group_count_t group_count = {};
+  group_count.groupCountX = to_u32(size / group_size_x);
+  group_count.groupCountY = 1;
+  group_count.groupCountZ = 1;
+
+  lzt::append_memory_fill(cmdlist_immediate, device_buffer_1, &buffer_value,
+                          sizeof(buffer_value), size, nullptr);
+  lzt::append_launch_function(cmdlist_immediate, kernel, &group_count, nullptr,
+                              0, nullptr);
+  lzt::append_memory_copy(cmdlist_immediate, device_buffer_2, device_buffer_1,
+                          size,
+                          event_type != EventType::None ? event : nullptr);
+  if (event_type != EventType::None) {
+    lzt::event_host_synchronize(event, UINT64_MAX);
+  } else {
+    lzt::synchronize_command_list_host(cmdlist_immediate, UINT64_MAX);
+  }
+
+  for (size_t i = 0; i < size / sizeof(uint32_t); i++) {
+    if (static_cast<uint32_t *>(host_buffer)[i] != expected_value) {
+      FAIL() << "Data mismatch at index " << i << ": reference - " << std::hex
+             << expected_value << ", actual - " << std::hex
+             << static_cast<uint32_t *>(host_buffer)[i];
+    }
+  }
+
+  lzt::free_memory(device_buffer_2);
+  lzt::free_memory(device_buffer_1);
+  lzt::free_memory(host_buffer);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    CopyOffloadHintParams,
+    zeImmediateCommandListInOrderCopyOffloadExecutionTests,
+    ::testing::Combine(::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                                         ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
+                                         ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+                       ::testing::Values(EventType::None, EventType::Regular,
+                                         EventType::CounterBased)));
+
 } // namespace
