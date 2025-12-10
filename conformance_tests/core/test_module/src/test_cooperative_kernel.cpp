@@ -21,9 +21,8 @@ namespace {
 using lzt::to_int;
 using lzt::to_u32;
 
-class CooperativeKernelTests
-    : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<uint32_t, bool>> {
+class CooperativeKernelTests : public ::testing::Test,
+                               public ::testing::WithParamInterface<bool> {
 protected:
   void RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(
       bool is_shared_system);
@@ -32,7 +31,6 @@ protected:
 void CooperativeKernelTests::
     RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(
         bool is_shared_system) {
-  uint32_t max_group_count = 0;
   ze_module_handle_t module = nullptr;
   ze_kernel_handle_t kernel = nullptr;
   auto driver = lzt::get_default_driver();
@@ -57,20 +55,11 @@ void CooperativeKernelTests::
     LOG_WARNING << "No command queues that support cooperative kernels";
     GTEST_SKIP();
   }
-  auto is_immediate = std::get<1>(GetParam());
+  auto is_immediate = GetParam();
   auto cmd_bundle =
       lzt::create_command_bundle(context, device, flags, mode, priority, 0,
                                  to_u32(ordinal), 0, is_immediate);
 
-  // Set up input vector data
-  const size_t data_size = 4096;
-  uint64_t kernel_data[data_size] = {0};
-  void *input_data = lzt::allocate_shared_memory_with_allocator_selector(
-      sizeof(uint64_t) * data_size, 1, 0, 0, device, context, is_shared_system);
-
-  memcpy(input_data, kernel_data, data_size * sizeof(uint64_t));
-
-  uint32_t row_num = std::get<0>(GetParam());
   uint32_t groups_x = 1;
 
   module = lzt::create_module(context, device, "cooperative_kernel.spv",
@@ -83,16 +72,14 @@ void CooperativeKernelTests::
   ASSERT_ZE_RESULT_SUCCESS(
       zeKernelSuggestMaxCooperativeGroupCount(kernel, &groups_x));
   ASSERT_GT(groups_x, 0);
-  // We've set the number of workgroups to the max
-  // so check that it is sufficient for the input,
-  // otherwise just clamp the test
-  if (groups_x < row_num) {
-    row_num = groups_x;
-  }
+
+  void *input_data = lzt::allocate_shared_memory_with_allocator_selector(
+      sizeof(int32_t) * groups_x, 1, 0, 0, device, context, is_shared_system);
+
+  memset(input_data, 0, sizeof(int32_t) * groups_x);
+
   ASSERT_ZE_RESULT_SUCCESS(
       zeKernelSetArgumentValue(kernel, 0, sizeof(input_data), &input_data));
-  ASSERT_ZE_RESULT_SUCCESS(
-      zeKernelSetArgumentValue(kernel, 1, sizeof(row_num), &row_num));
 
   ze_group_count_t args = {groups_x, 1, 1};
   ASSERT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchCooperativeKernel(
@@ -102,10 +89,8 @@ void CooperativeKernelTests::
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   // Validate the kernel completed successfully and correctly
-  uint64_t val = 0;
-  for (uint32_t i = 0U; i <= row_num; i++) {
-    val = i + row_num;
-    ASSERT_EQ(static_cast<uint64_t *>(input_data)[i], val);
+  for (uint32_t i = 0U; i < groups_x; i++) {
+    ASSERT_EQ(static_cast<int *>(input_data)[i], i);
   }
 
   lzt::free_memory_with_allocator_selector(context, input_data,
@@ -128,10 +113,7 @@ LZT_TEST_P(
   RunGivenCooperativeKernelWhenAppendingLaunchCooperativeKernelTest(true);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    // 62 is the max row such that no calculation will overflow max uint64 value
-    GroupNumbers, CooperativeKernelTests,
-    ::testing::Combine(::testing::Values(0, 1, 5, 10, 50, 62),
-                       ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(GroupNumbers, CooperativeKernelTests,
+                         ::testing::Bool());
 
 } // namespace
