@@ -1,12 +1,12 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2025 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
 
-kernel void cooperative_kernel(global ulong *buffer, const int n) {
+kernel void cooperative_kernel(global int *buffer) {
 
   const int work_group_id = get_group_id(0);
   const int xid = get_global_id(0);
@@ -19,12 +19,14 @@ kernel void cooperative_kernel(global ulong *buffer, const int n) {
            work_group_id, work_group_thread_id, xid, xsize);
     printf("Number of items in work-group: %d\n", xgsize);
   }
+  
+  buffer[work_group_id] = work_group_id;
 
-  ulong val = 0;
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-  for (int i = 0; i <= n; i++) {
-    val = xid + n;
-    buffer[xid] = val;
+  global_barrier();
+
+  for (int i = 0; i < get_num_groups(0); ++i) {
+    if (buffer[i] != i) {
+        buffer[work_group_id] = -1;
+    }
   }
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 }
