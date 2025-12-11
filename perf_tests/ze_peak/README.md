@@ -15,6 +15,7 @@ ze_peak measures the following:
 * Double Precision Compute in GigaFlops
 * Integer Compute in GigaInteger Flops
 * Memory Transfer Bandwidth in GigaBytes Per Second
+  * GPU Copy Shared System Memory <-> Device Memory
   * GPU Copy Host <-> Shared Memory
   * System Memory Copy Host <-> Shared Memory
 * Kernel Launch Latency in micro seconds
