@@ -315,7 +315,8 @@ LZT_TEST_F(
           auto s1 = lzt::get_engine_activity(engine_handle);
           double pre_utilization = 0.0;
 
-          while (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(5)) {
+          while (std::chrono::steady_clock::now() - start_time <
+                 std::chrono::seconds(5)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             auto s2 = lzt::get_engine_activity(engine_handle);
             if (s2.timestamp > s1.timestamp) {
@@ -343,7 +344,7 @@ LZT_TEST_F(
           s1 = lzt::get_engine_activity(engine_handle);
           std::thread thread(workload_for_device, core_device);
           thread.join();
-          s2 = lzt::get_engine_activity(engine_handle);
+          auto s2 = lzt::get_engine_activity(engine_handle);
 #else  // USE_ZESINIT
           s1 = lzt::get_engine_activity(engine_handle);
           std::thread thread(workload_for_device, device);
