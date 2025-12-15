@@ -325,10 +325,17 @@ LZT_TEST_F(
                                  static_cast<double>(s1.activeTime)) /
                                 (static_cast<double>(s2.timestamp) -
                                  static_cast<double>(s1.timestamp));
+
+              // If utilization falls below threshold, break and proceed with
+              // test
+              if (pre_utilization < pre_utilization_threshold) {
+                break;
+              }
             }
             s1 = s2;
           }
 
+          // Skip only if utilization remained high throughout the entire period
           if (pre_utilization > pre_utilization_threshold) {
             LOG_INFO << "Pre-utilization is already high: "
                      << pre_utilization * 100 << "%, skipping workload test.";
