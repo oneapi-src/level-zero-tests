@@ -304,6 +304,7 @@ LZT_TEST_F(
     count = lzt::get_engine_handle_count(device);
     if (count > 0) {
       is_engine_supported = true;
+      constexpr double pre_utilization_threshold = 0.05;
       LOG_INFO << "Engine handles are available on this device! ";
       auto engine_handles = lzt::get_engine_handles(device, count);
       for (auto engine_handle : engine_handles) {
@@ -328,7 +329,7 @@ LZT_TEST_F(
             s1 = s2;
           }
 
-          if (pre_utilization > 0.05) {
+          if (pre_utilization > pre_utilization_threshold) {
             LOG_INFO << "Pre-utilization is already high: "
                      << pre_utilization * 100 << "%, skipping workload test.";
             continue;
