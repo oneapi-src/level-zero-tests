@@ -11,6 +11,7 @@
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include <thread>
 namespace lzt = level_zero_tests;
 
 #include <level_zero/zes_api.h>
@@ -309,15 +310,21 @@ LZT_TEST_F(
         ASSERT_NE(nullptr, engine_handle);
         auto properties = lzt::get_engine_properties(engine_handle);
         if (properties.type == ZES_ENGINE_GROUP_COMPUTE_ALL) {
-          // Get pre-workload utilization
+          // Poll pre-workload utilization for 5 seconds
+          auto start_time = std::chrono::steady_clock::now();
           auto s1 = lzt::get_engine_activity(engine_handle);
-          auto s2 = lzt::get_engine_activity(engine_handle);
           double pre_utilization = 0.0;
-          if (s2.timestamp > s1.timestamp) {
-            pre_utilization = (static_cast<double>(s2.activeTime) -
-                               static_cast<double>(s1.activeTime)) /
-                              (static_cast<double>(s2.timestamp) -
-                               static_cast<double>(s1.timestamp));
+
+          while (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(5)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            auto s2 = lzt::get_engine_activity(engine_handle);
+            if (s2.timestamp > s1.timestamp) {
+              pre_utilization = (static_cast<double>(s2.activeTime) -
+                                 static_cast<double>(s1.activeTime)) /
+                                (static_cast<double>(s2.timestamp) -
+                                 static_cast<double>(s1.timestamp));
+            }
+            s1 = s2;
           }
 
           if (pre_utilization > 0.05) {
@@ -341,7 +348,7 @@ LZT_TEST_F(
           s1 = lzt::get_engine_activity(engine_handle);
           std::thread thread(workload_for_device, device);
           thread.join();
-          s2 = lzt::get_engine_activity(engine_handle);
+          auto s2 = lzt::get_engine_activity(engine_handle);
 #endif // USE_ZESINIT
           EXPECT_NE(s2.timestamp, s1.timestamp);
           if (s2.timestamp > s1.timestamp) {
