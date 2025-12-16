@@ -186,4 +186,37 @@ LZT_TEST_F(
   }
 }
 
+LZT_TEST_F(
+    ECC_TEST,
+    GIvenValidDeviceHandleWhenEccGetDefaultStateIsQueriedThenValidValuesAreReturned) {
+  for (const auto &device : devices) {
+    auto available = lzt::get_ecc_available(device);
+    auto configurable = lzt::get_ecc_configurable(device);
+    if (available == static_cast<ze_bool_t>(true) &&
+        configurable == static_cast<ze_bool_t>(true)) {
+      // Get ECC state WITH default state extension
+      zes_device_ecc_default_properties_ext_t defaultExt = {
+          ZES_STRUCTURE_TYPE_DEVICE_ECC_DEFAULT_PROPERTIES_EXT, nullptr};
+      zes_device_ecc_properties_t eccState = {
+          ZES_STRUCTURE_TYPE_DEVICE_ECC_PROPERTIES, &defaultExt};
+
+      EXPECT_ZE_RESULT_SUCCESS(zesDeviceGetEccState(device, &eccState));
+
+      // Validate regular state values
+      EXPECT_GE(eccState.currentState, ZES_DEVICE_ECC_STATE_UNAVAILABLE);
+      EXPECT_LE(eccState.currentState, ZES_DEVICE_ECC_STATE_DISABLED);
+      EXPECT_GE(eccState.pendingState, ZES_DEVICE_ECC_STATE_UNAVAILABLE);
+      EXPECT_LE(eccState.pendingState, ZES_DEVICE_ECC_STATE_DISABLED);
+      EXPECT_GE(eccState.pendingAction, ZES_DEVICE_ACTION_NONE);
+      EXPECT_LE(eccState.pendingAction, ZES_DEVICE_ACTION_COLD_SYSTEM_REBOOT);
+
+      // Validate default state value
+      EXPECT_GE(defaultExt.defaultState, ZES_DEVICE_ECC_STATE_UNAVAILABLE);
+      EXPECT_LE(defaultExt.defaultState, ZES_DEVICE_ECC_STATE_DISABLED);
+    } else {
+      LOG_INFO << "ECC is not available or not configurable";
+    }
+  }
+}
+
 } // namespace
