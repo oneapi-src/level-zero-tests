@@ -75,6 +75,8 @@ struct L0Context {
                                             nullptr};
   ze_device_compute_properties_t device_compute_property = {
       ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES, nullptr};
+  ze_device_memory_access_properties_t device_memory_access_property = {
+      ZE_STRUCTURE_TYPE_DEVICE_MEMORY_ACCESS_PROPERTIES, nullptr};
   bool verbose = false;
   std::vector<ze_command_queue_group_properties_t> queueProperties;
 
@@ -155,9 +157,15 @@ public:
 #endif
 
 private:
+  enum class MemoryAdvice { None, SourceToSystem, DestinationToSystem };
+
   long double _transfer_bw_gpu_copy(L0Context &context,
                                     void *destination_buffer,
                                     void *source_buffer, size_t buffer_size);
+  long double _transfer_bw_gpu_copy_with_shared_system(
+      L0Context &context, void *destination_buffer, void *source_buffer,
+      void *input_buffer, size_t buffer_size, bool is_source_system,
+      MemoryAdvice advice = MemoryAdvice::None);
   long double _transfer_bw_host_copy(L0Context &context,
                                      void *destination_buffer,
                                      void *source_buffer, size_t buffer_size,
