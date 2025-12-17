@@ -1338,24 +1338,27 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   size_t head = 4096;
   size_t reference_buffer_size = 4096 * 1024;
 
-  LOG_DEBUG << "Memory Properties: " << mem_properties.size();
-  LOG_DEBUG << "Total available memory: " << total_mem;
-  LOG_DEBUG << "Available host memory: " << available_host_mem;
-  LOG_DEBUG << "Max Mem alloc size: " << device_properties.maxMemAllocSize;
-  LOG_DEBUG << "Allocation size: " << alloc_size;
+  LOG_INFO << "Memory Properties: " << mem_properties.size();
+  LOG_INFO << "Total device memory: " << total_mem;
+  LOG_INFO << "Available host memory: " << available_host_mem;
+  LOG_INFO << "Max Mem alloc size: " << device_properties.maxMemAllocSize;
+  LOG_INFO << "Allocation size: " << alloc_size;
 
   if (alloc_size > available_host_mem) {
     GTEST_SKIP() << "Required allocation size is greater than available host "
                     "memory, skipping test";
   }
 
-  if (alloc_size > mem_properties[0].totalSize) {
+  if (alloc_size > device_properties.maxMemAllocSize) {
+    GTEST_SKIP()
+        << "Required allocation size is greater than max allocation size, "
+           "skipping test";
+  }
+
+  if (alloc_size > total_mem) {
     GTEST_SKIP() << "Required allocation size is greater than total memory, "
                     "skipping test";
   }
-
-  size_t difference =
-      mem_properties[0].totalSize - device_properties.maxMemAllocSize;
 
   uint8_t *reference_buffer, *head_buffer;
   try {
