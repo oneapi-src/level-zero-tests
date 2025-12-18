@@ -299,6 +299,7 @@ static void workload_for_device(ze_device_handle_t device) {
 LZT_TEST_F(
     ENGINE_TEST,
     GivenValidEngineHandleWhenGpuWorkloadIsSubmittedThenEngineActivityMeasuredIsHigher) {
+  bool is_engine_workload_executed = false;
   for (auto device : devices) {
     uint32_t count = 0;
     count = lzt::get_engine_handle_count(device);
@@ -352,13 +353,13 @@ LZT_TEST_F(
           s1 = lzt::get_engine_activity(engine_handle);
           std::thread thread(workload_for_device, core_device);
           thread.join();
-          auto s2 = lzt::get_engine_activity(engine_handle);
 #else  // USE_ZESINIT
           s1 = lzt::get_engine_activity(engine_handle);
           std::thread thread(workload_for_device, device);
           thread.join();
-          auto s2 = lzt::get_engine_activity(engine_handle);
 #endif // USE_ZESINIT
+          is_engine_workload_executed = true;
+          auto s2 = lzt::get_engine_activity(engine_handle);
           EXPECT_NE(s2.timestamp, s1.timestamp);
           if (s2.timestamp > s1.timestamp) {
             double post_utilization = (static_cast<double>(s2.activeTime) -
@@ -376,6 +377,10 @@ LZT_TEST_F(
     } else {
       LOG_INFO << "No engine handles found for this device! ";
     }
+  }
+  if (!is_engine_workload_executed) {
+    GTEST_SKIP() << "All engines had high pre-utilization. No workload test "
+                    "was executed.";
   }
   if (!is_engine_supported) {
     FAIL() << "No engine handles found on any of the devices! ";
