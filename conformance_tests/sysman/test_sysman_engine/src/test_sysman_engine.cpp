@@ -11,6 +11,7 @@
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include <thread>
 namespace lzt = level_zero_tests;
 
 #include <level_zero/zes_api.h>
@@ -298,26 +299,48 @@ static void workload_for_device(ze_device_handle_t device) {
 LZT_TEST_F(
     ENGINE_TEST,
     GivenValidEngineHandleWhenGpuWorkloadIsSubmittedThenEngineActivityMeasuredIsHigher) {
+  bool is_engine_workload_executed = false;
   for (auto device : devices) {
     uint32_t count = 0;
     count = lzt::get_engine_handle_count(device);
     if (count > 0) {
       is_engine_supported = true;
+      constexpr double pre_utilization_threshold = 0.05;
       LOG_INFO << "Engine handles are available on this device! ";
       auto engine_handles = lzt::get_engine_handles(device, count);
       for (auto engine_handle : engine_handles) {
         ASSERT_NE(nullptr, engine_handle);
         auto properties = lzt::get_engine_properties(engine_handle);
         if (properties.type == ZES_ENGINE_GROUP_COMPUTE_ALL) {
-          // Get pre-workload utilization
+          // Poll pre-workload utilization for 5 seconds
+          auto start_time = std::chrono::steady_clock::now();
           auto s1 = lzt::get_engine_activity(engine_handle);
-          auto s2 = lzt::get_engine_activity(engine_handle);
           double pre_utilization = 0.0;
-          if (s2.timestamp > s1.timestamp) {
-            pre_utilization = (static_cast<double>(s2.activeTime) -
-                               static_cast<double>(s1.activeTime)) /
-                              (static_cast<double>(s2.timestamp) -
-                               static_cast<double>(s1.timestamp));
+
+          while (std::chrono::steady_clock::now() - start_time <
+                 std::chrono::seconds(5)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            auto s2 = lzt::get_engine_activity(engine_handle);
+            if (s2.timestamp > s1.timestamp) {
+              pre_utilization = (static_cast<double>(s2.activeTime) -
+                                 static_cast<double>(s1.activeTime)) /
+                                (static_cast<double>(s2.timestamp) -
+                                 static_cast<double>(s1.timestamp));
+
+              // If utilization falls below threshold, break and proceed with
+              // test
+              if (pre_utilization < pre_utilization_threshold) {
+                break;
+              }
+            }
+            s1 = s2;
+          }
+
+          // Skip only if utilization remained high throughout the entire period
+          if (pre_utilization > pre_utilization_threshold) {
+            LOG_INFO << "Pre-utilization is already high: "
+                     << pre_utilization * 100 << "%, skipping workload test.";
+            continue;
           }
 
           // submit workload and measure  utilization
@@ -330,13 +353,13 @@ LZT_TEST_F(
           s1 = lzt::get_engine_activity(engine_handle);
           std::thread thread(workload_for_device, core_device);
           thread.join();
-          s2 = lzt::get_engine_activity(engine_handle);
 #else  // USE_ZESINIT
           s1 = lzt::get_engine_activity(engine_handle);
           std::thread thread(workload_for_device, device);
           thread.join();
-          s2 = lzt::get_engine_activity(engine_handle);
 #endif // USE_ZESINIT
+          is_engine_workload_executed = true;
+          auto s2 = lzt::get_engine_activity(engine_handle);
           EXPECT_NE(s2.timestamp, s1.timestamp);
           if (s2.timestamp > s1.timestamp) {
             double post_utilization = (static_cast<double>(s2.activeTime) -
@@ -354,6 +377,10 @@ LZT_TEST_F(
     } else {
       LOG_INFO << "No engine handles found for this device! ";
     }
+  }
+  if (!is_engine_workload_executed) {
+    GTEST_SKIP() << "All engines had high pre-utilization. No workload test "
+                    "was executed.";
   }
   if (!is_engine_supported) {
     FAIL() << "No engine handles found on any of the devices! ";
