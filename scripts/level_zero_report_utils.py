@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import re
+import sys
 
 def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str,):
         test_feature_tag = ""
