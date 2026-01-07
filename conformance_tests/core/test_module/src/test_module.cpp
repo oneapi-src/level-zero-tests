@@ -1329,14 +1329,14 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
       ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE;
   void *pNext = &relaxed_allocation_limits_desc;
 
-  auto mem_properties = lzt::get_memory_properties(device);
-  auto total_mem = mem_properties[0].totalSize;
-  uint64_t available_host_mem = lzt::total_available_host_memory();
+  const auto mem_properties = lzt::get_memory_properties(device);
+  const uint64_t total_mem = mem_properties[0].totalSize;
+  const uint64_t available_host_mem = lzt::total_available_host_memory();
 
-  size_t alloc_size = (1ULL << 30) * 5ULL /*5 GiB*/;
+  const uint64_t alloc_size = (1ULL << 30) * 5ULL /*5 GiB*/;
 
-  size_t head = 4096;
-  size_t reference_buffer_size = 4096 * 1024;
+  const uint64_t head = 4096;
+  const uint64_t reference_buffer_size = 4096 * 1024;
 
   LOG_INFO << "Memory Properties: " << mem_properties.size();
   LOG_INFO << "Total device memory: " << total_mem;
@@ -1373,8 +1373,9 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   memset(reference_buffer, pattern, reference_buffer_size);
   memset(head_buffer, 0xAE, head);
 
-  auto device_buffer = lzt::allocate_shared_memory(alloc_size, 0, context);
-  std::memset(device_buffer, pattern, alloc_size);
+  auto device_buffer =
+      lzt::allocate_shared_memory(static_cast<size_t>(alloc_size), 0, context);
+  std::memset(device_buffer, pattern, static_cast<size_t>(alloc_size));
 
   if (::testing::Test::HasFailure()) {
     delete[] reference_buffer;
@@ -1411,7 +1412,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   // validate
-  size_t offset;
+  uint64_t offset = 0ULL;
   auto break_error = false;
 
   ASSERT_EQ(0, memcmp(device_buffer, head_buffer, head));
@@ -1424,7 +1425,7 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
     if (comparison) {
       LOG_DEBUG << "Failed at offset: " << offset << std::endl;
       LOG_DEBUG << "Finding Incorrect Value";
-      for (size_t j = 0; j < alloc_size; j++) {
+      for (uint64_t j = 0; j < alloc_size; j++) {
         if (device_buffer_ptr[offset + j] != reference_buffer[j]) {
           LOG_DEBUG << "index: " << std::dec << offset + j
                     << " val: " << std::hex
