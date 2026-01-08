@@ -2574,10 +2574,7 @@ LZT_TEST_P(
 
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
-      if (!lzt::supports_shared_system_alloc(device)) {
-        LOG_WARNING << "Device does not support shared system allocation";
-        continue;
-      }
+      SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
       int *src_memory = nullptr;
       int *dst_memory = nullptr;
 
@@ -2676,6 +2673,92 @@ void free_aligned(void *ptr) {
   _aligned_free(ptr);
 #endif
 }
+
+class zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<size_t, bool>> {
+public:
+  void launchHostUsrPtrAppendMemCopy(ze_device_handle_t device, int *src_memory,
+                                int *dst_memory, size_t size,
+                                bool is_immediate) {
+
+    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+    const int8_t src_pattern = (rand() & 0x7F);
+    const int8_t dst_pattern = 0;
+
+    int *expected_data =
+        static_cast<int *>(lzt::allocate_host_memory(size));
+    int *verify_data =
+        static_cast<int *>(lzt::allocate_host_memory(size));
+
+    memset(expected_data, src_pattern, size);
+    memset(verify_data, dst_pattern, size);
+
+    EXPECT_NE(expected_data, nullptr);
+    EXPECT_NE(verify_data, nullptr);
+
+    memset(src_memory, src_pattern, size);
+    memset(dst_memory, dst_pattern, size);
+
+    lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_memory),
+                            static_cast<void *>(src_memory),
+                            size);
+
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.list, verify_data,
+                            static_cast<void *>(dst_memory),
+                            size);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+    EXPECT_EQ(0, memcmp(expected_data, verify_data, size));
+
+    lzt::destroy_command_bundle(cmd_bundle);
+    lzt::free_memory(expected_data);
+    lzt::free_memory(verify_data);
+  }
+};
+
+LZT_TEST_P(
+    zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr,
+    GivenSourceAndDestinationSharedSystemUsmWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
+  size_t size =  std::get<0>(GetParam());
+  bool is_immediate = std::get<1>(GetParam());
+
+  auto context = lzt::get_default_context();
+
+  for (auto driver : lzt::get_all_driver_handles()) {
+    for (auto device : lzt::get_devices(driver)) {
+
+      int *src_memory = nullptr;
+      int *dst_memory = nullptr;
+
+     src_memory = static_cast<int *>(malloc (size));
+     dst_memory = static_cast<int *>(malloc (size));
+
+      EXPECT_NE(src_memory, nullptr);
+      EXPECT_NE(dst_memory, nullptr);
+
+      launchHostUsrPtrAppendMemCopy(device, src_memory, dst_memory, size,
+                               is_immediate);
+
+      if (dst_memory) {
+         free(dst_memory);
+      }
+      if (src_memory) {
+         free(src_memory);
+      }
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(ParamAppendMemCopyHostUserPtr,
+                         zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr,
+                         ::testing::Combine(::testing::Values(1, 16, 128, 4096, 65536),
+                                            ::testing::Bool()));
+
 
 class zeSharedSystemMemoryCopyTests
     : public ::testing::Test,
