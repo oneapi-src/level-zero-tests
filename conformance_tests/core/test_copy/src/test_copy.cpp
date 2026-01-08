@@ -2730,8 +2730,8 @@ LZT_TEST_P(
       char *src_memory = nullptr;
       char *dst_memory = nullptr;
 
-      src_memory = static_cast<char *>(malloc (size));
-      dst_memory = static_cast<char *>(malloc (size));
+      src_memory = static_cast<char *>(malloc(size));
+      dst_memory = static_cast<char *>(malloc(size));
 
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
