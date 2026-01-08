@@ -2678,9 +2678,9 @@ class zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr
     : public ::testing::Test,
       public ::testing::WithParamInterface<std::tuple<size_t, bool>> {
 public:
-  void launchHostUsrPtrAppendMemCopy(ze_device_handle_t device, char *src_memory,
-                                     char *dst_memory, size_t size,
-                                     bool is_immediate) {
+  void launchHostUsrPtrAppendMemCopy(ze_device_handle_t device,
+                                     char *src_memory, char *dst_memory,
+                                     size_t size, bool is_immediate) {
 
     auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
     const int8_t src_pattern = (rand() & 0x7F);
@@ -2727,11 +2727,11 @@ LZT_TEST_P(
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
 
-     char *src_memory = nullptr;
-     char *dst_memory = nullptr;
+      char *src_memory = nullptr;
+      char *dst_memory = nullptr;
 
-     src_memory = static_cast<char *>(malloc (size));
-     dst_memory = static_cast<char *>(malloc (size));
+      src_memory = static_cast<char *>(malloc (size));
+      dst_memory = static_cast<char *>(malloc (size));
 
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
