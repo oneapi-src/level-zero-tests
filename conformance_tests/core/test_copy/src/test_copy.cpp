@@ -2676,21 +2676,18 @@ void free_aligned(void *ptr) {
 
 class zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr
     : public ::testing::Test,
-      public ::testing::WithParamInterface<
-          std::tuple<size_t, bool>> {
+      public ::testing::WithParamInterface<std::tuple<size_t, bool>> {
 public:
-  void launchHostUsrPtrAppendMemCopy(ze_device_handle_t device, int *src_memory,
-                                int *dst_memory, size_t size,
-                                bool is_immediate) {
+  void launchHostUsrPtrAppendMemCopy(ze_device_handle_t device, char *src_memory,
+                                     char *dst_memory, size_t size,
+                                     bool is_immediate) {
 
     auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
     const int8_t src_pattern = (rand() & 0x7F);
     const int8_t dst_pattern = 0;
 
-    int *expected_data =
-        static_cast<int *>(lzt::allocate_host_memory(size));
-    int *verify_data =
-        static_cast<int *>(lzt::allocate_host_memory(size));
+    int *expected_data = static_cast<int *>(lzt::allocate_host_memory(size));
+    int *verify_data = static_cast<int *>(lzt::allocate_host_memory(size));
 
     memset(expected_data, src_pattern, size);
     memset(verify_data, dst_pattern, size);
@@ -2702,13 +2699,11 @@ public:
     memset(dst_memory, dst_pattern, size);
 
     lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_memory),
-                            static_cast<void *>(src_memory),
-                            size);
+                            static_cast<void *>(src_memory), size);
 
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     lzt::append_memory_copy(cmd_bundle.list, verify_data,
-                            static_cast<void *>(dst_memory),
-                            size);
+                            static_cast<void *>(dst_memory), size);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -2724,7 +2719,7 @@ public:
 LZT_TEST_P(
     zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr,
     GivenSourceAndDestinationSharedSystemUsmWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
-  size_t size =  std::get<0>(GetParam());
+  size_t size = std::get<0>(GetParam());
   bool is_immediate = std::get<1>(GetParam());
 
   auto context = lzt::get_default_context();
@@ -2732,33 +2727,33 @@ LZT_TEST_P(
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
 
-      int *src_memory = nullptr;
-      int *dst_memory = nullptr;
+     char *src_memory = nullptr;
+     char *dst_memory = nullptr;
 
-     src_memory = static_cast<int *>(malloc (size));
-     dst_memory = static_cast<int *>(malloc (size));
+     src_memory = static_cast<char *>(malloc (size));
+     dst_memory = static_cast<char *>(malloc (size));
 
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
 
       launchHostUsrPtrAppendMemCopy(device, src_memory, dst_memory, size,
-                               is_immediate);
+                                    is_immediate);
 
       if (dst_memory) {
-         free(dst_memory);
+        free(dst_memory);
       }
       if (src_memory) {
-         free(src_memory);
+        free(src_memory);
       }
     }
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(ParamAppendMemCopyHostUserPtr,
-                         zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr,
-                         ::testing::Combine(::testing::Values(1, 16, 128, 4096, 65536),
-                                            ::testing::Bool()));
-
+INSTANTIATE_TEST_SUITE_P(
+    ParamAppendMemCopyHostUserPtr,
+    zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr,
+    ::testing::Combine(::testing::Values(1, 16, 128, 4096, 65536),
+                       ::testing::Bool()));
 
 class zeSharedSystemMemoryCopyTests
     : public ::testing::Test,
