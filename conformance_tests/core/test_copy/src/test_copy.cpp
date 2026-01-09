@@ -2571,10 +2571,23 @@ LZT_TEST_P(
 
   auto context = lzt::get_default_context();
   const size_t size = 16;
-
+  
+  std::vector<ze_device_handle_t> device_svm;
+  uint32_t svm_count = 0;
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
-      SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+      if(lzt::supports_shared_system_alloc(device)) {
+        device_svm.push_back(device);
+        svm_count++;
+      }
+    }
+  }
+
+  if (!svm_count) {
+     GTEST_SKIP() << "No devices on any driver support shared system allocation";
+  }
+  else {
+    for (auto device : device_svm) {
       int *src_memory = nullptr;
       int *dst_memory = nullptr;
 
@@ -2683,11 +2696,11 @@ public:
                                      size_t size, bool is_immediate) {
 
     auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
-    const int8_t src_pattern = (rand() & 0x7F);
+    const int8_t src_pattern = 0x55;
     const int8_t dst_pattern = 0;
 
-    int *expected_data = static_cast<int *>(lzt::allocate_host_memory(size));
-    int *verify_data = static_cast<int *>(lzt::allocate_host_memory(size));
+    char *expected_data = static_cast<char *>(lzt::allocate_host_memory(size));
+    char *verify_data = static_cast<char *>(lzt::allocate_host_memory(size));
 
     memset(expected_data, src_pattern, size);
     memset(verify_data, dst_pattern, size);
@@ -2730,8 +2743,10 @@ LZT_TEST_P(
       char *src_memory = nullptr;
       char *dst_memory = nullptr;
 
-      src_memory = static_cast<char *>(malloc(size));
-      dst_memory = static_cast<char *>(malloc(size));
+      src_memory = static_cast<char *>(lzt::allocate_device_memory_with_allocator_selector(
+        size, true));
+      dst_memory = static_cast<char *>(lzt::allocate_device_memory_with_allocator_selector(
+        size, true));
 
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
@@ -2740,10 +2755,10 @@ LZT_TEST_P(
                                     is_immediate);
 
       if (dst_memory) {
-        free(dst_memory);
+        lzt::free_memory_with_allocator_selector(dst_memory, true);
       }
       if (src_memory) {
-        free(src_memory);
+        lzt::free_memory_with_allocator_selector(src_memory, true);
       }
     }
   }
