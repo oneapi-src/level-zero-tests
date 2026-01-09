@@ -2571,12 +2571,12 @@ LZT_TEST_P(
 
   auto context = lzt::get_default_context();
   const size_t size = 16;
-  
+
   std::vector<ze_device_handle_t> device_svm;
   uint32_t svm_count = 0;
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
-      if(lzt::supports_shared_system_alloc(device)) {
+      if (lzt::supports_shared_system_alloc(device)) {
         device_svm.push_back(device);
         svm_count++;
       }
@@ -2584,9 +2584,8 @@ LZT_TEST_P(
   }
 
   if (!svm_count) {
-     GTEST_SKIP() << "No devices on any driver support shared system allocation";
-  }
-  else {
+    GTEST_SKIP() << "No devices on any driver support shared system allocation";
+  } else {
     for (auto device : device_svm) {
       int *src_memory = nullptr;
       int *dst_memory = nullptr;
@@ -2743,10 +2742,10 @@ LZT_TEST_P(
       char *src_memory = nullptr;
       char *dst_memory = nullptr;
 
-      src_memory = static_cast<char *>(lzt::allocate_device_memory_with_allocator_selector(
-        size, true));
-      dst_memory = static_cast<char *>(lzt::allocate_device_memory_with_allocator_selector(
-        size, true));
+      src_memory = static_cast<char *>(
+          lzt::allocate_device_memory_with_allocator_selector(size, true));
+      dst_memory = static_cast<char *>(
+          lzt::allocate_device_memory_with_allocator_selector(size, true));
 
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
