@@ -976,8 +976,9 @@ LZT_TEST_F(
 
   ASSERT_EQ(initial_result, zeCommandListReset(command_list));
   uint32_t metricGroupCount = 0;
-  EXPECT_ZE_RESULT_SUCCESS(
-      zetMetricGroupGet(device, &metricGroupCount, nullptr));
+  ze_result_t result = zetMetricGroupGet(device, &metricGroupCount, nullptr);
+  ASSERT_EQ(result, ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE); // Assuming metrics
+                                                             // are unavailable
 }
 
 LZT_TEST_F(

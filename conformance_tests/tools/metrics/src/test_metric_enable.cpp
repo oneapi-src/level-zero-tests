@@ -72,7 +72,10 @@ LZT_TEST_F(
 
     uint32_t metricGroupCount = 0;
     ze_result_t result = zetMetricGroupGet(device, &metricGroupCount, nullptr);
-    EXPECT_ZE_RESULT_SUCCESS(result);
+    EXPECT_EQ(
+        result,
+        ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE); // if no metrics are found,
+                                                 // something is missing
     EXPECT_EQ(metricGroupCount, 0);
 
     lzt::enable_metrics_runtime(device);
