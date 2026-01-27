@@ -34,9 +34,25 @@ public:
                                   skip_array_type, skip_buffer_type);
   }
 
+  ze_result_t set_kernel_arg(ze_kernel_handle_t hFunction, uint32_t argIndex,
+                             size_t argSize, const void *pArgValue) {
+    ze_result_t result =
+        zeKernelSetArgumentValue(hFunction, argIndex, argSize, pArgValue);
+    if (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT) {
+      skip_message << "zeKernelSetArgumentValue[" << std::to_string(argIndex)
+                   << "] Unsupported image format";
+    } else {
+      EXPECT_ZE_RESULT_SUCCESS(result);
+    }
+    return result;
+  }
+
   void TearDown() override {
     if (module != nullptr) {
       lzt::destroy_module(module);
+    }
+    if (!skip_message.str().empty()) {
+      GTEST_SKIP() << skip_message.str();
     }
   }
 
@@ -68,6 +84,7 @@ public:
   std::vector<ze_image_type_t> supported_image_types;
   void *inbuff = nullptr, *outbuff = nullptr;
   std::string kernel_name;
+  std::stringstream skip_message;
 };
 
 void ImageFormatFixture::run_test(
@@ -75,6 +92,8 @@ void ImageFormatFixture::run_test(
     void (*buffer_verify_f)(ImageFormatFixture &), ze_image_type_t image_type,
     ze_image_format_type_t format_type, ze_image_format_layout_t layout,
     bool is_immediate, bool is_shared_system) {
+  LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format_type;
+  LOG_INFO << "LAYOUT - " << layout;
   uint32_t group_size_x, group_size_y, group_size_z;
   auto cmd_bundle = lzt::create_command_bundle(is_immediate);
   get_kernel(image_type, format_type, layout);
@@ -97,8 +116,13 @@ void ImageFormatFixture::run_test(
 
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-  lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);
-  lzt::set_argument_value(kernel, 1, sizeof(img_out), &img_out);
+  if (set_kernel_arg(kernel, 0, sizeof(img_in), &img_in) != ZE_RESULT_SUCCESS) {
+    return;
+  }
+  if (set_kernel_arg(kernel, 1, sizeof(img_out), &img_out) !=
+      ZE_RESULT_SUCCESS) {
+    return;
+  }
 
   ze_group_count_t group_dems = {to_u32(image_dims.width / group_size_x),
                                  image_dims.height / group_size_y,
@@ -263,7 +287,7 @@ LZT_TEST_P(zeImageFormatTypeTests,
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers<uint32_t, 1>,
            zeImageFormatTypeTests::verify_outbuffer<uint32_t, 2>, image_type,
            ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
@@ -278,7 +302,7 @@ LZT_TEST_P(zeImageFormatTypeTests,
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers<int32_t, -1>,
            zeImageFormatTypeTests::verify_outbuffer<int32_t, -2>, image_type,
            ZE_IMAGE_FORMAT_TYPE_SINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
@@ -293,7 +317,7 @@ LZT_TEST_P(zeImageFormatTypeTests,
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers_float,
            zeImageFormatTypeTests::verify_outbuffer_float, image_type,
            ZE_IMAGE_FORMAT_TYPE_FLOAT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
@@ -308,7 +332,7 @@ LZT_TEST_P(zeImageFormatTypeTests,
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers<uint16_t, 0>,
            zeImageFormatTypeTests::verify_outbuffer<uint16_t, 65535>,
            image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_LAYOUT_16,
@@ -323,7 +347,7 @@ LZT_TEST_P(zeImageFormatTypeTests,
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers<int16_t, -32768>,
            zeImageFormatTypeTests::verify_outbuffer<int16_t, 32767>, image_type,
            ZE_IMAGE_FORMAT_TYPE_SNORM, ZE_IMAGE_FORMAT_LAYOUT_16, is_immediate,
@@ -340,7 +364,7 @@ LZT_TEST_P(
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers<uint32_t, 1>,
            zeImageFormatTypeTests::verify_outbuffer<uint32_t, 2>, image_type,
            ZE_IMAGE_FORMAT_TYPE_UINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
@@ -357,7 +381,7 @@ LZT_TEST_P(
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers<int32_t, -1>,
            zeImageFormatTypeTests::verify_outbuffer<int32_t, -2>, image_type,
            ZE_IMAGE_FORMAT_TYPE_SINT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
@@ -374,7 +398,7 @@ LZT_TEST_P(
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers_float,
            zeImageFormatTypeTests::verify_outbuffer_float, image_type,
            ZE_IMAGE_FORMAT_TYPE_FLOAT, ZE_IMAGE_FORMAT_LAYOUT_32, is_immediate,
@@ -391,7 +415,7 @@ LZT_TEST_P(
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers<uint16_t, 0>,
            zeImageFormatTypeTests::verify_outbuffer<uint16_t, 65535>,
            image_type, ZE_IMAGE_FORMAT_TYPE_UNORM, ZE_IMAGE_FORMAT_LAYOUT_16,
@@ -408,7 +432,7 @@ LZT_TEST_P(
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto is_immediate = std::get<1>(GetParam());
-  LOG_INFO << "TYPE - " << image_type;
+
   run_test(zeImageFormatTypeTests::setup_buffers<int16_t, -32768>,
            zeImageFormatTypeTests::verify_outbuffer<int16_t, 32767>, image_type,
            ZE_IMAGE_FORMAT_TYPE_SNORM, ZE_IMAGE_FORMAT_LAYOUT_16, is_immediate,
@@ -569,8 +593,6 @@ LZT_TEST_P(zeImageFormatLayoutTests,
     GTEST_SKIP() << "Unsupported type: " << image_type;
   }
 
-  LOG_INFO << "TYPE - " << image_type << "LAYOUT - " << layout;
-
   switch (layout) {
   case ZE_IMAGE_FORMAT_LAYOUT_8:
     run_test(set_up_buffers<uint8_t>, verify_buffer<uint8_t>, image_type,
@@ -653,8 +675,6 @@ LZT_TEST_P(
                 image_type) == supported_image_types.end()) {
     GTEST_SKIP() << "Unsupported type: " << image_type;
   }
-
-  LOG_INFO << "TYPE - " << image_type << "LAYOUT - " << layout;
 
   switch (layout) {
   case ZE_IMAGE_FORMAT_LAYOUT_8:
