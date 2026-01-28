@@ -99,7 +99,7 @@ LZT_TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
   LOG_INFO << "call create module";
   ze_module_handle_t module_handle = lzt::create_module(
       context, device, module_name, ZE_MODULE_FORMAT_IL_SPIRV,
-      "-ze-opt-greater-than-4GB-buffer-required", nullptr);
+      "-ze-opt-greater-than-4GB-buffer-required");
 
   LOG_INFO << "call create kernel";
   ze_kernel_handle_t test_function =

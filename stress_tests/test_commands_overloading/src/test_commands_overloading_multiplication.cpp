@@ -101,10 +101,10 @@ protected:
       std::vector<ze_kernel_handle_t> &multiple_kernel_handle) {
     for (uint64_t module_id = 0; module_id < test_arguments.multiply_modules;
          module_id++) {
-      ze_module_handle_t module_handle = lzt::create_module(
-          context, device, "test_commands_overloading.spv",
-          ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required",
-          nullptr);
+      ze_module_handle_t module_handle =
+          lzt::create_module(context, device, "test_commands_overloading.spv",
+                             ZE_MODULE_FORMAT_IL_SPIRV,
+                             "-ze-opt-greater-than-4GB-buffer-required");
       multiple_module_handle.push_back(module_handle);
       for (uint64_t kernel_id = 0; kernel_id < test_arguments.multiply_kernels;
            kernel_id++) {

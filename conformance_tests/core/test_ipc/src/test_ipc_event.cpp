@@ -125,8 +125,7 @@ ze_kernel_handle_t get_matrix_multiplication_kernel(
   tg->groupCountZ = 1;
 
   ze_module_handle_t module =
-      lzt::create_module(context, device, "ze_matrix_multiplication_ipc.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::create_module(context, device, "ze_matrix_multiplication_ipc.spv");
   ze_kernel_handle_t function =
       lzt::create_function(module, "matrix_multiplication");
   lzt::set_group_size(function, 16, 16, 1);

@@ -567,8 +567,7 @@ void load_for_gpu(ze_device_handle_t target_device) {
   void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
   void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
   ze_module_handle_t module =
-      lzt::create_module(device, "sysman_matrix_multiplication.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::create_module(device, "sysman_matrix_multiplication.spv");
   ze_kernel_handle_t function =
       lzt::create_function(module, "sysman_matrix_multiplication");
   lzt::set_group_size(function, 16, 16, 1);
@@ -724,8 +723,7 @@ void loadForGpuMaxFreqTest(ze_device_handle_t target_device) {
   void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
   void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
   ze_module_handle_t module =
-      lzt::create_module(device, "sysman_matrix_multiplication.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::create_module(device, "sysman_matrix_multiplication.spv");
   ze_kernel_handle_t function =
       lzt::create_function(module, "sysman_matrix_multiplication");
   lzt::set_group_size(function, 16, 16, 1);

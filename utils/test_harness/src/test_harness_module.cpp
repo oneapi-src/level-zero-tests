@@ -6,6 +6,7 @@
  *
  */
 
+#include "test_harness/test_harness_module.hpp"
 #include "test_harness/test_harness.hpp"
 #include "utils/utils.hpp"
 #include "gtest/gtest.h"
@@ -57,9 +58,19 @@ create_program_module(ze_context_handle_t context, ze_device_handle_t device,
   auto device_initial = device;
   auto context_initial = context;
 
-  ze_module_handle_t module;
-  EXPECT_ZE_RESULT_SUCCESS(
-      zeModuleCreate(context, device, &module_description, &module, nullptr));
+  ze_module_handle_t module = nullptr;
+  ze_result_t result = ZE_RESULT_ERROR_UNKNOWN;
+  ze_module_build_log_handle_t p_build_log = nullptr;
+  result = zeModuleCreate(context, device, &module_description, &module,
+                          &p_build_log);
+  if (result != ZE_RESULT_SUCCESS) {
+    LOG_ERROR << lzt::get_build_log_string(p_build_log);
+  }
+  if (p_build_log != nullptr) {
+    lzt::destroy_build_log(p_build_log);
+  }
+
+  EXPECT_ZE_RESULT_SUCCESS(result);
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
 
@@ -71,11 +82,36 @@ create_program_module(ze_context_handle_t context, ze_device_handle_t device,
 
 #endif
 
+ze_module_handle_t create_module(ze_context_handle_t context,
+                                 ze_device_handle_t device,
+                                 const std::string filename) {
+  return create_module(context, device, filename, ZE_MODULE_FORMAT_IL_SPIRV,
+                       "");
+}
 ze_module_handle_t create_module(ze_device_handle_t device,
                                  const std::string filename) {
+  return create_module(lzt::get_default_context(), device, filename,
+                       ZE_MODULE_FORMAT_IL_SPIRV, "");
+}
+ze_module_handle_t create_module(ze_device_handle_t device,
+                                 const std::string filename,
+                                 const ze_module_format_t format,
+                                 const char *build_flags) {
+  return create_module(lzt::get_default_context(), device, filename, format,
+                       build_flags);
+}
 
-  return (
-      create_module(device, filename, ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr));
+ze_module_handle_t create_module(ze_context_handle_t context,
+                                 ze_device_handle_t device,
+                                 const std::string filename,
+                                 const ze_module_format_t format,
+                                 const char *build_flags) {
+  ze_module_build_log_handle_t build_log = nullptr;
+  return create_module(context, device, filename, format, build_flags,
+                       &build_log);
+  if (build_log != nullptr) {
+    lzt::destroy_build_log(build_log);
+  }
 }
 
 ze_module_handle_t create_module(ze_device_handle_t device,
@@ -125,6 +161,10 @@ ze_module_handle_t create_module(ze_context_handle_t context,
   auto device_initial = device;
   *build_result = zeModuleCreate(context, device, &module_description, &module,
                                  p_build_log);
+  if (*build_result != ZE_RESULT_SUCCESS && p_build_log != nullptr &&
+      *p_build_log != nullptr) {
+    LOG_ERROR << lzt::get_build_log_string(*p_build_log);
+  }
   EXPECT_ZE_RESULT_SUCCESS(*build_result);
   EXPECT_EQ(context, context_initial);
   EXPECT_EQ(device, device_initial);
@@ -156,7 +196,11 @@ std::string get_build_log_string(ze_module_build_log_handle_t build_log) {
 }
 
 void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules) {
-  dynamic_link(num_modules, modules, nullptr);
+  ze_module_build_log_handle_t link_log = nullptr;
+  dynamic_link(num_modules, modules, &link_log);
+  if (link_log != nullptr) {
+    lzt::destroy_build_log(link_log);
+  }
 }
 
 void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
@@ -171,6 +215,10 @@ void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
   memcpy(modules_initial.data(), modules,
          sizeof(ze_module_handle_t) * num_modules);
   *result = zeModuleDynamicLink(num_modules, modules, link_log);
+  if (*result != ZE_RESULT_SUCCESS && link_log != nullptr &&
+      *link_log != nullptr) {
+    LOG_ERROR << lzt::get_build_log_string(*link_log);
+  }
   EXPECT_ZE_RESULT_SUCCESS(*result);
   for (uint32_t i = 0U; i < num_modules; i++) {
     EXPECT_EQ(modules[i], modules_initial[i]);

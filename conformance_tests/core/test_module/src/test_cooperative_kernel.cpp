@@ -62,8 +62,7 @@ void CooperativeKernelTests::
 
   uint32_t groups_x = 1;
 
-  module = lzt::create_module(context, device, "cooperative_kernel.spv",
-                              ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
+  module = lzt::create_module(device, "cooperative_kernel.spv");
   kernel = lzt::create_function(module, "cooperative_kernel");
 
   // Use a small group size in order to use more groups

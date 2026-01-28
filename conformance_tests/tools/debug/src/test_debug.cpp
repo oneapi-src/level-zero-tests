@@ -2228,9 +2228,7 @@ LZT_TEST(zetModuleGetDebugInfoTest,
   auto context = lzt::create_context(driver);
 
   for (auto &device : devices) {
-    auto module =
-        lzt::create_module(context, device, "debug_add.spv",
-                           ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+    auto module = lzt::create_module(context, device, "debug_add.spv");
     auto debug_info = lzt::get_debug_info(module);
     ASSERT_NE(debug_info.size(), 0);
     ASSERT_EQ(debug_info[1], 'E');

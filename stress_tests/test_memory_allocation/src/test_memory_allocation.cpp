@@ -318,8 +318,7 @@ LZT_TEST_P(
   LOG_INFO << "call create module";
   ze_module_handle_t module_handle = lzt::create_module(
       context, device, "test_multiple_memory_allocations.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required",
-      nullptr);
+      ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required");
 
   LOG_INFO << "call dispatch_kernels";
   dispatch_kernels(device, test_arguments_.memory_type, module_handle,

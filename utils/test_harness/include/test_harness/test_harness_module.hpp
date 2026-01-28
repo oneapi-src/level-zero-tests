@@ -32,8 +32,20 @@ ze_module_handle_t create_module(ze_device_handle_t device,
 ze_module_handle_t create_module(ze_device_handle_t device,
                                  const std::string filename,
                                  const ze_module_format_t format,
+                                 const char *build_flags);
+ze_module_handle_t create_module(ze_device_handle_t device,
+                                 const std::string filename,
+                                 const ze_module_format_t format,
                                  const char *build_flags,
-                                 ze_module_build_log_handle_t *phBuildLog);
+                                 ze_module_build_log_handle_t *p_build_log);
+ze_module_handle_t create_module(ze_context_handle_t context,
+                                 ze_device_handle_t device,
+                                 const std::string filename);
+ze_module_handle_t create_module(ze_context_handle_t context,
+                                 ze_device_handle_t device,
+                                 const std::string filename,
+                                 const ze_module_format_t format,
+                                 const char *build_flags);
 ze_module_handle_t create_module(ze_context_handle_t context,
                                  ze_device_handle_t device,
                                  const std::string filename,

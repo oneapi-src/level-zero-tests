@@ -43,8 +43,7 @@ void RunGivenKernelScheduleHintWhenRunningKernelTest(bool is_immediate) {
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
-  auto module = lzt::create_module(context, device, "module_add.spv",
-                                   ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
+  auto module = lzt::create_module(context, device, "module_add.spv");
   auto kernel = lzt::create_function(module, "module_add_constant_2");
 
   uint32_t hints[] = {ZE_SCHEDULING_HINT_EXP_FLAG_OLDEST_FIRST,

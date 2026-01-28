@@ -38,7 +38,7 @@ LZT_TEST(
 
     auto module = lzt::create_module(context, device, "profile_module.spv",
                                      ZE_MODULE_FORMAT_IL_SPIRV,
-                                     build_string.str().c_str(), nullptr);
+                                     build_string.str().c_str());
 
     auto kernel = lzt::create_function(module, "blackscholes");
 
@@ -66,9 +66,9 @@ LZT_TEST(
     auto context = lzt::create_context(driver);
     auto device = lzt::get_default_device(driver);
 
-    auto module = lzt::create_module(context, device, "profile_module.spv",
-                                     ZE_MODULE_FORMAT_IL_SPIRV,
-                                     buildString.c_str(), nullptr);
+    auto module =
+        lzt::create_module(context, device, "profile_module.spv",
+                           ZE_MODULE_FORMAT_IL_SPIRV, buildString.c_str());
 
     auto kernel = lzt::create_function(module, "blackscholes");
 

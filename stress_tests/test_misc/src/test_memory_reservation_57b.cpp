@@ -38,8 +38,7 @@ LZT_TEST_F(zeRunDriverIn57bAddressSpace, CheckIfKernelCanBeExecuted) {
 
   std::string kernel_name = "simple_test";
   ze_module_handle_t module_handle =
-      lzt::create_module(context, device, "test_memory_reservation_57b.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::create_module(context, device, "test_memory_reservation_57b.spv");
   ze_command_list_handle_t command_list =
       lzt::create_command_list(context, device, 0);
   ze_kernel_handle_t kernel_handle =
