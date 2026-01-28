@@ -40,7 +40,7 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   std::string module_name =
       options.use_custom_module ? options.module_name_in : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
-                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
+                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g");
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
@@ -130,7 +130,7 @@ void attach_after_module_created_test(ze_context_handle_t context,
 
   LOG_INFO << "[Application] Creating module";
   auto module = lzt::create_module(context, device, module_name,
-                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
+                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g");
 
   LOG_INFO << "[Application] Creating kernel";
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
@@ -225,7 +225,7 @@ void attach_after_module_destroyed_test(ze_context_handle_t context,
   std::string module_name =
       options.use_custom_module ? options.module_name_in : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
-                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
+                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g");
 
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
@@ -323,11 +323,11 @@ void multiple_modules_created_test(ze_context_handle_t context,
   std::string module_name =
       options.use_custom_module ? options.module_name_in : "debug_add.spv";
   auto module = lzt::create_module(context, device, module_name,
-                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
+                                   ZE_MODULE_FORMAT_IL_SPIRV, "-g");
   auto kernel = lzt::create_function(module, "debug_add_constant_2");
 
   auto module2 = lzt::create_module(context, device, "1kernel.spv",
-                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g", nullptr);
+                                    ZE_MODULE_FORMAT_IL_SPIRV, "-g");
   auto kernel2 = lzt::create_function(module2, "kernel1");
 
   ze_group_count_t group_count = {};
@@ -436,9 +436,8 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
     mod_options.append(" " + options.module_options_in);
   }
   LOG_INFO << "Module Options: " << mod_options;
-  auto module =
-      lzt::create_module(device, module_name, ZE_MODULE_FORMAT_IL_SPIRV,
-                         mod_options.c_str(), nullptr);
+  auto module = lzt::create_module(
+      device, module_name, ZE_MODULE_FORMAT_IL_SPIRV, mod_options.c_str());
 
   auto kernel = lzt::create_function(module, kernel_name);
 
@@ -746,8 +745,8 @@ void Job::set_up_work(debug_options &options) {
 
   LOG_INFO << "[Application] Creating Module";
 
-  module = lzt::create_module(device, module_name, ZE_MODULE_FORMAT_IL_SPIRV,
-                              "-g", nullptr);
+  module =
+      lzt::create_module(device, module_name, ZE_MODULE_FORMAT_IL_SPIRV, "-g");
 
   LOG_INFO << "[Application] Creating Kernels";
 
@@ -975,9 +974,9 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
   lzt::event_host_synchronize(event, UINT64_MAX);
   lzt::reset_command_list(command_list);
 
-  auto module = lzt::create_module(device_0, "debug_transform.spv",
-                                   ZE_MODULE_FORMAT_IL_SPIRV,
-                                   "-g -cl-opt-disable", nullptr);
+  auto module =
+      lzt::create_module(device_0, "debug_transform.spv",
+                         ZE_MODULE_FORMAT_IL_SPIRV, "-g -cl-opt-disable");
   auto kernel = lzt::create_function(module, "transform_kernel");
 
   auto device_idx = 0;
@@ -1055,8 +1054,7 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
   lzt::reset_command_list(command_list_1);
 
   module = lzt::create_module(device_1, "debug_transform.spv",
-                              ZE_MODULE_FORMAT_IL_SPIRV, "-g -cl-opt-disable",
-                              nullptr);
+                              ZE_MODULE_FORMAT_IL_SPIRV, "-g -cl-opt-disable");
   kernel = lzt::create_function(module, "transform_kernel");
 
   device_idx = 1;

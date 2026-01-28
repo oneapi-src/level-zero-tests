@@ -953,8 +953,7 @@ static void RunAppendLaunchKernelEvent(cmdListVec cmdlist, cmdQueueVec cmdqueue,
   const uint64_t timeout = UINT64_MAX - 1;
 
   ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "cmdlist_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);

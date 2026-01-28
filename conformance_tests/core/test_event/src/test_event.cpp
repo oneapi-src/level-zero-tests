@@ -795,8 +795,7 @@ protected:
         0);
 
     ze_module_handle_t module =
-        lzt::create_module(context, device, "profile_add.spv",
-                           ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+        lzt::create_module(context, device, "profile_add.spv");
     ze_kernel_handle_t kernel =
         lzt::create_function(module, "profile_add_constant");
 
@@ -939,8 +938,7 @@ LZT_TEST_P(
       device, context));
   std::fill_n(buf_hst, sz, 0);
 
-  auto module = lzt::create_module(context, device, "profile_add.spv",
-                                   ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  auto module = lzt::create_module(context, device, "profile_add.spv");
   auto kernel = lzt::create_function(module, "profile_add_constant");
   uint32_t groupSizeX = 0u;
   uint32_t groupSizeY = 0u;
@@ -1086,9 +1084,7 @@ multi_device_event_signal_read(std::vector<ze_device_handle_t> devices,
     auto dst_buffer = lzt::allocate_host_memory(buff_size, 1, context);
     const int addval = 0x11223344;
     memset(src_buffer, 0, buff_size);
-    auto module =
-        lzt::create_module(context, devices[0], "profile_add.spv",
-                           ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+    auto module = lzt::create_module(context, devices[0], "profile_add.spv");
     auto kernel = lzt::create_function(module, "profile_add_constant");
     lzt::set_group_size(kernel, 1, 1, 1);
     ze_group_count_t args = {static_cast<uint32_t>(size), 1, 1};

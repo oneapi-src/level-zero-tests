@@ -282,8 +282,7 @@ ze_result_t copy_workload(ze_device_handle_t device,
   void *dst_buffer = dst_ptr;
   uint32_t offset = 0;
 
-  ze_module_handle_t module = lzt::create_module(
-      device, "copy_module.spv", ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_module_handle_t module = lzt::create_module(device, "copy_module.spv");
   ze_kernel_handle_t function = lzt::create_function(module, "copy_data");
 
   lzt::set_group_size(function, 1, 1, 1);

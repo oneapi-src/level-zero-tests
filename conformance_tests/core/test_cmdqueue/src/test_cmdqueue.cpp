@@ -1130,8 +1130,7 @@ protected:
         0);
 
     ze_module_handle_t module =
-        lzt::create_module(context, device, "cmdqueue_add.spv",
-                           ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+        lzt::create_module(context, device, "cmdqueue_add.spv");
     ze_kernel_handle_t kernel =
         lzt::create_function(module, "cmdqueue_add_constant");
 

@@ -220,8 +220,7 @@ void zeImmediateCommandListExecutionTests::
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event0));
 
   ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "cmdlist_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
@@ -288,8 +287,7 @@ static void RunAppendLaunchKernel(ze_command_list_handle_t cmdlist_immediate,
   memset(buffer, 0x0, size * sizeof(int));
 
   ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "cmdlist_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
@@ -364,8 +362,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
       num_cmdlist * size * sizeof(int), is_shared_system);
 
   ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "cmdlist_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
@@ -1249,8 +1246,7 @@ LZT_TEST_P(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(event0));
 
   ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "cmdlist_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
@@ -1350,8 +1346,7 @@ RunIclAndRclAppendOperations(ze_command_list_handle_t cmdlist_immediate,
   memset(buffer, 0x0, size * sizeof(int));
 
   ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "cmdlist_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
@@ -1496,8 +1491,7 @@ protected:
         0);
 
     ze_module_handle_t module =
-        lzt::create_module(context, device, "cmdlist_add.spv",
-                           ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+        lzt::create_module(context, device, "cmdlist_add.spv");
     ze_kernel_handle_t kernel =
         lzt::create_function(module, "cmdlist_add_constant");
 
@@ -1606,8 +1600,7 @@ class zeImmediateCommandListInOrderCopyOffloadExecutionTests
 protected:
   void SetUp() override {
     module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
-                                "cmdlist_add.spv", ZE_MODULE_FORMAT_IL_SPIRV,
-                                nullptr, nullptr);
+                                "cmdlist_add.spv");
     kernel = lzt::create_function(module, "cmdlist_add_constant");
 
     if (event_type == EventType::Regular) {

@@ -461,8 +461,7 @@ submit_workload_for_gpu(std::vector<float> a, std::vector<float> b,
   void *b_buffer = lzt::allocate_host_memory(k * n * sizeof(float));
   void *c_buffer = lzt::allocate_host_memory(m * n * sizeof(float));
   ze_module_handle_t module =
-      lzt::create_module(device, "sysman_matrix_multiplication.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::create_module(device, "sysman_matrix_multiplication.spv");
   ze_kernel_handle_t function =
       lzt::create_function(module, "sysman_matrix_multiplication");
   lzt::set_group_size(function, 16, 16, 1);
@@ -572,9 +571,8 @@ bool compute_workload_and_validate(device_handles_t device) {
   lzt::make_memory_resident(device.core_handle, b_buffer, b_buffer_size);
   lzt::make_memory_resident(device.core_handle, c_buffer, c_buffer_size);
 
-  ze_module_handle_t module =
-      lzt::create_module(device.core_handle, "sysman_matrix_multiplication.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  ze_module_handle_t module = lzt::create_module(
+      device.core_handle, "sysman_matrix_multiplication.spv");
   ze_kernel_handle_t function =
       lzt::create_function(module, "sysman_matrix_multiplication");
   lzt::set_group_size(function, 16, 16, 1);

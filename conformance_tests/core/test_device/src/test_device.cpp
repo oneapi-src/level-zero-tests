@@ -887,8 +887,7 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
 
-  auto module = lzt::create_module(context, device, "module_add.spv",
-                                   ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
+  auto module = lzt::create_module(context, device, "module_add.spv");
   auto kernel = lzt::create_function(module, "module_add_constant_2");
 
   auto timestamps = lzt::get_global_timestamps(device);

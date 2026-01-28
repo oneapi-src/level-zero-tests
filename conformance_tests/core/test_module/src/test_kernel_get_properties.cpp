@@ -17,8 +17,7 @@ LZT_TEST(zeKernelGetNameTests, GivenKernelGetNameCorrectNameIsReturned) {
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
-  auto module = lzt::create_module(context, device, "module_add.spv",
-                                   ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
+  auto module = lzt::create_module(context, device, "module_add.spv");
   std::string kernelName = "module_add_constant";
   auto kernel = lzt::create_function(module, kernelName);
 
@@ -37,7 +36,7 @@ LZT_TEST(zeKernelMaxGroupSize, GivenKernelGetMaxGroupSize) {
 
   auto module = lzt::create_module(context, device, "module_add.spv",
                                    ZE_MODULE_FORMAT_IL_SPIRV,
-                                   "-ze-opt-large-register-file", nullptr);
+                                   "-ze-opt-large-register-file");
   std::string kernelName = "module_add_constant";
   auto kernel = lzt::create_function(module, kernelName);
 

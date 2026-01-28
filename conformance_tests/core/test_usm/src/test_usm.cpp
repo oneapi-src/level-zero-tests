@@ -232,8 +232,7 @@ public:
 
       LOG_DEBUG << "call create module for device " << i;
       ze_module_handle_t module_handle = lzt::create_module(
-          context, device_handle, "test_fill_device_memory_usm.spv",
-          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+          context, device_handle, "test_fill_device_memory_usm.spv");
 
       LOG_DEBUG << "host access pattern buffer created on device " << i;
       // Access to pattern buffer from host.
@@ -287,8 +286,7 @@ public:
 
         LOG_DEBUG << "call create module for device :" << index;
         ze_module_handle_t module_handle_1 = lzt::create_module(
-            context, device_handle_1, "test_fill_device_memory_usm.spv",
-            ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+            context, device_handle_1, "test_fill_device_memory_usm.spv");
 
         uint64_t *gpu_expected_output_buffer_1;
         gpu_expected_output_buffer_1 =
@@ -484,8 +482,7 @@ public:
 
       LOG_DEBUG << "call create module for device " << i;
       ze_module_handle_t module_handle = lzt::create_module(
-          context, device_handle, "test_fill_device_memory_usm.spv",
-          ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+          context, device_handle, "test_fill_device_memory_usm.spv");
 
       LOG_DEBUG << "host access pattern buffer created on device " << i;
       // Access to pattern buffer from host.

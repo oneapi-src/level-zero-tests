@@ -606,8 +606,7 @@ LZT_TEST_P(
 
   const int addval_2 = 50;
   ze_module_handle_t module =
-      lzt::create_module(context, device, "barrier_add.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::create_module(context, device, "barrier_add.spv");
   ze_kernel_handle_t function_1 =
       lzt::create_function(module, "barrier_add_constant");
   lzt::set_group_size(function_1, 1, 1, 1);

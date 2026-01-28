@@ -135,10 +135,9 @@ LZT_TEST_P(zeDriverMultiplyEventsStressTest, RunKernelDispatchesUsingEvents) {
 
   LOG_INFO << "call create modules, kernels, events, set command lists.";
   uint64_t dispatch_id = 0;
-  ze_module_handle_t module_handle =
-      lzt::create_module(context, device, "test_commands_overloading.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV,
-                         "-ze-opt-greater-than-4GB-buffer-required", nullptr);
+  ze_module_handle_t module_handle = lzt::create_module(
+      context, device, "test_commands_overloading.spv",
+      ZE_MODULE_FORMAT_IL_SPIRV, "-ze-opt-greater-than-4GB-buffer-required");
   std::string kernel_name = "test_device_memory1";
   ze_kernel_handle_t kernel_handle =
       create_kernel(module_handle, kernel_name, output_allocations,

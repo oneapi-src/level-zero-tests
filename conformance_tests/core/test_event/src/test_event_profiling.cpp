@@ -64,8 +64,7 @@ protected:
     cmd_bundle = lzt::create_command_bundle(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
-    module = lzt::create_module(context, device, "profile_add.spv",
-                                ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+    module = lzt::create_module(context, device, "profile_add.spv");
     kernel = lzt::create_function(module, "profile_add_constant");
     lzt::set_group_size(kernel, 1, 1, 1);
     ze_group_count_t args = {elems_nb, 1, 1};
@@ -356,8 +355,7 @@ void RunGivenKernelEventWhenUsingEventToSyncTest(bool is_immediate) {
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
   ze_module_handle_t module =
-      lzt::create_module(context, device, "profile_add.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::create_module(context, device, "profile_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "profile_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
@@ -432,9 +430,7 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
   auto event = lzt::create_event(event_pool, event_desc);
 
-  auto module0 =
-      lzt::create_module(context, device0, "profile_add.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  auto module0 = lzt::create_module(context, device0, "profile_add.spv");
   auto kernel0 = lzt::create_function(module0, "profile_add_constant");
   lzt::set_group_size(kernel0, 1, 1, 1);
 
@@ -483,9 +479,7 @@ static void kernel_timestamp_event_test(ze_context_handle_t context,
   EXPECT_ZE_RESULT_SUCCESS(
       zeCommandListAppendEventReset(cmd_bundle1.list, event));
 
-  auto module1 =
-      lzt::create_module(context, device1, "profile_add.spv",
-                         ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  auto module1 = lzt::create_module(context, device1, "profile_add.spv");
   auto kernel1 = lzt::create_function(module1, "profile_add_constant");
   lzt::set_group_size(kernel1, 1, 1, 1);
 
@@ -665,8 +659,7 @@ void RunGivenDeviceWithSubDevicesWhenQueryingForMultipleTimestampsTest(
   event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
   auto event = lzt::create_event(event_pool, event_desc);
 
-  auto module = lzt::create_module(context, device, "profile_add.spv",
-                                   ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+  auto module = lzt::create_module(context, device, "profile_add.spv");
 
   auto kernel = lzt::create_function(module, "profile_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
@@ -828,8 +821,7 @@ LZT_TEST_P(
     }
 
     // Prepare Kernel
-    module = lzt::create_module(context, test_device, "profile_add.spv",
-                                ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+    module = lzt::create_module(context, test_device, "profile_add.spv");
     kernel = lzt::create_function(module, "profile_add_constant");
     lzt::set_group_size(kernel, 1, 1, 1);
     lzt::set_argument_value(kernel, 0, sizeof(src_buffer), &src_buffer);

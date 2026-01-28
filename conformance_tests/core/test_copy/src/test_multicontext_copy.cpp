@@ -125,8 +125,7 @@ LZT_TEST(
   LOG_INFO << "Starting verification of cross device cross context kernel "
               "buffer access";
 
-  auto module0 = lzt::create_module(context0, device0, "copy_module.spv",
-                                    ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
+  auto module0 = lzt::create_module(context0, device0, "copy_module.spv");
   auto kernel0 = lzt::create_function(module0, "copy_data");
   int offset = 0;
 
@@ -158,8 +157,7 @@ LZT_TEST(
     ASSERT_EQ(verification_buffer[i], pattern);
   }
 
-  auto module1 = lzt::create_module(context1, device1, "copy_module.spv",
-                                    ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
+  auto module1 = lzt::create_module(context1, device1, "copy_module.spv");
   auto kernel1 = lzt::create_function(module1, "copy_data");
 
   lzt::set_argument_value(kernel1, 0, sizeof(buffer_0_0), &buffer_0_0);

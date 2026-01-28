@@ -1836,8 +1836,7 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
       num_cmdlist * size * sizeof(int), is_shared_system);
 
   ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "cmdlist_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
@@ -2017,8 +2016,7 @@ static void RunOutOfOrderAppendLaunchKernelEvent(
       num_cmdlist * size * sizeof(int), is_shared_system);
 
   ze_module_handle_t module = lzt::create_module(
-      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv",
-      ZE_MODULE_FORMAT_IL_SPIRV, nullptr, nullptr);
+      lzt::zeDevice::get_instance()->get_device(), "cmdlist_add.spv");
   ze_kernel_handle_t kernel =
       lzt::create_function(module, "cmdlist_add_constant");
   lzt::set_group_size(kernel, 1, 1, 1);
