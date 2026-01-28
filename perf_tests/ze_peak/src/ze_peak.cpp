@@ -294,6 +294,26 @@ void L0Context::init_xe(uint32_t specified_driver, uint32_t specified_device,
   else
     device = devices[specified_device];
 
+  if (verbose) {
+    ze_pci_ext_properties_t pci_properties = {};
+    pci_properties.stype = ZE_STRUCTURE_TYPE_PCI_EXT_PROPERTIES;
+    pci_properties.pNext = nullptr;
+    result = zeDevicePciGetPropertiesExt(device, &pci_properties);
+    if (result == ZE_RESULT_SUCCESS) {
+      std::cout << "Device PCI BDF: " 
+                << std::setfill('0') << std::setw(4) << std::hex 
+                << pci_properties.address.domain << ":"
+                << std::setfill('0') << std::setw(2) << std::hex 
+                << pci_properties.address.bus << ":"
+                << std::setfill('0') << std::setw(2) << std::hex 
+                << pci_properties.address.device << "."
+                << pci_properties.address.function 
+                << std::dec << std::endl;
+    } else {
+      std::cout << "zeDevicePciGetPropertiesExt failed: " << result << std::endl;
+    }
+  }
+
   if (query_engines || enable_fixed_ordinal_index) {
     ze_peak_query_engines();
   }
