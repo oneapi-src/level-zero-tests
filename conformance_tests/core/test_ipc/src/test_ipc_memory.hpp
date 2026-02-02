@@ -12,6 +12,7 @@
 typedef enum {
   TEST_DEVICE_ACCESS,
   TEST_SUBDEVICE_ACCESS,
+  TEST_MULTIDEVICE_ACCESS,
   TEST_HOST_ACCESS
 } ipc_mem_access_test_t;
 

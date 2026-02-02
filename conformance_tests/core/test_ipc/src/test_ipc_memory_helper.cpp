@@ -222,6 +222,49 @@ static void child_host_access_test_opaque(size_t size,
   }
 }
 
+static void child_multidevice_access_test_opaque(size_t size,
+                                                 ze_ipc_memory_flags_t flags,
+                                                 bool is_immediate,
+                                                 ze_ipc_mem_handle_t ipc_handle) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto devices = lzt::get_ze_devices(driver);
+  
+  if (devices.size() < 2) {
+    LOG_WARNING << "[Child] Multi-device test requires at least 2 devices, found " 
+                << devices.size() << ". Skipping test.";
+    exit(0);
+  }
+
+  // Use device 1 (second device) to access memory allocated on device 0 (first device)
+  auto device = devices[1];
+  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  void *memory = nullptr;
+
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
+
+  void *buffer = lzt::allocate_host_memory(size, 1, context);
+  memset(buffer, 0, size);
+  lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+  LOG_DEBUG << "[Child] Validating buffer received correctly on device " << 1;
+  lzt::validate_data_pattern(buffer, size, 1);
+
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
+  lzt::free_memory(context, buffer);
+  lzt::destroy_command_bundle(cmd_bundle);
+  lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+
 int main() {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -271,6 +314,15 @@ int main() {
                                          shared_data.ipc_handle);
     } else {
       break; // Currently supporting only device access test scenario
+    }
+    break;
+  case TEST_MULTIDEVICE_ACCESS:
+    if (shared_data.test_sock_type == TEST_NONSOCK) {
+      child_multidevice_access_test_opaque(shared_data.size, shared_data.flags,
+                                           shared_data.is_immediate,
+                                           shared_data.ipc_handle);
+    } else {
+      break; // Currently supporting only opaque test scenario
     }
     break;
   case TEST_HOST_ACCESS:
