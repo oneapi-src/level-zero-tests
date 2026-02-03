@@ -54,7 +54,7 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type,
 
   ze_ipc_mem_handle_t ipc_handle = {};
   shared_data_t test_data = {test_type, TEST_SOCK,    to_u32(size),
-                             flags,     is_immediate, ipc_handle};
+                             flags,     is_immediate, ipc_handle, 0, 0};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_memory_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));
@@ -130,8 +130,10 @@ static void run_ipc_dev_mem_access_test_opaque(ipc_mem_access_test_t test_type,
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   ze_device_handle_t device;
+  uint32_t device_id_parent = 0;
+  uint32_t device_id_child = 0;
 
-  // For multi-device tests, explicitly use device 0 (parent) while child uses device 1
+  // For multi-device tests, find valid P2P device pair
   if (test_type == TEST_MULTIDEVICE_ACCESS) {
     auto devices = lzt::get_ze_devices(driver);
     if (devices.size() < 2) {
@@ -139,7 +141,30 @@ static void run_ipc_dev_mem_access_test_opaque(ipc_mem_access_test_t test_type,
                   << devices.size() << ". Skipping test.";
       GTEST_SKIP();
     }
-    device = devices[0];
+    
+    // Find a valid device pair that supports peer access
+    bool found_valid_pair = false;
+    for (uint32_t i = 0; i < devices.size() && !found_valid_pair; ++i) {
+      for (uint32_t j = 0; j < devices.size() && !found_valid_pair; ++j) {
+        if (i == j) continue;
+        
+        ze_bool_t can_access_peer = false;
+        ze_result_t result = zeDeviceCanAccessPeer(devices[i], devices[j], &can_access_peer);
+        if (result == ZE_RESULT_SUCCESS && can_access_peer) {
+          device_id_parent = i;
+          device_id_child = j;
+          found_valid_pair = true;
+          LOG_DEBUG << "[Parent] Found valid P2P pair: device " << i << " -> device " << j;
+        }
+      }
+    }
+    
+    if (!found_valid_pair) {
+      LOG_WARNING << "[Parent] No valid P2P device pairs found. Skipping test.";
+      GTEST_SKIP();
+    }
+    
+    device = devices[device_id_parent];
   } else {
     device = lzt::zeDevice::get_instance()->get_device();
   }
@@ -189,7 +214,8 @@ static void run_ipc_dev_mem_access_test_opaque(ipc_mem_access_test_t test_type,
 
   // copy ipc handle data to shm
   shared_data_t test_data = {test_type, TEST_NONSOCK, to_u32(size),
-                             flags,     is_immediate, ipc_handle};
+                             flags,     is_immediate, ipc_handle,
+                             device_id_parent, device_id_child};
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
   // Free device memory once receiver is done
@@ -261,7 +287,7 @@ static void run_ipc_host_mem_access_test_opaque(size_t size,
 
   // Copy ipc handle data to shm
   shared_data_t test_data = {
-      TEST_HOST_ACCESS, TEST_NONSOCK, to_u32(size), flags, false, ipc_handle};
+      TEST_HOST_ACCESS, TEST_NONSOCK, to_u32(size), flags, false, ipc_handle, 0, 0};
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
   // Free device memory once receiver is done
@@ -294,8 +320,10 @@ static void run_ipc_mem_access_test_opaque_with_properties(
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   ze_device_handle_t device;
+  uint32_t device_id_parent = 0;
+  uint32_t device_id_child = 0;
 
-  // For multi-device tests, explicitly use device 0 (parent) while child uses device 1
+  // For multi-device tests, find valid P2P device pair
   if (test_type == TEST_MULTIDEVICE_ACCESS) {
     auto devices = lzt::get_ze_devices(driver);
     if (devices.size() < 2) {
@@ -303,7 +331,30 @@ static void run_ipc_mem_access_test_opaque_with_properties(
                   << devices.size() << ". Skipping test.";
       GTEST_SKIP();
     }
-    device = devices[0];
+    
+    // Find a valid device pair that supports peer access
+    bool found_valid_pair = false;
+    for (uint32_t i = 0; i < devices.size() && !found_valid_pair; ++i) {
+      for (uint32_t j = 0; j < devices.size() && !found_valid_pair; ++j) {
+        if (i == j) continue;
+        
+        ze_bool_t can_access_peer = false;
+        ze_result_t result = zeDeviceCanAccessPeer(devices[i], devices[j], &can_access_peer);
+        if (result == ZE_RESULT_SUCCESS && can_access_peer) {
+          device_id_parent = i;
+          device_id_child = j;
+          found_valid_pair = true;
+          LOG_DEBUG << "[Parent] Found valid P2P pair: device " << i << " -> device " << j;
+        }
+      }
+    }
+    
+    if (!found_valid_pair) {
+      LOG_WARNING << "[Parent] No valid P2P device pairs found. Skipping test.";
+      GTEST_SKIP();
+    }
+    
+    device = devices[device_id_parent];
   } else {
     device = lzt::zeDevice::get_instance()->get_device();
   }
@@ -360,7 +411,8 @@ static void run_ipc_mem_access_test_opaque_with_properties(
 
   // copy ipc handle data to shm
   shared_data_t test_data = {test_type, TEST_NONSOCK, to_u32(size),
-                             flags,     is_immediate, ipc_handle};
+                             flags,     is_immediate, ipc_handle,
+                             device_id_parent, device_id_child};
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
   // Free device memory once receiver is done
@@ -525,56 +577,56 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryWhenUsingL0IPCThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_dev_mem_access_test_opaque(TEST_MULTIDEVICE_ACCESS, 4096, false,
                                      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryWhenUsingL0IPCOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_dev_mem_access_test_opaque(TEST_MULTIDEVICE_ACCESS, 4096, false,
                                      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryBiasCachedWhenUsingL0IPCThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_dev_mem_access_test_opaque(TEST_MULTIDEVICE_ACCESS, 4096, false,
                                      ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_dev_mem_access_test_opaque(TEST_MULTIDEVICE_ACCESS, 4096, false,
                                      ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryWhenUsingL0IPCThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_dev_mem_access_test_opaque(TEST_MULTIDEVICE_ACCESS, 4096, true,
                                      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryWhenUsingL0IPCOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_dev_mem_access_test_opaque(TEST_MULTIDEVICE_ACCESS, 4096, true,
                                      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryBiasCachedWhenUsingL0IPCThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_dev_mem_access_test_opaque(TEST_MULTIDEVICE_ACCESS, 4096, true,
                                      ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_dev_mem_access_test_opaque(TEST_MULTIDEVICE_ACCESS, 4096, true,
                                      ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
 }
@@ -753,7 +805,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCWithDefaultHandleTypeThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryWithDefaultHandleTypeThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
@@ -761,7 +813,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCWithDefaultHandleTypeOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryWithDefaultHandleTypeOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
@@ -769,7 +821,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCWithDefaultHandleTypeThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryBiasCachedWithDefaultHandleTypeThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_CACHED,
       false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
@@ -777,7 +829,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCWithDefaultHandleTypeOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryBiasCachedWithDefaultHandleTypeOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_CACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
@@ -785,7 +837,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCWithDefaultHandleTypeThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryWithDefaultHandleTypeThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
@@ -793,7 +845,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCWithDefaultHandleTypeOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryWithDefaultHandleTypeOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
@@ -801,7 +853,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCWithDefaultHandleTypeThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryBiasCachedWithDefaultHandleTypeThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_CACHED,
       false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
@@ -809,7 +861,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCWithDefaultHandleTypeOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryBiasCachedWithDefaultHandleTypeOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_CACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
@@ -817,7 +869,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryWithFabricAccessibleHandleTypeThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
@@ -825,7 +877,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryWithFabricAccessibleHandleTypeOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
@@ -833,7 +885,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCWithFabricAccessibleHandleTypeThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryBiasCachedWithFabricAccessibleHandleTypeThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_CACHED,
       false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
@@ -841,7 +893,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCWithFabricAccessibleHandleTypeOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenL0MemoryBiasCachedWithFabricAccessibleHandleTypeOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_CACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
@@ -849,7 +901,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryWithFabricAccessibleHandleTypeThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
@@ -857,7 +909,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryWithFabricAccessibleHandleTypeOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
@@ -865,7 +917,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCWithFabricAccessibleHandleTypeThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryBiasCachedWithFabricAccessibleHandleTypeThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_CACHED,
       false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
@@ -873,7 +925,7 @@ LZT_TEST(
 
 LZT_TEST(
     IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
-    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCWithFabricAccessibleHandleTypeOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingDifferentDevice) {
+    GivenReservedPhysicalMemoryBiasCachedWithFabricAccessibleHandleTypeOnImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_CACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);

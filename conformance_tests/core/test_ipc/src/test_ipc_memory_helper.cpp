@@ -225,19 +225,22 @@ static void child_host_access_test_opaque(size_t size,
 static void child_multidevice_access_test_opaque(size_t size,
                                                  ze_ipc_memory_flags_t flags,
                                                  bool is_immediate,
-                                                 ze_ipc_mem_handle_t ipc_handle) {
+                                                 ze_ipc_mem_handle_t ipc_handle,
+                                                 uint32_t device_id_parent,
+                                                 uint32_t device_id_child) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
   
-  if (devices.size() < 2) {
-    LOG_WARNING << "[Child] Multi-device test requires at least 2 devices, found " 
-                << devices.size() << ". Skipping test.";
+  if (devices.size() <= device_id_child || devices.size() <= device_id_parent) {
+    LOG_WARNING << "[Child] Device indices out of range. Required devices: " 
+                << device_id_parent << " and " << device_id_child 
+                << ", available: " << devices.size();
     exit(0);
   }
 
-  // Use device 1 (second device) to access memory allocated on device 0 (first device)
-  auto device = devices[1];
+  // Use the device specified by parent for accessing memory
+  auto device = devices[device_id_child];
   auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
   void *memory = nullptr;
 
@@ -250,7 +253,7 @@ static void child_multidevice_access_test_opaque(size_t size,
   lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  LOG_DEBUG << "[Child] Validating buffer received correctly on device " << 1;
+  LOG_DEBUG << "[Child] Validating buffer received correctly on device " << device_id_child;
   lzt::validate_data_pattern(buffer, size, 1);
 
   EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
@@ -320,7 +323,9 @@ int main() {
     if (shared_data.test_sock_type == TEST_NONSOCK) {
       child_multidevice_access_test_opaque(shared_data.size, shared_data.flags,
                                            shared_data.is_immediate,
-                                           shared_data.ipc_handle);
+                                           shared_data.ipc_handle,
+                                           shared_data.device_id_parent,
+                                           shared_data.device_id_child);
     } else {
       break; // Currently supporting only opaque test scenario
     }
