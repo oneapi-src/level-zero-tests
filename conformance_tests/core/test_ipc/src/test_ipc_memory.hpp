@@ -25,8 +25,8 @@ typedef struct {
   ze_ipc_memory_flags_t flags;
   bool is_immediate;
   ze_ipc_mem_handle_t ipc_handle;
-  uint32_t device_id_parent;  // Device index for parent (memory allocation)
-  uint32_t device_id_child;   // Device index for child (memory access)
+  uint32_t device_id_parent; // Device index for parent (memory allocation)
+  uint32_t device_id_child;  // Device index for child (memory access)
 } shared_data_t;
 
 #endif

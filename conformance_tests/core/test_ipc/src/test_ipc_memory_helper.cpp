@@ -231,10 +231,10 @@ static void child_multidevice_access_test_opaque(size_t size,
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
-  
+
   if (devices.size() <= device_id_child || devices.size() <= device_id_parent) {
-    LOG_WARNING << "[Child] Device indices out of range. Required devices: " 
-                << device_id_parent << " and " << device_id_child 
+    LOG_WARNING << "[Child] Device indices out of range. Required devices: "
+                << device_id_parent << " and " << device_id_child
                 << ", available: " << devices.size();
     exit(0);
   }
@@ -253,7 +253,8 @@ static void child_multidevice_access_test_opaque(size_t size,
   lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
-  LOG_DEBUG << "[Child] Validating buffer received correctly on device " << device_id_child;
+  LOG_DEBUG << "[Child] Validating buffer received correctly on device "
+            << device_id_child;
   lzt::validate_data_pattern(buffer, size, 1);
 
   EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
@@ -321,11 +322,10 @@ int main() {
     break;
   case TEST_MULTIDEVICE_ACCESS:
     if (shared_data.test_sock_type == TEST_NONSOCK) {
-      child_multidevice_access_test_opaque(shared_data.size, shared_data.flags,
-                                           shared_data.is_immediate,
-                                           shared_data.ipc_handle,
-                                           shared_data.device_id_parent,
-                                           shared_data.device_id_child);
+      child_multidevice_access_test_opaque(
+          shared_data.size, shared_data.flags, shared_data.is_immediate,
+          shared_data.ipc_handle, shared_data.device_id_parent,
+          shared_data.device_id_child);
     } else {
       break; // Currently supporting only opaque test scenario
     }
