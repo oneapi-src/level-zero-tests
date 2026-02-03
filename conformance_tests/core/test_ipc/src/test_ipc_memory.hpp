@@ -12,6 +12,7 @@
 typedef enum {
   TEST_DEVICE_ACCESS,
   TEST_SUBDEVICE_ACCESS,
+  TEST_MULTIDEVICE_ACCESS,
   TEST_HOST_ACCESS
 } ipc_mem_access_test_t;
 
@@ -24,6 +25,8 @@ typedef struct {
   ze_ipc_memory_flags_t flags;
   bool is_immediate;
   ze_ipc_mem_handle_t ipc_handle;
+  uint32_t device_id_parent; // Device index for parent (memory allocation)
+  uint32_t device_id_child;  // Device index for child (memory access)
 } shared_data_t;
 
 #endif
