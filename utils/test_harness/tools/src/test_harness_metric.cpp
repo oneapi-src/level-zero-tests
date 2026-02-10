@@ -1716,8 +1716,8 @@ size_t metric_tracer_read_data_size(
     zet_metric_tracer_exp_handle_t metric_tracer_handle) {
   size_t metric_size = 1024 * 1024; /* 1MB buffer */
   std::vector<uint8_t> temp_buffer(metric_size);
-  EXPECT_ZE_RESULT_SUCCESS(
-      zetMetricTracerReadDataExp(metric_tracer_handle, &metric_size, temp_buffer.data()));
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+      metric_tracer_handle, &metric_size, temp_buffer.data()));
   EXPECT_NE(0u, metric_size)
       << "zetMetricTracerReadDataExp reports that there are no "
          "metrics available to read";
