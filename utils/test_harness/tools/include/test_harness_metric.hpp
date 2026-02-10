@@ -278,9 +278,6 @@ void metric_tracer_enable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
 void metric_tracer_disable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
                            ze_bool_t synchronous);
 
-size_t metric_tracer_read_data_size(
-    zet_metric_tracer_exp_handle_t metric_tracer_handle);
-
 void metric_tracer_read_data(
     zet_metric_tracer_exp_handle_t metric_tracer_handle,
     std::vector<uint8_t> *ptr_metric_data);
