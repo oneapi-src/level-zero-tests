@@ -315,15 +315,66 @@ LZT_TEST_F(
     LOG_DEBUG << "synchronize with completion of workload";
     lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
 
-    size_t raw_data_size{};
+    size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
+    std::vector<uint8_t> raw_data(raw_data_size, 0);
     EXPECT_EQ(ZE_RESULT_NOT_READY,
               zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                         nullptr))
+                                         raw_data.data()))
         << "tracer is not enabled, zetMetricTracerReadDataExp should return "
            "ZE_RESULT_NOT_READY";
-    EXPECT_EQ(0, raw_data_size)
-        << "zetMetricTracerReadDataExp is not expected to read any useful "
-           "data, raw data size should be 0";
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
+  }
+}
+
+LZT_TEST_F(
+    zetMetricTracerTest,
+    GivenTracerIsEnabledWhenQueryingForDataSizeWithZeroSizeThenExpectInvalidArgumentError) {
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    lzt::display_device_properties(device);
+
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 128);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+
+    auto &grp_handles =
+        device_with_metric_group_handles.activatable_metric_group_handle_list;
+    uint32_t num_grp_handles = to_u32(grp_handles.size());
+    ASSERT_GT(num_grp_handles, 0u);
+    lzt::activate_metric_groups(device, num_grp_handles, grp_handles.data());
+
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(
+        lzt::get_default_context(), device, num_grp_handles, grp_handles.data(),
+        &tracer_descriptor, nullptr, &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+
+    LOG_DEBUG << "execute workload";
+    lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+    LOG_DEBUG << "synchronize with completion of workload";
+    lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+
+    size_t raw_data_size = 0;
+    EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
+              zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                         nullptr))
+        << "zetMetricTracerReadDataExp with raw_data_size = 0 should return "
+           "ZE_RESULT_ERROR_INVALID_ARGUMENT";
+
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
     lzt::metric_tracer_destroy(metric_tracer_handle);
     lzt::deactivate_metric_groups(device);
     lzt::free_memory(a_buffer);
@@ -382,11 +433,13 @@ LZT_TEST_F(
           std::min(max_wait_time_in_milliseconds, 100u);
     }
 
-    size_t raw_data_size{};
+    size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
+    std::vector<uint8_t> raw_data(raw_data_size, 0);
     /* wait for the tracer to get enabled */
     do {
+      raw_data_size = raw_data.size();
       result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                          nullptr);
+                                          raw_data.data());
       if (result == ZE_RESULT_NOT_READY) {
         LOG_INFO
             << "Waiting for tracer to be enabled. zetMetricTracerReadDataExp "
@@ -403,17 +456,11 @@ LZT_TEST_F(
     EXPECT_ZE_RESULT_SUCCESS(result);
     EXPECT_NE(0, raw_data_size) << "zetMetricTracerReadDataExp reports that "
                                    "there are no metrics available to read";
-    if (raw_data_size != 0) {
-      std::vector<uint8_t> raw_data(raw_data_size, 0);
-      result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                          raw_data.data());
-      EXPECT_ZE_RESULT_SUCCESS(result);
-      uint64_t raw_data_accumulate =
-          std::accumulate(raw_data.begin(), raw_data.end(), 0ULL);
-      EXPECT_NE(0, raw_data_accumulate)
-          << "all raw data entries are zero, zetMetricTracerReadDataExp is "
-             "expected to read useful data";
-    }
+    uint64_t raw_data_accumulate =
+        std::accumulate(raw_data.begin(), raw_data.begin() + raw_data_size, 0ULL);
+    EXPECT_NE(0, raw_data_accumulate)
+        << "all raw data entries are zero, zetMetricTracerReadDataExp is "
+           "expected to read useful data";
     lzt::metric_tracer_disable(metric_tracer_handle, true);
     lzt::metric_tracer_destroy(metric_tracer_handle);
     lzt::deactivate_metric_groups(device);
@@ -464,16 +511,13 @@ LZT_TEST_F(
     LOG_DEBUG << "synchronize with completion of workload";
     lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
 
-    size_t raw_data_size{};
-    std::vector<uint8_t> raw_data;
+    size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
+    std::vector<uint8_t> raw_data(raw_data_size, 0);
     uint64_t raw_data_accumulate{};
     ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-        metric_tracer_handle, &raw_data_size, nullptr));
+        metric_tracer_handle, &raw_data_size, raw_data.data()));
     ASSERT_NE(0, raw_data_size) << "zetMetricTracerReadDataExp reports that "
                                    "there are no metrics available to read";
-    raw_data.resize(raw_data_size, 0);
-    ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-        metric_tracer_handle, &raw_data_size, raw_data.data()));
 
     raw_data_accumulate =
         std::accumulate(raw_data.begin(), raw_data.end(), 0ULL);
@@ -501,24 +545,15 @@ LZT_TEST_F(
     /* read raw data while API returns ZE_RESULT_SUCCESS and
      * ZE_RESULT_NOT_READY(for the last piece of data) */
     do {
-      raw_data_size = 0;
+      raw_data_size = raw_data.size();
       result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                          nullptr);
+                                          raw_data.data());
       EXPECT_TRUE(ZE_RESULT_SUCCESS == result || ZE_RESULT_NOT_READY == result)
-          << "zetMetricTracerReadDataExp failed while retrieving the raw data "
-             "size";
+          << "zetMetricTracerReadDataExp failed while retrieving the raw data";
 
-      if (raw_data_size != 0) {
-        raw_data.resize(raw_data_size, 0);
-        result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                            &raw_data_size, raw_data.data());
-        EXPECT_TRUE(ZE_RESULT_SUCCESS == result ||
-                    ZE_RESULT_NOT_READY == result)
-            << "zetMetricTracerReadDataExp failed while retrieving the raw "
-               "data";
-
+      if (result == ZE_RESULT_SUCCESS && raw_data_size != 0) {
         raw_data_accumulate =
-            std::accumulate(raw_data.begin(), raw_data.end(), 0ULL);
+            std::accumulate(raw_data.begin(), raw_data.begin() + raw_data_size, 0ULL);
         EXPECT_NE(0, raw_data_accumulate)
             << "all raw data entries are zero, zetMetricTracerReadDataExp is "
                "expected to read useful data";
@@ -536,11 +571,10 @@ LZT_TEST_F(
                << max_wait_time_in_milliseconds << " ms";
       }
     } while (result == ZE_RESULT_SUCCESS);
-    raw_data_size = 0;
+    raw_data_size = raw_data.size();
     result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
-                                        nullptr);
+                                        raw_data.data());
     EXPECT_EQ(ZE_RESULT_NOT_READY, result);
-    EXPECT_EQ(0, raw_data_size);
 
     lzt::metric_tracer_destroy(metric_tracer_handle);
     lzt::deactivate_metric_groups(device);
@@ -588,9 +622,10 @@ LZT_TEST_F(
     lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
     lzt::metric_tracer_disable(metric_tracer_handle, true);
 
-    size_t raw_data_size{};
+    size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
+    std::vector<uint8_t> temp_buffer(raw_data_size, 0);
     EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-        metric_tracer_handle, &raw_data_size, nullptr));
+        metric_tracer_handle, &raw_data_size, temp_buffer.data()));
     EXPECT_NE(0, raw_data_size)
         << "zetMetricTracerReadDataExp reports that there are no "
            "metrics available to read";
@@ -686,10 +721,12 @@ LZT_TEST_F(
       lzt::metric_tracer_enable(metric_tracer_handle, true);
 
       int32_t j = 0;
+      size_t initial_buffer_size = 1024 * 1024; /* 1MB buffer */
+      std::vector<uint8_t> initial_buffer(initial_buffer_size, 0);
       do {
-        size_t raw_data_size = 0;
+        size_t raw_data_size = initial_buffer.size();
         result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                            &raw_data_size, nullptr);
+                                            &raw_data_size, initial_buffer.data());
         if (result == ZE_RESULT_NOT_READY) {
           if (j == number_of_retries) {
             FAIL() << "Exceeded limit of retries of "
@@ -714,25 +751,13 @@ LZT_TEST_F(
       lzt::metric_tracer_disable(metric_tracer_handle, false);
 
       int32_t k = 0;
-      std::vector<uint8_t> raw_data_buffer;
+      size_t disable_buffer_size = 1024 * 1024; /* 1MB buffer */
+      std::vector<uint8_t> raw_data_buffer(disable_buffer_size, 0);
       do {
-        size_t raw_data_size = 0;
+        size_t raw_data_size = raw_data_buffer.size();
         result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                            &raw_data_size, nullptr);
-        if (result == ZE_RESULT_SUCCESS) {
-          if (raw_data_size != 0) {
-            size_t new_raw_data_size = raw_data_size;
-            raw_data_buffer.resize(raw_data_size);
-            result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                                &new_raw_data_size,
-                                                raw_data_buffer.data());
-            ASSERT_ZE_RESULT_SUCCESS(result);
-            ASSERT_EQ(raw_data_size, new_raw_data_size)
-                << "zetMetricTracerReadDataExp called with a non-zero "
-                   "rawDataSize "
-                << raw_data_size << " modified the rawDataSize parameter "
-                << new_raw_data_size;
-          }
+                                            &raw_data_size, raw_data_buffer.data());
+        if (result == ZE_RESULT_SUCCESS && raw_data_size != 0) {
           if (k == number_of_retries) {
             FAIL() << "Exceeded limit of retries of "
                       "zetMetricTracerReadDataExp "
@@ -825,10 +850,12 @@ void run_metric_tracer_read_test(
 
       if (!synchronous) {
         int32_t j = 0;
-        size_t raw_data_size = 0;
+        size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
+        std::vector<uint8_t> raw_data_buffer(raw_data_size, 0);
         do {
+          raw_data_size = raw_data_buffer.size();
           result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                              &raw_data_size, nullptr);
+                                              &raw_data_size, raw_data_buffer.data());
           if (result == ZE_RESULT_NOT_READY) {
             if (j == number_of_retries) {
               FAIL() << "Exceeded limit of retries of "
@@ -850,21 +877,6 @@ void run_metric_tracer_read_test(
         } while (result == ZE_RESULT_NOT_READY);
 
         ASSERT_ZE_RESULT_SUCCESS(result);
-
-        if (raw_data_size != 0) {
-          size_t new_raw_data_size;
-          new_raw_data_size = raw_data_size;
-          std::vector<uint8_t> raw_data_buffer(raw_data_size);
-          result = zetMetricTracerReadDataExp(
-              metric_tracer_handle, &new_raw_data_size, raw_data_buffer.data());
-          ASSERT_ZE_RESULT_SUCCESS(result);
-          ASSERT_EQ(raw_data_size, new_raw_data_size)
-              << "zetMetricTracerReadDataExp called with non-zero "
-                 "rawDataSize "
-                 "value "
-              << raw_data_size << "returned a different data size "
-              << new_raw_data_size;
-        }
       }
 
       executeMatrixMultiplyWorkload(device, commandQueue, commandList);
@@ -901,10 +913,12 @@ void run_metric_tracer_read_test(
              "tracer has returned no data";
       if (!synchronous) {
         int32_t k = 0;
+        size_t final_data_size = 1024 * 1024; /* 1MB buffer */
+        std::vector<uint8_t> final_data_buffer(final_data_size, 0);
         do {
-          size_t raw_data_size = 0;
+          final_data_size = final_data_buffer.size();
           result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                              &raw_data_size, nullptr);
+                                              &final_data_size, final_data_buffer.data());
           if (result == ZE_RESULT_SUCCESS) {
             if (k == number_of_retries) {
               FAIL() << "Exceeded limit of retries of "
