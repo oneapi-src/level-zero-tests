@@ -9,6 +9,7 @@ add_core_library(logging
 target_link_libraries(logging
     PUBLIC
     Boost::log
+    Boost::log_setup
     Boost::program_options
 )
 

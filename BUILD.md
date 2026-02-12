@@ -2,6 +2,63 @@
 
 ## Dependencies
 
+### Windows Dependencies
+Requirements: MSVC 2022
+
+```powershell
+Invoke-WebRequest -Uri 'https://zlib.net/zlib131.zip' -OutFile 'C:\TEMP\zlib.zip';
+Expand-Archive C:\TEMP\zlib.zip -DestinationPath C:\TEMP;
+Move-Item C:\TEMP\zlib-1.3.1 C:\TEMP\zlib;
+Remove-Item C:\TEMP\zlib.zip;
+
+Invoke-WebRequest -UserAgent 'Wget' -Uri 'https://downloads.sourceforge.net/project/libpng/libpng16/1.6.47/lpng1647.zip' -OutFile 'C:\TEMP\libpng.zip';
+Expand-Archive C:\TEMP\libpng.zip -DestinationPath C:\TEMP;
+Move-Item C:\TEMP\lpng1647 C:\TEMP\libpng;
+Remove-Item C:\TEMP\libpng.zip
+
+Invoke-WebRequest -UserAgent "Wget" -Uri 'https://sourceforge.net/projects/boost/files/boost/1.79.0/boost_1_79_0.zip' -OutFile 'C:\TEMP\Boost.zip' -UseBasicParsing;
+Add-Type -AssemblyName System.IO.Compression.FileSystem;
+[System.IO.Compression.ZipFile]::ExtractToDirectory('C:\TEMP\Boost.zip', 'C:\TEMP');
+Move-Item C:\TEMP\boost_1_79_0 C:\TEMP\Boost;
+Remove-Item C:\TEMP\Boost.zip;
+
+Invoke-WebRequest -Uri 'https://github.com/oneapi-src/level-zero/archive/refs/tags/v1.28.0.zip' -OutFile 'C:\TEMP\level-zero.zip'; `
+Expand-Archive C:\TEMP\level-zero.zip -DestinationPath C:\TEMP; `
+Move-Item C:\TEMP\level-zero-1.28.0 C:\TEMP\level-zero; `
+Remove-Item C:\TEMP\level-zero.zip;
+
+$WORKSPACE = "C:\LZT_Workspace"
+mkdir $WORKSPACE
+
+cmake -B C:\TEMP\build\zlib\ -S C:\TEMP\zlib -A x64 -D BUILD_SHARED_LIBS=YES -DCMAKE_INSTALL_PREFIX:PATH=$WORKSPACE\zlib
+cmake --build C:\TEMP\build\zlib\ --config Release --target install
+cmake -B C:\TEMP\build\libpng\ -S C:\TEMP\libpng -A x64 -DCMAKE_INSTALL_PREFIX:PATH=$WORKSPACE\libpng -DCMAKE_PREFIX_PATH:PATH=$WORKSPACE\zlib
+cmake --build C:\TEMP\build\libpng\ --config Release --target install
+cmake -B C:\TEMP\build\level-zero\ -S C:\TEMP\level-zero -A x64 -DCMAKE_INSTALL_PREFIX:PATH=$WORKSPACE\level-zero
+cmake --build C:\TEMP\build\level-zero\ --config Release --target install
+
+cd C:\TEMP\Boost
+.\bootstrap.bat vc143
+.\b2.exe install `
+  --prefix=$WORKSPACE\Boost `
+  -j 16 `
+  address-model=64 `
+  --with-chrono `
+  --with-log `
+  --with-program_options `
+  --with-serialization `
+  --with-system `
+  --with-date_time `
+  --with-timer
+
+cd $WORKSPACE\level-zero-tests
+mkdir build
+cd build
+cmake .. -DCMAKE_PREFIX_PATH="$WORKSPACE\zlib;$WORKSPACE\libpng;$WORKSPACE\level-zero;$WORKSPACE\Boost"
+cmake --build . --config Release --parallel
+
+```
+
 ### Linux Dependencies
 Requires the `level-zero`, `level-zero-devel`, `libpng-dev`, `libboost-all-dev`, `libva-dev` packages
 to be installed.
@@ -12,10 +69,10 @@ On SLES distributions only:
 Requires the `level-zero`, `level-zero-devel`, `libpng16-devel`, `libva-devel`
 packages to be installed.
 
-In addition to the above, the Boost C++ Library needs to be installed. Example below with Boost 1.70 (i.e. https://www.boost.org/users/history/version_1_70_0.html)
+In addition to the above, the Boost C++ Library needs to be installed. Example below with Boost 1.79 (i.e. https://www.boost.org/users/history/version_1_79_0.html)
 
 ```bash
-git clone --recurse-submodules --branch boost-1.70.0 https://github.com/boostorg/boost.git
+git clone --recurse-submodules --branch boost-1.79.0 https://github.com/boostorg/boost.git
 cd boost
 ./bootstrap.sh
 ./b2 install \
@@ -26,6 +83,7 @@ cd boost
   --with-program_options \
   --with-serialization \
   --with-system \
+  --with-date_time \
   --with-timer
 ```
 
