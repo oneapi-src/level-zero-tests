@@ -31,12 +31,16 @@ uint32_t get_prop_length(char *prop) { return to_u32(std::strlen(prop)); }
 class FirmwareZesTest : public lzt::ZesSysmanCtsClass {
 public:
   bool is_firmware_supported = false;
+  bool is_VRConfig_supported = false;
+  bool is_fantable_supported = false;
 };
 #define FIRMWARE_TEST FirmwareZesTest
 #else // USE_ZESINIT
 class FirmwareTest : public lzt::SysmanCtsClass {
 public:
   bool is_firmware_supported = false;
+  bool is_VRConfig_supported = false;
+  bool is_fantable_supported = false;
 };
 #define FIRMWARE_TEST FirmwareTest
 #endif // USE_ZESINIT
@@ -307,4 +311,116 @@ LZT_TEST_F(
   }
 }
 
+LZT_TEST_F(
+    FIRMWARE_TEST,
+    GivenValidFanTableFirmwareHandleWhenFirmwareIsFlashedThenFlashingIsSuccessful) {
+  auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (nullptr == fwDirEnv) {
+    LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY not set";
+    GTEST_SKIP();
+  }
+  std::vector<char> testFwImage;
+  std::string fwDir(fwDirEnv);
+  for (auto device : devices) {
+    uint32_t count = lzt::get_firmware_handle_count(device);
+    auto firmware_handles = lzt::get_firmware_handles(device, count);
+    zes_firmware_handle_t fan_table_handle = nullptr;
+    for (auto fw_handle : firmware_handles) {
+      zes_firmware_properties_t props = {
+          ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES};
+      zesFirmwareGetProperties(fw_handle, &props);
+      if (std::string(props.name) == "FanTable") {
+        is_fantable_supported = true;
+        fan_table_handle = fw_handle;
+        auto propFw = lzt::get_firmware_properties(fw_handle);
+        if (propFw.canControl) {
+          std::string fwName(reinterpret_cast<char *>(propFw.name));
+          std::string fwToLoad = fwDir + "/" + fwName + ".bin";
+          std::ifstream inFileStream(fwToLoad,
+                                     std::ios::binary | std::ios::ate);
+          if (!inFileStream.is_open()) {
+            LOG_INFO << "Skipping test as firmware image not found";
+            GTEST_SKIP();
+          }
+          testFwImage.resize(inFileStream.tellg());
+          inFileStream.seekg(0, inFileStream.beg);
+          inFileStream.read(testFwImage.data(), testFwImage.size());
+
+          lzt::flash_firmware(fan_table_handle,
+                              static_cast<void *>(testFwImage.data()),
+                              testFwImage.size());
+        }
+      }
+    }
+
+    if (!is_fantable_supported) {
+      LOG_INFO << "No fan table handles found for this device!";
+    }
+  }
+  if (!is_fantable_supported) {
+    FAIL() << "No fan table handles found on any of the devices!";
+  }
+}
+
+LZT_TEST_F(
+    FIRMWARE_TEST,
+    GivenValidVRConfigFirmwareHandleWhenFirmwareIsFlashedThenFlashingIsSuccessful) {
+  auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (fwDirEnv == nullptr) {
+    LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY not set";
+    GTEST_SKIP();
+  }
+
+  std::vector<char> testFwImage;
+  std::string fwDir(fwDirEnv);
+
+  for (auto device : devices) {
+    uint32_t count = lzt::get_firmware_handle_count(device);
+    auto firmware_handles = lzt::get_firmware_handles(device, count);
+
+    zes_firmware_handle_t vr_config_handle = nullptr;
+
+    for (auto fw_handle : firmware_handles) {
+      zes_firmware_properties_t props = {
+          ZES_STRUCTURE_TYPE_FIRMWARE_PROPERTIES};
+      zesFirmwareGetProperties(fw_handle, &props);
+
+      if (std::string(props.name) == "VRConfig") {
+        is_VRConfig_supported = true;
+        vr_config_handle = fw_handle;
+
+        auto propFw = lzt::get_firmware_properties(fw_handle);
+        if (propFw.canControl) {
+          std::string fwName(reinterpret_cast<char *>(propFw.name));
+          std::string fwToLoad = fwDir + "/" + fwName + ".bin";
+
+          std::ifstream inFileStream(fwToLoad,
+                                     std::ios::binary | std::ios::ate);
+
+          if (!inFileStream.is_open()) {
+            LOG_INFO << "Skipping test as firmware image not found";
+            GTEST_SKIP();
+          }
+
+          testFwImage.resize(static_cast<size_t>(inFileStream.tellg()));
+          inFileStream.seekg(0, std::ios::beg);
+          inFileStream.read(testFwImage.data(),
+                            static_cast<std::streamsize>(testFwImage.size()));
+
+          lzt::flash_firmware(vr_config_handle,
+                              static_cast<void *>(testFwImage.data()),
+                              static_cast<uint32_t>(testFwImage.size()));
+        }
+      }
+    }
+
+    if (!is_VRConfig_supported) {
+      LOG_INFO << "No VRConfig handles found for this device!";
+    }
+  }
+
+  if (!is_VRConfig_supported) {
+    FAIL() << "No VRConfig handles found on any of the devices!";
+  }
+}
 } // namespace
