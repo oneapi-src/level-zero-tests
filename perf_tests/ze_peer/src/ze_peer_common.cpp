@@ -195,6 +195,15 @@ void ZePeer::initialize_src_buffer(ze_command_list_handle_t command_list,
   SUCCESS_OR_TERMINATE(zeCommandListReset(command_list));
 }
 
+void ZePeer::initialize_src_buffer_immediate(
+    ze_command_list_handle_t command_list, void *src_buffer, char *host_buffer,
+    size_t buffer_size) {
+  SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
+      command_list, src_buffer, host_buffer, buffer_size, nullptr, 0, nullptr));
+  SUCCESS_OR_TERMINATE(zeCommandListHostSynchronize(
+      command_list, std::numeric_limits<uint64_t>::max()));
+}
+
 void ZePeer::initialize_buffers(ze_command_list_handle_t command_list,
                                 ze_command_queue_handle_t command_queue,
                                 void *src_buffer, char *host_buffer,
@@ -208,8 +217,13 @@ void ZePeer::initialize_buffers(ze_command_list_handle_t command_list,
   }
 
   if (src_buffer) {
-    initialize_src_buffer(command_list, command_queue, src_buffer, host_buffer,
-                          buffer_size);
+    if (use_immediate_cmdlist) {
+      initialize_src_buffer_immediate(command_list, src_buffer, host_buffer,
+                                      buffer_size);
+    } else {
+      initialize_src_buffer(command_list, command_queue, src_buffer,
+                            host_buffer, buffer_size);
+    }
   }
 }
 
@@ -229,8 +243,13 @@ void ZePeer::initialize_buffers(std::vector<uint32_t> &remote_device_ids,
     ze_command_queue_handle_t command_queue =
         ze_peer_devices[remote_device_id].engines[0].first;
     void *src_buffer = ze_src_buffers[remote_device_id];
-    initialize_src_buffer(command_list, command_queue, src_buffer, host_buffer,
-                          buffer_size);
+    if (ZePeer::use_immediate_cmdlist) {
+      initialize_src_buffer_immediate(command_list, src_buffer, host_buffer,
+                                      buffer_size);
+    } else {
+      initialize_src_buffer(command_list, command_queue, src_buffer,
+                            host_buffer, buffer_size);
+    }
   }
 
   for (auto local_device_id : local_device_ids) {
@@ -239,8 +258,13 @@ void ZePeer::initialize_buffers(std::vector<uint32_t> &remote_device_ids,
     ze_command_queue_handle_t command_queue =
         ze_peer_devices[local_device_id].engines[0].first;
     void *src_buffer = ze_src_buffers[local_device_id];
-    initialize_src_buffer(command_list, command_queue, src_buffer, host_buffer,
-                          buffer_size);
+    if (ZePeer::use_immediate_cmdlist) {
+      initialize_src_buffer_immediate(command_list, src_buffer, host_buffer,
+                                      buffer_size);
+    } else {
+      initialize_src_buffer(command_list, command_queue, src_buffer,
+                            host_buffer, buffer_size);
+    }
   }
 }
 
@@ -257,6 +281,26 @@ void ZePeer::validate_buffer(ze_command_list_handle_t command_list,
   SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
       command_queue, std::numeric_limits<uint64_t>::max()));
   SUCCESS_OR_TERMINATE(zeCommandListReset(command_list));
+
+  for (size_t i = 0; i < buffer_size; i++) {
+    if (validate_buffer[i] != host_buffer[i]) {
+      std::cout << "Error at " << i << ": validate_buffer "
+                << static_cast<uint32_t>(validate_buffer[i])
+                << " != host_buffer " << static_cast<uint32_t>(host_buffer[i])
+                << "\n";
+      break;
+    }
+  }
+}
+
+void ZePeer::validate_buffer_immediate(ze_command_list_handle_t command_list,
+                                       char *validate_buffer, void *dst_buffer,
+                                       char *host_buffer, size_t buffer_size) {
+  SUCCESS_OR_TERMINATE(
+      zeCommandListAppendMemoryCopy(command_list, validate_buffer, dst_buffer,
+                                    buffer_size, nullptr, 0, nullptr));
+  SUCCESS_OR_TERMINATE(zeCommandListHostSynchronize(
+      command_list, std::numeric_limits<uint64_t>::max()));
 
   for (size_t i = 0; i < buffer_size; i++) {
     if (validate_buffer[i] != host_buffer[i]) {
