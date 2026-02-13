@@ -126,6 +126,7 @@ static const char *usage_str =
     "divide "
     "buffers across available"
     "\n                              engines specified with option -u."
+    "\n"
     "\n  -x                          for unidirectional parallel tests, select "
     "where to place the queue"
     "\n      src                     use queue in source"
@@ -135,6 +136,9 @@ static const char *usage_str =
     "specified by options -s and -d, "
     "\n                              with each device being managed by a "
     "separate process."
+    "\n"
+    "\n  --regular_cmdlist           use regular command list instead of "
+    "immediate"
     "\n"
     "\n  --version                   display version"
     "\n  -h, --help                  display help message"
@@ -155,7 +159,15 @@ public:
                                               uint32_t local_device_id,
                                               size_t buffer_size);
 
+  void perform_parallel_copy_to_single_target_immediate(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      uint32_t remote_device_id, uint32_t local_device_id, size_t buffer_size);
+
   void perform_bidirectional_parallel_copy_to_single_target(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      uint32_t remote_device_id, uint32_t local_device_id, size_t buffer_size);
+
+  void perform_bidirectional_parallel_copy_to_single_target_immediate(
       peer_test_t test_type, peer_transfer_t transfer_type,
       uint32_t remote_device_id, uint32_t local_device_id, size_t buffer_size);
 
@@ -170,7 +182,19 @@ public:
       std::vector<uint32_t> &local_device_ids, size_t buffer_size,
       bool divide_buffers);
 
+  void perform_parallel_copy_to_multiple_targets_immediate(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      std::vector<uint32_t> &remote_device_ids,
+      std::vector<uint32_t> &local_device_ids, size_t buffer_size,
+      bool divide_buffers);
+
   void perform_bidirectional_parallel_copy_to_multiple_targets(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      std::vector<uint32_t> &remote_device_ids,
+      std::vector<uint32_t> &local_device_ids, size_t buffer_size,
+      bool divide_buffers);
+
+  void perform_bidirectional_parallel_copy_to_multiple_targets_immediate(
       peer_test_t test_type, peer_transfer_t transfer_type,
       std::vector<uint32_t> &remote_device_ids,
       std::vector<uint32_t> &local_device_ids, size_t buffer_size,
@@ -181,7 +205,17 @@ public:
       std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
       size_t buffer_size, bool divide_buffers);
 
+  void perform_parallel_copy_to_pair_targets_immediate(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
+      size_t buffer_size, bool divide_buffers);
+
   void perform_bidirectional_parallel_copy_to_pair_targets(
+      peer_test_t test_type, peer_transfer_t transfer_type,
+      std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
+      size_t buffer_size, bool divide_buffers);
+
+  void perform_bidirectional_parallel_copy_to_pair_targets_immediate(
       peer_test_t test_type, peer_transfer_t transfer_type,
       std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
       size_t buffer_size, bool divide_buffers);
@@ -214,16 +248,29 @@ public:
                     ze_command_queue_handle_t command_queue, void *dst_buffer,
                     void *src_buffer, size_t buffer_size);
 
+  void perform_copy_immediate(peer_test_t test_type,
+                              ze_command_list_handle_t command_list,
+                              void *dst_buffer, void *src_buffer,
+                              size_t buffer_size);
+
   void bidirectional_perform_copy(uint32_t dst_device_id,
                                   uint32_t src_device_id, uint32_t queue_index,
                                   peer_test_t test_type,
                                   peer_transfer_t transfer_type,
                                   size_t buffer_size);
 
+  void bidirectional_perform_copy_immediate(
+      uint32_t remote_device_id, uint32_t local_device_id, uint32_t queue_index,
+      peer_test_t test_type, peer_transfer_t transfer_type, size_t buffer_size);
+
   void initialize_src_buffer(ze_command_list_handle_t command_list,
                              ze_command_queue_handle_t command_queue,
                              void *local_buffer, char *host_buffer,
                              size_t buffer_size);
+
+  void initialize_src_buffer_immediate(ze_command_list_handle_t command_list,
+                                       void *src_buffer, char *host_buffer,
+                                       size_t buffer_size);
 
   void initialize_buffers(ze_command_list_handle_t command_list,
                           ze_command_queue_handle_t command_queue,
@@ -238,6 +285,10 @@ public:
                        ze_command_queue_handle_t command_queue,
                        char *validate_buffer, void *dst_buffer,
                        char *host_buffer, size_t buffer_size);
+
+  void validate_buffer_immediate(ze_command_list_handle_t command_list,
+                                 char *validate_buffer, void *dst_buffer,
+                                 char *host_buffer, size_t buffer_size);
 
   void set_up(size_t number_buffer_elements,
               std::vector<uint32_t> &remote_device_ids,
@@ -297,6 +348,7 @@ public:
   static bool parallel_copy_to_multiple_targets;
   static bool parallel_copy_to_pair_targets;
   static bool parallel_divide_buffers;
+  static bool use_immediate_cmdlist;
 
   static uint32_t number_iterations;
   uint32_t warm_up_iterations = number_iterations / 5;

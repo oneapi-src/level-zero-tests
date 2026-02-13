@@ -234,6 +234,19 @@ void ZeApp::commandListCreate(uint32_t device_index,
                                            phCommandList));
 }
 
+void ZeApp::immediateCommandListCreate(
+    uint32_t device_index, uint32_t command_queue_group_ordinal,
+    uint32_t command_queue_index, ze_command_list_handle_t *phCommandList) {
+  ze_command_queue_desc_t command_queue_description{};
+  command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  command_queue_description.pNext = nullptr;
+  command_queue_description.ordinal = command_queue_group_ordinal;
+  command_queue_description.index = command_queue_index;
+  SUCCESS_OR_TERMINATE(
+      zeCommandListCreateImmediate(context, _devices[device_index],
+                                   &command_queue_description, phCommandList));
+}
+
 void ZeApp::commandListDestroy(ze_command_list_handle_t command_list) {
   SUCCESS_OR_TERMINATE(zeCommandListDestroy(command_list));
 }

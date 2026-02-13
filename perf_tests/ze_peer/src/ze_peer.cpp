@@ -18,6 +18,7 @@ bool ZePeer::parallel_copy_to_single_target = false;
 bool ZePeer::parallel_copy_to_multiple_targets = false;
 bool ZePeer::parallel_copy_to_pair_targets = false;
 bool ZePeer::parallel_divide_buffers = false;
+bool ZePeer::use_immediate_cmdlist = true;
 uint32_t ZePeer::number_iterations = 50;
 const size_t max_elems = 268435456; /* 256 MB */
 
@@ -457,6 +458,8 @@ int main(int argc, char **argv) {
       i++;
     } else if (strcmp(argv[i], "-v") == 0) {
       ZePeer::validate_results = true;
+    } else if (strcmp(argv[i], "--regular_cmdlist") == 0) {
+      ZePeer::use_immediate_cmdlist = false;
     } else {
       std::cout << usage_str;
       exit(-1);
@@ -711,18 +714,25 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
     uint32_t engineIndex = 0;
     for (uint32_t g = 0; g < numQueueGroups; g++) {
       for (uint32_t q = 0; q < queueProperties[g].numQueues; q++) {
-        ze_command_queue_handle_t command_queue;
-        benchmark->commandQueueCreate(d, g, q, &command_queue);
+        std::pair<ze_command_queue_handle_t, ze_command_list_handle_t>
+            enginePair;
+        if (ZePeer::use_immediate_cmdlist) {
+          ze_command_list_handle_t command_list;
+          benchmark->immediateCommandListCreate(d, g, q, &command_list);
 
-        ze_command_list_handle_t command_list;
-        benchmark->commandListCreate(d, g, &command_list);
+          enginePair = std::make_pair(nullptr, command_list);
+        } else {
+          ze_command_queue_handle_t command_queue;
+          benchmark->commandQueueCreate(d, g, q, &command_queue);
 
-        auto enginePair = std::make_pair(command_queue, command_list);
+          ze_command_list_handle_t command_list;
+          benchmark->commandListCreate(d, g, &command_list);
+
+          enginePair = std::make_pair(command_queue, command_list);
+        }
+
         ze_peer_devices[d].engines.push_back(enginePair);
-
-        // use compute engines by default. Select the indexes from device 0
-        if (option_u_empty && (queueProperties[g].flags &
-                               ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
+        if (option_u_empty) {
           this->queues.push_back(engineIndex);
         }
 
@@ -745,7 +755,9 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
 ZePeer::~ZePeer() {
   for (auto &device : ze_peer_devices) {
     for (auto enginePair : device.engines) {
-      benchmark->commandQueueDestroy(enginePair.first);
+      if (enginePair.first) {
+        benchmark->commandQueueDestroy(enginePair.first);
+      }
       benchmark->commandListDestroy(enginePair.second);
     }
   }

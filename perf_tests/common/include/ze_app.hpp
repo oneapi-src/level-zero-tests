@@ -50,6 +50,10 @@ public:
   void commandListCreate(uint32_t device_index,
                          uint32_t command_queue_group_ordinal,
                          ze_command_list_handle_t *phCommandList);
+  void immediateCommandListCreate(uint32_t device_index,
+                                  uint32_t command_queue_group_ordinal,
+                                  uint32_t command_queue_index,
+                                  ze_command_list_handle_t *phCommandList);
   void commandListDestroy(ze_command_list_handle_t phCommandList);
   void commandListClose(ze_command_list_handle_t phCommandList);
   void commandListReset(ze_command_list_handle_t phCommandList);
