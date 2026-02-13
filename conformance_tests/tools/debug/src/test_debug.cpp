@@ -1427,7 +1427,7 @@ void zetDebugThreadControlTest::SetUpThreadControl(ze_device_handle_t &device,
 
   LOG_INFO << "[Debugger] Interrupting all threads";
   // give time to app to launch the kernel
-  std::this_thread::sleep_for(std::chrono::seconds(60));
+  std::this_thread::sleep_for(std::chrono::seconds(6));
 
   lzt::debug_interrupt(debugSession, thread);
   stopped_threads = {};

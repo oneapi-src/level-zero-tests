@@ -97,6 +97,14 @@ bool check_events_unordered(const zet_debug_session_handle_t &debug_session,
   return true;
 }
 
+std::string to_string(ze_device_thread_t &thread) {
+
+  std::stringstream ss;
+  ss << "{SLICE: " << thread.slice << " SUBSLICE: " << thread.subslice
+     << " EU: " << thread.eu << " THREAD: " << thread.thread << "}";
+  return ss.str();
+}
+
 void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
                                  ze_device_handle_t device,
                                  zet_debug_session_handle_t &debug_session,
@@ -125,8 +133,11 @@ void attach_and_get_module_event(uint32_t pid, process_synchro *synchro,
       break;
     }
 
+    auto suffix = (debug_event.type == ZET_DEBUG_EVENT_TYPE_THREAD_STOPPED)
+                      ? to_string(debug_event.info.thread.thread)
+                      : "";
     LOG_INFO << "[Debugger] received event: "
-             << lzt::debuggerEventTypeString[debug_event.type];
+             << lzt::debuggerEventTypeString[debug_event.type] << suffix;
 
     if (ZET_DEBUG_EVENT_TYPE_MODULE_LOAD == debug_event.type) {
       LOG_INFO << "[Debugger]"
