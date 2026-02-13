@@ -1712,29 +1712,6 @@ void metric_tracer_disable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
       zetMetricTracerDisableExp(metric_tracer_handle, synchronous));
 }
 
-size_t metric_tracer_read_data_size(
-    zet_metric_tracer_exp_handle_t metric_tracer_handle) {
-  size_t metric_size = 0;
-  EXPECT_ZE_RESULT_SUCCESS(
-      zetMetricTracerReadDataExp(metric_tracer_handle, &metric_size, nullptr));
-  EXPECT_NE(0u, metric_size)
-      << "zetMetricTracerReadDataExp reports that there are no "
-         "metrics available to read";
-  LOG_DEBUG << "raw data size = " << metric_size;
-  return metric_size;
-}
-
-void metric_tracer_read_data(
-    zet_metric_tracer_exp_handle_t metric_tracer_handle,
-    std::vector<uint8_t> *ptr_metric_data) {
-  EXPECT_NE(nullptr, ptr_metric_data);
-  size_t metric_size = metric_tracer_read_data_size(metric_tracer_handle);
-  EXPECT_NE(0u, metric_size);
-  ptr_metric_data->resize(metric_size);
-  EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-      metric_tracer_handle, &metric_size, ptr_metric_data->data()));
-}
-
 void enable_metrics_runtime(ze_device_handle_t device) {
   EXPECT_NE(nullptr, device);
   EXPECT_ZE_RESULT_SUCCESS(zetDeviceEnableMetricsExp(device));
