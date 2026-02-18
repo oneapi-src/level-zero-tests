@@ -416,6 +416,8 @@ std::string to_string(const ze_image_format_swizzle_t swizzle) {
     return "ZE_IMAGE_FORMAT_SWIZZLE_1";
   } else if (swizzle == ZE_IMAGE_FORMAT_SWIZZLE_X) {
     return "ZE_IMAGE_FORMAT_SWIZZLE_X";
+  } else if (swizzle == ZE_IMAGE_FORMAT_SWIZZLE_D) {
+    return "ZE_IMAGE_FORMAT_SWIZZLE_D";
   } else {
     return "Unknown ze_image_format_swizzle_t value: " +
            std::to_string(static_cast<int>(swizzle));
