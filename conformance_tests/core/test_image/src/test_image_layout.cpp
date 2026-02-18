@@ -566,4 +566,281 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(lzt::image_format_types),
                        ::testing::Bool()));
 
+class zeImageDepthFormatLayoutTests
+    : public ImageLayoutFixture,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_image_type_t, ze_image_format_type_t,
+                     ze_image_format_layout_t, bool>> {
+protected:
+  void TearDown() override {
+    ImageLayoutFixture::TearDown();
+    if (!skip_message.str().empty()) {
+      GTEST_SKIP() << skip_message.str();
+    }
+  }
+
+  ze_image_handle_t
+  create_image_desc_depth_format(ze_image_format_layout_t layout,
+                                 ze_image_type_t type,
+                                 ze_image_format_type_t format);
+};
+
+ze_image_handle_t zeImageDepthFormatLayoutTests::create_image_desc_depth_format(
+    ze_image_format_layout_t layout, ze_image_type_t type,
+    ze_image_format_type_t format) {
+  ze_image_desc_t image_desc = {};
+  image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+
+  image_desc.pNext = nullptr;
+  image_desc.flags = ZE_IMAGE_FLAG_KERNEL_WRITE | ZE_IMAGE_FLAG_BIAS_UNCACHED;
+  image_desc.type = type;
+  image_desc.format.layout = layout;
+  image_desc.format.type = format;
+
+  // Set depth format swizzle: D, 0, 0, 0
+  image_desc.format.x = ZE_IMAGE_FORMAT_SWIZZLE_D;
+  image_desc.format.y = ZE_IMAGE_FORMAT_SWIZZLE_0;
+  image_desc.format.z = ZE_IMAGE_FORMAT_SWIZZLE_0;
+  image_desc.format.w = ZE_IMAGE_FORMAT_SWIZZLE_0;
+
+  if (type == ZE_IMAGE_TYPE_1DARRAY) {
+    image_desc.arraylevels = image_dims.height;
+  }
+  if (type == ZE_IMAGE_TYPE_2DARRAY) {
+    image_desc.arraylevels = image_dims.depth;
+  }
+
+  image_desc.width = image_dims.width;
+  image_desc.height = image_dims.height;
+  image_desc.depth = image_dims.depth;
+
+  auto image = lzt::create_ze_image(lzt::get_default_context(),
+                                    lzt::zeDevice::get_instance()->get_device(),
+                                    image_desc);
+  EXPECT_NE(nullptr, image);
+
+  return image;
+}
+
+LZT_TEST_P(zeImageDepthFormatLayoutTests,
+           GivenDepthFormatSwizzleWhenConvertingImageToMemory) {
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto format = std::get<1>(GetParam());
+  auto layout = std::get<2>(GetParam());
+  auto is_immediate = std::get<3>(GetParam());
+
+  LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format;
+  LOG_INFO << "LAYOUT - " << layout << " (Depth swizzle: D, 0, 0, 0)";
+
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  image_dims = get_sample_image_dims(image_type);
+  image_size = static_cast<size_t>(image_dims.width * image_dims.height *
+                                   image_dims.depth);
+
+  auto image_in = create_image_desc_depth_format(layout, image_type, format);
+  size_t buffer_size = image_size * get_pixel_bytes(layout);
+  auto buffer_in = lzt::allocate_host_memory(buffer_size);
+  auto buffer_out = lzt::allocate_host_memory(buffer_size);
+
+  uint8_t *ptr1 = static_cast<uint8_t *>(buffer_in);
+  uint8_t *ptr2 = static_cast<uint8_t *>(buffer_out);
+  for (size_t i = 0; i < buffer_size; ++i) {
+    ptr1[i] = to_u8((0xff) - (i & 0xff));
+    ptr2[i] = 0xff;
+  }
+
+  lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
+                                  nullptr);
+  lzt::append_barrier(cmd_bundle.list);
+  lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_in, nullptr);
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+  EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
+
+  lzt::free_memory(buffer_in);
+  lzt::free_memory(buffer_out);
+  lzt::destroy_ze_image(image_in);
+  lzt::destroy_command_bundle(cmd_bundle);
+}
+
+LZT_TEST_P(
+    zeImageDepthFormatLayoutTests,
+    GivenDepthFormatSwizzleWhenPassingImageThroughKernelAndConvertingToMemory) {
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto format = std::get<1>(GetParam());
+  auto layout = std::get<2>(GetParam());
+  auto is_immediate = std::get<3>(GetParam());
+
+  LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format;
+  LOG_INFO << "LAYOUT - " << layout << " (Depth swizzle: D, 0, 0, 0)";
+
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  std::string kernel_name = get_kernel(format, image_type);
+  ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
+
+  image_dims = get_sample_image_dims(image_type);
+  image_size = static_cast<size_t>(image_dims.width * image_dims.height *
+                                   image_dims.depth);
+
+  auto image_in = create_image_desc_depth_format(layout, image_type, format);
+  auto image_out = create_image_desc_depth_format(layout, image_type, format);
+
+  size_t buffer_size = image_size * get_pixel_bytes(layout);
+  auto buffer_in = lzt::allocate_host_memory(buffer_size);
+  auto buffer_out = lzt::allocate_host_memory(buffer_size);
+
+  uint8_t *ptr1 = static_cast<uint8_t *>(buffer_in);
+  uint8_t *ptr2 = static_cast<uint8_t *>(buffer_out);
+  for (size_t i = 0; i < buffer_size; ++i) {
+    ptr1[i] = to_u8((0xff) - (i & 0xff));
+    ptr2[i] = 0xff;
+  }
+
+  lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
+                                  nullptr);
+  lzt::append_barrier(cmd_bundle.list);
+
+  uint32_t group_size_x, group_size_y, group_size_z;
+  lzt::suggest_group_size(kernel, to_u32(image_dims.width), image_dims.height,
+                          image_dims.depth, group_size_x, group_size_y,
+                          group_size_z);
+  lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
+
+  if (set_kernel_arg(kernel, 0, sizeof(image_in), &image_in) !=
+      ZE_RESULT_SUCCESS) {
+    lzt::free_memory(buffer_in);
+    lzt::free_memory(buffer_out);
+    lzt::destroy_ze_image(image_in);
+    lzt::destroy_ze_image(image_out);
+    lzt::destroy_function(kernel);
+    lzt::destroy_command_bundle(cmd_bundle);
+    return;
+  }
+  if (set_kernel_arg(kernel, 1, sizeof(image_out), &image_out) !=
+      ZE_RESULT_SUCCESS) {
+    lzt::free_memory(buffer_in);
+    lzt::free_memory(buffer_out);
+    lzt::destroy_ze_image(image_in);
+    lzt::destroy_ze_image(image_out);
+    lzt::destroy_function(kernel);
+    lzt::destroy_command_bundle(cmd_bundle);
+    return;
+  }
+
+  ze_group_count_t group_dems = {to_u32(image_dims.width / group_size_x),
+                                 image_dims.height / group_size_y,
+                                 image_dims.depth / group_size_z};
+
+  lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr, 0,
+                              nullptr);
+  lzt::append_barrier(cmd_bundle.list);
+  lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_out,
+                                nullptr);
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+  EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
+
+  lzt::free_memory(buffer_in);
+  lzt::free_memory(buffer_out);
+  lzt::destroy_ze_image(image_in);
+  lzt::destroy_ze_image(image_out);
+  lzt::destroy_function(kernel);
+  lzt::destroy_command_bundle(cmd_bundle);
+}
+
+LZT_TEST_P(
+    zeImageDepthFormatLayoutTests,
+    GivenDepthFormatSwizzleWhenConvertingImageToMemoryWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  auto image_type = std::get<0>(GetParam());
+  if (std::find(supported_image_types.begin(), supported_image_types.end(),
+                image_type) == supported_image_types.end()) {
+    GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
+  }
+  auto format = std::get<1>(GetParam());
+  auto layout = std::get<2>(GetParam());
+  auto is_immediate = std::get<3>(GetParam());
+
+  LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format;
+  LOG_INFO << "LAYOUT - " << layout << " (Depth swizzle: D, 0, 0, 0)";
+
+  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  image_dims = get_sample_image_dims(image_type);
+  image_size = static_cast<size_t>(image_dims.width * image_dims.height *
+                                   image_dims.depth);
+
+  auto image_in = create_image_desc_depth_format(layout, image_type, format);
+  size_t buffer_size = image_size * get_pixel_bytes(layout);
+  auto buffer_in =
+      lzt::allocate_host_memory_with_allocator_selector(buffer_size, true);
+  auto buffer_out =
+      lzt::allocate_host_memory_with_allocator_selector(buffer_size, true);
+
+  uint8_t *ptr1 = static_cast<uint8_t *>(buffer_in);
+  uint8_t *ptr2 = static_cast<uint8_t *>(buffer_out);
+  for (size_t i = 0; i < buffer_size; ++i) {
+    ptr1[i] = to_u8((0xff) - (i & 0xff));
+    ptr2[i] = 0xff;
+  }
+
+  lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
+                                  nullptr);
+  lzt::append_barrier(cmd_bundle.list);
+  lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_in, nullptr);
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+  EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
+
+  lzt::free_memory_with_allocator_selector(buffer_in, true);
+  lzt::free_memory_with_allocator_selector(buffer_out, true);
+  lzt::destroy_ze_image(image_in);
+  lzt::destroy_command_bundle(cmd_bundle);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDepthFormatLayoutUInt, zeImageDepthFormatLayoutTests,
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT),
+                       ::testing::ValuesIn(lzt::image_format_layout_uint),
+                       ::testing::Bool()));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDepthFormatLayoutSInt, zeImageDepthFormatLayoutTests,
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ZE_IMAGE_FORMAT_TYPE_SINT),
+                       ::testing::ValuesIn(lzt::image_format_layout_sint),
+                       ::testing::Bool()));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDepthFormatLayoutUNorm, zeImageDepthFormatLayoutTests,
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UNORM),
+                       ::testing::ValuesIn(lzt::image_format_layout_unorm),
+                       ::testing::Bool()));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDepthFormatLayoutSNorm, zeImageDepthFormatLayoutTests,
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ZE_IMAGE_FORMAT_TYPE_SNORM),
+                       ::testing::ValuesIn(lzt::image_format_layout_snorm),
+                       ::testing::Bool()));
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDepthFormatLayoutFloat, zeImageDepthFormatLayoutTests,
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
+                       ::testing::ValuesIn(lzt::image_format_layout_float),
+                       ::testing::Bool()));
+
 } // namespace
