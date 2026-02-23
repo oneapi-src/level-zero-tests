@@ -12,7 +12,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(clang_tools)
 include(custom_functions)
-include(vs2019_missing_redist_workaround)
 
 find_package(PNG REQUIRED)
 find_package(Git)
@@ -45,14 +44,11 @@ enable_testing()
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
-# Workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/20638
-set(_Boost_LOG_SETUP_DEPENDENCIES log)
-set(_Boost_LOG_DEPENDENCIES "")
 if(BUILD_ZE_PERF_TESTS_ONLY)
   # do not require boost when building perf tests only, will skip tests that use boost
-  find_package(Boost 1.65 COMPONENTS log program_options timer chrono system serialization)
+  find_package(Boost 1.79 COMPONENTS log log_setup program_options timer chrono system serialization)
 else()
-  find_package(Boost 1.65 REQUIRED COMPONENTS log program_options timer chrono system serialization)
+  find_package(Boost 1.79 REQUIRED COMPONENTS log log_setup program_options timer chrono system serialization)
 endif()
 message(STATUS "Boost_FOUND: ${Boost_FOUND}")
 
