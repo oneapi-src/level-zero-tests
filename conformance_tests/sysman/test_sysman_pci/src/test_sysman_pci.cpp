@@ -58,6 +58,24 @@ LZT_TEST_F(
     PCI_TEST,
     GivenSysmanHandleWhenRetrievingPCIPropertiesThenpropertiesIsReturned) {
   for (auto device : devices) {
+    ze_device_properties_t deviceProperties = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+#ifdef USE_ZESINIT
+    auto sysman_device_properties = lzt::get_sysman_device_properties(device);
+    ze_device_handle_t core_device =
+        lzt::get_core_device_by_uuid(sysman_device_properties.core.uuid.id);
+    EXPECT_NE(core_device, nullptr);
+    device = core_device;
+#endif // USE_ZESINIT
+    EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &deviceProperties));
+    bool is_integrated =
+        (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED);
+
+    if (is_integrated) {
+      GTEST_SKIP()
+          << "PCI properties are not applicable for integrated device: "
+          << deviceProperties.name;
+    }
     zes_pci_properties_t pciProps = {};
     pciProps = lzt::get_pci_properties(device);
     EXPECT_GE(pciProps.address.domain, 0);
