@@ -1,0 +1,24 @@
+name: CI on 'infra' branch
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  trigger:
+    runs-on: [self-hosted, gfx-small, Linux]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: infra
+    - uses: ./.github/actions/trigger-infra-ci
+      with:
+        branch: infra
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        concurrency_key: ${{ github.workflow }}-${{ github.ref }}
+        github_token: ${{ secrets.REPO_TOKEN }}
