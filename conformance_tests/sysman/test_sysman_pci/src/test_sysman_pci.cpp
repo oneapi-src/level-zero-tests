@@ -72,10 +72,11 @@ LZT_TEST_F(
         (deviceProperties.flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED);
 
     if (is_integrated) {
-      GTEST_SKIP()
-          << "PCI properties are not applicable for integrated device: "
-          << deviceProperties.name;
+      LOG_INFO << "Skipping integrated device (PCI properties not applicable): "
+               << deviceProperties.name;
+      continue;
     }
+
     zes_pci_properties_t pciProps = {};
     pciProps = lzt::get_pci_properties(device);
     EXPECT_GE(pciProps.address.domain, 0);
