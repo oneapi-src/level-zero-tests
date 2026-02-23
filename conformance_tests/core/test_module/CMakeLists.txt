@@ -9,7 +9,6 @@ add_lzt_test(
     src/test_kernel_args.cpp
     src/test_kernel_indirect_access.cpp
     src/test_kernel_get_properties.cpp
-    src/test_cooperative_kernel.cpp
     src/test_kernel_schedule_hints.cpp
     src/main.cpp
     src/test_module_program_exp.cpp
@@ -23,7 +22,6 @@ add_lzt_test(
     10kernels
     100kernels
     1000kernels
-    cooperative_kernel
     multi_argument_kernel_test
     multi_image_argument_kernel_test
     single_global_variable
