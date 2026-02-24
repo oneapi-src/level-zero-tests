@@ -20,6 +20,6 @@ jobs:
       with:
         branch: infra
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        concurrency_key: ${{ github.workflow }}-${{ github.ref }}
+        concurrency_key: ${{ github.ref }}
         github_token: ${{ secrets.REPO_TOKEN }}
-        is_master: ${{ github.ref_name == 'master' }}
+        is_master: ${{ github.ref_name == 'master' && 'true' || 'false' }}
