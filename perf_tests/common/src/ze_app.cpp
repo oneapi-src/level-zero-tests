@@ -6,6 +6,8 @@
  *
  */
 
+#include <level_zero/zer_api.h>
+
 #include "ze_app.hpp"
 
 #include "../../common/include/common.hpp"
@@ -232,6 +234,30 @@ void ZeApp::commandListCreate(uint32_t device_index,
   SUCCESS_OR_TERMINATE(zeCommandListCreate(context, _devices[device_index],
                                            &command_list_description,
                                            phCommandList));
+}
+
+void ZeApp::immediateCommandListCreate(
+    uint32_t device_index, ze_command_list_handle_t *phCommandList) {
+  SUCCESS_OR_TERMINATE(zeCommandListCreateImmediate(
+      context, _devices[device_index], &zeDefaultGPUImmediateCommandQueueDesc,
+      phCommandList));
+}
+
+void ZeApp::immediateCommandListCreate(
+    uint32_t device_index, uint32_t command_queue_group_ordinal,
+    uint32_t command_queue_index, ze_command_list_handle_t *phCommandList) {
+  ze_command_queue_desc_t command_queue_description{};
+  command_queue_description.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+  command_queue_description.pNext = nullptr;
+  command_queue_description.ordinal = command_queue_group_ordinal;
+  command_queue_description.index = command_queue_index;
+  command_queue_description.flags =
+      ZE_COMMAND_QUEUE_FLAG_IN_ORDER | ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
+  command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+  command_queue_description.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
+  SUCCESS_OR_TERMINATE(
+      zeCommandListCreateImmediate(context, _devices[device_index],
+                                   &command_queue_description, phCommandList));
 }
 
 void ZeApp::commandListDestroy(ze_command_list_handle_t command_list) {
