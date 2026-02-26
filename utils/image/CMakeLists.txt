@@ -20,6 +20,14 @@ target_link_libraries(image
     PNG::PNG
 )
 
+# Boost 1.74 GIL uses template-id constructor names (e.g. image_read_info<png_tag>())
+# which became ill-formed in C++20 (P1383R2).
+set_source_files_properties(
+    src/image.cpp
+    PROPERTIES
+    COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/std:c++17,-std=gnu++17>"
+)
+
 if (NOT BUILD_ZE_PERF_TESTS_ONLY)
     add_core_library_test(image
         SOURCE

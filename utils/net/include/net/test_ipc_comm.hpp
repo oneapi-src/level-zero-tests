@@ -9,7 +9,7 @@
 #ifndef __TEST_IPC_COMM_HPP__
 
 #define __TEST_IPC_COMM_HPP__
-
+#include <utility>
 #include <level_zero/ze_api.h>
 #include <cstddef>
 #include <boost/asio.hpp>

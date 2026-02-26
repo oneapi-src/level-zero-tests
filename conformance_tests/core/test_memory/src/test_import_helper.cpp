@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
   uint64_t targetHandle;
   BOOL pipeCommandSuccess = FALSE;
   DWORD bytesRead, pipeMode;
-  LPTSTR externalMemoryTestPipeName =
+  LPCTSTR externalMemoryTestPipeName =
       TEXT("\\\\.\\pipe\\external_memory_socket");
 
   while (1) {
