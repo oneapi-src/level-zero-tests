@@ -10,6 +10,7 @@ add_lzt_test(
     src/test_copy_image.cpp
     src/test_copy_remote_madvise.cpp
     src/test_copy.cpp
+    src/test_empty_copy.cpp
     src/test_kernel_copy.cpp
     src/test_multicontext_copy.cpp
   LINK_LIBRARIES
