@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2024 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -20,7 +20,7 @@ extern "C" {
 #endif // !ZET_INTEL_GPU_DEBUG_MAJOR
 
 #ifndef ZET_INTEL_GPU_DEBUG_MINOR
-#define ZET_INTEL_GPU_DEBUG_MINOR 1
+#define ZET_INTEL_GPU_DEBUG_MINOR 2
 #endif //! ZET_INTEL_GPU_DEBUG_MINOR
 
 #if ZET_INTEL_GPU_DEBUG_MAJOR == 1
@@ -54,6 +54,11 @@ typedef enum _zet_debug_regset_type_intel_gpu_t {
       17,                                      ///< Thread Scratch register set
   ZET_DEBUG_REGSET_TYPE_SCALAR_INTEL_GPU = 18, ///< The scalar register set
 #endif                                         // ZET_INTEL_GPU_DEBUG_MINOR >= 1
+#if ZET_INTEL_GPU_DEBUG_MINOR >= 2
+  ZET_DEBUG_REGSET_TYPE_STATUS_INTEL_GPU = 19,
+  ZET_DEBUG_REGSET_TYPE_RANDOM_INTEL_GPU = 20,
+  ZET_DEBUG_REGSET_TYPE_DIRECT_INTEL_GPU = 21,
+#endif // ZET_INTEL_GPU_DEBUG_MINOR >= 1
   ZET_DEBUG_REGSET_TYPE_FORCE_UINT32 = 0x7fffffff
 #endif // ZET_INTEL_GPU_DEBUG_MINOR >= 0
 } zet_debug_regset_type_intel_gpu_t;
@@ -88,7 +93,7 @@ typedef enum _zet_debug_sba_intel_gpu_t {
       6, ///< BindlessSamplerStateBaseAddress
   ZET_DEBUG_SBA_BINDING_TABLE_INTEL_GPU = 7, ///< BindingTableStateBaseAddress
   ZET_DEBUG_SBA_SCRATCH_SPACE_INTEL_GPU = 8, ///< ScratchSpaceBaseAddress
-  ZET_DEBUG_SBA_COUNT_INTEL_GPU = 9 ///< Number of registers in SBA regster set
+  ZET_DEBUG_SBA_COUNT_INTEL_GPU = 9 ///< Number of registers in SBA register set
 } zet_debug_sba_intel_gpu_t;
 #endif // ZET_INTEL_GPU_DEBUG_MAJOR == 1
 
