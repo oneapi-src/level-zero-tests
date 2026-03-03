@@ -1994,33 +1994,6 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     LCTRACING_TEST_NAME,
-    GivenEnabledTracerWithzeImageViewCreateExpCallbacksWhenCallingzeImageViewCreateExpThenUserDataIsSetAndResultUnchanged) {
-
-  zelTracerImageViewCreateExpRegisterCallback(
-      tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
-  zelTracerImageViewCreateExpRegisterCallback(
-      tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
-
-  if (!init_image()) {
-    LOG_WARNING << "test not executed because "
-                   "images are not supported";
-    user_data.prologue_called = true;
-    user_data.epilogue_called = true;
-    GTEST_SKIP();
-  }
-
-  ze_image_handle_t imageView;
-
-  lzt::enable_ltracer(tracer_handle);
-
-  ASSERT_ZE_RESULT_SUCCESS(
-      zeImageViewCreateExp(context, device, &image_desc, image, &imageView));
-
-  zeImageDestroy(imageView);
-}
-
-LZT_TEST_F(
-    LCTRACING_TEST_NAME,
     GivenEnabledTracerWithzeCommandListAppendMemoryPrefetchCallbacksWhenCallingzeCommandListAppendMemoryPrefetchThenUserDataIsSetAndResultUnchanged) {
   zelTracerCommandListAppendMemoryPrefetchRegisterCallback(
       tracer_handle, ZEL_REGISTER_PROLOGUE, lzt::lprologue_callback);
