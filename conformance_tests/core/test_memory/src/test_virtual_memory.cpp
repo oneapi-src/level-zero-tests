@@ -408,7 +408,7 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
       lzt::get_ze_devices(numDevices);
   std::vector<ze_physical_mem_handle_t> reservedPhysicalMemoryArray;
   devices.push_back(potential_devices[0]);
-  for (int i = 1; i < numDevices; i++) {
+  for (uint32_t i = 1; i < numDevices; i++) {
     if (lzt::can_access_peer(devices[0], potential_devices[i])) {
       devices.push_back(potential_devices[i]);
     }
@@ -506,7 +506,7 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
       lzt::get_ze_devices(numDevices);
   std::vector<ze_physical_mem_handle_t> reservedPhysicalMemoryArray;
   devices.push_back(potential_devices[0]);
-  for (int i = 1; i < numDevices; i++) {
+  for (uint32_t i = 1; i < numDevices; i++) {
     if (lzt::can_access_peer(devices[0], potential_devices[i])) {
       devices.push_back(potential_devices[i]);
     }

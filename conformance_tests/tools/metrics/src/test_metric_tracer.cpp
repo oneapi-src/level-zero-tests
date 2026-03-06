@@ -442,7 +442,8 @@ LZT_TEST_F(
     EXPECT_NE(0, raw_data_size) << "zetMetricTracerReadDataExp reports that "
                                    "there are no metrics available to read";
     uint64_t raw_data_accumulate = std::accumulate(
-        raw_data.begin(), raw_data.begin() + raw_data_size, 0ULL);
+        raw_data.begin(),
+        raw_data.begin() + static_cast<int64_t>(raw_data_size), 0ULL);
     EXPECT_NE(0, raw_data_accumulate)
         << "all raw data entries are zero, zetMetricTracerReadDataExp is "
            "expected to read useful data";
@@ -505,7 +506,8 @@ LZT_TEST_F(
                                    "there are no metrics available to read";
 
     raw_data_accumulate = std::accumulate(
-        raw_data.begin(), raw_data.begin() + raw_data_size, 0ULL);
+        raw_data.begin(),
+        raw_data.begin() + static_cast<int64_t>(raw_data_size), 0ULL);
     ASSERT_NE(0, raw_data_accumulate)
         << "all raw data entries are zero, zetMetricTracerReadDataExp is "
            "expected to read useful data";
@@ -538,7 +540,8 @@ LZT_TEST_F(
 
       if (result == ZE_RESULT_SUCCESS && raw_data_size != 0) {
         raw_data_accumulate = std::accumulate(
-            raw_data.begin(), raw_data.begin() + raw_data_size, 0ULL);
+            raw_data.begin(),
+            raw_data.begin() + static_cast<int64_t>(raw_data_size), 0ULL);
         EXPECT_NE(0, raw_data_accumulate)
             << "all raw data entries are zero, zetMetricTracerReadDataExp is "
                "expected to read useful data";
@@ -618,7 +621,8 @@ LZT_TEST_F(
                                           chunk_buffer.data());
       if (result == ZE_RESULT_SUCCESS && chunk_size > 0) {
         concatenated_data.insert(concatenated_data.end(), chunk_buffer.begin(),
-                                 chunk_buffer.begin() + chunk_size);
+                                 chunk_buffer.begin() +
+                                     static_cast<int64_t>(chunk_size));
         total_bytes_read += chunk_size;
         LOG_DEBUG << "Read " << chunk_size
                   << " bytes, total: " << total_bytes_read;
