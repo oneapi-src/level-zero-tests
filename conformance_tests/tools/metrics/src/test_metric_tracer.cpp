@@ -60,11 +60,16 @@ protected:
     }
   }
 
-  void TearDown() override { lzt::destroy_context(context); }
+  void TearDown() override {
+    tracer_supporting_devices_list.clear();
+    device = nullptr;
+    driver = nullptr;
+    lzt::destroy_context(context);
+  }
 
-  ze_device_handle_t device;
-  ze_driver_handle_t driver;
-  ze_context_handle_t context;
+  ze_device_handle_t device = nullptr;
+  ze_driver_handle_t driver = nullptr;
+  ze_context_handle_t context = nullptr;
 
   std::vector<ze_device_handle_t> devices;
 
@@ -879,7 +884,7 @@ void run_metric_tracer_read_test(
       ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
           metric_tracer_handle, &enabled_read_data_size,
           enabled_raw_data.data()));
-      ASSERT_NE(enabled_read_data_size, 0)
+      EXPECT_NE(enabled_read_data_size, 0)
           << "zetMetricTracerReadDataExp on an enabled "
              "tracer returned zero data size";
 
@@ -892,7 +897,7 @@ void run_metric_tracer_read_test(
       ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
           metric_tracer_handle, &disabled_read_data_size,
           disabled_raw_data.data()));
-      ASSERT_NE(disabled_read_data_size, 0)
+      EXPECT_NE(disabled_read_data_size, 0)
           << "zetMetricTracerReadDataExp with "
              "non-null data buffer and disabled "
              "tracer has returned no data";

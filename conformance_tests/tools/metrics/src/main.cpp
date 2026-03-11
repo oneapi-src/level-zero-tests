@@ -19,9 +19,9 @@ int main(int argc, char **argv) {
   putenv(enable_metrics);
 
   ze_result_t result = zeInit(0);
-  if (result) {
-    throw std::runtime_error("zeInit failed: " +
-                             level_zero_tests::to_string(result));
+  if (result != ZE_RESULT_SUCCESS) {
+    LOG_ERROR << "zeInit failed: " << level_zero_tests::to_string(result);
+    return EXIT_FAILURE;
   }
   LOG_TRACE << "Driver initialized";
 
