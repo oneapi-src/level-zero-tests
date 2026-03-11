@@ -794,7 +794,7 @@ LZT_TEST_F(
   uint32_t number_iterations = 2;
   if (valueString != nullptr) {
     uint32_t _value = to_u32(valueString);
-    number_iterations = _value < 0 ? number_iterations : std::min(_value, 300U);
+    number_iterations = std::min(_value, 300U);
     if (number_iterations != _value) {
       LOG_WARNING << "Number of iterations is capped at 300\n";
     }

@@ -37,7 +37,14 @@ LZT_TEST_F(
     LED_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
-    lzt::get_led_handle_count(device);
+    uint32_t count = 0;
+    count = lzt::get_led_handle_count(device);
+    if (count > 0) {
+      is_led_supported = true;
+      LOG_INFO << "Led handles are available on this device! ";
+    } else {
+      LOG_INFO << "No led handles found for this device! ";
+    }
   }
 }
 
