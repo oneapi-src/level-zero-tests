@@ -127,9 +127,11 @@ double get_timestamp_time(const ze_kernel_timestamp_data_t *timestamp,
 
   double timer_period = 0;
   if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES) {
-    timer_period = (1000000000.0 / to_f64(timestamp_freq));
-  } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
+    // the units are in nanoseconds
     timer_period = to_f64(timestamp_freq);
+  } else if (property_type == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
+    // the units are in cycles/sec
+    timer_period = (1000000000.0 / to_f64(timestamp_freq));
   } else {
     LOG_ERROR << "INVALID DEVICE_PROPERTY_TYPE";
   }
