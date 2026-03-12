@@ -454,6 +454,12 @@ void get_ipc_handle(ze_context_handle_t context,
                     ze_ipc_mem_handle_t *mem_handle, void *memory) {
   EXPECT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, mem_handle));
 }
+void get_ipc_handle_with_properties(ze_context_handle_t context, void *memory,
+                                    void *pNext,
+                                    ze_ipc_mem_handle_t *mem_handle) {
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetIpcHandleWithProperties(context, memory, pNext, mem_handle));
+}
 
 void put_ipc_handle(ze_context_handle_t context,
                     ze_ipc_mem_handle_t mem_handle) {

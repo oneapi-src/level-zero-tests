@@ -152,6 +152,9 @@ void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
                                      ze_memory_type_t mem_type, size_t size);
 void get_ipc_handle(ze_context_handle_t context, ze_ipc_mem_handle_t *handle,
                     void *memory);
+void get_ipc_handle_with_properties(ze_context_handle_t context, void *memory,
+                                    void *pNext,
+                                    ze_ipc_mem_handle_t *mem_handle);
 void put_ipc_handle(ze_context_handle_t context, ze_ipc_mem_handle_t handle);
 void open_ipc_handle(ze_context_handle_t context, ze_device_handle_t device,
                      ze_ipc_mem_handle_t mem_handle, void **memory);
