@@ -37,7 +37,16 @@ LZT_TEST_F(
     FREQUENCY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
   for (auto device : devices) {
-    lzt::get_freq_handle_count(device);
+    uint32_t count = lzt::get_freq_handle_count(device);
+    if (count > 0) {
+      is_freq_supported = true;
+      LOG_INFO << "Frequency handles are available on this device!";
+    } else {
+      LOG_INFO << "No frequency handles found for this device!";
+    }
+  }
+  if (!is_freq_supported) {
+    FAIL() << "No frequency handles found on any of the devices!";
   }
 }
 
