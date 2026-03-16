@@ -1172,10 +1172,12 @@ static void RunMultipleDependentCommandLists(ze_command_queue_mode_t mode) {
   lzt::ImagePNG32Bit output(width, height);
   auto input_xeimage = create_test_image(height, width);
   auto output_xeimage = create_test_image(height, width);
+
   ze_command_list_handle_t cmdlist_immediate = nullptr;
   ze_command_list_handle_t cmdlist_immediate_1 = nullptr;
   ze_command_list_handle_t cmdlist_immediate_2 = nullptr;
   ze_command_list_handle_t cmdlist_immediate_3 = nullptr;
+
   cmdlist_immediate = lzt::create_immediate_command_list(
       lzt::zeDevice::get_instance()->get_device(),
       ZE_COMMAND_QUEUE_FLAG_IN_ORDER, mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
@@ -1193,27 +1195,61 @@ static void RunMultipleDependentCommandLists(ze_command_queue_mode_t mode) {
       ZE_COMMAND_QUEUE_FLAG_IN_ORDER, mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
       0);
 
+  // Create an event pool
+  ze_event_pool_desc_t event_pool_desc = {};
+  event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+  event_pool_desc.count = 3; // Number of events in the pool
+
+  ze_event_pool_handle_t event_pool = lzt::create_event_pool(event_pool_desc);
+
+  // Create event descriptors
+  ze_event_desc_t event_desc = {};
+  event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  event_desc.index = 0;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
+  event_desc.wait = ZE_EVENT_SCOPE_FLAG_DEVICE;
+
+  // Create events
+  event_desc.index = 0;
+  ze_event_handle_t event_upload = lzt::create_event(event_pool, event_desc);
+
+  event_desc.index = 1;
+  ze_event_handle_t event_copy = lzt::create_event(event_pool, event_desc);
+
+  event_desc.index = 2;
+  ze_event_handle_t event_copy_region =
+      lzt::create_event(event_pool, event_desc);
+
   // Use ImageCopyFromMemory to upload ImageA
   lzt::append_image_copy_from_mem(cmdlist_immediate, input_xeimage,
-                                  input.raw_data(), nullptr);
-  // use ImageCopy to copy A -> B
+                                  input.raw_data(), event_upload);
+
+  // Use ImageCopy to copy A -> B
   lzt::append_image_copy(cmdlist_immediate_1, output_xeimage, input_xeimage,
-                         nullptr);
-  // use ImageCopyRegion to copy part of A -> B
+                         event_copy, 1, &event_upload);
+
+  // Use ImageCopyRegion to copy part of A -> B
   ze_image_region_t sr = {0, 0, 0, 1, 1, 1};
   ze_image_region_t dr = {0, 0, 0, 1, 1, 1};
   lzt::append_image_copy_region(cmdlist_immediate_2, output_xeimage,
-                                input_xeimage, &dr, &sr, nullptr);
-  // use ImageCopyToMemory to dowload ImageB
+                                input_xeimage, &dr, &sr, event_copy_region, 1,
+                                &event_copy);
+
+  // Use ImageCopyToMemory to download ImageB
   lzt::append_image_copy_to_mem(cmdlist_immediate_3, output.raw_data(),
-                                output_xeimage, nullptr);
+                                output_xeimage, nullptr, 1, &event_copy_region);
 
   lzt::synchronize_command_list_host(cmdlist_immediate_3, UINT64_MAX);
 
-  // Verfy A matches B
+  // Verify A matches B
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
-
+  // Cleanup
+  lzt::destroy_event(event_upload);
+  lzt::destroy_event(event_copy);
+  lzt::destroy_event(event_copy_region);
+  lzt::destroy_event_pool(event_pool);
   lzt::destroy_ze_image(input_xeimage);
   lzt::destroy_ze_image(output_xeimage);
   lzt::destroy_command_list(cmdlist_immediate);
