@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2021 Intel Corporation
+# Copyright(c) 2021-2026 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ add_lzt_test(
   SOURCES
     ../common/src/stress_common_func.cpp
     src/test_commands_overloading.cpp
+    src/test_commands_overloading_submissions.cpp
     src/test_commands_overloading_multiplication.cpp
     src/test_commands_overloading_events.cpp
     src/main.cpp
