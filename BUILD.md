@@ -40,6 +40,7 @@ cmake --build C:\TEMP\build\level-zero\ --config Release --target install
 cd C:\TEMP\Boost
 .\bootstrap.bat vc143
 .\b2.exe install `
+  define=BOOST_USE_WINAPI_VERSION=0x0601 `
   --prefix=$WORKSPACE\Boost `
   -j 16 `
   address-model=64 `
