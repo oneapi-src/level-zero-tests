@@ -234,6 +234,15 @@ get_ze_image_mem_properties_exp(ze_image_handle_t image) {
   return image_mem_properties;
 }
 
+uint64_t get_image_device_offset_exp(ze_image_handle_t image,
+                                     uint64_t *device_offset) {
+  ze_image_handle_t initial_image = image;
+  EXPECT_NE(device_offset, nullptr);
+  EXPECT_ZE_RESULT_SUCCESS(zeImageGetDeviceOffsetExp(image, device_offset));
+  EXPECT_EQ(image, initial_image);
+  return device_offset == nullptr ? 0 : *device_offset;
+}
+
 static inline uint32_t mask_and_shift(int8_t v, uint8_t m, size_t s) {
   return static_cast<uint32_t>(v & m) << s;
 }

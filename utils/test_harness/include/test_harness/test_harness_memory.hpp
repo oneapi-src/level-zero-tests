@@ -238,5 +238,11 @@ inline bool supports_shared_system_alloc() {
   return supports_shared_system_alloc(get_default_driver());
 }
 
+size_t get_mem_pitch_for_2d_image(ze_context_handle_t context,
+                                  ze_device_handle_t device, size_t image_width,
+                                  size_t image_height,
+                                  unsigned int element_size_in_bytes,
+                                  size_t *row_pitch);
+
 }; // namespace level_zero_tests
 #endif

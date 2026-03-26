@@ -662,4 +662,20 @@ size_t create_page_aligned_size(size_t requested_size, size_t page_size) {
   }
 }
 
+size_t get_mem_pitch_for_2d_image(ze_context_handle_t context,
+                                  ze_device_handle_t device, size_t image_width,
+                                  size_t image_height,
+                                  unsigned int element_size_in_bytes,
+                                  size_t *row_pitch) {
+  ze_context_handle_t context_initial = context;
+  ze_device_handle_t device_initial = device;
+  EXPECT_NE(nullptr, row_pitch);
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemGetPitchFor2dImage(context, device, image_width, image_height,
+                              element_size_in_bytes, row_pitch));
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(device, device_initial);
+  return row_pitch == nullptr ? 0 : *row_pitch;
+}
+
 }; // namespace level_zero_tests

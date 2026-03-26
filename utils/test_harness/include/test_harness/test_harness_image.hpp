@@ -126,6 +126,9 @@ get_ze_image_alloc_properties_ext(ze_image_handle_t image);
 ze_image_memory_properties_exp_t
 get_ze_image_mem_properties_exp(ze_image_handle_t image);
 
+uint64_t get_image_device_offset_exp(ze_image_handle_t image,
+                                     uint64_t *device_offset);
+
 void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output);
 void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output);
 
