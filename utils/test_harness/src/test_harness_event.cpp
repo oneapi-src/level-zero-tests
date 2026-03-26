@@ -381,6 +381,66 @@ void open_ipc_event_handle(ze_context_handle_t context,
   EXPECT_EQ(context, context_initial);
 }
 
+ze_event_handle_t
+create_counter_based_event(ze_event_counter_based_desc_t &desc) {
+  return create_counter_based_event(
+      lzt::get_default_context(),
+      lzt::get_default_device(lzt::get_default_driver()), desc);
+}
+
+ze_event_handle_t
+create_counter_based_event(ze_device_handle_t device,
+                           ze_event_counter_based_desc_t &desc) {
+
+  return create_counter_based_event(lzt::get_default_context(), device, desc);
+}
+
+ze_event_handle_t
+create_counter_based_event(ze_context_handle_t context,
+                           ze_device_handle_t device,
+                           ze_event_counter_based_desc_t &desc) {
+  ze_context_handle_t context_initial = context;
+  ze_device_handle_t device_initial = device;
+  ze_event_handle_t event = nullptr;
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventCounterBasedCreate(context, device, &desc, &event));
+  EXPECT_NE(nullptr, event);
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(device, device_initial);
+  return event;
+}
+
+void event_counter_based_get_device_address(ze_event_handle_t event,
+                                            uint64_t *completion_value,
+                                            uint64_t *device_address) {
+  EXPECT_ZE_RESULT_SUCCESS(zeEventCounterBasedGetDeviceAddress(
+      event, completion_value, device_address));
+}
+
+void event_counter_based_get_ipc_handle(
+    ze_event_handle_t event, ze_ipc_event_counter_based_handle_t *ipc_handle) {
+  EXPECT_ZE_RESULT_SUCCESS(zeEventCounterBasedGetIpcHandle(event, ipc_handle));
+}
+
+void event_counter_based_open_ipc_handle(
+    ze_context_handle_t context, ze_ipc_event_counter_based_handle_t ipc_handle,
+    ze_event_handle_t *event) {
+  ze_context_handle_t context_initial = context;
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventCounterBasedOpenIpcHandle(context, ipc_handle, event));
+  EXPECT_EQ(context, context_initial);
+}
+
+void event_counter_based_open_ipc_handle(
+    ze_ipc_event_counter_based_handle_t ipc_handle, ze_event_handle_t *event) {
+  event_counter_based_open_ipc_handle(lzt::get_default_context(), ipc_handle,
+                                      event);
+}
+
+void event_counter_based_close_ipc_handle(ze_event_handle_t event) {
+  EXPECT_ZE_RESULT_SUCCESS(zeEventCounterBasedCloseIpcHandle(event));
+}
+
 void signal_event_from_host(ze_event_handle_t hEvent) {
   auto event_initial = hEvent;
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent));

@@ -45,7 +45,6 @@ public:
   void create_events(std::vector<ze_event_handle_t> &events, size_t event_count,
                      ze_event_scope_flags_t signal,
                      ze_event_scope_flags_t wait);
-
   void destroy_event(ze_event_handle_t event);
   void destroy_events(std::vector<ze_event_handle_t> &events);
 
@@ -121,6 +120,27 @@ public:
   zeEventPool ep;
 };
 
+ze_event_handle_t
+create_counter_based_event(ze_event_counter_based_desc_t &desc);
+ze_event_handle_t
+create_counter_based_event(ze_context_handle_t context,
+                           ze_device_handle_t device,
+                           ze_event_counter_based_desc_t &desc);
+ze_event_handle_t
+create_counter_based_event(ze_device_handle_t device,
+                           ze_event_counter_based_desc_t &desc);
+
+void event_counter_based_get_device_address(ze_event_handle_t event,
+                                            uint64_t *completion_value,
+                                            uint64_t *device_address);
+void event_counter_based_get_ipc_handle(
+    ze_event_handle_t event, ze_ipc_event_counter_based_handle_t *ipc_handle);
+void event_counter_based_open_ipc_handle(
+    ze_context_handle_t context, ze_ipc_event_counter_based_handle_t ipc_handle,
+    ze_event_handle_t *event);
+void event_counter_based_open_ipc_handle(
+    ze_ipc_event_counter_based_handle_t ipc_handle, ze_event_handle_t *event);
+void event_counter_based_close_ipc_handle(ze_event_handle_t event);
 }; // namespace level_zero_tests
 
 #endif

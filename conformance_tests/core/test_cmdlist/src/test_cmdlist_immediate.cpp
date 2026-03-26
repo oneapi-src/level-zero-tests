@@ -59,20 +59,15 @@ protected:
   ze_command_list_handle_t cmdlist_immediate_default_mode = nullptr;
 };
 
-class zeImmediateCommandListEventCounterTests : public lzt::zeEventPoolTests {
+class zeImmediateCommandListEventCounterTests : public ::testing::Test {
 protected:
   void SetUp() override {
-    ze_event_pool_desc_t eventPoolDesc = {};
-    eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-    eventPoolDesc.count = 10;
-
-    ze_event_pool_counter_based_exp_desc_t counterBasedExtension = {
-        ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
-    counterBasedExtension.flags =
-        ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE;
-    eventPoolDesc.pNext = &counterBasedExtension;
-    ep.InitEventPool(eventPoolDesc);
-    ep.create_event(event0, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+    ze_event_counter_based_desc_t desc = {};
+    desc.stype = ZE_STRUCTURE_TYPE_EVENT_COUNTER_BASED_DESC;
+    desc.flags = ZE_EVENT_COUNTER_BASED_FLAG_IMMEDIATE |
+                 ZE_EVENT_COUNTER_BASED_FLAG_HOST_VISIBLE;
+    desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    event0 = lzt::create_counter_based_event(desc);
 
     cmdlist.push_back(lzt::create_immediate_command_list(
         lzt::zeDevice::get_instance()->get_device(),
@@ -93,7 +88,7 @@ protected:
   }
 
   void TearDown() override {
-    ep.destroy_event(event0);
+    lzt::destroy_event(event0);
     for (auto cl : cmdlist) {
       lzt::destroy_command_list(cl);
     }
@@ -419,11 +414,6 @@ RunAppendLaunchKernelEvent(std::vector<ze_command_list_handle_t> cmdlist,
 LZT_TEST_F(
     zeImmediateCommandListEventCounterTests,
     GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecution) {
-  if (!lzt::check_if_extension_supported(
-          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
-    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
-                 << " not supported";
-  }
   for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, event0, i, false);
@@ -435,11 +425,6 @@ LZT_TEST_F(
     GivenInOrderImmediateCommandListWhenAppendLaunchKernelInstructionCounterEventThenVerifyImmediateExecutionWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
 
-  if (!lzt::check_if_extension_supported(
-          lzt::get_default_driver(), ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
-    GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
-                 << " not supported";
-  }
   for (size_t i = 1; i <= cmdlist.size(); i++) {
     LOG_INFO << "Running " << i << " command list(s)";
     RunAppendLaunchKernelEvent(cmdlist, event0, i, true);
@@ -1641,26 +1626,15 @@ protected:
 
     if (event_type == EventType::Regular) {
       ep.InitEventPool(1);
-    } else if (event_type == EventType::CounterBased) {
-      if (!lzt::check_if_extension_supported(
-              lzt::get_default_driver(),
-              ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME)) {
-        GTEST_SKIP() << "Extension " << ZE_EVENT_POOL_COUNTER_BASED_EXP_NAME
-                     << " not supported";
-      }
-      ze_event_pool_desc_t eventPoolDesc = {};
-      eventPoolDesc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-      eventPoolDesc.count = 1;
-      ze_event_pool_counter_based_exp_desc_t counterBasedExtension = {
-          ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
-      counterBasedExtension.flags =
-          ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE;
-      eventPoolDesc.pNext = &counterBasedExtension;
-      ep.InitEventPool(eventPoolDesc);
-    }
-
-    if (event_type != EventType::None) {
       ep.create_event(event, ZE_EVENT_SCOPE_FLAG_HOST, 0);
+    } else if (event_type == EventType::CounterBased) {
+      ze_event_counter_based_desc_t desc = {};
+      desc.stype = ZE_STRUCTURE_TYPE_EVENT_COUNTER_BASED_DESC;
+      desc.flags = ZE_EVENT_COUNTER_BASED_FLAG_IMMEDIATE |
+                   ZE_EVENT_COUNTER_BASED_FLAG_HOST_VISIBLE;
+      desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+      desc.wait = 0;
+      event = lzt::create_counter_based_event(desc);
     }
 
     cmdlist_immediate = lzt::create_immediate_command_list(
@@ -1672,8 +1646,10 @@ protected:
 
   void TearDown() override {
     lzt::destroy_command_list(cmdlist_immediate);
-    if (event_type != EventType::None) {
+    if (event_type == EventType::Regular) {
       ep.destroy_event(event);
+    } else if (event_type == EventType::CounterBased) {
+      lzt::destroy_event(event);
     }
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
