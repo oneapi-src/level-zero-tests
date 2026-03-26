@@ -153,7 +153,7 @@ void allocate_mem_and_get_ipc_handle(ze_context_handle_t context,
 void get_ipc_handle(ze_context_handle_t context, ze_ipc_mem_handle_t *handle,
                     void *memory);
 void get_ipc_handle_with_properties(ze_context_handle_t context, void *memory,
-                                    void *pNext,
+                                    void *p_next,
                                     ze_ipc_mem_handle_t *mem_handle);
 void put_ipc_handle(ze_context_handle_t context, ze_ipc_mem_handle_t handle);
 void open_ipc_handle(ze_context_handle_t context, ze_device_handle_t device,
@@ -182,9 +182,18 @@ void physical_device_memory_allocation(ze_context_handle_t context,
                                        ze_device_handle_t device,
                                        size_t allocation_size,
                                        ze_physical_mem_handle_t *memory);
+void physical_device_memory_allocation(ze_context_handle_t context,
+                                       ze_device_handle_t device,
+                                       size_t allocation_size,
+                                       ze_physical_mem_handle_t *memory,
+                                       const void *p_next);
 void physical_host_memory_allocation(ze_context_handle_t context,
                                      size_t allocation_size,
                                      ze_physical_mem_handle_t *memory);
+void physical_host_memory_allocation(ze_context_handle_t context,
+                                     size_t allocation_size,
+                                     ze_physical_mem_handle_t *memory,
+                                     const void *p_next);
 void physical_memory_destroy(ze_context_handle_t context,
                              ze_physical_mem_handle_t memory);
 void virtual_memory_map(ze_context_handle_t context,
@@ -204,6 +213,9 @@ void virtual_memory_reservation_set_access(ze_context_handle_t context,
 void *reserve_allocate_and_map_device_memory(
     ze_context_handle_t context, ze_device_handle_t device, size_t &allocSize,
     ze_physical_mem_handle_t *reservedPhysicalMemory);
+void *reserve_allocate_and_map_device_memory(
+    ze_context_handle_t context, ze_device_handle_t device, size_t &alloc_size,
+    ze_physical_mem_handle_t *reserved_physical_memory, const void *p_next);
 void unmap_and_free_reserved_memory(
     ze_context_handle_t context, void *reservedMemory,
     ze_physical_mem_handle_t reservedPhysicalMemory, size_t allocSize);

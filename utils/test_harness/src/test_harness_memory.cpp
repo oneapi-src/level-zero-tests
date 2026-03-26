@@ -455,10 +455,10 @@ void get_ipc_handle(ze_context_handle_t context,
   EXPECT_ZE_RESULT_SUCCESS(zeMemGetIpcHandle(context, memory, mem_handle));
 }
 void get_ipc_handle_with_properties(ze_context_handle_t context, void *memory,
-                                    void *pNext,
+                                    void *p_next,
                                     ze_ipc_mem_handle_t *mem_handle) {
   EXPECT_ZE_RESULT_SUCCESS(
-      zeMemGetIpcHandleWithProperties(context, memory, pNext, mem_handle));
+      zeMemGetIpcHandleWithProperties(context, memory, p_next, mem_handle));
 }
 
 void put_ipc_handle(ze_context_handle_t context,
@@ -525,6 +525,24 @@ void *reserve_allocate_and_map_device_memory(
   return reservedMemory;
 }
 
+void *reserve_allocate_and_map_device_memory(
+    ze_context_handle_t context, ze_device_handle_t device, size_t &alloc_size,
+    ze_physical_mem_handle_t *reserved_physical_memory, const void *p_next) {
+  size_t page_size = 0;
+  void *reserved_memory = nullptr;
+  lzt::query_page_size(context, device, alloc_size, &page_size);
+  alloc_size = lzt::create_page_aligned_size(alloc_size, page_size);
+  lzt::physical_device_memory_allocation(context, device, alloc_size,
+                                         reserved_physical_memory, p_next);
+  lzt::virtual_memory_reservation(context, nullptr, alloc_size,
+                                  &reserved_memory);
+  EXPECT_NE(nullptr, reserved_memory);
+  EXPECT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
+      context, reserved_memory, alloc_size, *reserved_physical_memory, 0,
+      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  return reserved_memory;
+}
+
 void unmap_and_free_reserved_memory(
     ze_context_handle_t context, void *reservedMemory,
     ze_physical_mem_handle_t reservedPhysicalMemory, size_t allocSize) {
@@ -576,11 +594,34 @@ void physical_device_memory_allocation(ze_context_handle_t context,
   lzt::physical_memory_allocation(context, device, &physDesc, memory);
 }
 
+void physical_device_memory_allocation(ze_context_handle_t context,
+                                       ze_device_handle_t device,
+                                       size_t allocation_size,
+                                       ze_physical_mem_handle_t *memory,
+                                       const void *p_next) {
+  ze_physical_mem_desc_t phys_desc = {ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC,
+                                      p_next};
+  phys_desc.size = allocation_size;
+  phys_desc.flags = ZE_PHYSICAL_MEM_FLAG_ALLOCATE_ON_DEVICE;
+  lzt::physical_memory_allocation(context, device, &phys_desc, memory);
+}
+
 void physical_host_memory_allocation(ze_context_handle_t context,
                                      size_t allocation_size,
                                      ze_physical_mem_handle_t *memory) {
   ze_physical_mem_desc_t physDesc = {ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC,
                                      nullptr};
+  physDesc.size = allocation_size;
+  physDesc.flags = ZE_PHYSICAL_MEM_FLAG_ALLOCATE_ON_HOST;
+  lzt::physical_memory_allocation(context, nullptr, &physDesc, memory);
+}
+
+void physical_host_memory_allocation(ze_context_handle_t context,
+                                     size_t allocation_size,
+                                     ze_physical_mem_handle_t *memory,
+                                     const void *pNext) {
+  ze_physical_mem_desc_t physDesc = {ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC,
+                                     pNext};
   physDesc.size = allocation_size;
   physDesc.flags = ZE_PHYSICAL_MEM_FLAG_ALLOCATE_ON_HOST;
   lzt::physical_memory_allocation(context, nullptr, &physDesc, memory);
