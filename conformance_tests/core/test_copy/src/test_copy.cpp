@@ -2187,6 +2187,12 @@ void zeCommandListAppendMemoryCopyTests::
   ze_event_handle_t hEvent = nullptr;
   ze_copy_region_t dstRegion = {};
   ze_copy_region_t srcRegion = {};
+  dstRegion.width = size;
+  dstRegion.height = 1;
+  dstRegion.depth = 1;
+  srcRegion.width = size;
+  srcRegion.height = 1;
+  srcRegion.depth = 1;
 
   ep.create_event(hEvent);
   auto hEvent_before = hEvent;
