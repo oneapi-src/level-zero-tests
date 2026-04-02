@@ -97,18 +97,8 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
   lzt::send_ipc_handle(ipc_handle);
 
   // Free device memory once receiver is done
-  int child_status;
-  pid_t clientPId = wait(&child_status);
-  if (clientPId < 0) {
-    std::cerr << "Error waiting for receiver process " << strerror(errno)
-              << "\n";
-  }
-
-  if (WIFEXITED(child_status)) {
-    if (WEXITSTATUS(child_status)) {
-      FAIL() << "Receiver process failed memory verification\n";
-    }
-  }
+  c.wait();
+  EXPECT_EQ(c.exit_code(), 0);
 
   ASSERT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context, ipc_handle));
   bipc::shared_memory_object::remove("ipc_put_handle_test");

@@ -35,7 +35,7 @@ static void child_put_device_test(size_t size, ze_ipc_memory_flags_t flags,
   memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
          sizeof(ipc_descriptor));
 
-  EXPECT_ZE_RESULT_SUCCESS(
+  ASSERT_ZE_RESULT_SUCCESS(
       zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
@@ -47,7 +47,7 @@ static void child_put_device_test(size_t size, ze_ipc_memory_flags_t flags,
   LOG_DEBUG << "[Child] Validating buffer received correctly";
   lzt::validate_data_pattern(buffer, size, 1);
 
-  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
   lzt::free_memory(context, buffer);
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::destroy_context(context);
@@ -77,7 +77,7 @@ static void child_put_subdevice_test(size_t size, ze_ipc_memory_flags_t flags,
          sizeof(ipc_descriptor));
 
   // Open IPC buffer with root device
-  EXPECT_ZE_RESULT_SUCCESS(
+  ASSERT_ZE_RESULT_SUCCESS(
       zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
@@ -97,7 +97,7 @@ static void child_put_subdevice_test(size_t size, ze_ipc_memory_flags_t flags,
     lzt::destroy_command_bundle(cmd_bundle);
   }
 
-  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
+  ASSERT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
   lzt::free_memory(context, buffer);
   lzt::destroy_context(context);
 
