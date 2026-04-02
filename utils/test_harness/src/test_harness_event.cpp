@@ -145,6 +145,19 @@ double get_timestamp_time(const ze_kernel_timestamp_data_t *timestamp,
   return time_ns;
 }
 
+double get_bandwidth(size_t size_in_bytes, double time_ns,
+                     measurement_unit_t unit) {
+  const auto size_bytes = to_f64(size_in_bytes);
+  const auto time_s = time_ns / 1e9;
+  switch (unit) {
+  case measurement_unit_t::gigabytes_per_second:
+    return size_bytes / (1000.0 * 1000.0 * 1000.0) / time_s;
+  case measurement_unit_t::gibibytes_per_second:
+    return size_bytes / (1024.0 * 1024.0 * 1024.0) / time_s;
+  }
+  throw std::invalid_argument("Unsupported measurement unit");
+}
+
 double
 get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
                               const ze_device_handle_t &device,

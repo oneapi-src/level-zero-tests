@@ -15,6 +15,7 @@
 namespace lzt = level_zero_tests;
 
 namespace level_zero_tests {
+enum class measurement_unit_t { gigabytes_per_second, gibibytes_per_second };
 
 class zeEventPool {
 public:
@@ -87,6 +88,9 @@ double get_timestamp_time(const ze_kernel_timestamp_data_t *timestamp,
                           uint64_t kernel_timestamp_valid_bits,
                           const ze_structure_type_t property_type =
                               ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES);
+double get_bandwidth(
+    size_t size_in_bytes, double time_ns,
+    measurement_unit_t unit = measurement_unit_t::gigabytes_per_second);
 double
 get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
                               const ze_device_handle_t &device,
