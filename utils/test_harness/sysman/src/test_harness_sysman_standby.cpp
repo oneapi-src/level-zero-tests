@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2020 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -35,9 +35,10 @@ zes_standby_promo_mode_t get_standby_mode(zes_standby_handle_t pStandByHandle) {
   EXPECT_ZE_RESULT_SUCCESS(zesStandbyGetMode(pStandByHandle, &pMode));
   return pMode;
 }
-void set_standby_mode(zes_standby_handle_t pStandByHandle,
-                      zes_standby_promo_mode_t pMode) {
-  EXPECT_ZE_RESULT_SUCCESS(zesStandbySetMode(pStandByHandle, pMode));
+ze_result_t set_standby_mode(zes_standby_handle_t pStandByHandle,
+                             zes_standby_promo_mode_t pMode) {
+  ze_result_t result = zesStandbySetMode(pStandByHandle, pMode);
+  return result;
 }
 zes_standby_properties_t
 get_standby_properties(zes_standby_handle_t pStandbyHandle) {

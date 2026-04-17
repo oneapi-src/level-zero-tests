@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -82,6 +82,7 @@ LZT_TEST_F(
     }
   }
 }
+
 LZT_TEST_F(
     STANDBY_TEST,
     GivenValidDeviceWhenSettingModeThenExpectzesSysmanStandbySetModeFollowedByzesSysmanStandbyGetModeToMatch) {
@@ -93,11 +94,23 @@ LZT_TEST_F(
       zes_standby_promo_mode_t standByMode = {};
       zes_standby_promo_mode_t standByMode1 = {};
       standByMode = ZES_STANDBY_PROMO_MODE_DEFAULT;
-      lzt::set_standby_mode(p_handle, standByMode);
+      ze_result_t result = lzt::set_standby_mode(p_handle, standByMode);
+      if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        LOG_INFO << "Unable to set standby mode on device " << device
+                 << ": Unsupported feature.";
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(result);
       standByMode1 = lzt::get_standby_mode(p_handle);
       EXPECT_EQ(standByMode, standByMode1);
       standByMode = ZES_STANDBY_PROMO_MODE_NEVER;
-      lzt::set_standby_mode(p_handle, standByMode);
+      result = lzt::set_standby_mode(p_handle, standByMode);
+      if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        LOG_INFO << "Unable to set standby mode on device " << device
+                 << ": Unsupported feature.";
+        continue;
+      }
+      EXPECT_ZE_RESULT_SUCCESS(result);
       standByMode1 = lzt::get_standby_mode(p_handle);
       EXPECT_EQ(standByMode, standByMode1);
     }
