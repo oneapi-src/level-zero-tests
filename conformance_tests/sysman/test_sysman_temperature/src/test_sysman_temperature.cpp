@@ -146,7 +146,7 @@ LZT_TEST_F(
           EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
         }
         EXPECT_GE(properties.type, ZES_TEMP_SENSORS_GLOBAL);
-        EXPECT_LE(properties.type, ZES_TEMP_SENSORS_MEMORY_MIN);
+        EXPECT_LE(properties.type, ZES_TEMP_SENSORS_VOLTAGE_REGULATOR);
       }
     } else {
       LOG_INFO << "No temperature handles found for this device!";
