@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -376,8 +376,9 @@ LZT_TEST_F(
         EXPECT_NE(nullptr, p_sched_handle);
         auto cur_mode = lzt::get_scheduler_current_mode(p_sched_handle);
         if (cur_mode != ZES_SCHED_MODE_EXCLUSIVE) {
-          auto timeout_pretest_properties =
-              lzt::get_timeout_properties(p_sched_handle, false);
+          zes_sched_timeout_properties_t timeout_pretest_properties = {
+              ZES_STRUCTURE_TYPE_SCHED_TIMEOUT_PROPERTIES, nullptr};
+          timeout_pretest_properties.watchdogTimeout = 5000;
           auto timeslice_pretest_properties =
               lzt::get_timeslice_properties(p_sched_handle, false);
           lzt::set_exclusive_mode(p_sched_handle);
