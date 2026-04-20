@@ -846,12 +846,17 @@ void run_metric_tracer_read_test(
 
       if (!synchronous) {
         int32_t j = 0;
-        size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
+        size_t raw_data_size = 256; /* 200B buffer */
         std::vector<uint8_t> raw_data_buffer(raw_data_size, 0);
         do {
           raw_data_size = raw_data_buffer.size();
           result = zetMetricTracerReadDataExp(
               metric_tracer_handle, &raw_data_size, raw_data_buffer.data());
+          if (result != ZE_RESULT_NOT_READY && result != ZE_RESULT_SUCCESS) {
+            FAIL() << "zetMetricTracerReadDataExp returned unexpected result: "
+                   << result;
+            break;
+          }
           if (result == ZE_RESULT_NOT_READY) {
             if (j == number_of_retries) {
               FAIL() << "Exceeded limit of retries of "
@@ -877,13 +882,28 @@ void run_metric_tracer_read_test(
 
       executeMatrixMultiplyWorkload(device, commandQueue, commandList);
 
-      /* Read partial data while tracer is enabled */
-      size_t enabled_read_data_size = 1024; /* 1KB buffer */
-      std::vector<uint8_t> enabled_raw_data(enabled_read_data_size);
+      /* Poll until HW buffer is filled with data from the workload, or timeout
+       */
+      size_t enabled_read_data_size = 1024;
+      std::vector<uint8_t> enabled_raw_data(
+          enabled_read_data_size); /* 1KB buffer */
+      for (int32_t poll = 0; poll <= number_of_retries; poll++) {
+        result = zetMetricTracerReadDataExp(metric_tracer_handle,
+                                            &enabled_read_data_size,
+                                            enabled_raw_data.data());
 
-      ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-          metric_tracer_handle, &enabled_read_data_size,
-          enabled_raw_data.data()));
+        ASSERT_ZE_RESULT_SUCCESS(result);
+        if (enabled_read_data_size > 0) {
+          break; // data received, stop polling
+        }
+        if (poll < number_of_retries) {
+          LOG_INFO << "zetMetricTracerReadDataExp returned zero data, "
+                      "retrying ("
+                   << poll + 1 << "/" << number_of_retries << ")";
+          std::this_thread::sleep_for(
+              std::chrono::milliseconds(retry_wait_milliseconds));
+        }
+      }
       EXPECT_NE(enabled_read_data_size, 0)
           << "zetMetricTracerReadDataExp on an enabled "
              "tracer returned zero data size";
