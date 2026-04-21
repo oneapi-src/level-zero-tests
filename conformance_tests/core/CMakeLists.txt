@@ -1,6 +1,7 @@
-# Copyright (C) 2020 Intel Corporation
+# Copyright (C) 2020-2026 Intel Corporation
 # SPDX-License-Identifier: MIT
 
+add_subdirectory(test_api_interop)
 add_subdirectory(test_barrier)
 add_subdirectory(test_cmdlist)
 add_subdirectory(test_cmdqueue)

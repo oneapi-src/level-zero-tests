@@ -42,6 +42,9 @@ if(NOT TARGET GTest::GTest AND NOT TARGET GMock::GMock AND NOT BUILD_ZE_PERF_TES
 endif()
 enable_testing()
 
+if(WIN32)
+  add_compile_definitions(BOOST_USE_WINAPI_VERSION=0x0601)
+endif()
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
