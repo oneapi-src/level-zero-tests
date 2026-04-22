@@ -354,7 +354,8 @@ static void run_ipc_host_mem_access_test_opaque(size_t size,
 static void run_ipc_mem_access_test_opaque_with_properties(
     ipc_mem_access_test_t test_type, size_t size, bool reserved,
     ze_ipc_memory_flags_t flags, bool is_immediate,
-    ze_ipc_mem_handle_type_flags_t handle_type_flags) {
+    ze_ipc_mem_handle_type_flags_t handle_type_flags,
+    bool use_copy_engine = false) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Parent zeInit failed: " +
@@ -437,7 +438,27 @@ static void run_ipc_mem_access_test_opaque_with_properties(
       device = lzt::zeDevice::get_instance()->get_device();
     }
 
-    auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+    // Check for copy-only engine if requested
+    uint32_t ordinal = 0;
+    if (use_copy_engine) {
+      auto cmd_queue_group_props =
+          lzt::get_command_queue_group_properties(device);
+      auto copy_ordinal = lzt::get_queue_ordinal(
+          cmd_queue_group_props, ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY,
+          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE);
+      if (!copy_ordinal.has_value()) {
+        LOG_WARNING << "[Parent] No copy-only engine available. Skipping test.";
+        lzt::destroy_context(context);
+        GTEST_SKIP();
+      }
+      ordinal = *copy_ordinal;
+    }
+
+    auto cmd_bundle =
+        use_copy_engine
+            ? lzt::create_command_bundle(context, device, 0, ordinal,
+                                         is_immediate)
+            : lzt::create_command_bundle(context, device, is_immediate);
 
     void *buffer = lzt::allocate_host_memory(size, 1, context);
     memset(buffer, 0, size);
@@ -489,8 +510,9 @@ static void run_ipc_mem_access_test_opaque_with_properties(
 
     // copy ipc handle data to shm
     shared_data_t test_data = {
-        test_type,    TEST_NONSOCK, to_u32(size),     flags,
-        is_immediate, ipc_handle,   device_id_parent, device_id_child};
+        test_type,      TEST_NONSOCK, to_u32(size),     flags,
+        is_immediate,   ipc_handle,   device_id_parent, device_id_child,
+        use_copy_engine};
     std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
     // Free device memory once receiver is done
@@ -1009,6 +1031,134 @@ LZT_TEST(
   run_ipc_mem_access_test_opaque_with_properties(
       TEST_MULTIDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true,
       ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithProperties,
+    GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCWithDefaultHandleTypeOnCopyEngineCmdListThenParentProcessReadsMemoryCorrectly) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_DEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithProperties,
+    GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCWithDefaultHandleTypeOnCopyEngineImmediateCmdListThenParentProcessReadsMemoryCorrectly) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_DEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithProperties,
+    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCWithDefaultHandleTypeOnCopyEngineCmdListThenChildProcessReadsMemoryCorrectly) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_DEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithProperties,
+    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCWithDefaultHandleTypeOnCopyEngineImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_DEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithProperties,
+    GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeOnCopyEngineCmdListThenParentProcessReadsMemoryCorrectly) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_DEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithProperties,
+    GivenL0MemoryAllocatedInChildProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeOnCopyEngineImmediateCmdListThenParentProcessReadsMemoryCorrectly) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_DEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithProperties,
+    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeOnCopyEngineCmdListThenChildProcessReadsMemoryCorrectly) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_DEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithProperties,
+    GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeOnCopyEngineImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_DEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesSubDevice,
+    GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCWithDefaultHandleTypeOnCopyEngineCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_SUBDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
+      false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesSubDevice,
+    GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCWithDefaultHandleTypeOnCopyEngineImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_SUBDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesSubDevice,
+    GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeOnCopyEngineCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_SUBDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
+      false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesSubDevice,
+    GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCWithFabricAccessibleHandleTypeOnCopyEngineImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueue) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_SUBDEVICE_ACCESS, 4096, true, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
+    GivenL0MemoryWithDefaultHandleTypeOnCopyEngineCmdListThenChildReadsCorrectlyOnDifferentDevice) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
+      false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
+    GivenL0MemoryWithDefaultHandleTypeOnCopyEngineImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
+      true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
+    GivenL0MemoryWithFabricAccessibleHandleTypeOnCopyEngineCmdListThenChildReadsCorrectlyOnDifferentDevice) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
+      false, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandleWithPropertiesMultiDevice,
+    GivenL0MemoryWithFabricAccessibleHandleTypeOnCopyEngineImmediateCmdListThenChildReadsCorrectlyOnDifferentDevice) {
+  run_ipc_mem_access_test_opaque_with_properties(
+      TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
+      true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
 }
 
 } // namespace

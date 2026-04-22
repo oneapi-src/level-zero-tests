@@ -122,11 +122,32 @@ static void child_subdevice_access_test(size_t size,
 static void child_device_access_test_opaque(size_t size,
                                             ze_ipc_memory_flags_t flags,
                                             bool is_immediate,
-                                            ze_ipc_mem_handle_t ipc_handle) {
+                                            ze_ipc_mem_handle_t ipc_handle,
+                                            bool use_copy_engine) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
-  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+
+  uint32_t ordinal = 0;
+  if (use_copy_engine) {
+    auto cmd_queue_group_props =
+        lzt::get_command_queue_group_properties(device);
+    auto copy_ordinal = lzt::get_queue_ordinal(
+        cmd_queue_group_props, ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY,
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE);
+    if (!copy_ordinal.has_value()) {
+      LOG_WARNING << "[Child] No copy-only engine available. Skipping.";
+      lzt::destroy_context(context);
+      exit(0);
+    }
+    ordinal = *copy_ordinal;
+  }
+
+  auto cmd_bundle =
+      use_copy_engine
+          ? lzt::create_command_bundle(context, device, 0, ordinal,
+                                       is_immediate)
+          : lzt::create_command_bundle(context, device, is_immediate);
   void *memory = nullptr;
 
   EXPECT_ZE_RESULT_SUCCESS(
@@ -156,7 +177,8 @@ static void child_device_access_test_opaque(size_t size,
 static void child_subdevice_access_test_opaque(size_t size,
                                                ze_ipc_memory_flags_t flags,
                                                bool is_immediate,
-                                               ze_ipc_mem_handle_t ipc_handle) {
+                                               ze_ipc_mem_handle_t ipc_handle,
+                                               bool use_copy_engine) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
@@ -174,16 +196,35 @@ static void child_subdevice_access_test_opaque(size_t size,
   memset(buffer, 0, size);
   // For each sub device found, use IPC buffer in a copy operation and validate
   for (size_t i = 0U; i < sub_device_count; i++) {
-    auto cmd_bundle =
-        lzt::create_command_bundle(context, sub_devices[i], is_immediate);
+    uint32_t ordinal = 0;
+    ze_device_handle_t sub_device = sub_devices[i];
+    if (use_copy_engine) {
+      auto cmd_queue_group_props =
+          lzt::get_command_queue_group_properties(sub_device);
+      auto copy_ordinal = lzt::get_queue_ordinal(
+          cmd_queue_group_props, ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY,
+          ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE);
+      if (!copy_ordinal.has_value()) {
+        LOG_WARNING << "[Child] No copy-only engine on sub-device " << i
+                    << ". Skipping sub-device.";
+        continue;
+      }
+      ordinal = *copy_ordinal;
+    }
 
-    lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+    auto sub_bundle =
+        use_copy_engine
+            ? lzt::create_command_bundle(context, sub_device, 0, ordinal,
+                                         is_immediate)
+            : lzt::create_command_bundle(context, sub_device, is_immediate);
+
+    lzt::append_memory_copy(sub_bundle.list, buffer, memory, size);
+    lzt::close_command_list(sub_bundle.list);
+    lzt::execute_and_sync_command_bundle(sub_bundle, UINT64_MAX);
 
     LOG_DEBUG << "[Child] Validating buffer received correctly";
     lzt::validate_data_pattern(buffer, size, 1);
-    lzt::destroy_command_bundle(cmd_bundle);
+    lzt::destroy_command_bundle(sub_bundle);
   }
 
   EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
@@ -222,12 +263,10 @@ static void child_host_access_test_opaque(size_t size,
   }
 }
 
-static void child_multidevice_access_test_opaque(size_t size,
-                                                 ze_ipc_memory_flags_t flags,
-                                                 bool is_immediate,
-                                                 ze_ipc_mem_handle_t ipc_handle,
-                                                 uint32_t device_id_parent,
-                                                 uint32_t device_id_child) {
+static void child_multidevice_access_test_opaque(
+    size_t size, ze_ipc_memory_flags_t flags, bool is_immediate,
+    ze_ipc_mem_handle_t ipc_handle, uint32_t device_id_parent,
+    uint32_t device_id_child, bool use_copy_engine) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
@@ -241,7 +280,28 @@ static void child_multidevice_access_test_opaque(size_t size,
 
   // Use the device specified by parent for accessing memory
   auto device = devices[device_id_child];
-  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+
+  uint32_t ordinal = 0;
+  if (use_copy_engine) {
+    auto cmd_queue_group_props =
+        lzt::get_command_queue_group_properties(device);
+    auto copy_ordinal = lzt::get_queue_ordinal(
+        cmd_queue_group_props, ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY,
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE);
+    if (!copy_ordinal.has_value()) {
+      LOG_WARNING << "[Child] No copy-only engine available on device "
+                  << device_id_child << ". Skipping.";
+      lzt::destroy_context(context);
+      exit(0);
+    }
+    ordinal = *copy_ordinal;
+  }
+
+  auto cmd_bundle =
+      use_copy_engine
+          ? lzt::create_command_bundle(context, device, 0, ordinal,
+                                       is_immediate)
+          : lzt::create_command_bundle(context, device, is_immediate);
   void *memory = nullptr;
 
   EXPECT_ZE_RESULT_SUCCESS(
@@ -301,9 +361,9 @@ int main() {
   switch (shared_data.test_type) {
   case TEST_DEVICE_ACCESS:
     if (shared_data.test_sock_type == TEST_NONSOCK) {
-      child_device_access_test_opaque(shared_data.size, shared_data.flags,
-                                      shared_data.is_immediate,
-                                      shared_data.ipc_handle);
+      child_device_access_test_opaque(
+          shared_data.size, shared_data.flags, shared_data.is_immediate,
+          shared_data.ipc_handle, shared_data.use_copy_engine);
 #ifdef __linux__
     } else {
       child_device_access_test(shared_data.size, shared_data.flags,
@@ -313,9 +373,9 @@ int main() {
     break;
   case TEST_SUBDEVICE_ACCESS:
     if (shared_data.test_sock_type == TEST_NONSOCK) {
-      child_subdevice_access_test_opaque(shared_data.size, shared_data.flags,
-                                         shared_data.is_immediate,
-                                         shared_data.ipc_handle);
+      child_subdevice_access_test_opaque(
+          shared_data.size, shared_data.flags, shared_data.is_immediate,
+          shared_data.ipc_handle, shared_data.use_copy_engine);
     } else {
       break; // Currently supporting only device access test scenario
     }
@@ -325,7 +385,7 @@ int main() {
       child_multidevice_access_test_opaque(
           shared_data.size, shared_data.flags, shared_data.is_immediate,
           shared_data.ipc_handle, shared_data.device_id_parent,
-          shared_data.device_id_child);
+          shared_data.device_id_child, shared_data.use_copy_engine);
     } else {
       break; // Currently supporting only opaque test scenario
     }

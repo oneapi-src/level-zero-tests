@@ -27,6 +27,7 @@ typedef struct {
   ze_ipc_mem_handle_t ipc_handle;
   uint32_t device_id_parent; // Device index for parent (memory allocation)
   uint32_t device_id_child;  // Device index for child (memory access)
+  bool use_copy_engine;      // Use copy-only engine for memory copy
 } shared_data_t;
 
 #endif

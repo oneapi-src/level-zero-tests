@@ -128,4 +128,29 @@ LZT_TEST_F(
   EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context_, ipc_memory_));
 }
 
+LZT_TEST_F(
+    zeIpcMemHandleTests,
+    GivenDeviceMemoryAllocationWhenGettingIpcMemHandleWithPropertiesThenSuccessIsReturned) {
+  ze_result_t result = zeInit(0);
+  if (result) {
+    throw std::runtime_error("zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_TRACE << "Driver initialized";
+  level_zero_tests::print_platform_overview();
+  context_ = lzt::create_context();
+  memory_ = lzt::allocate_device_memory(1, 1, 0, context_);
+
+  // Use zeMemGetIpcHandleWithProperties with extension properties
+  ze_ipc_mem_handle_type_ext_desc_t handle_type_desc = {};
+  handle_type_desc.stype = ZE_STRUCTURE_TYPE_IPC_MEM_HANDLE_TYPE_EXT_DESC;
+  handle_type_desc.pNext = nullptr;
+  handle_type_desc.typeFlags = ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE;
+
+  EXPECT_ZE_RESULT_SUCCESS(zeMemGetIpcHandleWithProperties(
+      context_, memory_, &handle_type_desc, &ipc_mem_handle_));
+  lzt::free_memory(context_, memory_);
+  lzt::destroy_context(context_);
+}
+
 } // namespace
