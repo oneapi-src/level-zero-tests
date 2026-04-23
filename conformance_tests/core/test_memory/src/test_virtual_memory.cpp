@@ -942,4 +942,51 @@ INSTANTIATE_TEST_SUITE_P(
                                          ZE_MEMORY_TYPE_SHARED),
                        ::testing::Bool()));
 
+LZT_TEST_F(
+    zeVirtualMemoryTests,
+    GivenLargeReservationSizesThenVirtualMemoryReservationSucceedsOrFailsGracefully) {
+  const size_t gb = 1ull << 30;
+  const size_t tb = 1ull << 40;
+  const size_t pb = 1ull << 50;
+
+  // Covers 48-bit VA range (up to 128 TB) and 57-bit VA range (up to 64 PB)
+  const std::vector<size_t> test_sizes = {
+      1 * gb,  1 * tb,  2 * tb,   4 * tb,   8 * tb,   16 * tb,
+      32 * tb, 64 * tb, 128 * tb, 256 * tb, 512 * tb, 1 * pb,
+      2 * pb,  4 * pb,  8 * pb,   16 * pb,  32 * pb,  64 * pb,
+  };
+
+  void *start_address = reinterpret_cast<void *>(0x7fff0000ull);
+  for (auto test_size : test_sizes) {
+    size_t aligned_size = test_size;
+    lzt::query_page_size(context, device, aligned_size, &pageSize);
+    aligned_size = lzt::create_page_aligned_size(aligned_size, pageSize);
+
+    void *ptr = nullptr;
+    ze_result_t result =
+        zeVirtualMemReserve(context, start_address, aligned_size, &ptr);
+
+    LOG_INFO << "Size: " << (test_size / gb) << " GB"
+             << " - Page size: " << pageSize
+             << " - Result (zeVirtualMemReserve): " << result
+             << " - Ptr: " << ptr;
+
+    if (test_size < 128 * tb) {
+      EXPECT_EQ(ZE_RESULT_SUCCESS, result)
+          << "Expected success for size " << (test_size / gb) << " GB"
+          << " - Result: " << result;
+    }
+
+    if (result == ZE_RESULT_SUCCESS) {
+      EXPECT_NE(nullptr, ptr);
+      lzt::virtual_memory_free(context, ptr, aligned_size);
+    } else {
+      EXPECT_TRUE(result == ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY ||
+                  result == ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY)
+          << "Unexpected error for size " << (test_size / gb) << " GB"
+          << " - Result: " << result;
+    }
+  }
+}
+
 } // namespace
