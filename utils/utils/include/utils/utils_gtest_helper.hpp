@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2025 Intel Corporation
+ * Copyright (C) 2025-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -75,6 +75,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
       LZT_BODY_##test_suite_name##_##test_name();                              \
     } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
+    } catch (const std::exception &e) {                                        \
+      FAIL() << e.what();                                                      \
     }                                                                          \
   }                                                                            \
   void LZT_BODY_##test_suite_name##_##test_name()
@@ -89,6 +91,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
         test_suite_name::SetUpTestSuite();                                     \
       } catch (const LztGtestSkipExecutionException &e) {                      \
         GTEST_SKIP() << e.what();                                              \
+      } catch (const std::exception &e) {                                      \
+        FAIL() << e.what();                                                    \
       }                                                                        \
     }                                                                          \
     static void TearDownTestSuite() {                                          \
@@ -96,6 +100,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
         test_suite_name::TearDownTestSuite();                                  \
       } catch (const LztGtestSkipExecutionException &e) {                      \
         GTEST_SKIP() << e.what();                                              \
+      } catch (const std::exception &e) {                                      \
+        FAIL() << e.what();                                                    \
       }                                                                        \
     }                                                                          \
     void SetUp() override;                                                     \
@@ -107,6 +113,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
       test_suite_name::SetUp();                                                \
     } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
+    } catch (const std::exception &e) {                                        \
+      FAIL() << e.what();                                                      \
     }                                                                          \
   }                                                                            \
   void LZT_CONCATENATE(GTEST_TEST_CLASS_NAME_(test_suite_name, test_name),     \
@@ -115,6 +123,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
       test_suite_name::TearDown();                                             \
     } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
+    } catch (const std::exception &e) {                                        \
+      FAIL() << e.what();                                                      \
     }                                                                          \
   }
 
@@ -153,6 +163,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
       LztTestBodyHelper();                                                     \
     } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
+    } catch (const std::exception &e) {                                        \
+      FAIL() << e.what();                                                      \
     }                                                                          \
   }                                                                            \
   void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::LztTestBodyHelper()
@@ -200,6 +212,8 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
       LztTestBodyHelper();                                                     \
     } catch (const LztGtestSkipExecutionException &e) {                        \
       GTEST_SKIP() << e.what();                                                \
+    } catch (const std::exception &e) {                                        \
+      FAIL() << e.what();                                                      \
     }                                                                          \
   }                                                                            \
   void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::LztTestBodyHelper()
