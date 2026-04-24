@@ -470,7 +470,7 @@ static void run_ipc_mem_access_test_opaque_with_properties(
       memory = lzt::reserve_allocate_and_map_device_memory(
           context, device, allocSize, &reservedPhysicalMemory);
     } else {
-      memory = lzt::allocate_device_memory(size, 1, 0, context);
+      memory = lzt::allocate_device_memory(size, 1, 0, device, context);
     }
     lzt::append_memory_copy(cmd_bundle.list, memory, buffer, size);
     lzt::close_command_list(cmd_bundle.list);
