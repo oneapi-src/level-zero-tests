@@ -43,6 +43,7 @@ static void child_host_reads(ze_event_pool_handle_t hEventPool) {
 }
 
 static void child_query_event_status(ze_event_pool_handle_t hEventPool) {
+  LOG_INFO << "IPC Child child_query_event_status";
   ze_event_handle_t hEvent = nullptr;
   EXPECT_ZE_RESULT_SUCCESS(
       zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
@@ -50,6 +51,7 @@ static void child_query_event_status(ze_event_pool_handle_t hEventPool) {
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent));
   EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(hEvent));
   EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
+  LOG_INFO << "IPC Child child_query_event_status completed successfully";
 }
 
 static void child_device_reads(ze_event_pool_handle_t hEventPool,
@@ -262,10 +264,18 @@ int main() {
   std::memcpy(&shared_data, region.get_address(), sizeof(shared_data_t));
 
   ze_ipc_event_pool_handle_t hIpcEventPool{};
-  int ipc_descriptor =
-      lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>(hIpcEventPool.data);
-  memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
-         sizeof(ipc_descriptor));
+
+  // Handle both socket-based and opaque (shared memory) modes
+  if (shared_data.test_sock_type == TEST_SOCK) {
+    // Socket-based: receive IPC handle via socket
+    int ipc_descriptor =
+        lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>(hIpcEventPool.data);
+    memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
+           sizeof(ipc_descriptor));
+  } else {
+    // Opaque mode: IPC handle is already in shared memory
+    hIpcEventPool = shared_data.ipc_handle;
+  }
 
   std::vector<ze_device_handle_t> devices;
   if (shared_data.multi_device) {

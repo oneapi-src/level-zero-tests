@@ -245,8 +245,10 @@ static void run_ipc_event_test(parent_test_t parent_test,
   } else {
     hEvent = lzt::create_event(ep, defaultEventDesc);
   }
-  shared_data_t test_data = {parent_test, child_test, multi_device,
-                             isImmediate};
+  ze_ipc_event_pool_handle_t empty_handle = {};
+  shared_data_t test_data = {parent_test, child_test,  multi_device,
+                             isImmediate, 0,           0,
+                             TEST_SOCK,   empty_handle};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));
@@ -254,6 +256,110 @@ static void run_ipc_event_test(parent_test_t parent_test,
   std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
 
   lzt::send_ipc_handle(hIpcEventPool);
+  uint64_t startTime = 0;
+  uint64_t endTime = 0;
+  switch (parent_test) {
+  case PARENT_TEST_HOST_SIGNALS:
+    parent_host_signals(hEvent);
+    break;
+  case PARENT_TEST_DEVICE_SIGNALS:
+    parent_device_signals(hEvent, context, isImmediate);
+    break;
+  case PARENT_TEST_HOST_LAUNCHES_KERNEL:
+    run_workload(hEvent, context, startTime, endTime,
+                 (timestamp_type == MAPPED_KERNEL_TIMESTAMP));
+    break;
+  case PARENT_TEST_QUERY_EVENT_STATUS:
+    break;
+  default:
+    FAIL() << "Fatal test error";
+  }
+
+  c.wait(); // wait for the process to exit
+  ASSERT_EQ(c.exit_code(), 0);
+  if (parent_test == PARENT_TEST_QUERY_EVENT_STATUS) {
+    EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(hEvent));
+  }
+  if (parent_test == PARENT_TEST_HOST_LAUNCHES_KERNEL) {
+    // ensure the timestamps match
+    std::memcpy(&test_data, region.get_address(), sizeof(shared_data_t));
+    EXPECT_EQ(test_data.start_time, startTime);
+    EXPECT_EQ(test_data.end_time, endTime);
+  }
+
+  // cleanup
+  bipc::shared_memory_object::remove("ipc_event_test");
+  lzt::destroy_event(hEvent);
+  lzt::destroy_event_pool(ep);
+  lzt::destroy_context(context);
+#endif // linux
+}
+
+static void run_ipc_event_test_opaque(parent_test_t parent_test,
+                                      child_test_t child_test,
+                                      bool multi_device, bool isImmediate) {
+#ifdef __linux__
+  bipc::named_semaphore::remove("ipc_event_test_semaphore");
+  bipc::named_semaphore semaphore(bipc::create_only, "ipc_event_test_semaphore",
+                                  0);
+
+  bipc::shared_memory_object::remove("ipc_event_test");
+
+  // launch child
+  boost::process::child c("./ipc/test_ipc_event_helper");
+
+  ze_result_t result = zeInit(0);
+  if (result) {
+    throw std::runtime_error("zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_INFO << "IPC Parent zeInit";
+  level_zero_tests::print_platform_overview();
+
+  if (multi_device && lzt::get_ze_device_count() < 2) {
+    LOG_INFO << "WARNING:  Exiting as multiple devices do not exist";
+    GTEST_SKIP();
+  }
+  bool device_events = false;
+  if (parent_test == PARENT_TEST_DEVICE_SIGNALS &&
+      child_test == CHILD_TEST_DEVICE_READS) {
+    device_events = true;
+  }
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+
+  auto timestamp_type = NO_TIMESTAMP;
+  if (child_test == CHILD_TEST_HOST_TIMESTAMP_READS ||
+      child_test == CHILD_TEST_DEVICE_TIMESTAMP_READS) {
+    timestamp_type = KERNEL_TIMESTAMP;
+  } else if (child_test == CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS) {
+    timestamp_type = MAPPED_KERNEL_TIMESTAMP;
+  }
+  auto ep =
+      get_event_pool(multi_device, device_events, context, timestamp_type);
+  ze_ipc_event_pool_handle_t hIpcEventPool;
+  EXPECT_ZE_RESULT_SUCCESS(zeEventPoolGetIpcHandle(ep, &hIpcEventPool));
+  if (testing::Test::HasFatalFailure())
+    return; // Abort test if IPC Event handle failed
+
+  ze_event_handle_t hEvent;
+  if (device_events) {
+    hEvent = lzt::create_event(ep, defaultDeviceEventDesc);
+  } else {
+    hEvent = lzt::create_event(ep, defaultEventDesc);
+  }
+
+  // Pass IPC handle via shared memory (opaque mode)
+  shared_data_t test_data = {
+      parent_test, child_test, multi_device, isImmediate,
+      0,           0,          TEST_NONSOCK, hIpcEventPool};
+  bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
+                                 bipc::read_write);
+  shm.truncate(sizeof(shared_data_t));
+  bipc::mapped_region region(shm, bipc::read_write);
+  std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
+
+  // No socket communication - handle is in shared memory
   uint64_t startTime = 0;
   uint64_t endTime = 0;
   switch (parent_test) {
@@ -427,6 +533,127 @@ LZT_TEST(
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildOnImmediateCmdListFromMultipleDevicePerspective) {
   run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
                      true, true);
+}
+
+// Opaque IPC Event Pool Tests (handle passed via shared memory)
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleThenEventSetinChildFromHostPerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_HOST_READS,
+                            false, false);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleThenEventSetinChildFromHostPerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS,
+                            false, false);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromHostPerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS,
+                            false, true);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleThenEventSetinChildFromDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS,
+                            false, false);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS,
+                            false, true);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleThenEventSetinChildFromDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS,
+                            false, false);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS,
+                            false, true);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenTimestampEventSignalledWithOpaqueHandleThenEventSetInChildFromHostPerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_HOST_LAUNCHES_KERNEL,
+                            CHILD_TEST_HOST_TIMESTAMP_READS, false, false);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenTimestampEventSignalledWithOpaqueHandleThenEventSetInChildFromDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_HOST_LAUNCHES_KERNEL,
+                            CHILD_TEST_DEVICE_TIMESTAMP_READS, false, false);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenMappedTimestampEventSignalledWithOpaqueHandleThenEventSetInChildFromHostPerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_HOST_LAUNCHES_KERNEL,
+                            CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS, false,
+                            false);
+}
+
+LZT_TEST(
+    zeIPCEventTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByChildWithOpaqueHandleThenEventQueryStatusSuccess) {
+  run_ipc_event_test_opaque(PARENT_TEST_QUERY_EVENT_STATUS,
+                            CHILD_TEST_QUERY_EVENT_STATUS, false, false);
+}
+
+LZT_TEST(
+    zeIPCEventMultipleDeviceTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleThenEventSetinChildFromSecondDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS,
+                            CHILD_TEST_DEVICE2_READS, true, false);
+}
+
+LZT_TEST(
+    zeIPCEventMultipleDeviceTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromSecondDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS,
+                            CHILD_TEST_DEVICE2_READS, true, true);
+}
+
+LZT_TEST(
+    zeIPCEventMultipleDeviceTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleThenEventSetinChildFromMultipleDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS,
+                            CHILD_TEST_MULTI_DEVICE_READS, true, false);
+}
+
+LZT_TEST(
+    zeIPCEventMultipleDeviceTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromMultipleDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS,
+                            CHILD_TEST_MULTI_DEVICE_READS, true, true);
+}
+
+LZT_TEST(
+    zeIPCEventMultipleDeviceTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleThenEventSetinChildFromMultipleDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS,
+                            CHILD_TEST_MULTI_DEVICE_READS, true, false);
+}
+
+LZT_TEST(
+    zeIPCEventMultipleDeviceTestsOpaqueHandle,
+    GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromMultipleDevicePerspective) {
+  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS,
+                            CHILD_TEST_MULTI_DEVICE_READS, true, true);
 }
 
 } // namespace

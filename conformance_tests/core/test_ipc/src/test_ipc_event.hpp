@@ -27,6 +27,8 @@ typedef enum {
   CHILD_TEST_QUERY_EVENT_STATUS
 } child_test_t;
 
+typedef enum { TEST_SOCK, TEST_NONSOCK } ipc_event_test_sock_t;
+
 typedef struct {
   parent_test_t parent_type;
   child_test_t child_type;
@@ -34,6 +36,8 @@ typedef struct {
   bool is_immediate;
   uint64_t start_time;
   uint64_t end_time;
+  ipc_event_test_sock_t test_sock_type;
+  ze_ipc_event_pool_handle_t ipc_handle;
 } shared_data_t;
 
 #endif
