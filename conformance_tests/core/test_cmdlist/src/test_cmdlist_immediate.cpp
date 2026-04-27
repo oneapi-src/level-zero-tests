@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -17,6 +17,7 @@ namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 #include <chrono>
+#include <numeric>
 
 namespace {
 
@@ -1612,22 +1613,45 @@ INSTANTIATE_TEST_SUITE_P(
                           ZE_COMMAND_QUEUE_FLAG_IN_ORDER),
         ::testing::Bool()));
 
-enum class EventType { None, Regular, CounterBased };
+enum class event_type_t { None, Regular, CounterBased };
+
+enum class memory_type_t {
+  Host = ZE_MEMORY_TYPE_HOST,
+  Device = ZE_MEMORY_TYPE_DEVICE,
+  Shared = ZE_MEMORY_TYPE_SHARED,
+  SharedSystem,
+};
 
 class zeImmediateCommandListInOrderCopyOffloadExecutionTests
     : public lzt::zeEventPoolTests,
       public ::testing::WithParamInterface<
-          std::tuple<ze_command_queue_mode_t, EventType>> {
+          std::tuple<ze_command_queue_mode_t, event_type_t, memory_type_t>> {
 protected:
   void SetUp() override {
-    module = lzt::create_module(lzt::zeDevice::get_instance()->get_device(),
-                                "cmdlist_add.spv");
+    device = lzt::zeDevice::get_instance()->get_device();
+    memory_type = std::get<2>(GetParam());
+    LOG_INFO << "Memory type: "
+             << (memory_type == memory_type_t::SharedSystem
+                     ? "SHARED_SYSTEM"
+                     : lzt::to_string(
+                           static_cast<ze_memory_type_t>(memory_type)));
+    LOG_INFO << "Event type: "
+             << (event_type == event_type_t::None
+                     ? "None"
+                     : (event_type == event_type_t::Regular ? "Regular"
+                                                            : "CounterBased"));
+    if (memory_type == memory_type_t::SharedSystem &&
+        !lzt::supports_shared_system_alloc(device)) {
+      GTEST_SKIP() << "Shared system allocation not supported";
+    }
+
+    module = lzt::create_module(device, "cmdlist_add.spv");
     kernel = lzt::create_function(module, "cmdlist_add_constant");
 
-    if (event_type == EventType::Regular) {
+    if (event_type == event_type_t::Regular) {
       ep.InitEventPool(1);
       ep.create_event(event, ZE_EVENT_SCOPE_FLAG_HOST, 0);
-    } else if (event_type == EventType::CounterBased) {
+    } else if (event_type == event_type_t::CounterBased) {
       ze_event_counter_based_desc_t desc = {};
       desc.stype = ZE_STRUCTURE_TYPE_EVENT_COUNTER_BASED_DESC;
       desc.flags = ZE_EVENT_COUNTER_BASED_FLAG_IMMEDIATE |
@@ -1638,7 +1662,7 @@ protected:
     }
 
     cmdlist_immediate = lzt::create_immediate_command_list(
-        lzt::zeDevice::get_instance()->get_device(),
+        device,
         ZE_COMMAND_QUEUE_FLAG_IN_ORDER |
             ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT,
         mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
@@ -1646,17 +1670,19 @@ protected:
 
   void TearDown() override {
     lzt::destroy_command_list(cmdlist_immediate);
-    if (event_type == EventType::Regular) {
+    if (event_type == event_type_t::Regular) {
       ep.destroy_event(event);
-    } else if (event_type == EventType::CounterBased) {
+    } else if (event_type == event_type_t::CounterBased) {
       lzt::destroy_event(event);
     }
     lzt::destroy_function(kernel);
     lzt::destroy_module(module);
   }
 
+  memory_type_t memory_type;
+  ze_device_handle_t device = nullptr;
   ze_command_queue_mode_t mode = std::get<0>(GetParam());
-  EventType event_type = std::get<1>(GetParam());
+  event_type_t event_type = std::get<1>(GetParam());
   ze_command_list_handle_t cmdlist_immediate = nullptr;
   ze_event_handle_t event = nullptr;
   ze_module_handle_t module = nullptr;
@@ -1667,9 +1693,32 @@ LZT_TEST_P(
     zeImmediateCommandListInOrderCopyOffloadExecutionTests,
     GivenInOrderImmediateCommandListWithCopyOffloadHintWhenAppendMemoryCopyThenVerifySuccessful) {
   size_t size = 4096;
+
+  void *copy_buffer_1 = nullptr;
+  void *copy_buffer_2 = nullptr;
+  switch (memory_type) {
+  case memory_type_t::Host:
+    copy_buffer_1 = lzt::allocate_host_memory(size);
+    copy_buffer_2 = lzt::allocate_host_memory(size);
+    break;
+  case memory_type_t::Device:
+    copy_buffer_1 = lzt::allocate_device_memory(size);
+    copy_buffer_2 = lzt::allocate_device_memory(size);
+    break;
+  case memory_type_t::Shared:
+    copy_buffer_1 = lzt::allocate_shared_memory(size);
+    copy_buffer_2 = lzt::allocate_shared_memory(size);
+    break;
+  case memory_type_t::SharedSystem:
+    copy_buffer_1 =
+        lzt::allocate_shared_memory_with_allocator_selector(size, true);
+    copy_buffer_2 =
+        lzt::allocate_shared_memory_with_allocator_selector(size, true);
+    break;
+  default:
+    FAIL() << "unexpected memory type";
+  }
   auto host_buffer = lzt::allocate_host_memory(size);
-  auto device_buffer_1 = lzt::allocate_device_memory(size);
-  auto device_buffer_2 = lzt::allocate_device_memory(size);
 
   const uint32_t buffer_value = static_cast<uint32_t>(0xABABABAB);
   const uint32_t add_val = 0x01010101;
@@ -1690,14 +1739,13 @@ LZT_TEST_P(
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
-  lzt::append_memory_fill(cmdlist_immediate, device_buffer_1, &buffer_value,
+  lzt::append_memory_fill(cmdlist_immediate, copy_buffer_1, &buffer_value,
                           sizeof(buffer_value), size, nullptr);
   lzt::append_launch_function(cmdlist_immediate, kernel, &group_count, nullptr,
                               0, nullptr);
-  lzt::append_memory_copy(cmdlist_immediate, device_buffer_2, device_buffer_1,
-                          size,
-                          event_type != EventType::None ? event : nullptr);
-  if (event_type != EventType::None) {
+  lzt::append_memory_copy(cmdlist_immediate, copy_buffer_2, copy_buffer_1, size,
+                          event_type != event_type_t::None ? event : nullptr);
+  if (event_type != event_type_t::None) {
     lzt::event_host_synchronize(event, UINT64_MAX);
   } else {
     lzt::synchronize_command_list_host(cmdlist_immediate, UINT64_MAX);
@@ -1711,18 +1759,119 @@ LZT_TEST_P(
     }
   }
 
-  lzt::free_memory(device_buffer_2);
-  lzt::free_memory(device_buffer_1);
+  if (memory_type == memory_type_t::SharedSystem) {
+    lzt::aligned_free(copy_buffer_2);
+    lzt::aligned_free(copy_buffer_1);
+  } else {
+    lzt::free_memory(copy_buffer_2);
+    lzt::free_memory(copy_buffer_1);
+  }
   lzt::free_memory(host_buffer);
+}
+
+LZT_TEST_P(
+    zeImmediateCommandListInOrderCopyOffloadExecutionTests,
+    GivenInOrderImmediateCommandListWithCopyOffloadHintWhenAppendMemoryFillThenVerifySuccessful) {
+  auto cq_props = lzt::get_command_queue_group_properties(device);
+  size_t bcs_max_pattern_size = 0;
+  auto copy_ordinal = lzt::get_queue_ordinal(
+      cq_props, ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY,
+      ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE);
+  if (copy_ordinal.has_value()) {
+    bcs_max_pattern_size = cq_props[*copy_ordinal].maxMemoryFillPatternSize;
+    EXPECT_GT(bcs_max_pattern_size, 0);
+    LOG_INFO << "maxMemoryFillPatternSize for copy engine: "
+             << bcs_max_pattern_size << " bytes";
+  }
+
+  std::vector<size_t> pattern_sizes;
+  size_t temp_pattern_size = 1;
+  // Pattern sizes should be powers of 2 up to maxMemoryFillPatternSize
+  do {
+    pattern_sizes.push_back(temp_pattern_size);
+    temp_pattern_size <<= 1;
+  } while (temp_pattern_size <= bcs_max_pattern_size);
+  // Add pattern sizes exceeding maxMemoryFillPatternSize to test fallback
+  pattern_sizes.insert(pattern_sizes.end(),
+                       {bcs_max_pattern_size * 2, bcs_max_pattern_size * 4,
+                        bcs_max_pattern_size * 512,
+                        bcs_max_pattern_size * 1024});
+
+  constexpr size_t min_buffer_size = 8192;
+  for (const auto &pattern_size : pattern_sizes) {
+    LOG_INFO << "Testing pattern_size: " << pattern_size;
+    size_t buffer_size = std::max(min_buffer_size, pattern_size * 4);
+
+    void *fill_buffer = nullptr;
+    switch (memory_type) {
+    case memory_type_t::Host:
+      fill_buffer = lzt::allocate_host_memory(buffer_size);
+      break;
+    case memory_type_t::Device:
+      fill_buffer = lzt::allocate_device_memory(buffer_size);
+      break;
+    case memory_type_t::Shared:
+      fill_buffer = lzt::allocate_shared_memory(buffer_size);
+      break;
+    case memory_type_t::SharedSystem:
+      fill_buffer = lzt::allocate_shared_memory_with_allocator_selector(
+          buffer_size, true);
+      break;
+    default:
+      FAIL() << "unexpected memory type";
+    }
+    auto verify_buffer = lzt::allocate_host_memory(buffer_size);
+    std::vector<uint8_t> pattern(pattern_size);
+    std::iota(pattern.begin(), pattern.end(), 0);
+
+    lzt::append_memory_fill(cmdlist_immediate, fill_buffer, pattern.data(),
+                            pattern_size, buffer_size,
+                            event_type != event_type_t::None ? event : nullptr);
+    if (event_type != event_type_t::None) {
+      lzt::event_host_synchronize(event, UINT64_MAX);
+      if (event_type == event_type_t::Regular) {
+        lzt::event_host_reset(event);
+      }
+    }
+    lzt::append_memory_copy(cmdlist_immediate, verify_buffer, fill_buffer,
+                            buffer_size,
+                            event_type != event_type_t::None ? event : nullptr);
+
+    if (event_type != event_type_t::None) {
+      lzt::event_host_synchronize(event, UINT64_MAX);
+    } else {
+      lzt::synchronize_command_list_host(cmdlist_immediate, UINT64_MAX);
+    }
+
+    for (size_t i = 0; i < buffer_size; i += pattern_size) {
+      if (std::memcmp(static_cast<uint8_t *>(verify_buffer) + i, pattern.data(),
+                      pattern_size) != 0) {
+        ADD_FAILURE();
+        break;
+      }
+    }
+
+    if (event_type == event_type_t::Regular) {
+      lzt::event_host_reset(event);
+    }
+    if (memory_type == memory_type_t::SharedSystem) {
+      lzt::aligned_free(fill_buffer);
+    } else {
+      lzt::free_memory(fill_buffer);
+    }
+    lzt::free_memory(verify_buffer);
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(
     CopyOffloadHintParams,
     zeImmediateCommandListInOrderCopyOffloadExecutionTests,
-    ::testing::Combine(::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                                         ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-                                         ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
-                       ::testing::Values(EventType::None, EventType::Regular,
-                                         EventType::CounterBased)));
-
+    ::testing::Combine(
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                          ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
+                          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+        ::testing::Values(event_type_t::None, event_type_t::Regular,
+                          event_type_t::CounterBased),
+        ::testing::Values(memory_type_t::Host, memory_type_t::Device,
+                          memory_type_t::Shared, memory_type_t::SharedSystem)));
 } // namespace

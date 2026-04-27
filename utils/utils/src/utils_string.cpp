@@ -489,6 +489,21 @@ ze_image_type_t to_image_type(const std::string type) {
   }
 }
 
+std::string to_string(const ze_memory_type_t type) {
+  if (type == ZE_MEMORY_TYPE_HOST) {
+    return "ZE_MEMORY_TYPE_HOST";
+  } else if (type == ZE_MEMORY_TYPE_DEVICE) {
+    return "ZE_MEMORY_TYPE_DEVICE";
+  } else if (type == ZE_MEMORY_TYPE_SHARED) {
+    return "ZE_MEMORY_TYPE_SHARED";
+  } else if (type == ZE_MEMORY_TYPE_HOST_IMPORTED) {
+    return "ZE_MEMORY_TYPE_HOST_IMPORTED";
+  } else {
+    return "Unknown ze_memory_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
 std::string to_string(const ze_device_fp_flag_t flags) {
   std::stringstream bitfield;
   if (flags & ZE_DEVICE_FP_FLAG_DENORM) {
