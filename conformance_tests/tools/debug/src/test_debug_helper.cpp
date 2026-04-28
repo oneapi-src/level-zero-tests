@@ -668,8 +668,10 @@ void loop_create_destroy_multiple_cq_immcl(ze_context_handle_t context,
         lzt::destroy_command_queue(cmdqueue);
 
         synchro.notify_debugger();
-        synchro.wait_for_debugger_signal();
-        synchro.clear_debugger_signal();
+        if (counter < static_cast<int>(totalNumCQs)) {
+          synchro.wait_for_debugger_signal();
+          synchro.clear_debugger_signal();
+        }
         counter++;
       }
       cmdQueues.clear();
@@ -679,8 +681,10 @@ void loop_create_destroy_multiple_cq_immcl(ze_context_handle_t context,
         lzt::destroy_command_list(cmdList);
 
         synchro.notify_debugger();
-        synchro.wait_for_debugger_signal();
-        synchro.clear_debugger_signal();
+        if (counter < static_cast<int>(totalNumCQs)) {
+          synchro.wait_for_debugger_signal();
+          synchro.clear_debugger_signal();
+        }
         counter++;
       }
       cmdLists.clear();

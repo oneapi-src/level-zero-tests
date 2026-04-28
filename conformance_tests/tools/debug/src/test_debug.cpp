@@ -742,7 +742,9 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
         }
 
         // let the app destroy another CQ
-        synchro->notify_application();
+        if (queueNum < totalNumCQs) {
+          synchro->notify_application();
+        }
       }
 
     } // loops
