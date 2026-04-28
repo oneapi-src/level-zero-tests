@@ -1582,12 +1582,19 @@ LZT_TEST_F(zetMetricTracerTest,
     uint32_t num_grp_handles = to_u32(grp_handles.size());
     ASSERT_GT(num_grp_handles, 0u);
     lzt::activate_metric_groups(device, num_grp_handles, grp_handles.data());
+
+    const uint64_t nanosPerSecond = 1000000000;
+    ze_device_properties_t device_props = {
+        ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2};
+    zeDeviceGetProperties(device, &device_props);
+    uint64_t timer_frequency = device_props.timerResolution;
+    uint64_t timer_period = nanosPerSecond / timer_frequency;
+
     uint64_t host_timestamp_start, device_timestamp_start;
     std::tie(host_timestamp_start, device_timestamp_start) =
         lzt::get_global_timestamps(device);
     LOG_DEBUG << "host_timestamp_start = " << host_timestamp_start
               << " device_timestamp_start = " << device_timestamp_start;
-
     zet_metric_tracer_exp_handle_t metric_tracer_handle;
     lzt::metric_tracer_create(
         lzt::get_default_context(), device, num_grp_handles, grp_handles.data(),
@@ -1601,6 +1608,30 @@ LZT_TEST_F(zetMetricTracerTest,
     lzt::event_host_synchronize(notification_event,
                                 std::numeric_limits<uint64_t>::max());
     lzt::metric_tracer_disable(metric_tracer_handle, true);
+
+    // Compute time_diff_ticks after workload completes, using
+    // zetMetricGroupGetGlobalTimestampsExp.
+    int64_t time_diff_ns = 0;
+    int64_t time_diff_ticks = 0;
+    for (uint32_t g = 0; g < num_grp_handles; g++) {
+      uint64_t globalTimestamp = 0, metricTimestamp = 0;
+      ASSERT_ZE_RESULT_SUCCESS(zetMetricGroupGetGlobalTimestampsExp(
+          grp_handles[g], false, &globalTimestamp, &metricTimestamp));
+      time_diff_ticks = static_cast<int64_t>(metricTimestamp) -
+                        static_cast<int64_t>(globalTimestamp);
+      time_diff_ns = time_diff_ticks * static_cast<int64_t>(timer_period);
+      LOG_DEBUG
+          << "Metric group: " << g
+          << " globalTimestamp retrieved from "
+             "zetMetricGroupGetGlobalTimestampsExp: "
+          << globalTimestamp
+          << " metricTimestamp retrieved from "
+             "zetMetricGroupGetGlobalTimestampsExp: "
+          << metricTimestamp
+          << " Delta between metricTimestamp and globalTimestamp in nanosecs: "
+          << time_diff_ns;
+    }
+
     /* read data */
     size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
     std::vector<uint8_t> raw_data(raw_data_size, 0);
@@ -1637,24 +1668,37 @@ LZT_TEST_F(zetMetricTracerTest,
            "to be decoded";
 
     if (metric_entry_count != 0) {
-      uint64_t metric_entry_timestamp_start = 0;
-      uint64_t metric_entry_timestamp_end = 0;
-      metric_entry_timestamp_start = metric_entries[0].timeStamp;
+      uint64_t metric_entry_timestamp_start_ns = 0;
+      uint64_t metric_entry_timestamp_end_ns = 0;
+      metric_entry_timestamp_start_ns = metric_entries[0].timeStamp;
       LOG_DEBUG << "metric entry timestamp start "
-                << metric_entry_timestamp_start;
-      metric_entry_timestamp_end =
+                << metric_entry_timestamp_start_ns;
+      metric_entry_timestamp_end_ns =
           metric_entries[metric_entry_count - 1].timeStamp;
-      LOG_DEBUG << "metric entry timestamp end " << metric_entry_timestamp_end;
+      LOG_DEBUG << "metric entry timestamp end "
+                << metric_entry_timestamp_end_ns;
 
       uint64_t host_timestamp_end, device_timestamp_end;
       std::tie(host_timestamp_end, device_timestamp_end) =
           lzt::get_global_timestamps(device);
       LOG_DEBUG << "host_timestamp_end = " << host_timestamp_end
                 << " device_timestamp_end = " << device_timestamp_end;
-      EXPECT_GT(metric_entry_timestamp_start, device_timestamp_start)
+      /* Shift device ticks into metric domain, then convert to ns */
+      uint64_t device_timestamp_start_ns =
+          static_cast<uint64_t>(static_cast<int64_t>(device_timestamp_start) *
+                                    static_cast<int64_t>(timer_period) +
+                                time_diff_ns);
+      LOG_DEBUG << "device_timestamp_start_ns = " << device_timestamp_start_ns;
+
+      uint64_t device_timestamp_end_ns =
+          static_cast<uint64_t>(static_cast<int64_t>(device_timestamp_end) *
+                                    static_cast<int64_t>(timer_period) +
+                                time_diff_ns);
+      LOG_DEBUG << "device_timestamp_end_ns = " << device_timestamp_end_ns;
+      EXPECT_GT(metric_entry_timestamp_start_ns, device_timestamp_start_ns)
           << "first metric entry timestamp should be greater than first "
              "device timestamp";
-      EXPECT_LT(metric_entry_timestamp_end, device_timestamp_end)
+      EXPECT_LT(metric_entry_timestamp_end_ns, device_timestamp_end_ns)
           << "last metric entry timestamp should be lesser than last device "
              "timestamp";
     }
