@@ -1668,7 +1668,7 @@ protected:
         mode, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0);
   }
 
-  void TearDown() override {
+  void cleanup() {
     lzt::destroy_command_list(cmdlist_immediate);
     if (event_type == event_type_t::Regular) {
       ep.destroy_event(event);
@@ -1767,6 +1767,7 @@ LZT_TEST_P(
     lzt::free_memory(copy_buffer_1);
   }
   lzt::free_memory(host_buffer);
+  cleanup();
 }
 
 LZT_TEST_P(
@@ -1861,6 +1862,7 @@ LZT_TEST_P(
     }
     lzt::free_memory(verify_buffer);
   }
+  cleanup();
 }
 
 INSTANTIATE_TEST_SUITE_P(
