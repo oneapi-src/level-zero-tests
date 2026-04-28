@@ -704,7 +704,7 @@ void zeModuleCreateTests::RunGivenModuleCompiledWithOptimizationsWhenExecuting(
                             "-ze-opt-level=O2"};
   auto device = lzt::get_default_device(lzt::get_default_driver());
 
-  // Note: L0 Spec does not gaurantee if/how optimization is applied to module.
+  // Note: L0 Spec does not guarantee if/how optimization is applied to module.
   // Test
   // can only ensure module is still valid and correct after optimization.
 

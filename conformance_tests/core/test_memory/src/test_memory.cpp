@@ -391,7 +391,7 @@ LZT_TEST_P(
   void *base = nullptr;
   size_t size_out;
 
-  // Test getting address info from begining of memory range
+  // Test getting address info from beginning of memory range
   uint8_t *mem_target = static_cast<uint8_t *>(memory);
   EXPECT_ZE_RESULT_SUCCESS(zeMemGetAddressRange(lzt::get_default_context(),
                                                 memory, &base, &size_out));

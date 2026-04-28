@@ -185,8 +185,8 @@ std::string get_affinity_mask_string(ze_device_handle_t device,
     }
     devices_present += 1;
 
-    // we have determined wether our descendant devices are present
-    // if all our descendants are present, then just ouput our device index
+    // we have determined whether our descendant devices are present
+    // if all our descendants are present, then just output our device index
     // **if only some of our devices are present, then concatenate those
     // strings**
     // if none of our descendants are present, then do nothing

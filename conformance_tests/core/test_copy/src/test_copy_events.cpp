@@ -844,7 +844,7 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   lzt::append_image_copy_region(cmd_bundle.list, output_xeimage, input_xeimage,
                                 &dr, &sr, hEvent3);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent3);
-  // use ImageCopyToMemory to dowload ImageB
+  // use ImageCopyToMemory to download ImageB
   lzt::append_image_copy_to_mem(cmd_bundle.list, output.raw_data(),
                                 output_xeimage, hEvent4);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent4);
@@ -860,7 +860,7 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent3, UINT64_MAX));
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent4, UINT64_MAX));
 
-  // Verfy A matches B
+  // Verify A matches B
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 
@@ -935,7 +935,7 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   ze_image_region_t dr = {0, 0, 0, 1, 1, 1};
   lzt::append_image_copy_region(append_list, output_xeimage, input_xeimage, &dr,
                                 &sr, hEvent3, 1, &hEvent2);
-  // use ImageCopyToMemory to dowload ImageB
+  // use ImageCopyToMemory to download ImageB
   lzt::append_image_copy_to_mem(append_list, output.raw_data(), output_xeimage,
                                 hEvent4, 1, &hEvent3);
   lzt::append_wait_on_events(append_list, 1, &hEvent4);
@@ -960,7 +960,7 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent3, UINT64_MAX));
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent4, UINT64_MAX));
 
-  // Verfy A matches B
+  // Verify A matches B
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 

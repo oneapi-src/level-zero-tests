@@ -33,7 +33,7 @@ bool check_ext_version() {
            "test\n");
     return false;
   } else {
-    printf("Extention version %d found\n", ext_version);
+    printf("Extension version %d found\n", ext_version);
     return true;
   }
 }

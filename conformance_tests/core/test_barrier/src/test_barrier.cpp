@@ -566,7 +566,7 @@ LZT_TEST_P(
   int *p_host = static_cast<int *>(host_buff);
   enum BarrierType barrier_type = std::get<0>(GetParam());
 
-  // Initialize host buffer with postive and negative integer values
+  // Initialize host buffer with positive and negative integer values
   const int addval_1 = -100;
   const int val_1 = 50000;
   int val = val_1;
@@ -593,7 +593,7 @@ LZT_TEST_P(
   // 1) Command list memcopy from Host to Device Buffer.
   // 2) First kernel function uses Device Buffer as input buffer and adds
   // constant 3) Second kernel function adds Device Buffer output of first to
-  // Host buffer 4) Coherency via barriers or events needed betwen 1&2 and
+  // Host buffer 4) Coherency via barriers or events needed between 1&2 and
   // between 2&3
 
   if (barrier_type == BT_EVENTS_BARRIER) {

@@ -1124,7 +1124,7 @@ LZT_TEST_P(
   lzt::append_image_copy_region(cmdlist_immediate_2, output_xeimage,
                                 input_xeimage, &dr, &sr, hEvent3);
   lzt::append_wait_on_events(cmdlist_immediate_3, 1, &hEvent3);
-  // use ImageCopyToMemory to dowload ImageB
+  // use ImageCopyToMemory to download ImageB
   lzt::append_image_copy_to_mem(cmdlist_immediate_3, output.raw_data(),
                                 output_xeimage, hEvent4);
   if (useEventsToSynchronize) {
@@ -1134,7 +1134,7 @@ LZT_TEST_P(
     EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(hEvent4));
   }
 
-  // Verfy A matches B
+  // Verify A matches B
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 

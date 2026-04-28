@@ -188,7 +188,7 @@ public:
     lzt::append_image_copy_from_mem(cmd_bundle.list, h_source_image,
                                     foreground_image.raw_data(), nullptr);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    // Copy the portion of the foreground image correspoding to the region:
+    // Copy the portion of the foreground image corresponding to the region:
     lzt::append_image_copy_region(cmd_bundle.list, h_dest_image, h_source_image,
                                   region, region, nullptr);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
@@ -386,8 +386,8 @@ public:
     // Verify output image matches initial host image.
     // Output image contains input image data shifted by in_region's origin
     // minus out_region's origin.  Some of the original data may not make it
-    // to the output due to sizes and offests, and there may be junk data in
-    // parts of the output image that don't have coresponding pixels in the
+    // to the output due to sizes and offsets, and there may be junk data in
+    // parts of the output image that don't have corresponding pixels in the
     // input; we will ignore those.
     // We may pass negative origin coordinates to compare_data_pattern; in that
     // case, it will skip over any negative-index pixels.
