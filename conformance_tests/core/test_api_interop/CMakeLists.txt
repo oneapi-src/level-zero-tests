@@ -5,13 +5,17 @@ add_lzt_test(
   NAME test_api_interop
   GROUP "/conformance_tests/core"
   SOURCES
-    src/dx11_interop_fixture.hpp
-    $<$<BOOL:${WIN32}>:src/dx12_helper.cpp>
-    src/dx12_helper.hpp
-    src/dx12_interop_fixture.hpp
+    $<$<BOOL:${WIN32}>:src/dx11_interop/dx11_helper.cpp>
+    $<$<BOOL:${WIN32}>:src/dx11_interop/dx11_helper.hpp>
+    $<$<BOOL:${WIN32}>:src/dx11_interop/dx11_interop_fixture.hpp>
+    $<$<BOOL:${WIN32}>:src/dx12_interop/dx12_helper.cpp>
+    $<$<BOOL:${WIN32}>:src/dx12_interop/dx12_helper.hpp>
+    $<$<BOOL:${WIN32}>:src/dx12_interop/dx12_interop_fixture.hpp>
+    $<$<BOOL:${WIN32}>:src/dx_common.cpp>
+    $<$<BOOL:${WIN32}>:src/dx_common.hpp>
+    src/dx11_interop/test_dx11_interop.cpp
+    src/dx12_interop/test_dx12_interop.cpp
     src/main.cpp
-    src/test_dx11_interop.cpp
-    src/test_dx12_interop.cpp
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils

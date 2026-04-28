@@ -12,19 +12,6 @@
 
 namespace dx12 {
 
-std::string hr_to_string(HRESULT result) {
-  char *msg = nullptr;
-  FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                     FORMAT_MESSAGE_IGNORE_INSERTS,
-                 nullptr, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                 (LPSTR)&msg, 0, nullptr);
-
-  std::string str = msg ? msg : "Unknown error";
-  if (msg)
-    LocalFree(msg);
-  return str;
-}
-
 ComPtr<ID3D12Fence> create_fence(const ComPtr<ID3D12Device> &device,
                                  bool exportable) {
   ComPtr<ID3D12Fence> fence;
@@ -32,7 +19,8 @@ ComPtr<ID3D12Fence> create_fence(const ComPtr<ID3D12Device> &device,
           0, exportable ? D3D12_FENCE_FLAG_SHARED : D3D12_FENCE_FLAG_NONE,
           IID_PPV_ARGS(&fence));
       FAILED(hr)) {
-    LOG_ERROR << "ID3D12Device::CreateFence failed with: " << hr_to_string(hr);
+    LOG_ERROR << "ID3D12Device::CreateFence failed with: "
+              << dx::hr_to_string(hr);
     throw std::runtime_error("Failed to create DX12 fence.");
   }
 
@@ -49,7 +37,8 @@ ComPtr<ID3D12Heap> create_heap(const ComPtr<ID3D12Device> &device, size_t size,
   ComPtr<ID3D12Heap> heap;
   if (HRESULT hr = device->CreateHeap(&heap_desc, IID_PPV_ARGS(&heap));
       FAILED(hr)) {
-    LOG_ERROR << "ID3D12Device::CreateHeap failed with: " << hr_to_string(hr);
+    LOG_ERROR << "ID3D12Device::CreateHeap failed with: "
+              << dx::hr_to_string(hr);
     throw std::runtime_error("Failed to create DX12 heap.");
   }
 
@@ -76,7 +65,7 @@ create_placed_resource(const ComPtr<ID3D12Device> &device,
           IID_PPV_ARGS(&placed_resource));
       FAILED(hr)) {
     LOG_ERROR << "ID3D12Device::CreatePlacedResource failed with: "
-              << hr_to_string(hr);
+              << dx::hr_to_string(hr);
     throw std::runtime_error("Failed to create DX12 placed resource.");
   }
 
@@ -106,7 +95,7 @@ ComPtr<ID3D12Resource> create_committed_resource(
           &resource_desc, state, nullptr, IID_PPV_ARGS(&resource));
       FAILED(hr)) {
     LOG_ERROR << "ID3D12Device::CreateCommittedResource failed with: "
-              << hr_to_string(hr);
+              << dx::hr_to_string(hr);
     throw std::runtime_error("Failed to create DX12 committed resource.");
   }
 
@@ -116,8 +105,11 @@ ComPtr<ID3D12Resource> create_committed_resource(
 HANDLE create_shared_handle(const ComPtr<ID3D12Device> &device,
                             ID3D12DeviceChild *object) {
   HANDLE handle = {};
-  if (FAILED(device->CreateSharedHandle(object, nullptr, GENERIC_ALL, nullptr,
-                                        &handle))) {
+  if (HRESULT hr = device->CreateSharedHandle(object, nullptr, GENERIC_ALL,
+                                              nullptr, &handle);
+      FAILED(hr)) {
+    LOG_ERROR << "ID3D12Device::CreateSharedHandle failed with: "
+              << dx::hr_to_string(hr);
     throw std::runtime_error(
         "Failed to create shared handle for a DX12 object.");
   }
@@ -134,7 +126,7 @@ CommandBundle create_command_bundle(const ComPtr<ID3D12Device> &device) {
                                               IID_PPV_ARGS(&bundle.cmd_queue));
       FAILED(hr)) {
     LOG_ERROR << "ID3D12Device::CreateCommandQueue failed with: "
-              << hr_to_string(hr);
+              << dx::hr_to_string(hr);
     throw std::runtime_error("Failed to create DX12 command queue.");
   }
 
@@ -142,7 +134,7 @@ CommandBundle create_command_bundle(const ComPtr<ID3D12Device> &device) {
           D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bundle.cmd_allocator));
       FAILED(hr)) {
     LOG_ERROR << "ID3D12Device::CreateCommandAllocator failed with: "
-              << hr_to_string(hr);
+              << dx::hr_to_string(hr);
     throw std::runtime_error("Failed to create DX12 command allocator.");
   }
 
@@ -151,11 +143,30 @@ CommandBundle create_command_bundle(const ComPtr<ID3D12Device> &device) {
           nullptr, IID_PPV_ARGS(&bundle.cmd_list));
       FAILED(hr)) {
     LOG_ERROR << "ID3D12Device::CreateCommandList failed with: "
-              << hr_to_string(hr);
+              << dx::hr_to_string(hr);
     throw std::runtime_error("Failed to create DX12 command list.");
   }
 
   return bundle;
+}
+
+void wait_for_fence(const ComPtr<ID3D12Fence> &fence, uint64_t wait_value) {
+  if (fence->GetCompletedValue() < wait_value) {
+    HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if (event == NULL) {
+      DWORD hr = GetLastError();
+      LOG_ERROR << "CreateEvent failed with: " << dx::hr_to_string(hr);
+      throw std::runtime_error("Failed to create Windows event.");
+    }
+    if (HRESULT hr = fence->SetEventOnCompletion(wait_value, event);
+        FAILED(hr)) {
+      LOG_ERROR << "ID3D12Fence::SetEventOnCompletion failed with: "
+                << dx::hr_to_string(hr);
+      throw std::runtime_error("Failed to set event on fence completion.");
+    }
+    WaitForSingleObject(event, INFINITE);
+    CloseHandle(event);
+  }
 }
 
 void execute_and_sync_command_bundle(const ComPtr<ID3D12Device> &device,
@@ -166,17 +177,7 @@ void execute_and_sync_command_bundle(const ComPtr<ID3D12Device> &device,
   ComPtr<ID3D12Fence> fence = dx12::create_fence(device);
   cmd_bundle.cmd_queue->Signal(fence.Get(), 1);
 
-  if (fence->GetCompletedValue() < 1) {
-    HANDLE event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    if (event == NULL) {
-      DWORD hr = GetLastError();
-      LOG_ERROR << "CreateEvent failed with: " << hr_to_string(hr);
-      throw std::runtime_error("Failed to create Windows event.");
-    }
-    fence->SetEventOnCompletion(1, event);
-    WaitForSingleObject(event, INFINITE);
-    CloseHandle(event);
-  }
+  wait_for_fence(fence, 1);
 }
 
 } // namespace dx12

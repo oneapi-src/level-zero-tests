@@ -517,6 +517,8 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
 def assign_test_feature(test_binary: str, test_name: str):
         test_feature = "None"
         test_section = "Core"
+        if test_binary == "test_api_interop":
+            test_feature = "API Sharing"
         if (test_binary == "test_pin") \
             or (re.search('tracing', test_name, re.IGNORECASE)) \
             or (re.search('sysman', test_binary, re.IGNORECASE)) \

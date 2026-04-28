@@ -10,9 +10,9 @@
 
 #include "gtest/gtest.h"
 
-#include "dx12_helper.hpp"
+#include "dx11_helper.hpp"
 
-struct DX12InteroperabilityTests : ::testing::Test {
+struct DX11InteroperabilityTests : ::testing::Test {
 
   void SetUp() override {
     l0_device = lzt::zeDevice::get_instance()->get_device();
@@ -35,11 +35,18 @@ struct DX12InteroperabilityTests : ::testing::Test {
       }
     }
 
-    EXPECT_TRUE(devices_matched) << "Device doesn't support DX12.";
+    if (!devices_matched) {
+      GTEST_SKIP() << "Device doesn't support DX11.";
+    }
 
-    if (FAILED(D3D12CreateDevice(dxgi_adapter.Get(), D3D_FEATURE_LEVEL_11_0,
-                                 IID_PPV_ARGS(&dx12_device)))) {
-      throw std::runtime_error("Failed to create DX12 device.");
+    if (FAILED(D3D11CreateDevice(
+            dxgi_adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, nullptr, 0,
+            D3D11_SDK_VERSION, &dx11_device, nullptr, &dx11_device_context))) {
+      throw std::runtime_error("Failed to create DX11 device and context.");
+    }
+
+    if (FAILED(dx11_device.As(&dx11_device5))) {
+      throw std::runtime_error("Failed to query DX11 device5.");
     }
   }
 
@@ -47,5 +54,7 @@ struct DX12InteroperabilityTests : ::testing::Test {
 
   ComPtr<IDXGIFactory1> dxgi_adapter_factory;
   ComPtr<IDXGIAdapter1> dxgi_adapter;
-  ComPtr<ID3D12Device> dx12_device;
+  ComPtr<ID3D11Device> dx11_device;
+  ComPtr<ID3D11DeviceContext> dx11_device_context;
+  ComPtr<ID3D11Device5> dx11_device5;
 };

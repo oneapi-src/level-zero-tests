@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -181,6 +181,20 @@ void query_event(ze_event_handle_t event,
                  ze_result_t result = ZE_RESULT_SUCCESS);
 void append_reset_event(ze_command_list_handle_t hCommandList,
                         ze_event_handle_t hEvent);
+
+void append_signal_external_semaphore(
+    ze_command_list_handle_t cmd_list, uint32_t num_semaphores,
+    ze_external_semaphore_ext_handle_t *semaphores,
+    ze_external_semaphore_signal_params_ext_t *signal_params,
+    ze_event_handle_t signal_event, uint32_t num_wait_events,
+    ze_event_handle_t *wait_events);
+
+void append_wait_external_semaphore(
+    ze_command_list_handle_t cmd_list, uint32_t num_semaphores,
+    ze_external_semaphore_ext_handle_t *semaphores,
+    ze_external_semaphore_wait_params_ext_t *wait_params,
+    ze_event_handle_t signal_event, uint32_t num_wait_events,
+    ze_event_handle_t *wait_events);
 
 void append_image_copy(ze_command_list_handle_t hCommandList,
                        ze_image_handle_t dst, ze_image_handle_t src,

@@ -10,13 +10,9 @@
 
 #include "gtest/gtest.h"
 
-#include <d3d11.h>
-#include <d3d11_4.h>
-#include <wrl.h>
+#include "dx12_helper.hpp"
 
-template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
-
-struct DX11InteroperabilityTests : ::testing::Test {
+struct DX12InteroperabilityTests : ::testing::Test {
 
   void SetUp() override {
     l0_device = lzt::zeDevice::get_instance()->get_device();
@@ -39,19 +35,33 @@ struct DX11InteroperabilityTests : ::testing::Test {
       }
     }
 
-    EXPECT_TRUE(devices_matched) << "Device doesn't support DX11.";
-
-    if (FAILED(D3D11CreateDevice(
-            dxgi_adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, nullptr, 0,
-            D3D11_SDK_VERSION, &dx11_device, nullptr, &dx11_device_context))) {
-      throw std::runtime_error("Failed to create DX11 device and context.");
+    if (!devices_matched) {
+      GTEST_SKIP() << "Device doesn't support DX12.";
     }
+
+    if (FAILED(D3D12CreateDevice(dxgi_adapter.Get(), D3D_FEATURE_LEVEL_11_0,
+                                 IID_PPV_ARGS(&dx12_device)))) {
+      throw std::runtime_error("Failed to create DX12 device.");
+    }
+  }
+
+  void *import_memory(HANDLE shared_handle,
+                      ze_external_memory_type_flags_t type, size_t size) const {
+    ze_external_memory_import_win32_handle_t import_win32_handle = {
+        .stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_WIN32,
+        .flags = type,
+        .handle = shared_handle};
+
+    void *imported_memory =
+        lzt::allocate_device_memory(size, 0, 0, &import_win32_handle, 0,
+                                    l0_device, lzt::get_default_context());
+
+    return imported_memory;
   }
 
   ze_device_handle_t l0_device;
 
   ComPtr<IDXGIFactory1> dxgi_adapter_factory;
   ComPtr<IDXGIAdapter1> dxgi_adapter;
-  ComPtr<ID3D11Device> dx11_device;
-  ComPtr<ID3D11DeviceContext> dx11_device_context;
+  ComPtr<ID3D12Device> dx12_device;
 };

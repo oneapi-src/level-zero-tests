@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -474,6 +474,24 @@ ze_result_t get_device_status(ze_device_handle_t device) {
   ze_result_t status;
   status = zeDeviceGetStatus(device);
   return status;
+}
+
+ze_external_semaphore_ext_handle_t
+import_external_semaphore(ze_device_handle_t device,
+                          const ze_external_semaphore_ext_desc_t *desc) {
+  auto device_initial = device;
+
+  ze_external_semaphore_ext_handle_t semaphore = nullptr;
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceImportExternalSemaphoreExt(device, desc, &semaphore));
+
+  EXPECT_EQ(device, device_initial);
+
+  EXPECT_NE(semaphore, nullptr);
+  return semaphore;
+}
+void release_external_semaphore(ze_external_semaphore_ext_handle_t semaphore) {
+  EXPECT_ZE_RESULT_SUCCESS(zeDeviceReleaseExternalSemaphoreExt(semaphore));
 }
 
 }; // namespace level_zero_tests

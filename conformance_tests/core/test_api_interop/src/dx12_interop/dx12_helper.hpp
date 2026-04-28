@@ -7,18 +7,12 @@
  */
 
 #pragma once
+#include "../dx_common.hpp"
 
 #include <dxgi.h>
 #include <d3d12.h>
-#include <wrl.h>
-
-#include <string>
-
-template <typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 namespace dx12 {
-
-std::string hr_to_string(HRESULT result);
 
 ComPtr<ID3D12Fence> create_fence(const ComPtr<ID3D12Device> &device,
                                  bool exportable = false);
@@ -45,6 +39,8 @@ struct CommandBundle {
 };
 
 CommandBundle create_command_bundle(const ComPtr<ID3D12Device> &device);
+
+void wait_for_fence(const ComPtr<ID3D12Fence> &fence, uint64_t wait_value);
 
 void execute_and_sync_command_bundle(const ComPtr<ID3D12Device> &device,
                                      const CommandBundle &cmd_bundle);

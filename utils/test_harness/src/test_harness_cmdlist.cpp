@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -531,6 +531,81 @@ void append_reset_event(ze_command_list_handle_t hCommandList,
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendEventReset(hCommandList, hEvent));
   EXPECT_EQ(hCommandList, command_list_initial);
   EXPECT_EQ(hEvent, event_initial);
+}
+
+void append_signal_external_semaphore(
+    ze_command_list_handle_t cmd_list, uint32_t num_semaphores,
+    ze_external_semaphore_ext_handle_t *semaphores,
+    ze_external_semaphore_signal_params_ext_t *signal_params,
+    ze_event_handle_t signal_event, uint32_t num_wait_events,
+    ze_event_handle_t *wait_events) {
+  auto cmdlist_initial = cmd_list;
+  std::vector<ze_external_semaphore_ext_handle_t> semaphores_initial(
+      num_semaphores);
+  std::memcpy(semaphores_initial.data(), semaphores,
+              sizeof(ze_external_semaphore_ext_handle_t) * num_semaphores);
+  std::vector<ze_external_semaphore_signal_params_ext_t> signal_params_initial(
+      num_semaphores);
+  std::memcpy(signal_params_initial.data(), signal_params,
+              sizeof(ze_external_semaphore_signal_params_ext_t) *
+                  num_semaphores);
+  auto signal_event_initial = signal_event;
+  std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
+  std::memcpy(wait_events_initial.data(), wait_events,
+              sizeof(ze_event_handle_t) * num_wait_events);
+
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendSignalExternalSemaphoreExt(
+      cmd_list, num_semaphores, semaphores, signal_params, signal_event,
+      num_wait_events, wait_events));
+
+  EXPECT_EQ(cmd_list, cmdlist_initial);
+  for (uint32_t i = 0u; i < num_semaphores; ++i) {
+    EXPECT_EQ(semaphores[i], semaphores_initial[i]);
+    EXPECT_EQ(signal_params[i].stype, signal_params_initial[i].stype);
+    EXPECT_EQ(signal_params[i].pNext, signal_params_initial[i].pNext);
+    EXPECT_EQ(signal_params[i].value, signal_params_initial[i].value);
+  }
+  EXPECT_EQ(signal_event, signal_event_initial);
+  for (uint32_t i = 0u; i < num_wait_events; ++i) {
+    EXPECT_EQ(wait_events[i], wait_events_initial[i]);
+  }
+}
+
+void append_wait_external_semaphore(
+    ze_command_list_handle_t cmd_list, uint32_t num_semaphores,
+    ze_external_semaphore_ext_handle_t *semaphores,
+    ze_external_semaphore_wait_params_ext_t *wait_params,
+    ze_event_handle_t signal_event, uint32_t num_wait_events,
+    ze_event_handle_t *wait_events) {
+  auto cmdlist_initial = cmd_list;
+  std::vector<ze_external_semaphore_ext_handle_t> semaphores_initial(
+      num_semaphores);
+  std::memcpy(semaphores_initial.data(), semaphores,
+              sizeof(ze_external_semaphore_ext_handle_t) * num_semaphores);
+  std::vector<ze_external_semaphore_wait_params_ext_t> wait_params_initial(
+      num_semaphores);
+  std::memcpy(wait_params_initial.data(), wait_params,
+              sizeof(ze_external_semaphore_wait_params_ext_t) * num_semaphores);
+  auto signal_event_initial = signal_event;
+  std::vector<ze_event_handle_t> wait_events_initial(num_wait_events);
+  std::memcpy(wait_events_initial.data(), wait_events,
+              sizeof(ze_event_handle_t) * num_wait_events);
+
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendWaitExternalSemaphoreExt(
+      cmd_list, num_semaphores, semaphores, wait_params, signal_event,
+      num_wait_events, wait_events));
+
+  EXPECT_EQ(cmd_list, cmdlist_initial);
+  for (uint32_t i = 0u; i < num_semaphores; ++i) {
+    EXPECT_EQ(semaphores[i], semaphores_initial[i]);
+    EXPECT_EQ(wait_params[i].stype, wait_params_initial[i].stype);
+    EXPECT_EQ(wait_params[i].pNext, wait_params_initial[i].pNext);
+    EXPECT_EQ(wait_params[i].value, wait_params_initial[i].value);
+  }
+  EXPECT_EQ(signal_event, signal_event_initial);
+  for (uint32_t i = 0u; i < num_wait_events; ++i) {
+    EXPECT_EQ(wait_events[i], wait_events_initial[i]);
+  }
 }
 
 void append_image_copy(ze_command_list_handle_t hCommandList,
