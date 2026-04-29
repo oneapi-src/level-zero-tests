@@ -329,6 +329,75 @@ static void child_multidevice_access_test_opaque(
   }
 }
 
+// Child side of the IPC loop test.
+// Phase 1: open all IPC handles simultaneously (accumulate remote pointers).
+// Phase 2: for each iteration, copy device memory to a host buffer and verify
+//          that every int32_t element equals the iteration index.
+// Phase 3: close all handles in one batch – this exercises the driver's
+//          ability to sustain many concurrently open IPC handles.
+static void child_device_access_loop_test(const shared_data_loop_t &loop_data) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+
+  const uint32_t n = loop_data.num_iterations;
+  std::vector<void *> remote_ptrs(n, nullptr);
+
+  // Phase 1: open all IPC handles (keep them all resident simultaneously)
+  for (uint32_t i = 0; i < n; i++) {
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeMemOpenIpcHandle(context, device, loop_data.ipc_handles[i],
+                           loop_data.flags, &remote_ptrs[i]));
+    LOG_DEBUG << "[Child] Opened IPC handle " << i;
+  }
+
+  // Phase 2: copy each remote buffer to host and verify the data pattern
+  for (uint32_t i = 0; i < n; i++) {
+    if (remote_ptrs[i] == nullptr) {
+      continue;
+    }
+    auto cmd_bundle =
+        lzt::create_command_bundle(context, device, loop_data.is_immediate);
+    void *buffer = lzt::allocate_host_memory(loop_data.size, 1, context);
+    memset(buffer, 0, loop_data.size);
+    lzt::append_memory_copy(cmd_bundle.list, buffer, remote_ptrs[i],
+                            loop_data.size);
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+    const int32_t *ptr = static_cast<const int32_t *>(buffer);
+    bool match = true;
+    for (size_t j = 0; j < loop_data.size / sizeof(int32_t); j++) {
+      if (ptr[j] != static_cast<int32_t>(i)) {
+        LOG_DEBUG << "[Child] Data mismatch at iteration " << i << " index "
+                  << j << ": got " << ptr[j] << " expected " << i;
+        match = false;
+        break;
+      }
+    }
+    EXPECT_TRUE(match) << "[Child] Data mismatch at loop iteration " << i;
+
+    lzt::free_memory(context, buffer);
+    lzt::destroy_command_bundle(cmd_bundle);
+  }
+
+  // Phase 3: close all handles in a batch (the key robustness check)
+  LOG_DEBUG << "[Child] Closing all " << n << " IPC handles";
+  for (uint32_t i = 0; i < n; i++) {
+    if (remote_ptrs[i] != nullptr) {
+      EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, remote_ptrs[i]));
+    }
+  }
+
+  lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+
 int main() {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
@@ -394,6 +463,16 @@ int main() {
     child_host_access_test_opaque(shared_data.size, shared_data.flags,
                                   shared_data.ipc_handle);
     break;
+  case TEST_LOOP_ACCESS: {
+    // Open the secondary shared memory that carries all IPC handles
+    bipc::shared_memory_object shm_loop(
+        bipc::open_only, "ipc_memory_loop_handles", bipc::read_only);
+    bipc::mapped_region region_loop(shm_loop, bipc::read_only);
+    const shared_data_loop_t *loop_data_ptr =
+        static_cast<const shared_data_loop_t *>(region_loop.get_address());
+    child_device_access_loop_test(*loop_data_ptr);
+    break;
+  }
   default:
     LOG_DEBUG << "Unrecognized test case";
     exit(1);

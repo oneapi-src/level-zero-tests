@@ -1160,6 +1160,139 @@ LZT_TEST(
       TEST_MULTIDEVICE_ACCESS, 4096, false, ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
       true, ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE, true);
 }
+// Native Level Zero reproducer of the SYCL/MPI style use case.
+// The parent allocates num_iterations device buffers, fills buffer[i] with
+// int32_t value i, obtains an IPC handle for every buffer, then signals the
+// child to begin.  The child:
+//   Phase 1 — opens all handles simultaneously (accumulates remote pointers).
+//   Phase 2 — copies each buffer to host and verifies the data pattern.
+//   Phase 3 — closes all handles in one batch.
+// This exercises IPC handle lifecycle robustness under repeated acquisition
+// and bulk release.
+static void run_ipc_mem_access_loop_test(uint32_t num_iterations, size_t size,
+                                         ze_ipc_memory_flags_t flags,
+                                         bool is_immediate) {
+  ASSERT_LE(num_iterations, IPC_LOOP_NUM_ITERATIONS)
+      << "num_iterations exceeds IPC_LOOP_NUM_ITERATIONS";
+  ASSERT_EQ(size % sizeof(int32_t), 0u)
+      << "size must be a multiple of sizeof(int32_t)";
+
+  ze_result_t result = zeInit(0);
+  if (result != ZE_RESULT_SUCCESS) {
+    throw std::runtime_error("Parent zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_DEBUG << "[Parent] Driver initialized\n";
+  lzt::print_platform_overview();
+
+  bipc::shared_memory_object::remove("ipc_memory_test");
+  bipc::shared_memory_object::remove("ipc_memory_loop_handles");
+
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+
+  // Allocate all host and device buffers up-front.  Buffer i is filled with
+  // the int32_t value i so the child can verify per-iteration identity.
+  std::vector<void *> host_bufs(num_iterations, nullptr);
+  std::vector<void *> dev_bufs(num_iterations, nullptr);
+  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    host_bufs[i] = lzt::allocate_host_memory(size, 1, context);
+    int32_t *ptr = static_cast<int32_t *>(host_bufs[i]);
+    for (size_t j = 0; j < size / sizeof(int32_t); j++) {
+      ptr[j] = static_cast<int32_t>(i);
+    }
+    dev_bufs[i] = lzt::allocate_device_memory(size, 1, 0, context);
+    lzt::append_memory_copy(cmd_bundle.list, dev_bufs[i], host_bufs[i], size);
+  }
+  lzt::close_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::destroy_command_bundle(cmd_bundle);
+
+  // Obtain an IPC handle for every device buffer.
+  auto loop_data = std::make_unique<shared_data_loop_t>();
+  loop_data->test_type = TEST_LOOP_ACCESS;
+  loop_data->num_iterations = num_iterations;
+  loop_data->size = to_u32(size);
+  loop_data->flags = flags;
+  loop_data->is_immediate = is_immediate;
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    ASSERT_ZE_RESULT_SUCCESS(
+        zeMemGetIpcHandle(context, dev_bufs[i], &loop_data->ipc_handles[i]));
+  }
+
+  // Write the type indicator to the primary shared memory so the existing
+  // child dispatch logic routes to TEST_LOOP_ACCESS.
+  shared_data_t indicator = {};
+  indicator.test_type = TEST_LOOP_ACCESS;
+  indicator.test_sock_type = TEST_NONSOCK;
+  indicator.size = to_u32(size);
+  indicator.flags = flags;
+  indicator.is_immediate = is_immediate;
+
+  // Create BOTH shared memory objects before launching the child to avoid
+  // any race between creation and child startup.
+  {
+    bipc::shared_memory_object shm_main(bipc::create_only, "ipc_memory_test",
+                                        bipc::read_write);
+    shm_main.truncate(sizeof(shared_data_t));
+    bipc::mapped_region region(shm_main, bipc::read_write);
+    std::memcpy(region.get_address(), &indicator, sizeof(shared_data_t));
+  }
+  {
+    bipc::shared_memory_object shm_loop(
+        bipc::create_only, "ipc_memory_loop_handles", bipc::read_write);
+    shm_loop.truncate(sizeof(shared_data_loop_t));
+    bipc::mapped_region region(shm_loop, bipc::read_write);
+    std::memcpy(region.get_address(), loop_data.get(),
+                sizeof(shared_data_loop_t));
+  }
+
+#ifdef _WIN32
+  std::string helper_path = ".\\ipc\\test_ipc_memory_helper.exe";
+#else
+  std::string helper_path = "./ipc/test_ipc_memory_helper";
+#endif
+  boost::process::child c;
+  try {
+    c = boost::process::child(helper_path);
+  } catch (const boost::process::process_error &e) {
+    std::cerr << "Failed to launch child process: " << e.what() << std::endl;
+    throw;
+  }
+
+  c.wait();
+  EXPECT_EQ(c.exit_code(), 0);
+
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    ASSERT_ZE_RESULT_SUCCESS(
+        zeMemPutIpcHandle(context, loop_data->ipc_handles[i]));
+  }
+
+  bipc::shared_memory_object::remove("ipc_memory_test");
+  bipc::shared_memory_object::remove("ipc_memory_loop_handles");
+
+  for (uint32_t i = 0; i < num_iterations; i++) {
+    lzt::free_memory(context, dev_bufs[i]);
+    lzt::free_memory(context, host_bufs[i]);
+  }
+  lzt::destroy_context(context);
+}
+
+LZT_TEST(
+    IpcMemoryLoopAccessTest,
+    GivenL0DeviceMemoryAllocatedInLoopWhenUsingIPCThenChildCanOpenAllHandlesAndVerifyData) {
+  run_ipc_mem_access_loop_test(IPC_LOOP_NUM_ITERATIONS, 4096,
+                               ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+}
+
+LZT_TEST(
+    IpcMemoryLoopAccessTest,
+    GivenL0DeviceMemoryAllocatedInLoopWhenUsingIPCOnImmediateCmdListThenChildCanOpenAllHandlesAndVerifyData) {
+  run_ipc_mem_access_loop_test(IPC_LOOP_NUM_ITERATIONS, 4096,
+                               ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+}
 
 } // namespace
 
