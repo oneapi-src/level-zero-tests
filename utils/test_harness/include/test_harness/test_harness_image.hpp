@@ -118,6 +118,10 @@ ze_image_handle_t create_ze_image(ze_image_desc_t image_descriptor);
 
 void destroy_ze_image(ze_image_handle_t image);
 
+ze_image_handle_t create_ze_image_view_ext(ze_device_handle_t device,
+                                           const ze_image_desc_t *desc,
+                                           ze_image_handle_t image);
+
 ze_image_properties_t get_ze_image_properties(ze_image_desc_t image_descriptor);
 
 ze_image_allocation_ext_properties_t

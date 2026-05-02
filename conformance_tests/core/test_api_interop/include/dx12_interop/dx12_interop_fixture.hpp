@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-#include "dx12_helper.hpp"
+#include "dx12_interop/dx12_helper.hpp"
 
 struct DX12InteroperabilityTests : ::testing::Test {
 

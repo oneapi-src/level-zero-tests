@@ -141,6 +141,34 @@ void destroy_ze_image(ze_image_handle_t image) {
   EXPECT_ZE_RESULT_SUCCESS(zeImageDestroy(image));
 }
 
+ze_image_handle_t create_ze_image_view_ext(ze_device_handle_t device,
+                                           const ze_image_desc_t *desc,
+                                           ze_image_handle_t image) {
+  auto context = lzt::get_default_context();
+
+  auto context_initial = context;
+  auto device_initial = device;
+  auto image_initial = image;
+
+  ze_image_handle_t image_view = nullptr;
+  ze_result_t result =
+      zeImageViewCreateExt(context, device, desc, image, &image_view);
+
+  EXPECT_EQ(context, context_initial);
+  EXPECT_EQ(device, device_initial);
+  EXPECT_EQ(image, image_initial);
+
+  EXPECT_TRUE((result == ZE_RESULT_SUCCESS) ||
+              (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT));
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT) {
+    print_image_descriptor_unsupported(*desc);
+  }
+  if (result == ZE_RESULT_SUCCESS) {
+    EXPECT_NE(nullptr, image_view);
+  }
+  return image_view;
+}
+
 #define DEFAULT_WIDTH 128
 #define DEFAULT_HEIGHT 128
 

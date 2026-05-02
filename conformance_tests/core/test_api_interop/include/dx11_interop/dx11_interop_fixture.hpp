@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-#include "dx11_helper.hpp"
+#include "dx11_interop/dx11_helper.hpp"
 
 struct DX11InteroperabilityTests : ::testing::Test {
 
@@ -48,6 +48,10 @@ struct DX11InteroperabilityTests : ::testing::Test {
     if (FAILED(dx11_device.As(&dx11_device5))) {
       throw std::runtime_error("Failed to query DX11 device5.");
     }
+
+    if (FAILED(dx11_device_context.As(&dx11_device_context4))) {
+      throw std::runtime_error("Failed to query ID3D11DeviceContext4.");
+    }
   }
 
   ze_device_handle_t l0_device;
@@ -57,4 +61,5 @@ struct DX11InteroperabilityTests : ::testing::Test {
   ComPtr<ID3D11Device> dx11_device;
   ComPtr<ID3D11DeviceContext> dx11_device_context;
   ComPtr<ID3D11Device5> dx11_device5;
+  ComPtr<ID3D11DeviceContext4> dx11_device_context4;
 };
