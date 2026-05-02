@@ -3,45 +3,71 @@
 ## Dependencies
 
 ### Windows Dependencies
-Requirements: MSVC 2022
+Requirements: MSVC 2022 version latest (tested on 17.14.30)
 
 ```powershell
-Invoke-WebRequest -Uri 'https://zlib.net/zlib131.zip' -OutFile 'C:\TEMP\zlib.zip';
-Expand-Archive C:\TEMP\zlib.zip -DestinationPath C:\TEMP;
-Move-Item C:\TEMP\zlib-1.3.1 C:\TEMP\zlib;
-Remove-Item C:\TEMP\zlib.zip;
 
-Invoke-WebRequest -UserAgent 'Wget' -Uri 'https://downloads.sourceforge.net/project/libpng/libpng16/1.6.47/lpng1647.zip' -OutFile 'C:\TEMP\libpng.zip';
-Expand-Archive C:\TEMP\libpng.zip -DestinationPath C:\TEMP;
-Move-Item C:\TEMP\lpng1647 C:\TEMP\libpng;
-Remove-Item C:\TEMP\libpng.zip
+$LZT_TEMP = if ($env:LZT_TEMP_DIR) { $env:LZT_TEMP_DIR } else { 'C:\TEMP' }
+New-Item -ItemType Directory -Path $LZT_TEMP -Force | Out-Null
 
-Invoke-WebRequest -UserAgent "Wget" -Uri 'https://sourceforge.net/projects/boost/files/boost/1.79.0/boost_1_79_0.zip' -OutFile 'C:\TEMP\Boost.zip' -UseBasicParsing;
+$zlibVersion = "v1.3.2"
+$zlibUrl = "https://github.com/madler/zlib/archive/refs/tags/$zlibVersion.zip"
+Invoke-WebRequest -Uri $zlibUrl -OutFile (Join-Path $LZT_TEMP 'zlib.zip') -UseBasicParsing;
+Expand-Archive (Join-Path $LZT_TEMP 'zlib.zip') -DestinationPath $LZT_TEMP;
+Move-Item (Join-Path $LZT_TEMP "zlib-$($zlibVersion -replace 'v','')") (Join-Path $LZT_TEMP 'zlib');
+Remove-Item (Join-Path $LZT_TEMP 'zlib.zip');
+
+Invoke-WebRequest -UserAgent 'Wget' -Uri 'https://downloads.sourceforge.net/project/libpng/libpng16/1.6.47/lpng1647.zip' -OutFile (Join-Path $LZT_TEMP 'libpng.zip') -UseBasicParsing;
+Expand-Archive (Join-Path $LZT_TEMP 'libpng.zip') -DestinationPath $LZT_TEMP;
+Move-Item (Join-Path $LZT_TEMP 'lpng1647') (Join-Path $LZT_TEMP 'libpng');
+Remove-Item (Join-Path $LZT_TEMP 'libpng.zip')
+
+Invoke-WebRequest -UserAgent "Wget" -Uri 'https://sourceforge.net/projects/boost/files/boost/1.79.0/boost_1_79_0.zip' -OutFile (Join-Path $LZT_TEMP 'Boost.zip') -UseBasicParsing;
 Add-Type -AssemblyName System.IO.Compression.FileSystem;
-[System.IO.Compression.ZipFile]::ExtractToDirectory('C:\TEMP\Boost.zip', 'C:\TEMP');
-Move-Item C:\TEMP\boost_1_79_0 C:\TEMP\Boost;
-Remove-Item C:\TEMP\Boost.zip;
+[System.IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $LZT_TEMP 'Boost.zip'), $LZT_TEMP);
+Move-Item (Join-Path $LZT_TEMP 'boost_1_79_0') (Join-Path $LZT_TEMP 'Boost');
 
-Invoke-WebRequest -Uri 'https://github.com/oneapi-src/level-zero/archive/refs/tags/v1.28.0.zip' -OutFile 'C:\TEMP\level-zero.zip'; `
-Expand-Archive C:\TEMP\level-zero.zip -DestinationPath C:\TEMP; `
-Move-Item C:\TEMP\level-zero-1.28.0 C:\TEMP\level-zero; `
-Remove-Item C:\TEMP\level-zero.zip;
+$msvcJamPath = Join-Path $LZT_TEMP 'Boost\tools\build\src\tools\msvc.jam'
+$reader = New-Object System.IO.StreamReader($msvcJamPath, [System.Text.UTF8Encoding]::new($false), $true)
+try {
+  $msvcJamContent = $reader.ReadToEnd()
+  $encoding = $reader.CurrentEncoding
+} finally {
+  $reader.Close()
+}
+$old1 = 'if [ MATCH "(14.3)"'
+$new1 = 'if [ MATCH "(14.[3-9])"'
+$old2 = 'if [ MATCH "(MSVC\\\\14.3)" : $(command) ]'
+$new2 = 'if [ MATCH "(MSVC\\\\14.[3-9])" : $(command) ]'
+if (-not $msvcJamContent.Contains($old1)) { throw "Pattern not found: $old1" }
+if (-not $msvcJamContent.Contains($old2)) { throw "Pattern not found: $old2" }
+$updatedMsvcJamContent = $msvcJamContent.Replace($old1, $new1).Replace($old2, $new2)
+[System.IO.File]::WriteAllText($msvcJamPath, $updatedMsvcJamContent, $encoding)
+Remove-Item (Join-Path $LZT_TEMP 'Boost.zip');
 
-$WORKSPACE = "C:\LZT_Workspace"
-mkdir $WORKSPACE
+$LZT_WORKSPACE = if ($env:LZT_WORKSPACE) { $env:LZT_WORKSPACE } else { 'C:\LZT_Workspace' }
+New-Item -ItemType Directory -Path $LZT_WORKSPACE -Force | Out-Null
 
-cmake -B C:\TEMP\build\zlib\ -S C:\TEMP\zlib -A x64 -D BUILD_SHARED_LIBS=YES -DCMAKE_INSTALL_PREFIX:PATH=$WORKSPACE\zlib
-cmake --build C:\TEMP\build\zlib\ --config Release --target install
-cmake -B C:\TEMP\build\libpng\ -S C:\TEMP\libpng -A x64 -DCMAKE_INSTALL_PREFIX:PATH=$WORKSPACE\libpng -DCMAKE_PREFIX_PATH:PATH=$WORKSPACE\zlib
-cmake --build C:\TEMP\build\libpng\ --config Release --target install
-cmake -B C:\TEMP\build\level-zero\ -S C:\TEMP\level-zero -A x64 -DCMAKE_INSTALL_PREFIX:PATH=$WORKSPACE\level-zero
-cmake --build C:\TEMP\build\level-zero\ --config Release --target install
+$levelZeroTag = (Invoke-RestMethod -Headers @{ 'User-Agent' = 'PowerShell' } -Uri 'https://api.github.com/repos/oneapi-src/level-zero/releases/latest').tag_name
+$levelZeroVersion = $levelZeroTag.TrimStart('v')
+$levelZeroSdkZip = Join-Path $LZT_TEMP 'level-zero-win-sdk.zip'
+$levelZeroSdkUrl = "https://github.com/oneapi-src/level-zero/releases/download/$levelZeroTag/level-zero-win-sdk-$levelZeroVersion.zip"
+Invoke-WebRequest -Uri $levelZeroSdkUrl -OutFile $levelZeroSdkZip -UseBasicParsing
+Remove-Item (Join-Path $LZT_WORKSPACE 'level-zero') -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path (Join-Path $LZT_WORKSPACE 'level-zero') -Force | Out-Null
+Expand-Archive -Path $levelZeroSdkZip -DestinationPath (Join-Path $LZT_WORKSPACE 'level-zero') -Force
+Remove-Item $levelZeroSdkZip
 
-cd C:\TEMP\Boost
+cmake -B (Join-Path $LZT_TEMP 'build\zlib') -S (Join-Path $LZT_TEMP 'zlib') -A x64 -D BUILD_SHARED_LIBS=YES -DCMAKE_INSTALL_PREFIX:PATH=$LZT_WORKSPACE\zlib
+cmake --build (Join-Path $LZT_TEMP 'build\zlib') --config Release --target install
+cmake -B (Join-Path $LZT_TEMP 'build\libpng') -S (Join-Path $LZT_TEMP 'libpng') -A x64 -DCMAKE_INSTALL_PREFIX:PATH=$LZT_WORKSPACE\libpng -DCMAKE_PREFIX_PATH:PATH=$LZT_WORKSPACE\zlib
+cmake --build (Join-Path $LZT_TEMP 'build\libpng') --config Release --target install
+
+cd (Join-Path $LZT_TEMP 'Boost')
 .\bootstrap.bat vc143
 .\b2.exe install `
   define=BOOST_USE_WINAPI_VERSION=0x0601 `
-  --prefix=$WORKSPACE\Boost `
+  --prefix=$LZT_WORKSPACE\Boost `
   -j 16 `
   address-model=64 `
   --with-chrono `
@@ -52,10 +78,14 @@ cd C:\TEMP\Boost
   --with-date_time `
   --with-timer
 
-cd $WORKSPACE\level-zero-tests
+if (-not (Test-Path (Join-Path $LZT_WORKSPACE 'level-zero-tests'))) {
+  git clone https://github.com/oneapi-src/level-zero-tests.git (Join-Path $LZT_WORKSPACE 'level-zero-tests')
+}
+
+cd $LZT_WORKSPACE\level-zero-tests
 mkdir build
 cd build
-cmake .. -DCMAKE_PREFIX_PATH="$WORKSPACE\zlib;$WORKSPACE\libpng;$WORKSPACE\level-zero;$WORKSPACE\Boost"
+cmake .. -DLevelZero_ROOT="$LZT_WORKSPACE\level-zero" -DBOOST_ROOT="$LZT_WORKSPACE\Boost" -DPNG_ROOT="$LZT_WORKSPACE\libpng" -DZLIB_ROOT="$LZT_WORKSPACE\zlib"
 cmake --build . --config Release --parallel
 
 ```
