@@ -63,6 +63,9 @@ template <typename T> inline constexpr double to_f64(T val) {
   return static_cast<double>(val);
 }
 
+constexpr uint64_t nanosPerSecond = 1000000000;
+constexpr uint64_t ns_in_five_ms = 5000000;
+
 using nanosec = std::chrono::nanoseconds;
 
 template <typename D> uint64_t to_nanoseconds(D &&dur) {

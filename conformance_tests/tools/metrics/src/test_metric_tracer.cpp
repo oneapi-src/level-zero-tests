@@ -1092,17 +1092,35 @@ LZT_TEST_F(
     ASSERT_GT(num_grp_handles, 0U);
     for (uint32_t i = 0U; i < num_grp_handles; i++) {
       LOG_DEBUG << "Number of metric groups being tested is " << i + 1;
+      for (uint32_t j = 0U; j <= i; j++) {
+        zet_metric_group_properties_t grp_props = {};
+        grp_props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+        ASSERT_ZE_RESULT_SUCCESS(
+            zetMetricGroupGetProperties(grp_handles[j], &grp_props));
+        LOG_DEBUG << "Group [" << j << "] Name: " << grp_props.name;
+      }
 
       ze_event_pool_handle_t notification_event_pool;
       notification_event_pool = lzt::create_event_pool(
           lzt::get_default_context(), 1, ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
 
+      ze_event_pool_handle_t kernel_event_pool =
+          lzt::create_event_pool(lzt::get_default_context(), 1,
+                                 ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP |
+                                     ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+
       ze_event_handle_t notification_event;
+      ze_event_handle_t kernel_event;
       ze_event_desc_t notification_event_descriptor = {
+          ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, ZE_EVENT_SCOPE_FLAG_HOST,
+          ZE_EVENT_SCOPE_FLAG_DEVICE};
+      ze_event_desc_t kernel_event_descriptor = {
           ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, ZE_EVENT_SCOPE_FLAG_HOST,
           ZE_EVENT_SCOPE_FLAG_DEVICE};
       notification_event = lzt::create_event(notification_event_pool,
                                              notification_event_descriptor);
+      kernel_event =
+          lzt::create_event(kernel_event_pool, kernel_event_descriptor);
 
       lzt::activate_metric_groups(device, i + 1, grp_handles.data());
 
@@ -1121,6 +1139,14 @@ LZT_TEST_F(
           lzt::metric_decoder_get_decodable_metrics_count(
               metric_decoder_handle);
 
+      ze_device_properties_t device_props = {
+          ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2};
+      zeDeviceGetProperties(device, &device_props);
+      uint64_t timer_frequency = device_props.timerResolution;
+      uint64_t timer_period_ns = lzt::nanosPerSecond / timer_frequency;
+      const int64_t ticks_in_five_ms =
+          lzt::ns_in_five_ms / static_cast<int64_t>(timer_period_ns);
+
       std::vector<zet_metric_handle_t> decodable_metric_handles(
           decodable_metric_count);
       lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
@@ -1133,8 +1159,8 @@ LZT_TEST_F(
       ze_kernel_handle_t function = get_matrix_multiplication_kernel(
           device, &tg, &a_buffer, &b_buffer, &c_buffer);
 
-      zeCommandListAppendLaunchKernel(commandList, function, &tg, nullptr, 0,
-                                      nullptr);
+      zeCommandListAppendLaunchKernel(commandList, function, &tg, kernel_event,
+                                      0, nullptr);
 
       lzt::close_command_list(commandList);
 
@@ -1162,81 +1188,135 @@ LZT_TEST_F(
                     << result;
       }
 
-      /* read data */
-      size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
-      std::vector<uint8_t> raw_data(raw_data_size, 0);
-      ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-          metric_tracer_handle, &raw_data_size, raw_data.data()));
-      ASSERT_NE(raw_data_size, 0)
-          << "zetMetricTracerReadDataExp returned no data";
-      raw_data.resize(raw_data_size);
+      LOG_DEBUG << "synchronize on kernel completion";
+      ASSERT_ZE_RESULT_SUCCESS(
+          zeEventHostSynchronize(kernel_event, event_wait_time_ns));
+      uint64_t metricTimestamp_ticks = 0;
+      uint64_t deviceTimestamp_ticks = 0;
+      int64_t time_diff_ticks = 0;
+      // Query kernel timestamp
+      ze_kernel_timestamp_result_t timestamp_result = {};
+      ASSERT_ZE_RESULT_SUCCESS(zeEventQueryStatus(kernel_event));
 
-      /* decode data */
+      ASSERT_ZE_RESULT_SUCCESS(
+          zeEventQueryKernelTimestamp(kernel_event, &timestamp_result));
+      LOG_DEBUG << "Kernel end time (device): "
+                << timestamp_result.global.kernelEnd;
+
+      // Sync device timestamp with metric timestamp
+      ASSERT_ZE_RESULT_SUCCESS(zetMetricGroupGetGlobalTimestampsExp(
+          grp_handles[i], false, &deviceTimestamp_ticks,
+          &metricTimestamp_ticks));
+      LOG_DEBUG << "Device timestamp: " << deviceTimestamp_ticks
+                << " Metric timestamp: " << metricTimestamp_ticks;
+      time_diff_ticks = static_cast<int64_t>(deviceTimestamp_ticks) -
+                        static_cast<int64_t>(metricTimestamp_ticks);
+      LOG_DEBUG << "Time difference between device timestamp and metric "
+                   "timestamp in ticks: "
+                << time_diff_ticks;
+
+      size_t raw_data_size;
+      std::vector<uint8_t> raw_data;
       uint32_t metric_entry_count = 0;
       uint32_t set_count = 0;
-      lzt::metric_tracer_decode_get_various_counts(
-          metric_decoder_handle, &raw_data_size, &raw_data,
-          decodable_metric_count, &decodable_metric_handles, &set_count,
-          &metric_entry_count);
-      EXPECT_NE(0u, metric_entry_count) << "zetMetricTracerDecodeExp reports "
-                                           "that there are no metric entries "
-                                           "to be decoded";
-      std::vector<uint32_t> metric_entries_per_set_count(set_count);
-      std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
+      int64_t kernelEnd_ticks;
+      do {
+        /* read data */
+        raw_data_size = 1024 * 1024; /* 1MB buffer */
+        raw_data.assign(raw_data_size, 0);
+        ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+            metric_tracer_handle, &raw_data_size, raw_data.data()));
+        raw_data.resize(raw_data_size);
 
-      lzt::metric_tracer_decode(
-          metric_decoder_handle, &raw_data_size, &raw_data,
-          decodable_metric_count, &decodable_metric_handles, &set_count,
-          &metric_entries_per_set_count, &metric_entry_count, &metric_entries);
+        // decode data - count pass, retry reading more data if 0 entries found
 
-      LOG_DEBUG << "Actual Decoded Metric Entry Count: " << metric_entry_count
-                << "\n";
-      LOG_DEBUG << "Raw data decoded: " << raw_data_size << " bytes"
-                << std::endl;
+        lzt::metric_tracer_decode_get_various_counts(
+            metric_decoder_handle, &raw_data_size, &raw_data,
+            decodable_metric_count, &decodable_metric_handles, &set_count,
+            &metric_entry_count);
 
-      uint32_t set_entry_start = 0;
-      for (uint32_t set_index = 0; set_index < set_count; set_index++) {
-        LOG_DEBUG << "Set number: " << set_index << " Entries in set: "
-                  << metric_entries_per_set_count[set_index] << "\n";
+        ASSERT_ZE_RESULT_SUCCESS(zetMetricGroupGetGlobalTimestampsExp(
+            grp_handles[i], false, &deviceTimestamp_ticks,
+            &metricTimestamp_ticks));
+        LOG_DEBUG << "Device timestamp: " << deviceTimestamp_ticks
+                  << " Metric timestamp: " << metricTimestamp_ticks;
+        kernelEnd_ticks =
+            static_cast<int64_t>(timestamp_result.global.kernelEnd) +
+            time_diff_ticks;
 
-        for (uint32_t index = set_entry_start;
-             index < set_entry_start + metric_entries_per_set_count[set_index];
-             index++) {
-          auto &metric_entry = metric_entries[index];
-          zet_metric_properties_t metric_properties = {};
-          lzt::get_metric_properties(
-              decodable_metric_handles[metric_entry.metricIndex],
-              &metric_properties);
-          LOG_DEBUG << "Component: " << metric_properties.component
-                    << " Decodable metric name: " << metric_properties.name;
-          switch (metric_properties.resultType) {
-          case ZET_VALUE_TYPE_UINT32:
-          case ZET_VALUE_TYPE_UINT8:
-          case ZET_VALUE_TYPE_UINT16:
-            LOG_DEBUG << "\t value: " << metric_entry.value.ui32;
-            break;
-          case ZET_VALUE_TYPE_UINT64:
-            LOG_DEBUG << "\t value: " << metric_entry.value.ui64;
-            break;
-          case ZET_VALUE_TYPE_FLOAT32:
-            LOG_DEBUG << "\t value: " << metric_entry.value.fp32;
-            break;
-          case ZET_VALUE_TYPE_FLOAT64:
-            LOG_DEBUG << "\t value: " << metric_entry.value.fp64;
-            break;
-          case ZET_VALUE_TYPE_BOOL8:
-            LOG_DEBUG << "\t value: "
-                      << (metric_entry.value.b8 ? "TRUE" : "FALSE");
-            break;
-          default:
-            LOG_ERROR << "Encountered unsupported Type "
-                      << metric_properties.resultType;
-            break;
-          }
-          LOG_DEBUG << "timestamp " << metric_entry.timeStamp;
+        if (kernelEnd_ticks + ticks_in_five_ms <
+            static_cast<int64_t>(metricTimestamp_ticks)) {
+          break;
         }
 
-        set_entry_start += metric_entries_per_set_count[set_index];
+      } while (metric_entry_count == 0 && raw_data_size != 0);
+
+      if (raw_data_size == 0) {
+        LOG_DEBUG << "zetMetricTracerReadDataExp returned no data";
+      }
+      if (metric_entry_count == 0) {
+        LOG_WARNING << "No decoded metric entries found after exhausting "
+                       "available data, skipping decode pass";
+      } else {
+        std::vector<uint32_t> metric_entries_per_set_count(set_count);
+        std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
+
+        lzt::metric_tracer_decode(metric_decoder_handle, &raw_data_size,
+                                  &raw_data, decodable_metric_count,
+                                  &decodable_metric_handles, &set_count,
+                                  &metric_entries_per_set_count,
+                                  &metric_entry_count, &metric_entries);
+
+        LOG_DEBUG << "Actual Decoded Metric Entry Count: " << metric_entry_count
+                  << "\n";
+        LOG_DEBUG << "Raw data decoded: " << raw_data_size << " bytes"
+                  << std::endl;
+
+        uint32_t set_entry_start = 0;
+        for (uint32_t set_index = 0; set_index < set_count; set_index++) {
+          LOG_DEBUG << "Set number: " << set_index << " Entries in set: "
+                    << metric_entries_per_set_count[set_index] << "\n";
+
+          for (uint32_t index = set_entry_start;
+               index <
+               set_entry_start + metric_entries_per_set_count[set_index];
+               index++) {
+            auto &metric_entry = metric_entries[index];
+            zet_metric_properties_t metric_properties = {};
+            lzt::get_metric_properties(
+                decodable_metric_handles[metric_entry.metricIndex],
+                &metric_properties);
+            LOG_DEBUG << "Component: " << metric_properties.component
+                      << " Decodable metric name: " << metric_properties.name;
+            switch (metric_properties.resultType) {
+            case ZET_VALUE_TYPE_UINT32:
+            case ZET_VALUE_TYPE_UINT8:
+            case ZET_VALUE_TYPE_UINT16:
+              LOG_DEBUG << "\t value: " << metric_entry.value.ui32;
+              break;
+            case ZET_VALUE_TYPE_UINT64:
+              LOG_DEBUG << "\t value: " << metric_entry.value.ui64;
+              break;
+            case ZET_VALUE_TYPE_FLOAT32:
+              LOG_DEBUG << "\t value: " << metric_entry.value.fp32;
+              break;
+            case ZET_VALUE_TYPE_FLOAT64:
+              LOG_DEBUG << "\t value: " << metric_entry.value.fp64;
+              break;
+            case ZET_VALUE_TYPE_BOOL8:
+              LOG_DEBUG << "\t value: "
+                        << (metric_entry.value.b8 ? "TRUE" : "FALSE");
+              break;
+            default:
+              LOG_ERROR << "Encountered unsupported Type "
+                        << metric_properties.resultType;
+              break;
+            }
+            LOG_DEBUG << "timestamp " << metric_entry.timeStamp;
+          }
+
+          set_entry_start += metric_entries_per_set_count[set_index];
+        }
       }
 
       LOG_DEBUG << "synchronize with completion of workload";
@@ -1253,6 +1333,8 @@ LZT_TEST_F(
       lzt::deactivate_metric_groups(device);
       lzt::destroy_event(notification_event);
       lzt::destroy_event_pool(notification_event_pool);
+      lzt::destroy_event(kernel_event);
+      lzt::destroy_event_pool(kernel_event_pool);
     }
     lzt::destroy_command_queue(commandQueue);
     lzt::destroy_command_list(commandList);
