@@ -1426,6 +1426,16 @@ LZT_TEST_F(
         device_with_metric_group_handles.activatable_metric_group_handle_list;
     uint32_t num_grp_handles = to_u32(grp_handles.size());
     ASSERT_GT(num_grp_handles, 0u);
+
+    auto grp_properties =
+        lzt::get_metric_group_properties(std::vector<zet_metric_group_handle_t>(
+            grp_handles.begin(), grp_handles.end()));
+
+    for (uint32_t i = 0; i < num_grp_handles; i++) {
+      LOG_DEBUG << " Metric Group  [" << i
+                << "] name=" << grp_properties[i].name;
+    }
+
     lzt::activate_metric_groups(device, num_grp_handles, grp_handles.data());
 
     zet_metric_tracer_exp_handle_t metric_tracer_handle;
@@ -1438,14 +1448,7 @@ LZT_TEST_F(
     LOG_DEBUG << "synchronize with completion of workload";
     lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
     lzt::metric_tracer_disable(metric_tracer_handle, true);
-    /* read data */
-    size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
-    std::vector<uint8_t> raw_data(raw_data_size, 0);
-    ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-        metric_tracer_handle, &raw_data_size, raw_data.data()));
-    ASSERT_NE(raw_data_size, 0)
-        << "zetMetricTracerReadDataExp returned no data";
-    raw_data.resize(raw_data_size);
+
     zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
     lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
 
@@ -1474,17 +1477,26 @@ LZT_TEST_F(
             << "zetMetricDecoderGetDecodableMetricsExp should not return more "
                "decodable metrics than are available";
       }
-
-      /* decode data */
+      size_t raw_data_size;
+      std::vector<uint8_t> raw_data;
       uint32_t set_count{};
       uint32_t metric_entry_count{};
-      lzt::metric_tracer_decode_get_various_counts(
-          metric_decoder_handle, &raw_data_size, &raw_data,
-          decodable_metric_count, &decodable_metric_handles, &set_count,
-          &metric_entry_count);
-      EXPECT_NE(0u, metric_entry_count)
-          << "zetMetricTracerDecodeExp reports that there are no metric "
-             "entries to be decoded";
+      do {
+        /* read data */
+        raw_data_size = 1024 * 1024; /* 1MB buffer */
+        raw_data.assign(raw_data_size, 0);
+        ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+            metric_tracer_handle, &raw_data_size, raw_data.data()));
+        raw_data.resize(raw_data_size);
+
+        /* decode data */
+
+        lzt::metric_tracer_decode_get_various_counts(
+            metric_decoder_handle, &raw_data_size, &raw_data,
+            decodable_metric_count, &decodable_metric_handles, &set_count,
+            &metric_entry_count);
+
+      } while (metric_entry_count == 0 && raw_data_size != 0);
 
       if (metric_entry_count != 0) {
         std::vector<uint32_t> metric_entries_per_set_count(set_count);
@@ -1553,7 +1565,14 @@ LZT_TEST_F(
     uint32_t num_grp_handles = to_u32(grp_handles.size());
     ASSERT_GT(num_grp_handles, 0u);
     lzt::activate_metric_groups(device, num_grp_handles, grp_handles.data());
+    auto grp_properties =
+        lzt::get_metric_group_properties(std::vector<zet_metric_group_handle_t>(
+            grp_handles.begin(), grp_handles.end()));
 
+    for (uint32_t i = 0; i < num_grp_handles; i++) {
+      LOG_DEBUG << " Metric Group  [" << i
+                << "] name=" << grp_properties[i].name;
+    }
     zet_metric_tracer_exp_handle_t metric_tracer_handle;
     lzt::metric_tracer_create(
         lzt::get_default_context(), device, num_grp_handles, grp_handles.data(),
@@ -1564,14 +1583,7 @@ LZT_TEST_F(
     LOG_DEBUG << "synchronize with completion of workload";
     lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
     lzt::metric_tracer_disable(metric_tracer_handle, true);
-    /* read data */
-    size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
-    std::vector<uint8_t> raw_data(raw_data_size, 0);
-    ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-        metric_tracer_handle, &raw_data_size, raw_data.data()));
-    ASSERT_NE(raw_data_size, 0)
-        << "zetMetricTracerReadDataExp returned no data";
-    raw_data.resize(raw_data_size);
+
     zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
 
     lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
@@ -1583,18 +1595,28 @@ LZT_TEST_F(
                                               &decodable_metric_handles);
     decodable_metric_count = to_u32(decodable_metric_handles.size());
 
-    /* decode data */
+    size_t raw_data_size;
+    std::vector<uint8_t> raw_data;
     uint32_t set_count{};
     uint32_t metric_entry_count{};
-    EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerDecodeExp(
-        metric_decoder_handle, &raw_data_size, raw_data.data(),
-        decodable_metric_count, decodable_metric_handles.data(), &set_count,
-        nullptr, &metric_entry_count, nullptr));
-    LOG_DEBUG << "decodable metric entry count: " << metric_entry_count;
-    LOG_DEBUG << "set count: " << set_count;
-    EXPECT_NE(0u, metric_entry_count)
-        << "zetMetricTracerDecodeExp reports that there are no metric entries "
-           "to be decoded";
+    do {
+      /* read data */
+      raw_data_size = 1024 * 1024; /* 1MB buffer */
+      raw_data.assign(raw_data_size, 0);
+      ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+          metric_tracer_handle, &raw_data_size, raw_data.data()));
+      raw_data.resize(raw_data_size);
+
+      /* decode data */
+
+      EXPECT_ZE_RESULT_SUCCESS(zetMetricTracerDecodeExp(
+          metric_decoder_handle, &raw_data_size, raw_data.data(),
+          decodable_metric_count, decodable_metric_handles.data(), &set_count,
+          nullptr, &metric_entry_count, nullptr));
+      LOG_DEBUG << "decodable metric entry count: " << metric_entry_count;
+      LOG_DEBUG << "set count: " << set_count;
+
+    } while (metric_entry_count == 0 && raw_data_size != 0);
 
     if (metric_entry_count != 0) {
       const uint32_t additional_entries = 8;
@@ -1663,6 +1685,14 @@ LZT_TEST_F(zetMetricTracerTest,
         device_with_metric_group_handles.activatable_metric_group_handle_list;
     uint32_t num_grp_handles = to_u32(grp_handles.size());
     ASSERT_GT(num_grp_handles, 0u);
+    auto grp_properties =
+        lzt::get_metric_group_properties(std::vector<zet_metric_group_handle_t>(
+            grp_handles.begin(), grp_handles.end()));
+
+    for (uint32_t i = 0; i < num_grp_handles; i++) {
+      LOG_DEBUG << " Metric Group  [" << i
+                << "] name=" << grp_properties[i].name;
+    }
     lzt::activate_metric_groups(device, num_grp_handles, grp_handles.data());
 
     const uint64_t nanosPerSecond = 1000000000;
@@ -1714,16 +1744,7 @@ LZT_TEST_F(zetMetricTracerTest,
           << time_diff_ns;
     }
 
-    /* read data */
-    size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
-    std::vector<uint8_t> raw_data(raw_data_size, 0);
-    ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-        metric_tracer_handle, &raw_data_size, raw_data.data()));
-    ASSERT_NE(raw_data_size, 0)
-        << "zetMetricTracerReadDataExp returned no data";
-    raw_data.resize(raw_data_size);
     zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
-
     lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
     uint32_t decodable_metric_count =
         lzt::metric_decoder_get_decodable_metrics_count(metric_decoder_handle);
@@ -1732,24 +1753,35 @@ LZT_TEST_F(zetMetricTracerTest,
     lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
                                               &decodable_metric_handles);
     decodable_metric_count = to_u32(decodable_metric_handles.size());
-    /* decode data */
-    uint32_t metric_entry_count = 0;
-    uint32_t set_count = 0;
-    lzt::metric_tracer_decode_get_various_counts(
-        metric_decoder_handle, &raw_data_size, &raw_data,
-        decodable_metric_count, &decodable_metric_handles, &set_count,
-        &metric_entry_count);
-    std::vector<uint32_t> metric_entries_per_set_count(set_count);
-    std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
-    lzt::metric_tracer_decode(metric_decoder_handle, &raw_data_size, &raw_data,
-                              decodable_metric_count, &decodable_metric_handles,
-                              &set_count, &metric_entries_per_set_count,
-                              &metric_entry_count, &metric_entries);
-    EXPECT_NE(0u, metric_entry_count)
-        << "zetMetricTracerDecodeExp reports that there are no metric entries "
-           "to be decoded";
+
+    size_t raw_data_size;
+    std::vector<uint8_t> raw_data;
+    uint32_t set_count{};
+    uint32_t metric_entry_count{};
+    do {
+      /* read data */
+      raw_data_size = 1024 * 1024; /* 1MB buffer */
+      raw_data.assign(raw_data_size, 0);
+      ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+          metric_tracer_handle, &raw_data_size, raw_data.data()));
+      raw_data.resize(raw_data_size);
+
+      /* decode data */
+
+      lzt::metric_tracer_decode_get_various_counts(
+          metric_decoder_handle, &raw_data_size, &raw_data,
+          decodable_metric_count, &decodable_metric_handles, &set_count,
+          &metric_entry_count);
+
+    } while (metric_entry_count == 0 && raw_data_size != 0);
 
     if (metric_entry_count != 0) {
+      std::vector<uint32_t> metric_entries_per_set_count(set_count);
+      std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
+      lzt::metric_tracer_decode(
+          metric_decoder_handle, &raw_data_size, &raw_data,
+          decodable_metric_count, &decodable_metric_handles, &set_count,
+          &metric_entries_per_set_count, &metric_entry_count, &metric_entries);
       uint64_t metric_entry_timestamp_start_ns = 0;
       uint64_t metric_entry_timestamp_end_ns = 0;
       metric_entry_timestamp_start_ns = metric_entries[0].timeStamp;
@@ -1810,6 +1842,14 @@ LZT_TEST_F(
         device_with_metric_group_handles.activatable_metric_group_handle_list;
     uint32_t num_grp_handles = to_u32(grp_handles.size());
     ASSERT_NE(0u, num_grp_handles);
+    auto grp_properties =
+        lzt::get_metric_group_properties(std::vector<zet_metric_group_handle_t>(
+            grp_handles.begin(), grp_handles.end()));
+
+    for (uint32_t i = 0; i < num_grp_handles; i++) {
+      LOG_DEBUG << " Metric Group  [" << i
+                << "] name=" << grp_properties[i].name;
+    }
 
     std::vector<zet_metric_group_handle_t> dma_buf_metric_group_handles;
     lzt::get_metric_groups_supporting_dma_buf(
@@ -1861,14 +1901,7 @@ LZT_TEST_F(
       LOG_DEBUG << "synchronize with completion of workload";
       lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
       lzt::metric_tracer_disable(metric_tracer_handle, true);
-      /* read data */
-      size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
-      std::vector<uint8_t> raw_data(raw_data_size, 0);
-      ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
-          metric_tracer_handle, &raw_data_size, raw_data.data()));
-      ASSERT_NE(raw_data_size, 0)
-          << "zetMetricTracerReadDataExp returned no data";
-      raw_data.resize(raw_data_size);
+
       zet_metric_decoder_exp_handle_t metric_decoder_handle = nullptr;
 
       lzt::metric_decoder_create(metric_tracer_handle, &metric_decoder_handle);
@@ -1880,24 +1913,36 @@ LZT_TEST_F(
       lzt::metric_decoder_get_decodable_metrics(metric_decoder_handle,
                                                 &decodable_metric_handles);
       decodable_metric_count = to_u32(decodable_metric_handles.size());
-      /* decode data */
-      uint32_t metric_entry_count = 0;
-      uint32_t set_count = 0;
-      lzt::metric_tracer_decode_get_various_counts(
-          metric_decoder_handle, &raw_data_size, &raw_data,
-          decodable_metric_count, &decodable_metric_handles, &set_count,
-          &metric_entry_count);
-      std::vector<uint32_t> metric_entries_per_set_count(set_count);
-      std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
-      lzt::metric_tracer_decode(
-          metric_decoder_handle, &raw_data_size, &raw_data,
-          decodable_metric_count, &decodable_metric_handles, &set_count,
-          &metric_entries_per_set_count, &metric_entry_count, &metric_entries);
-      EXPECT_NE(0u, metric_entry_count)
-          << "zetMetricTracerDecodeExp reports that there are no metric "
-             "entries to be decoded";
+
+      size_t raw_data_size;
+      std::vector<uint8_t> raw_data;
+      uint32_t set_count{};
+      uint32_t metric_entry_count{};
+      do {
+        /* read data */
+        raw_data_size = 1024 * 1024; /* 1MB buffer */
+        raw_data.assign(raw_data_size, 0);
+        ASSERT_ZE_RESULT_SUCCESS(zetMetricTracerReadDataExp(
+            metric_tracer_handle, &raw_data_size, raw_data.data()));
+        raw_data.resize(raw_data_size);
+
+        /* decode data */
+
+        lzt::metric_tracer_decode_get_various_counts(
+            metric_decoder_handle, &raw_data_size, &raw_data,
+            decodable_metric_count, &decodable_metric_handles, &set_count,
+            &metric_entry_count);
+
+      } while (metric_entry_count == 0 && raw_data_size != 0);
 
       if (metric_entry_count != 0) {
+        std::vector<uint32_t> metric_entries_per_set_count(set_count);
+        std::vector<zet_metric_entry_exp_t> metric_entries(metric_entry_count);
+        lzt::metric_tracer_decode(metric_decoder_handle, &raw_data_size,
+                                  &raw_data, decodable_metric_count,
+                                  &decodable_metric_handles, &set_count,
+                                  &metric_entries_per_set_count,
+                                  &metric_entry_count, &metric_entries);
         dma_buf_validation_count++;
         uint8_t exported_memory_data = to_u8(metric_entries[0].value.ui32);
         EXPECT_EQ(src_buf_data, exported_memory_data);
