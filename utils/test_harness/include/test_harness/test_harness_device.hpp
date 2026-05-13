@@ -110,6 +110,7 @@ ze_external_semaphore_ext_handle_t
 import_external_semaphore(ze_device_handle_t device,
                           const ze_external_semaphore_ext_desc_t *desc);
 void release_external_semaphore(ze_external_semaphore_ext_handle_t semaphore);
-
+void get_aggregated_copy_offload_increment_value(ze_device_handle_t device,
+                                                 uint32_t *value);
 }; // namespace level_zero_tests
 #endif

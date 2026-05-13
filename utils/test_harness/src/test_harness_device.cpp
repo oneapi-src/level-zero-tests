@@ -490,8 +490,16 @@ import_external_semaphore(ze_device_handle_t device,
   EXPECT_NE(semaphore, nullptr);
   return semaphore;
 }
+
 void release_external_semaphore(ze_external_semaphore_ext_handle_t semaphore) {
   EXPECT_ZE_RESULT_SUCCESS(zeDeviceReleaseExternalSemaphoreExt(semaphore));
 }
 
+void get_aggregated_copy_offload_increment_value(ze_device_handle_t device,
+                                                 uint32_t *value) {
+  auto device_initial = device;
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeDeviceGetAggregatedCopyOffloadIncrementValue(device, value));
+  EXPECT_EQ(device, device_initial);
+}
 }; // namespace level_zero_tests
