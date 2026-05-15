@@ -39,7 +39,7 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
 std::vector<metricGroupInfo_t>
 get_metric_group_info(ze_device_handle_t device,
                       zet_metric_group_sampling_type_flags_t samplingType,
-                      bool includeExpFeature, bool one_group_per_domain);
+                      bool one_group_per_domain);
 
 uint32_t get_metric_group_handles_count(ze_device_handle_t device);
 std::vector<zet_metric_group_handle_t>
@@ -53,8 +53,7 @@ std::vector<ze_device_handle_t>
 get_metric_test_device_list(uint32_t testSubDeviceCount = 1);
 std::vector<std::string>
 get_metric_group_name_list(ze_device_handle_t device,
-                           zet_metric_group_sampling_type_flags_t samplingType,
-                           bool includeExpFeature);
+                           zet_metric_group_sampling_type_flags_t samplingType);
 zet_metric_group_handle_t find_metric_group(ze_device_handle_t device,
                                             std::string metricGroupToFind,
                                             uint32_t samplingType);

@@ -1145,7 +1145,8 @@ LZT_TEST_F(
       uint64_t timer_frequency = device_props.timerResolution;
       uint64_t timer_period_ns = lzt::nanosPerSecond / timer_frequency;
       const int64_t ticks_in_five_ms =
-          lzt::ns_in_five_ms / static_cast<int64_t>(timer_period_ns);
+          static_cast<int64_t>(lzt::ns_in_five_ms) /
+          static_cast<int64_t>(timer_period_ns);
 
       std::vector<zet_metric_handle_t> decodable_metric_handles(
           decodable_metric_count);
@@ -1695,12 +1696,11 @@ LZT_TEST_F(zetMetricTracerTest,
     }
     lzt::activate_metric_groups(device, num_grp_handles, grp_handles.data());
 
-    const uint64_t nanosPerSecond = 1000000000;
     ze_device_properties_t device_props = {
         ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2};
     zeDeviceGetProperties(device, &device_props);
     uint64_t timer_frequency = device_props.timerResolution;
-    uint64_t timer_period = nanosPerSecond / timer_frequency;
+    uint64_t timer_period = lzt::nanosPerSecond / timer_frequency;
 
     uint64_t host_timestamp_start, device_timestamp_start;
     std::tie(host_timestamp_start, device_timestamp_start) =

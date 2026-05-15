@@ -167,8 +167,7 @@ get_metric_test_device_list(uint32_t testSubDeviceCount) {
   return testDevices;
 }
 
-bool check_metric_type_ip(zet_metric_group_handle_t metricGroupHandle,
-                          bool includeExpFeature) {
+bool check_metric_type_ip(zet_metric_group_handle_t metricGroupHandle) {
 
   std::vector<zet_metric_handle_t> metricHandles =
       get_metric_handles(metricGroupHandle);
@@ -179,20 +178,11 @@ bool check_metric_type_ip(zet_metric_group_handle_t metricGroupHandle,
     MetricProp.pNext = nullptr;
     EXPECT_ZE_RESULT_SUCCESS(zetMetricGetProperties(metric, &MetricProp));
 
-    if (MetricProp.metricType == ZET_METRIC_TYPE_IP && !includeExpFeature) {
+    if (MetricProp.metricType == ZET_METRIC_TYPE_IP) {
       return true;
     }
   }
   return false;
-}
-
-bool check_metric_type_ip(ze_device_handle_t device, std::string groupName,
-                          zet_metric_group_sampling_type_flags_t samplingType,
-                          bool includeExpFeature) {
-
-  zet_metric_group_handle_t groupHandle;
-  groupHandle = lzt::find_metric_group(device, groupName, samplingType);
-  return check_metric_type_ip(groupHandle, includeExpFeature);
 }
 
 std::vector<zet_metric_group_handle_t> get_one_metric_group_per_domain(
@@ -283,7 +273,7 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
 std::vector<metricGroupInfo_t>
 get_metric_group_info(ze_device_handle_t device,
                       zet_metric_group_sampling_type_flags_t metricSamplingType,
-                      bool includeExpFeature, bool one_group_per_domain) {
+                      bool one_group_per_domain) {
 
   std::vector<zet_metric_group_handle_t> metricGroupHandles =
       get_metric_group_handles(device);
@@ -302,11 +292,6 @@ get_metric_group_info(ze_device_handle_t device,
       continue;
     }
 
-    if (check_metric_type_ip(metricGroupHandle, includeExpFeature)) {
-      LOG_WARNING
-          << "Test includes ZET_METRIC_TYPE_IP Metric Type - Skipped...";
-      continue;
-    }
     if (one_group_per_domain) {
       concurrentMetricGroupHandles.push_back(metricGroupHandle);
     }
@@ -359,7 +344,7 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
       continue;
     }
 
-    if (!check_metric_type_ip(metricGroupHandle, false)) {
+    if (!check_metric_type_ip(metricGroupHandle)) {
       continue;
     }
 
@@ -373,10 +358,9 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
   return matchedGroupsInfo;
 }
 
-std::vector<std::string>
-get_metric_group_name_list(ze_device_handle_t device,
-                           zet_metric_group_sampling_type_flags_t samplingType,
-                           bool includeExpFeature = true) {
+std::vector<std::string> get_metric_group_name_list(
+    ze_device_handle_t device,
+    zet_metric_group_sampling_type_flags_t samplingType) {
   ze_result_t result = zeInit(0);
   if (result) {
     throw std::runtime_error("zeInit failed: " +
@@ -387,14 +371,8 @@ get_metric_group_name_list(ze_device_handle_t device,
   std::vector<std::string> groupPropName;
   for (auto propItem : groupProp) {
     std::string strItem(propItem.name);
-    if (propItem.samplingType != samplingType)
+    if (!(propItem.samplingType & samplingType))
       continue;
-    if (check_metric_type_ip(device, strItem, samplingType,
-                             includeExpFeature)) {
-      LOG_WARNING
-          << "Test includes ZET_METRIC_TYPE_IP Metric Type - Skipped...";
-      continue;
-    }
     groupPropName.push_back(strItem);
   }
   return groupPropName;
@@ -427,7 +405,7 @@ zet_metric_group_handle_t find_metric_group(ze_device_handle_t device,
   auto metricGroupProp = get_metric_group_properties(device);
   for (auto groupProp : metricGroupProp) {
     if (strcmp(metricGroupToFind.c_str(), groupProp.name) == 0 &&
-        (groupProp.samplingType == samplingType)) {
+        (groupProp.samplingType & samplingType)) {
       break;
     }
     i++;
@@ -617,7 +595,7 @@ void metric_streamer_read_data(
 
   bool isIpMetricGroup = false;
   if (metricGroupHandle != nullptr) {
-    isIpMetricGroup = check_metric_type_ip(metricGroupHandle, false);
+    isIpMetricGroup = check_metric_type_ip(metricGroupHandle);
   }
 
   ze_result_t result = zetMetricStreamerReadData(
@@ -1151,7 +1129,7 @@ void generate_device_list_with_activatable_metric_group_handles(
     lzt::display_device_properties(device);
 
     auto metric_group_info =
-        lzt::get_metric_group_info(device, sampling_type, true, true);
+        lzt::get_metric_group_info(device, sampling_type, true);
     if (metric_group_info.size() == 0) {
       continue;
     }
