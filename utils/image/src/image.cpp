@@ -192,8 +192,10 @@ template <typename T> bool ImageBMP<T>::read(const std::string &image_path) {
   bool error = !BmpUtils::load_bmp_image(tmp, width_, height_, pitch,
                                          bits_per_pixel, image_path.c_str());
   data.reset(tmp);
-  pixels_.resize(size(), 0);
-  copy_raw_data(reinterpret_cast<T *>(data.get()));
+  if (!error) {
+    pixels_.resize(size(), 0);
+    copy_raw_data(reinterpret_cast<T *>(data.get()));
+  }
   return error;
 }
 
@@ -203,8 +205,10 @@ template <> bool ImageBMP<uint8_t>::read(const std::string &image_path) {
   bool error =
       !BmpUtils::load_bmp_image_8u(tmp, width_, height_, image_path.c_str());
   data.reset(tmp);
-  pixels_.resize(size(), 0);
-  copy_raw_data(data.get());
+  if (!error) {
+    pixels_.resize(size(), 0);
+    copy_raw_data(data.get());
+  }
   return error;
 }
 
