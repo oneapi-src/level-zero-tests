@@ -424,10 +424,30 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(lzt::image_format_layout_float),
                        ::testing::Bool()));
 
+using LayoutPair =
+    std::pair<ze_image_format_layout_t, ze_image_format_layout_t>;
+
+const std::vector<LayoutPair> integer_layout_pairs = {
+    {ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_16},
+    {ZE_IMAGE_FORMAT_LAYOUT_8, ZE_IMAGE_FORMAT_LAYOUT_32},
+    {ZE_IMAGE_FORMAT_LAYOUT_8_8, ZE_IMAGE_FORMAT_LAYOUT_16_16},
+    {ZE_IMAGE_FORMAT_LAYOUT_8_8, ZE_IMAGE_FORMAT_LAYOUT_32_32},
+    {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16},
+    {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32},
+    {ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32},
+};
+
+const std::vector<LayoutPair> float_layout_pairs = {
+    {ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16},
+    {ZE_IMAGE_FORMAT_LAYOUT_16, ZE_IMAGE_FORMAT_LAYOUT_32},
+    {ZE_IMAGE_FORMAT_LAYOUT_16_16, ZE_IMAGE_FORMAT_LAYOUT_32_32},
+    {ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2, ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32},
+};
+
 class zeImageLayoutTwoKernelsTests
     : public ImageLayoutFixture,
-      public ::testing::WithParamInterface<
-          std::tuple<ze_image_type_t, ze_image_format_type_t, bool>> {
+      public ::testing::WithParamInterface<std::tuple<
+          ze_image_type_t, ze_image_format_type_t, bool, LayoutPair>> {
 public:
   void run_test_two_kernels(ze_image_type_t image_type,
                             ze_image_format_layout_t base_layout,
@@ -454,52 +474,9 @@ LZT_TEST_P(zeImageLayoutTwoKernelsTests,
   }
   auto format = std::get<1>(GetParam());
   auto is_immediate = std::get<2>(GetParam());
-  switch (format) {
-  case ZE_IMAGE_FORMAT_TYPE_UINT:
-  case ZE_IMAGE_FORMAT_TYPE_SINT:
-  case ZE_IMAGE_FORMAT_TYPE_UNORM:
-  case ZE_IMAGE_FORMAT_TYPE_SNORM:
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_16, format, TWO_KERNEL_CONVERT,
-                         is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_32, format, TWO_KERNEL_CONVERT,
-                         is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_16_16, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-  case ZE_IMAGE_FORMAT_TYPE_FLOAT:
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-                         ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_16,
-                         ZE_IMAGE_FORMAT_LAYOUT_32, format, TWO_KERNEL_CONVERT,
-                         is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_16_16,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-                         ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, false);
-    break;
-  default:
-    throw std::runtime_error("Unhandled format");
-  }
+  auto layout_pair = std::get<3>(GetParam());
+  run_test_two_kernels(image_type, layout_pair.first, layout_pair.second,
+                       format, TWO_KERNEL_CONVERT, is_immediate, false);
 }
 
 LZT_TEST_P(zeImageLayoutTwoKernelsTests,
@@ -512,59 +489,27 @@ LZT_TEST_P(zeImageLayoutTwoKernelsTests,
   }
   auto format = std::get<1>(GetParam());
   auto is_immediate = std::get<2>(GetParam());
-  switch (format) {
-  case ZE_IMAGE_FORMAT_TYPE_UINT:
-  case ZE_IMAGE_FORMAT_TYPE_SINT:
-  case ZE_IMAGE_FORMAT_TYPE_UNORM:
-  case ZE_IMAGE_FORMAT_TYPE_SNORM:
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_16, format, TWO_KERNEL_CONVERT,
-                         is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_32, format, TWO_KERNEL_CONVERT,
-                         is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_16_16, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-  case ZE_IMAGE_FORMAT_TYPE_FLOAT:
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-                         ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_16,
-                         ZE_IMAGE_FORMAT_LAYOUT_32, format, TWO_KERNEL_CONVERT,
-                         is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_16_16,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-                         ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-    run_test_two_kernels(image_type, ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2,
-                         ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32, format,
-                         TWO_KERNEL_CONVERT, is_immediate, true);
-    break;
-  default:
-    throw std::runtime_error("Unhandled format");
-  }
+  auto layout_pair = std::get<3>(GetParam());
+  run_test_two_kernels(image_type, layout_pair.first, layout_pair.second,
+                       format, TWO_KERNEL_CONVERT, is_immediate, true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    LayoutTwoKernelsTestsParam, zeImageLayoutTwoKernelsTests,
+    LayoutTwoKernelsIntParam, zeImageLayoutTwoKernelsTests,
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
-                       ::testing::ValuesIn(lzt::image_format_types),
-                       ::testing::Bool()));
+                       ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT,
+                                         ZE_IMAGE_FORMAT_TYPE_SINT,
+                                         ZE_IMAGE_FORMAT_TYPE_UNORM,
+                                         ZE_IMAGE_FORMAT_TYPE_SNORM),
+                       ::testing::Bool(),
+                       ::testing::ValuesIn(integer_layout_pairs)));
+
+INSTANTIATE_TEST_SUITE_P(
+    LayoutTwoKernelsFloatParam, zeImageLayoutTwoKernelsTests,
+    ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
+                       ::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
+                       ::testing::Bool(),
+                       ::testing::ValuesIn(float_layout_pairs)));
 
 class zeImageDepthFormatLayoutTests
     : public ImageLayoutFixture,
