@@ -171,7 +171,13 @@ void ClImageCopy::measureHost2Device2Host() {
   total_data_transfer = (2 * imagesize * number_iterations) /
                         static_cast<long double>(1e9); /* Units in Gigabytes */
 
-  gbps = total_data_transfer / total_time_s;
+  if (total_time_s == 0.0L) {
+    std::cerr << "Warning: total_time_s is 0, skipping GBPS "
+                 "computation.\n";
+    gbps = 0.0L;
+  } else {
+    gbps = total_data_transfer / total_time_s;
+  }
 
   std::cout << gbps << " GBPS\n";
 
@@ -236,7 +242,13 @@ void ClImageCopy::measureParallelHost2Device() {
   total_data_transfer = (imagesize * number_iterations * num_image_copy) /
                         static_cast<long double>(1e9); /* Units in Gigabytes */
 
-  gbps = total_data_transfer / total_time_s;
+  if (total_time_s == 0.0L) {
+    std::cerr << "Warning: total_time_s is 0, skipping GBPS "
+                 "computation.\n";
+    gbps = 0.0L;
+  } else {
+    gbps = total_data_transfer / total_time_s;
+  }
   std::cout << gbps << " GBPS\n";
   latency = total_time_usec /
             static_cast<long double>(number_iterations * num_image_copy);
@@ -308,7 +320,13 @@ void ClImageCopy::measureParallelDevice2Host() {
   total_data_transfer = (imagesize * number_iterations * num_image_copy) /
                         static_cast<long double>(1e9); /* Units in Gigabytes */
 
-  gbps = total_data_transfer / total_time_s;
+  if (total_time_s == 0.0L) {
+    std::cerr << "Warning: total_time_s is 0, skipping GBPS "
+                 "computation.\n";
+    gbps = 0.0L;
+  } else {
+    gbps = total_data_transfer / total_time_s;
+  }
 
   std::cout << gbps << " GBPS\n";
   latency = total_time_usec /

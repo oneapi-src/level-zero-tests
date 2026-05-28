@@ -172,7 +172,13 @@ void ZeImageCopy::measureHost2Device2Host() {
   total_data_transfer = (2 * this->buffer_size * num_iterations) /
                         static_cast<long double>(1e9); /* Units in Gigabytes */
 
-  gbps = total_data_transfer / total_time_s;
+  if (total_time_s == 0.0L) {
+    std::cerr << "Warning: total_time_s is 0, skipping GBPS "
+                 "computation.\n";
+    gbps = 0.0L;
+  } else {
+    gbps = total_data_transfer / total_time_s;
+  }
 
   std::cout << gbps << " GBPS\n";
   this->validate_data_buffer();
@@ -231,7 +237,13 @@ void ZeImageCopy::measureParallelHost2Device() {
   total_data_transfer = (buffer_size * num_image_copies * num_iterations) /
                         static_cast<long double>(1e9); /* Units in Gigabytes */
 
-  gbps = total_data_transfer / total_time_s;
+  if (total_time_s == 0.0L) {
+    std::cerr << "Warning: total_time_s is 0, skipping GBPS "
+                 "computation.\n";
+    gbps = 0.0L;
+  } else {
+    gbps = total_data_transfer / total_time_s;
+  }
   std::cout << gbps << " GBPS\n";
   latency = total_time_usec /
             static_cast<long double>(num_image_copies * num_iterations);
@@ -293,7 +305,13 @@ void ZeImageCopy::measureParallelDevice2Host() {
       (this->buffer_size * num_image_copies * num_iterations) /
       static_cast<long double>(1e9); /* Units in Gigabytes */
 
-  gbps = total_data_transfer / total_time_s;
+  if (total_time_s == 0.0L) {
+    std::cerr << "Warning: total_time_s is 0, skipping GBPS "
+                 "computation.\n";
+    gbps = 0.0L;
+  } else {
+    gbps = total_data_transfer / total_time_s;
+  }
   std::cout << gbps << " GBPS\n";
   latency = total_time_usec /
             static_cast<long double>(num_image_copies * num_iterations);
@@ -382,7 +400,13 @@ void ZeImageCopy::measureSerialHost2Device() {
   total_data_transfer = (buffer_size * num_iterations) /
                         static_cast<long double>(1e9); /* Units in Gigabytes */
 
-  gbps = total_data_transfer / total_time_s;
+  if (total_time_s == 0.0L) {
+    std::cerr << "Warning: total_time_s is 0, skipping GBPS "
+                 "computation.\n";
+    gbps = 0.0L;
+  } else {
+    gbps = total_data_transfer / total_time_s;
+  }
   std::cout << gbps << " GBPS\n";
   latency = total_time_usec / static_cast<long double>(num_iterations);
   std::cout << std::setprecision(11) << latency << " us"
@@ -469,7 +493,13 @@ void ZeImageCopy::measureSerialDevice2Host() {
   total_data_transfer = (this->buffer_size * num_iterations) /
                         static_cast<long double>(1e9); /* Units in Gigabytes */
 
-  gbps = total_data_transfer / total_time_s;
+  if (total_time_s == 0.0L) {
+    std::cerr << "Warning: total_time_s is 0, skipping GBPS "
+                 "computation.\n";
+    gbps = 0.0L;
+  } else {
+    gbps = total_data_transfer / total_time_s;
+  }
   std::cout << gbps << " GBPS\n";
   latency = total_time_usec / static_cast<long double>(num_iterations);
   std::cout << std::setprecision(11) << latency << " us"
