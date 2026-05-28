@@ -1693,6 +1693,7 @@ LZT_TEST_P(
     zeImmediateCommandListInOrderCopyOffloadExecutionTests,
     GivenInOrderImmediateCommandListWithCopyOffloadHintWhenAppendMemoryCopyThenVerifySuccessful) {
   size_t size = 4096;
+  size_t elem_range = size / sizeof(uint32_t);
 
   void *copy_buffer_1 = nullptr;
   void *copy_buffer_2 = nullptr;
@@ -1730,12 +1731,12 @@ LZT_TEST_P(
   lzt::set_argument_value(kernel, 1, sizeof(uint32_t), &add_val);
 
   uint32_t group_size_x = 0, group_size_y = 0, group_size_z = 0;
-  lzt::suggest_group_size(kernel, to_u32(size), 1, 1, group_size_x,
+  lzt::suggest_group_size(kernel, to_u32(elem_range), 1, 1, group_size_x,
                           group_size_y, group_size_z);
 
   lzt::set_group_size(kernel, group_size_x, 1, 1);
   ze_group_count_t group_count = {};
-  group_count.groupCountX = to_u32(size / group_size_x);
+  group_count.groupCountX = to_u32(elem_range / group_size_x);
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
