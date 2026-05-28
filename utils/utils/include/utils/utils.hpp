@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -19,6 +19,7 @@
 
 #include "utils/utils_string.hpp"
 #include "utils/utils_gtest_helper.hpp"
+#include "utils/utils_command_bundle.hpp"
 
 namespace level_zero_tests {
 

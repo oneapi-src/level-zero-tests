@@ -1,12 +1,13 @@
 /*
  *
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
 
 #include "utils/utils.hpp"
+#include "utils/utils_command_bundle.hpp"
 #include "gtest/gtest.h"
 
 template <typename T> class SizeInBytes : public testing::Test {};
@@ -384,4 +385,128 @@ LZT_TEST(XeImageTypeToString, InvalidValue) {
   EXPECT_EQ("Unknown ze_image_type_t value: " +
                 std::to_string(static_cast<int>(t)),
             level_zero_tests::to_string(t));
+}
+
+namespace {
+using level_zero_tests::command_bundle;
+using level_zero_tests::command_bundle_t;
+using level_zero_tests::command_list_mode_t;
+} // namespace
+
+class CommandBundleRecordList
+    : public ::testing::TestWithParam<command_list_mode_t> {};
+
+LZT_TEST_P(CommandBundleRecordList, ReturnsCorrectHandle) {
+  command_bundle b;
+  b.list = reinterpret_cast<ze_command_list_handle_t>(0xDEAD);
+  b.append_list = nullptr;
+  b.mode = GetParam();
+
+  if (GetParam() == command_list_mode_t::immediate_append_regular) {
+    b.append_list = reinterpret_cast<ze_command_list_handle_t>(0xBEEF);
+    EXPECT_EQ(b.append_list, b.record_list());
+  } else {
+    EXPECT_EQ(b.list, b.record_list());
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllModes, CommandBundleRecordList,
+    ::testing::Values(command_list_mode_t::regular,
+                      command_list_mode_t::immediate,
+                      command_list_mode_t::immediate_append_regular));
+
+class CommandBundleSubmitList
+    : public ::testing::TestWithParam<command_list_mode_t> {};
+
+LZT_TEST_P(CommandBundleSubmitList, AlwaysReturnsPrimaryList) {
+  command_bundle b;
+  b.list = reinterpret_cast<ze_command_list_handle_t>(0xDEAD);
+  b.append_list = reinterpret_cast<ze_command_list_handle_t>(0xBEEF);
+  b.mode = GetParam();
+
+  EXPECT_EQ(b.list, b.submit_list());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllModes, CommandBundleSubmitList,
+    ::testing::Values(command_list_mode_t::regular,
+                      command_list_mode_t::immediate,
+                      command_list_mode_t::immediate_append_regular));
+
+LZT_TEST(CommandBundleOperator, MatchesRecordList) {
+  command_bundle b;
+  b.list = reinterpret_cast<ze_command_list_handle_t>(0xDEAD);
+  b.append_list = nullptr;
+  b.mode = command_list_mode_t::regular;
+
+  ze_command_list_handle_t converted = static_cast<ze_command_list_handle_t>(b);
+  EXPECT_EQ(b.record_list(), converted);
+
+  b.append_list = reinterpret_cast<ze_command_list_handle_t>(0xBEEF);
+  b.mode = command_list_mode_t::immediate_append_regular;
+  converted = static_cast<ze_command_list_handle_t>(b);
+  EXPECT_EQ(b.record_list(), converted);
+}
+
+namespace {
+
+static_assert(command_bundle_t<command_list_mode_t::regular>::has_queue);
+static_assert(!command_bundle_t<command_list_mode_t::immediate>::has_queue);
+static_assert(!command_bundle_t<
+              command_list_mode_t::immediate_append_regular>::has_queue);
+
+static_assert(!command_bundle_t<command_list_mode_t::regular>::has_append_list);
+static_assert(
+    !command_bundle_t<command_list_mode_t::immediate>::has_append_list);
+static_assert(command_bundle_t<
+              command_list_mode_t::immediate_append_regular>::has_append_list);
+
+static_assert(command_bundle_t<command_list_mode_t::regular>::mode ==
+              command_list_mode_t::regular);
+static_assert(command_bundle_t<command_list_mode_t::immediate>::mode ==
+              command_list_mode_t::immediate);
+static_assert(
+    command_bundle_t<command_list_mode_t::immediate_append_regular>::mode ==
+    command_list_mode_t::immediate_append_regular);
+
+static_assert(sizeof(command_bundle_t<command_list_mode_t::immediate>) <=
+              sizeof(command_bundle_t<command_list_mode_t::regular>));
+static_assert(
+    sizeof(command_bundle_t<command_list_mode_t::immediate_append_regular>) <=
+    sizeof(command_bundle_t<command_list_mode_t::regular>));
+static_assert(sizeof(command_bundle_t<command_list_mode_t::regular>) <=
+              2 * sizeof(void *));
+
+} // namespace
+
+LZT_TEST(CommandBundleTRegular, RecordAndSubmitReturnPrimaryList) {
+  command_bundle_t<command_list_mode_t::regular> b;
+  b.queue = reinterpret_cast<ze_command_queue_handle_t>(0xDEAD);
+  b.list = reinterpret_cast<ze_command_list_handle_t>(0xBEEF);
+
+  EXPECT_EQ(b.list, b.record_list());
+  EXPECT_EQ(b.list, b.submit_list());
+  EXPECT_EQ(b.list, static_cast<ze_command_list_handle_t>(b));
+}
+
+LZT_TEST(CommandBundleTImmediate, RecordAndSubmitReturnPrimaryList) {
+  command_bundle_t<command_list_mode_t::immediate> b;
+  b.list = reinterpret_cast<ze_command_list_handle_t>(0xC0FFEE);
+
+  EXPECT_EQ(b.list, b.record_list());
+  EXPECT_EQ(b.list, b.submit_list());
+  EXPECT_EQ(b.list, static_cast<ze_command_list_handle_t>(b));
+}
+
+LZT_TEST(CommandBundleTImmediateAppendRegular,
+         RecordReturnsAppendListAndSubmitReturnsPrimary) {
+  command_bundle_t<command_list_mode_t::immediate_append_regular> b;
+  b.list = reinterpret_cast<ze_command_list_handle_t>(0xDEAD);
+  b.append_list = reinterpret_cast<ze_command_list_handle_t>(0xBEEF);
+
+  EXPECT_EQ(b.append_list, b.record_list());
+  EXPECT_EQ(b.list, b.submit_list());
+  EXPECT_EQ(b.append_list, static_cast<ze_command_list_handle_t>(b));
+  EXPECT_NE(b.record_list(), b.submit_list());
 }

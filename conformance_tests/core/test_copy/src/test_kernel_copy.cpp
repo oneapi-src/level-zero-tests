@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -37,20 +37,21 @@ struct copy_data {
   uint32_t *data;
 };
 
-class KernelCopyTests : public ::testing::Test,
-                        public ::testing::WithParamInterface<
-                            std::tuple<ze_memory_type_t, uint32_t, bool>> {};
+class KernelCopyTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_memory_type_t, uint32_t, lzt::command_list_mode_t>> {};
 
 LZT_TEST_P(KernelCopyTests,
            GivenDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
   ze_memory_type_t memory_type = std::get<0>(GetParam());
   uint32_t offset = std::get<1>(GetParam());
-  bool is_immediate = std::get<2>(GetParam());
+  lzt::command_list_mode_t mode = std::get<2>(GetParam());
 
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
       // set up
-      auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+      auto cmd_bundle = lzt::create_command_bundle(device, mode);
 
       auto module = lzt::create_module(device, "copy_module.spv");
       auto kernel = lzt::create_function(module, "copy_data");
@@ -86,7 +87,6 @@ LZT_TEST_P(KernelCopyTests,
       lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
                                   nullptr, 0, nullptr);
 
-      lzt::close_command_list(cmd_bundle.list);
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
       ASSERT_EQ(0, memcmp(input_data, output_data + offset,
@@ -106,11 +106,11 @@ LZT_TEST_P(KernelCopyTests,
            GivenInDirectMemoryWhenCopyingDataInKernelThenCopyIsCorrect) {
   ze_memory_type_t memory_type = std::get<0>(GetParam());
   size_t offset = std::get<1>(GetParam());
-  bool is_immediate = std::get<2>(GetParam());
+  lzt::command_list_mode_t mode = std::get<2>(GetParam());
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
       // set up
-      auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+      auto cmd_bundle = lzt::create_command_bundle(device, mode);
 
       auto module = lzt::create_module(device, "copy_module.spv");
       auto kernel = lzt::create_function(module, "copy_data_indirect");
@@ -179,7 +179,6 @@ LZT_TEST_P(KernelCopyTests,
       lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
                                   nullptr, 0, nullptr);
 
-      lzt::close_command_list(cmd_bundle.list);
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
       for (uint32_t i = 0U; i < size; i++) {
@@ -206,13 +205,14 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_HOST,
                                          ZE_MEMORY_TYPE_SHARED),
                        ::testing::Values(0U, 1U, size / 4, size / 2),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 class KernelCopyTestsWithIndirectMemoryTypes
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<test_memory_type, test_memory_type, test_memory_type,
-                     test_memory_type, uint32_t, bool>> {
+                     test_memory_type, uint32_t, lzt::command_list_mode_t>> {
 
 protected:
   void SetUp() override {
@@ -371,7 +371,7 @@ protected:
       shared_memory_type src_ptr_shr_type = SHARED_LOCAL,
       shared_memory_type dst_shr_type = SHARED_LOCAL,
       shared_memory_type dst_ptr_shr_type = SHARED_LOCAL,
-      bool is_immediate = false) {
+      lzt::command_list_mode_t mode = lzt::command_list_mode_t::regular) {
 
     auto driver = drivers[driver_index];
     auto device = devices[driver_index][device_index];
@@ -387,7 +387,7 @@ protected:
       GTEST_SKIP();
     }
     // set up
-    auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle(context, device, mode);
 
     auto module = lzt::create_module(device, "copy_module.spv");
     auto kernel = lzt::create_function(module, "copy_data_indirect");
@@ -545,7 +545,6 @@ protected:
       lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
     }
 
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     // copy dst_data to output_data for non-device memory
@@ -601,7 +600,7 @@ LZT_TEST_P(
   test_memory_type dst_test_type = std::get<2>(GetParam());
   test_memory_type dst_ptr_test_type = std::get<3>(GetParam());
   uint32_t offset = std::get<4>(GetParam());
-  bool is_immediate = std::get<5>(GetParam());
+  lzt::command_list_mode_t mode = std::get<5>(GetParam());
 
   ze_memory_type_t src_mem_type;
   ze_memory_type_t src_ptr_mem_type;
@@ -625,7 +624,7 @@ LZT_TEST_P(
   test_indirect_memory_kernel_copy(0, 0, src_mem_type, src_ptr_mem_type,
                                    dst_mem_type, dst_ptr_mem_type, offset,
                                    src_shr_type, src_ptr_shr_type, dst_shr_type,
-                                   dst_ptr_shr_type, is_immediate);
+                                   dst_ptr_shr_type, mode);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -638,6 +637,8 @@ INSTANTIATE_TEST_SUITE_P(
                                          USM_SHARED_CROSS, USM_SHARED_SYSTEM),
                        ::testing::Values(USM_HOST, USM_DEVICE, USM_SHARED_LOCAL,
                                          USM_SHARED_CROSS, USM_SHARED_SYSTEM),
-                       ::testing::Values(0U), ::testing::Bool()));
+                       ::testing::Values(0U),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 } // namespace

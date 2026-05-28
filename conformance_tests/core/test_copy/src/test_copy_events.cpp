@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -21,9 +21,6 @@ namespace lzt = level_zero_tests;
 #include <bitset>
 
 namespace {
-
-enum class zeCmdListMode { Regular = 0, Immediate, ImmediateAppendRegular };
-
 class zeCommandListEventTests
     : public ::testing::TestWithParam<std::tuple<bool, bool>> {
 public:
@@ -52,10 +49,11 @@ public:
   lzt::zeEventPool ep;
 };
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate, bool is_shared_system_src,
+    zeCommandListEventTests &test, bool is_shared_system_src,
     bool is_shared_system_dst) {
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   auto src_buffer = lzt::allocate_shared_memory_with_allocator_selector(
       test.size, is_shared_system_src);
   auto dst_buffer = lzt::allocate_shared_memory_with_allocator_selector(
@@ -70,22 +68,15 @@ void RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   lzt::append_memory_copy(cmd_bundle.list, dst_buffer, src_buffer, test.size,
                           test.hEvent);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(test.hEvent, UINT64_MAX));
 
   // Verify Memory Copy completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
   lzt::free_memory_with_allocator_selector(dst_buffer, is_shared_system_dst);
   lzt::destroy_command_bundle(cmd_bundle);
@@ -94,37 +85,40 @@ void RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
-  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, false, false, false);
+  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly) {
-  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, true, false, false);
+  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()));
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate, bool is_shared_system_src,
+    zeCommandListEventTests &test, bool is_shared_system_src,
     bool is_shared_system_dst) {
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   auto ref_buffer = lzt::allocate_shared_memory_with_allocator_selector(
       test.size, is_shared_system_src);
   auto dst_buffer = lzt::allocate_shared_memory_with_allocator_selector(
@@ -140,22 +134,15 @@ void RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   lzt::append_memory_set(cmd_bundle.list, dst_buffer, &one, test.size,
                          test.hEvent);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(test.hEvent, UINT64_MAX));
 
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::free_memory_with_allocator_selector(ref_buffer, is_shared_system_src);
   lzt::free_memory_with_allocator_selector(dst_buffer, is_shared_system_dst);
   lzt::destroy_command_bundle(cmd_bundle);
@@ -164,37 +151,40 @@ void RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
-  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, false, false, false);
+  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemorySetThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly) {
-  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, true, false, false);
+  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemorySetThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()));
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate, bool is_shared_system_src,
+    zeCommandListEventTests &test, bool is_shared_system_src,
     bool is_shared_system_dst) {
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   uint32_t width = 16;
   uint32_t height = 16;
   test.size = height * width;
@@ -215,22 +205,15 @@ void RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandLis
                                  src_buffer, &sr, width, 0, test.hEvent);
   lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(test.hEvent, UINT64_MAX));
 
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
   lzt::free_memory_with_allocator_selector(dst_buffer, is_shared_system_dst);
   lzt::destroy_command_bundle(cmd_bundle);
@@ -239,38 +222,40 @@ void RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandLis
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
-  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, false, false, false);
+  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly) {
-  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, true, false, false);
+  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()));
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
-    zeCommandListEventTestsExtended &test, bool is_immediate,
-    bool is_shared_system_src, bool is_shared_system_temp,
-    bool is_shared_system_dst) {
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+    zeCommandListEventTestsExtended &test, bool is_shared_system_src,
+    bool is_shared_system_temp, bool is_shared_system_dst) {
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   auto src_buffer = lzt::allocate_shared_memory_with_allocator_selector(
       test.size, is_shared_system_src);
   auto temp_buffer = lzt::allocate_shared_memory_with_allocator_selector(
@@ -291,11 +276,8 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
                           test.hEvent, 0, nullptr);
   lzt::append_memory_copy(cmd_bundle.list, dst_buffer, temp_buffer, test.size,
                           nullptr, 1, &hEvent1);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // Verify Copy Waits for Signal
   lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
@@ -308,12 +290,7 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent1));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
-
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   // Verify Memory Copy completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
@@ -327,42 +304,45 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTestsExtended,
     GivenMemoryCopiesWithDependenciesWhenExecutingCommandListThenCommandsCompletesSuccessfully) {
-  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
-      *this, false, false, false, false);
+  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTestsExtended,
     GivenMemoryCopiesWithDependenciesWhenExecutingImmediateCommandListThenCommandsCompletesSuccessfully) {
-  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
-      *this, true, false, false, false);
+  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTestsExtended,
     GivenMemoryCopiesWithDependenciesWhenExecutingCommandListThenCommandsCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()),
-      std::get<2>(GetParam()));
+  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()),
+                                         std::get<2>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTestsExtended,
     GivenMemoryCopiesWithDependenciesWhenExecutingImmediateCommandListThenCommandsCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()),
-      std::get<2>(GetParam()));
+  RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()),
+                                           std::get<2>(GetParam()));
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate, bool is_shared_system_src,
+    zeCommandListEventTests &test, bool is_shared_system_src,
     bool is_shared_system_dst) {
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   auto src_buffer = lzt::allocate_shared_memory_with_allocator_selector(
       test.size, is_shared_system_src);
   auto dst_buffer = lzt::allocate_shared_memory_with_allocator_selector(
@@ -376,11 +356,8 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
   // Execute and verify GPU reads event
   lzt::append_memory_copy(cmd_bundle.list, dst_buffer, src_buffer, test.size,
                           nullptr, 1, &test.hEvent);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -393,12 +370,7 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(test.hEvent));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
-
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   // Verify Memory Copy completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
@@ -409,38 +381,41 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(*this, false,
-                                                                 false, false);
+  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(*this, true,
-                                                                 false, false);
+  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryCopyThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()));
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate, bool is_shared_system_src,
+    zeCommandListEventTests &test, bool is_shared_system_src,
     bool is_shared_system_dst) {
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   auto ref_buffer = lzt::allocate_shared_memory_with_allocator_selector(
       test.size, is_shared_system_src);
   auto dst_buffer = lzt::allocate_shared_memory_with_allocator_selector(
@@ -460,11 +435,8 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
                           test.size, test.hEvent, 0, nullptr);
   lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &one, sizeof(one),
                           test.size, nullptr, 1, &hEvent1);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
 
@@ -476,12 +448,7 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent1));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
-
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   // Verify Memory Fill completed
   EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
 
@@ -494,40 +461,43 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListThenCommandCompletesSuccessfully) {
-  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
-      *this, false, false, false);
+  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryFillsThatSignalAndWaitWhenExecutingImmediateCommandListThenCommandCompletesSuccessfully) {
-  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
-      *this, true, false, false);
+  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListThenCommandCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryFillsThatSignalAndWaitWhenExecutingImmediateCommandListThenCommandCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()));
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate, bool is_shared_system_src,
+    zeCommandListEventTests &test, bool is_shared_system_src,
     bool is_shared_system_dst) {
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   auto ref_buffer = lzt::allocate_shared_memory_with_allocator_selector(
       test.size, is_shared_system_src);
   auto dst_buffer = lzt::allocate_shared_memory_with_allocator_selector(
@@ -542,11 +512,8 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
   // Execute and verify GPU reads event
   lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &one, sizeof(one),
                           test.size, nullptr, 1, &test.hEvent);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // Verify Device waits for Signal
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
@@ -560,12 +527,7 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(test.hEvent));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
-
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   // Verify Memory Fill completed
   EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
 
@@ -577,42 +539,44 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryFillThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(*this, false,
-                                                                 false, false);
+  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryFillThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(*this, true,
-                                                                 false, false);
+  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryFillThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryFillThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()));
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
-    zeCommandListEventTestsExtended &test, bool is_immediate,
-    bool is_shared_system_src, bool is_shared_system_temp,
-    bool is_shared_system_dst) {
+    zeCommandListEventTestsExtended &test, bool is_shared_system_src,
+    bool is_shared_system_temp, bool is_shared_system_dst) {
   uint32_t width = 16;
   uint32_t height = 16;
   test.size = height * width;
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   auto src_buffer = lzt::allocate_shared_memory_with_allocator_selector(
       test.size, is_shared_system_src);
   auto temp_buffer = lzt::allocate_shared_memory_with_allocator_selector(
@@ -637,11 +601,8 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
   lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
                                  temp_buffer, &sr, width, 0, nullptr, 1,
                                  &hEvent1);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // Verify Copy Waits for Signal
   lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
@@ -654,12 +615,7 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
 
   // Signal Event On Host
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent1));
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
-
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
@@ -672,37 +628,40 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTestsExtended,
     GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfully) {
-  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
-      *this, false, false, false, false);
+  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTestsExtended,
     GivenMemoryCopyRegionWithDependenciesWhenExecutingImmediateCommandListThenCommandCompletesSuccessfully) {
-  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
-      *this, true, false, false, false);
+  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTestsExtended,
     GivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListThenCommandCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()),
-      std::get<2>(GetParam()));
+  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()),
+                                         std::get<2>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTestsExtended,
     GivenMemoryCopyRegionWithDependenciesWhenExecutingImmediateCommandListThenCommandCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()),
-      std::get<2>(GetParam()));
+  RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()),
+                                           std::get<2>(GetParam()));
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate, bool is_shared_system_src,
+    zeCommandListEventTests &test, bool is_shared_system_src,
     bool is_shared_system_dst) {
   // This test is similar to the previous except that there is an
   // added delay to specifically test the wait functionality
@@ -710,7 +669,7 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
   uint32_t width = 16;
   uint32_t height = 16;
   test.size = height * width;
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   auto src_buffer = lzt::allocate_shared_memory_with_allocator_selector(
       test.size, is_shared_system_src);
   auto dst_buffer = lzt::allocate_shared_memory_with_allocator_selector(
@@ -727,11 +686,8 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
   lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
                                  src_buffer, &sr, width, 0, nullptr, 1,
                                  &test.hEvent);
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // Verify Copy Waits for Signal
   // This sleep simulates work (e.g. file i/o) on the host that would cause
   // with a high probability the device to have to wait
@@ -745,12 +701,7 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
 
   // Signal Event On Host
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(test.hEvent));
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
-
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
@@ -761,31 +712,33 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, false, false, false);
+  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, true, false, false);
+  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, false, false);
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, false, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this, std::get<0>(GetParam()),
+                                         std::get<1>(GetParam()));
 }
 
 LZT_TEST_P(
     zeCommandListEventTests,
     GivenMemoryCopyRegionThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfullyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, true, std::get<0>(GetParam()), std::get<1>(GetParam()));
+  RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this, std::get<0>(GetParam()),
+                                           std::get<1>(GetParam()));
 }
 
 static ze_image_handle_t create_test_image(uint32_t height, uint32_t width) {
@@ -811,12 +764,13 @@ static ze_image_handle_t create_test_image(uint32_t height, uint32_t width) {
   return image;
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, bool is_immediate) {
+    zeCommandListEventTests &test) {
   if (!(lzt::image_support())) {
     GTEST_SKIP() << "device does not support images, cannot run test";
   }
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
   uint32_t width = input.width();
@@ -849,11 +803,8 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
                                 output_xeimage, hEvent4);
   lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent4);
   // execute commands
-  lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
-
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
   // Make sure all events signaled from host perspective
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent1, UINT64_MAX));
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent2, UINT64_MAX));
@@ -864,11 +815,7 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   // cleanup
   test.ep.destroy_event(hEvent1);
   test.ep.destroy_event(hEvent2);
@@ -882,32 +829,25 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListThenHostAndGpuReadEventCorrectly) {
-  RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, false);
+  RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatSignalsEventWhenCompleteWhenExecutingImmediateCommandListThenHostAndGpuReadEventCorrectly) {
-  RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
-      *this, true);
+  RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this);
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
-    zeCommandListEventTests &test, zeCmdListMode cmd_list_mode) {
+    zeCommandListEventTests &test) {
   if (!(lzt::image_support())) {
     GTEST_SKIP() << "device does not support images, cannot run test";
   }
-  const bool is_immediate =
-      (cmd_list_mode == zeCmdListMode::Immediate ||
-       cmd_list_mode == zeCmdListMode::ImmediateAppendRegular);
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
-  ze_command_list_handle_t append_list = nullptr;
-  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-    append_list = lzt::create_command_list();
-  } else {
-    append_list = cmd_bundle.list;
-  }
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
+  auto cmd_list = static_cast<ze_command_list_handle_t>(cmd_bundle);
   // create 2 images
   lzt::ImagePNG32Bit input("test_input.png");
   uint32_t width = input.width();
@@ -922,36 +862,26 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   test.ep.create_event(hEvent3, ZE_EVENT_SCOPE_FLAG_HOST, 0);
   test.ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
-  lzt::append_signal_event(append_list, hEvent0);
+  lzt::append_signal_event(cmd_list, hEvent0);
 
   // Use ImageCopyFromMemory to upload ImageA
-  lzt::append_image_copy_from_mem(append_list, input_xeimage, input.raw_data(),
+  lzt::append_image_copy_from_mem(cmd_list, input_xeimage, input.raw_data(),
                                   hEvent1, 1, &hEvent0);
   // use ImageCopy to copy A -> B
-  lzt::append_image_copy(append_list, output_xeimage, input_xeimage, hEvent2, 1,
+  lzt::append_image_copy(cmd_list, output_xeimage, input_xeimage, hEvent2, 1,
                          &hEvent1);
   // use ImageCopyRegion to copy part of A -> B
   ze_image_region_t sr = {0, 0, 0, 1, 1, 1};
   ze_image_region_t dr = {0, 0, 0, 1, 1, 1};
-  lzt::append_image_copy_region(append_list, output_xeimage, input_xeimage, &dr,
+  lzt::append_image_copy_region(cmd_list, output_xeimage, input_xeimage, &dr,
                                 &sr, hEvent3, 1, &hEvent2);
   // use ImageCopyToMemory to download ImageB
-  lzt::append_image_copy_to_mem(append_list, output.raw_data(), output_xeimage,
+  lzt::append_image_copy_to_mem(cmd_list, output.raw_data(), output_xeimage,
                                 hEvent4, 1, &hEvent3);
-  lzt::append_wait_on_events(append_list, 1, &hEvent4);
+  lzt::append_wait_on_events(cmd_list, 1, &hEvent4);
   // execute commands
-  if (cmd_list_mode == zeCmdListMode::Regular ||
-      cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-    lzt::close_command_list(append_list);
-  }
-
-  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-    lzt::append_command_lists_immediate_exp(cmd_bundle.list, 1, &append_list);
-  }
-
-  if (!is_immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
 
   // Make sure all events signaled from host perspective
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent0, UINT64_MAX));
@@ -964,11 +894,7 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   // cleanup
   test.ep.destroy_event(hEvent0);
   test.ep.destroy_event(hEvent1);
@@ -977,39 +903,34 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   test.ep.destroy_event(hEvent4);
   lzt::destroy_ze_image(input_xeimage);
   lzt::destroy_ze_image(output_xeimage);
-  if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-    lzt::destroy_command_list(append_list);
-  }
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatWaitsOnEventWhenExecutingCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, zeCmdListMode::Regular);
+  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::regular>(*this);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatWaitsOnEventWhenExecutingImmediateCommandListThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, zeCmdListMode::Immediate);
+  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate>(*this);
 }
 
 LZT_TEST_F(
     zeCommandListEventTests,
     GivenImageCopyThatWaitsOnEventWhenExecutingImmediateCommandListAppendCmdListsThenCommandWaitsAndCompletesSuccessfully) {
-  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
-      *this, zeCmdListMode::ImmediateAppendRegular);
+  RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest<
+      lzt::command_list_mode_t::immediate_append_regular>(*this);
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-    zeCmdListMode cmd_list_mode, bool is_shared_system_src,
-    bool is_shared_system_temp, bool is_shared_system_dst) {
-  const bool is_immediate =
-      (cmd_list_mode == zeCmdListMode::Immediate ||
-       cmd_list_mode == zeCmdListMode::ImmediateAppendRegular);
+    bool is_shared_system_src, bool is_shared_system_temp,
+    bool is_shared_system_dst) {
   const size_t size = 1024;
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -1034,26 +955,14 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
     }
     test_run = true;
 
-    auto cmd_bundle_0 = lzt::create_command_bundle(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, copy_ordinals[0], 0, is_immediate);
-    ze_command_list_handle_t append_list_0 = nullptr;
-    if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-      append_list_0 =
-          lzt::create_command_list(context, device, 0, copy_ordinals[0]);
-    } else {
-      append_list_0 = cmd_bundle_0.list;
-    }
-    auto cmd_bundle_1 = lzt::create_command_bundle(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, copy_ordinals[1], 0, is_immediate);
-    ze_command_list_handle_t append_list_1 = nullptr;
-    if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-      append_list_1 =
-          lzt::create_command_list(context, device, 0, copy_ordinals[1]);
-    } else {
-      append_list_1 = cmd_bundle_1.list;
-    }
+    auto cmd_bundle_0 = lzt::create_command_bundle<Mode>(
+        context, device, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, copy_ordinals[0], 0u);
+    auto cmd_bundle_1 = lzt::create_command_bundle<Mode>(
+        context, device, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, copy_ordinals[1], 0u);
+    auto cmd_list_0 = static_cast<ze_command_list_handle_t>(cmd_bundle_0);
+    auto cmd_list_1 = static_cast<ze_command_list_handle_t>(cmd_bundle_1);
 
     ze_event_pool_desc_t event_pool_desc = {};
     event_pool_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
@@ -1077,37 +986,18 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
     memset(dst_buffer, 0x0, size);
 
     // Execute and verify GPU reads event
-    lzt::append_memory_copy(append_list_0, temp_buffer, src_buffer, size, event,
-                            0, nullptr);
-    lzt::append_memory_copy(append_list_1, dst_buffer, temp_buffer, size,
-                            nullptr, 1, &event);
+    lzt::append_memory_copy(cmd_list_0, temp_buffer, src_buffer, size, event, 0,
+                            nullptr);
+    lzt::append_memory_copy(cmd_list_1, dst_buffer, temp_buffer, size, nullptr,
+                            1, &event);
 
-    if (cmd_list_mode == zeCmdListMode::Regular ||
-        cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-      lzt::close_command_list(append_list_0);
-      lzt::close_command_list(append_list_1);
-    }
-
-    if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-      lzt::append_command_lists_immediate_exp(cmd_bundle_0.list, 1,
-                                              &append_list_0);
-      lzt::append_command_lists_immediate_exp(cmd_bundle_1.list, 1,
-                                              &append_list_1);
-    }
-
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(cmd_bundle_0.list, UINT64_MAX);
-      lzt::synchronize_command_list_host(cmd_bundle_1.list, UINT64_MAX);
-    } else {
-
-      lzt::execute_command_lists(cmd_bundle_1.queue, 1, &cmd_bundle_1.list,
-                                 nullptr);
-      lzt::execute_command_lists(cmd_bundle_0.queue, 1, &cmd_bundle_0.list,
-                                 nullptr);
-
-      lzt::synchronize(cmd_bundle_0.queue, UINT64_MAX);
-      lzt::synchronize(cmd_bundle_1.queue, UINT64_MAX);
-    }
+    lzt::close_command_bundle(cmd_bundle_0);
+    lzt::close_command_bundle(cmd_bundle_1);
+    // Submit bundle_1 before bundle_0 to test cross-queue event sync
+    lzt::submit_command_bundle(cmd_bundle_1);
+    lzt::submit_command_bundle(cmd_bundle_0);
+    lzt::sync_command_bundle(cmd_bundle_0, UINT64_MAX);
+    lzt::sync_command_bundle(cmd_bundle_1, UINT64_MAX);
 
     // Verify Memory Copy completed
     EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));
@@ -1120,10 +1010,6 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
                                              is_shared_system_dst);
     lzt::destroy_event(event);
     lzt::destroy_event_pool(event_pool);
-    if (cmd_list_mode == zeCmdListMode::ImmediateAppendRegular) {
-      lzt::destroy_command_list(append_list_0);
-      lzt::destroy_command_list(append_list_1);
-    }
     lzt::destroy_command_bundle(cmd_bundle_0);
     lzt::destroy_command_bundle(cmd_bundle_1);
   }
@@ -1137,22 +1023,22 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
 LZT_TEST(
     zeCommandListCopyEventTest,
     GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesThenCopiesCompleteSuccessfully) {
-  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-      zeCmdListMode::Regular, false, false, false);
+  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest<
+      lzt::command_list_mode_t::regular>(false, false, false);
 }
 
 LZT_TEST(
     zeCommandListCopyEventTest,
     GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsThenCopiesCompleteSuccessfully) {
-  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-      zeCmdListMode::Immediate, false, false, false);
+  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest<
+      lzt::command_list_mode_t::immediate>(false, false, false);
 }
 
 LZT_TEST(
     zeCommandListCopyEventTest,
     GivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesOnImmediateCmdListsAppendCmdListsExpThenCopiesCompleteSuccessfully) {
-  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-      zeCmdListMode::ImmediateAppendRegular, false, false, false);
+  RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest<
+      lzt::command_list_mode_t::immediate_append_regular>(false, false, false);
 }
 
 LZT_TEST(
@@ -1161,8 +1047,8 @@ LZT_TEST(
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   for (uint32_t i = 1; i < 8; ++i) {
     std::bitset<3> bits(i);
-    RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-        zeCmdListMode::Regular, bits[2], bits[1], bits[0]);
+    RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest<
+        lzt::command_list_mode_t::regular>(bits[2], bits[1], bits[0]);
   }
 }
 
@@ -1172,8 +1058,8 @@ LZT_TEST(
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   for (uint32_t i = 1; i < 8; ++i) {
     std::bitset<3> bits(i);
-    RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-        zeCmdListMode::Immediate, bits[2], bits[1], bits[0]);
+    RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest<
+        lzt::command_list_mode_t::immediate>(bits[2], bits[1], bits[0]);
   }
 }
 
@@ -1183,8 +1069,9 @@ LZT_TEST(
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   for (uint32_t i = 1; i < 8; ++i) {
     std::bitset<3> bits(i);
-    RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
-        zeCmdListMode::ImmediateAppendRegular, bits[2], bits[1], bits[0]);
+    RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest<
+        lzt::command_list_mode_t::immediate_append_regular>(bits[2], bits[1],
+                                                            bits[0]);
   }
 }
 

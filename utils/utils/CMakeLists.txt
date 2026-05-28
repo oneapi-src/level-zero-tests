@@ -1,4 +1,4 @@
-# Copyright (C) 2019 Intel Corporation
+# Copyright (C) 2019-2026 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 add_core_library(utils_string
@@ -16,7 +16,9 @@ if(NOT BUILD_ZE_PERF_TESTS_ONLY)
   add_core_library(utils
     SOURCE
     "include/utils/utils.hpp"
+    "include/utils/utils_command_bundle.hpp"
     "src/utils.cpp"
+    "src/utils_command_bundle.cpp"
   )
   target_link_libraries(utils
     PUBLIC

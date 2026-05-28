@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -31,17 +31,17 @@ using lzt::to_u8;
 
 class zeCommandListAppendMemoryFillTests : public ::testing::Test {
 protected:
-  void RunMaxMemoryFillTest(bool is_immediate, bool is_shared_system,
-                            bool use_madvise);
+  template <lzt::command_list_mode_t Mode>
+  void RunMaxMemoryFillTest(bool is_shared_system, bool use_madvise);
+  template <lzt::command_list_mode_t Mode>
   void RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(
-      bool is_immediate, bool is_shared_system, bool use_copy_engine,
-      bool use_madvise);
+      bool is_shared_system, bool use_copy_engine, bool use_madvise);
+  template <lzt::command_list_mode_t Mode>
   void RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(
-      bool is_immediate, bool is_shared_system, bool use_copy_engine,
-      bool use_madvise);
+      bool is_shared_system, bool use_copy_engine, bool use_madvise);
+  template <lzt::command_list_mode_t Mode>
   void RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      bool is_immediate, bool is_shared_system, bool use_copy_engine,
-      bool use_madvise);
+      bool is_shared_system, bool use_copy_engine, bool use_madvise);
 
   void SetUp() override {
     device = zeDevice::get_instance()->get_device();
@@ -52,9 +52,9 @@ protected:
   std::vector<ze_command_queue_group_properties_t> cmd_queue_group_props;
 };
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryFillTests::
-    RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(bool is_immediate,
-                                                          bool is_shared_system,
+    RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(bool is_shared_system,
                                                           bool use_copy_engine,
                                                           bool use_madvise) {
   auto cmd_queue_group_props = get_command_queue_group_properties(
@@ -71,9 +71,9 @@ void zeCommandListAppendMemoryFillTests::
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
   ASSERT_NE(ordinal, std::nullopt);
 
-  auto cmd_bundle = lzt::create_command_bundle(
-      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      *ordinal, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0u,
+      *ordinal);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -89,7 +89,6 @@ void zeCommandListAppendMemoryFillTests::
   lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                           nullptr);
 
-  lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
@@ -98,102 +97,104 @@ void zeCommandListAppendMemoryFillTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, false, false,
-                                                        false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::regular>(false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, false, false,
-                                                        false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::immediate>(false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, true, false,
-                                                        false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::regular>(true, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, true, false,
-                                                        false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::immediate>(true, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, true, false,
-                                                        true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::regular>(true, false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, true, false,
-                                                        true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::immediate>(true, false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, false, true,
-                                                        false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::regular>(false, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, false, true,
-                                                        false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::immediate>(false, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, true, true,
-                                                        false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::regular>(true, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, true, true,
-                                                        false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::immediate>(true, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(false, true, true,
-                                                        true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::regular>(true, true, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest(true, true, true, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillTest<
+      lzt::command_list_mode_t::immediate>(true, true, true);
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
-    bool is_immediate, bool is_shared_system, bool use_madvise) {
+    bool is_shared_system, bool use_madvise) {
   auto device_properties = lzt::get_device_properties(device);
   auto max_alloc_memsize = device_properties.maxMemAllocSize;
 
   for (size_t i = 0U; i < cmd_queue_group_props.size(); i++) {
-    auto bundle = lzt::create_command_bundle(lzt::get_default_context(), device,
-                                             0, to_u32(i), is_immediate);
+    auto bundle = lzt::create_command_bundle<Mode>(lzt::get_default_context(),
+                                                   device, 0u, to_u32(i));
     size_t size = cmd_queue_group_props[i].maxMemoryFillPatternSize;
     size_t pattern_size = cmd_queue_group_props[i].maxMemoryFillPatternSize;
     if (cmd_queue_group_props[i].maxMemoryFillPatternSize > max_alloc_memsize) {
@@ -213,7 +214,6 @@ void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
     lzt::append_memory_fill(bundle.list, memory, &pattern, pattern_size, size,
                             nullptr);
 
-    close_command_list(bundle.list);
     execute_and_sync_command_bundle(bundle, UINT64_MAX);
     reset_command_list(bundle.list);
     lzt::free_memory_with_allocator_selector(memory, is_shared_system);
@@ -224,47 +224,47 @@ void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned) {
-  RunMaxMemoryFillTest(false, false, false);
+  RunMaxMemoryFillTest<lzt::command_list_mode_t::regular>(false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturned) {
-  RunMaxMemoryFillTest(true, false, false);
+  RunMaxMemoryFillTest<lzt::command_list_mode_t::immediate>(false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunMaxMemoryFillTest(false, true, false);
+  RunMaxMemoryFillTest<lzt::command_list_mode_t::regular>(true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenImmediateCommandListAndMaxMemoryFillPatternSizeForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunMaxMemoryFillTest(true, true, false);
+  RunMaxMemoryFillTest<lzt::command_list_mode_t::immediate>(true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenMaxMemoryFillPatternSizeAndMemAdviceForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunMaxMemoryFillTest(false, true, true);
+  RunMaxMemoryFillTest<lzt::command_list_mode_t::regular>(true, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenImmediateCommandListMaxMemoryFillPatternSizeAndMemAdviceForEachCommandQueueGroupWhenAppendingMemoryFillThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunMaxMemoryFillTest(true, true, true);
+  RunMaxMemoryFillTest<lzt::command_list_mode_t::immediate>(true, true);
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryFillTests::
     RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(
-        bool is_immediate, bool is_shared_system, bool use_copy_engine,
-        bool use_madvise) {
+        bool is_shared_system, bool use_copy_engine, bool use_madvise) {
   lzt::zeEventPool ep;
 
   auto cmd_queue_group_props = get_command_queue_group_properties(
@@ -281,9 +281,9 @@ void zeCommandListAppendMemoryFillTests::
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
   ASSERT_NE(ordinal, std::nullopt);
 
-  auto cmd_bundle = lzt::create_command_bundle(
-      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      *ordinal, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0u,
+      *ordinal);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -300,9 +300,7 @@ void zeCommandListAppendMemoryFillTests::
   ep.create_event(hEvent);
   lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                           hEvent);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   ep.destroy_event(hEvent);
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
@@ -311,99 +309,99 @@ void zeCommandListAppendMemoryFillTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, false,
-                                                                  false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::regular>(false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, false,
-                                                                  false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::immediate>(false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, true,
-                                                                  false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::regular>(true, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, true,
-                                                                  false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::immediate>(true, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, true,
-                                                                  false, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::regular>(true, false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, true,
-                                                                  false, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::immediate>(true, false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, false,
-                                                                  true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::regular>(false, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, false,
-                                                                  true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::immediate>(false, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, true,
-                                                                  true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::regular>(true, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, true,
-                                                                  true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::immediate>(true, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(false, true,
-                                                                  true, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::regular>(true, true, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest(true, true,
-                                                                  true, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithHEventTest<
+      lzt::command_list_mode_t::immediate>(true, true, true);
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryFillTests::
     RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-        bool is_immediate, bool is_shared_system, bool use_copy_engine,
-        bool use_madvise) {
+        bool is_shared_system, bool use_copy_engine, bool use_madvise) {
   lzt::zeEventPool ep;
 
   auto cmd_queue_group_props = get_command_queue_group_properties(
@@ -420,9 +418,9 @@ void zeCommandListAppendMemoryFillTests::
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
   ASSERT_NE(ordinal, std::nullopt);
 
-  auto cmd_bundle = lzt::create_command_bundle(
-      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      *ordinal, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0u,
+      *ordinal);
   const size_t size = 4096;
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
       size, is_shared_system);
@@ -442,9 +440,7 @@ void zeCommandListAppendMemoryFillTests::
   lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                           nullptr, 1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  }
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   ep.destroy_event(hEvent);
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory_with_allocator_selector(memory, is_shared_system);
@@ -453,116 +449,119 @@ void zeCommandListAppendMemoryFillTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      false, false, false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      true, false, false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(false, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      false, true, false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(true, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      true, true, false, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(true, false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      false, true, false, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(true, false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      true, true, false, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(true, false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      false, false, true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(false, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenDeviceMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      true, false, true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(false, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      false, true, true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(true, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      true, true, true, false);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(true, true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      false, true, true, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(true, true, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillTests,
     GivenAdvisedSharedSystemMemorySizeValueAndCopyEngineWhenAppendingMemoryFillWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest(
-      true, true, true, true);
+  RunGivenMemorySizeAndValueWhenAppendingMemoryFillWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(true, true, true);
 }
 
 class zeCommandListAppendMemoryFillVerificationTests : public ::testing::Test {
 protected:
-  void RunGivenHostMemoryWhenExecutingAMemoryFillTest(bool is_immediate);
-  void RunGivenSharedMemoryWhenExecutingAMemoryFillTest(bool is_immediate);
-  void RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(bool is_immediate);
-  void
-  RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest(bool is_immediate);
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenHostMemoryWhenExecutingAMemoryFillTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenSharedMemoryWhenExecutingAMemoryFillTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenDeviceMemoryWhenExecutingAMemoryFillTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest();
 };
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryFillVerificationTests::
-    RunGivenHostMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
+    RunGivenHostMemoryWhenExecutingAMemoryFillTest() {
   size_t size = 16;
   auto memory = allocate_host_memory(size);
   uint8_t pattern = 0xAB;
   const int pattern_size = 1;
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                      nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
@@ -576,27 +575,29 @@ void zeCommandListAppendMemoryFillVerificationTests::
 
 LZT_TEST_F(zeCommandListAppendMemoryFillVerificationTests,
            GivenHostMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
-  RunGivenHostMemoryWhenExecutingAMemoryFillTest(false);
+  RunGivenHostMemoryWhenExecutingAMemoryFillTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenHostMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly) {
-  RunGivenHostMemoryWhenExecutingAMemoryFillTest(true);
+  RunGivenHostMemoryWhenExecutingAMemoryFillTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryFillVerificationTests::
-    RunGivenSharedMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
+    RunGivenSharedMemoryWhenExecutingAMemoryFillTest() {
   size_t size = 16;
   auto memory = allocate_shared_memory(size);
   uint8_t pattern = 0xAB;
   const int pattern_size = 1;
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                      nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
@@ -610,33 +611,34 @@ void zeCommandListAppendMemoryFillVerificationTests::
 
 LZT_TEST_F(zeCommandListAppendMemoryFillVerificationTests,
            GivenSharedMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
-  RunGivenSharedMemoryWhenExecutingAMemoryFillTest(false);
+  RunGivenSharedMemoryWhenExecutingAMemoryFillTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenSharedMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly) {
-  RunGivenSharedMemoryWhenExecutingAMemoryFillTest(true);
+  RunGivenSharedMemoryWhenExecutingAMemoryFillTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryFillVerificationTests::
-    RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
+    RunGivenDeviceMemoryWhenExecutingAMemoryFillTest() {
   size_t size = 16;
   auto memory = allocate_device_memory(size);
   auto local_mem = allocate_host_memory(size);
   uint8_t pattern = 0xAB;
   const int pattern_size = 1;
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                      nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListReset(cmd_bundle.list));
   append_memory_copy(cmd_bundle.list, local_mem, memory, size, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
@@ -651,28 +653,30 @@ void zeCommandListAppendMemoryFillVerificationTests::
 
 LZT_TEST_F(zeCommandListAppendMemoryFillVerificationTests,
            GivenDeviceMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectly) {
-  RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(false);
+  RunGivenDeviceMemoryWhenExecutingAMemoryFillTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenDeviceMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectly) {
-  RunGivenDeviceMemoryWhenExecutingAMemoryFillTest(true);
+  RunGivenDeviceMemoryWhenExecutingAMemoryFillTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryFillVerificationTests::
-    RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest(bool is_immediate) {
+    RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest() {
   size_t size = 16;
   auto memory = malloc(size);
   ASSERT_NE(nullptr, memory);
   uint8_t pattern = 0xAB;
   const int pattern_size = 1;
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size, size,
                      nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (uint32_t i = 0; i < size; i++) {
@@ -688,26 +692,28 @@ LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenSharedSystemMemoryWhenExecutingAMemoryFillThenMemoryIsSetCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest(false);
+  RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryFillVerificationTests,
     GivenSharedSystemMemoryWhenExecutingAMemoryFillOnImmediateCmdListThenMemoryIsSetCorrectlyWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest(true);
+  RunGivenSharedSystemMemoryWhenExecutingAMemoryFillTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 class zeCommandListAppendMemoryFillSubDeviceVerificationTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<ze_memory_type_t, bool>> {
-};
+      public ::testing::WithParamInterface<
+          std::tuple<ze_memory_type_t, lzt::command_list_mode_t>> {};
 LZT_TEST_P(
     zeCommandListAppendMemoryFillSubDeviceVerificationTests,
     GivenMemoryAllocationWhenExecutingAMemoryFillWithSubDeviceThenMemoryIsSetCorrectly) {
 
   auto memory_type = std::get<0>(GetParam());
-  bool is_immediate = std::get<1>(GetParam());
+  lzt::command_list_mode_t mode = std::get<1>(GetParam());
   uint32_t test_count = 0;
   auto context = lzt::get_default_context();
   auto driver = lzt::get_default_driver();
@@ -723,7 +729,7 @@ LZT_TEST_P(
     }
     test_count++;
     for (auto subdevice : subdevices) {
-      auto cmd_bundle = lzt::create_command_bundle(subdevice, is_immediate);
+      auto cmd_bundle = lzt::create_command_bundle(subdevice, mode);
 
       void *memory = nullptr;
       switch (memory_type) {
@@ -748,7 +754,6 @@ LZT_TEST_P(
                               size, nullptr);
       lzt::append_barrier(cmd_bundle.list);
       lzt::append_memory_copy(cmd_bundle.list, host_memory, memory, size);
-      lzt::close_command_list(cmd_bundle.list);
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
       for (size_t i = 0U; i < size; i++) {
@@ -773,11 +778,13 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_DEVICE,
                                          ZE_MEMORY_TYPE_HOST,
                                          ZE_MEMORY_TYPE_SHARED),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 class zeCommandListAppendMemoryFillPatternVerificationTests
     : public zeCommandListAppendMemoryFillVerificationTests,
-      public ::testing::WithParamInterface<std::tuple<size_t, bool>> {
+      public ::testing::WithParamInterface<
+          std::tuple<size_t, lzt::command_list_mode_t>> {
 protected:
   void RunGivenPatternSizeWhenExecutingAMemoryFillTest(bool is_shared_system);
 };
@@ -785,8 +792,8 @@ protected:
 void zeCommandListAppendMemoryFillPatternVerificationTests::
     RunGivenPatternSizeWhenExecutingAMemoryFillTest(bool is_shared_system) {
   const size_t pattern_size = std::get<0>(GetParam());
-  const bool is_immediate = std::get<1>(GetParam());
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  lzt::command_list_mode_t mode = std::get<1>(GetParam());
+  auto cmd_bundle = lzt::create_command_bundle(mode);
   const size_t total_size = (pattern_size * 10) + 5;
   auto pattern = std::make_unique<uint8_t[]>(pattern_size);
   auto target_memory = lzt::allocate_host_memory_with_allocator_selector(
@@ -799,7 +806,6 @@ void zeCommandListAppendMemoryFillPatternVerificationTests::
   append_memory_fill(cmd_bundle.list, target_memory, pattern.get(),
                      pattern_size, total_size, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (size_t i = 0U; i < total_size; i++) {
@@ -822,30 +828,30 @@ LZT_TEST_P(
   RunGivenPatternSizeWhenExecutingAMemoryFillTest(true);
 }
 
-INSTANTIATE_TEST_SUITE_P(VaryPatternSize,
-                         zeCommandListAppendMemoryFillPatternVerificationTests,
-                         ::testing::Combine(::testing::Values(1, 2, 4, 8, 16,
-                                                              32, 64, 128),
-                                            ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(
+    VaryPatternSize, zeCommandListAppendMemoryFillPatternVerificationTests,
+    ::testing::Combine(::testing::Values(1, 2, 4, 8, 16, 32, 64, 128),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 class zeCommandListCommandQueueTests : public ::testing::Test {};
 
 class zeCommandListAppendMemoryCopyWithDataVerificationTests
     : public zeCommandListCommandQueueTests {
 protected:
-  void RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(
-      bool is_immediate);
-  void RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(
-      bool is_immediate);
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest();
 };
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryCopyWithDataVerificationTests::
-    RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(
-        bool is_immediate) {
+    RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest() {
   const size_t size = 4 * 1024;
   std::vector<uint8_t> host_memory1(size), host_memory2(size, 0);
   void *device_memory = allocate_device_memory(size_in_bytes(host_memory1));
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   lzt::write_data_pattern(host_memory1.data(), size, 1);
 
@@ -855,7 +861,6 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
   append_memory_copy(cmd_bundle.list, host_memory2.data(), device_memory,
                      size_in_bytes(host_memory2), nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
@@ -866,18 +871,20 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
     GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
-  RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(false);
+  RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
     GivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
-  RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(true);
+  RunGivenHostMemoryDeviceMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryCopyWithDataVerificationTests::
-    RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(
-        bool is_immediate) {
+    RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest() {
   const size_t size = 1024;
   // number of transfers to device memory
   const size_t num_dev_mem_copy = 8;
@@ -886,7 +893,7 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
   std::vector<uint8_t> host_memory1(size), host_memory2(size, 0);
   void *device_memory = allocate_device_memory(
       num_dev_mem_copy * (size_in_bytes(host_memory1) + addr_alignment));
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   lzt::write_data_pattern(host_memory1.data(), size, 1);
 
@@ -905,7 +912,6 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
   append_memory_copy(cmd_bundle.list, host_memory2.data(),
                      static_cast<void *>(char_dst_ptr), size, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory2.data(), size, 1);
@@ -917,26 +923,29 @@ void zeCommandListAppendMemoryCopyWithDataVerificationTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
     GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
-  RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(false);
+  RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyWithDataVerificationTests,
     GivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
-  RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest(true);
+  RunGivenDeviceMemoryToDeviceMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 enum class MemoryHint { None, AdviceToSystem, Prefetch };
 
 class zeCommandListAppendMemoryBackToBackTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<
-          std::tuple<bool, bool, bool, bool, MemoryHint, size_t>> {
+      public ::testing::WithParamInterface<std::tuple<
+          bool, bool, lzt::command_list_mode_t, bool, MemoryHint, size_t>> {
 
 protected:
   void RunGivenCopyBetweenUsmAndSharedSystemUsmAndVerifyCorrect(
-      bool is_src_shared_system, bool is_dst_shared_system, bool is_immediate,
-      bool is_copy_only, MemoryHint memory_hint, size_t size) {
+      bool is_src_shared_system, bool is_dst_shared_system,
+      lzt::command_list_mode_t mode, bool is_copy_only, MemoryHint memory_hint,
+      size_t size) {
     const uint8_t value = to_u8(rand()) & 0xFF;
     const uint8_t init = (value + 0x22) & 0xFF;
 
@@ -967,7 +976,7 @@ protected:
 
     LOG_INFO << "src_memory (" << src_memory_type << ")= " << src_memory
              << " dst_memory (" << dst_memory_type << ")= " << dst_memory
-             << " immediate = " << is_immediate
+             << " immediate = " << (mode != lzt::command_list_mode_t::regular)
              << " is_copy_only = " << is_copy_only
              << " memory_hint = " << memory_hint_to_str(memory_hint)
              << " size = " << size;
@@ -977,9 +986,9 @@ protected:
 
     auto device = zeDevice::get_instance()->get_device();
     auto cmd_bundle = lzt::create_command_bundle(
-        lzt::get_default_context(), device, 0,
-        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0,
-        ordinal, 0, is_immediate);
+        lzt::get_default_context(), device, 0u,
+        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+        0u, ordinal, 0u, mode);
 
     if (is_src_shared_system) {
       switch (memory_hint) {
@@ -1010,7 +1019,6 @@ protected:
     lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(dst_memory),
                             static_cast<void *>(src_memory), size);
 
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
     EXPECT_EQ(0, memcmp(src_memory, dst_memory, size));
 
@@ -1037,7 +1045,9 @@ LZT_TEST_P(
 
 INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, zeCommandListAppendMemoryBackToBackTests,
-    ::testing::Combine(::testing::Bool(), ::testing::Bool(), ::testing::Bool(),
+    ::testing::Combine(::testing::Bool(), ::testing::Bool(),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate),
                        ::testing::Bool(),
                        ::testing::Values(MemoryHint::None,
                                          MemoryHint::AdviceToSystem,
@@ -1047,17 +1057,17 @@ INSTANTIATE_TEST_SUITE_P(
 class zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests
     : public zeCommandListCommandQueueTests {
 protected:
+  template <lzt::command_list_mode_t Mode>
   void
-  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
-      bool is_immediate);
+  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest();
+  template <lzt::command_list_mode_t Mode>
   void
-  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
-      bool is_immediate);
+  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest();
 };
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
-    RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
-        bool is_immediate) {
+    RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest() {
   const size_t size = 4 * 1024;
   ze_context_handle_t src_context = lzt::create_context();
   ze_context_handle_t dflt_context = lzt::get_default_context();
@@ -1072,7 +1082,7 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
   void *device_memory_src_ctx = lzt::allocate_device_memory(
       size, 1, 0, 0, zeDevice::get_instance()->get_device(), src_context);
   void *device_memory_dflt_ctx = lzt::allocate_device_memory(size);
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   lzt::write_data_pattern(host_memory_src_ctx, size, 1);
 
@@ -1091,7 +1101,6 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
   append_memory_copy(src_context, cmd_bundle.list, host_memory_dflt_ctx,
                      shared_memory_src_ctx, size, nullptr, 0, nullptr);
   append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory_dflt_ctx, size, 1);
@@ -1107,20 +1116,20 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
     GivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
-  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
-      false);
+  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
     GivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
-  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest(
-      true);
+  RunGivenHostMemoryAndSharedMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
-    RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
-        bool is_immediate) {
+    RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest() {
   const size_t size = 4 * 1024;
   ze_context_handle_t src_context = lzt::create_context();
   ze_context_handle_t dflt_context = lzt::get_default_context();
@@ -1136,7 +1145,7 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
   void *device_memory_src_ctx = lzt::allocate_device_memory(
       size, 1, 0, 0, zeDevice::get_instance()->get_device(), src_context);
   void *device_memory_dflt_ctx = lzt::allocate_device_memory(size);
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   lzt::write_data_pattern(host_memory_src_ctx, size, 1);
 
@@ -1149,7 +1158,6 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
   append_memory_copy(src_context, cmd_bundle.list, host_memory_dflt_ctx,
                      device_memory_src_ctx, size, hEvent1, 0, &hEvent2);
   append_barrier(cmd_bundle.list, nullptr, 1, &hEvent1);
-  close_command_list(cmd_bundle.list);
   execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(host_memory_dflt_ctx, size, 1);
@@ -1165,21 +1173,22 @@ void zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
     GivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsThenSuccessIsReturnedAndCopyIsCorrect) {
-  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
-      false);
+  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyFromContextWithDataVerificationTests,
     GivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsOnImmediateCmdListThenSuccessIsReturnedAndCopyIsCorrect) {
-  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest(
-      true);
+  RunGivenHostMemoryAndDeviceMemoryFromTwoContextsWhenAppendingMemoryCopyWithEventsTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 class zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<
-          size_t, size_t, size_t, ze_memory_type_t, ze_memory_type_t, bool>> {
+      public ::testing::WithParamInterface<
+          std::tuple<size_t, size_t, size_t, ze_memory_type_t, ze_memory_type_t,
+                     lzt::command_list_mode_t>> {
 protected:
   zeCommandListAppendMemoryCopyRegionWithDataVerificationParameterizedTests() {
     rows = std::get<0>(GetParam());
@@ -1191,8 +1200,8 @@ protected:
     ze_memory_type_t source_type = std::get<3>(GetParam());
     ze_memory_type_t destination_type = std::get<4>(GetParam());
 
-    is_immediate = std::get<5>(GetParam());
-    cmd_bundle = lzt::create_command_bundle(is_immediate);
+    mode = std::get<5>(GetParam());
+    cmd_bundle = lzt::create_command_bundle(mode);
 
     switch (source_type) {
     case ZE_MEMORY_TYPE_DEVICE:
@@ -1284,7 +1293,6 @@ protected:
       append_barrier(cmd_bundle.list);
       append_memory_copy(cmd_bundle.list, verification_memory,
                          destination_memory, memory_size);
-      close_command_list(cmd_bundle.list);
       execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
       reset_command_list(cmd_bundle.list);
 
@@ -1306,7 +1314,7 @@ protected:
     }
   }
 
-  lzt::zeCommandBundle cmd_bundle;
+  lzt::command_bundle cmd_bundle;
 
   void *source_memory, *temp_src;
   void *destination_memory, *temp_dest;
@@ -1314,7 +1322,7 @@ protected:
   size_t rows;
   size_t columns;
   size_t slices;
-  bool is_immediate;
+  lzt::command_list_mode_t mode;
   size_t memory_size;
 };
 
@@ -1334,11 +1342,12 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::Values(1, 8, 64), // Slices
                        memory_types,                // Source Memory Type
                        memory_types,                // Destination Memory Type
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 class AppendMemoryCopyRegionWithSharedSystem
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<size_t, size_t, size_t, bool, bool>> {
+          std::tuple<size_t, size_t, size_t, lzt::command_list_mode_t, bool>> {
 protected:
   enum class MemoryHint {
     None,
@@ -1352,7 +1361,7 @@ protected:
 
   void RunMemoryCopyRegionTest(MemoryHint memory_hint) {
 
-    is_immediate = std::get<3>(GetParam());
+    mode = std::get<3>(GetParam());
     use_copy_engine = std::get<4>(GetParam());
 
     auto device = zeDevice::get_instance()->get_device();
@@ -1370,8 +1379,8 @@ protected:
                                queue_group_flags_not_set);
     ASSERT_NE(ordinal, std::nullopt);
 
-    auto cmd_bundle = lzt::create_command_bundle(
-        lzt::get_default_context(), device, 0, *ordinal, is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle(lzt::get_default_context(),
+                                                 device, 0u, *ordinal, mode);
 
     // Set up memory buffers for test
     // Device memory has to be copied in so
@@ -1450,7 +1459,6 @@ protected:
       append_barrier(cmd_bundle.list);
       append_memory_copy(cmd_bundle.list, verification_memory,
                          destination_memory, memory_size);
-      close_command_list(cmd_bundle.list);
       execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
       reset_command_list(cmd_bundle.list);
 
@@ -1477,7 +1485,7 @@ protected:
     free_memory(verification_memory);
   }
 
-  lzt::zeCommandBundle cmd_bundle;
+  lzt::command_bundle cmd_bundle;
 
   void *source_memory, *temp_src;
   void *destination_memory, *temp_dest;
@@ -1485,7 +1493,7 @@ protected:
   size_t rows;
   size_t columns;
   size_t slices;
-  bool is_immediate;
+  lzt::command_list_mode_t mode;
   bool use_copy_engine;
   size_t memory_size;
 };
@@ -1865,29 +1873,36 @@ LZT_TEST_P(
   lzt::aligned_free(destination_memory);
 }
 
-INSTANTIATE_TEST_SUITE_P(MemoryCopies, AppendMemoryCopyRegionWithSharedSystem,
-                         ::testing::Combine(::testing::Values(8, 64), // Rows
-                                            ::testing::Values(8, 64), // Cols
-                                            ::testing::Values(1, 8,
-                                                              64), // Slices
-                                            ::testing::Bool(),
-                                            ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(
+    MemoryCopies, AppendMemoryCopyRegionWithSharedSystem,
+    ::testing::Combine(::testing::Values(8, 64), // Rows
+                       ::testing::Values(8, 64), // Cols
+                       ::testing::Values(1, 8,
+                                         64), // Slices
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate),
+                       ::testing::Bool()));
 
 class zeCommandListAppendMemoryCopyTests : public ::testing::Test {
 protected:
-  void RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(
-      bool is_immediate, bool is_shared_system, bool use_copy_engine);
+  template <lzt::command_list_mode_t Mode>
+  void
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(bool is_shared_system,
+                                                       bool use_copy_engine);
+  template <lzt::command_list_mode_t Mode>
   void RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
-      bool is_immediate, bool is_shared_system, bool use_copy_engine);
+      bool is_shared_system, bool use_copy_engine);
+  template <lzt::command_list_mode_t Mode>
   void RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
-      bool is_immediate, bool is_shared_system, bool use_copy_engine);
+      bool is_shared_system, bool use_copy_engine);
+  template <lzt::command_list_mode_t Mode>
   void RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
-      bool is_immediate, bool is_shared_system);
+      bool is_shared_system);
 };
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryCopyTests::
-    RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(bool is_immediate,
-                                                         bool is_shared_system,
+    RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(bool is_shared_system,
                                                          bool use_copy_engine) {
   auto cmd_queue_group_props = get_command_queue_group_properties(
       zeDevice::get_instance()->get_device());
@@ -1903,9 +1918,9 @@ void zeCommandListAppendMemoryCopyTests::
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
   ASSERT_NE(ordinal, std::nullopt);
 
-  auto cmd_bundle = lzt::create_command_bundle(
-      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      *ordinal, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0u,
+      *ordinal);
 
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
@@ -1914,7 +1929,6 @@ void zeCommandListAppendMemoryCopyTests::
 
   lzt::append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
                           size_in_bytes(host_memory), nullptr);
-  lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>().max());
   lzt::destroy_command_bundle(cmd_bundle);
@@ -1924,58 +1938,67 @@ void zeCommandListAppendMemoryCopyTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(false, false, false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::regular>(false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(true, false, false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::immediate>(false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(false, true, false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::regular>(true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(true, true, false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::immediate>(true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(false, false, true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::regular>(false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(true, false, true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::immediate>(false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyToSharedSystemMemoryThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(false, true, true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::regular>(true, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyToSharedSystemMemoryOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest(true, true, true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyTest<
+      lzt::command_list_mode_t::immediate>(true, true);
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryCopyTests::
     RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(
-        bool is_immediate, bool is_shared_system, bool use_copy_engine) {
+        bool is_shared_system, bool use_copy_engine) {
   auto cmd_queue_group_props = get_command_queue_group_properties(
       zeDevice::get_instance()->get_device());
 
@@ -1990,9 +2013,9 @@ void zeCommandListAppendMemoryCopyTests::
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
   ASSERT_NE(ordinal, std::nullopt);
 
-  auto cmd_bundle = lzt::create_command_bundle(
-      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      *ordinal, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0u,
+      *ordinal);
 
   lzt::zeEventPool ep;
   const size_t size = 16;
@@ -2004,7 +2027,6 @@ void zeCommandListAppendMemoryCopyTests::
   ep.create_event(hEvent);
   lzt::append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
                           size_in_bytes(host_memory), hEvent);
-  lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>().max());
   ep.destroy_event(hEvent);
@@ -2015,66 +2037,67 @@ void zeCommandListAppendMemoryCopyTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(false, false,
-                                                                 false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest<
+      lzt::command_list_mode_t::regular>(false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(true, false,
-                                                                 false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest<
+      lzt::command_list_mode_t::immediate>(false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(false, true,
-                                                                 false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest<
+      lzt::command_list_mode_t::regular>(true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(true, true,
-                                                                 false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest<
+      lzt::command_list_mode_t::immediate>(true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyWithHEventThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(false, false,
-                                                                 true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest<
+      lzt::command_list_mode_t::regular>(false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyWithHEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(true, false,
-                                                                 true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest<
+      lzt::command_list_mode_t::immediate>(false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyToSharedSystemMemoryWithHEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(false, true,
-                                                                 true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest<
+      lzt::command_list_mode_t::regular>(true, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyToSharedSystemMemoryWithHEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest(true, true,
-                                                                 true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithHEventTest<
+      lzt::command_list_mode_t::immediate>(true, true);
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryCopyTests::
     RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
-        bool is_immediate, bool is_shared_system, bool use_copy_engine) {
+        bool is_shared_system, bool use_copy_engine) {
   auto cmd_queue_group_props = get_command_queue_group_properties(
       zeDevice::get_instance()->get_device());
 
@@ -2089,9 +2112,9 @@ void zeCommandListAppendMemoryCopyTests::
       cmd_queue_group_props, queue_group_flags_set, queue_group_flags_not_set);
   ASSERT_NE(ordinal, std::nullopt);
 
-  auto cmd_bundle = lzt::create_command_bundle(
-      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0,
-      *ordinal, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), zeDevice::get_instance()->get_device(), 0u,
+      *ordinal);
 
   lzt::zeEventPool ep;
   const size_t size = 16;
@@ -2106,7 +2129,6 @@ void zeCommandListAppendMemoryCopyTests::
   lzt::append_memory_copy(cmd_bundle.list, memory, host_memory.data(),
                           size_in_bytes(host_memory), nullptr, 1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
-  lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>().max());
   ep.destroy_event(hEvent);
@@ -2117,69 +2139,70 @@ void zeCommandListAppendMemoryCopyTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
-      false, false, false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(true, false,
-                                                                    false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(false, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(false, true,
-                                                                    false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyToSharedSystemMemoryWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(true, true,
-                                                                    false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(true, false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyWithWaitEventThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(
-      false, false, true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(true, false,
-                                                                    true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(false, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyToSharedSystemMemoryWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(false, true,
-                                                                    true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(true, true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemorySizeAndCopyEngineWhenAppendingMemoryCopyToSharedSystemMemoryWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest(true, true,
-                                                                    true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(true, true);
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeCommandListAppendMemoryCopyTests::
     RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
-        bool is_immediate, bool is_shared_system) {
+        bool is_shared_system) {
 
   lzt::zeEventPool ep;
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   const size_t size = 16;
   const std::vector<char> host_memory(size, 123);
   void *memory = lzt::allocate_device_memory_with_allocator_selector(
@@ -2201,7 +2224,6 @@ void zeCommandListAppendMemoryCopyTests::
                                  host_memory.data(), &srcRegion, 0, 0, nullptr,
                                  1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_before);
-  lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>().max());
   ep.destroy_event(hEvent);
@@ -2212,47 +2234,46 @@ void zeCommandListAppendMemoryCopyTests::
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
-      false, false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryDeviceHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
-      true, false);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionToSharedSystemMemoryWithWaitEventThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(false,
-                                                                          true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest<
+      lzt::command_list_mode_t::regular>(true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryCopyTests,
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionToSharedSystemMemoryWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(true,
-                                                                          true);
+  RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(true);
 }
 
 class zeCommandListAppendMemoryPrefetchTests : public ::testing::Test {
 protected:
-  void RunGivenMemoryPrefetchWhenWritingFromDeviceTest(bool is_immediate,
-                                                       bool is_shared_system) {
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenMemoryPrefetchWhenWritingFromDeviceTest(bool is_shared_system) {
     const size_t size = 16;
     const uint8_t value = 0x55;
     void *memory = lzt::allocate_shared_memory_with_allocator_selector(
         size, is_shared_system);
     memset(memory, 0xaa, size);
-    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
     lzt::append_memory_prefetch(cmd_bundle.list, memory, size);
     lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     for (size_t i = 0; i < size; i++) {
@@ -2266,42 +2287,46 @@ protected:
 
 LZT_TEST_F(zeCommandListAppendMemoryPrefetchTests,
            GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHost) {
-  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(false, false);
+  RunGivenMemoryPrefetchWhenWritingFromDeviceTest<
+      lzt::command_list_mode_t::regular>(false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryPrefetchTests,
     GivenMemoryPrefetchWhenWritingFromDeviceOnImmediateCmdListThenDataisCorrectFromHost) {
-  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(true, false);
+  RunGivenMemoryPrefetchWhenWritingFromDeviceTest<
+      lzt::command_list_mode_t::immediate>(false);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryPrefetchTests,
     GivenMemoryPrefetchWhenWritingFromDeviceThenDataisCorrectFromHostWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(false, true);
+  RunGivenMemoryPrefetchWhenWritingFromDeviceTest<
+      lzt::command_list_mode_t::regular>(true);
 }
 
 LZT_TEST_F(
     zeCommandListAppendMemoryPrefetchTests,
     GivenMemoryPrefetchWhenWritingFromDeviceOnImmediateCmdListThenDataisCorrectFromHostWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  RunGivenMemoryPrefetchWhenWritingFromDeviceTest(true, true);
+  RunGivenMemoryPrefetchWhenWritingFromDeviceTest<
+      lzt::command_list_mode_t::immediate>(true);
 }
 
 class zeCommandListAppendMemAdviseTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<ze_memory_advice_t, bool>> {
+          std::tuple<ze_memory_advice_t, lzt::command_list_mode_t>> {
 protected:
   void RunGivenMemAdviseWhenWritingFromDeviceTest(ze_memory_advice_t mem_advice,
-                                                  bool is_immediate,
+                                                  lzt::command_list_mode_t mode,
                                                   bool is_shared_system);
 };
 
 void zeCommandListAppendMemAdviseTests::
     RunGivenMemAdviseWhenWritingFromDeviceTest(ze_memory_advice_t mem_advice,
-                                               bool is_immediate,
+                                               lzt::command_list_mode_t mode,
                                                bool is_shared_system) {
   const size_t size = 16;
   const uint8_t value = 0x55;
@@ -2309,14 +2334,13 @@ void zeCommandListAppendMemAdviseTests::
       allocate_shared_memory_with_allocator_selector(size, is_shared_system);
   memset(memory, 0xaa, size);
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle(mode);
 
   lzt::append_memory_advise(cmd_bundle.list,
                             lzt::zeDevice::get_instance()->get_device(), memory,
                             size, mem_advice);
 
   lzt::append_memory_set(cmd_bundle.list, memory, &value, size);
-  lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (size_t i = 0; i < size; i++) {
@@ -2330,8 +2354,8 @@ void zeCommandListAppendMemAdviseTests::
 LZT_TEST_P(zeCommandListAppendMemAdviseTests,
            GivenMemAdviseWhenWritingFromDeviceThenDataIsCorrectFromHost) {
   ze_memory_advice_t mem_advice = std::get<0>(GetParam());
-  bool is_immediate = std::get<1>(GetParam());
-  RunGivenMemAdviseWhenWritingFromDeviceTest(mem_advice, is_immediate, false);
+  lzt::command_list_mode_t mode = std::get<1>(GetParam());
+  RunGivenMemAdviseWhenWritingFromDeviceTest(mem_advice, mode, false);
 }
 
 LZT_TEST_P(
@@ -2339,8 +2363,8 @@ LZT_TEST_P(
     GivenMemAdviseWhenWritingFromDeviceThenDataIsCorrectFromHostWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   ze_memory_advice_t mem_advice = std::get<0>(GetParam());
-  bool is_immediate = std::get<1>(GetParam());
-  RunGivenMemAdviseWhenWritingFromDeviceTest(mem_advice, is_immediate, true);
+  lzt::command_list_mode_t mode = std::get<1>(GetParam());
+  RunGivenMemAdviseWhenWritingFromDeviceTest(mem_advice, mode, true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -2356,17 +2380,18 @@ INSTANTIATE_TEST_SUITE_P(
             ZE_MEMORY_ADVICE_SET_NON_ATOMIC_MOSTLY,
             ZE_MEMORY_ADVICE_CLEAR_NON_ATOMIC_MOSTLY,
             ZE_MEMORY_ADVICE_BIAS_CACHED, ZE_MEMORY_ADVICE_BIAS_UNCACHED),
-        ::testing::Bool()));
+        ::testing::Values(lzt::command_list_mode_t::regular,
+                          lzt::command_list_mode_t::immediate)));
 
 class zeCommandListAppendMemoryCopyParameterizedTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<
-          std::tuple<ze_memory_type_t, ze_memory_type_t, bool>> {
+      public ::testing::WithParamInterface<std::tuple<
+          ze_memory_type_t, ze_memory_type_t, lzt::command_list_mode_t>> {
 public:
   void launchParamAppendMemCopy(ze_device_handle_t device, int *src_memory,
                                 int *dst_memory, size_t size,
-                                bool is_immediate) {
-    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+                                lzt::command_list_mode_t mode) {
+    auto cmd_bundle = lzt::create_command_bundle(device, mode);
     const int8_t src_pattern = 1;
     const int8_t dst_pattern = 0;
 
@@ -2405,7 +2430,6 @@ public:
     lzt::append_memory_copy(cmd_bundle.list, expected_data,
                             static_cast<void *>(src_memory),
                             size * sizeof(int));
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(0, memcmp(expected_data, verify_data, size * sizeof(int)));
@@ -2421,7 +2445,7 @@ LZT_TEST_P(
     GivenParameterizedSourceAndDestinationMemAllocTypesWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
   ze_memory_type_t src_memory_type = std::get<0>(GetParam());
   ze_memory_type_t dst_memory_type = std::get<1>(GetParam());
-  bool is_immediate = std::get<2>(GetParam());
+  lzt::command_list_mode_t mode = std::get<2>(GetParam());
 
   auto context = lzt::get_default_context();
   const size_t size = 16;
@@ -2472,8 +2496,7 @@ LZT_TEST_P(
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
 
-      launchParamAppendMemCopy(device, src_memory, dst_memory, size,
-                               is_immediate);
+      launchParamAppendMemCopy(device, src_memory, dst_memory, size, mode);
 
       if (dst_memory)
         lzt::free_memory(context, dst_memory);
@@ -2483,10 +2506,11 @@ LZT_TEST_P(
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(ParamAppendMemCopy,
-                         zeCommandListAppendMemoryCopyParameterizedTests,
-                         ::testing::Combine(memory_types, memory_types,
-                                            ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(
+    ParamAppendMemCopy, zeCommandListAppendMemoryCopyParameterizedTests,
+    ::testing::Combine(memory_types, memory_types,
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 enum MemoryType {
   MEMORY_TYPE_DEVICE,
@@ -2513,11 +2537,12 @@ static std::string MemoryTypeString(MemoryType type) {
 class AppendMemoryCopyWithSharedSystem
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<MemoryType, MemoryType, bool>> {
+          std::tuple<MemoryType, MemoryType, lzt::command_list_mode_t>> {
 public:
   void launchAppendMemCopy(ze_device_handle_t device, int *src_memory,
-                           int *dst_memory, size_t size, bool is_immediate) {
-    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+                           int *dst_memory, size_t size,
+                           lzt::command_list_mode_t mode) {
+    auto cmd_bundle = lzt::create_command_bundle(device, mode);
     const int8_t src_pattern = 1;
     const int8_t dst_pattern = 0;
 
@@ -2556,7 +2581,6 @@ public:
     lzt::append_memory_copy(cmd_bundle.list, expected_data,
                             static_cast<void *>(src_memory),
                             size * sizeof(int));
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(0, memcmp(expected_data, verify_data, size * sizeof(int)));
@@ -2573,7 +2597,7 @@ LZT_TEST_P(
 
   MemoryType src_memory_type = std::get<0>(GetParam());
   MemoryType dst_memory_type = std::get<1>(GetParam());
-  bool is_immediate = std::get<2>(GetParam());
+  lzt::command_list_mode_t mode = std::get<2>(GetParam());
 
   auto context = lzt::get_default_context();
   const size_t size = 16;
@@ -2643,7 +2667,7 @@ LZT_TEST_P(
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
 
-      launchAppendMemCopy(device, src_memory, dst_memory, size, is_immediate);
+      launchAppendMemCopy(device, src_memory, dst_memory, size, mode);
 
       const bool is_shared_system_src =
           src_memory_type == MEMORY_TYPE_SHARED_SYSTEM;
@@ -2665,7 +2689,8 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::Values(MEMORY_TYPE_DEVICE, MEMORY_TYPE_HOST,
                                          MEMORY_TYPE_SHARED,
                                          MEMORY_TYPE_SHARED_SYSTEM),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 INSTANTIATE_TEST_SUITE_P(
     ParamAppendMemCopyWithDestinationAsSharedSystem,
@@ -2674,7 +2699,8 @@ INSTANTIATE_TEST_SUITE_P(
                                          MEMORY_TYPE_SHARED,
                                          MEMORY_TYPE_SHARED_SYSTEM),
                        ::testing::Values(MEMORY_TYPE_SHARED_SYSTEM),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 void *malloc_aligned(size_t alignment, size_t size) {
 #ifdef __linux__
@@ -2694,13 +2720,15 @@ void free_aligned(void *ptr) {
 
 class zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<size_t, bool>> {
+      public ::testing::WithParamInterface<
+          std::tuple<size_t, lzt::command_list_mode_t>> {
 public:
   void launchHostUsrPtrAppendMemCopy(ze_device_handle_t device,
                                      char *src_memory, char *dst_memory,
-                                     size_t size, bool is_immediate) {
+                                     size_t size,
+                                     lzt::command_list_mode_t mode) {
 
-    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle(device, mode);
     const int8_t src_pattern = 0x55;
     const int8_t dst_pattern = 0;
 
@@ -2723,7 +2751,6 @@ public:
     lzt::append_memory_copy(cmd_bundle.list, verify_data,
                             static_cast<void *>(dst_memory), size);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(0, memcmp(expected_data, verify_data, size));
@@ -2738,7 +2765,7 @@ LZT_TEST_P(
     zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr,
     GivenSourceAndDestinationSharedSystemUsmWhenAppendingMemoryCopyThenSuccessIsReturnedAndCopyIsCorrect) {
   size_t size = std::get<0>(GetParam());
-  bool is_immediate = std::get<1>(GetParam());
+  lzt::command_list_mode_t mode = std::get<1>(GetParam());
 
   auto context = lzt::get_default_context();
 
@@ -2756,8 +2783,7 @@ LZT_TEST_P(
       EXPECT_NE(src_memory, nullptr);
       EXPECT_NE(dst_memory, nullptr);
 
-      launchHostUsrPtrAppendMemCopy(device, src_memory, dst_memory, size,
-                                    is_immediate);
+      launchHostUsrPtrAppendMemCopy(device, src_memory, dst_memory, size, mode);
 
       if (dst_memory) {
         lzt::free_memory_with_allocator_selector(dst_memory, true);
@@ -2773,7 +2799,8 @@ INSTANTIATE_TEST_SUITE_P(
     ParamAppendMemCopyHostUserPtr,
     zeCommandListAppendMemoryCopySharedSystemUsmHostUserPtr,
     ::testing::Combine(::testing::Values(1, 16, 128, 4096, 65536),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 class zeSharedSystemMemoryCopyTests
     : public ::testing::Test,
@@ -2788,8 +2815,8 @@ protected:
 
   void TearDown() override {}
 
-  void run(const bool use_sys_dst, const bool is_immediate,
-           const bool close_and_reset_immediate) {
+  template <lzt::command_list_mode_t Mode>
+  void run(const bool use_sys_dst, const bool close_and_reset_immediate) {
     const ze_memory_type_t memory_type = std::get<0>(GetParam());
     const size_t buf_sz = std::get<1>(GetParam());
     const size_t alignment = std::get<2>(GetParam());
@@ -2829,11 +2856,12 @@ protected:
       std::swap(buf_src, buf_dst);
     }
 
-    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
     // In theory this doesn't affect immediate cmdlists, but it does in reality
-    const bool close_and_reset =
-        !is_immediate || (is_immediate && close_and_reset_immediate);
+    const bool close_and_reset = (Mode == lzt::command_list_mode_t::regular) ||
+                                 ((Mode != lzt::command_list_mode_t::regular) &&
+                                  close_and_reset_immediate);
 
     for (int i = 0; i < this->n_iters; i++) {
       lzt::append_memory_copy(cmd_bundle.list, buf_dst, buf_src, buf_sz);
@@ -2857,37 +2885,37 @@ protected:
 LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryThenSuccessIsReturned) {
-  this->run(true, false, false);
+  this->template run<lzt::command_list_mode_t::regular>(true, false);
 }
 
 LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryThenSuccessIsReturned) {
-  this->run(false, false, false);
+  this->template run<lzt::command_list_mode_t::regular>(false, false);
 }
 
 LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryOnImmediateCmdListWithCloseAndResetThenSuccessIsReturned) {
-  this->run(true, true, true);
+  this->template run<lzt::command_list_mode_t::immediate>(true, true);
 }
 
 LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryOnImmediateCmdListWithCloseAndResetThenSuccessIsReturned) {
-  this->run(false, true, true);
+  this->template run<lzt::command_list_mode_t::immediate>(false, true);
 }
 
 LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingToSharedSystemMemoryOnImmediateCmdListWithoutCloseAndResetThenSuccessIsReturned) {
-  this->run(true, true, false);
+  this->template run<lzt::command_list_mode_t::immediate>(true, false);
 }
 
 LZT_TEST_P(
     zeSharedSystemMemoryCopyTests,
     GivenSizeAndAlignmentWhenCopyingFromSharedSystemMemoryOnImmediateCmdListWithoutCloseAndResetThenSuccessIsReturned) {
-  this->run(false, true, false);
+  this->template run<lzt::command_list_mode_t::immediate>(false, false);
 }
 
 INSTANTIATE_TEST_SUITE_P(

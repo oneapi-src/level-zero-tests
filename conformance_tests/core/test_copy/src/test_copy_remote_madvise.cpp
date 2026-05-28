@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2025 Intel Corporation
+ * Copyright (C) 2025-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,7 +18,8 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
+struct SharedSystemRemoteDeviceTests
+    : public ::testing::TestWithParam<lzt::command_list_mode_t> {
   void SetUp() override {
     auto driver = lzt::get_default_driver();
     auto context = lzt::get_default_context();
@@ -39,8 +40,8 @@ struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
     device = devices[0];
     remote_device = devices[1];
 
-    bool is_immediate = GetParam();
-    cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+    lzt::command_list_mode_t mode = GetParam();
+    cmd_bundle = lzt::create_command_bundle(device, mode);
   }
 
   void TearDown() override {
@@ -61,7 +62,6 @@ struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
     lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, sizeof(pattern),
                             size, nullptr);
 
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     uint8_t *memory_as_byte = static_cast<uint8_t *>(memory);
@@ -90,7 +90,6 @@ struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
 
     lzt::append_memory_copy(cmd_bundle.list, dst_memory, src_memory, size);
 
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     uint8_t *src_memory_as_byte = static_cast<uint8_t *>(src_memory);
@@ -131,7 +130,6 @@ struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
 
     lzt::append_memory_copy_region(cmd_bundle.list, dst_memory, &region, 1, 1,
                                    src_memory, &region, 1, 1, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     uint8_t *src_memory_as_byte = static_cast<uint8_t *>(src_memory);
@@ -186,7 +184,6 @@ struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
     lzt::append_image_copy_to_mem(cmd_bundle.list, png_img_dest.raw_data(),
                                   ze_img, nullptr);
     lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(png_img_src, png_img_dest);
@@ -229,7 +226,6 @@ struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
                                   nullptr, 0, nullptr);
     }
 
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     int *src_memory_as_int = static_cast<int *>(src_memory);
@@ -247,7 +243,7 @@ struct SharedSystemRemoteDeviceTests : public ::testing::TestWithParam<bool> {
 
   static constexpr size_t size = 1024;
   ze_device_handle_t device, remote_device;
-  lzt::zeCommandBundle cmd_bundle;
+  lzt::command_bundle cmd_bundle;
 };
 
 LZT_TEST_P(
@@ -355,7 +351,9 @@ LZT_TEST_P(
   run_append_launch_kernel_test(true, true, true);
 }
 
-INSTANTIATE_TEST_SUITE_P(SharedSystemRemoteDeviceTestParam,
-                         SharedSystemRemoteDeviceTests, ::testing::Bool());
+INSTANTIATE_TEST_SUITE_P(
+    SharedSystemRemoteDeviceTestParam, SharedSystemRemoteDeviceTests,
+    ::testing::Values(lzt::command_list_mode_t::regular,
+                      lzt::command_list_mode_t::immediate));
 
 } // namespace
