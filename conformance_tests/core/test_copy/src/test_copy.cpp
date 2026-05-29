@@ -1898,6 +1898,13 @@ protected:
   template <lzt::command_list_mode_t Mode>
   void RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest(
       bool is_shared_system);
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenZeroSizeWhenAppendingMemoryCopyThenSuccessIsReturnedTest(
+      bool is_shared_system);
+  template <lzt::command_list_mode_t Mode>
+  void
+  RunGivenZeroRegionParamsWhenAppendingMemoryCopyRegionThenSuccessIsReturnedTest(
+      bool is_shared_system);
 };
 
 template <lzt::command_list_mode_t Mode>
@@ -2258,6 +2265,104 @@ LZT_TEST_F(
     GivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionToSharedSystemMemoryWithWaitEventOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
   RunGivenHostMemoryAndSizeWhenAppendingMemoryCopyRegionWithWaitEventTest<
+      lzt::command_list_mode_t::immediate>(true);
+}
+
+template <lzt::command_list_mode_t Mode>
+void zeCommandListAppendMemoryCopyTests::
+    RunGivenZeroSizeWhenAppendingMemoryCopyThenSuccessIsReturnedTest(
+        bool is_shared_system) {
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
+  const size_t alloc_size = 16;
+  const std::vector<char> host_memory(alloc_size, 123);
+  void *memory = lzt::allocate_shared_memory_with_allocator_selector(
+      alloc_size, is_shared_system);
+
+  lzt::append_memory_copy(cmd_bundle.list, memory, host_memory.data(), 0);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>().max());
+
+  lzt::destroy_command_bundle(cmd_bundle);
+  lzt::free_memory_with_allocator_selector(memory, is_shared_system);
+}
+
+LZT_TEST_F(zeCommandListAppendMemoryCopyTests,
+           GivenZeroSizeWhenAppendingMemoryCopyThenSuccessIsReturned) {
+  RunGivenZeroSizeWhenAppendingMemoryCopyThenSuccessIsReturnedTest<
+      lzt::command_list_mode_t::regular>(false);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenZeroSizeWhenAppendingMemoryCopyOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenZeroSizeWhenAppendingMemoryCopyThenSuccessIsReturnedTest<
+      lzt::command_list_mode_t::immediate>(false);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenZeroSizeWhenAppendingMemoryCopyToSharedSystemMemoryThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenZeroSizeWhenAppendingMemoryCopyThenSuccessIsReturnedTest<
+      lzt::command_list_mode_t::regular>(true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenZeroSizeWhenAppendingMemoryCopyToSharedSystemMemoryOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenZeroSizeWhenAppendingMemoryCopyThenSuccessIsReturnedTest<
+      lzt::command_list_mode_t::immediate>(true);
+}
+
+template <lzt::command_list_mode_t Mode>
+void zeCommandListAppendMemoryCopyTests::
+    RunGivenZeroRegionParamsWhenAppendingMemoryCopyRegionThenSuccessIsReturnedTest(
+        bool is_shared_system) {
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
+  const size_t alloc_size = 16;
+  const std::vector<char> host_memory(alloc_size, 123);
+  void *memory = lzt::allocate_shared_memory_with_allocator_selector(
+      alloc_size, is_shared_system);
+  ze_copy_region_t dstRegion = {};
+  ze_copy_region_t srcRegion = {};
+
+  lzt::append_memory_copy_region(cmd_bundle.list, memory, &dstRegion, 0, 0,
+                                 host_memory.data(), &srcRegion, 0, 0, nullptr);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>().max());
+
+  lzt::destroy_command_bundle(cmd_bundle);
+  lzt::free_memory_with_allocator_selector(memory, is_shared_system);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenZeroRegionParamsWhenAppendingMemoryCopyRegionThenSuccessIsReturned) {
+  RunGivenZeroRegionParamsWhenAppendingMemoryCopyRegionThenSuccessIsReturnedTest<
+      lzt::command_list_mode_t::regular>(false);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenZeroRegionParamsWhenAppendingMemoryCopyRegionOnImmediateCmdListThenSuccessIsReturned) {
+  RunGivenZeroRegionParamsWhenAppendingMemoryCopyRegionThenSuccessIsReturnedTest<
+      lzt::command_list_mode_t::immediate>(false);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenZeroRegionParamsWhenAppendingMemoryCopyRegionToSharedSystemMemoryThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenZeroRegionParamsWhenAppendingMemoryCopyRegionThenSuccessIsReturnedTest<
+      lzt::command_list_mode_t::regular>(true);
+}
+
+LZT_TEST_F(
+    zeCommandListAppendMemoryCopyTests,
+    GivenZeroRegionParamsWhenAppendingMemoryCopyRegionToSharedSystemMemoryOnImmediateCmdListThenSuccessIsReturnedWithSharedSystemAllocator) {
+  SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
+  RunGivenZeroRegionParamsWhenAppendingMemoryCopyRegionThenSuccessIsReturnedTest<
       lzt::command_list_mode_t::immediate>(true);
 }
 
