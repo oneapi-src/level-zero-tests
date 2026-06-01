@@ -328,6 +328,20 @@ void *metric_map_dma_buf_fd_to_memory(ze_device_handle_t device,
                                       ze_context_handle_t context, int fd,
                                       size_t size, size_t alignment);
 
+void run_matrix_multiplication_and_collect_tracer_data(
+    ze_device_handle_t device,
+    zet_metric_tracer_exp_handle_t metric_tracer_handle,
+    std::vector<uint8_t> &raw_data);
+
+void run_matrix_multiplication_and_collect_streamer_data(
+    ze_device_handle_t device,
+    zet_metric_streamer_handle_t metric_streamer_handle,
+    std::vector<uint8_t> &raw_data);
+
+void run_matrix_multiplication_and_collect_query_data(
+    ze_device_handle_t device, zet_metric_group_handle_t metric_group,
+    std::vector<uint8_t> &raw_data);
+
 }; // namespace level_zero_tests
 
 #endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */
