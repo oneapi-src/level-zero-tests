@@ -9,6 +9,7 @@
 #include "gmock/gmock.h"
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
+#include "test_multiprocess.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -18,10 +19,7 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 
-// Forward declarations - definitions live in test_multiprocess.cpp.
-struct ChildResults {
-  int values[64];
-};
+// Forward declaration - definition lives in test_multiprocess.cpp.
 int child_work(int child_index, ChildResults *shm,
                const std::string &worker_name);
 

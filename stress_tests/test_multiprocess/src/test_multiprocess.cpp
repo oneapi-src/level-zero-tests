@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 
+#include "test_multiprocess.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
@@ -35,10 +36,6 @@ namespace lzt = level_zero_tests;
 #endif
 
 namespace bipc = boost::interprocess;
-
-struct ChildResults {
-  int values[1024]; // supports up to 1024 child processes
-};
 
 static constexpr int default_child_count = 48;
 
@@ -74,23 +71,23 @@ static WorkerRegistrar
                << ", coreClockRate=" << props.coreClockRate;
     });
 
-static constexpr uint32_t k_kernel_elem_count = 256;
-static constexpr uint64_t k_event_sync_timeout = 60'000'000'000ULL;
-static constexpr size_t k_kernel_buf_size =
-    k_kernel_elem_count * sizeof(uint32_t);
+static constexpr uint32_t kernel_elem_count = 256;
+static constexpr uint64_t event_sync_timeout = 60'000'000'000ULL;
+static constexpr size_t kernel_buf_size =
+    kernel_elem_count * sizeof(uint32_t);
 static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
                                             ze_device_handle_t device,
                                             uint32_t *dst, bool is_immediate,
                                             int pid, int child_index) {
   uint32_t *src = static_cast<uint32_t *>(
-      lzt::allocate_shared_memory(k_kernel_buf_size, 1, 0, 0, device, context));
+      lzt::allocate_shared_memory(kernel_buf_size, 1, 0, 0, device, context));
   uint32_t *result_buf = static_cast<uint32_t *>(
-      lzt::allocate_shared_memory(k_kernel_buf_size, 1, 0, 0, device, context));
+      lzt::allocate_shared_memory(kernel_buf_size, 1, 0, 0, device, context));
 
   const uint32_t fill_value = 0xDEADBEEF;
-  for (uint32_t i = 0; i < k_kernel_elem_count; ++i)
+  for (uint32_t i = 0; i < kernel_elem_count; ++i)
     src[i] = fill_value;
-  memset(dst, 0, k_kernel_buf_size);
+  memset(dst, 0, kernel_buf_size);
 
   ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
                                           nullptr,
@@ -110,7 +107,7 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
   ze_kernel_handle_t kernel = lzt::create_function(module, "simple_test");
 
   uint32_t group_size_x = 0, group_size_y = 0, group_size_z = 0;
-  lzt::suggest_group_size(kernel, k_kernel_elem_count, 1, 1, group_size_x,
+  lzt::suggest_group_size(kernel, kernel_elem_count, 1, 1, group_size_x,
                           group_size_y, group_size_z);
 
   lzt::set_group_size(kernel, group_size_x, 1, 1);
@@ -118,7 +115,7 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
   lzt::set_argument_value(kernel, 1, sizeof(dst), &dst);
 
   ze_group_count_t dispatch = {};
-  dispatch.groupCountX = k_kernel_elem_count / group_size_x;
+  dispatch.groupCountX = kernel_elem_count / group_size_x;
   dispatch.groupCountY = 1;
   dispatch.groupCountZ = 1;
 
@@ -128,7 +125,7 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
   lzt::append_launch_function(bundle.list, kernel, &dispatch, event1, 0,
                               nullptr);
   lzt::append_barrier(bundle.list, nullptr, 1, &event1);
-  lzt::append_memory_copy(bundle.list, result_buf, dst, k_kernel_buf_size,
+  lzt::append_memory_copy(bundle.list, result_buf, dst, kernel_buf_size,
                           event2);
 
   LOG_INFO
@@ -136,23 +133,23 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
       << "] Kernel launched, waiting for completion and synchronizing with "
          "host...";
   if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, k_event_sync_timeout);
+    lzt::synchronize_command_list_host(bundle.list, event_sync_timeout);
     LOG_INFO << "[child=" << child_index << " pid=" << pid
              << "] Immediate command list synchronized with host completed";
   } else {
     lzt::close_command_list(bundle.list);
-    lzt::execute_and_sync_command_bundle(bundle, k_event_sync_timeout);
+    lzt::execute_and_sync_command_bundle(bundle, event_sync_timeout);
     LOG_INFO << "[child=" << child_index << " pid=" << pid
              << "] Command list registered execution and host synchronization "
                 "completed";
   }
 
-  lzt::event_host_synchronize(event2, k_event_sync_timeout);
+  lzt::event_host_synchronize(event2, event_sync_timeout);
   LOG_INFO << "[child=" << child_index << " pid=" << pid
            << "] Event host synchronization completed, verifying "
               "results...";
   bool data_ok = true;
-  for (uint32_t i = 0; i < k_kernel_elem_count; ++i) {
+  for (uint32_t i = 0; i < kernel_elem_count; ++i) {
     if (result_buf[i] != fill_value) {
       LOG_INFO << "[child=" << child_index << " pid=" << pid
                << "] Data mismatch at index " << i << ": expected 0x"
@@ -189,7 +186,7 @@ static void run_kernel_worker(bool is_immediate, int child_index) {
   ze_context_handle_t context = lzt::create_context(driver);
 
   uint32_t *dst = static_cast<uint32_t *>(
-      lzt::allocate_shared_memory(k_kernel_buf_size, 1, 0, 0, device, context));
+      lzt::allocate_shared_memory(kernel_buf_size, 1, 0, 0, device, context));
   run_simple_test_kernel_with_dst(context, device, dst, is_immediate, pid,
                                   child_index);
 
@@ -225,7 +222,7 @@ int child_work(int child_index, ChildResults *shm,
     return 1;
   }
 
-  shm->values[child_index] = 1;
+  shm->at(child_index) = 1;
   return 0;
 }
 
@@ -328,7 +325,7 @@ static void run_children_and_verify(int num_children,
 #endif // _WIN32
 
   for (int i = 0; i < num_children; ++i) {
-    EXPECT_EQ(1, shm->values[i])
+    EXPECT_EQ(1, shm->at(i))
         << "Child " << i << " did not set its success flag in shared memory";
   }
 
@@ -343,8 +340,7 @@ LZT_TEST_F(
     RunMultiProcessTest,
     GivenNChildProcessesWhenEachRunsZeInitAndDevicePropertiesThenAllSucceed) {
   ASSERT_LE(default_child_count,
-            static_cast<int>(sizeof(ChildResults::values) /
-                             sizeof(ChildResults::values[0])))
+            static_cast<int>(std::tuple_size_v<ChildResults>))
       << "kDefaultChildCount exceeds shared-memory capacity";
   run_children_and_verify(default_child_count, "device_properties");
 }
@@ -353,8 +349,7 @@ LZT_TEST_F(
     RunMultiProcessTest,
     GivenNChildProcessesWhenKernelExecutionAndHostEventSynchornizedSetThenNotTimeoutsAndErrorsOnImmediateCommandList) {
   ASSERT_LE(default_child_count,
-            static_cast<int>(sizeof(ChildResults::values) /
-                             sizeof(ChildResults::values[0])))
+            static_cast<int>(std::tuple_size_v<ChildResults>))
       << "kDefaultChildCount exceeds shared-memory capacity";
   run_children_and_verify(default_child_count, "kernel_immediate");
 }
@@ -363,8 +358,7 @@ LZT_TEST_F(
     RunMultiProcessTest,
     GivenNChildProcessesWhenKernelExecutionAndHostEventSynchornizedSetThenNotTimeoutsAndErrorsOnRegisteredCommandList) {
   ASSERT_LE(default_child_count,
-            static_cast<int>(sizeof(ChildResults::values) /
-                             sizeof(ChildResults::values[0])))
+            static_cast<int>(std::tuple_size_v<ChildResults>))
       << "kDefaultChildCount exceeds shared-memory capacity";
   run_children_and_verify(default_child_count, "kernel_registered");
 }
