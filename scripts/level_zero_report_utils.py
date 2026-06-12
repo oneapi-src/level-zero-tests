@@ -532,7 +532,9 @@ def assign_test_feature(test_binary: str, test_name: str):
             test_feature = "Device Memory"
         if test_binary == "test_stress_commands_overloading":
             test_feature = "Events"
-        if (re.search('stress', test_name, re.IGNORECASE)):
+        if test_binary == "test_stress_multiprocess":
+            test_feature = "Driver Handles"
+        if (re.search('stress', test_binary, re.IGNORECASE) or re.search('stress', test_name, re.IGNORECASE)):
             test_section = "Stress"
             return test_feature, test_section
         if (test_binary == "test_driver") \
