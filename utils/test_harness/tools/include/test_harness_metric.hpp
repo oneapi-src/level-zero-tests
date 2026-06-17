@@ -36,10 +36,13 @@ std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
     ze_device_handle_t device,
     zet_metric_group_sampling_type_flags_t metricSamplingType);
 
-std::vector<metricGroupInfo_t>
-get_metric_group_info(ze_device_handle_t device,
-                      zet_metric_group_sampling_type_flags_t samplingType,
-                      bool one_group_per_domain);
+std::vector<metricGroupInfo_t> get_device_metric_groups_for_sampling_type(
+    ze_device_handle_t device,
+    zet_metric_group_sampling_type_flags_t samplingType,
+    bool one_group_per_domain);
+
+std::vector<metricGroupInfo_t> get_metric_group_info(
+    const std::vector<zet_metric_group_handle_t> &metricGroupHandles);
 
 uint32_t get_metric_group_handles_count(ze_device_handle_t device);
 std::vector<zet_metric_group_handle_t>
@@ -260,6 +263,19 @@ void destroy_metric_group_handles_list(
 std::vector<zet_metric_group_handle_t> get_one_metric_group_per_domain(
     ze_device_handle_t device,
     std::vector<zet_metric_group_handle_t> &metricGroupHandleList);
+
+void get_all_device_concurrent_metric_groups(
+    ze_device_handle_t device,
+    std::vector<zet_metric_group_handle_t> &metricGroupHandleList,
+    uint32_t &concurrentGroupCount,
+    std::vector<uint32_t> &countPerConcurrentGroup);
+
+std::vector<zet_metric_group_handle_t> get_device_metric_groups_for_source_id(
+    const std::vector<zet_metric_group_handle_t> &metricGroupHandleList,
+    uint32_t sourceId);
+
+std::vector<uint32_t> get_device_metric_groups_metric_sources(
+    const std::vector<zet_metric_group_handle_t> &metricGroupHandleList);
 
 void metric_tracer_create(
     zet_context_handle_t context_handle, zet_device_handle_t device_handle,

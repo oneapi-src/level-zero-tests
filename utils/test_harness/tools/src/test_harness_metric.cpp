@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <map>
+#include <set>
 
 namespace lzt = level_zero_tests;
 
@@ -209,6 +210,64 @@ std::vector<zet_metric_group_handle_t> get_one_metric_group_per_domain(
   return concurrentMetricGroupList;
 }
 
+void get_all_device_concurrent_metric_groups(
+    ze_device_handle_t device,
+    std::vector<zet_metric_group_handle_t> &metricGroupHandleList,
+    uint32_t &concurrentGroupCount,
+    std::vector<uint32_t> &countPerConcurrentGroup) {
+
+  if (metricGroupHandleList.empty()) {
+    return;
+  }
+  concurrentGroupCount = 0;
+  EXPECT_ZE_RESULT_SUCCESS(zetDeviceGetConcurrentMetricGroupsExp(
+      device, to_u32(metricGroupHandleList.size()),
+      metricGroupHandleList.data(), nullptr, &concurrentGroupCount));
+  countPerConcurrentGroup.resize(concurrentGroupCount);
+  EXPECT_ZE_RESULT_SUCCESS(zetDeviceGetConcurrentMetricGroupsExp(
+      device, to_u32(metricGroupHandleList.size()),
+      metricGroupHandleList.data(), countPerConcurrentGroup.data(),
+      &concurrentGroupCount));
+}
+
+std::vector<zet_metric_group_handle_t> get_device_metric_groups_for_source_id(
+    const std::vector<zet_metric_group_handle_t> &metricGroupHandleList,
+    uint32_t sourceId) {
+  std::vector<zet_metric_group_handle_t> metric_group_list_per_source{};
+  for (auto metricGroupHandle : metricGroupHandleList) {
+    zet_metric_group_properties_t props = {};
+    props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    zet_metric_source_id_exp_t sourceIdExt = {};
+    sourceIdExt.stype = ZET_STRUCTURE_TYPE_METRIC_SOURCE_ID_EXP;
+    sourceIdExt.pNext = nullptr;
+    props.pNext = &sourceIdExt;
+    EXPECT_ZE_RESULT_SUCCESS(
+        zetMetricGroupGetProperties(metricGroupHandle, &props));
+
+    if (sourceIdExt.sourceId == sourceId) {
+      metric_group_list_per_source.push_back(metricGroupHandle);
+    }
+  }
+  return metric_group_list_per_source;
+}
+
+std::vector<uint32_t> get_device_metric_groups_metric_sources(
+    const std::vector<zet_metric_group_handle_t> &metricGroupHandleList) {
+  std::set<uint32_t> sourceIdSet;
+  for (auto metricGroupHandle : metricGroupHandleList) {
+    zet_metric_group_properties_t props = {};
+    props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    zet_metric_source_id_exp_t sourceIdExt = {};
+    sourceIdExt.stype = ZET_STRUCTURE_TYPE_METRIC_SOURCE_ID_EXP;
+    sourceIdExt.pNext = nullptr;
+    props.pNext = &sourceIdExt;
+    EXPECT_ZE_RESULT_SUCCESS(
+        zetMetricGroupGetProperties(metricGroupHandle, &props));
+    sourceIdSet.insert(sourceIdExt.sourceId);
+  }
+  return std::vector<uint32_t>(sourceIdSet.begin(), sourceIdSet.end());
+}
+
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
     uint32_t percentOfMetricGroupForTest, const char *metricGroupName) {
@@ -270,10 +329,10 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
   return optimizedList;
 }
 
-std::vector<metricGroupInfo_t>
-get_metric_group_info(ze_device_handle_t device,
-                      zet_metric_group_sampling_type_flags_t metricSamplingType,
-                      bool one_group_per_domain) {
+std::vector<metricGroupInfo_t> get_device_metric_groups_for_sampling_type(
+    ze_device_handle_t device,
+    zet_metric_group_sampling_type_flags_t metricSamplingType,
+    bool one_group_per_domain) {
 
   std::vector<zet_metric_group_handle_t> metricGroupHandles =
       get_metric_group_handles(device);
@@ -316,6 +375,22 @@ get_metric_group_info(ze_device_handle_t device,
   } else {
     return matchedGroupsInfo;
   }
+}
+
+std::vector<metricGroupInfo_t> get_metric_group_info(
+    const std::vector<zet_metric_group_handle_t> &metricGroupHandles) {
+  std::vector<metricGroupInfo_t> metric_group_info_list;
+  for (auto metricGroupHandle : metricGroupHandles) {
+    zet_metric_group_properties_t props = {};
+    props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    props.pNext = nullptr;
+    EXPECT_ZE_RESULT_SUCCESS(
+        zetMetricGroupGetProperties(metricGroupHandle, &props));
+    metric_group_info_list.emplace_back(metricGroupHandle, props.name,
+                                        props.description, props.domain,
+                                        props.metricCount);
+  }
+  return metric_group_info_list;
 }
 
 std::vector<metricGroupInfo_t> get_metric_type_ip_group_info(
@@ -1128,8 +1203,8 @@ void generate_device_list_with_activatable_metric_group_handles(
     ze_result_t result;
     lzt::display_device_properties(device);
 
-    auto metric_group_info =
-        lzt::get_metric_group_info(device, sampling_type, true);
+    auto metric_group_info = lzt::get_device_metric_groups_for_sampling_type(
+        device, sampling_type, true);
     if (metric_group_info.size() == 0) {
       continue;
     }
