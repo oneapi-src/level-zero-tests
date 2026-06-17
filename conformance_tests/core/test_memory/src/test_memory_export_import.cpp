@@ -86,6 +86,19 @@ bool verify_external_memory_type_flag_support(
   return true;
 }
 
+bool verify_external_memory_import_type_flag_support(
+    ze_device_handle_t device,
+    ze_external_memory_type_flag_t external_memory_type_flag) {
+  auto external_memory_properties = lzt::get_external_memory_properties(device);
+  if (!(external_memory_properties.memoryAllocationImportTypes &
+        to_u32(external_memory_type_flag))) {
+    LOG_WARNING << "Device does not support importing memory flag type: "
+                << external_memory_type_flag;
+    return false;
+  }
+  return true;
+}
+
 void *allocate_exported_memory(
     ze_context_handle_t context, ze_device_handle_t device, size_t size,
     test_memory_type_t test_memory_type,
@@ -354,7 +367,7 @@ static int send_handle(std::string driver_id, bp::opstream &child_input,
   auto result =
       DuplicateHandle(GetCurrentProcess(), reinterpret_cast<HANDLE>(handle),
                       import_memory_helper.native_handle(), &targetHandle,
-                      DUPLICATE_SAME_ACCESS, TRUE, DUPLICATE_SAME_ACCESS);
+                      GENERIC_READ | GENERIC_WRITE, FALSE, 0);
   if (result > 0) {
     child_input << handle_type << std::endl;
 
@@ -786,6 +799,10 @@ void zeDeviceGetExternalMemoryProperties::
 
   if (!verify_external_memory_type_flag_support(device,
                                                 external_memory_type_flag)) {
+    GTEST_SKIP();
+  }
+  if (!verify_external_memory_import_type_flag_support(
+          device, external_memory_type_flag)) {
     GTEST_SKIP();
   }
 

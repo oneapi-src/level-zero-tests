@@ -154,16 +154,17 @@ int main(int argc, char **argv) {
   auto external_memory_properties = lzt::get_external_memory_properties(device);
   std::string handle_type;
   std::cin >> handle_type;
+
   if (atoi(handle_type.c_str()) ==
       lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32) {
-    if (!(external_memory_properties.memoryAllocationExportTypes &
+    if (!(external_memory_properties.memoryAllocationImportTypes &
           ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32)) {
       LOG_WARNING << "Device does not support importing OPAQUE_WIN32\n";
       exit(1);
     }
   } else if (atoi(handle_type.c_str()) ==
              lzt::lztWin32HandleTestType::LZT_KMT_WIN32) {
-    if (!(external_memory_properties.memoryAllocationExportTypes &
+    if (!(external_memory_properties.memoryAllocationImportTypes &
           ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT)) {
       LOG_WARNING << "Device does not support importing WIN32 KMT Handle\n";
       exit(1);
