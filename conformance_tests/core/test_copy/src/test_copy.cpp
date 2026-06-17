@@ -794,7 +794,7 @@ void zeCommandListAppendMemoryFillPatternVerificationTests::
   const size_t pattern_size = std::get<0>(GetParam());
   lzt::command_list_mode_t mode = std::get<1>(GetParam());
   auto cmd_bundle = lzt::create_command_bundle(mode);
-  const size_t total_size = (pattern_size * 10) + 5;
+  const size_t total_size = (pattern_size * 10);
   auto pattern = std::make_unique<uint8_t[]>(pattern_size);
   auto target_memory = lzt::allocate_host_memory_with_allocator_selector(
       total_size, is_shared_system);
