@@ -1294,6 +1294,135 @@ LZT_TEST(
                                ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
 }
 
+// Tests that zeMemGetIpcHandleWithProperties accepts a ze_physical_mem_handle_t
+// cast to (const void*) — i.e. the physical memory is never virtually mapped in
+// the parent.  The child receives the resulting opaque IPC handle, opens it via
+// zeMemOpenIpcHandle (which creates the virtual mapping in the child process),
+// and then closes it.
+static void run_ipc_physical_mem_getipchwithprops_opaque(
+    ze_ipc_memory_flags_t flags,
+    ze_ipc_mem_handle_type_flags_t handle_type_flags) {
+  ze_result_t result = zeInit(0);
+  if (result != ZE_RESULT_SUCCESS) {
+    throw std::runtime_error("Parent zeInit failed: " +
+                             level_zero_tests::to_string(result));
+  }
+  LOG_DEBUG << "[Parent] Driver initialized\n";
+  lzt::print_platform_overview();
+
+  bipc::shared_memory_object::remove("ipc_memory_test");
+
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+
+  // Page-align the allocation size as required by zePhysicalMemCreate.
+  size_t allocSize = 4096;
+  size_t pageSize = 0;
+  lzt::query_page_size(context, device, allocSize, &pageSize);
+  allocSize = lzt::create_page_aligned_size(allocSize, pageSize);
+
+  // Allocate physical device memory.  Intentionally do NOT create a virtual
+  // mapping so that the handle itself is passed directly to
+  // zeMemGetIpcHandleWithProperties.
+  ze_physical_mem_handle_t physMem = {};
+  lzt::physical_device_memory_allocation(context, device, allocSize, &physMem);
+
+  // Obtain an IPC handle by casting the physical mem handle to (const void*).
+  ze_ipc_mem_handle_t ipc_handle = {};
+  ze_ipc_mem_handle_type_ext_desc_t handle_type_desc = {};
+  handle_type_desc.stype = ZE_STRUCTURE_TYPE_IPC_MEM_HANDLE_TYPE_EXT_DESC;
+  handle_type_desc.pNext = nullptr;
+  handle_type_desc.typeFlags = handle_type_flags;
+
+  ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandleWithProperties(
+      context, reinterpret_cast<const void *>(physMem), &handle_type_desc,
+      &ipc_handle));
+
+  ze_ipc_mem_handle_t ipc_handle_zero{};
+  ASSERT_NE(0, memcmp((void *)&ipc_handle, (void *)&ipc_handle_zero,
+                      sizeof(ipc_handle)));
+
+#ifdef _WIN32
+  std::string helper_path = ".\\ipc\\test_ipc_memory_helper.exe";
+#else
+  std::string helper_path = "./ipc/test_ipc_memory_helper";
+#endif
+  boost::process::child c;
+  try {
+    c = boost::process::child(helper_path);
+  } catch (const boost::process::process_error &e) {
+    std::cerr << "Failed to launch child process: " << e.what() << std::endl;
+    throw;
+  }
+
+  bipc::shared_memory_object shm(bipc::create_only, "ipc_memory_test",
+                                 bipc::read_write);
+  shm.truncate(sizeof(shared_data_t));
+  bipc::mapped_region region(shm, bipc::read_write);
+
+  shared_data_t test_data = {TEST_PHYSICAL_MEM_ACCESS,
+                             TEST_NONSOCK,
+                             to_u32(allocSize),
+                             flags,
+                             false,
+                             ipc_handle,
+                             0,
+                             0};
+  std::memcpy(region.get_address(), &test_data, sizeof(shared_data_t));
+
+  c.wait();
+  EXPECT_EQ(c.exit_code(), 0);
+
+  ASSERT_ZE_RESULT_SUCCESS(zeMemPutIpcHandle(context, ipc_handle));
+  bipc::shared_memory_object::remove("ipc_memory_test");
+
+  // After the child has written its data pattern and exited, map the physical
+  // memory virtually in the parent and verify the child's writes are visible.
+  void *reservedVA = nullptr;
+  lzt::virtual_memory_reservation(context, nullptr, allocSize, &reservedVA);
+  ASSERT_NE(nullptr, reservedVA);
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(context, reservedVA, allocSize, physMem, 0,
+                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+
+  void *verify_buf = lzt::allocate_host_memory(allocSize, 1, context);
+  memset(verify_buf, 0, allocSize);
+
+  auto verify_bundle = lzt::create_command_bundle(context, device, false);
+  lzt::append_memory_copy(verify_bundle.list, verify_buf, reservedVA,
+                          allocSize);
+  lzt::close_command_list(verify_bundle.list);
+  lzt::execute_and_sync_command_bundle(verify_bundle, UINT64_MAX);
+  lzt::destroy_command_bundle(verify_bundle);
+
+  LOG_DEBUG << "[Parent] Validating data written by child process is visible "
+               "after mapping physical memory";
+  lzt::validate_data_pattern(verify_buf, allocSize, 1);
+
+  lzt::free_memory(context, verify_buf);
+  lzt::virtual_memory_unmap(context, reservedVA, allocSize);
+  lzt::virtual_memory_free(context, reservedVA, allocSize);
+
+  lzt::physical_memory_destroy(context, physMem);
+  lzt::destroy_context(context);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandle,
+    GivenPhysicalMemHandleWithNoVirtualMapWhenPassedToGetIpcHandleWithPropertiesWithDefaultTypeThenChildCanOpenIpcHandle) {
+  run_ipc_physical_mem_getipchwithprops_opaque(
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, ZE_IPC_MEM_HANDLE_TYPE_FLAG_DEFAULT);
+}
+
+LZT_TEST(
+    IpcMemoryAccessTestOpaqueIpcHandle,
+    GivenPhysicalMemHandleWithNoVirtualMapWhenPassedToGetIpcHandleWithPropertiesWithFabricAccessibleTypeThenChildCanOpenIpcHandle) {
+  run_ipc_physical_mem_getipchwithprops_opaque(
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED,
+      ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE);
+}
+
 } // namespace
 
 // We put the main here because L0 doesn't currently specify how

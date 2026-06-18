@@ -335,6 +335,61 @@ static void child_multidevice_access_test_opaque(
 //          that every int32_t element equals the iteration index.
 // Phase 3: close all handles in one batch – this exercises the driver's
 //          ability to sustain many concurrently open IPC handles.
+// Child side of the physical-mem IPC test.
+// The parent created a ze_physical_mem_handle_t with no virtual mapping and
+// obtained an opaque IPC handle from it via zeMemGetIpcHandleWithProperties.
+// The child opens the IPC handle (establishing a virtual mapping in this
+// process), writes a known data pattern to the device memory via GPU commands,
+// reads it back to verify the write succeeded, then closes the handle.
+// The parent will subsequently map the same physical memory and verify the
+// child's writes are visible.
+static void child_physical_mem_ipc_test_opaque(size_t size,
+                                               ze_ipc_memory_flags_t flags,
+                                               bool is_immediate,
+                                               ze_ipc_mem_handle_t ipc_handle) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::zeDevice::get_instance()->get_device();
+  void *memory = nullptr;
+
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
+
+  // Write a known data pattern into the IPC-opened device memory.
+  void *write_buf = lzt::allocate_host_memory(size, 1, context);
+  lzt::write_data_pattern(write_buf, size, 1);
+
+  auto write_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  lzt::append_memory_copy(write_bundle.list, memory, write_buf, size);
+  lzt::close_command_list(write_bundle.list);
+  lzt::execute_and_sync_command_bundle(write_bundle, UINT64_MAX);
+  lzt::destroy_command_bundle(write_bundle);
+
+  // Read back from device to host and verify the write succeeded in the child.
+  void *read_buf = lzt::allocate_host_memory(size, 1, context);
+  memset(read_buf, 0, size);
+
+  auto read_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  lzt::append_memory_copy(read_bundle.list, read_buf, memory, size);
+  lzt::close_command_list(read_bundle.list);
+  lzt::execute_and_sync_command_bundle(read_bundle, UINT64_MAX);
+  lzt::destroy_command_bundle(read_bundle);
+
+  LOG_DEBUG << "[Child] Validating write/read of IPC-opened physical memory";
+  lzt::validate_data_pattern(read_buf, size, 1);
+
+  EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
+  lzt::free_memory(context, write_buf);
+  lzt::free_memory(context, read_buf);
+  lzt::destroy_context(context);
+
+  if (::testing::Test::HasFailure()) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+
 static void child_device_access_loop_test(const shared_data_loop_t &loop_data) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -462,6 +517,11 @@ int main() {
   case TEST_HOST_ACCESS:
     child_host_access_test_opaque(shared_data.size, shared_data.flags,
                                   shared_data.ipc_handle);
+    break;
+  case TEST_PHYSICAL_MEM_ACCESS:
+    child_physical_mem_ipc_test_opaque(shared_data.size, shared_data.flags,
+                                       shared_data.is_immediate,
+                                       shared_data.ipc_handle);
     break;
   case TEST_LOOP_ACCESS: {
     // Open the secondary shared memory that carries all IPC handles

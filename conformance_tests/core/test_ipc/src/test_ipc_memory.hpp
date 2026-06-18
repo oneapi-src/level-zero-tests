@@ -14,7 +14,9 @@ typedef enum {
   TEST_SUBDEVICE_ACCESS,
   TEST_MULTIDEVICE_ACCESS,
   TEST_HOST_ACCESS,
-  TEST_LOOP_ACCESS // IPC handle loop test (multiple iterations, bulk close)
+  TEST_LOOP_ACCESS, // IPC handle loop test (multiple iterations, bulk close)
+  TEST_PHYSICAL_MEM_ACCESS // Physical mem handle (no virtual map) passed to
+                           // zeMemGetIpcHandleWithProperties via cast
 } ipc_mem_access_test_t;
 
 typedef enum { TEST_SOCK, TEST_NONSOCK } ipc_mem_access_test_sock_t;
