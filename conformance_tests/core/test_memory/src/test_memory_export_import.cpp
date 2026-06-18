@@ -441,6 +441,12 @@ protected:
   void RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
       bool is_immediate, test_memory_type_t test_memory_type,
       ze_external_memory_type_flag_t external_memory_type_flag);
+  void
+  RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+      bool is_immediate);
+  void
+  RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+      bool is_immediate);
 };
 
 #ifdef __linux__
@@ -714,6 +720,86 @@ void zeDeviceGetExternalMemoryProperties::
 }
 
 void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+        bool is_immediate) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto devices = lzt::get_ze_devices(driver);
+  auto device = devices[0];
+
+  auto external_memory_properties = lzt::get_external_memory_properties(device);
+  if (!(external_memory_properties.memoryAllocationImportTypes &
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
+    LOG_WARNING << "Device does not support importing DMA_BUF";
+    GTEST_SKIP();
+  }
+
+  // Launch child process that exports device memory filled with pattern 0xAB
+  auto driver_properties = lzt::get_driver_properties(driver);
+  bp::opstream child_input;
+  auto imported_fd = get_imported_fd(
+      lzt::to_string(driver_properties.uuid), child_input, is_immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+
+  const size_t size = 1024;
+
+  // Compute page-aligned size for physical/virtual memory APIs
+  size_t page_size = 0;
+  lzt::query_page_size(context, device, size, &page_size);
+  size_t aligned_size = lzt::create_page_aligned_size(size, page_size);
+
+  // Import the fd received from the child into a physical memory object
+  ze_external_memory_import_fd_t import_fd = {};
+  import_fd.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_FD;
+  import_fd.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF;
+  import_fd.fd = imported_fd;
+
+  ze_physical_mem_handle_t physical_memory = nullptr;
+  lzt::physical_device_memory_allocation(context, device, aligned_size,
+                                         &physical_memory, &import_fd);
+
+  // Reserve virtual address space and map the physical memory into it
+  void *virtual_address = nullptr;
+  lzt::virtual_memory_reservation(context, nullptr, aligned_size,
+                                  &virtual_address);
+  ASSERT_NE(nullptr, virtual_address);
+
+  lzt::virtual_memory_map(context, virtual_address, aligned_size,
+                          physical_memory, 0,
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+
+  // Copy from the GPU virtual address into a host-accessible buffer
+  auto verification_memory =
+      lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
+  auto cmd_bundle = lzt::create_command_bundle(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  lzt::append_memory_copy(cmd_bundle.list, verification_memory, virtual_address,
+                          size);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+  }
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+  LOG_DEBUG << "Importer sending done msg " << std::endl;
+  // import helper can now call free on its handle to memory
+  child_input << "Done" << std::endl;
+
+  for (size_t i = 0U; i < size; i++) {
+    EXPECT_EQ(static_cast<uint8_t *>(verification_memory)[i],
+              0xAB); // this pattern is written in test_import_helper
+  }
+
+  // cleanup
+  lzt::destroy_command_bundle(cmd_bundle);
+  lzt::free_memory(context, verification_memory);
+  lzt::virtual_memory_unmap(context, virtual_address, aligned_size);
+  lzt::physical_memory_destroy(context, physical_memory);
+  lzt::virtual_memory_free(context, virtual_address, aligned_size);
+  lzt::destroy_context(context);
+}
+
+void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
         bool is_immediate, test_memory_type_t test_memory_type,
         ze_external_memory_type_flag_t external_memory_type_flag,
@@ -726,6 +812,89 @@ void zeDeviceGetExternalMemoryProperties::
         bool is_immediate, test_memory_type_t test_memory_type,
         ze_external_memory_type_flag_t external_memory_type_flag) {
   GTEST_SKIP() << "Test Not Supported on Linux";
+}
+
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+        bool is_immediate) {
+  auto driver = lzt::get_default_driver();
+  auto context = lzt::create_context(driver);
+  auto device = lzt::get_default_device(driver);
+
+  if (!verify_external_memory_type_flag_support(
+          device, ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
+    GTEST_SKIP();
+  }
+
+  auto external_memory_properties = lzt::get_external_memory_properties(device);
+  if (!(external_memory_properties.memoryAllocationImportTypes &
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
+    LOG_WARNING << "Device does not support importing DMA_BUF";
+    GTEST_SKIP();
+  }
+
+  const size_t size = 1024;
+  const uint8_t pattern = 0xAB;
+  void *exported_memory = nullptr;
+  int fd = 0;
+  ze_image_handle_t image_handle;
+
+  ASSERT_ZE_RESULT_SUCCESS(
+      export_memory(context, device, is_immediate, size, pattern,
+                    test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+                    ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
+                    &image_handle));
+  ASSERT_NE(fd, 0);
+
+  // Compute page-aligned size for physical/virtual memory APIs
+  size_t page_size = 0;
+  lzt::query_page_size(context, device, size, &page_size);
+  size_t aligned_size = lzt::create_page_aligned_size(size, page_size);
+
+  // Import the exported DMA-BUF fd into a physical memory object
+  ze_external_memory_import_fd_t import_fd = {};
+  import_fd.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_FD;
+  import_fd.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF;
+  import_fd.fd = fd;
+
+  ze_physical_mem_handle_t physical_memory = nullptr;
+  lzt::physical_device_memory_allocation(context, device, aligned_size,
+                                         &physical_memory, &import_fd);
+
+  // Reserve virtual address space and map the physical memory into it
+  void *virtual_address = nullptr;
+  lzt::virtual_memory_reservation(context, nullptr, aligned_size,
+                                  &virtual_address);
+  ASSERT_NE(nullptr, virtual_address);
+
+  lzt::virtual_memory_map(context, virtual_address, aligned_size,
+                          physical_memory, 0,
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+
+  // Copy from the GPU virtual address into a host-accessible buffer,
+  // then verify the original pattern
+  auto verification_memory = lzt::allocate_host_memory(size);
+  auto cmd_bundle = lzt::create_command_bundle(
+      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  lzt::append_memory_copy(cmd_bundle.list, verification_memory, virtual_address,
+                          size);
+  if (!is_immediate) {
+    lzt::close_command_list(cmd_bundle.list);
+  }
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+
+  for (size_t i = 0; i < size; i++) {
+    EXPECT_EQ(static_cast<uint8_t *>(verification_memory)[i], pattern);
+  }
+
+  // cleanup
+  lzt::destroy_command_bundle(cmd_bundle);
+  lzt::free_memory(context, verification_memory);
+  lzt::virtual_memory_unmap(context, virtual_address, aligned_size);
+  lzt::physical_memory_destroy(context, physical_memory);
+  lzt::virtual_memory_free(context, virtual_address, aligned_size);
+  lzt::destroy_context(context);
 }
 
 #else
@@ -784,6 +953,18 @@ void zeDeviceGetExternalMemoryProperties::
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenImportingMemoryTest(
         bool is_immediate, test_memory_type_t test_memory_type) {
+  GTEST_SKIP() << "Test Not Supported on Windows";
+}
+
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+        bool is_immediate) {
+  GTEST_SKIP() << "Test Not Supported on Windows";
+}
+
+void zeDeviceGetExternalMemoryProperties::
+    RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+        bool is_immediate) {
   GTEST_SKIP() << "Test Not Supported on Windows";
 }
 
@@ -1343,6 +1524,34 @@ LZT_TEST_F(
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
         true, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
   }
+}
+
+LZT_TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressContainingValidData) {
+  RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+      false);
+}
+
+LZT_TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenValidDeviceWhenExportingDeviceMemoryAsDMABufOnImmediateCmdListThenCanImportIntoPhysicalMemAndMapToVirtualAddressContainingValidData) {
+  RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+      true);
+}
+
+LZT_TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenChildProcessExportsDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressContainingValidData) {
+  RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+      false);
+}
+
+LZT_TEST_F(
+    zeDeviceGetExternalMemoryProperties,
+    GivenChildProcessExportsDeviceMemoryAsDMABufOnImmediateCmdListThenCanImportIntoPhysicalMemAndMapToVirtualAddressContainingValidData) {
+  RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
+      true);
 }
 
 } // namespace
