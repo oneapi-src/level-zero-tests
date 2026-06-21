@@ -531,4 +531,63 @@ uint32_t nextPowerOfTwo(uint32_t value) {
   return value;
 }
 
+// Currently limited to creating function with 1d group and single argument.
+// Expand as needed.
+void create_and_execute_function(ze_device_handle_t device,
+                                 ze_module_handle_t module,
+                                 std::string func_name, uint32_t group_size,
+                                 void *arg, command_list_mode_t mode) {
+  std::vector<FunctionArg> args;
+  if (arg != nullptr) {
+    FunctionArg func_arg{sizeof(arg), &arg};
+    args.push_back(func_arg);
+  }
+  create_and_execute_function(device, module, func_name, group_size, args,
+                              mode);
+}
+
+void create_and_execute_function(ze_device_handle_t device,
+                                 ze_module_handle_t module,
+                                 std::string func_name, uint32_t group_size,
+                                 const std::vector<FunctionArg> &args,
+                                 command_list_mode_t mode) {
+
+  ze_kernel_handle_t function = create_function(module, func_name);
+  command_bundle cmd_bundle = create_command_bundle(device, mode);
+  uint32_t group_size_x = group_size;
+  uint32_t group_size_y = 1;
+  uint32_t group_size_z = 1;
+  EXPECT_ZE_RESULT_SUCCESS(zeKernelSuggestGroupSize(
+      function, group_size, 1, 1, &group_size_x, &group_size_y, &group_size_z));
+
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeKernelSetGroupSize(function, group_size_x, group_size_y, group_size_z));
+
+  ze_kernel_properties_t function_properties = get_kernel_properties(function);
+  EXPECT_EQ(function_properties.numKernelArgs, args.size());
+
+  uint32_t i = 0U;
+  for (auto arg : args) {
+    EXPECT_ZE_RESULT_SUCCESS(
+        zeKernelSetArgumentValue(function, i++, arg.arg_size, arg.arg_value));
+  }
+
+  ze_group_count_t thread_group_dimensions;
+  thread_group_dimensions.groupCountX = 1;
+  thread_group_dimensions.groupCountY = 1;
+  thread_group_dimensions.groupCountZ = 1;
+
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
+      cmd_bundle.record_list(), function, &thread_group_dimensions, nullptr, 0,
+      nullptr));
+
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(cmd_bundle.record_list(),
+                                                      nullptr, 0, nullptr));
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
+
+  destroy_function(function);
+  destroy_command_bundle(cmd_bundle);
+}
+
 } // namespace level_zero_tests

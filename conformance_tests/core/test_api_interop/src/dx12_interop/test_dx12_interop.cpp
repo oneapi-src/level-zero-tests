@@ -54,9 +54,10 @@ LZT_TEST_F(DX12InteroperabilityTests,
   uint64_t wait_value = 1;
 
   auto l0_cmd_bundle =
-      lzt::create_command_bundle(l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                 ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, true);
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
 
   ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {
       .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT,
@@ -106,9 +107,10 @@ void test_wait_fence(const ComPtr<ID3D12Device> &dx12_device,
   }
 
   auto l0_cmd_bundle =
-      lzt::create_command_bundle(l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                 ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, true);
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
 
   ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
       .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
@@ -183,9 +185,10 @@ void test_import_memory(const ComPtr<ID3D12Device> &dx12_device,
   memset(l0_memory, 0, memory_size);
 
   auto l0_cmd_bundle =
-      lzt::create_command_bundle(l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                 ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, true);
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
 
   lzt::append_memory_copy(l0_cmd_bundle.list, l0_memory, l0_imported_memory,
                           memory_size);
@@ -317,9 +320,10 @@ void test_import_memory_with_semaphore(
   memset(l0_memory, 0, memory_size);
 
   auto l0_cmd_bundle =
-      lzt::create_command_bundle(l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                 ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, true);
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
 
   ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
       .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
@@ -539,9 +543,10 @@ LZT_TEST_F(
   std::vector<uint8_t> dst_uv_plane_values(uv_plane_size);
 
   auto l0_cmd_bundle =
-      lzt::create_command_bundle(l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                 ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, true);
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
 
   lzt::append_image_copy_to_mem(l0_cmd_bundle.list, dst_y_plane_values.data(),
                                 y_plane_view, nullptr);
@@ -636,9 +641,10 @@ LZT_TEST_F(
   std::vector<uint16_t> dst_uv_plane_values(uv_plane_size);
 
   auto l0_cmd_bundle =
-      lzt::create_command_bundle(l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                 ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, true);
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
 
   lzt::append_image_copy_to_mem(l0_cmd_bundle.list, dst_y_plane_values.data(),
                                 y_plane_view, nullptr);
@@ -754,9 +760,10 @@ LZT_TEST_P(DX12InteroperabilityImageTests,
   std::vector<uint8_t> dst_image_values(total_size);
 
   auto l0_cmd_bundle =
-      lzt::create_command_bundle(l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                 ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, true);
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
 
   lzt::append_image_copy_to_mem(l0_cmd_bundle.list, dst_image_values.data(),
                                 imported_image, nullptr);
@@ -836,9 +843,10 @@ LZT_TEST_P(
   std::vector<uint8_t> dst_image_values(total_size);
 
   auto l0_cmd_bundle =
-      lzt::create_command_bundle(l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
-                                 ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                 ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, true);
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
 
   ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
       .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,

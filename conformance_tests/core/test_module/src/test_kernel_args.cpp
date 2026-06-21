@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -36,10 +36,11 @@ protected:
     }
   }
 
+  template <lzt::command_list_mode_t Mode>
   void set_image_pixel(ze_image_handle_t image, uint32_t x, uint32_t y,
-                       uint32_t val, bool is_immediate);
-  uint32_t get_image_pixel(ze_image_handle_t image, uint32_t x, uint32_t y,
-                           bool is_immediate);
+                       uint32_t val);
+  template <lzt::command_list_mode_t Mode>
+  uint32_t get_image_pixel(ze_image_handle_t image, uint32_t x, uint32_t y);
 
   ze_device_handle_t device_;
   ze_module_handle_t module_;
@@ -48,12 +49,16 @@ protected:
   const uint32_t img_height = 20;
   const uint32_t img_width = 20;
 
-  void RunGivenSeveralBuffersWhenPassingToKernelTest(bool is_immediate);
-  void RunGivenSeveral2DImagesWhenPassingToKernelTest(bool is_immediate);
-  void RunGivenSeveralSamplersWhenPassingToKernelTest(bool is_immediate);
-  void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
-      bool is_immediate);
-  void RunGivenManyLocalArgsWhenPassingToKernelTest(bool is_immediate);
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenSeveralBuffersWhenPassingToKernelTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenSeveral2DImagesWhenPassingToKernelTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenSeveralSamplersWhenPassingToKernelTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenManyLocalArgsWhenPassingToKernelTest();
 };
 
 static ze_image_handle_t create_2d_uint_test_image(uint32_t width,
@@ -83,39 +88,39 @@ static ze_image_handle_t create_2d_uint_test_image(uint32_t width,
   return image;
 }
 
+template <lzt::command_list_mode_t Mode>
 void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, uint32_t x,
-                                          uint32_t y, uint32_t val,
-                                          bool is_immediate) {
+                                          uint32_t y, uint32_t val) {
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   lzt::ImagePNG32Bit temp_png(img_width, img_height);
   temp_png.set_pixel(x, y, val);
   lzt::append_image_copy_from_mem(cmd_bundle.list, image, temp_png.raw_data(),
                                   nullptr);
-  lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
-  lzt::reset_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
+  lzt::reset_command_bundle(cmd_bundle);
   lzt::destroy_command_bundle(cmd_bundle);
   return;
 }
 
+template <lzt::command_list_mode_t Mode>
 uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image,
-                                              uint32_t x, uint32_t y,
-                                              bool is_immediate) {
+                                              uint32_t x, uint32_t y) {
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   lzt::ImagePNG32Bit temp_png(img_width, img_height);
   lzt::append_image_copy_to_mem(cmd_bundle.list, temp_png.raw_data(), image,
                                 nullptr);
-  lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
-  lzt::reset_command_list(cmd_bundle.list);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
+  lzt::reset_command_bundle(cmd_bundle);
   lzt::destroy_command_bundle(cmd_bundle);
   return temp_png.get_pixel(x, y);
 }
 
-void KernelArgumentTests::RunGivenSeveralBuffersWhenPassingToKernelTest(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void KernelArgumentTests::RunGivenSeveralBuffersWhenPassingToKernelTest() {
   std::string kernel_name = "many_buffers";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -131,7 +136,7 @@ void KernelArgumentTests::RunGivenSeveralBuffersWhenPassingToKernelTest(
   }
   // Kernel should set buffers to values 1,2,3,4,5.
   lzt::create_and_execute_function(device_, module_, kernel_name, 1U, args,
-                                   is_immediate);
+                                   Mode);
 
   for (int i = 0; i < num_bufs; i++) {
     int data = *static_cast<int *>(buffers[i]);
@@ -142,17 +147,19 @@ void KernelArgumentTests::RunGivenSeveralBuffersWhenPassingToKernelTest(
 
 LZT_TEST_F(KernelArgumentTests,
            GivenSeveralBuffersWhenPassingToKernelThenCorrectResultIsReturned) {
-  RunGivenSeveralBuffersWhenPassingToKernelTest(false);
+  RunGivenSeveralBuffersWhenPassingToKernelTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     KernelArgumentTests,
     GivenSeveralBuffersWhenPassingToKernelOnImmediateCmdListThenCorrectResultIsReturned) {
-  RunGivenSeveralBuffersWhenPassingToKernelTest(true);
+  RunGivenSeveralBuffersWhenPassingToKernelTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
-void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest() {
   std::string kernel_name = "many_2d_images";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -162,7 +169,7 @@ void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest(
   for (uint32_t i = 0U; i < num_images; i++) {
     images[i] = create_2d_uint_test_image(img_width, img_height);
     // set pixel to test value;
-    set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
+    set_image_pixel<Mode>(images[i], i + 1, i + 1, i + 1);
     arg.arg_size = sizeof(images[i]);
     arg.arg_value = &images[i];
     args.push_back(arg);
@@ -171,12 +178,12 @@ void KernelArgumentTests::RunGivenSeveral2DImagesWhenPassingToKernelTest(
   // For each image, pixel value at coord ([imagenum],[imagenum])
   // will be written to coord ([imagenum+10],[imagenum+10])
   lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
-                                   args, is_immediate);
+                                   args, Mode);
 
   for (uint32_t i = 0U; i < num_images; i++) {
-    uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1, is_immediate);
+    uint32_t pixel = get_image_pixel<Mode>(images[i], i + 1, i + 1);
     EXPECT_EQ(pixel, i + 1);
-    pixel = get_image_pixel(images[i], i + 11, i + 11, is_immediate);
+    pixel = get_image_pixel<Mode>(images[i], i + 11, i + 11);
     EXPECT_EQ(pixel, i + 1);
     lzt::destroy_ze_image(images[i]);
   }
@@ -188,7 +195,8 @@ LZT_TEST_F(KernelArgumentTests,
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  RunGivenSeveral2DImagesWhenPassingToKernelTest(false);
+  RunGivenSeveral2DImagesWhenPassingToKernelTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
@@ -198,7 +206,8 @@ LZT_TEST_F(
     LOG_INFO << "device does not support images, cannot run test";
     GTEST_SKIP();
   }
-  RunGivenSeveral2DImagesWhenPassingToKernelTest(true);
+  RunGivenSeveral2DImagesWhenPassingToKernelTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 bool sampler_support() {
@@ -214,8 +223,8 @@ bool sampler_support() {
   }
 }
 
-void KernelArgumentTests::RunGivenSeveralSamplersWhenPassingToKernelTest(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void KernelArgumentTests::RunGivenSeveralSamplersWhenPassingToKernelTest() {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
@@ -236,7 +245,7 @@ void KernelArgumentTests::RunGivenSeveralSamplersWhenPassingToKernelTest(
 
   // sampler kernel is a noop, nothing to check
   lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
-                                   args, is_immediate);
+                                   args, Mode);
 
   for (int i = 0; i < num_samplers; i++) {
     lzt::destroy_sampler(samplers[i]);
@@ -245,18 +254,20 @@ void KernelArgumentTests::RunGivenSeveralSamplersWhenPassingToKernelTest(
 
 LZT_TEST_F(KernelArgumentTests,
            GivenSeveralSamplersWhenPassingToKernelThenSuccessIsReturned) {
-  RunGivenSeveralSamplersWhenPassingToKernelTest(false);
+  RunGivenSeveralSamplersWhenPassingToKernelTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     KernelArgumentTests,
     GivenSeveralSamplersWhenPassingToKernelOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenSeveralSamplersWhenPassingToKernelTest(true);
+  RunGivenSeveralSamplersWhenPassingToKernelTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void KernelArgumentTests::
-    RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(
-        bool is_immediate) {
+    RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest() {
   /*
   Kernel used for this test expects the following args:
   global int *buf1, global int *buf2, local int *local_buf, global int *buf3,
@@ -305,7 +316,7 @@ void KernelArgumentTests::
   for (uint32_t i = 0; i < num_images; i++) {
     images[i] = create_2d_uint_test_image(img_width, img_height);
     // set pixel to test value;
-    set_image_pixel(images[i], i + 1, i + 1, i + 1, is_immediate);
+    set_image_pixel<Mode>(images[i], i + 1, i + 1, i + 1);
     arg.arg_size = sizeof(images[i]);
     arg.arg_value = &images[i];
     args.push_back(arg);
@@ -328,7 +339,7 @@ void KernelArgumentTests::
   // For each image, pixel value at coord ([imagenum],[imagenum])
   //   will be written to coord ([imagenum+10],[imagenum+10]) using sampler
   lzt::create_and_execute_function(device_, image_module_, kernel_name, 1U,
-                                   args, is_immediate);
+                                   args, Mode);
 
   EXPECT_EQ(*static_cast<int *>(buffers[0]), *static_cast<int *>(buffers[2]));
   EXPECT_EQ(*static_cast<int *>(buffers[1]), *static_cast<int *>(buffers[3]));
@@ -339,9 +350,9 @@ void KernelArgumentTests::
     lzt::destroy_sampler(samplers[i]);
   }
   for (uint32_t i = 0; i < num_images; i++) {
-    uint32_t pixel = get_image_pixel(images[i], i + 1, i + 1, is_immediate);
+    uint32_t pixel = get_image_pixel<Mode>(images[i], i + 1, i + 1);
     EXPECT_EQ(pixel, i + 1);
-    pixel = get_image_pixel(images[i], i + 11, i + 11, is_immediate);
+    pixel = get_image_pixel<Mode>(images[i], i + 11, i + 11);
     EXPECT_EQ(pixel, i + 1);
     lzt::destroy_ze_image(images[i]);
   }
@@ -358,7 +369,8 @@ LZT_TEST_F(
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
   }
-  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(false);
+  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
@@ -372,11 +384,12 @@ LZT_TEST_F(
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
   }
-  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest(true);
+  RunGivenManyArgsOfAllTypesIncludingImageWhenPassingToKernelTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
-void KernelArgumentTests::RunGivenManyLocalArgsWhenPassingToKernelTest(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void KernelArgumentTests::RunGivenManyLocalArgsWhenPassingToKernelTest() {
   std::string kernel_name = "many_locals";
   lzt::FunctionArg arg;
   std::vector<lzt::FunctionArg> args;
@@ -396,7 +409,7 @@ void KernelArgumentTests::RunGivenManyLocalArgsWhenPassingToKernelTest(
 
   // Kernel should set global buffer to value 0x55
   lzt::create_and_execute_function(device_, module_, kernel_name, 1U, args,
-                                   is_immediate);
+                                   Mode);
 
   // Kernel should set all bytes to 0x55
   uint8_t *data = static_cast<uint8_t *>(buff);
@@ -408,13 +421,15 @@ void KernelArgumentTests::RunGivenManyLocalArgsWhenPassingToKernelTest(
 
 LZT_TEST_F(KernelArgumentTests,
            GivenManyLocalArgsWhenPassingToKernelCorrectResultIsReturned) {
-  RunGivenManyLocalArgsWhenPassingToKernelTest(false);
+  RunGivenManyLocalArgsWhenPassingToKernelTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     KernelArgumentTests,
     GivenManyLocalArgsWhenPassingToKernelOnImmediateCmdListCorrectResultIsReturned) {
-  RunGivenManyLocalArgsWhenPassingToKernelTest(true);
+  RunGivenManyLocalArgsWhenPassingToKernelTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 } // namespace

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023 Intel Corporation
+ * Copyright (C) 2023-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -32,8 +32,9 @@ std::string test_type_to_str(TestTypes test) {
     return "";
   }
 }
-std::string cmdlist_type_to_str(bool is_immediate) {
-  return is_immediate ? "_true_immediate" : "_false_immediate";
+std::string cmdlist_type_to_str(lzt::command_list_mode_t mode) {
+  return mode == lzt::command_list_mode_t::regular ? "_false_immediate"
+                                                   : "_true_immediate";
 }
 
 class CaptureOutput {
@@ -186,7 +187,8 @@ uint32_t *zeCheckFunctions::out_allocation = nullptr;
 
 class zeCheckMiscFunctionsTests
     : public zeCheckFunctions,
-      public ::testing::WithParamInterface<std::tuple<TestTypes, bool>> {};
+      public ::testing::WithParamInterface<
+          std::tuple<TestTypes, lzt::command_list_mode_t>> {};
 
 struct CombinationsTestNameSuffix {
   template <class ParamType>
@@ -199,7 +201,8 @@ struct CombinationsTestNameSuffix {
 auto kernel_function_types =
     ::testing::Values(TestTypes::test_printf, TestTypes::test_get_global_id,
                       TestTypes::test_get_group_id);
-auto immediate_types = ::testing::Values(true, false);
+auto immediate_types = ::testing::Values(lzt::command_list_mode_t::immediate,
+                                         lzt::command_list_mode_t::regular);
 INSTANTIATE_TEST_CASE_P(zeCheckMiscFunctionsTestsInstantiate,
                         zeCheckMiscFunctionsTests,
                         ::testing::Combine(kernel_function_types,
@@ -211,11 +214,11 @@ LZT_TEST_P(
     GivenFunctionInKernelWhenLaunchingKernelsThenFunctionWorksCorrectly) {
 
   const TestTypes test_type = std::get<0>(GetParam());
-  bool is_immediate = std::get<1>(GetParam());
+  const auto mode = std::get<1>(GetParam());
   std::string test_type_s = test_type_to_str(test_type);
 
-  auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
-  lzt::reset_command_list(cmd_bundle.list);
+  auto cmd_bundle = lzt::create_command_bundle(device, mode);
+  lzt::reset_command_list(cmd_bundle.record_list());
   LOG_INFO << "Test type " << test_type_s << std::endl;
 
   uint32_t init_value = 4321;
@@ -223,13 +226,13 @@ LZT_TEST_P(
       lzt::create_function(module, test_type_s);
   CaptureOutput capture_stdout(1);
 
-  if (is_immediate) {
-    lzt::append_memory_fill(cmd_bundle.list, out_allocation, &init_value,
-                            sizeof(init_value),
+  if (mode != lzt::command_list_mode_t::regular) {
+    lzt::append_memory_fill(cmd_bundle.record_list(), out_allocation,
+                            &init_value, sizeof(init_value),
                             work_items_count * sizeof(uint32_t), event0);
     LOG_INFO << "Synchronizing... memory fill" << std::endl;
     lzt::event_host_synchronize(event0, UINT64_MAX);
-    lzt::append_reset_event(cmd_bundle.list, event0);
+    lzt::append_reset_event(cmd_bundle.record_list(), event0);
     ze_group_count_t thread_group_dimensions = {thread_groups_count, 1, 1};
 
     ze_kernel_handle_t function_handle =
@@ -240,19 +243,19 @@ LZT_TEST_P(
     }
     lzt::set_group_size(function_handle, work_items_count / thread_groups_count,
                         1, 1);
-    lzt::append_barrier(cmd_bundle.list, event0);
+    lzt::append_barrier(cmd_bundle.record_list(), event0);
     lzt::event_host_synchronize(event0, UINT64_MAX);
-    lzt::append_reset_event(cmd_bundle.list, event0);
+    lzt::append_reset_event(cmd_bundle.record_list(), event0);
     LOG_INFO << "Executing command list..." << std::endl;
-    lzt::append_launch_function(cmd_bundle.list, function_handle,
+    lzt::append_launch_function(cmd_bundle.record_list(), function_handle,
                                 &thread_group_dimensions, nullptr, 0, nullptr);
     LOG_INFO << "Synchronizing..." << std::endl;
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   } else {
-    lzt::append_memory_fill(cmd_bundle.list, out_allocation, &init_value,
-                            sizeof(init_value),
+    lzt::append_memory_fill(cmd_bundle.record_list(), out_allocation,
+                            &init_value, sizeof(init_value),
                             work_items_count * sizeof(uint32_t), nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr);
     if (test_type != TestTypes::test_printf) {
       lzt::set_argument_value(function_handle, 0, sizeof(out_allocation),
                               &out_allocation);
@@ -260,16 +263,16 @@ LZT_TEST_P(
     lzt::set_group_size(function_handle, work_items_count / thread_groups_count,
                         1, 1);
     ze_group_count_t thread_group_dimensions = {thread_groups_count, 1, 1};
-    lzt::append_barrier(cmd_bundle.list, nullptr);
-    lzt::append_launch_function(cmd_bundle.list, function_handle,
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr);
+    lzt::append_launch_function(cmd_bundle.record_list(), function_handle,
                                 &thread_group_dimensions, nullptr, 0, nullptr);
 
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::close_command_bundle(cmd_bundle);
     LOG_INFO << "Executing command list..." << std::endl;
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
+    lzt::submit_command_bundle(cmd_bundle);
     LOG_INFO << "Synchronizing..." << std::endl;
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
+    lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
   }
   EXPECT_TRUE(
       validate_output(capture_stdout.GetOutput(), out_allocation, test_type));

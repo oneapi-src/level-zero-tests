@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023 Intel Corporation
+ * Copyright (C) 2023-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -22,12 +22,12 @@
 namespace bipc = boost::interprocess;
 
 #ifdef __linux__
-static void child_device_access_test(size_t size, ze_ipc_memory_flags_t flags,
-                                     bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+static void child_device_access_test(size_t size, ze_ipc_memory_flags_t flags) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
-  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(context, device);
   ze_ipc_mem_handle_t ipc_handle;
   void *memory = nullptr;
 
@@ -45,9 +45,9 @@ static void child_device_access_test(size_t size, ze_ipc_memory_flags_t flags,
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
-  lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-  lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle.record_list(), buffer, memory, size);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   LOG_DEBUG << "[Child] Validating buffer received correctly";
   lzt::validate_data_pattern(buffer, size, 1);
@@ -64,9 +64,9 @@ static void child_device_access_test(size_t size, ze_ipc_memory_flags_t flags,
   }
 }
 
+template <lzt::command_list_mode_t Mode>
 static void child_subdevice_access_test(size_t size,
-                                        ze_ipc_memory_flags_t flags,
-                                        bool is_immediate) {
+                                        ze_ipc_memory_flags_t flags) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
@@ -95,12 +95,11 @@ static void child_subdevice_access_test(size_t size,
 
   // For each sub device found, use IPC buffer in a copy operation and validate
   for (size_t i = 0U; i < sub_device_count; i++) {
-    auto cmd_bundle =
-        lzt::create_command_bundle(context, sub_devices[i], is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle<Mode>(context, sub_devices[i]);
 
-    lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+    lzt::append_memory_copy(cmd_bundle.record_list(), buffer, memory, size);
+    lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                         std::numeric_limits<uint64_t>::max());
 
     LOG_DEBUG << "[Child] Validating buffer received correctly";
     lzt::validate_data_pattern(buffer, size, 1);
@@ -119,9 +118,9 @@ static void child_subdevice_access_test(size_t size,
 }
 #endif
 
+template <lzt::command_list_mode_t Mode>
 static void child_device_access_test_opaque(size_t size,
                                             ze_ipc_memory_flags_t flags,
-                                            bool is_immediate,
                                             ze_ipc_mem_handle_t ipc_handle,
                                             bool use_copy_engine) {
   auto driver = lzt::get_default_driver();
@@ -145,9 +144,8 @@ static void child_device_access_test_opaque(size_t size,
 
   auto cmd_bundle =
       use_copy_engine
-          ? lzt::create_command_bundle(context, device, 0, ordinal,
-                                       is_immediate)
-          : lzt::create_command_bundle(context, device, is_immediate);
+          ? lzt::create_command_bundle<Mode>(context, device, 0u, ordinal)
+          : lzt::create_command_bundle<Mode>(context, device);
   void *memory = nullptr;
 
   EXPECT_ZE_RESULT_SUCCESS(
@@ -155,9 +153,9 @@ static void child_device_access_test_opaque(size_t size,
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
-  lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-  lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle.record_list(), buffer, memory, size);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   LOG_DEBUG << "[Child] Validating buffer received correctly";
   lzt::validate_data_pattern(buffer, size, 1);
@@ -174,9 +172,9 @@ static void child_device_access_test_opaque(size_t size,
   }
 }
 
+template <lzt::command_list_mode_t Mode>
 static void child_subdevice_access_test_opaque(size_t size,
                                                ze_ipc_memory_flags_t flags,
-                                               bool is_immediate,
                                                ze_ipc_mem_handle_t ipc_handle,
                                                bool use_copy_engine) {
   auto driver = lzt::get_default_driver();
@@ -186,7 +184,7 @@ static void child_subdevice_access_test_opaque(size_t size,
 
   size_t sub_device_count = sub_devices.size();
 
-  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(context, device);
   void *memory = nullptr;
 
   EXPECT_ZE_RESULT_SUCCESS(
@@ -214,13 +212,12 @@ static void child_subdevice_access_test_opaque(size_t size,
 
     auto sub_bundle =
         use_copy_engine
-            ? lzt::create_command_bundle(context, sub_device, 0, ordinal,
-                                         is_immediate)
-            : lzt::create_command_bundle(context, sub_device, is_immediate);
+            ? lzt::create_command_bundle<Mode>(context, sub_device, 0u, ordinal)
+            : lzt::create_command_bundle<Mode>(context, sub_device);
 
     lzt::append_memory_copy(sub_bundle.list, buffer, memory, size);
-    lzt::close_command_list(sub_bundle.list);
-    lzt::execute_and_sync_command_bundle(sub_bundle, UINT64_MAX);
+    lzt::execute_and_sync_command_bundle(sub_bundle,
+                                         std::numeric_limits<uint64_t>::max());
 
     LOG_DEBUG << "[Child] Validating buffer received correctly";
     lzt::validate_data_pattern(buffer, size, 1);
@@ -263,10 +260,10 @@ static void child_host_access_test_opaque(size_t size,
   }
 }
 
+template <lzt::command_list_mode_t Mode>
 static void child_multidevice_access_test_opaque(
-    size_t size, ze_ipc_memory_flags_t flags, bool is_immediate,
-    ze_ipc_mem_handle_t ipc_handle, uint32_t device_id_parent,
-    uint32_t device_id_child, bool use_copy_engine) {
+    size_t size, ze_ipc_memory_flags_t flags, ze_ipc_mem_handle_t ipc_handle,
+    uint32_t device_id_parent, uint32_t device_id_child, bool use_copy_engine) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
@@ -299,9 +296,8 @@ static void child_multidevice_access_test_opaque(
 
   auto cmd_bundle =
       use_copy_engine
-          ? lzt::create_command_bundle(context, device, 0, ordinal,
-                                       is_immediate)
-          : lzt::create_command_bundle(context, device, is_immediate);
+          ? lzt::create_command_bundle<Mode>(context, device, 0u, ordinal)
+          : lzt::create_command_bundle<Mode>(context, device);
   void *memory = nullptr;
 
   EXPECT_ZE_RESULT_SUCCESS(
@@ -309,9 +305,9 @@ static void child_multidevice_access_test_opaque(
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
-  lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-  lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle.record_list(), buffer, memory, size);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   LOG_DEBUG << "[Child] Validating buffer received correctly on device "
             << device_id_child;
@@ -343,9 +339,9 @@ static void child_multidevice_access_test_opaque(
 // reads it back to verify the write succeeded, then closes the handle.
 // The parent will subsequently map the same physical memory and verify the
 // child's writes are visible.
+template <lzt::command_list_mode_t Mode>
 static void child_physical_mem_ipc_test_opaque(size_t size,
                                                ze_ipc_memory_flags_t flags,
-                                               bool is_immediate,
                                                ze_ipc_mem_handle_t ipc_handle) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -359,9 +355,8 @@ static void child_physical_mem_ipc_test_opaque(size_t size,
   void *write_buf = lzt::allocate_host_memory(size, 1, context);
   lzt::write_data_pattern(write_buf, size, 1);
 
-  auto write_bundle = lzt::create_command_bundle(context, device, is_immediate);
-  lzt::append_memory_copy(write_bundle.list, memory, write_buf, size);
-  lzt::close_command_list(write_bundle.list);
+  auto write_bundle = lzt::create_command_bundle<Mode>(context, device);
+  lzt::append_memory_copy(write_bundle.record_list(), memory, write_buf, size);
   lzt::execute_and_sync_command_bundle(write_bundle, UINT64_MAX);
   lzt::destroy_command_bundle(write_bundle);
 
@@ -369,9 +364,8 @@ static void child_physical_mem_ipc_test_opaque(size_t size,
   void *read_buf = lzt::allocate_host_memory(size, 1, context);
   memset(read_buf, 0, size);
 
-  auto read_bundle = lzt::create_command_bundle(context, device, is_immediate);
-  lzt::append_memory_copy(read_bundle.list, read_buf, memory, size);
-  lzt::close_command_list(read_bundle.list);
+  auto read_bundle = lzt::create_command_bundle<Mode>(context, device);
+  lzt::append_memory_copy(read_bundle.record_list(), read_buf, memory, size);
   lzt::execute_and_sync_command_bundle(read_bundle, UINT64_MAX);
   lzt::destroy_command_bundle(read_bundle);
 
@@ -390,6 +384,7 @@ static void child_physical_mem_ipc_test_opaque(size_t size,
   }
 }
 
+template <lzt::command_list_mode_t Mode>
 static void child_device_access_loop_test(const shared_data_loop_t &loop_data) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
@@ -411,14 +406,13 @@ static void child_device_access_loop_test(const shared_data_loop_t &loop_data) {
     if (remote_ptrs[i] == nullptr) {
       continue;
     }
-    auto cmd_bundle =
-        lzt::create_command_bundle(context, device, loop_data.is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle<Mode>(context, device);
     void *buffer = lzt::allocate_host_memory(loop_data.size, 1, context);
     memset(buffer, 0, loop_data.size);
-    lzt::append_memory_copy(cmd_bundle.list, buffer, remote_ptrs[i],
+    lzt::append_memory_copy(cmd_bundle.record_list(), buffer, remote_ptrs[i],
                             loop_data.size);
-    lzt::close_command_list(cmd_bundle.list);
-    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+    lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                         std::numeric_limits<uint64_t>::max());
 
     const int32_t *ptr = static_cast<const int32_t *>(buffer);
     bool match = true;
@@ -485,31 +479,56 @@ int main() {
   switch (shared_data.test_type) {
   case TEST_DEVICE_ACCESS:
     if (shared_data.test_sock_type == TEST_NONSOCK) {
-      child_device_access_test_opaque(
-          shared_data.size, shared_data.flags, shared_data.is_immediate,
-          shared_data.ipc_handle, shared_data.use_copy_engine);
+      if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+        child_device_access_test_opaque<lzt::command_list_mode_t::immediate>(
+            shared_data.size, shared_data.flags, shared_data.ipc_handle,
+            shared_data.use_copy_engine);
+      } else {
+        child_device_access_test_opaque<lzt::command_list_mode_t::regular>(
+            shared_data.size, shared_data.flags, shared_data.ipc_handle,
+            shared_data.use_copy_engine);
+      }
 #ifdef __linux__
     } else {
-      child_device_access_test(shared_data.size, shared_data.flags,
-                               shared_data.is_immediate);
+      if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+        child_device_access_test<lzt::command_list_mode_t::immediate>(
+            shared_data.size, shared_data.flags);
+      } else {
+        child_device_access_test<lzt::command_list_mode_t::regular>(
+            shared_data.size, shared_data.flags);
+      }
 #endif
     }
     break;
   case TEST_SUBDEVICE_ACCESS:
     if (shared_data.test_sock_type == TEST_NONSOCK) {
-      child_subdevice_access_test_opaque(
-          shared_data.size, shared_data.flags, shared_data.is_immediate,
-          shared_data.ipc_handle, shared_data.use_copy_engine);
+      if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+        child_subdevice_access_test_opaque<lzt::command_list_mode_t::immediate>(
+            shared_data.size, shared_data.flags, shared_data.ipc_handle,
+            shared_data.use_copy_engine);
+      } else {
+        child_subdevice_access_test_opaque<lzt::command_list_mode_t::regular>(
+            shared_data.size, shared_data.flags, shared_data.ipc_handle,
+            shared_data.use_copy_engine);
+      }
     } else {
       break; // Currently supporting only device access test scenario
     }
     break;
   case TEST_MULTIDEVICE_ACCESS:
     if (shared_data.test_sock_type == TEST_NONSOCK) {
-      child_multidevice_access_test_opaque(
-          shared_data.size, shared_data.flags, shared_data.is_immediate,
-          shared_data.ipc_handle, shared_data.device_id_parent,
-          shared_data.device_id_child, shared_data.use_copy_engine);
+      if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+        child_multidevice_access_test_opaque<
+            lzt::command_list_mode_t::immediate>(
+            shared_data.size, shared_data.flags, shared_data.ipc_handle,
+            shared_data.device_id_parent, shared_data.device_id_child,
+            shared_data.use_copy_engine);
+      } else {
+        child_multidevice_access_test_opaque<lzt::command_list_mode_t::regular>(
+            shared_data.size, shared_data.flags, shared_data.ipc_handle,
+            shared_data.device_id_parent, shared_data.device_id_child,
+            shared_data.use_copy_engine);
+      }
     } else {
       break; // Currently supporting only opaque test scenario
     }
@@ -519,9 +538,13 @@ int main() {
                                   shared_data.ipc_handle);
     break;
   case TEST_PHYSICAL_MEM_ACCESS:
-    child_physical_mem_ipc_test_opaque(shared_data.size, shared_data.flags,
-                                       shared_data.is_immediate,
-                                       shared_data.ipc_handle);
+    if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+      child_physical_mem_ipc_test_opaque<lzt::command_list_mode_t::immediate>(
+          shared_data.size, shared_data.flags, shared_data.ipc_handle);
+    } else {
+      child_physical_mem_ipc_test_opaque<lzt::command_list_mode_t::regular>(
+          shared_data.size, shared_data.flags, shared_data.ipc_handle);
+    }
     break;
   case TEST_LOOP_ACCESS: {
     // Open the secondary shared memory that carries all IPC handles
@@ -530,7 +553,13 @@ int main() {
     bipc::mapped_region region_loop(shm_loop, bipc::read_only);
     const shared_data_loop_t *loop_data_ptr =
         static_cast<const shared_data_loop_t *>(region_loop.get_address());
-    child_device_access_loop_test(*loop_data_ptr);
+    if (loop_data_ptr->mode == lzt::command_list_mode_t::immediate) {
+      child_device_access_loop_test<lzt::command_list_mode_t::immediate>(
+          *loop_data_ptr);
+    } else {
+      child_device_access_loop_test<lzt::command_list_mode_t::regular>(
+          *loop_data_ptr);
+    }
     break;
   }
   default:

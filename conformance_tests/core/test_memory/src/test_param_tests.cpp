@@ -22,9 +22,10 @@ using lzt::to_int;
 
 enum memory_test_type { MTT_SHARED, MTT_HOST };
 
-class zeMemAccessTests : public ::testing::Test,
-                         public ::testing::WithParamInterface<
-                             std::tuple<enum memory_test_type, size_t, bool>> {
+class zeMemAccessTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<enum memory_test_type, size_t, lzt::command_list_mode_t>> {
 
 protected:
   zeMemAccessTests() {
@@ -52,7 +53,7 @@ LZT_TEST_P(
 
 class zeMemAccessCommandListTests : public zeMemAccessTests {
 protected:
-  lzt::zeCommandBundle cmd_bundle_;
+  lzt::command_bundle cmd_bundle_;
 };
 
 LZT_TEST_P(
@@ -60,8 +61,8 @@ LZT_TEST_P(
     GivenMemoryAllocationWhenCopyingAndReadingBackOnHostThenCorrectDataIsRead) {
   lzt::write_data_pattern(memory_, size_, 1);
   const size_t alignment = std::get<1>(GetParam());
-  bool is_immediate = std::get<2>(GetParam());
-  cmd_bundle_ = lzt::create_command_bundle(is_immediate);
+  auto mode = std::get<2>(GetParam());
+  cmd_bundle_ = lzt::create_command_bundle(mode);
   void *other_memory = (mtt_ == MTT_HOST)
                            ? lzt::allocate_host_memory(size_, alignment)
                            : lzt::allocate_shared_memory(size_, alignment);
@@ -69,8 +70,8 @@ LZT_TEST_P(
   lzt::append_memory_copy(cmd_bundle_.list, other_memory, memory_, size_,
                           nullptr);
   lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
-  lzt::close_command_list(cmd_bundle_.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle_, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_,
+                                       std::numeric_limits<uint64_t>::max());
   lzt::validate_data_pattern(other_memory, size_, 1);
   lzt::free_memory(other_memory);
   lzt::destroy_command_bundle(cmd_bundle_);
@@ -78,15 +79,15 @@ LZT_TEST_P(
 
 LZT_TEST_P(zeMemAccessCommandListTests,
            GivenAllocationSettingAndReadingBackOnHostThenCorrectDataIsRead) {
-  bool is_immediate = std::get<2>(GetParam());
-  cmd_bundle_ = lzt::create_command_bundle(is_immediate);
+  auto mode = std::get<2>(GetParam());
+  cmd_bundle_ = lzt::create_command_bundle(mode);
   const uint8_t value = 0x55;
   memset(memory_, 0,
          size_); // Write a different pattern from what we are going to write.
   lzt::append_memory_set(cmd_bundle_.list, memory_, &value, size_);
   lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
-  lzt::close_command_list(cmd_bundle_.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle_, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_,
+                                       std::numeric_limits<uint64_t>::max());
   for (unsigned int ui = 0; ui < size_; ui++) {
     EXPECT_EQ(value, static_cast<uint8_t *>(memory_)[ui]);
   }
@@ -96,7 +97,7 @@ LZT_TEST_P(zeMemAccessCommandListTests,
 LZT_TEST_P(
     zeMemAccessTests,
     GivenAllocationWhenWritingAndReadingBackOnDeviceThenCorrectDataIsRead) {
-  bool is_immediate = std::get<2>(GetParam());
+  auto mode = std::get<2>(GetParam());
   lzt::write_data_pattern(memory_, size_, 1);
   std::string module_name = "unified_mem_test.spv";
   ze_module_handle_t module = lzt::create_module(
@@ -114,7 +115,7 @@ LZT_TEST_P(
   arg.arg_value = &size;
   args.push_back(arg);
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name, 1U, args, is_immediate);
+                                   module, func_name, 1U, args, mode);
   lzt::validate_data_pattern(memory_, size_, -1);
   lzt::destroy_module(module);
 }
@@ -122,10 +123,14 @@ LZT_TEST_P(
 INSTANTIATE_TEST_SUITE_P(
     zeMemAccessTests, zeMemAccessTests,
     ::testing::Combine(::testing::Values(MTT_HOST, MTT_SHARED),
-                       lzt::memory_allocation_alignments, ::testing::Bool()));
+                       lzt::memory_allocation_alignments,
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 INSTANTIATE_TEST_SUITE_P(
     zeMemAccessCommandListTests, zeMemAccessCommandListTests,
     ::testing::Combine(::testing::Values(MTT_HOST, MTT_SHARED),
-                       lzt::memory_allocation_alignments, ::testing::Bool()));
+                       lzt::memory_allocation_alignments,
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 } // namespace

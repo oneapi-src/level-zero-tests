@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021-2023 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -84,9 +84,10 @@ void fill_expected_buffer(char *expected_buffer, const size_t size,
 
 inline void init_process(ze_context_handle_t &context,
                          ze_device_handle_t &device,
-                         std::vector<lzt::zeCommandBundle> &cmd_bundles,
+                         std::vector<lzt::command_bundle> &cmd_bundles,
                          bool is_server, uint32_t device_x, uint32_t device_y,
-                         size_t concurrency_offset, bool is_immediate) {
+                         size_t concurrency_offset,
+                         lzt::command_list_mode_t mode) {
   init_driver();
 
   auto driver = lzt::get_default_driver();
@@ -149,7 +150,7 @@ inline void init_process(ze_context_handle_t &context,
       auto cmd_bundle = lzt::create_command_bundle(
           context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-          ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY, ordinal, i, is_immediate);
+          ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY, ordinal, i, mode);
       cmd_bundles.push_back(cmd_bundle);
     }
   }
@@ -157,14 +158,14 @@ inline void init_process(ze_context_handle_t &context,
 
 void run_server(size_t size, uint32_t device_x, uint32_t device_y,
                 size_t concurrency_offset, bool bidirectional, pid_t pid,
-                bool is_immediate) {
+                lzt::command_list_mode_t mode) {
   ze_context_handle_t context;
   ze_device_handle_t device;
-  std::vector<lzt::zeCommandBundle> cmd_bundles;
+  std::vector<lzt::command_bundle> cmd_bundles;
   bool matched_expected_buffer = true;
 
   init_process(context, device, cmd_bundles, true, device_x, device_y,
-               concurrency_offset, is_immediate);
+               concurrency_offset, mode);
 
   for (uint32_t i = 0; i < cmd_bundles.size(); i++) {
     auto cb = cmd_bundles[i];
@@ -172,8 +173,8 @@ void run_server(size_t size, uint32_t device_x, uint32_t device_y,
     void *memory = lzt::allocate_device_memory(size, 1, 0, device, context);
     lzt::append_memory_fill(cb.list, memory, &server_pattern,
                             sizeof(server_pattern), size, nullptr);
-    lzt::close_command_list(cb.list);
-    lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+    lzt::execute_and_sync_command_bundle(cb,
+                                         std::numeric_limits<uint64_t>::max());
     lzt::reset_command_list(cb.list);
 
     struct sigaction sigint_action {};
@@ -197,8 +198,8 @@ void run_server(size_t size, uint32_t device_x, uint32_t device_y,
 
       lzt::append_memory_copy(cb.list, ((char *)memory) + concurrency_offset,
                               buffer, size - concurrency_offset);
-      lzt::close_command_list(cb.list);
-      lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+      lzt::execute_and_sync_command_bundle(
+          cb, std::numeric_limits<uint64_t>::max());
       lzt::reset_command_list(cb.list);
       lzt::free_memory(context, buffer);
     }
@@ -214,8 +215,8 @@ void run_server(size_t size, uint32_t device_x, uint32_t device_y,
     memset(buffer, 0, size);
 
     lzt::append_memory_copy(cb.list, buffer, memory, size);
-    lzt::close_command_list(cb.list);
-    lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+    lzt::execute_and_sync_command_bundle(cb,
+                                         std::numeric_limits<uint64_t>::max());
     lzt::reset_command_list(cb.list);
 
     LOG_INFO << "[Server] Validating buffer received correctly";
@@ -261,14 +262,14 @@ void run_server(size_t size, uint32_t device_x, uint32_t device_y,
 
 void run_client(size_t size, uint32_t device_x, uint32_t device_y,
                 size_t concurrency_offset, bool bidirectional, pid_t ppid,
-                bool is_immediate) {
+                lzt::command_list_mode_t mode) {
   ze_context_handle_t context;
   ze_device_handle_t device;
-  std::vector<lzt::zeCommandBundle> cmd_bundles;
+  std::vector<lzt::command_bundle> cmd_bundles;
   bool matched_expected_buffer = true;
 
   init_process(context, device, cmd_bundles, false, device_x, device_y,
-               concurrency_offset, is_immediate);
+               concurrency_offset, mode);
 
   for (uint32_t i = 0; i < cmd_bundles.size(); i++) {
     auto cb = cmd_bundles[i];
@@ -300,8 +301,8 @@ void run_client(size_t size, uint32_t device_x, uint32_t device_y,
     }
 
     lzt::append_memory_copy(cb.list, memory, buffer, size - concurrency_offset);
-    lzt::close_command_list(cb.list);
-    lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+    lzt::execute_and_sync_command_bundle(cb,
+                                         std::numeric_limits<uint64_t>::max());
     lzt::reset_command_list(cb.list);
 
     EXPECT_ZE_RESULT_SUCCESS(zeMemCloseIpcHandle(context, memory));
@@ -315,8 +316,8 @@ void run_client(size_t size, uint32_t device_x, uint32_t device_y,
       memset(bi_host_buffer, 0, size);
 
       lzt::append_memory_copy(cb.list, bi_host_buffer, bi_buffer, size);
-      lzt::close_command_list(cb.list);
-      lzt::execute_and_sync_command_bundle(cb, UINT64_MAX);
+      lzt::execute_and_sync_command_bundle(
+          cb, std::numeric_limits<uint64_t>::max());
       lzt::reset_command_list(cb.list);
 
       LOG_DEBUG << "[Client] Validating buffer received correctly";
@@ -351,7 +352,7 @@ void run_client(size_t size, uint32_t device_x, uint32_t device_y,
 class P2PIpcMemoryAccessTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<size_t, uint32_t, uint32_t, bool>> {};
+          std::tuple<size_t, uint32_t, uint32_t, lzt::command_list_mode_t>> {};
 
 LZT_TEST_P(
     P2PIpcMemoryAccessTest,
@@ -359,7 +360,7 @@ LZT_TEST_P(
   size_t size = 1UL << std::get<0>(GetParam());
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
-  bool is_immediate = std::get<3>(GetParam());
+  const auto mode = std::get<3>(GetParam());
   LOG_INFO << "Buffer Size: " << size;
 
   pid_t pid = fork();
@@ -381,9 +382,9 @@ LZT_TEST_P(
     if (pid < 0) {
       throw std::runtime_error("Failed to fork child process");
     } else if (pid > 0) {
-      run_server(size, device_x, device_y, 0U, false, pid, is_immediate);
+      run_server(size, device_x, device_y, 0U, false, pid, mode);
     } else {
-      run_client(size, device_x, device_y, 0U, false, ppid, is_immediate);
+      run_client(size, device_x, device_y, 0U, false, ppid, mode);
     }
   }
 }
@@ -394,7 +395,7 @@ LZT_TEST_P(
   size_t size = 1UL << std::get<0>(GetParam());
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
-  bool is_immediate = std::get<3>(GetParam());
+  const auto mode = std::get<3>(GetParam());
   LOG_INFO << "Buffer Size: " << size;
 
   pid_t pid = fork();
@@ -416,9 +417,9 @@ LZT_TEST_P(
     if (pid < 0) {
       throw std::runtime_error("Failed to fork child process");
     } else if (pid > 0) {
-      run_server(size, device_x, device_y, 0U, true, pid, is_immediate);
+      run_server(size, device_x, device_y, 0U, true, pid, mode);
     } else {
-      run_client(size, device_x, device_y, 0U, true, ppid, is_immediate);
+      run_client(size, device_x, device_y, 0U, true, ppid, mode);
     }
   }
 }
@@ -430,7 +431,7 @@ LZT_TEST_P(
   size_t concurrency_offset = size >> 1;
   uint32_t device_x = std::get<1>(GetParam());
   uint32_t device_y = std::get<2>(GetParam());
-  bool is_immediate = std::get<3>(GetParam());
+  const auto mode = std::get<3>(GetParam());
   LOG_INFO << "Buffer Size: " << size
            << " Concurrency Offset: " << concurrency_offset;
 
@@ -454,10 +455,10 @@ LZT_TEST_P(
       throw std::runtime_error("Failed to fork child process");
     } else if (pid > 0) {
       run_server(size, device_x, device_y, concurrency_offset, false, pid,
-                 is_immediate);
+                 mode);
     } else {
       run_client(size, device_x, device_y, concurrency_offset, false, ppid,
-                 is_immediate);
+                 mode);
     }
   }
 }
@@ -469,7 +470,8 @@ INSTANTIATE_TEST_SUITE_P(
                                          24, 25, 26, 27, 28), // Buffer Size
                        ::testing::Values(0, 1), // Server device ID
                        ::testing::Values(0, 1), // Client device ID
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 #endif
 

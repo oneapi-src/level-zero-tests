@@ -71,12 +71,13 @@ void RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(test.hEvent, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(
+      test.hEvent, std::numeric_limits<uint64_t>::max()));
 
   // Verify Memory Copy completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
   lzt::free_memory_with_allocator_selector(dst_buffer, is_shared_system_dst);
   lzt::destroy_command_bundle(cmd_bundle);
@@ -137,12 +138,13 @@ void RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(test.hEvent, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(
+      test.hEvent, std::numeric_limits<uint64_t>::max()));
 
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   lzt::free_memory_with_allocator_selector(ref_buffer, is_shared_system_src);
   lzt::free_memory_with_allocator_selector(dst_buffer, is_shared_system_dst);
   lzt::destroy_command_bundle(cmd_bundle);
@@ -208,12 +210,13 @@ void RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandLis
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(test.hEvent, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(
+      test.hEvent, std::numeric_limits<uint64_t>::max()));
 
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
   lzt::free_memory_with_allocator_selector(dst_buffer, is_shared_system_dst);
   lzt::destroy_command_bundle(cmd_bundle);
@@ -279,7 +282,8 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Copy Waits for Signal
-  lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
+  lzt::event_host_synchronize(test.hEvent,
+                              std::numeric_limits<uint64_t>::max());
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
 
   // Allocation can be accessed (while being used by GPU) only concurrently
@@ -290,7 +294,7 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent1));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   // Verify Memory Copy completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
 
@@ -370,7 +374,7 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(test.hEvent));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   // Verify Memory Copy completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
@@ -437,7 +441,8 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
                           test.size, nullptr, 1, &hEvent1);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
-  lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
+  lzt::event_host_synchronize(test.hEvent,
+                              std::numeric_limits<uint64_t>::max());
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
 
   // Allocation can be accessed (while being used by GPU) only concurrently
@@ -448,7 +453,7 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent1));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   // Verify Memory Fill completed
   EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
 
@@ -527,7 +532,7 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
 
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(test.hEvent));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   // Verify Memory Fill completed
   EXPECT_EQ(0, memcmp(ref_buffer, dst_buffer, test.size));
 
@@ -604,7 +609,8 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Copy Waits for Signal
-  lzt::event_host_synchronize(test.hEvent, UINT64_MAX);
+  lzt::event_host_synchronize(test.hEvent,
+                              std::numeric_limits<uint64_t>::max());
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventQueryStatus(hEvent1));
 
   // Allocation can be accessed (while being used by GPU) only concurrently
@@ -615,7 +621,7 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
 
   // Signal Event On Host
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(hEvent1));
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
@@ -701,7 +707,7 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
 
   // Signal Event On Host
   EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(test.hEvent));
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   // Verify Memory Set completed
   EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, test.size));
   lzt::free_memory_with_allocator_selector(src_buffer, is_shared_system_src);
@@ -806,16 +812,20 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Make sure all events signaled from host perspective
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent1, UINT64_MAX));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent2, UINT64_MAX));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent3, UINT64_MAX));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent4, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent1, std::numeric_limits<uint64_t>::max()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent2, std::numeric_limits<uint64_t>::max()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent3, std::numeric_limits<uint64_t>::max()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent4, std::numeric_limits<uint64_t>::max()));
 
   // Verify A matches B
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   // cleanup
   test.ep.destroy_event(hEvent1);
   test.ep.destroy_event(hEvent2);
@@ -884,17 +894,22 @@ void RunGivenImageCopyThatWaitsOnEventWhenExecutingCommandListTest(
   lzt::submit_command_bundle(cmd_bundle);
 
   // Make sure all events signaled from host perspective
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent0, UINT64_MAX));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent1, UINT64_MAX));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent2, UINT64_MAX));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent3, UINT64_MAX));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent4, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent0, std::numeric_limits<uint64_t>::max()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent1, std::numeric_limits<uint64_t>::max()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent2, std::numeric_limits<uint64_t>::max()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent3, std::numeric_limits<uint64_t>::max()));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent4, std::numeric_limits<uint64_t>::max()));
 
   // Verify A matches B
   EXPECT_EQ(0,
             memcmp(input.raw_data(), output.raw_data(), input.size_in_bytes()));
 
-  lzt::sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   // cleanup
   test.ep.destroy_event(hEvent0);
   test.ep.destroy_event(hEvent1);
@@ -996,8 +1011,10 @@ void RunGivenSuccessiveMemoryCopiesWithEventWhenExecutingOnDifferentQueuesTest(
     // Submit bundle_1 before bundle_0 to test cross-queue event sync
     lzt::submit_command_bundle(cmd_bundle_1);
     lzt::submit_command_bundle(cmd_bundle_0);
-    lzt::sync_command_bundle(cmd_bundle_0, UINT64_MAX);
-    lzt::sync_command_bundle(cmd_bundle_1, UINT64_MAX);
+    lzt::sync_command_bundle(cmd_bundle_0,
+                             std::numeric_limits<uint64_t>::max());
+    lzt::sync_command_bundle(cmd_bundle_1,
+                             std::numeric_limits<uint64_t>::max());
 
     // Verify Memory Copy completed
     EXPECT_EQ(0, memcmp(src_buffer, dst_buffer, size));

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -37,7 +37,8 @@ static void child_host_reads(ze_event_pool_handle_t hEventPool) {
   ze_event_handle_t hEvent;
   EXPECT_ZE_RESULT_SUCCESS(
       zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent, std::numeric_limits<uint64_t>::max()));
   // cleanup
   EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
@@ -54,9 +55,10 @@ static void child_query_event_status(ze_event_pool_handle_t hEventPool) {
   LOG_INFO << "IPC Child child_query_event_status completed successfully";
 }
 
+template <lzt::command_list_mode_t Mode>
 static void child_device_reads(ze_event_pool_handle_t hEventPool,
-                               bool device_events, ze_context_handle_t context,
-                               bool isImmediate) {
+                               bool device_events,
+                               ze_context_handle_t context) {
   ze_event_handle_t hEvent;
   if (device_events) {
     EXPECT_ZE_RESULT_SUCCESS(
@@ -67,27 +69,28 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool,
   }
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
-  auto cmdbundle = lzt::create_command_bundle(context, device, isImmediate);
+  auto cmdbundle = lzt::create_command_bundle<Mode>(context, device);
   lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
-  lzt::close_command_list(cmdbundle.list);
-  lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmdbundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   // cleanup
   lzt::destroy_command_bundle(cmdbundle);
   EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
+template <lzt::command_list_mode_t Mode>
 static void child_device2_reads(ze_event_pool_handle_t hEventPool,
-                                ze_context_handle_t context, bool isImmediate) {
+                                ze_context_handle_t context) {
   ze_event_handle_t hEvent;
   EXPECT_ZE_RESULT_SUCCESS(
       zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   auto devices = lzt::get_ze_devices();
-  auto cmdbundle = lzt::create_command_bundle(context, devices[1], isImmediate);
+  auto cmdbundle = lzt::create_command_bundle<Mode>(context, devices[1]);
   lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
   printf("execute second device\n");
-  lzt::close_command_list(cmdbundle.list);
-  lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmdbundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   // cleanup
   lzt::reset_command_list(cmdbundle.list);
@@ -95,26 +98,24 @@ static void child_device2_reads(ze_event_pool_handle_t hEventPool,
   EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
+template <lzt::command_list_mode_t Mode>
 static void child_multi_device_reads(ze_event_pool_handle_t hEventPool,
-                                     ze_context_handle_t context,
-                                     bool isImmediate) {
+                                     ze_context_handle_t context) {
   ze_event_handle_t hEvent;
   EXPECT_ZE_RESULT_SUCCESS(
       zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   auto devices = lzt::get_ze_devices();
-  auto cmdbundle1 =
-      lzt::create_command_bundle(context, devices[0], isImmediate);
+  auto cmdbundle1 = lzt::create_command_bundle<Mode>(context, devices[0]);
   lzt::append_wait_on_events(cmdbundle1.list, 1, &hEvent);
   printf("execute device[0]\n");
-  lzt::close_command_list(cmdbundle1.list);
-  lzt::execute_and_sync_command_bundle(cmdbundle1, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmdbundle1,
+                                       std::numeric_limits<uint64_t>::max());
 
-  auto cmdbundle2 =
-      lzt::create_command_bundle(context, devices[1], isImmediate);
+  auto cmdbundle2 = lzt::create_command_bundle<Mode>(context, devices[1]);
   lzt::append_wait_on_events(cmdbundle2.list, 1, &hEvent);
   printf("execute device[1]\n");
-  lzt::close_command_list(cmdbundle2.list);
-  lzt::execute_and_sync_command_bundle(cmdbundle2, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmdbundle2,
+                                       std::numeric_limits<uint64_t>::max());
   // cleanup
   lzt::reset_command_list(cmdbundle1.list);
   lzt::reset_command_list(cmdbundle2.list);
@@ -133,7 +134,8 @@ static void child_host_query_timestamp(const ze_event_pool_handle_t &hEventPool,
   ze_event_handle_t hEvent;
   EXPECT_ZE_RESULT_SUCCESS(
       zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
-  EXPECT_ZE_RESULT_SUCCESS(zeEventHostSynchronize(hEvent, UINT64_MAX));
+  EXPECT_ZE_RESULT_SUCCESS(
+      zeEventHostSynchronize(hEvent, std::numeric_limits<uint64_t>::max()));
 
   ze_kernel_timestamp_result_t tsResult;
   if (mapped_timestamp) {
@@ -189,11 +191,10 @@ static void child_host_query_timestamp(const ze_event_pool_handle_t &hEventPool,
   EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
 
-static void
-child_device_query_timestamp(const ze_event_pool_handle_t &hEventPool,
-                             bool device_events,
-                             const ze_context_handle_t &context,
-                             shared_data_t &shared_data, bool isImmediate) {
+template <lzt::command_list_mode_t Mode>
+static void child_device_query_timestamp(
+    const ze_event_pool_handle_t &hEventPool, bool device_events,
+    const ze_context_handle_t &context, shared_data_t &shared_data) {
 
   ze_event_handle_t hEvent;
   if (device_events) {
@@ -205,7 +206,7 @@ child_device_query_timestamp(const ze_event_pool_handle_t &hEventPool,
   }
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_devices(driver)[0];
-  auto cmdbundle = lzt::create_command_bundle(context, device, isImmediate);
+  auto cmdbundle = lzt::create_command_bundle<Mode>(context, device);
 
   ze_kernel_timestamp_result_t *tsResult;
   tsResult =
@@ -215,8 +216,8 @@ child_device_query_timestamp(const ze_event_pool_handle_t &hEventPool,
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendQueryKernelTimestamps(
       cmdbundle.list, 1, &hEvent, tsResult, nullptr, nullptr, 1, &hEvent));
 
-  lzt::close_command_list(cmdbundle.list);
-  lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmdbundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   shared_data.start_time = tsResult->global.kernelStart;
   shared_data.end_time = tsResult->global.kernelEnd;
@@ -309,7 +310,6 @@ int main() {
     semaphore.wait();
   }
 
-  const bool isImmediate = shared_data.is_immediate;
   LOG_INFO << "IPC Child open event handle success";
   switch (shared_data.child_type) {
 
@@ -317,21 +317,44 @@ int main() {
     child_host_reads(hEventPool);
     break;
   case CHILD_TEST_DEVICE_READS:
-    child_device_reads(hEventPool, device_events, context, isImmediate);
+    if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+      child_device_reads<lzt::command_list_mode_t::immediate>(
+          hEventPool, device_events, context);
+    } else {
+      child_device_reads<lzt::command_list_mode_t::regular>(
+          hEventPool, device_events, context);
+    }
     break;
   case CHILD_TEST_DEVICE2_READS:
-    child_device2_reads(hEventPool, context, isImmediate);
+    if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+      child_device2_reads<lzt::command_list_mode_t::immediate>(hEventPool,
+                                                               context);
+    } else {
+      child_device2_reads<lzt::command_list_mode_t::regular>(hEventPool,
+                                                             context);
+    }
     break;
   case CHILD_TEST_MULTI_DEVICE_READS:
-    child_multi_device_reads(hEventPool, context, isImmediate);
+    if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+      child_multi_device_reads<lzt::command_list_mode_t::immediate>(hEventPool,
+                                                                    context);
+    } else {
+      child_multi_device_reads<lzt::command_list_mode_t::regular>(hEventPool,
+                                                                  context);
+    }
     break;
   case CHILD_TEST_HOST_TIMESTAMP_READS:
     child_host_query_timestamp(hEventPool, shared_data, false);
     std::memcpy(region.get_address(), &shared_data, sizeof(shared_data_t));
     break;
   case CHILD_TEST_DEVICE_TIMESTAMP_READS:
-    child_device_query_timestamp(hEventPool, device_events, context,
-                                 shared_data, isImmediate);
+    if (shared_data.mode == lzt::command_list_mode_t::immediate) {
+      child_device_query_timestamp<lzt::command_list_mode_t::immediate>(
+          hEventPool, device_events, context, shared_data);
+    } else {
+      child_device_query_timestamp<lzt::command_list_mode_t::regular>(
+          hEventPool, device_events, context, shared_data);
+    }
     std::memcpy(region.get_address(), &shared_data, sizeof(shared_data_t));
     break;
   case CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS:

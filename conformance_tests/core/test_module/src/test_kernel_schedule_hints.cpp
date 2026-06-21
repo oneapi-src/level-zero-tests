@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021-2023 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -38,7 +38,8 @@ bool check_ext_version() {
   }
 }
 
-void RunGivenKernelScheduleHintWhenRunningKernelTest(bool is_immediate) {
+void RunGivenKernelScheduleHintWhenRunningKernelTest(
+    lzt::command_list_mode_t mode) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -62,7 +63,7 @@ void RunGivenKernelScheduleHintWhenRunningKernelTest(bool is_immediate) {
     lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
     auto cmd_bundle = lzt::create_command_bundle(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, mode);
 
     lzt::set_group_size(kernel, 256, 1, 1);
     ze_group_count_t group_count = {};
@@ -71,7 +72,6 @@ void RunGivenKernelScheduleHintWhenRunningKernelTest(bool is_immediate) {
     group_count.groupCountZ = 1;
     lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
                                 0, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     lzt::destroy_command_bundle(cmd_bundle);
@@ -91,7 +91,8 @@ LZT_TEST(zeKernelScheduleHintsTests,
          GivenKernelScheduleHintWhenRunningKernelThenResultIsCorrect) {
   if (!check_ext_version())
     GTEST_SKIP();
-  RunGivenKernelScheduleHintWhenRunningKernelTest(false);
+  RunGivenKernelScheduleHintWhenRunningKernelTest(
+      lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST(
@@ -99,7 +100,8 @@ LZT_TEST(
     GivenKernelScheduleHintWhenRunningKernelOnImmediateCmdListThenResultIsCorrect) {
   if (!check_ext_version())
     GTEST_SKIP();
-  RunGivenKernelScheduleHintWhenRunningKernelTest(true);
+  RunGivenKernelScheduleHintWhenRunningKernelTest(
+      lzt::command_list_mode_t::immediate);
 }
 
 } // namespace

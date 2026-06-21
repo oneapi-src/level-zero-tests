@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2024 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,7 +18,8 @@
 namespace {
 #ifdef __linux__
 
-void multi_device_sender(size_t size, bool reserved, bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void multi_device_sender(size_t size, bool reserved) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Sender zeInit failed: " +
@@ -61,9 +62,9 @@ void multi_device_sender(size_t size, bool reserved, bool is_immediate) {
   }
 
   auto context = lzt::create_context(driver);
-  auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
 
   ze_device_mem_alloc_flags_t flags = 0;
   size_t allocSize = size;
@@ -78,10 +79,10 @@ void multi_device_sender(size_t size, bool reserved, bool is_immediate) {
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   lzt::write_data_pattern(buffer, size, 1);
-  lzt::append_memory_copy(cmd_bundle.list, memory, buffer, size);
+  lzt::append_memory_copy(cmd_bundle.record_list(), memory, buffer, size);
 
-  lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   ze_ipc_mem_handle_t ipc_handle{};
   std::fill_n(ipc_handle.data, ZE_MAX_IPC_HANDLE_SIZE, 0);
@@ -115,7 +116,8 @@ void multi_device_sender(size_t size, bool reserved, bool is_immediate) {
   lzt::destroy_context(context);
 }
 
-void multi_device_receiver(size_t size, bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void multi_device_receiver(size_t size) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Receiver zeInit failed: " +
@@ -153,9 +155,9 @@ void multi_device_receiver(size_t size, bool is_immediate) {
   }
 
   auto context = lzt::create_context(driver);
-  auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
   ze_ipc_mem_handle_t ipc_handle{};
   std::fill_n(ipc_handle.data, ZE_MAX_IPC_HANDLE_SIZE, 0);
   auto ipc_descriptor =
@@ -169,9 +171,9 @@ void multi_device_receiver(size_t size, bool is_immediate) {
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
-  lzt::append_memory_copy(cmd_bundle.list, buffer, memory, size);
-  lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle.record_list(), buffer, memory, size);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   lzt::validate_data_pattern(buffer, size, 1);
 
@@ -181,8 +183,9 @@ void multi_device_receiver(size_t size, bool is_immediate) {
   lzt::destroy_context(context);
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(
-    bool reserved, bool is_immediate) {
+    bool reserved) {
   size_t size = 4096;
 
   pid_t pid = fork();
@@ -203,7 +206,7 @@ void RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest
     if (pid < 0) {
       throw std::runtime_error("Failed to fork child process");
     } else if (pid > 0) {
-      multi_device_sender(size, reserved, is_immediate);
+      multi_device_sender<Mode>(size, reserved);
 
       if (testing::Test::HasFailure()) {
         LOG_DEBUG << "IPC Sender Failed GTEST Check";
@@ -211,7 +214,7 @@ void RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest
       }
       exit(0);
     } else {
-      multi_device_receiver(size, is_immediate);
+      multi_device_receiver<Mode>(size);
 
       if (testing::Test::HasFailure()) {
         LOG_DEBUG << "IPC Receiver Failed GTEST Check";
@@ -225,29 +228,29 @@ void RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest
 LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCThenChildProcessReadsMemoryCorrectly) {
-  RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(
-      false, false);
+  RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest<
+      lzt::command_list_mode_t::regular>(false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
-  RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(
-      false, true);
+  RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest<
+      lzt::command_list_mode_t::immediate>(false);
 }
 
 LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingMultipleDevicesWithIPCThenChildProcessReadsMemoryCorrectly) {
-  RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(
-      true, false);
+  RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest<
+      lzt::command_list_mode_t::regular>(true);
 }
 
 LZT_TEST(
     IpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingMultipleDevicesWithIPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectly) {
-  RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest(
-      true, true);
+  RunGivenL0MemoryAllocatedInParentProcessWhenUsingMultipleDevicesWithIPCTest<
+      lzt::command_list_mode_t::immediate>(true);
 }
 #endif
 

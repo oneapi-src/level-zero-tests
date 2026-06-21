@@ -80,14 +80,16 @@ public:
   template <lzt::command_list_mode_t Mode> void test_image_copy() {
     auto cmd_bundle = lzt::create_command_bundle<Mode>();
     img_ptr = new zeImageCreateCommon;
-    lzt::append_image_copy_from_mem(cmd_bundle.list, ze_img_src,
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), ze_img_src,
                                     png_img_src.raw_data(), nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy(cmd_bundle.list, ze_img_dest, ze_img_src, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy_to_mem(cmd_bundle.list, png_img_dest.raw_data(),
-                                  ze_img_dest, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy(cmd_bundle.record_list(), ze_img_dest, ze_img_src,
+                           nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy_to_mem(cmd_bundle.record_list(),
+                                  png_img_dest.raw_data(), ze_img_dest,
+                                  nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(png_img_src, png_img_dest);
@@ -111,15 +113,17 @@ public:
                                          png_img_src.raw_data(), image_width,
                                          image_height, image_width * 2);
 
-    lzt::append_image_copy_from_mem_ext(cmd_bundle.list, ze_img_src,
+    lzt::append_image_copy_from_mem_ext(cmd_bundle.record_list(), ze_img_src,
                                         padded_buffer_src, image_width * 2, 0,
                                         nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy(cmd_bundle.list, ze_img_dest, ze_img_src, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy_to_mem_ext(cmd_bundle.list, padded_buffer_dst,
-                                      ze_img_dest, image_width * 2, 0, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy(cmd_bundle.record_list(), ze_img_dest, ze_img_src,
+                           nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy_to_mem_ext(cmd_bundle.record_list(),
+                                      padded_buffer_dst, ze_img_dest,
+                                      image_width * 2, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(true,
@@ -178,23 +182,24 @@ public:
     lzt::write_image_data_pattern(new_host_image, scribble_dp);
     // First, copy the background image from the host to the device:
     // This will serve as the BACKGROUND of the image.
-    lzt::append_image_copy_from_mem(cmd_bundle.list, h_dest_image,
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), h_dest_image,
                                     background_image.raw_data(), nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     // Next, copy the foreground image from the host to the device:
     // This will serve as the FOREGROUND of the image.
-    lzt::append_image_copy_from_mem(cmd_bundle.list, h_source_image,
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), h_source_image,
                                     foreground_image.raw_data(), nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     // Copy the portion of the foreground image corresponding to the region:
-    lzt::append_image_copy_region(cmd_bundle.list, h_dest_image, h_source_image,
-                                  region, region, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_image_copy_region(cmd_bundle.record_list(), h_dest_image,
+                                  h_source_image, region, region, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     // Finally, copy the image in hTstImage back to new_host_image for
     // validation:
-    lzt::append_image_copy_to_mem(cmd_bundle.list, new_host_image.raw_data(),
-                                  h_dest_image, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_image_copy_to_mem(cmd_bundle.record_list(),
+                                  new_host_image.raw_data(), h_dest_image,
+                                  nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     // Execute all of the commands involving copying of images
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
@@ -233,26 +238,26 @@ public:
 
     if (use_madvise) {
       lzt::append_memory_advise(
-          cmd_bundle.list, device, source_buff, image_size,
+          cmd_bundle.record_list(), device, source_buff, image_size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
 
       lzt::append_memory_advise(
-          cmd_bundle.list, device, dest_buff, image_size,
+          cmd_bundle.record_list(), device, dest_buff, image_size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
     }
 
-    lzt::append_memory_copy(cmd_bundle.list, source_buff,
+    lzt::append_memory_copy(cmd_bundle.record_list(), source_buff,
                             png_img_src.raw_data(), image_size);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy_from_mem(cmd_bundle.list, ze_img_src, source_buff,
-                                    nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy_to_mem(cmd_bundle.list, dest_buff, ze_img_src,
-                                  nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(cmd_bundle.list, png_img_dest.raw_data(), dest_buff,
-                            image_size);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), ze_img_src,
+                                    source_buff, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy_to_mem(cmd_bundle.record_list(), dest_buff,
+                                  ze_img_src, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.record_list(), png_img_dest.raw_data(),
+                            dest_buff, image_size);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
 
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
@@ -292,46 +297,46 @@ public:
 
     if (use_madvise) {
       lzt::append_memory_advise(
-          cmd_bundle.list, device, source_buff_bot, image_size,
+          cmd_bundle.record_list(), device, source_buff_bot, image_size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
       lzt::append_memory_advise(
-          cmd_bundle.list, device, source_buff_top, image_size,
+          cmd_bundle.record_list(), device, source_buff_top, image_size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
 
       lzt::append_memory_advise(
-          cmd_bundle.list, device, dest_buff_bot, image_size,
+          cmd_bundle.record_list(), device, dest_buff_bot, image_size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
       lzt::append_memory_advise(
-          cmd_bundle.list, device, dest_buff_top, image_size,
+          cmd_bundle.record_list(), device, dest_buff_top, image_size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
     }
 
-    lzt::append_memory_copy(cmd_bundle.list, source_buff_bot,
+    lzt::append_memory_copy(cmd_bundle.record_list(), source_buff_bot,
                             png_img_src.raw_data(), image_size / 2);
-    lzt::append_memory_copy(cmd_bundle.list, source_buff_top,
+    lzt::append_memory_copy(cmd_bundle.record_list(), source_buff_top,
                             png_img_src.raw_data() + image_size / 4 / 2,
                             image_size / 2);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy_from_mem(cmd_bundle.list, ze_img_src,
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), ze_img_src,
                                     source_buff_bot, bot_region, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy_from_mem(cmd_bundle.list, ze_img_src,
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), ze_img_src,
                                     source_buff_top, top_region, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
 
-    lzt::append_image_copy_to_mem(cmd_bundle.list, dest_buff_bot, ze_img_src,
-                                  bot_region, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy_to_mem(cmd_bundle.list, dest_buff_top, ze_img_src,
-                                  top_region, nullptr);
+    lzt::append_image_copy_to_mem(cmd_bundle.record_list(), dest_buff_bot,
+                                  ze_img_src, bot_region, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy_to_mem(cmd_bundle.record_list(), dest_buff_top,
+                                  ze_img_src, top_region, nullptr);
 
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(cmd_bundle.list, png_img_dest.raw_data(),
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.record_list(), png_img_dest.raw_data(),
                             dest_buff_bot, image_size / 2);
-    lzt::append_memory_copy(cmd_bundle.list,
+    lzt::append_memory_copy(cmd_bundle.record_list(),
                             png_img_dest.raw_data() + image_size / 4 / 2,
                             dest_buff_top, image_size / 2);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
 
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
@@ -363,16 +368,16 @@ public:
         out_image.set_pixel(x, y, 0xffffffff);
 
     // Copy from host image to to device image region
-    lzt::append_image_copy_from_mem(cmd_bundle.list,
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(),
                                     img_ptr->dflt_device_image_,
                                     in_image.raw_data(), in_region, nullptr);
 
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
 
     // Copy from image region to output host image
-    lzt::append_image_copy_to_mem(cmd_bundle.list, out_image.raw_data(),
-                                  img_ptr->dflt_device_image_, out_region,
-                                  nullptr);
+    lzt::append_image_copy_to_mem(
+        cmd_bundle.record_list(), out_image.raw_data(),
+        img_ptr->dflt_device_image_, out_region, nullptr);
 
     // Execute
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -1214,10 +1219,11 @@ void RunGivenDeviceImageWhenAppendingImageCopyTest(
     zeCommandListAppendImageCopyTests &test) {
   auto cmd_bundle = lzt::create_command_bundle<Mode>();
   test.img_ptr = new zeImageCreateCommon;
-  lzt::append_image_copy(cmd_bundle.list, test.img_ptr->dflt_device_image_,
+  lzt::append_image_copy(cmd_bundle.record_list(),
+                         test.img_ptr->dflt_device_image_,
                          test.img_ptr->dflt_device_image_2_, nullptr);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   lzt::destroy_command_bundle(cmd_bundle);
   delete test.img_ptr;
@@ -1255,10 +1261,11 @@ void RunGivenDeviceImageWhenAppendingImageCopyWithHEventTest(
   desc.signal = 0;
   desc.wait = 0;
   auto event = lzt::create_event(test.ep, desc);
-  lzt::append_image_copy(cmd_bundle.list, test.img_ptr->dflt_device_image_,
+  lzt::append_image_copy(cmd_bundle.record_list(),
+                         test.img_ptr->dflt_device_image_,
                          test.img_ptr->dflt_device_image_2_, event);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   destroy_event(event);
   delete test.img_ptr;
@@ -1300,13 +1307,13 @@ void RunGivenDeviceImageWhenAppendingImageCopyWithWaitEventTest(
   desc.wait = 0;
   auto event = lzt::create_event(test.ep, desc);
   auto event_before = event;
-  lzt::append_image_copy(cmd_bundle.list, test.img_ptr->dflt_device_image_,
-                         test.img_ptr->dflt_device_image_2_, nullptr, 1,
-                         &event);
+  lzt::append_image_copy(
+      cmd_bundle.record_list(), test.img_ptr->dflt_device_image_,
+      test.img_ptr->dflt_device_image_2_, nullptr, 1, &event);
   ASSERT_EQ(event, event_before);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
     lzt::signal_event_from_host(event);
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   destroy_event(event);
   delete test.img_ptr;
@@ -1395,10 +1402,10 @@ void RunGivenDeviceImageAndHostImageWhenAppendingImageCopyTest(
   auto cmd_bundle = lzt::create_command_bundle<Mode>();
   test.img_ptr = new zeImageCreateCommon;
   lzt::append_image_copy_from_mem(
-      cmd_bundle.list, test.img_ptr->dflt_device_image_,
+      cmd_bundle.record_list(), test.img_ptr->dflt_device_image_,
       test.img_ptr->dflt_host_image_.raw_data(), nullptr);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   lzt::destroy_command_bundle(cmd_bundle);
   delete test.img_ptr;
@@ -1434,10 +1441,10 @@ void RunGivenDeviceImageAndHostImageWhenAppendingImageCopyWithHEventTest(
 
   test.ep.create_event(hEvent);
   lzt::append_image_copy_from_mem(
-      cmd_bundle.list, test.img_ptr->dflt_device_image_,
+      cmd_bundle.record_list(), test.img_ptr->dflt_device_image_,
       test.img_ptr->dflt_host_image_.raw_data(), hEvent);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   test.ep.destroy_event(hEvent);
   delete test.img_ptr;
@@ -1475,12 +1482,12 @@ void RunGivenDeviceImageAndHostImageWhenAppendingImageCopyWithWaitEventTest(
   test.ep.create_event(hEvent);
   auto hEvent_initial = hEvent;
   lzt::append_image_copy_from_mem(
-      cmd_bundle.list, test.img_ptr->dflt_device_image_,
+      cmd_bundle.record_list(), test.img_ptr->dflt_device_image_,
       test.img_ptr->dflt_host_image_.raw_data(), nullptr, 1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_initial);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
     lzt::signal_event_from_host(hEvent);
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   test.ep.destroy_event(hEvent);
   delete test.img_ptr;
@@ -1531,12 +1538,12 @@ void RunGivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionTest(
   source_region.width = test.img_ptr->dflt_host_image_.width() / 2;
   source_region.height = test.img_ptr->dflt_host_image_.height() / 2;
   source_region.depth = 1;
-  lzt::append_image_copy_region(cmd_bundle.list,
+  lzt::append_image_copy_region(cmd_bundle.record_list(),
                                 test.img_ptr->dflt_device_image_,
                                 test.img_ptr->dflt_device_image_2_,
                                 &dest_region, &source_region, nullptr);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   delete test.img_ptr;
   lzt::destroy_command_bundle(cmd_bundle);
@@ -1587,10 +1594,10 @@ void RunGivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithHEventTest
 
   test.ep.create_event(hEvent);
   lzt::append_image_copy_region(
-      cmd_bundle.list, test.img_ptr->dflt_device_image_,
+      cmd_bundle.record_list(), test.img_ptr->dflt_device_image_,
       test.img_ptr->dflt_device_image_2_, &dest_region, &source_region, hEvent);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   test.ep.destroy_event(hEvent);
   delete test.img_ptr;
@@ -1643,13 +1650,13 @@ void RunGivenDeviceImageAndDeviceImageWhenAppendingImageCopyRegionWithWaitEventT
   test.ep.create_event(hEvent);
   auto hEvent_initial = hEvent;
   lzt::append_image_copy_region(
-      cmd_bundle.list, test.img_ptr->dflt_device_image_,
+      cmd_bundle.record_list(), test.img_ptr->dflt_device_image_,
       test.img_ptr->dflt_device_image_2_, &dest_region, &source_region, nullptr,
       1, &hEvent);
   ASSERT_EQ(hEvent, hEvent_initial);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
     lzt::signal_event_from_host(hEvent);
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   test.ep.destroy_event(hEvent);
   delete test.img_ptr;
@@ -1687,10 +1694,10 @@ void RunGivenDeviceImageWhenAppendingImageCopyToMemoryTest(
   void *device_memory = lzt::allocate_device_memory_with_allocator_selector(
       size_in_bytes(test.img_ptr->dflt_host_image_), is_shared_system);
 
-  lzt::append_image_copy_to_mem(cmd_bundle.list, device_memory,
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), device_memory,
                                 test.img_ptr->dflt_device_image_, nullptr);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   lzt::free_memory_with_allocator_selector(device_memory, is_shared_system);
   delete test.img_ptr;
@@ -1749,10 +1756,10 @@ void RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithHEventTest(
   ze_event_handle_t hEvent = nullptr;
 
   test.ep.create_event(hEvent);
-  lzt::append_image_copy_to_mem(cmd_bundle.list, device_memory,
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), device_memory,
                                 test.img_ptr->dflt_device_image_, hEvent);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   test.ep.destroy_event(hEvent);
   lzt::free_memory_with_allocator_selector(device_memory, is_shared_system);
@@ -1813,13 +1820,13 @@ void RunGivenDeviceImageWhenAppendingImageCopyToMemoryWithWaitEventTest(
 
   test.ep.create_event(hEvent);
   auto hEvent_initial = hEvent;
-  lzt::append_image_copy_to_mem(cmd_bundle.list, device_memory,
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), device_memory,
                                 test.img_ptr->dflt_device_image_, nullptr, 1,
                                 &hEvent);
   ASSERT_EQ(hEvent, hEvent_initial);
   if constexpr (Mode != lzt::command_list_mode_t::regular) {
     lzt::signal_event_from_host(hEvent);
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
+    lzt::synchronize_command_list_host(cmd_bundle.record_list(), UINT64_MAX);
   }
   test.ep.destroy_event(hEvent);
   lzt::free_memory_with_allocator_selector(device_memory, is_shared_system);

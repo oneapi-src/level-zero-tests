@@ -153,6 +153,13 @@ void sync_command_bundle(command_bundle &bundle, uint64_t timeout) {
   });
 }
 
+void reset_command_bundle(command_bundle &bundle) {
+  dispatch_mode(bundle.mode, [&]<command_list_mode_t M>() {
+    auto typed = to_typed<M>(bundle);
+    reset_command_bundle<M>(typed);
+  });
+}
+
 void execute_and_sync_command_bundle(command_bundle bundle, uint64_t timeout) {
   close_command_bundle(bundle);
   submit_command_bundle(bundle);

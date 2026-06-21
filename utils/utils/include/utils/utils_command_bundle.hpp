@@ -191,6 +191,21 @@ void sync_command_bundle(command_bundle_t<Mode> &bundle, uint64_t timeout) {
 }
 
 template <command_list_mode_t Mode>
+void reset_command_bundle(command_bundle_t<Mode> &bundle) {
+  if constexpr (Mode == command_list_mode_t::regular) {
+    reset_command_list(bundle.list);
+  } else if constexpr (Mode == command_list_mode_t::immediate) {
+    // no-op
+  } else if constexpr (Mode == command_list_mode_t::immediate_append_regular) {
+    reset_command_list(bundle.append_list);
+    reset_command_list(bundle.list);
+  } else {
+    static_assert(detail::always_false<Mode>::value,
+                  "Unsupported command_list_mode_t in reset_command_bundle");
+  }
+}
+
+template <command_list_mode_t Mode>
 void execute_and_sync_command_bundle(command_bundle_t<Mode> bundle,
                                      uint64_t timeout) {
   close_command_bundle<Mode>(bundle);
@@ -262,6 +277,7 @@ command_bundle create_command_bundle(
 void execute_and_sync_command_bundle(command_bundle bundle, uint64_t timeout);
 void close_command_bundle(command_bundle &bundle);
 void submit_command_bundle(command_bundle &bundle);
+void reset_command_bundle(command_bundle &bundle);
 void sync_command_bundle(command_bundle &bundle, uint64_t timeout);
 void destroy_command_bundle(command_bundle bundle);
 

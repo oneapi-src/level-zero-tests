@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -8,6 +8,8 @@
 
 #ifndef TEST_IPC_EVENT_HPP
 #define TEST_IPC_EVENT_HPP
+
+#include "utils/utils.hpp"
 
 typedef enum {
   PARENT_TEST_HOST_SIGNALS,
@@ -33,7 +35,7 @@ typedef struct {
   parent_test_t parent_type;
   child_test_t child_type;
   bool multi_device;
-  bool is_immediate;
+  level_zero_tests::command_list_mode_t mode;
   uint64_t start_time;
   uint64_t end_time;
   ipc_event_test_sock_t test_sock_type;

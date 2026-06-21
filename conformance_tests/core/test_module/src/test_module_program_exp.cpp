@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021-2023 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -38,13 +38,14 @@ bool check_ext_version() {
   }
 }
 
-void RunGivenModulesWithLinkageDependenciesWhenCreatingTest(bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void RunGivenModulesWithLinkageDependenciesWhenCreatingTest() {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
-  auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
   void *result_buffer =
       lzt::allocate_shared_memory(sizeof(int), 1, 0, 0, device, context);
 
@@ -73,7 +74,6 @@ void RunGivenModulesWithLinkageDependenciesWhenCreatingTest(bool is_immediate) {
 
   lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
-  lzt::close_command_list(cmd_bundle.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   int expectedResult = (x + y);
@@ -92,7 +92,8 @@ LZT_TEST(zeModuleProgramTests,
          GivenModulesWithLinkageDependenciesWhenCreatingThenSuccessIsReturned) {
   if (!check_ext_version())
     GTEST_SKIP();
-  RunGivenModulesWithLinkageDependenciesWhenCreatingTest(false);
+  RunGivenModulesWithLinkageDependenciesWhenCreatingTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST(
@@ -100,7 +101,8 @@ LZT_TEST(
     GivenModulesWithLinkageDependenciesWhenCreatingOnImmediateCmdListThenSuccessIsReturned) {
   if (!check_ext_version())
     GTEST_SKIP();
-  RunGivenModulesWithLinkageDependenciesWhenCreatingTest(true);
+  RunGivenModulesWithLinkageDependenciesWhenCreatingTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 } // namespace

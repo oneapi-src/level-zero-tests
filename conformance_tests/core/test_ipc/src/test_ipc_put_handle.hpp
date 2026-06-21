@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023 Intel Corporation
+ * Copyright (C) 2023-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -18,7 +18,7 @@ typedef struct {
   ipc_put_mem_access_test_t test_type;
   uint32_t size;
   ze_ipc_memory_flags_t flags;
-  bool is_immediate;
+  lzt::command_list_mode_t mode;
 } shared_data_t;
 
 #endif

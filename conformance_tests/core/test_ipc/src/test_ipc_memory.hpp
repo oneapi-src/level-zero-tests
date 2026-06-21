@@ -26,7 +26,7 @@ typedef struct {
   ipc_mem_access_test_sock_t test_sock_type;
   uint32_t size;
   ze_ipc_memory_flags_t flags;
-  bool is_immediate;
+  lzt::command_list_mode_t mode;
   ze_ipc_mem_handle_t ipc_handle;
   uint32_t device_id_parent; // Device index for parent (memory allocation)
   uint32_t device_id_child;  // Device index for child (memory access)
@@ -45,7 +45,7 @@ typedef struct {
   uint32_t num_iterations;
   uint32_t size;
   ze_ipc_memory_flags_t flags;
-  bool is_immediate;
+  lzt::command_list_mode_t mode;
   ze_ipc_mem_handle_t ipc_handles[IPC_LOOP_NUM_ITERATIONS];
 } shared_data_loop_t;
 

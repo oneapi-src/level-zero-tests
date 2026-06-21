@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -99,28 +99,32 @@ create_module_vector(ze_device_handle_t device,
 
 class zeModuleCreateTests : public ::testing::Test {
 protected:
-  void RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(
-      bool is_immediate);
-  void RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(
-      bool is_immediate);
-  void RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(
-      bool is_immediate);
-  void RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(
-      bool is_immediate);
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers();
+  template <lzt::command_list_mode_t Mode>
   void
-  RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(bool is_immediate);
-  void RunGivenValidSpecConstantsWhenCreatingModuleTest(bool is_immediate);
-  void RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(
-      bool is_immediate);
-  void
-  RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(bool is_immediate);
-  void RunGivenModuleCompiledWithOptimizationsWhenExecuting(bool is_immediate);
-  void RunGivenModuleWithGlobalVariableWhenWritingGlobalData(bool is_immediate);
+  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenValidSpecConstantsWhenCreatingModuleTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenModuleWithFunctionWhenRetrievingFunctionPointer();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenModuleCompiledWithOptimizationsWhenExecuting();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenModuleWithGlobalVariableWhenWritingGlobalData();
 };
 
+template <lzt::command_list_mode_t Mode>
 void zeModuleCreateTests::
-    RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(
-        bool is_immediate) {
+    RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -132,7 +136,7 @@ void zeModuleCreateTests::
   int *typed_global_pointer;
 
   for (auto mod : module) {
-    auto bundle = lzt::create_command_bundle(is_immediate);
+    auto bundle = lzt::create_command_bundle<Mode>();
     global_pointer = nullptr;
     ASSERT_ZE_RESULT_SUCCESS(zeModuleGetGlobalPointer(
         mod, global_name.c_str(), nullptr, &global_pointer));
@@ -140,7 +144,6 @@ void zeModuleCreateTests::
     void *memory = lzt::allocate_shared_memory(sizeof(expected_value));
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_value));
-    lzt::close_command_list(bundle.list);
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_value, *typed_global_pointer);
@@ -153,18 +156,20 @@ void zeModuleCreateTests::
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerThenPointerPointsToValidGlobalVariable) {
-  RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(false);
+  RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenRetrievingGlobalPointerOnImmediateCmdListThenPointerPointsToValidGlobalVariable) {
-  RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer(true);
+  RunGivenModuleWithGlobalVariableWhenRetrievingGlobalPointer<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeModuleCreateTests::
-    RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(
-        bool is_immediate) {
+    RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -176,7 +181,7 @@ void zeModuleCreateTests::
   int *typed_global_pointer = nullptr;
 
   for (auto mod : module) {
-    auto bundle = lzt::create_command_bundle(is_immediate);
+    auto bundle = lzt::create_command_bundle<Mode>();
     global_pointer = nullptr;
     ASSERT_ZE_RESULT_SUCCESS(zeModuleGetGlobalPointer(
         mod, global_name.c_str(), nullptr, &global_pointer));
@@ -186,17 +191,17 @@ void zeModuleCreateTests::
     *typed_global_pointer = expected_value;
     lzt::append_memory_copy(bundle.list, global_pointer, memory,
                             sizeof(expected_value));
-    if (!is_immediate) {
+    if constexpr (Mode == lzt::command_list_mode_t::regular) {
       lzt::close_command_list(bundle.list);
     }
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     *typed_global_pointer = ~expected_value;
-    if (!is_immediate) {
+    if constexpr (Mode == lzt::command_list_mode_t::regular) {
       lzt::reset_command_list(bundle.list);
     }
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_value));
-    if (!is_immediate) {
+    if constexpr (Mode == lzt::command_list_mode_t::regular) {
       lzt::close_command_list(bundle.list);
     }
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
@@ -210,13 +215,15 @@ void zeModuleCreateTests::
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenWritingDataToGlobalPointerThenGlobalVariableHasCorrectValue) {
-  RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(false);
+  RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenWritingDataToGlobalPointerOnImmediateCmdListThenThenGlobalVariableHasCorrectValue) {
-  RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer(true);
+  RunGivenModuleWithGlobalVariableWhenWritingDataToGlobalPointer<
+      lzt::command_list_mode_t::immediate>();
 }
 
 LZT_TEST_F(
@@ -249,9 +256,9 @@ LZT_TEST_F(
   }
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeModuleCreateTests::
-    RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(
-        bool is_immediate) {
+    RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -263,7 +270,7 @@ void zeModuleCreateTests::
 
   for (auto mod : module) {
     for (int i = 0; i < global_count; ++i) {
-      auto bundle = lzt::create_command_bundle(is_immediate);
+      auto bundle = lzt::create_command_bundle<Mode>();
       std::string global_name = "global_" + std::to_string(i);
       global_pointer = nullptr;
       ASSERT_ZE_RESULT_SUCCESS(zeModuleGetGlobalPointer(
@@ -271,7 +278,6 @@ void zeModuleCreateTests::
       EXPECT_NE(nullptr, global_pointer);
       void *memory = lzt::allocate_shared_memory(sizeof(i));
       lzt::append_memory_copy(bundle.list, memory, global_pointer, sizeof(i));
-      lzt::close_command_list(bundle.list);
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
       typed_global_pointer = static_cast<int *>(memory);
       EXPECT_EQ(i, *typed_global_pointer);
@@ -285,18 +291,20 @@ void zeModuleCreateTests::
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointersThenAllPointersPointToValidGlobalVariable) {
-  RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(false);
+  RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointersOnImmediateCmdListThenAllPointersPointToValidGlobalVariable) {
-  RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers(true);
+  RunGivenModuleWithMultipleGlobalVariablesWhenRetrievingGlobalPointers<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeModuleCreateTests::
-    RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(
-        bool is_immediate) {
+    RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -308,7 +316,7 @@ void zeModuleCreateTests::
 
   for (auto mod : module) {
     for (int i = 0; i < global_count; ++i) {
-      auto bundle = lzt::create_command_bundle(is_immediate);
+      auto bundle = lzt::create_command_bundle<Mode>();
       std::string global_name = "global_" + std::to_string(i);
       global_pointer = nullptr;
       ASSERT_ZE_RESULT_SUCCESS(zeModuleGetGlobalPointer(
@@ -318,16 +326,16 @@ void zeModuleCreateTests::
       typed_global_pointer = static_cast<int *>(memory);
       *typed_global_pointer = i + 2;
       lzt::append_memory_copy(bundle.list, global_pointer, memory, sizeof(i));
-      if (!is_immediate) {
+      if constexpr (Mode == lzt::command_list_mode_t::regular) {
         lzt::close_command_list(bundle.list);
       }
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
-      if (!is_immediate) {
+      if constexpr (Mode == lzt::command_list_mode_t::regular) {
         lzt::reset_command_list(bundle.list);
       }
       *typed_global_pointer = 0;
       lzt::append_memory_copy(bundle.list, memory, global_pointer, sizeof(i));
-      if (!is_immediate) {
+      if constexpr (Mode == lzt::command_list_mode_t::regular) {
         lzt::close_command_list(bundle.list);
       }
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
@@ -342,19 +350,20 @@ void zeModuleCreateTests::
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointersThenAllGlobalVariablesHaveCorrectValue) {
-  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(
-      false);
+  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointersOnImmediateCmdListThenGlobalVariablesHaveCorrectValue) {
-  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers(
-      true);
+  RunGivenModuleWithMultipleGlobalVariablesWhenWritingDataToGlobalPointers<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeModuleCreateTests::
-    RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(bool is_immediate) {
+    RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   std::vector<const char *> build_flag = {nullptr};
   std::vector<ze_module_handle_t> module =
@@ -367,7 +376,7 @@ void zeModuleCreateTests::
   const int expected_updated_value = 2;
 
   for (auto mod : module) {
-    auto bundle = lzt::create_command_bundle(is_immediate);
+    auto bundle = lzt::create_command_bundle<Mode>();
     global_pointer = nullptr;
     ASSERT_ZE_RESULT_SUCCESS(zeModuleGetGlobalPointer(
         mod, global_name.c_str(), nullptr, &global_pointer));
@@ -375,16 +384,13 @@ void zeModuleCreateTests::
     void *memory = lzt::allocate_shared_memory(sizeof(expected_initial_value));
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_initial_value));
-    lzt::close_command_list(bundle.list);
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_initial_value, *typed_global_pointer);
-    lzt::create_and_execute_function(device, mod, "test", 1U, nullptr,
-                                     is_immediate);
+    lzt::create_and_execute_function(device, mod, "test", 1U, nullptr, Mode);
     lzt::reset_command_list(bundle.list);
     lzt::append_memory_copy(bundle.list, memory, global_pointer,
                             sizeof(expected_updated_value));
-    lzt::close_command_list(bundle.list);
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_updated_value, *typed_global_pointer);
@@ -397,17 +403,19 @@ void zeModuleCreateTests::
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenGlobalPointerWhenUpdatingGlobalVariableOnDeviceThenGlobalPointerPointsToUpdatedVariable) {
-  RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(false);
+  RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenGlobalPointerWhenUpdatingGlobalVariableOnDeviceWithImmediateCmdListThenGlobalPointerPointsToUpdatedVariable) {
-  RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice(true);
+  RunGivenGlobalPointerWhenUpdatingGlobalVariableOnDevice<
+      lzt::command_list_mode_t::immediate>();
 }
 
-void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
   ze_result_t build_result = ZE_RESULT_ERROR_UNKNOWN;
@@ -418,8 +426,7 @@ void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest(
   ASSERT_ZE_RESULT_SUCCESS(build_result);
   std::string kernel_name = "test";
   void *buff = lzt::allocate_host_memory(sizeof(uint64_t));
-  lzt::create_and_execute_function(device, module, kernel_name, 1U, buff,
-                                   is_immediate);
+  lzt::create_and_execute_function(device, module, kernel_name, 1U, buff, Mode);
   uint64_t data = *static_cast<uint64_t *>(buff);
   const uint64_t expected_initial_value = 160;
   EXPECT_EQ(expected_initial_value, data);
@@ -451,7 +458,7 @@ void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest(
   kernel_name = "test";
   void *buff_spec = lzt::allocate_host_memory(sizeof(uint64_t));
   lzt::create_and_execute_function(device, module_spec, kernel_name, 1U,
-                                   buff_spec, is_immediate);
+                                   buff_spec, Mode);
   data = *static_cast<uint64_t *>(buff_spec);
   const uint64_t expected_updated_value = 190;
   EXPECT_EQ(expected_updated_value, data);
@@ -462,18 +469,20 @@ void zeModuleCreateTests::RunGivenValidSpecConstantsWhenCreatingModuleTest(
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenValidSpecConstantsWhenCreatingModuleThenExpectSpecConstantInKernelGetsUpdates) {
-  RunGivenValidSpecConstantsWhenCreatingModuleTest(false);
+  RunGivenValidSpecConstantsWhenCreatingModuleTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenValidSpecConstantsWhenCreatingModuleThenExpectSpecConstantInKernelGetsUpdatesOnImmediateCmdList) {
-  RunGivenValidSpecConstantsWhenCreatingModuleTest(true);
+  RunGivenValidSpecConstantsWhenCreatingModuleTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeModuleCreateTests::
-    RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(
-        bool is_immediate) {
+    RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
   uint32_t spec_constants_num = 4;
@@ -504,7 +513,7 @@ void zeModuleCreateTests::
       lzt::allocate_host_memory(sizeof(uint64_t) * spec_constants_num);
   const std::string kernel_name = "test";
   lzt::create_and_execute_function(device, module_spec, kernel_name, 1U,
-                                   buff_spec, is_immediate);
+                                   buff_spec, Mode);
   uint64_t *output = static_cast<uint64_t *>(buff_spec);
 
   for (uint32_t i = 0U; i < spec_constants_num; i++) {
@@ -520,17 +529,20 @@ void zeModuleCreateTests::
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenValidSpecConstantsWhenUsingSpecConstantCompositeThenExpectVectorCreates) {
-  RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(false);
+  RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenValidSpecConstantsWhenUsingSpecConstantCompositeThenExpectVectorCreatesOnImmediateCmdList) {
-  RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest(true);
+  RunGivenSpecConstantsUsingSpecConstantCompositeWhenCreatingModuleTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeModuleCreateTests::
-    RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(bool is_immediate) {
+    RunGivenModuleWithFunctionWhenRetrievingFunctionPointer() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   void *values = lzt::allocate_shared_memory(sizeof(int));
   std::vector<lzt::FunctionArg> args;
@@ -548,7 +560,7 @@ void zeModuleCreateTests::
       module, function_pointer_name.c_str(), &function_pointer));
   ASSERT_NE(nullptr, function_pointer);
   ze_kernel_handle_t function = lzt::create_function(module, function_name);
-  auto bundle = lzt::create_command_bundle(device, is_immediate);
+  auto bundle = lzt::create_command_bundle(device, Mode);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
@@ -574,7 +586,6 @@ void zeModuleCreateTests::
 
   EXPECT_ZE_RESULT_SUCCESS(
       zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
-  EXPECT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.list));
 
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
@@ -595,13 +606,15 @@ void zeModuleCreateTests::
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithFunctionWhenRetrievingFunctionPointerThenCallToKernelWithFunctionPointerSucceeds) {
-  RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(false);
+  RunGivenModuleWithFunctionWhenRetrievingFunctionPointer<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithFunctionWhenRetrievingFunctionPointerThenCallToKernelWithFunctionPointerOnImmediateCmdListSucceeds) {
-  RunGivenModuleWithFunctionWhenRetrievingFunctionPointer(true);
+  RunGivenModuleWithFunctionWhenRetrievingFunctionPointer<
+      lzt::command_list_mode_t::immediate>();
 }
 
 LZT_TEST_F(
@@ -696,8 +709,9 @@ LZT_TEST_F(
   stream.close();
 }
 
-void zeModuleCreateTests::RunGivenModuleCompiledWithOptimizationsWhenExecuting(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void zeModuleCreateTests::
+    RunGivenModuleCompiledWithOptimizationsWhenExecuting() {
   std::string l0_opt[3] = {"-ze-opt-level=0", "-ze-opt-level=1",
                            "-ze-opt-level=2"};
   std::string igc_opt[3] = {"-ze-opt-level=O0", "-ze-opt-level=O1",
@@ -722,7 +736,7 @@ void zeModuleCreateTests::RunGivenModuleCompiledWithOptimizationsWhenExecuting(
     std::string native(buffer.begin(), buffer.end());
     ASSERT_NE(native.find(igc_opt[i]), std::string::npos);
     auto kernel = lzt::create_function(module, "module_add_constant");
-    auto bundle = lzt::create_command_bundle(device, is_immediate);
+    auto bundle = lzt::create_command_bundle(device, Mode);
     int *input =
         (int *)lzt::allocate_shared_memory(16 * sizeof(int), 1, 0, 0, device);
     memset(input, 0, 16 * sizeof(int));
@@ -736,7 +750,6 @@ void zeModuleCreateTests::RunGivenModuleCompiledWithOptimizationsWhenExecuting(
     lzt::append_launch_function(bundle.list, kernel, &group_dim, nullptr, 0,
                                 nullptr);
 
-    lzt::close_command_list(bundle.list);
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
     EXPECT_EQ(input[0], addval);
@@ -751,13 +764,15 @@ void zeModuleCreateTests::RunGivenModuleCompiledWithOptimizationsWhenExecuting(
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleCompiledWithOptimizationsWhenExecutingThenResultIsCorrect) {
-  RunGivenModuleCompiledWithOptimizationsWhenExecuting(false);
+  RunGivenModuleCompiledWithOptimizationsWhenExecuting<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleCompiledWithOptimizationsWhenExecutingOnImmediateCmdListThenResultIsCorrect) {
-  RunGivenModuleCompiledWithOptimizationsWhenExecuting(true);
+  RunGivenModuleCompiledWithOptimizationsWhenExecuting<
+      lzt::command_list_mode_t::immediate>();
 }
 
 LZT_TEST_F(zeModuleCreateTests,
@@ -794,8 +809,8 @@ protected:
   void run_test(ze_module_handle_t mod, ze_group_count_t th_group_dim,
                 uint32_t group_size_x, uint32_t group_size_y,
                 uint32_t group_size_z, bool signal_to_host,
-                bool signal_from_host, enum TestType type, bool is_immediate,
-                bool is_shared_system) {
+                bool signal_from_host, enum TestType type,
+                bool is_shared_system, lzt::command_list_mode_t mode) {
     uint32_t num_events = std::min(group_size_x, to_u32(6));
     ze_event_handle_t event_kernel_to_host = nullptr;
     ze_kernel_handle_t function;
@@ -839,8 +854,8 @@ protected:
 
     function = lzt::create_function(mod, "module_add_constant");
     auto bundle = lzt::create_command_bundle(
-        device_, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, is_immediate);
+        device_, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, mode);
     memset(input_a, 0, 16);
 
     EXPECT_ZE_RESULT_SUCCESS(zeKernelSetArgumentValue(
@@ -931,12 +946,8 @@ protected:
     EXPECT_ZE_RESULT_SUCCESS(
         zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
 
-    EXPECT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.list));
-
-    if (!is_immediate) {
-      EXPECT_ZE_RESULT_SUCCESS(zeCommandQueueExecuteCommandLists(
-          bundle.queue, 1, &bundle.list, nullptr));
-    }
+    lzt::close_command_bundle(bundle);
+    lzt::submit_command_bundle(bundle);
 
     if (signal_from_host) {
       for (uint32_t i = 0; i < num_events; i++) {
@@ -944,11 +955,7 @@ protected:
       }
     }
 
-    if (is_immediate) {
-      lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-    } else {
-      lzt::synchronize(bundle.queue, UINT64_MAX);
-    }
+    lzt::sync_command_bundle(bundle, UINT64_MAX);
 
     if (signal_to_host) {
       EXPECT_ZE_RESULT_SUCCESS(
@@ -1194,16 +1201,18 @@ LZT_TEST_F(
 
 class zeKernelLaunchTests
     : public ::zeKernelCreateTests,
-      public ::testing::WithParamInterface<std::tuple<enum TestType, bool>> {
+      public ::testing::WithParamInterface<
+          std::tuple<enum TestType, lzt::command_list_mode_t>> {
 protected:
-  void test_kernel_execution(enum TestType test_type, const bool is_immediate,
-                             bool is_shared_system);
-  void RunGivenBufferLargerThan4GBWhenExecutingFunction(bool is_immediate);
+  void test_kernel_execution(enum TestType test_type, bool is_shared_system,
+                             lzt::command_list_mode_t mode);
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenBufferLargerThan4GBWhenExecutingFunction();
 };
 
 void zeKernelLaunchTests::test_kernel_execution(enum TestType test_type,
-                                                const bool is_immediate,
-                                                bool is_shared_system) {
+                                                bool is_shared_system,
+                                                lzt::command_list_mode_t mode) {
   ze_device_compute_properties_t dev_compute_properties = {};
   dev_compute_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
   dev_compute_properties.pNext = nullptr;
@@ -1247,8 +1256,8 @@ void zeKernelLaunchTests::test_kernel_execution(enum TestType test_type,
           for (auto sig1 : sig_to_host) {
             for (auto sig2 : sig_from_host) {
               run_test(mod, thread_group_dimensions, group_size_x, group_size_y,
-                       group_size_z, sig1, sig2, test_type, is_immediate,
-                       is_shared_system);
+                       group_size_z, sig1, sig2, test_type, is_shared_system,
+                       mode);
             }
           }
         }
@@ -1261,25 +1270,25 @@ LZT_TEST_P(
     zeKernelLaunchTests,
     GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecution) {
   enum TestType test_type = std::get<0>(GetParam());
-  const bool is_immediate = std::get<1>(GetParam());
-  if (is_immediate) {
+  const auto mode = std::get<1>(GetParam());
+  if (mode != lzt::command_list_mode_t::regular) {
     GTEST_SKIP() << "Immediate command lists are unsupported at the moment";
   }
-  test_kernel_execution(test_type, is_immediate, false);
+  test_kernel_execution(test_type, false, mode);
 }
 
 LZT_TEST_F(
     zeKernelLaunchTests,
     GivenValidFunctionWhenAppendLaunchKernelThenReturnSuccessfulAndVerifyExecutionWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  test_kernel_execution(FUNCTION, false, true);
+  test_kernel_execution(FUNCTION, true, lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeKernelLaunchTests,
     GivenValidFunctionWhenAppendLaunchKernelOnImmediateCmdListThenReturnSuccessfulAndVerifyExecutionWithSharedSystemAllocator) {
   SKIP_IF_SHARED_SYSTEM_ALLOC_UNSUPPORTED();
-  test_kernel_execution(FUNCTION, true, true);
+  test_kernel_execution(FUNCTION, true, lzt::command_list_mode_t::immediate);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1287,17 +1296,18 @@ INSTANTIATE_TEST_SUITE_P(
     zeKernelLaunchTests,
     ::testing::Combine(::testing::Values(FUNCTION, FUNCTION_INDIRECT,
                                          MULTIPLE_INDIRECT),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
-void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction() {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto context = lzt::create_context(driver);
 
-  auto bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto bundle = lzt::create_command_bundle<Mode>(
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
 
   auto module = lzt::create_module(
       context, device, "module_add.spv", ZE_MODULE_FORMAT_IL_SPIRV,
@@ -1408,7 +1418,6 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
 
   lzt::append_launch_function(bundle.list, kernel, &group_count, nullptr, 0,
                               nullptr);
-  lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   // validate
@@ -1460,19 +1469,22 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction(
 LZT_TEST_F(
     zeKernelLaunchTests,
     GivenBufferLargerThan4GBWhenExecutingFunctionThenFunctionExecutesSuccessfully) {
-  RunGivenBufferLargerThan4GBWhenExecutingFunction(false);
+  RunGivenBufferLargerThan4GBWhenExecutingFunction<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeKernelLaunchTests,
     GivenBufferLargerThan4GBWhenExecutingFunctionOnImmediateCmdListThenFunctionExecutesSuccessfully) {
-  RunGivenBufferLargerThan4GBWhenExecutingFunction(true);
+  RunGivenBufferLargerThan4GBWhenExecutingFunction<
+      lzt::command_list_mode_t::immediate>();
 }
 
 class zeKernelLaunchTestsP
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<uint32_t, uint32_t, uint32_t, bool>> {};
+          std::tuple<uint32_t, uint32_t, uint32_t, lzt::command_list_mode_t>> {
+};
 
 LZT_TEST_P(
     zeKernelLaunchTestsP,
@@ -1482,10 +1494,10 @@ LZT_TEST_P(
   auto device = lzt::get_default_device(driver);
   auto context = lzt::create_context(driver);
 
-  const bool is_immediate = std::get<3>(GetParam());
+  const auto mode = std::get<3>(GetParam());
   auto bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, mode);
   auto module = lzt::create_module(context, device, "module_add.spv",
                                    ZE_MODULE_FORMAT_IL_SPIRV, "", nullptr);
   auto kernel = lzt::create_function(module, "module_add_constant_3");
@@ -1562,7 +1574,6 @@ LZT_TEST_P(
                               nullptr);
   lzt::append_barrier(bundle.list);
   lzt::append_memory_copy(bundle.list, buffer_a, buffer_b, size);
-  lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   // validation
@@ -1597,7 +1608,9 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::Values(0, 1, 4,
                                          7), // 0, 1, base_size/2, base_size-1
                        ::testing::Values(0, 1, 4, 7),
-                       ::testing::Values(0, 1, 4, 7), ::testing::Bool()));
+                       ::testing::Values(0, 1, 4, 7),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 class zeKernelLaunchSubDeviceTests : public zeKernelLaunchTests {
 protected:
@@ -1623,15 +1636,15 @@ LZT_TEST_P(
     zeKernelLaunchSubDeviceTests,
     GivenValidFunctionWhenAppendLaunchKernelOnSubDeviceThenReturnSuccessfulAndVerifyExecution) {
   enum TestType test_type = std::get<0>(GetParam());
-  const bool is_immediate = std::get<1>(GetParam());
+  const auto mode = std::get<1>(GetParam());
   if (!device_) {
     LOG_WARNING << "No sub-device for kernel execution test";
     GTEST_SKIP();
   }
-  if (is_immediate) {
+  if (mode != lzt::command_list_mode_t::regular) {
     GTEST_SKIP() << "Immediate command lists are unsupported at the moment";
   }
-  test_kernel_execution(test_type, is_immediate, false);
+  test_kernel_execution(test_type, false, mode);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1639,7 +1652,8 @@ INSTANTIATE_TEST_SUITE_P(
     zeKernelLaunchSubDeviceTests,
     ::testing::Combine(::testing::Values(FUNCTION, FUNCTION_INDIRECT,
                                          MULTIPLE_INDIRECT),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 class ModuleGetKernelNamesTests
     : public ::testing::Test,
@@ -1687,8 +1701,9 @@ LZT_TEST(
   lzt::set_kernel_cache_config(function, ZE_CACHE_CONFIG_FLAG_LARGE_DATA);
 }
 
-void zeModuleCreateTests::RunGivenModuleWithGlobalVariableWhenWritingGlobalData(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void zeModuleCreateTests::
+    RunGivenModuleWithGlobalVariableWhenWritingGlobalData() {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   const uint32_t work_group_size = 16;
   const std::string filename = "global_data_kernel.spv";
@@ -1726,14 +1741,13 @@ void zeModuleCreateTests::RunGivenModuleWithGlobalVariableWhenWritingGlobalData(
     output[i] = 0;
   }
 
-  auto bundle = lzt::create_command_bundle(is_immediate);
+  auto bundle = lzt::create_command_bundle<Mode>();
   lzt::append_memory_copy(bundle.list, global_pointer, memory_in, data_size,
                           nullptr);
-  lzt::close_command_list(bundle.list);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   const std::string kernel_name = "test_global_data";
   lzt::create_and_execute_function(device, module, kernel_name, work_group_size,
-                                   memory_out, is_immediate);
+                                   memory_out, Mode);
 
   for (uint32_t i = 0; i < work_group_size; i++) {
     ASSERT_EQ(output[i], expected_value);
@@ -1748,13 +1762,15 @@ void zeModuleCreateTests::RunGivenModuleWithGlobalVariableWhenWritingGlobalData(
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenWritingGlobalDataThenValidKernelOutputIsReturned) {
-  RunGivenModuleWithGlobalVariableWhenWritingGlobalData(false);
+  RunGivenModuleWithGlobalVariableWhenWritingGlobalData<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeModuleCreateTests,
     GivenModuleWithGlobalVariableWhenWritingGlobalDataOnImmediateCmdListThenValidKernelOutputIsReturned) {
-  RunGivenModuleWithGlobalVariableWhenWritingGlobalData(true);
+  RunGivenModuleWithGlobalVariableWhenWritingGlobalData<
+      lzt::command_list_mode_t::immediate>();
 }
 
 } // namespace

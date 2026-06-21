@@ -45,7 +45,7 @@ struct SharedSystemRemoteDeviceTests
   }
 
   void TearDown() override {
-    if (cmd_bundle.list != nullptr) {
+    if (cmd_bundle.record_list() != nullptr) {
       lzt::destroy_command_bundle(cmd_bundle);
     }
   }
@@ -55,12 +55,12 @@ struct SharedSystemRemoteDeviceTests
     memset(memory, 0, size);
 
     if (use_madvise) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device, memory, size,
-                                ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device, memory,
+                                size, ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
     uint8_t pattern = 0xAB;
-    lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, sizeof(pattern),
-                            size, nullptr);
+    lzt::append_memory_fill(cmd_bundle.record_list(), memory, &pattern,
+                            sizeof(pattern), size, nullptr);
 
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
@@ -80,15 +80,18 @@ struct SharedSystemRemoteDeviceTests
     memset(dst_memory, 0, size);
 
     if (use_madvise_for_src) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device, src_memory,
-                                size, ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device,
+                                src_memory, size,
+                                ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
     if (use_madvise_for_dst) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device, dst_memory,
-                                size, ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device,
+                                dst_memory, size,
+                                ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
 
-    lzt::append_memory_copy(cmd_bundle.list, dst_memory, src_memory, size);
+    lzt::append_memory_copy(cmd_bundle.record_list(), dst_memory, src_memory,
+                            size);
 
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
@@ -111,12 +114,14 @@ struct SharedSystemRemoteDeviceTests
     memset(dst_memory, 0, size);
 
     if (use_madvise_for_src) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device, src_memory,
-                                size, ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device,
+                                src_memory, size,
+                                ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
     if (use_madvise_for_dst) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device, dst_memory,
-                                size, ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device,
+                                dst_memory, size,
+                                ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
 
     constexpr size_t region_size = size / 2;
@@ -128,8 +133,9 @@ struct SharedSystemRemoteDeviceTests
     region.height = 1;
     region.depth = 1;
 
-    lzt::append_memory_copy_region(cmd_bundle.list, dst_memory, &region, 1, 1,
-                                   src_memory, &region, 1, 1, nullptr);
+    lzt::append_memory_copy_region(cmd_bundle.record_list(), dst_memory,
+                                   &region, 1, 1, src_memory, &region, 1, 1,
+                                   nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     uint8_t *src_memory_as_byte = static_cast<uint8_t *>(src_memory);
@@ -168,22 +174,22 @@ struct SharedSystemRemoteDeviceTests
     auto ze_img = lzt::create_ze_image(device, img_desc);
 
     if (use_madvise_for_src) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device,
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device,
                                 png_img_src.raw_data(), size,
                                 ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
     if (use_madvise_for_dst) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device,
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device,
                                 png_img_dest.raw_data(), size,
                                 ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
 
-    lzt::append_image_copy_from_mem(cmd_bundle.list, ze_img,
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), ze_img,
                                     png_img_src.raw_data(), nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_image_copy_to_mem(cmd_bundle.list, png_img_dest.raw_data(),
-                                  ze_img, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_image_copy_to_mem(cmd_bundle.record_list(),
+                                  png_img_dest.raw_data(), ze_img, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(png_img_src, png_img_dest);
@@ -209,21 +215,23 @@ struct SharedSystemRemoteDeviceTests
     lzt::set_argument_value(kernel, 3, sizeof(size), &size);
 
     if (use_madvise_for_src) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device, src_memory,
-                                size, ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device,
+                                src_memory, size,
+                                ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
     if (use_madvise_for_dst) {
-      lzt::append_memory_advise(cmd_bundle.list, remote_device, dst_memory,
-                                size, ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
+      lzt::append_memory_advise(cmd_bundle.record_list(), remote_device,
+                                dst_memory, size,
+                                ZE_MEMORY_ADVICE_SET_PREFERRED_LOCATION);
     }
 
     ze_group_count_t group_count{1, 1, 1};
     if (use_cooperative) {
       lzt::append_launch_cooperative_function(
-          cmd_bundle.list, kernel, &group_count, nullptr, 0, nullptr);
+          cmd_bundle.record_list(), kernel, &group_count, nullptr, 0, nullptr);
     } else {
-      lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
-                                  nullptr, 0, nullptr);
+      lzt::append_launch_function(cmd_bundle.record_list(), kernel,
+                                  &group_count, nullptr, 0, nullptr);
     }
 
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);

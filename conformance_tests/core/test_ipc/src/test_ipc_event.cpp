@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -90,15 +90,15 @@ static void parent_host_signals(ze_event_handle_t hEvent) {
   lzt::signal_event_from_host(hEvent);
 }
 
+template <lzt::command_list_mode_t Mode>
 static void parent_device_signals(ze_event_handle_t hEvent,
-                                  ze_context_handle_t context,
-                                  bool isImmediate) {
+                                  ze_context_handle_t context) {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
-  auto cmdbundle = lzt::create_command_bundle(context, device, isImmediate);
+  auto cmdbundle = lzt::create_command_bundle<Mode>(context, device);
   lzt::append_signal_event(cmdbundle.list, hEvent);
-  lzt::close_command_list(cmdbundle.list);
-  lzt::execute_and_sync_command_bundle(cmdbundle, UINT64_MAX);
+  lzt::execute_and_sync_command_bundle(cmdbundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   // cleanup
   lzt::destroy_command_bundle(cmdbundle);
@@ -166,7 +166,7 @@ static void run_workload(ze_event_handle_t &timestamp_event,
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
 
-  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
 
   bipc::named_semaphore semaphore(bipc::open_only, "ipc_event_test_semaphore");
   semaphore.post();
@@ -193,9 +193,9 @@ static void run_workload(ze_event_handle_t &timestamp_event,
   lzt::destroy_command_queue(command_queue);
 }
 
+template <lzt::command_list_mode_t Mode>
 static void run_ipc_event_test(parent_test_t parent_test,
-                               child_test_t child_test, bool multi_device,
-                               bool isImmediate) {
+                               child_test_t child_test, bool multi_device) {
 #ifdef __linux__
   bipc::named_semaphore::remove("ipc_event_test_semaphore");
   bipc::named_semaphore semaphore(bipc::create_only, "ipc_event_test_semaphore",
@@ -246,9 +246,8 @@ static void run_ipc_event_test(parent_test_t parent_test,
     hEvent = lzt::create_event(ep, defaultEventDesc);
   }
   ze_ipc_event_pool_handle_t empty_handle = {};
-  shared_data_t test_data = {parent_test, child_test,  multi_device,
-                             isImmediate, 0,           0,
-                             TEST_SOCK,   empty_handle};
+  shared_data_t test_data = {parent_test, child_test, multi_device, Mode, 0,
+                             0,           TEST_SOCK,  empty_handle};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));
@@ -263,7 +262,7 @@ static void run_ipc_event_test(parent_test_t parent_test,
     parent_host_signals(hEvent);
     break;
   case PARENT_TEST_DEVICE_SIGNALS:
-    parent_device_signals(hEvent, context, isImmediate);
+    parent_device_signals<Mode>(hEvent, context);
     break;
   case PARENT_TEST_HOST_LAUNCHES_KERNEL:
     run_workload(hEvent, context, startTime, endTime,
@@ -295,9 +294,10 @@ static void run_ipc_event_test(parent_test_t parent_test,
 #endif // linux
 }
 
+template <lzt::command_list_mode_t Mode>
 static void run_ipc_event_test_opaque(parent_test_t parent_test,
                                       child_test_t child_test,
-                                      bool multi_device, bool isImmediate) {
+                                      bool multi_device) {
 #ifdef __linux__
   bipc::named_semaphore::remove("ipc_event_test_semaphore");
   bipc::named_semaphore semaphore(bipc::create_only, "ipc_event_test_semaphore",
@@ -350,9 +350,8 @@ static void run_ipc_event_test_opaque(parent_test_t parent_test,
   }
 
   // Pass IPC handle via shared memory (opaque mode)
-  shared_data_t test_data = {
-      parent_test, child_test, multi_device, isImmediate,
-      0,           0,          TEST_NONSOCK, hIpcEventPool};
+  shared_data_t test_data = {parent_test, child_test,   multi_device, Mode, 0,
+                             0,           TEST_NONSOCK, hIpcEventPool};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_event_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));
@@ -367,7 +366,7 @@ static void run_ipc_event_test_opaque(parent_test_t parent_test,
     parent_host_signals(hEvent);
     break;
   case PARENT_TEST_DEVICE_SIGNALS:
-    parent_device_signals(hEvent, context, isImmediate);
+    parent_device_signals<Mode>(hEvent, context);
     break;
   case PARENT_TEST_HOST_LAUNCHES_KERNEL:
     run_workload(hEvent, context, startTime, endTime,
@@ -402,258 +401,261 @@ static void run_ipc_event_test_opaque(parent_test_t parent_test,
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromHostPerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_HOST_READS, false,
-                     false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_HOST_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromHostPerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false,
-                     false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromHostPerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false,
-                     true);
+  run_ipc_event_test<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false,
-                     false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false,
-                     true);
+  run_ipc_event_test<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false,
-                     false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentOnImmediateCmdListThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false,
-                     true);
+  run_ipc_event_test<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenTimestampEventSignalledThenEventSetInChildFromHostPerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_LAUNCHES_KERNEL,
-                     CHILD_TEST_HOST_TIMESTAMP_READS, false, false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_LAUNCHES_KERNEL, CHILD_TEST_HOST_TIMESTAMP_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenTimestampEventSignalledThenEventSetInChildFromDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_LAUNCHES_KERNEL,
-                     CHILD_TEST_DEVICE_TIMESTAMP_READS, false, false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_LAUNCHES_KERNEL, CHILD_TEST_DEVICE_TIMESTAMP_READS,
+      false);
 }
 
 LZT_TEST(
     zeIPCEventTests,
     GivenTwoProcessesWhenMappedTimestampEventSignalledThenEventSetInChildFromHostPerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_LAUNCHES_KERNEL,
-                     CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS, false, false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_LAUNCHES_KERNEL, CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS,
+      false);
 }
 
 LZT_TEST(zeIPCEventTests,
          GivenTwoProcessesWhenEventSignaledByChildThenEventQueryStatusSuccess) {
-  run_ipc_event_test(PARENT_TEST_QUERY_EVENT_STATUS,
-                     CHILD_TEST_QUERY_EVENT_STATUS, false, false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_QUERY_EVENT_STATUS, CHILD_TEST_QUERY_EVENT_STATUS, false);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromSecondDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS, true,
-                     false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromSecondDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS, true,
-                     true);
+  run_ipc_event_test<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromMultipleDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
-                     true, false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromMultipleDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
-                     true, true);
+  run_ipc_event_test<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentThenEventSetinChildFromDevicePerspectiveForSingleThenMultipleDevice) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false,
-                     false);
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
-                     true, false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentOnImmediateCmdListThenEventSetinChildFromDevicePerspectiveForSingleThenMultipleDevice) {
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false,
-                     true);
-  run_ipc_event_test(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
-                     true, true);
+  run_ipc_event_test<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false);
+  run_ipc_event_test<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildFromMultipleDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
-                     true, false);
+  run_ipc_event_test<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTests,
     GivenTwoProcessesWhenEventSignaledByHostInParentThenEventSetinChildOnImmediateCmdListFromMultipleDevicePerspective) {
-  run_ipc_event_test(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS,
-                     true, true);
+  run_ipc_event_test<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 // Opaque IPC Event Pool Tests (handle passed via shared memory)
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleThenEventSetinChildFromHostPerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_HOST_READS,
-                            false, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_HOST_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleThenEventSetinChildFromHostPerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS,
-                            false, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromHostPerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS,
-                            false, true);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_HOST_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS,
-                            false, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS,
-                            false, true);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS,
-                            false, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS,
-                            false, true);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_DEVICE_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenTimestampEventSignalledWithOpaqueHandleThenEventSetInChildFromHostPerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_HOST_LAUNCHES_KERNEL,
-                            CHILD_TEST_HOST_TIMESTAMP_READS, false, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_LAUNCHES_KERNEL, CHILD_TEST_HOST_TIMESTAMP_READS, false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenTimestampEventSignalledWithOpaqueHandleThenEventSetInChildFromDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_HOST_LAUNCHES_KERNEL,
-                            CHILD_TEST_DEVICE_TIMESTAMP_READS, false, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_LAUNCHES_KERNEL, CHILD_TEST_DEVICE_TIMESTAMP_READS,
+      false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenMappedTimestampEventSignalledWithOpaqueHandleThenEventSetInChildFromHostPerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_HOST_LAUNCHES_KERNEL,
-                            CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS, false,
-                            false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_LAUNCHES_KERNEL, CHILD_TEST_HOST_MAPPED_TIMESTAMP_READS,
+      false);
 }
 
 LZT_TEST(
     zeIPCEventTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByChildWithOpaqueHandleThenEventQueryStatusSuccess) {
-  run_ipc_event_test_opaque(PARENT_TEST_QUERY_EVENT_STATUS,
-                            CHILD_TEST_QUERY_EVENT_STATUS, false, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_QUERY_EVENT_STATUS, CHILD_TEST_QUERY_EVENT_STATUS, false);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleThenEventSetinChildFromSecondDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS,
-                            CHILD_TEST_DEVICE2_READS, true, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromSecondDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS,
-                            CHILD_TEST_DEVICE2_READS, true, true);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_DEVICE2_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleThenEventSetinChildFromMultipleDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS,
-                            CHILD_TEST_MULTI_DEVICE_READS, true, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByDeviceInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromMultipleDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_DEVICE_SIGNALS,
-                            CHILD_TEST_MULTI_DEVICE_READS, true, true);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_DEVICE_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleThenEventSetinChildFromMultipleDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS,
-                            CHILD_TEST_MULTI_DEVICE_READS, true, false);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::regular>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 LZT_TEST(
     zeIPCEventMultipleDeviceTestsOpaqueHandle,
     GivenTwoProcessesWhenEventSignaledByHostInParentWithOpaqueHandleOnImmediateCmdListThenEventSetinChildFromMultipleDevicePerspective) {
-  run_ipc_event_test_opaque(PARENT_TEST_HOST_SIGNALS,
-                            CHILD_TEST_MULTI_DEVICE_READS, true, true);
+  run_ipc_event_test_opaque<lzt::command_list_mode_t::immediate>(
+      PARENT_TEST_HOST_SIGNALS, CHILD_TEST_MULTI_DEVICE_READS, true);
 }
 
 } // namespace

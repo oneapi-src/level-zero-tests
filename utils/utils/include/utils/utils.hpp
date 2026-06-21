@@ -123,6 +123,24 @@ template <typename T> size_t size_in_bytes(const std::vector<T> &v) {
   return sizeof(T) * v.size();
 }
 
+void create_and_execute_function(ze_device_handle_t device,
+                                 ze_module_handle_t module,
+                                 std::string func_name, uint32_t group_size,
+                                 void *arg, command_list_mode_t mode);
+
+struct FunctionArg {
+  size_t arg_size;
+  void *arg_value;
+};
+
+// Group size can only be set in x dimension
+// Accepts arbitrary amounts of function arguments
+void create_and_execute_function(ze_device_handle_t device,
+                                 ze_module_handle_t module,
+                                 std::string func_name, uint32_t group_size,
+                                 const std::vector<FunctionArg> &args,
+                                 command_list_mode_t mode);
+
 extern std::unique_ptr<std::map<std::string, std::vector<uint8_t>>>
     binary_file_map;
 

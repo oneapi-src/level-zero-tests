@@ -84,8 +84,8 @@ LZT_TEST_P(KernelCopyTests,
       group_count.groupCountY = 1;
       group_count.groupCountZ = 1;
 
-      lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
-                                  nullptr, 0, nullptr);
+      lzt::append_launch_function(cmd_bundle.record_list(), kernel,
+                                  &group_count, nullptr, 0, nullptr);
 
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
@@ -176,8 +176,8 @@ LZT_TEST_P(KernelCopyTests,
       group_count.groupCountY = 1;
       group_count.groupCountZ = 1;
 
-      lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
-                                  nullptr, 0, nullptr);
+      lzt::append_launch_function(cmd_bundle.record_list(), kernel,
+                                  &group_count, nullptr, 0, nullptr);
 
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
@@ -459,10 +459,10 @@ protected:
     // copy input data to src_data
     if (src_mem_type == ZE_MEMORY_TYPE_DEVICE) {
       for (uint32_t i = 0U; i < size; i++) {
-        lzt::append_memory_copy(cmd_bundle.list, src_data_ptr_array[i],
+        lzt::append_memory_copy(cmd_bundle.record_list(), src_data_ptr_array[i],
                                 input_data[i].data, num_bytes, nullptr);
       }
-      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     } else {
       for (uint32_t i = 0U; i < size; i++) {
         memcpy(src_data_ptr_array[i], input_data[i].data, num_bytes);
@@ -475,9 +475,10 @@ protected:
       for (uint32_t i = 0U; i < size; i++) {
         src_data_host_ptr[i].data = src_data_ptr_array[i];
       }
-      lzt::append_memory_copy(cmd_bundle.list, src_data, src_data_host_ptr,
-                              size * sizeof(copy_data), nullptr);
-      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+      lzt::append_memory_copy(cmd_bundle.record_list(), src_data,
+                              src_data_host_ptr, size * sizeof(copy_data),
+                              nullptr);
+      lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     } else {
       for (uint32_t i = 0U; i < size; i++) {
         src_data[i].data = src_data_ptr_array[i];
@@ -490,9 +491,10 @@ protected:
       for (uint32_t i = 0U; i < size; i++) {
         dst_data_host_ptr[i].data = dst_data_ptr_array[i];
       }
-      lzt::append_memory_copy(cmd_bundle.list, dst_data, dst_data_host_ptr,
-                              size * sizeof(copy_data), nullptr);
-      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+      lzt::append_memory_copy(cmd_bundle.record_list(), dst_data,
+                              dst_data_host_ptr, size * sizeof(copy_data),
+                              nullptr);
+      lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     } else {
       for (uint32_t i = 0U; i < size; i++) {
         dst_data[i].data = dst_data_ptr_array[i];
@@ -532,17 +534,17 @@ protected:
     group_count.groupCountY = 1;
     group_count.groupCountZ = 1;
 
-    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
-                                0, nullptr);
+    lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                                nullptr, 0, nullptr);
 
     // copy dst_data to output_data for device memory
     if (dst_mem_type == ZE_MEMORY_TYPE_DEVICE) {
-      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
       for (uint32_t i = 0U; i < size; i++) {
-        lzt::append_memory_copy(cmd_bundle.list, output_data[i].data,
+        lzt::append_memory_copy(cmd_bundle.record_list(), output_data[i].data,
                                 dst_data_ptr_array[i], num_bytes, nullptr);
       }
-      lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     }
 
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);

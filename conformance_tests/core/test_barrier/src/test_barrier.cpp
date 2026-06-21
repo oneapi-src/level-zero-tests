@@ -391,7 +391,7 @@ void RunAppendingBarrierWaitsForEventsWhenHostAndSendSignals(
   for (uint32_t i = 2; i < num_events; i++) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(events_to_barrier[i]));
   }
-  lzt::sync_command_bundle(bundle, UINT64_MAX);
+  lzt::sync_command_bundle(bundle, std::numeric_limits<uint64_t>::max());
   for (uint32_t i = 0; i < num_events; i++) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events_to_barrier[i]));
   }
@@ -505,7 +505,7 @@ void RunAppendingMemoryRangesBarrierWaitsForEventsWhenHostAndSendSignals(
   for (uint32_t i = 2; i < num_events; i++) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostSignal(events_to_barrier[i]));
   }
-  lzt::sync_command_bundle(bundle, UINT64_MAX);
+  lzt::sync_command_bundle(bundle, std::numeric_limits<uint64_t>::max());
   for (uint32_t i = 0; i < num_events; i++) {
     EXPECT_ZE_RESULT_SUCCESS(zeEventQueryStatus(events_to_barrier[i]));
   }

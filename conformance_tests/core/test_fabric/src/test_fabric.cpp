@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022-2024 Intel Corporation
+ * Copyright (C) 2022-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -577,7 +577,7 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
                                       ze_fabric_vertex_handle_t &vertex_b,
                                       uint32_t copy_size,
                                       ze_memory_type_t usm_type,
-                                      bool is_immediate) {
+                                      lzt::command_list_mode_t mode) {
 
   ze_device_handle_t device_a{}, device_b{};
   ASSERT_ZE_RESULT_SUCCESS(zeFabricVertexGetDeviceExp(vertex_a, &device_a));
@@ -599,8 +599,8 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
            << " device: " << device_a << ") to (vertex: " << vertex_b
            << " device: " << device_b << ")" << std::endl;
 
-  auto cmd_bundle_a = lzt::create_command_bundle(device_a, is_immediate);
-  auto cmd_bundle_b = lzt::create_command_bundle(device_b, is_immediate);
+  auto cmd_bundle_a = lzt::create_command_bundle(device_a, mode);
+  auto cmd_bundle_b = lzt::create_command_bundle(device_b, mode);
 
   const size_t size = copy_size;
   void *memory_a = nullptr;
@@ -627,28 +627,29 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
   const int pattern_size = 1;
 
   // Fill with default pattern for both devices
-  lzt::append_memory_fill(cmd_bundle_a.list, memory_a, &pattern_a, pattern_size,
-                          size, nullptr);
-  lzt::close_command_list(cmd_bundle_a.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle_a, UINT64_MAX);
-  lzt::reset_command_list(cmd_bundle_a.list);
+  lzt::append_memory_fill(cmd_bundle_a.record_list(), memory_a, &pattern_a,
+                          pattern_size, size, nullptr);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_a,
+                                       std::numeric_limits<uint64_t>::max());
+  lzt::reset_command_list(cmd_bundle_a.record_list());
 
-  lzt::append_memory_fill(cmd_bundle_b.list, memory_b, &pattern_b, pattern_size,
-                          size, nullptr);
-  lzt::close_command_list(cmd_bundle_b.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle_b, UINT64_MAX);
-  lzt::reset_command_list(cmd_bundle_b.list);
+  lzt::append_memory_fill(cmd_bundle_b.record_list(), memory_b, &pattern_b,
+                          pattern_size, size, nullptr);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_b,
+                                       std::numeric_limits<uint64_t>::max());
+  lzt::reset_command_list(cmd_bundle_b.record_list());
 
   // Do memory copy between devices
-  lzt::append_memory_copy(cmd_bundle_a.list, memory_b, memory_a, size);
-  lzt::close_command_list(cmd_bundle_a.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle_a, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle_a.record_list(), memory_b, memory_a, size);
+  lzt::execute_and_sync_command_bundle(cmd_bundle_a,
+                                       std::numeric_limits<uint64_t>::max());
 
   // If using device USM, copy to the host to verify
   if (usm_type == ZE_MEMORY_TYPE_DEVICE) {
-    lzt::append_memory_copy(cmd_bundle_b.list, memory_c, memory_b, size);
-    lzt::close_command_list(cmd_bundle_b.list);
-    lzt::execute_and_sync_command_bundle(cmd_bundle_b, UINT64_MAX);
+    lzt::append_memory_copy(cmd_bundle_b.record_list(), memory_c, memory_b,
+                            size);
+    lzt::execute_and_sync_command_bundle(cmd_bundle_b,
+                                         std::numeric_limits<uint64_t>::max());
   }
 
   for (uint32_t i = 0; i < size; i++) {
@@ -671,7 +672,7 @@ static void fabric_vertex_copy_memory(ze_fabric_vertex_handle_t &vertex_a,
 class zeFabricEdgeCopyTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<uint32_t, ze_memory_type_t, bool>> {};
+          std::tuple<uint32_t, ze_memory_type_t, lzt::command_list_mode_t>> {};
 
 LZT_TEST_P(zeFabricEdgeCopyTests,
            GivenValidFabricEdgesThenCopyIsSuccessfulBetweenThem) {
@@ -685,15 +686,14 @@ LZT_TEST_P(zeFabricEdgeCopyTests,
   uint32_t copy_size = std::get<0>(GetParam());
   LOG_DEBUG << "Test Copy Size " << copy_size;
   ze_memory_type_t usm_type = std::get<1>(GetParam());
-  bool is_immediate = std::get<2>(GetParam());
+  const auto mode = std::get<2>(GetParam());
 
   for (auto &edge : edges) {
     ze_fabric_vertex_handle_t vertex_a = nullptr, vertex_b = nullptr;
     ASSERT_ZE_RESULT_SUCCESS(
         zeFabricEdgeGetVerticesExp(edge, &vertex_a, &vertex_b));
 
-    fabric_vertex_copy_memory(vertex_a, vertex_b, copy_size, usm_type,
-                              is_immediate);
+    fabric_vertex_copy_memory(vertex_a, vertex_b, copy_size, usm_type, mode);
   }
 }
 
@@ -703,6 +703,7 @@ INSTANTIATE_TEST_SUITE_P(
                                          1u * 1024u, 64u, 1u),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE,
                                          ZE_MEMORY_TYPE_SHARED),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 } // namespace

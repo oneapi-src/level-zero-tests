@@ -89,30 +89,12 @@ ze_kernel_handle_t create_function(ze_module_handle_t module,
 void destroy_function(ze_kernel_handle_t function);
 ze_kernel_properties_t get_kernel_properties(ze_kernel_handle_t kernel);
 
-// This function is useful when only a single argument is needed.
-void create_and_execute_function(ze_device_handle_t device,
-                                 ze_module_handle_t module,
-                                 std::string func_name, uint32_t group_size,
-                                 void *arg, bool is_immediate);
 void kernel_set_indirect_access(ze_kernel_handle_t hKernel,
                                 ze_kernel_indirect_access_flags_t flags);
 void kernel_get_indirect_access(ze_kernel_handle_t hKernel,
                                 ze_kernel_indirect_access_flags_t *flags);
 std::string kernel_get_name_string(ze_kernel_handle_t hKernel);
 std::string kernel_get_source_attribute(ze_kernel_handle_t hKernel);
-
-struct FunctionArg {
-  size_t arg_size;
-  void *arg_value;
-};
-
-// Group size can only be set in x dimension
-// Accepts arbitrary amounts of function arguments
-void create_and_execute_function(ze_device_handle_t device,
-                                 ze_module_handle_t module,
-                                 std::string func_name, uint32_t group_size,
-                                 const std::vector<FunctionArg> &args,
-                                 bool is_immediate);
 
 #ifdef ZE_KERNEL_SCHEDULING_HINTS_EXP_NAME
 void set_kernel_scheduling_hint(ze_kernel_handle_t kernel,

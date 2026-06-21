@@ -44,7 +44,7 @@ class zeDeviceCreateSamplerTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
           std::tuple<ze_sampler_address_mode_t, ze_sampler_filter_mode_t,
-                     ze_bool_t, bool>> {};
+                     ze_bool_t, lzt::command_list_mode_t>> {};
 
 LZT_TEST_P(
     zeDeviceCreateSamplerTests,
@@ -71,14 +71,14 @@ LZT_TEST_P(
   EXPECT_ZE_RESULT_SUCCESS(zeSamplerDestroy(sampler));
 }
 
-INSTANTIATE_TEST_SUITE_P(SamplerCreationCombinations,
-                         zeDeviceCreateSamplerTests,
-                         ::testing::Combine(sampler_address_modes,
-                                            sampler_filter_modes,
-                                            ::testing::Values(true, false),
-                                            ::testing::Values(false)));
+INSTANTIATE_TEST_SUITE_P(
+    SamplerCreationCombinations, zeDeviceCreateSamplerTests,
+    ::testing::Combine(sampler_address_modes, sampler_filter_modes,
+                       ::testing::Values(true, false),
+                       ::testing::Values(lzt::command_list_mode_t::regular)));
 
-void RunGivenSamplerWhenPassingAsFunctionArgumentTest(bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void RunGivenSamplerWhenPassingAsFunctionArgumentTest() {
   if (!(sampler_support())) {
     LOG_INFO << "device does not support sampler, cannot run test";
     GTEST_SKIP();
@@ -98,20 +98,22 @@ void RunGivenSamplerWhenPassingAsFunctionArgumentTest(bool is_immediate) {
   args.push_back(arg);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name, 1U, args, is_immediate);
+                                   module, func_name, 1U, args, Mode);
   lzt::destroy_module(module);
   lzt::destroy_sampler(sampler);
 }
 
 LZT_TEST(zeSamplerTests,
          GivenSamplerWhenPassingAsFunctionArgumentThenSuccessIsReturned) {
-  RunGivenSamplerWhenPassingAsFunctionArgumentTest(false);
+  RunGivenSamplerWhenPassingAsFunctionArgumentTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST(
     zeSamplerTests,
     GivenSamplerWhenPassingAsFunctionArgumentOnImmediateCmdListThenSuccessIsReturned) {
-  RunGivenSamplerWhenPassingAsFunctionArgumentTest(true);
+  RunGivenSamplerWhenPassingAsFunctionArgumentTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 static ze_image_handle_t create_sampler_image(lzt::ImagePNG32Bit png_image,
@@ -162,7 +164,7 @@ LZT_TEST_P(
   auto address_mode = std::get<0>(GetParam());
   auto filter_mode = std::get<1>(GetParam());
   auto normalize = std::get<2>(GetParam());
-  auto is_immediate = std::get<3>(GetParam());
+  auto mode = std::get<3>(GetParam());
 
   auto sampler = lzt::create_sampler(address_mode, filter_mode, normalize);
 
@@ -243,11 +245,11 @@ LZT_TEST_P(
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
                                    module, func_name_inhost, 1U, args_inhost,
-                                   is_immediate);
+                                   mode);
 
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
                                    module, func_name_inkernel, 1U,
-                                   args_inkernel, is_immediate);
+                                   args_inkernel, mode);
 
   lzt::copy_image_to_mem(output_xeimage_host, output_inhost);
   lzt::copy_image_to_mem(output_xeimage_kernel, output_inkernel);
@@ -263,10 +265,11 @@ LZT_TEST_P(
   lzt::destroy_ze_image(output_xeimage_kernel);
 }
 
-INSTANTIATE_TEST_SUITE_P(SamplerKernelExecuteTests, zeDeviceExecuteSamplerTests,
-                         ::testing::Combine(sampler_address_modes,
-                                            sampler_filter_modes,
-                                            ::testing::Values(true, false),
-                                            ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(
+    SamplerKernelExecuteTests, zeDeviceExecuteSamplerTests,
+    ::testing::Combine(sampler_address_modes, sampler_filter_modes,
+                       ::testing::Values(true, false),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 } // namespace

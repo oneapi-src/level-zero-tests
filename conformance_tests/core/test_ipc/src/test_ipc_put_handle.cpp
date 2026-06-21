@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023-2024 Intel Corporation
+ * Copyright (C) 2023-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -32,10 +32,11 @@ namespace {
 
 namespace bipc = boost::interprocess;
 
+template <lzt::command_list_mode_t Mode>
 static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
                                     uint32_t size, bool reserved,
-                                    bool getFromFd, ze_ipc_memory_flags_t flags,
-                                    bool is_immediate) {
+                                    bool getFromFd,
+                                    ze_ipc_memory_flags_t flags) {
   ze_result_t result = zeInit(0);
   if (result != ZE_RESULT_SUCCESS) {
     throw std::runtime_error("Parent zeInit failed: " +
@@ -48,7 +49,7 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
   // launch child
   boost::process::child c("./ipc/test_ipc_put_handle_helper");
 
-  shared_data_t test_data = {test_type, size, flags, is_immediate};
+  shared_data_t test_data = {test_type, size, flags, Mode};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_put_handle_test",
                                  bipc::read_write);
   shm.truncate(sizeof(shared_data_t));
@@ -58,7 +59,7 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
-  auto cmd_bundle = lzt::create_command_bundle(context, device, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(context, device);
   ze_ipc_mem_handle_t ipc_handle = {};
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
@@ -73,9 +74,9 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
   } else {
     memory = lzt::allocate_device_memory(size, 1, 0, context);
   }
-  lzt::append_memory_copy(cmd_bundle.list, memory, buffer, size);
-  lzt::close_command_list(cmd_bundle.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+  lzt::append_memory_copy(cmd_bundle.record_list(), memory, buffer, size);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
 
   if (getFromFd) {
     // set up request to export the external memory handle
@@ -117,141 +118,159 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_DEVICE_ACCESS, 4096, false, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_DEVICE_ACCESS, 4096, false, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_DEVICE_ACCESS, 4096, false, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_DEVICE_ACCESS, 4096, false, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_DEVICE_ACCESS, 4096, true, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_DEVICE_ACCESS, 4096, true, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_DEVICE_ACCESS, 4096, true, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_DEVICE_ACCESS, 4096, true, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_DEVICE_ACCESS, 4096, false, true,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_DEVICE_ACCESS, 4096, false, true,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_DEVICE_ACCESS, 4096, false, true,
+      ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0MemoryAllocatedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, false, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_DEVICE_ACCESS, 4096, false, true,
+      ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_DEVICE_ACCESS, 4096, true, true,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_DEVICE_ACCESS, 4096, true, true,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_CACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_DEVICE_ACCESS, 4096, true, true, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessTest,
     GivenL0PhysicalMemoryAllocatedAndReservedInParentProcessBiasCachedWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_DEVICE_ACCESS, 4096, true, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_CACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_DEVICE_ACCESS, 4096, true, true, ZE_IPC_MEMORY_FLAG_BIAS_CACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_SUBDEVICE_ACCESS, 4096, true, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_SUBDEVICE_ACCESS, 4096, true, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithPutIpcHandle) {
-  run_ipc_put_handle_test(TEST_PUT_SUBDEVICE_ACCESS, 4096, true, false,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_SUBDEVICE_ACCESS, 4096, true, false,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_SUBDEVICE_ACCESS, 4096, true, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, false);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::regular>(
+      TEST_PUT_SUBDEVICE_ACCESS, 4096, true, true,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 LZT_TEST(
     PutIpcMemoryAccessSubDeviceTest,
     GivenL0PhysicalMemoryAllocatedReservedInParentProcessWhenUsingL0IPCOnImmediateCmdListThenChildProcessReadsMemoryCorrectlyUsingSubDeviceQueueWithGetHandleFromFd) {
-  run_ipc_put_handle_test(TEST_PUT_SUBDEVICE_ACCESS, 4096, true, true,
-                          ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED, true);
+  run_ipc_put_handle_test<lzt::command_list_mode_t::immediate>(
+      TEST_PUT_SUBDEVICE_ACCESS, 4096, true, true,
+      ZE_IPC_MEMORY_FLAG_BIAS_UNCACHED);
 }
 
 #endif // __linux__

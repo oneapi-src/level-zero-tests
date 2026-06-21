@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 
+#include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
@@ -98,23 +99,23 @@ protected:
   ze_event_pool_handle_t ep;
   bool skip = false;
 
-  void RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(
-      bool is_immediate);
-  void RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(
-      bool is_immediate);
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest();
 };
 
+template <lzt::command_list_mode_t Mode>
 void P2PImageCopy::
-    RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(
-        bool is_immediate) {
+    RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest() {
   if (skip)
     return;
-  auto cmd_bundle_dev0 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
-  auto cmd_bundle_dev1 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle_dev0 = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
+  auto cmd_bundle_dev1 = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), dev1, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -134,13 +135,11 @@ void P2PImageCopy::
   // copy to dev 1
   lzt::append_image_copy(cmd_bundle_dev0.list, img_dev1, img_dev0, event2);
   lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event2);
-  lzt::close_command_list(cmd_bundle_dev0.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev0, UINT64_MAX);
 
   // Copyback to host
   lzt::append_image_copy_to_mem(cmd_bundle_dev1.list, output_png.raw_data(),
                                 img_dev1, nullptr);
-  lzt::close_command_list(cmd_bundle_dev1.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev1, UINT64_MAX);
 
   // compare results
@@ -155,26 +154,28 @@ void P2PImageCopy::
 LZT_TEST_F(
     P2PImageCopy,
     GivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceThenResultIsCorrect) {
-  RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(false);
+  RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     P2PImageCopy,
     GivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceUsingImmediateCmdListThenResultIsCorrect) {
-  RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest(true);
+  RunGivenTwoDevicesAndImageOnDeviceWhenCopiedToOtherDeviceTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void P2PImageCopy::
-    RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(
-        bool is_immediate) {
+    RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest() {
   if (skip)
     return;
-  auto cmd_bundle_dev0 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
-  auto cmd_bundle_dev1 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+  auto cmd_bundle_dev0 = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
+  auto cmd_bundle_dev1 = lzt::create_command_bundle<Mode>(
+      lzt::get_default_context(), dev1, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -202,13 +203,11 @@ void P2PImageCopy::
                                 &region, &region, event3);
   lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event3);
 
-  lzt::close_command_list(cmd_bundle_dev0.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev0, UINT64_MAX);
 
   // Copyback to host
   lzt::append_image_copy_to_mem(cmd_bundle_dev1.list, output_png.raw_data(),
                                 img_dev1, nullptr);
-  lzt::close_command_list(cmd_bundle_dev1.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev1, UINT64_MAX);
 
   // compare results
@@ -224,13 +223,15 @@ void P2PImageCopy::
 LZT_TEST_F(
     P2PImageCopy,
     GivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceThenResultIsCorrect) {
-  RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(false);
+  RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     P2PImageCopy,
     GivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceUsingImmediateCmdListThenResultIsCorrect) {
-  RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest(true);
+  RunGivenTwoDevicesAndImageOnDeviceWhenRegionCopiedToOtherDeviceTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 class P2PImageCopyMemory
@@ -244,12 +245,14 @@ LZT_TEST_P(
   if (skip)
     return;
   bool is_immediate = std::get<1>(GetParam());
+  auto mode = is_immediate ? lzt::command_list_mode_t::immediate
+                           : lzt::command_list_mode_t::regular;
   auto cmd_bundle_dev0 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
   auto cmd_bundle_dev1 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::get_default_context(), dev1, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -283,13 +286,11 @@ LZT_TEST_P(
   lzt::append_image_copy_to_mem(cmd_bundle_dev0.list, target_mem, img_dev0,
                                 event2);
   lzt::append_wait_on_events(cmd_bundle_dev0.list, 1, &event2);
-  lzt::close_command_list(cmd_bundle_dev0.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev0, UINT64_MAX);
 
   // Copyback to host
   lzt::append_memory_copy(cmd_bundle_dev1.list, output_png.raw_data(),
                           target_mem, mem_size);
-  lzt::close_command_list(cmd_bundle_dev1.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev1, UINT64_MAX);
 
   // compare results
@@ -308,12 +309,14 @@ LZT_TEST_P(
   if (skip)
     return;
   bool is_immediate = std::get<1>(GetParam());
+  auto mode = is_immediate ? lzt::command_list_mode_t::immediate
+                           : lzt::command_list_mode_t::regular;
   auto cmd_bundle_dev0 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
   auto cmd_bundle_dev1 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::get_default_context(), dev1, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -339,7 +342,6 @@ LZT_TEST_P(
   // on dev1, load image to dev1 memory
   lzt::append_memory_copy(cmd_bundle_dev1.list, target_mem,
                           input_png.raw_data(), mem_size);
-  lzt::close_command_list(cmd_bundle_dev1.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev1, UINT64_MAX);
 
   // on dev0, copy from dev1 memory to dev0 image
@@ -350,7 +352,6 @@ LZT_TEST_P(
   // Copyback to host
   lzt::append_image_copy_to_mem(cmd_bundle_dev0.list, output_png.raw_data(),
                                 img_dev0, nullptr);
-  lzt::close_command_list(cmd_bundle_dev0.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev0, UINT64_MAX);
 
   // compare results
@@ -368,12 +369,14 @@ LZT_TEST_P(
   if (skip)
     return;
   bool is_immediate = std::get<1>(GetParam());
+  auto mode = is_immediate ? lzt::command_list_mode_t::immediate
+                           : lzt::command_list_mode_t::regular;
   auto cmd_bundle_dev0 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
   auto cmd_bundle_dev1 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::get_default_context(), dev1, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -399,7 +402,6 @@ LZT_TEST_P(
   // Load image to dev0
   lzt::append_image_copy_from_mem(cmd_bundle_dev0.list, img_dev0,
                                   input_png.raw_data(), nullptr);
-  lzt::close_command_list(cmd_bundle_dev0.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev0, UINT64_MAX);
 
   // on dev1, copy dev0 image to dev1 memory
@@ -410,7 +412,6 @@ LZT_TEST_P(
   // Copyback to host
   lzt::append_memory_copy(cmd_bundle_dev1.list, output_png.raw_data(),
                           target_mem, mem_size);
-  lzt::close_command_list(cmd_bundle_dev1.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev1, UINT64_MAX);
 
   // compare results
@@ -428,12 +429,14 @@ LZT_TEST_P(
   if (skip)
     return;
   bool is_immediate = std::get<1>(GetParam());
+  auto mode = is_immediate ? lzt::command_list_mode_t::immediate
+                           : lzt::command_list_mode_t::regular;
   auto cmd_bundle_dev0 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev0, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
   auto cmd_bundle_dev1 = lzt::create_command_bundle(
-      lzt::get_default_context(), dev1, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      lzt::get_default_context(), dev1, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   ze_event_desc_t event_desc = {};
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -467,13 +470,11 @@ LZT_TEST_P(
   lzt::append_image_copy_from_mem(cmd_bundle_dev1.list, img_dev0, target_mem,
                                   event2);
   lzt::append_wait_on_events(cmd_bundle_dev1.list, 1, &event2);
-  lzt::close_command_list(cmd_bundle_dev1.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev1, UINT64_MAX);
 
   // Copyback to host
   lzt::append_image_copy_to_mem(cmd_bundle_dev0.list, output_png.raw_data(),
                                 img_dev0, nullptr);
-  lzt::close_command_list(cmd_bundle_dev0.list);
   lzt::execute_and_sync_command_bundle(cmd_bundle_dev0, UINT64_MAX);
 
   // compare results

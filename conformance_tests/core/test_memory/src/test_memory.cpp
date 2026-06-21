@@ -231,7 +231,6 @@ public:
 
     lzt::append_memory_fill(bundle.list, memory, &pattern2, 1, size, nullptr);
 
-    lzt::close_command_list(bundle.list);
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
     for (size_t i = 0; i < size; i++) {
@@ -904,20 +903,20 @@ protected:
   void TearDown() override { delete[] memory_; }
   const size_t size_ = 4 * 1024;
   uint8_t *memory_ = nullptr;
-  lzt::zeCommandBundle cmd_bundle_;
   bool systemMemSupported;
 
-  void RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest(
-      bool is_immediate);
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest();
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest();
+  template <lzt::command_list_mode_t Mode>
   void
-  RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest(bool is_immediate);
-  void RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly(
-      bool is_immediate);
+  RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly();
 };
 
+template <lzt::command_list_mode_t Mode>
 void zeHostSystemMemoryDeviceTests::
-    RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest(
-        bool is_immediate) {
+    RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest() {
   if (!systemMemSupported) {
     FAIL() << "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE - Device does not support "
               "system memory";
@@ -939,7 +938,7 @@ void zeHostSystemMemoryDeviceTests::
   arg.arg_value = &size;
   args.push_back(arg);
   lzt::create_and_execute_function(lzt::zeDevice::get_instance()->get_device(),
-                                   module, func_name, 1U, args, is_immediate);
+                                   module, func_name, 1U, args, Mode);
   lzt::validate_data_pattern(memory_, size_, -1);
   lzt::destroy_module(module);
 }
@@ -947,79 +946,82 @@ void zeHostSystemMemoryDeviceTests::
 LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenAccessingMemoryOnDeviceThenCorrectDataIsRead) {
-  RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest(false);
+  RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenAccessingMemoryOnDeviceOnImmediateCmdListThenCorrectDataIsRead) {
-  RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest(true);
+  RunGivenHostSystemAllocationWhenAccessingMemoryOnDeviceTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeHostSystemMemoryDeviceTests::
-    RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest(
-        bool is_immediate) {
+    RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest() {
   if (!systemMemSupported) {
     FAIL() << "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE - Device does not support "
               "system memory";
   }
-  cmd_bundle_ = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   lzt::write_data_pattern(memory_, size_, 1);
   uint8_t *other_system_memory = new uint8_t[size_]();
 
-  lzt::append_memory_copy(cmd_bundle_.list, other_system_memory, memory_, size_,
+  lzt::append_memory_copy(cmd_bundle.list, other_system_memory, memory_, size_,
                           nullptr);
-  lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
-  lzt::close_command_list(cmd_bundle_.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle_, UINT64_MAX);
+  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::validate_data_pattern(other_system_memory, size_, 1);
-  lzt::destroy_command_bundle(cmd_bundle_);
+  lzt::destroy_command_bundle(cmd_bundle);
   delete[] other_system_memory;
 }
 
 LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenCopyingMemoryOnDeviceThenMemoryCopiedCorrectly) {
-  RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest(false);
+  RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemAllocationWhenCopyingMemoryOnDeviceOnImmediateCmdListThenMemoryCopiedCorrectly) {
-  RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest(true);
+  RunGivenHostSystemAllocationWhenCopyingMemoryOnDeviceTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
+template <lzt::command_list_mode_t Mode>
 void zeHostSystemMemoryDeviceTests::
-    RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly(
-        bool is_immediate) {
+    RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly() {
   if (!systemMemSupported) {
     FAIL() << "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE - Device does not support "
               "system memory";
   }
-  cmd_bundle_ = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle<Mode>();
   const uint8_t value = 0x55;
   lzt::write_data_pattern(memory_, size_, 1);
-  lzt::append_memory_set(cmd_bundle_.list, memory_, &value, size_);
-  lzt::append_barrier(cmd_bundle_.list, nullptr, 0, nullptr);
-  lzt::close_command_list(cmd_bundle_.list);
-  lzt::execute_and_sync_command_bundle(cmd_bundle_, UINT64_MAX);
+  lzt::append_memory_set(cmd_bundle.list, memory_, &value, size_);
+  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   for (unsigned int ui = 0; ui < size_; ui++) {
     EXPECT_EQ(value, static_cast<uint8_t *>(memory_)[ui]);
   }
-  lzt::destroy_command_bundle(cmd_bundle_);
+  lzt::destroy_command_bundle(cmd_bundle);
 }
 
 LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly) {
-  RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly(
-      false);
+  RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeHostSystemMemoryDeviceTests,
     GivenHostSystemMemoryWhenSettingMemoryOnDeviceOnImmediateCmdListThenMemorySetCorrectly) {
-  RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly(true);
+  RunGivenHostSystemMemoryWhenSettingMemoryOnDeviceThenMemorySetCorrectly<
+      lzt::command_list_mode_t::immediate>();
 }
 
 } // namespace
