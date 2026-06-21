@@ -23,3 +23,21 @@ jobs:
         concurrency_key: ${{ github.ref }}
         github_token: ${{ secrets.REPO_TOKEN }}
         is_master: ${{ github.ref_name == 'master' && 'true' || 'false' }}
+
+  trigger-code-review:
+    runs-on: [self-hosted, gfx-small, Linux]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: infra
+    - uses: ./.github/actions/trigger-infra-ci
+      with:
+        workflow_file: code-review.yml
+        status_context: 'Code Review'
+        status_prefix: 'code-review'
+        branch: infra
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        concurrency_key: ${{ github.ref }}
+        github_token: ${{ secrets.REPO_TOKEN }}
+        is_master: ${{ github.ref_name == 'master' && 'true' || 'false' }}
+        pr_number: ${{ github.event.pull_request.number }}
