@@ -8,6 +8,8 @@
 
 #include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 
 #include "utils/utils_string.hpp"
 #include "logging/logging.hpp"
@@ -29,93 +31,100 @@ std::string to_string(const ze_api_version_t version) {
 }
 
 std::string to_string(const ze_result_t result) {
-  if (result == ZE_RESULT_SUCCESS) {
+  switch (result) {
+  case ZE_RESULT_SUCCESS:
     return "ZE_RESULT_SUCCESS";
-  } else if (result == ZE_RESULT_NOT_READY) {
+  case ZE_RESULT_NOT_READY:
     return "ZE_RESULT_NOT_READY";
-  } else if (result == ZE_RESULT_ERROR_UNINITIALIZED) {
-    return "ZE_RESULT_ERROR_UNINITIALIZED";
-  } else if (result == ZE_RESULT_ERROR_DEVICE_LOST) {
+  case ZE_RESULT_ERROR_DEVICE_LOST:
     return "ZE_RESULT_ERROR_DEVICE_LOST";
-  } else if (result == ZE_RESULT_ERROR_INVALID_ARGUMENT) {
-    return "ZE_RESULT_ERROR_INVALID_ARGUMENT";
-  } else if (result == ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY) {
+  case ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY:
     return "ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY";
-  } else if (result == ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY) {
+  case ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY:
     return "ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY";
-  } else if (result == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE) {
+  case ZE_RESULT_ERROR_MODULE_BUILD_FAILURE:
     return "ZE_RESULT_ERROR_MODULE_BUILD_FAILURE";
-  } else if (result == ZE_RESULT_ERROR_MODULE_LINK_FAILURE) {
+  case ZE_RESULT_ERROR_MODULE_LINK_FAILURE:
     return "ZE_RESULT_ERROR_MODULE_LINK_FAILURE";
-  } else if (result == ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS) {
+  case ZE_RESULT_ERROR_DEVICE_REQUIRES_RESET:
+    return "ZE_RESULT_ERROR_DEVICE_REQUIRES_RESET";
+  case ZE_RESULT_ERROR_DEVICE_IN_LOW_POWER_STATE:
+    return "ZE_RESULT_ERROR_DEVICE_IN_LOW_POWER_STATE";
+  case ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS:
     return "ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS";
-  } else if (result == ZE_RESULT_ERROR_NOT_AVAILABLE) {
+  case ZE_RESULT_ERROR_NOT_AVAILABLE:
     return "ZE_RESULT_ERROR_NOT_AVAILABLE";
-  } else if (result == ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE) {
+  case ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE:
     return "ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE";
-  } else if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+  case ZE_RESULT_WARNING_DROPPED_DATA:
     return "ZE_RESULT_WARNING_DROPPED_DATA";
-  } else if (result == ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {
+  case ZE_RESULT_ERROR_UNINITIALIZED:
+    return "ZE_RESULT_ERROR_UNINITIALIZED";
+  case ZE_RESULT_ERROR_UNSUPPORTED_VERSION:
     return "ZE_RESULT_ERROR_UNSUPPORTED_VERSION";
-  } else if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+  case ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
     return "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE";
-  } else if (result == ZE_RESULT_ERROR_INVALID_NULL_HANDLE) {
+  case ZE_RESULT_ERROR_INVALID_ARGUMENT:
+    return "ZE_RESULT_ERROR_INVALID_ARGUMENT";
+  case ZE_RESULT_ERROR_INVALID_NULL_HANDLE:
     return "ZE_RESULT_ERROR_INVALID_NULL_HANDLE";
-  } else if (result == ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE) {
+  case ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE:
     return "ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE";
-  } else if (result == ZE_RESULT_ERROR_INVALID_NULL_POINTER) {
+  case ZE_RESULT_ERROR_INVALID_NULL_POINTER:
     return "ZE_RESULT_ERROR_INVALID_NULL_POINTER";
-  } else if (result == ZE_RESULT_ERROR_INVALID_SIZE) {
+  case ZE_RESULT_ERROR_INVALID_SIZE:
     return "ZE_RESULT_ERROR_INVALID_SIZE";
-  } else if (result == ZE_RESULT_ERROR_UNSUPPORTED_SIZE) {
+  case ZE_RESULT_ERROR_UNSUPPORTED_SIZE:
     return "ZE_RESULT_ERROR_UNSUPPORTED_SIZE";
-  } else if (result == ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT) {
+  case ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT:
     return "ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT";
-  } else if (result == ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT) {
+  case ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT:
     return "ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT";
-  } else if (result == ZE_RESULT_ERROR_INVALID_ENUMERATION) {
+  case ZE_RESULT_ERROR_INVALID_ENUMERATION:
     return "ZE_RESULT_ERROR_INVALID_ENUMERATION";
-  } else if (result == ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION) {
+  case ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION:
     return "ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION";
-  } else if (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT) {
+  case ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT:
     return "ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT";
-  } else if (result == ZE_RESULT_ERROR_INVALID_NATIVE_BINARY) {
+  case ZE_RESULT_ERROR_INVALID_NATIVE_BINARY:
     return "ZE_RESULT_ERROR_INVALID_NATIVE_BINARY";
-  } else if (result == ZE_RESULT_ERROR_INVALID_GLOBAL_NAME) {
+  case ZE_RESULT_ERROR_INVALID_GLOBAL_NAME:
     return "ZE_RESULT_ERROR_INVALID_GLOBAL_NAME";
-  } else if (result == ZE_RESULT_ERROR_INVALID_KERNEL_NAME) {
+  case ZE_RESULT_ERROR_INVALID_KERNEL_NAME:
     return "ZE_RESULT_ERROR_INVALID_KERNEL_NAME";
-  } else if (result == ZE_RESULT_ERROR_INVALID_FUNCTION_NAME) {
+  case ZE_RESULT_ERROR_INVALID_FUNCTION_NAME:
     return "ZE_RESULT_ERROR_INVALID_FUNCTION_NAME";
-  } else if (result == ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION) {
+  case ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION:
     return "ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION";
-  } else if (result == ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION) {
+  case ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION:
     return "ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION";
-  } else if (result == ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX) {
+  case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX:
     return "ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX";
-  } else if (result == ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE) {
+  case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE:
     return "ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE";
-  } else if (result == ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE) {
+  case ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE:
     return "ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE";
-  } else if (result == ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED) {
+  case ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED:
     return "ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED";
-  } else if (result == ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE) {
+  case ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE:
     return "ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE";
-  } else if (result == ZE_RESULT_ERROR_OVERLAPPING_REGIONS) {
+  case ZE_RESULT_ERROR_OVERLAPPING_REGIONS:
     return "ZE_RESULT_ERROR_OVERLAPPING_REGIONS";
-  } else if (result == ZE_RESULT_ERROR_UNKNOWN) {
+  case ZE_RESULT_ERROR_UNKNOWN:
     return "ZE_RESULT_ERROR_UNKNOWN";
-  } else {
-    throw std::runtime_error("Unknown ze_result_t value: " +
-                             std::to_string(static_cast<int>(result)));
+  case ZE_RESULT_FORCE_UINT32:
+    return "ZE_RESULT_FORCE_UINT32";
+  default:
+    return "Unknown ze_result_t value: " +
+           std::to_string(static_cast<int>(result));
   }
 }
 
 std::string to_string(const ze_bool_t ze_bool) {
   if (ze_bool) {
-    return "True";
+    return "true";
   } else {
-    return "False";
+    return "false";
   }
 }
 
@@ -348,7 +357,7 @@ ze_image_format_type_t to_format_type(const std::string format_type) {
   }
 }
 
-uint32_t num_bytes_per_pixel(ze_image_format_layout_t layout) {
+uint32_t num_bytes_per_pixel(const ze_image_format_layout_t layout) {
   switch (layout) {
   case ZE_IMAGE_FORMAT_LAYOUT_8:
     return 1;
@@ -504,73 +513,66 @@ std::string to_string(const ze_memory_type_t type) {
   }
 }
 
-std::string to_string(const ze_device_fp_flag_t flags) {
-  std::stringstream bitfield;
-  if (flags & ZE_DEVICE_FP_FLAG_DENORM) {
-    bitfield << "|ZE_DEVICE_FP_FLAG_DENORM|";
+std::string to_string(const ze_device_fp_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_FP_FLAG_DENORM:
+    return "ZE_DEVICE_FP_FLAG_DENORM";
+  case ZE_DEVICE_FP_FLAG_INF_NAN:
+    return "ZE_DEVICE_FP_FLAG_INF_NAN";
+  case ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST:
+    return "ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST";
+  case ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO:
+    return "ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO";
+  case ZE_DEVICE_FP_FLAG_ROUND_TO_INF:
+    return "ZE_DEVICE_FP_FLAG_ROUND_TO_INF";
+  case ZE_DEVICE_FP_FLAG_FMA:
+    return "ZE_DEVICE_FP_FLAG_FMA";
+  case ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT:
+    return "ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT";
+  case ZE_DEVICE_FP_FLAG_SOFT_FLOAT:
+    return "ZE_DEVICE_FP_FLAG_SOFT_FLOAT";
+  case ZE_DEVICE_FP_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_FP_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_fp_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
   }
-  if (flags & ZE_DEVICE_FP_FLAG_INF_NAN) {
-    bitfield << "|ZE_DEVICE_FP_FLAG_INF_NAN|";
-  }
-  if (flags & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST) {
-    bitfield << "|ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST|";
-  }
-  if (flags & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO) {
-    bitfield << "|ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO|";
-  }
-  if (flags & ZE_DEVICE_FP_FLAG_ROUND_TO_INF) {
-    bitfield << "|ZE_DEVICE_FP_FLAG_ROUND_TO_INF|";
-  }
-  if (flags & ZE_DEVICE_FP_FLAG_FMA) {
-    bitfield << "|ZE_DEVICE_FP_FLAG_FMA|";
-  }
-  if (flags & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT) {
-    bitfield << "|ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT|";
-  }
-  if (flags & ZE_DEVICE_FP_FLAG_SOFT_FLOAT) {
-    bitfield << "|ZE_DEVICE_FP_FLAG_SOFT_FLOAT|";
-  }
-  return to_string_helper(bitfield).str();
 }
 
-std::string to_string(const ze_memory_access_cap_flag_t flags) {
-  std::stringstream bitfield;
-  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_RW) {
-    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_RW|";
+std::string to_string(const ze_memory_access_cap_flag_t flag) {
+  switch (flag) {
+  case ZE_MEMORY_ACCESS_CAP_FLAG_RW:
+    return "ZE_MEMORY_ACCESS_CAP_FLAG_RW";
+  case ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC:
+    return "ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC";
+  case ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT:
+    return "ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT";
+  case ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC:
+    return "ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC";
+  case ZE_MEMORY_ACCESS_CAP_FLAG_FORCE_UINT32:
+    return "ZE_MEMORY_ACCESS_CAP_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_memory_access_cap_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
   }
-  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC) {
-    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_ATOMIC|";
-  }
-  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT) {
-    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT|";
-  }
-  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC) {
-    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_CONCURRENT_ATOMIC|";
-  }
-  if (flags & ZE_MEMORY_ACCESS_CAP_FLAG_FORCE_UINT32) {
-    bitfield << "|ZE_MEMORY_ACCESS_CAP_FLAG_FORCE_UINT32|";
-  }
-  return to_string_helper(bitfield).str();
 }
 
-std::string to_string(const ze_device_property_flag_t flags) {
-  std::stringstream bitfield;
-  if (flags & ZE_DEVICE_PROPERTY_FLAG_INTEGRATED) {
-    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_INTEGRATED|";
+std::string to_string(const ze_device_property_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_PROPERTY_FLAG_INTEGRATED:
+    return "ZE_DEVICE_PROPERTY_FLAG_INTEGRATED";
+  case ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE:
+    return "ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE";
+  case ZE_DEVICE_PROPERTY_FLAG_ECC:
+    return "ZE_DEVICE_PROPERTY_FLAG_ECC";
+  case ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING:
+    return "ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING";
+  case ZE_DEVICE_PROPERTY_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_PROPERTY_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_property_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
   }
-  if (flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
-    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE|";
-  }
-  if (flags & ZE_DEVICE_PROPERTY_FLAG_ECC) {
-    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_ECC|";
-  }
-  if (flags & ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING) {
-    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_ONDEMANDPAGING|";
-  }
-  if (flags & ZE_DEVICE_PROPERTY_FLAG_FORCE_UINT32) {
-    bitfield << "|ZE_DEVICE_PROPERTY_FLAG_FORCE_UINT32|";
-  }
-  return to_string_helper(bitfield).str();
 }
 
 constexpr char dec2hex[] = {'0', '1', '2', '3', '4', '5', '6', '7',
@@ -613,6 +615,509 @@ std::string to_string(const ze_native_kernel_uuid_t uuid) {
   uuid_to_string(uuid, ZE_MAX_KERNEL_UUID_SIZE, uuid_string);
   result << uuid_string;
   return result.str();
+}
+
+std::string uuid_to_string(const uint8_t uuid[]) {
+  std::stringstream ss;
+  ss << std::hex << std::setfill('0') << std::uppercase;
+  ss << std::setw(2) << +uuid[15];
+  ss << std::setw(2) << +uuid[14];
+  ss << std::setw(2) << +uuid[13];
+  ss << std::setw(2) << +uuid[12];
+  ss << '-';
+  ss << std::setw(2) << +uuid[11];
+  ss << std::setw(2) << +uuid[10];
+  ss << '-';
+  ss << std::setw(2) << +uuid[9];
+  ss << std::setw(2) << +uuid[8];
+  ss << '-';
+  ss << std::setw(2) << +uuid[7];
+  ss << std::setw(2) << +uuid[6];
+  ss << '-';
+  ss << std::setw(2) << +uuid[5];
+  ss << std::setw(2) << +uuid[4];
+  ss << std::setw(2) << +uuid[3];
+  ss << std::setw(2) << +uuid[2];
+  ss << std::setw(2) << +uuid[1];
+  ss << std::setw(2) << +uuid[0];
+  return ss.str();
+}
+
+std::vector<std::string> split_string(const std::string &string,
+                                      const std::string &delimiter) {
+  if (string.empty() || delimiter.empty()) {
+    return {string};
+  }
+  std::vector<std::string> tokens;
+  size_t start = 0U;
+  size_t end = string.find(delimiter);
+  while (end != std::string::npos) {
+    tokens.push_back(string.substr(start, end - start));
+    start = end + delimiter.length();
+    end = string.find(delimiter, start);
+  }
+  tokens.push_back(string.substr(start));
+  return tokens;
+}
+
+std::string join_strings(const std::vector<std::string> &tokens,
+                         const std::string &delimiter) {
+  std::stringstream ss;
+  for (size_t i = 0; i < tokens.size(); ++i) {
+    ss << tokens[i];
+    if (i < tokens.size() - 1) {
+      ss << delimiter;
+    }
+  }
+  return ss.str();
+}
+
+std::string to_string(const ze_device_type_t type) {
+  switch (type) {
+  case ZE_DEVICE_TYPE_GPU:
+    return "ZE_DEVICE_TYPE_GPU";
+  case ZE_DEVICE_TYPE_CPU:
+    return "ZE_DEVICE_TYPE_CPU";
+  case ZE_DEVICE_TYPE_FPGA:
+    return "ZE_DEVICE_TYPE_FPGA";
+  case ZE_DEVICE_TYPE_MCA:
+    return "ZE_DEVICE_TYPE_MCA";
+  case ZE_DEVICE_TYPE_VPU:
+    return "ZE_DEVICE_TYPE_VPU";
+  case ZE_DEVICE_TYPE_FORCE_UINT32:
+    return "ZE_DEVICE_TYPE_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const zet_metric_group_sampling_type_flag_t flag) {
+  switch (flag) {
+  case ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED:
+    return "ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED";
+  case ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED:
+    return "ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED";
+  case ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EXP_TRACER_BASED:
+    return "ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EXP_TRACER_BASED";
+  case ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_FORCE_UINT32:
+    return "ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown zet_metric_group_sampling_type_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const zes_engine_group_t type) {
+  switch (type) {
+  case ZES_ENGINE_GROUP_ALL:
+    return "ZES_ENGINE_GROUP_ALL";
+  case ZES_ENGINE_GROUP_COMPUTE_ALL:
+    return "ZES_ENGINE_GROUP_COMPUTE_ALL";
+  case ZES_ENGINE_GROUP_MEDIA_ALL:
+    return "ZES_ENGINE_GROUP_MEDIA_ALL";
+  case ZES_ENGINE_GROUP_COPY_ALL:
+    return "ZES_ENGINE_GROUP_COPY_ALL";
+  case ZES_ENGINE_GROUP_COMPUTE_SINGLE:
+    return "ZES_ENGINE_GROUP_COMPUTE_SINGLE";
+  case ZES_ENGINE_GROUP_RENDER_SINGLE:
+    return "ZES_ENGINE_GROUP_RENDER_SINGLE";
+  case ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE:
+    return "ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE";
+  case ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE:
+    return "ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE";
+  case ZES_ENGINE_GROUP_COPY_SINGLE:
+    return "ZES_ENGINE_GROUP_COPY_SINGLE";
+  case ZES_ENGINE_GROUP_MEDIA_ENHANCEMENT_SINGLE:
+    return "ZES_ENGINE_GROUP_MEDIA_ENHANCEMENT_SINGLE";
+  case ZES_ENGINE_GROUP_3D_SINGLE:
+    return "ZES_ENGINE_GROUP_3D_SINGLE";
+  case ZES_ENGINE_GROUP_3D_RENDER_COMPUTE_ALL:
+    return "ZES_ENGINE_GROUP_3D_RENDER_COMPUTE_ALL";
+  case ZES_ENGINE_GROUP_RENDER_ALL:
+    return "ZES_ENGINE_GROUP_RENDER_ALL";
+  case ZES_ENGINE_GROUP_3D_ALL:
+    return "ZES_ENGINE_GROUP_3D_ALL";
+  case ZES_ENGINE_GROUP_MEDIA_CODEC_SINGLE:
+    return "ZES_ENGINE_GROUP_MEDIA_CODEC_SINGLE";
+  case ZES_ENGINE_GROUP_FORCE_UINT32:
+    return "ZES_ENGINE_GROUP_FORCE_UINT32";
+  default:
+    return "Unknown zes_engine_group_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const zes_mem_type_t type) {
+  switch (type) {
+  case ZES_MEM_TYPE_HBM:
+    return "ZES_MEM_TYPE_HBM";
+  case ZES_MEM_TYPE_DDR:
+    return "ZES_MEM_TYPE_DDR";
+  case ZES_MEM_TYPE_DDR3:
+    return "ZES_MEM_TYPE_DDR3";
+  case ZES_MEM_TYPE_DDR4:
+    return "ZES_MEM_TYPE_DDR4";
+  case ZES_MEM_TYPE_DDR5:
+    return "ZES_MEM_TYPE_DDR5";
+  case ZES_MEM_TYPE_LPDDR:
+    return "ZES_MEM_TYPE_LPDDR";
+  case ZES_MEM_TYPE_LPDDR3:
+    return "ZES_MEM_TYPE_LPDDR3";
+  case ZES_MEM_TYPE_LPDDR4:
+    return "ZES_MEM_TYPE_LPDDR4";
+  case ZES_MEM_TYPE_LPDDR5:
+    return "ZES_MEM_TYPE_LPDDR5";
+  case ZES_MEM_TYPE_SRAM:
+    return "ZES_MEM_TYPE_SRAM";
+  case ZES_MEM_TYPE_L1:
+    return "ZES_MEM_TYPE_L1";
+  case ZES_MEM_TYPE_L3:
+    return "ZES_MEM_TYPE_L3";
+  case ZES_MEM_TYPE_GRF:
+    return "ZES_MEM_TYPE_GRF";
+  case ZES_MEM_TYPE_SLM:
+    return "ZES_MEM_TYPE_SLM";
+  case ZES_MEM_TYPE_GDDR4:
+    return "ZES_MEM_TYPE_GDDR4";
+  case ZES_MEM_TYPE_GDDR5:
+    return "ZES_MEM_TYPE_GDDR5";
+  case ZES_MEM_TYPE_GDDR5X:
+    return "ZES_MEM_TYPE_GDDR5X";
+  case ZES_MEM_TYPE_GDDR6:
+    return "ZES_MEM_TYPE_GDDR6";
+  case ZES_MEM_TYPE_GDDR6X:
+    return "ZES_MEM_TYPE_GDDR6X";
+  case ZES_MEM_TYPE_GDDR7:
+    return "ZES_MEM_TYPE_GDDR7";
+  default:
+    return "Unknown zes_mem_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const zes_mem_loc_t type) {
+  switch (type) {
+  case ZES_MEM_LOC_SYSTEM:
+    return "ZES_MEM_LOC_SYSTEM";
+  case ZES_MEM_LOC_DEVICE:
+    return "ZES_MEM_LOC_DEVICE";
+  default:
+    return "Unknown zes_mem_loc_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const zes_freq_domain_t type) {
+  switch (type) {
+  case ZES_FREQ_DOMAIN_GPU:
+    return "ZES_FREQ_DOMAIN_GPU";
+  case ZES_FREQ_DOMAIN_MEMORY:
+    return "ZES_FREQ_DOMAIN_MEMORY";
+  case ZES_FREQ_DOMAIN_MEDIA:
+    return "ZES_FREQ_DOMAIN_MEDIA";
+  default:
+    return "Unknown zes_freq_domain_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const zes_temp_sensors_t type) {
+  switch (type) {
+  case ZES_TEMP_SENSORS_GLOBAL:
+    return "ZES_TEMP_SENSORS_GLOBAL";
+  case ZES_TEMP_SENSORS_GPU:
+    return "ZES_TEMP_SENSORS_GPU";
+  case ZES_TEMP_SENSORS_MEMORY:
+    return "ZES_TEMP_SENSORS_MEMORY";
+  case ZES_TEMP_SENSORS_GLOBAL_MIN:
+    return "ZES_TEMP_SENSORS_GLOBAL_MIN";
+  case ZES_TEMP_SENSORS_GPU_MIN:
+    return "ZES_TEMP_SENSORS_GPU_MIN";
+  case ZES_TEMP_SENSORS_MEMORY_MIN:
+    return "ZES_TEMP_SENSORS_MEMORY_MIN";
+  case ZES_TEMP_SENSORS_GPU_BOARD:
+    return "ZES_TEMP_SENSORS_GPU_BOARD";
+  case ZES_TEMP_SENSORS_GPU_BOARD_MIN:
+    return "ZES_TEMP_SENSORS_GPU_BOARD_MIN";
+  case ZES_TEMP_SENSORS_VOLTAGE_REGULATOR:
+    return "ZES_TEMP_SENSORS_VOLTAGE_REGULATOR";
+  default:
+    return "Unknown zes_temp_sensors_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const zes_ras_error_type_t type) {
+  switch (type) {
+  case ZES_RAS_ERROR_TYPE_CORRECTABLE:
+    return "ZES_RAS_ERROR_TYPE_CORRECTABLE";
+  case ZES_RAS_ERROR_TYPE_UNCORRECTABLE:
+    return "ZES_RAS_ERROR_TYPE_UNCORRECTABLE";
+  default:
+    return "Unknown zes_ras_error_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const zes_standby_type_t type) {
+  switch (type) {
+  case ZES_STANDBY_TYPE_GLOBAL:
+    return "ZES_STANDBY_TYPE_GLOBAL";
+  default:
+    return "Unknown zes_standby_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const zes_sched_mode_t mode) {
+  switch (mode) {
+  case ZES_SCHED_MODE_TIMEOUT:
+    return "ZES_SCHED_MODE_TIMEOUT";
+  case ZES_SCHED_MODE_TIMESLICE:
+    return "ZES_SCHED_MODE_TIMESLICE";
+  case ZES_SCHED_MODE_EXCLUSIVE:
+    return "ZES_SCHED_MODE_EXCLUSIVE";
+  case ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG:
+    return "ZES_SCHED_MODE_COMPUTE_UNIT_DEBUG";
+  default:
+    return "Unknown zes_sched_mode_t value: " +
+           std::to_string(static_cast<int>(mode));
+  }
+}
+
+std::string to_string(const zes_pci_bar_type_t type) {
+  switch (type) {
+  case ZES_PCI_BAR_TYPE_MMIO:
+    return "ZES_PCI_BAR_TYPE_MMIO";
+  case ZES_PCI_BAR_TYPE_ROM:
+    return "ZES_PCI_BAR_TYPE_ROM";
+  case ZES_PCI_BAR_TYPE_MEM:
+    return "ZES_PCI_BAR_TYPE_MEM";
+  default:
+    return "Unknown zes_pci_bar_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const ze_device_memory_property_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_MEMORY_PROPERTY_FLAG_TBD:
+    return "ZE_DEVICE_MEMORY_PROPERTY_FLAG_TBD";
+  case ZE_DEVICE_MEMORY_PROPERTY_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_MEMORY_PROPERTY_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_memory_property_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_ipc_property_flag_t flag) {
+  switch (flag) {
+  case ZE_IPC_PROPERTY_FLAG_MEMORY:
+    return "ZE_IPC_PROPERTY_FLAG_MEMORY";
+  case ZE_IPC_PROPERTY_FLAG_EVENT_POOL:
+    return "ZE_IPC_PROPERTY_FLAG_EVENT_POOL";
+  case ZE_IPC_PROPERTY_FLAG_FORCE_UINT32:
+    return "ZE_IPC_PROPERTY_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_ipc_property_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_external_memory_type_flag_t flag) {
+  switch (flag) {
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_FD:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_FD";
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF";
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32";
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT";
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE";
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT";
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP";
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE";
+  case ZE_EXTERNAL_MEMORY_TYPE_FLAG_FORCE_UINT32:
+    return "ZE_EXTERNAL_MEMORY_TYPE_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_external_memory_type_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_device_cache_property_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_CACHE_PROPERTY_FLAG_USER_CONTROL:
+    return "ZE_DEVICE_CACHE_PROPERTY_FLAG_USER_CONTROL";
+  case ZE_DEVICE_CACHE_PROPERTY_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_CACHE_PROPERTY_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_cache_property_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_device_module_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_MODULE_FLAG_FP16:
+    return "ZE_DEVICE_MODULE_FLAG_FP16";
+  case ZE_DEVICE_MODULE_FLAG_FP64:
+    return "ZE_DEVICE_MODULE_FLAG_FP64";
+  case ZE_DEVICE_MODULE_FLAG_INT64_ATOMICS:
+    return "ZE_DEVICE_MODULE_FLAG_INT64_ATOMICS";
+  case ZE_DEVICE_MODULE_FLAG_DP4A:
+    return "ZE_DEVICE_MODULE_FLAG_DP4A";
+  case ZE_DEVICE_MODULE_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_MODULE_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_module_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_scheduling_hint_exp_flag_t flag) {
+  switch (flag) {
+  case ZE_SCHEDULING_HINT_EXP_FLAG_OLDEST_FIRST:
+    return "ZE_SCHEDULING_HINT_EXP_FLAG_OLDEST_FIRST";
+  case ZE_SCHEDULING_HINT_EXP_FLAG_ROUND_ROBIN:
+    return "ZE_SCHEDULING_HINT_EXP_FLAG_ROUND_ROBIN";
+  case ZE_SCHEDULING_HINT_EXP_FLAG_STALL_BASED_ROUND_ROBIN:
+    return "ZE_SCHEDULING_HINT_EXP_FLAG_STALL_BASED_ROUND_ROBIN";
+  case ZE_SCHEDULING_HINT_EXP_FLAG_FORCE_UINT32:
+    return "ZE_SCHEDULING_HINT_EXP_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_scheduling_hint_exp_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_device_fp_atomic_ext_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_LOAD_STORE:
+    return "ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_LOAD_STORE";
+  case ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_ADD:
+    return "ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_ADD";
+  case ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_MIN_MAX:
+    return "ZE_DEVICE_FP_ATOMIC_EXT_FLAG_GLOBAL_MIN_MAX";
+  case ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_LOAD_STORE:
+    return "ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_LOAD_STORE";
+  case ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_ADD:
+    return "ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_ADD";
+  case ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_MIN_MAX:
+    return "ZE_DEVICE_FP_ATOMIC_EXT_FLAG_LOCAL_MIN_MAX";
+  case ZE_DEVICE_FP_ATOMIC_EXT_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_FP_ATOMIC_EXT_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_fp_atomic_ext_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_device_raytracing_ext_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_RAYTRACING_EXT_FLAG_RAYQUERY:
+    return "ZE_DEVICE_RAYTRACING_EXT_FLAG_RAYQUERY";
+  case ZE_DEVICE_RAYTRACING_EXT_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_RAYTRACING_EXT_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_raytracing_ext_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_command_queue_group_property_flag_t flag) {
+  switch (flag) {
+  case ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE:
+    return "ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE";
+  case ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY:
+    return "ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY";
+  case ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS:
+    return "ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS";
+  case ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_METRICS:
+    return "ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_METRICS";
+  case ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_FORCE_UINT32:
+    return "ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_command_queue_group_property_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_mutable_command_list_exp_flags_t flag) {
+  switch (flag) {
+  case ZE_MUTABLE_COMMAND_LIST_EXP_FLAG_RESERVED:
+    return "ZE_MUTABLE_COMMAND_LIST_EXP_FLAG_RESERVED";
+  case ZE_MUTABLE_COMMAND_LIST_EXP_FLAG_FORCE_UINT32:
+    return "ZE_MUTABLE_COMMAND_LIST_EXP_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_mutable_command_list_exp_flags_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_mutable_command_exp_flag_t flag) {
+  switch (flag) {
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_ARGUMENTS:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_ARGUMENTS";
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_COUNT:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_COUNT";
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_GROUP_SIZE";
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_GLOBAL_OFFSET:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_GLOBAL_OFFSET";
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_SIGNAL_EVENT:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_SIGNAL_EVENT";
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_WAIT_EVENTS:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_WAIT_EVENTS";
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION";
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_GRAPH_ARGUMENTS:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_GRAPH_ARGUMENTS";
+  case ZE_MUTABLE_COMMAND_EXP_FLAG_FORCE_UINT32:
+    return "ZE_MUTABLE_COMMAND_EXP_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_mutable_command_exp_flags_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const zet_device_debug_property_flag_t flag) {
+  switch (flag) {
+  case ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH:
+    return "ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH";
+  case ZET_DEVICE_DEBUG_PROPERTY_FLAG_FORCE_UINT32:
+    return "ZET_DEVICE_DEBUG_PROPERTY_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown zet_device_debug_property_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const zes_engine_type_flag_t flag) {
+  switch (flag) {
+  case ZES_ENGINE_TYPE_FLAG_OTHER:
+    return "ZES_ENGINE_TYPE_FLAG_OTHER";
+  case ZES_ENGINE_TYPE_FLAG_COMPUTE:
+    return "ZES_ENGINE_TYPE_FLAG_COMPUTE";
+  case ZES_ENGINE_TYPE_FLAG_3D:
+    return "ZES_ENGINE_TYPE_FLAG_3D";
+  case ZES_ENGINE_TYPE_FLAG_MEDIA:
+    return "ZES_ENGINE_TYPE_FLAG_MEDIA";
+  case ZES_ENGINE_TYPE_FLAG_DMA:
+    return "ZES_ENGINE_TYPE_FLAG_DMA";
+  case ZES_ENGINE_TYPE_FLAG_RENDER:
+    return "ZES_ENGINE_TYPE_FLAG_RENDER";
+  default:
+    return "Unknown zes_engine_type_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
 }
 
 } // namespace level_zero_tests

@@ -89,7 +89,8 @@ LZT_TEST(XeResultToString, ZE_RESULT_ERROR_UNKNOWN) {
 
 LZT_TEST(XeResultToString, InvalidValue) {
   const ze_result_t r = static_cast<ze_result_t>(10);
-  EXPECT_THROW(level_zero_tests::to_string(r), std::runtime_error);
+  EXPECT_EQ("Unknown ze_result_t value: " + std::to_string(static_cast<int>(r)),
+            level_zero_tests::to_string(r));
 }
 
 LZT_TEST(XeCommandQueueDescFlagsToString, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY) {
