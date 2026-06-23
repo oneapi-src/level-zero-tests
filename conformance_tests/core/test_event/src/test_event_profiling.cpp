@@ -381,8 +381,8 @@ void RunGivenKernelEventWhenUsingEventToSyncTest() {
   lzt::append_memory_copy(cmd_bundle.record_list(), src_buffer, xfr_buffer,
                           buff_size);
 
-  lzt::close_command_bundle(cmd_bundle);
-  lzt::submit_command_bundle(cmd_bundle);
+  lzt::execute_and_sync_command_bundle(cmd_bundle,
+                                       std::numeric_limits<uint64_t>::max());
   lzt::event_host_synchronize(event, std::numeric_limits<uint64_t>::max());
 
   for (uint32_t i = 0U; i < elems_nb; i++) {

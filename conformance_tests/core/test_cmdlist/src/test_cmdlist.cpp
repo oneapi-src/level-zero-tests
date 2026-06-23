@@ -219,9 +219,10 @@ protected:
     ep.create_event(event, event_desc);
     lzt::append_signal_event(bundle.record_list(), event);
 
-    lzt::execute_and_sync_command_bundle(bundle,
-                                         std::numeric_limits<uint64_t>::max());
-
+    if (execute_all_commands || Mode != lzt::command_list_mode_t::regular) {
+      lzt::execute_and_sync_command_bundle(
+          bundle, std::numeric_limits<uint64_t>::max());
+    }
     lzt::reset_command_bundle(bundle);
 
     auto test_mem = lzt::allocate_shared_memory(size);

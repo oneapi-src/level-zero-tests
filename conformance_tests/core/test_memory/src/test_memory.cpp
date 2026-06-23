@@ -196,8 +196,8 @@ class zeDriverAllocSharedMemTests
                      size_t, size_t>> {
 
 public:
-  void RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest(
-      bool is_immediate) {
+  template <lzt::command_list_mode_t Mode>
+  void RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest() {
     const ze_device_mem_alloc_flag_t dev_flags = std::get<0>(GetParam());
     const ze_host_mem_alloc_flag_t host_flags = std::get<1>(GetParam());
     const size_t size = std::get<2>(GetParam());
@@ -225,13 +225,15 @@ public:
     EXPECT_NE(nullptr, memory);
     const uint8_t pattern2 = 0x55;
 
-    auto bundle = lzt::create_command_bundle(
+    auto bundle = lzt::create_command_bundle<Mode>(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0);
 
-    lzt::append_memory_fill(bundle.list, memory, &pattern2, 1, size, nullptr);
+    lzt::append_memory_fill(bundle.record_list(), memory, &pattern2, 1, size,
+                            nullptr);
 
-    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+    lzt::execute_and_sync_command_bundle(bundle,
+                                         std::numeric_limits<uint64_t>::max());
 
     for (size_t i = 0; i < size; i++) {
       ASSERT_EQ(static_cast<uint8_t *>(memory)[i], pattern2);
@@ -246,13 +248,15 @@ public:
 LZT_TEST_P(
     zeDriverAllocSharedMemTests,
     GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryThenNotNullPointerIsReturned) {
-  RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest(false);
+  RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_P(
     zeDriverAllocSharedMemTests,
     GivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryOnImmediateCmdListThenNotNullPointerIsReturned) {
-  RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest(true);
+  RunGivenAllocationFlagsSizeAndAlignmentWhenAllocatingSharedMemoryTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 INSTANTIATE_TEST_SUITE_P(
