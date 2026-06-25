@@ -1970,10 +1970,8 @@ ze_kernel_handle_t get_matrix_multiplication_kernel(
   return function;
 }
 
-void run_matrix_multiplication_and_collect_tracer_data(
-    ze_device_handle_t device,
-    zet_metric_tracer_exp_handle_t metric_tracer_handle,
-    std::vector<uint8_t> &raw_data) {
+void run_matrix_multiplication_workload(ze_device_handle_t device,
+                                        uint32_t dimensions) {
 
   ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
   zet_command_list_handle_t command_list = lzt::create_command_list(device);
@@ -1981,36 +1979,14 @@ void run_matrix_multiplication_and_collect_tracer_data(
   ze_group_count_t tg;
   ze_module_handle_t module;
   ze_kernel_handle_t function = get_matrix_multiplication_kernel(
-      device, &tg, &a_buffer, &b_buffer, &c_buffer, &module, 128);
+      device, &tg, &a_buffer, &b_buffer, &c_buffer, &module, dimensions);
   lzt::append_launch_function(command_list, function, &tg, nullptr, 0, nullptr);
   lzt::close_command_list(command_list);
 
-  lzt::metric_tracer_enable(metric_tracer_handle, true);
   LOG_DEBUG << "execute workload";
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
   LOG_DEBUG << "synchronize with completion of workload";
   lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
-  lzt::metric_tracer_disable(metric_tracer_handle, true);
-
-  /* drain all raw data */
-  const size_t chunk_size = 256 * 1024; /* 256 KB chunks */
-  raw_data.clear();
-  ze_result_t read_result = ZE_RESULT_SUCCESS;
-  while (read_result == ZE_RESULT_SUCCESS) {
-    size_t bytes_to_read = chunk_size;
-    std::vector<uint8_t> chunk(chunk_size);
-    read_result = zetMetricTracerReadDataExp(metric_tracer_handle,
-                                             &bytes_to_read, chunk.data());
-    EXPECT_TRUE(read_result == ZE_RESULT_SUCCESS ||
-                read_result == ZE_RESULT_NOT_READY)
-        << "zetMetricTracerReadDataExp returned unexpected error: "
-        << read_result;
-    if (read_result == ZE_RESULT_SUCCESS && bytes_to_read > 0) {
-      raw_data.insert(raw_data.end(), chunk.begin(),
-                      chunk.begin() +
-                          static_cast<std::ptrdiff_t>(bytes_to_read));
-    }
-  }
 
   lzt::destroy_function(function);
   lzt::destroy_module(module);
@@ -2022,36 +1998,48 @@ void run_matrix_multiplication_and_collect_tracer_data(
   lzt::destroy_command_list(command_list);
 }
 
+void run_matrix_multiplication_and_collect_tracer_data(
+    ze_device_handle_t device,
+    zet_metric_tracer_exp_handle_t metric_tracer_handle,
+    std::vector<uint8_t> &raw_data) {
+
+  lzt::metric_tracer_enable(metric_tracer_handle, true);
+  run_matrix_multiplication_workload(device, 128);
+  lzt::metric_tracer_disable(metric_tracer_handle, true);
+
+  /* drain all raw data */
+  const size_t chunk_size = 256 * 1024; /* 256 KB chunks */
+  raw_data.clear();
+  ze_result_t read_result = ZE_RESULT_SUCCESS;
+  while (read_result == ZE_RESULT_SUCCESS ||
+         read_result == ZE_RESULT_WARNING_DROPPED_DATA) {
+    size_t bytes_to_read = chunk_size;
+    std::vector<uint8_t> chunk(chunk_size);
+    read_result = zetMetricTracerReadDataExp(metric_tracer_handle,
+                                             &bytes_to_read, chunk.data());
+    EXPECT_TRUE(read_result == ZE_RESULT_SUCCESS ||
+                read_result == ZE_RESULT_WARNING_DROPPED_DATA ||
+                read_result == ZE_RESULT_NOT_READY)
+        << "zetMetricTracerReadDataExp returned unexpected error: "
+        << read_result;
+    if ((read_result == ZE_RESULT_SUCCESS ||
+         read_result == ZE_RESULT_WARNING_DROPPED_DATA) &&
+        bytes_to_read > 0) {
+      raw_data.insert(raw_data.end(), chunk.begin(),
+                      chunk.begin() +
+                          static_cast<std::ptrdiff_t>(bytes_to_read));
+    }
+  }
+}
+
 void run_matrix_multiplication_and_collect_streamer_data(
     ze_device_handle_t device,
     zet_metric_streamer_handle_t metric_streamer_handle,
     std::vector<uint8_t> &raw_data) {
 
-  ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
-  zet_command_list_handle_t command_list = lzt::create_command_list(device);
-  void *a_buffer, *b_buffer, *c_buffer;
-  ze_group_count_t tg;
-  ze_module_handle_t module;
-  ze_kernel_handle_t function = get_matrix_multiplication_kernel(
-      device, &tg, &a_buffer, &b_buffer, &c_buffer, &module);
-  lzt::append_launch_function(command_list, function, &tg, nullptr, 0, nullptr);
-  lzt::close_command_list(command_list);
-
-  LOG_DEBUG << "execute workload";
-  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
-  LOG_DEBUG << "synchronize with completion of workload";
-  lzt::synchronize(command_queue, std::numeric_limits<uint64_t>::max());
+  run_matrix_multiplication_workload(device);
 
   lzt::metric_streamer_read_data(metric_streamer_handle, &raw_data);
-
-  lzt::destroy_function(function);
-  lzt::destroy_module(module);
-  lzt::free_memory(a_buffer);
-  lzt::free_memory(b_buffer);
-  lzt::free_memory(c_buffer);
-  lzt::reset_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
-  lzt::destroy_command_list(command_list);
 }
 
 void run_matrix_multiplication_and_collect_query_data(

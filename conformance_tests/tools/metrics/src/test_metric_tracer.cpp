@@ -972,6 +972,89 @@ LZT_TEST_F(
                               tracer_descriptor, false);
 }
 
+LZT_TEST_F(
+    zetMetricTracerTest,
+    GivenTracerIsDisabledWhenReadingDataThenSuccessIsReturnedWithNonZeroSizeWhileDataIsAvailableAndNotReadyWithZeroSizeWhenDrained) {
+  /* zetMetricTracerReadDataExp is expected to return ZE_RESULT_SUCCESS while
+   * there is data to read, even when the tracer is disabled. When it returns
+   * ZE_RESULT_SUCCESS, pRawDataSize must be greater than 0. Once the data is
+   * fully drained it returns ZE_RESULT_NOT_READY and pRawDataSize must be 0. */
+  for (auto &device_with_metric_group_handles :
+       tracer_supporting_devices_list) {
+    device = device_with_metric_group_handles.device;
+    ze_result_t result;
+    lzt::display_device_properties(device);
+
+    auto &grp_handles =
+        device_with_metric_group_handles.activatable_metric_group_handle_list;
+    uint32_t num_grp_handles = to_u32(grp_handles.size());
+    ASSERT_GT(num_grp_handles, 0u);
+    lzt::activate_metric_groups(device, num_grp_handles, grp_handles.data());
+
+    zet_metric_tracer_exp_handle_t metric_tracer_handle;
+    lzt::metric_tracer_create(
+        lzt::get_default_context(), device, num_grp_handles, grp_handles.data(),
+        &tracer_descriptor, nullptr, &metric_tracer_handle);
+    lzt::metric_tracer_enable(metric_tracer_handle, true);
+
+    lzt::run_matrix_multiplication_workload(device, 128);
+
+    /* Disable the tracer synchronously so that all the collected data is
+     * flushed and available to be read. */
+    lzt::metric_tracer_disable(metric_tracer_handle, true);
+
+    size_t raw_data_size = 1024 * 1024; /* 1MB buffer */
+    std::vector<uint8_t> raw_data(raw_data_size, 0);
+
+    bool data_was_read = false;
+    bool continue_reading = true;
+    /* Read raw data from the disabled tracer. While data is available the API
+     * returns ZE_RESULT_SUCCESS with a non-zero size. Once drained it returns
+     * ZE_RESULT_NOT_READY with a zero size.*/
+    while (continue_reading) {
+      raw_data_size = raw_data.size();
+      result = zetMetricTracerReadDataExp(metric_tracer_handle, &raw_data_size,
+                                          raw_data.data());
+
+      switch (result) {
+      case ZE_RESULT_WARNING_DROPPED_DATA:
+      case ZE_RESULT_SUCCESS:
+        if (raw_data_size == 0u) {
+          ADD_FAILURE()
+              << "zetMetricTracerReadDataExp returned " << result
+              << " but pRawDataSize is 0; a successful read must report data "
+                 "greater than 0";
+          continue_reading = false;
+          break;
+        }
+        data_was_read = true;
+        break;
+      case ZE_RESULT_NOT_READY:
+        EXPECT_EQ(0u, raw_data_size)
+            << "zetMetricTracerReadDataExp returned ZE_RESULT_NOT_READY but "
+               "pRawDataSize is not 0; not-ready must report a size of 0";
+        continue_reading = false;
+        break;
+      default:
+        ADD_FAILURE()
+            << "zetMetricTracerReadDataExp returned an unexpected result "
+            << result;
+        continue_reading = false;
+        break;
+      }
+    }
+
+    EXPECT_TRUE(data_was_read)
+        << "expected at least one successful read with data from the disabled "
+           "tracer";
+    EXPECT_EQ(ZE_RESULT_NOT_READY, result)
+        << "expected ZE_RESULT_NOT_READY once all data has been drained";
+
+    lzt::metric_tracer_destroy(metric_tracer_handle);
+    lzt::deactivate_metric_groups(device);
+  }
+}
+
 LZT_TEST_F(zetMetricTracerTest,
            GivenTracerIsCreatedThenDecoderCreateAndDestroySucceed) {
 

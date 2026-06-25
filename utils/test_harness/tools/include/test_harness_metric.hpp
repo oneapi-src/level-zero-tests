@@ -344,6 +344,9 @@ void *metric_map_dma_buf_fd_to_memory(ze_device_handle_t device,
                                       ze_context_handle_t context, int fd,
                                       size_t size, size_t alignment);
 
+void run_matrix_multiplication_workload(ze_device_handle_t device,
+                                        uint32_t dimensions = 1024);
+
 void run_matrix_multiplication_and_collect_tracer_data(
     ze_device_handle_t device,
     zet_metric_tracer_exp_handle_t metric_tracer_handle,
