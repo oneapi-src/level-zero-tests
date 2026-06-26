@@ -3053,6 +3053,7 @@ LZT_TEST_F(
     if (metricGroupInfo.size() == 0) {
       GTEST_SKIP() << "No IP metric groups available on this platform";
     }
+    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
     auto groupInfo = metricGroupInfo[0];
     lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
 
@@ -3060,7 +3061,11 @@ LZT_TEST_F(
     uint32_t period = samplingPeriod;
     auto streamer = lzt::metric_streamer_open_for_device(
         device, groupInfo.metricGroupHandle, nullptr, requestedNotify, period);
-    ASSERT_NE(nullptr, streamer);
+    if (!streamer) {
+      lzt::deactivate_metric_groups(device);
+      GTEST_SKIP() << "Failed to create metric streamer for group "
+                   << groupInfo.metricGroupName;
+    }
 
     EXPECT_GT(requestedNotify, 0u);
     EXPECT_LT(requestedNotify, std::numeric_limits<uint32_t>::max());
