@@ -3044,4 +3044,31 @@ LZT_TEST_F(
   }
 }
 
+LZT_TEST_F(
+    zetMetricStreamerTest,
+    GivenValidTypeIpMetricGroupWhenNotifyEveryNReportsExceedsBufferCapacityThenItIsClamped) {
+  for (auto device : devices) {
+    auto metricGroupInfo = lzt::get_metric_type_ip_group_info(
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
+    if (metricGroupInfo.size() == 0) {
+      GTEST_SKIP() << "No IP metric groups available on this platform";
+    }
+    auto groupInfo = metricGroupInfo[0];
+    lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
+
+    uint32_t requestedNotify = std::numeric_limits<uint32_t>::max();
+    uint32_t period = samplingPeriod;
+    auto streamer = lzt::metric_streamer_open_for_device(
+        device, groupInfo.metricGroupHandle, nullptr, requestedNotify, period);
+    ASSERT_NE(nullptr, streamer);
+
+    EXPECT_GT(requestedNotify, 0u);
+    EXPECT_LT(requestedNotify, std::numeric_limits<uint32_t>::max());
+
+    lzt::metric_streamer_close(streamer);
+    lzt::deactivate_metric_groups(device);
+  }
+}
+
+
 } // namespace
