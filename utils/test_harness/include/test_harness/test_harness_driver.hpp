@@ -21,6 +21,7 @@ ze_driver_properties_t get_driver_properties(ze_driver_handle_t driver);
 uint32_t get_driver_version(ze_driver_handle_t driver);
 ze_api_version_t get_api_version(ze_driver_handle_t driver);
 ze_driver_ipc_properties_t get_ipc_properties(ze_driver_handle_t driver);
+bool supports_fabric_accessible_ipc(ze_driver_handle_t driver);
 std::vector<ze_driver_extension_properties_t>
 get_extension_properties(ze_driver_handle_t driver);
 bool check_if_extension_supported(ze_driver_handle_t driver,

@@ -64,6 +64,20 @@ ze_driver_ipc_properties_t get_ipc_properties(ze_driver_handle_t driver) {
   return properties;
 }
 
+bool supports_fabric_accessible_ipc(ze_driver_handle_t driver) {
+  // The fabric-accessible IPC property flag
+  // (ZE_IPC_PROPERTY_FLAG_FABRIC_ACCESSIBLE) was introduced in API
+  // version 1.16. Drivers older than 1.16 do not report it, so support cannot
+  // be queried -- in that case let the test run. For 1.16+ drivers, honor the
+  // advertised capability (reporting 1.16 does not guarantee fabric
+  // accessibility).
+  if (get_api_version(driver) < ZE_API_VERSION_1_16) {
+    return true;
+  }
+  auto ipc_flags = get_ipc_properties(driver).flags;
+  return (ipc_flags & ZE_IPC_PROPERTY_FLAG_FABRIC_ACCESSIBLE) != 0;
+}
+
 std::vector<ze_driver_extension_properties_t>
 get_extension_properties(ze_driver_handle_t driver) {
 

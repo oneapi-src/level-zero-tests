@@ -369,6 +369,17 @@ static void run_ipc_mem_access_test_opaque_with_properties(
   ze_ipc_mem_handle_t ipc_handle = {};
 
   auto driver = lzt::get_default_driver();
+
+  // Fabric accessibility is advertised via
+  // ZE_IPC_PROPERTY_FLAG_FABRIC_ACCESSIBLE by drivers reporting API
+  // version 1.16 or later. Skip the test when such a driver does not advertise
+  // support; older drivers run the test as before.
+  if (handle_type_flags & ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE) {
+    if (!lzt::supports_fabric_accessible_ipc(driver)) {
+      GTEST_SKIP() << "Driver does not support fabric accessible IPC handles";
+    }
+  }
+
   auto context = lzt::create_context(driver);
   ze_device_handle_t device;
   uint32_t device_id_parent = 0;
@@ -1364,6 +1375,17 @@ static void run_ipc_physical_mem_getipchwithprops_opaque(
   bipc::shared_memory_object::remove("ipc_memory_test");
 
   auto driver = lzt::get_default_driver();
+
+  // Fabric accessibility is advertised via
+  // ZE_IPC_PROPERTY_FLAG_FABRIC_ACCESSIBLE by drivers reporting API
+  // version 1.16 or later. Skip the test when such a driver does not advertise
+  // support; older drivers run the test as before.
+  if (handle_type_flags & ZE_IPC_MEM_HANDLE_TYPE_FLAG_FABRIC_ACCESSIBLE) {
+    if (!lzt::supports_fabric_accessible_ipc(driver)) {
+      GTEST_SKIP() << "Driver does not support fabric accessible IPC handles";
+    }
+  }
+
   auto context = lzt::create_context(driver);
   auto device = lzt::zeDevice::get_instance()->get_device();
 
