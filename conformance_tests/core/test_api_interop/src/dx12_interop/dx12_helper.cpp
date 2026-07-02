@@ -173,10 +173,10 @@ create_committed_texture_2d(const ComPtr<ID3D12Device> &device,
 }
 
 HANDLE create_shared_handle(const ComPtr<ID3D12Device> &device,
-                            ID3D12DeviceChild *object) {
+                            ID3D12DeviceChild *object, LPCWSTR name) {
   HANDLE handle = {};
   if (HRESULT hr = device->CreateSharedHandle(object, nullptr, GENERIC_ALL,
-                                              nullptr, &handle);
+                                              name, &handle);
       FAILED(hr)) {
     LOG_ERROR << "ID3D12Device::CreateSharedHandle failed with: "
               << dx::hr_to_string(hr);

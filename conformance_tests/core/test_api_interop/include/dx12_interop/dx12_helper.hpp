@@ -47,7 +47,7 @@ create_committed_texture_2d(const ComPtr<ID3D12Device> &device,
                             bool exportable = false);
 
 HANDLE create_shared_handle(const ComPtr<ID3D12Device> &device,
-                            ID3D12DeviceChild *object);
+                            ID3D12DeviceChild *object, LPCWSTR name = nullptr);
 
 struct CommandBundle {
   ComPtr<ID3D12CommandQueue> cmd_queue;

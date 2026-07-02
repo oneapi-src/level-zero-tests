@@ -18,7 +18,8 @@ namespace dx11 {
 ComPtr<ID3D11Fence> create_fence(const ComPtr<ID3D11Device5> &device5,
                                  bool exportable = false);
 
-HANDLE create_shared_handle(const ComPtr<ID3D11Fence> &fence);
+HANDLE create_shared_handle(const ComPtr<ID3D11Fence> &fence,
+                            LPCWSTR name = nullptr);
 
 void wait_for_fence(const ComPtr<ID3D11Fence> &fence, uint64_t wait_value);
 

@@ -25,6 +25,10 @@ ze_external_semaphore_ext_handle_t
 import_fence(ze_device_handle_t l0_device, HANDLE shared_handle,
              ze_external_semaphore_ext_flags_t type);
 
+ze_external_semaphore_ext_handle_t
+import_fence_by_name(ze_device_handle_t l0_device, LPCWSTR name,
+                     ze_external_semaphore_ext_flags_t type);
+
 ze_image_handle_t import_image(HANDLE shared_handle,
                                ze_external_memory_type_flags_t type,
                                uint64_t width, uint32_t height,

@@ -27,10 +27,10 @@ ComPtr<ID3D11Fence> create_fence(const ComPtr<ID3D11Device5> &device5,
   return fence;
 }
 
-HANDLE create_shared_handle(const ComPtr<ID3D11Fence> &fence) {
+HANDLE create_shared_handle(const ComPtr<ID3D11Fence> &fence, LPCWSTR name) {
   HANDLE handle = {};
   if (HRESULT hr =
-          fence->CreateSharedHandle(nullptr, GENERIC_ALL, nullptr, &handle);
+          fence->CreateSharedHandle(nullptr, GENERIC_ALL, name, &handle);
       FAILED(hr)) {
     LOG_ERROR << "ID3D11Fence::CreateSharedHandle failed with: "
               << dx::hr_to_string(hr);

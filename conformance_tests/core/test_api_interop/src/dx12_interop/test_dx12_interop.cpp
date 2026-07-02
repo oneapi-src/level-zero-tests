@@ -22,32 +22,72 @@ struct DX12InteroperabilityTests : ::testing::Test {
 
 namespace {
 
-LZT_TEST_F(DX12InteroperabilityTests,
-           GivenDX12SharedFenceWhenImportingExternalSemaphoreThenIsSuccess) {
 #ifndef __linux__
+void test_import_fence(const ComPtr<ID3D12Device> &dx12_device,
+                       ze_device_handle_t l0_device,
+                       LPCWSTR fence_name = nullptr) {
   auto fence = dx12::create_fence(dx12_device, true);
   auto fence_shared_handle =
-      dx12::create_shared_handle(dx12_device, fence.Get());
+      dx12::create_shared_handle(dx12_device, fence.Get(), fence_name);
 
   auto external_semaphore_handle =
-      dx::import_fence(l0_device, fence_shared_handle,
-                       ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE);
+      fence_name != nullptr
+          ? dx::import_fence_by_name(l0_device, fence_name,
+                                     ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE)
+          : dx::import_fence(l0_device, fence_shared_handle,
+                             ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE);
 
   lzt::release_external_semaphore(external_semaphore_handle);
   CloseHandle(fence_shared_handle);
+}
+#endif
+
+LZT_TEST_F(DX12InteroperabilityTests,
+           GivenDX12SharedFenceWhenImportingExternalSemaphoreThenIsSuccess) {
+#ifndef __linux__
+  test_import_fence(dx12_device, l0_device);
 #endif
 }
 
-LZT_TEST_F(DX12InteroperabilityTests,
-           GivenDX12SharedFenceWhenSignalingByL0ThenIsSuccessfullySignaled) {
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceWhenImportingExternalSemaphoreByNameInGlobalNamespaceThenIsSuccess) {
 #ifndef __linux__
+  test_import_fence(dx12_device, l0_device,
+                    L"Global\\DX12FenceNamedImportTest");
+#endif
+}
+
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceWhenImportingExternalSemaphoreByNameInLocalNamespaceThenIsSuccess) {
+#ifndef __linux__
+  test_import_fence(dx12_device, l0_device, L"Local\\DX12FenceNamedImportTest");
+#endif
+}
+
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceWhenImportingExternalSemaphoreByNameWithoutNamespaceThenIsSuccess) {
+#ifndef __linux__
+  test_import_fence(dx12_device, l0_device, L"DX12FenceNamedImportTest");
+#endif
+}
+
+#ifndef __linux__
+void test_signal_fence(const ComPtr<ID3D12Device> &dx12_device,
+                       ze_device_handle_t l0_device,
+                       LPCWSTR fence_name = nullptr) {
   auto fence = dx12::create_fence(dx12_device, true);
   auto fence_shared_handle =
-      dx12::create_shared_handle(dx12_device, fence.Get());
+      dx12::create_shared_handle(dx12_device, fence.Get(), fence_name);
 
   auto external_semaphore_handle =
-      dx::import_fence(l0_device, fence_shared_handle,
-                       ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE);
+      fence_name != nullptr
+          ? dx::import_fence_by_name(l0_device, fence_name,
+                                     ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE)
+          : dx::import_fence(l0_device, fence_shared_handle,
+                             ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE);
 
   EXPECT_EQ(fence->GetCompletedValue(), 0);
 
@@ -76,19 +116,39 @@ LZT_TEST_F(DX12InteroperabilityTests,
   lzt::destroy_command_bundle(l0_cmd_bundle);
   lzt::release_external_semaphore(external_semaphore_handle);
   CloseHandle(fence_shared_handle);
+}
+#endif
+
+LZT_TEST_F(DX12InteroperabilityTests,
+           GivenDX12SharedFenceWhenSignalingByL0ThenIsSuccessfullySignaled) {
+#ifndef __linux__
+  test_signal_fence(dx12_device, l0_device);
+#endif
+}
+
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceImportedByNameWhenSignalingByL0ThenIsSuccessfullySignaled) {
+#ifndef __linux__
+  test_signal_fence(dx12_device, l0_device,
+                    L"Local\\DX12FenceSignalByNameTest");
 #endif
 }
 
 #ifndef __linux__
 void test_wait_fence(const ComPtr<ID3D12Device> &dx12_device,
-                     ze_device_handle_t l0_device, bool signal_on_host) {
+                     ze_device_handle_t l0_device, bool signal_on_host,
+                     LPCWSTR fence_name = nullptr) {
   auto fence = dx12::create_fence(dx12_device, true);
   auto fence_shared_handle =
-      dx12::create_shared_handle(dx12_device, fence.Get());
+      dx12::create_shared_handle(dx12_device, fence.Get(), fence_name);
 
   auto external_semaphore_handle =
-      dx::import_fence(l0_device, fence_shared_handle,
-                       ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE);
+      fence_name != nullptr
+          ? dx::import_fence_by_name(l0_device, fence_name,
+                                     ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE)
+          : dx::import_fence(l0_device, fence_shared_handle,
+                             ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE);
 
   auto l0_event_pool = lzt::create_event_pool(lzt::get_default_context(), 1,
                                               ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
@@ -146,6 +206,24 @@ LZT_TEST_F(
     GivenDX12SharedFenceSignaledOnDeviceWhenWaitingByL0ThenIsSuccessfullyWaitedOn) {
 #ifndef __linux__
   test_wait_fence(dx12_device, l0_device, false);
+#endif
+}
+
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceSignaledOnHostAndImportedByNameWhenWaitingByL0ThenIsSuccessfullyWaitedOn) {
+#ifndef __linux__
+  test_wait_fence(dx12_device, l0_device, true,
+                  L"Local\\DX12FenceSignalByNameTest");
+#endif
+}
+
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceSignaledOnDeviceAndImportedByNameWhenWaitingByL0ThenIsSuccessfullyWaitedOn) {
+#ifndef __linux__
+  test_wait_fence(dx12_device, l0_device, false,
+                  L"Local\\DX12FenceSignalByNameTest");
 #endif
 }
 
