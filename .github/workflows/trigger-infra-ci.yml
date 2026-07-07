@@ -13,7 +13,7 @@ jobs:
   trigger:
     runs-on: [self-hosted, gfx-small, Linux]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: infra
     - uses: ./.github/actions/trigger-infra-ci
@@ -27,7 +27,7 @@ jobs:
   trigger-code-review:
     runs-on: [self-hosted, gfx-small, Linux]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: infra
     - uses: ./.github/actions/trigger-infra-ci
