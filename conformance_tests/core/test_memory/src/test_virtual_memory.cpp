@@ -989,4 +989,275 @@ LZT_TEST_F(
   }
 }
 
+void RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
+    zeVirtualMemoryTests &test, bool is_immediate) {
+  // Query page granularity using the actual allocation size.
+  lzt::query_page_size(test.context, test.device, test.allocationSize,
+                       &test.pageSize);
+  const size_t chunkSize =
+      lzt::create_page_aligned_size(test.allocationSize, test.pageSize);
+  // Physical memory is two chunks; virtual window is one chunk.
+  // Using a virtual window of chunkSize (not 2*chunkSize) avoids any
+  // larger-size alignment requirement from the driver.
+  const size_t physicalSize = chunkSize * 2;
+
+  ze_physical_mem_handle_t physicalMemory = nullptr;
+  lzt::physical_device_memory_allocation(test.context, test.device,
+                                         physicalSize, &physicalMemory);
+  ASSERT_NE(nullptr, physicalMemory);
+
+  void *virtualMemory = nullptr;
+  lzt::virtual_memory_reservation(test.context, nullptr, chunkSize,
+                                  &virtualMemory);
+  ASSERT_NE(nullptr, virtualMemory);
+
+  auto bundle = lzt::create_command_bundle(test.device, is_immediate);
+
+  // Step 1: map virtual -> physical[0..chunkSize) and fill with patternA
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
+                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  const uint8_t patternA = 0xAA;
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_fill(bundle.list, virtualMemory, &patternA,
+                          sizeof(patternA), chunkSize, nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  // Step 2: map virtual -> physical[chunkSize..2*chunkSize) (non-zero offset)
+  // and overwrite with patternB — this must NOT affect physical[0..chunkSize)
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory,
+                      chunkSize, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  const uint8_t patternB = 0xBB;
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_fill(bundle.list, virtualMemory, &patternB,
+                          sizeof(patternB), chunkSize, nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  void *readbackBuffer = lzt::allocate_shared_memory(chunkSize, test.pageSize);
+
+  // Step 3: re-map at offset 0 — first chunk must still be patternA
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
+                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
+                          nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  const uint8_t *data = reinterpret_cast<const uint8_t *>(readbackBuffer);
+  LOG_INFO << "[Step3] data[0..3] = " << static_cast<int>(data[0]) << " "
+           << static_cast<int>(data[1]) << " " << static_cast<int>(data[2])
+           << " " << static_cast<int>(data[3])
+           << " (expected patternA=" << static_cast<int>(patternA) << ")";
+  for (size_t i = 0; i < chunkSize; i++) {
+    ASSERT_EQ(data[i], patternA)
+        << "Pre-offset region modified unexpectedly at byte " << i;
+  }
+
+  // Step 4: re-map at offset chunkSize — second chunk must be patternB
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory,
+                      chunkSize, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
+                          nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  LOG_INFO << "[Step4] data[0..3] = " << static_cast<int>(data[0]) << " "
+           << static_cast<int>(data[1]) << " " << static_cast<int>(data[2])
+           << " " << static_cast<int>(data[3])
+           << " (expected patternB=" << static_cast<int>(patternB) << ")";
+  for (size_t i = 0; i < chunkSize; i++) {
+    ASSERT_EQ(data[i], patternB)
+        << "Offset region not written correctly at byte " << i;
+  }
+
+  // Step 5: re-map at offset 0 again — confirm first chunk is still patternA
+  // (i.e. writing patternB to the second chunk did not corrupt the first chunk)
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
+                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
+                          nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  LOG_INFO << "[Step5] data[0..3] = " << static_cast<int>(data[0]) << " "
+           << static_cast<int>(data[1]) << " " << static_cast<int>(data[2])
+           << " " << static_cast<int>(data[3])
+           << " (expected patternA=" << static_cast<int>(patternA)
+           << ", must be unchanged after patternB write)";
+  for (size_t i = 0; i < chunkSize; i++) {
+    ASSERT_EQ(data[i], patternA)
+        << "First chunk corrupted after patternB write at byte " << i;
+  }
+
+  lzt::virtual_memory_free(test.context, virtualMemory, chunkSize);
+  lzt::free_memory(readbackBuffer);
+  lzt::physical_memory_destroy(test.context, physicalMemory);
+  lzt::destroy_command_bundle(bundle);
+}
+
+LZT_TEST_F(
+    zeVirtualMemoryTests,
+    GivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetRegionUnchanged) {
+  RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
+      *this, false);
+}
+
+LZT_TEST_F(
+    zeVirtualMemoryTests,
+    GivenPhysicalMemoryMappedAtOffsetOnImmediateCmdListThenDataWrittenToOffsetAndPreOffsetRegionUnchanged) {
+  RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
+      *this, true);
+}
+
+void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
+    zeVirtualMemoryTests &test, bool is_immediate) {
+#ifdef __linux__
+  // Query page granularity using the actual allocation size.
+  lzt::query_page_size(test.context, test.device, test.allocationSize,
+                       &test.pageSize);
+  const size_t chunkSize =
+      lzt::create_page_aligned_size(test.allocationSize, test.pageSize);
+  // Physical host memory is two chunks; virtual window is one chunk.
+  const size_t physicalSize = chunkSize * 2;
+
+  ze_physical_mem_handle_t physicalMemory = nullptr;
+  lzt::physical_host_memory_allocation(test.context, physicalSize,
+                                       &physicalMemory);
+  ASSERT_NE(nullptr, physicalMemory);
+
+  void *virtualMemory = nullptr;
+  lzt::virtual_memory_reservation(test.context, nullptr, chunkSize,
+                                  &virtualMemory);
+  ASSERT_NE(nullptr, virtualMemory);
+
+  auto bundle = lzt::create_command_bundle(test.device, is_immediate);
+
+  // Step 1: map virtual -> physical[0..chunkSize) and fill with patternA via
+  // device
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
+                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  const uint8_t patternA = 0xAA;
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_fill(bundle.list, virtualMemory, &patternA,
+                          sizeof(patternA), chunkSize, nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  // Step 2: map virtual -> physical[chunkSize..2*chunkSize) (non-zero offset)
+  // and fill with patternB — this must NOT affect physical[0..chunkSize)
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory,
+                      chunkSize, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  const uint8_t patternB = 0xBB;
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_fill(bundle.list, virtualMemory, &patternB,
+                          sizeof(patternB), chunkSize, nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  void *readbackBuffer = lzt::allocate_shared_memory(chunkSize, test.pageSize);
+
+  // Step 3: re-map at offset 0 — first chunk must still be patternA
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
+                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
+                          nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  const uint8_t *data = reinterpret_cast<const uint8_t *>(readbackBuffer);
+  LOG_INFO << "[Step3] data[0..3] = " << static_cast<int>(data[0]) << " "
+           << static_cast<int>(data[1]) << " " << static_cast<int>(data[2])
+           << " " << static_cast<int>(data[3])
+           << " (expected patternA=" << static_cast<int>(patternA) << ")";
+  for (size_t i = 0; i < chunkSize; i++) {
+    ASSERT_EQ(data[i], patternA)
+        << "Pre-offset region modified unexpectedly at byte " << i;
+  }
+
+  // Step 4: re-map at offset chunkSize — second chunk must be patternB
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory,
+                      chunkSize, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
+                          nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  LOG_INFO << "[Step4] data[0..3] = " << static_cast<int>(data[0]) << " "
+           << static_cast<int>(data[1]) << " " << static_cast<int>(data[2])
+           << " " << static_cast<int>(data[3])
+           << " (expected patternB=" << static_cast<int>(patternB) << ")";
+  for (size_t i = 0; i < chunkSize; i++) {
+    ASSERT_EQ(data[i], patternB)
+        << "Offset region not written correctly at byte " << i;
+  }
+
+  // Step 5: re-map at offset 0 again — confirm first chunk is still patternA
+  // (i.e. writing patternB to the second chunk did not corrupt the first chunk)
+  ASSERT_ZE_RESULT_SUCCESS(
+      zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
+                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+  lzt::reset_command_list(bundle.list);
+  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
+                          nullptr);
+  lzt::close_command_list(bundle.list);
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
+
+  LOG_INFO << "[Step5] data[0..3] = " << static_cast<int>(data[0]) << " "
+           << static_cast<int>(data[1]) << " " << static_cast<int>(data[2])
+           << " " << static_cast<int>(data[3])
+           << " (expected patternA=" << static_cast<int>(patternA)
+           << ", must be unchanged after patternB write)";
+  for (size_t i = 0; i < chunkSize; i++) {
+    ASSERT_EQ(data[i], patternA)
+        << "First chunk corrupted after patternB write at byte " << i;
+  }
+
+  lzt::virtual_memory_free(test.context, virtualMemory, chunkSize);
+  lzt::free_memory(readbackBuffer);
+  lzt::physical_memory_destroy(test.context, physicalMemory);
+  lzt::destroy_command_bundle(bundle);
+#else
+  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
+#endif
+}
+
+LZT_TEST_F(
+    zeVirtualMemoryTests,
+    GivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetRegionUnchanged) {
+  RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
+      *this, false);
+}
+
+LZT_TEST_F(
+    zeVirtualMemoryTests,
+    GivenPhysicalHostMemoryMappedAtOffsetOnImmediateCmdListThenDataWrittenToOffsetAndPreOffsetRegionUnchanged) {
+  RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
+      *this, true);
+}
+
 } // namespace
