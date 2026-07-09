@@ -142,7 +142,8 @@ LZT_TEST_F(
     auto metricGroupInfo = lzt::get_device_metric_groups_for_sampling_type(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
-    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+    metricGroupInfo =
+        lzt::optimize_metric_group_info_list(metricGroupInfo, 20, nullptr, 1);
 
     for (auto groupInfo : metricGroupInfo) {
       LOG_INFO << "test metricGroup name " << groupInfo.metricGroupName;
@@ -234,7 +235,8 @@ LZT_TEST_F(
     auto metricGroupInfo = lzt::get_device_metric_groups_for_sampling_type(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No metric groups found";
-    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+    metricGroupInfo =
+        lzt::optimize_metric_group_info_list(metricGroupInfo, 20, nullptr, 1);
 
     for (auto groupInfo : metricGroupInfo) {
       lzt::enable_metrics_runtime(device);
@@ -345,7 +347,8 @@ LZT_TEST_F(
     auto metricGroupInfo = lzt::get_device_metric_groups_for_sampling_type(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No query metric groups found";
-    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+    metricGroupInfo =
+        lzt::optimize_metric_group_info_list(metricGroupInfo, 20, nullptr, 1);
 
     for (auto groupInfo : metricGroupInfo) {
 
@@ -432,7 +435,8 @@ LZT_TEST_F(
     auto metricGroupInfo = lzt::get_device_metric_groups_for_sampling_type(
         device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_EVENT_BASED, true);
     ASSERT_GT(metricGroupInfo.size(), 0u) << "No query metric groups found";
-    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+    metricGroupInfo =
+        lzt::optimize_metric_group_info_list(metricGroupInfo, 20, nullptr, 1);
 
     for (auto groupInfo : metricGroupInfo) {
       lzt::enable_metrics_runtime(device);

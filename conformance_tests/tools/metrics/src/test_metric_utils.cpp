@@ -283,7 +283,8 @@ void metric_run_ip_sampling_with_validation(
       GTEST_SKIP()
           << "No IP metric groups are available to test on this platform";
     }
-    metricGroupInfo = lzt::optimize_metric_group_info_list(metricGroupInfo);
+    metricGroupInfo =
+        lzt::optimize_metric_group_info_list(metricGroupInfo, 20, nullptr, 1);
 
     for (auto groupInfo : metricGroupInfo) {
 

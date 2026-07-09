@@ -131,11 +131,11 @@ void validate_metrics(
 
 void validate_metrics_std(zet_metric_group_handle_t matchedGroupHandle,
                           const size_t rawDataSize, const uint8_t *rawData);
-// Consider 20% of the metric groups in each domain for test input as default
+
 std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
-    uint32_t percentOfMetricGroupForTest = 20,
-    const char *MetricGroupName = nullptr);
+    uint32_t percentOfMetricGroupForTest, const char *MetricGroupName,
+    uint32_t minCount);
 
 bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup);
 
