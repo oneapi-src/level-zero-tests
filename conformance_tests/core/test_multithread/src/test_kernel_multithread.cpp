@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -26,13 +26,14 @@ const uint32_t pattern_memory_count = 64;
 const uint32_t pattern_memory_size = pattern_memory_count * sizeof(uint64_t);
 const uint32_t output_count = pattern_memory_count;
 const uint32_t output_size = pattern_memory_size;
-void run_functions(lzt::zeCommandBundle &, bool, ze_kernel_handle_t,
-                   ze_kernel_handle_t, void *, uint16_t, uint64_t *, uint64_t *,
-                   uint64_t *, uint64_t *);
+void run_functions(lzt::command_bundle &, lzt::command_list_mode_t,
+                   ze_kernel_handle_t, ze_kernel_handle_t, void *, uint16_t,
+                   uint64_t *, uint64_t *, uint64_t *, uint64_t *);
 
 void thread_kernel_create_destroy(ze_module_handle_t module_handle,
-                                  int thread_id, bool is_immediate) {
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+                                  int thread_id,
+                                  lzt::command_list_mode_t mode) {
+  auto cmd_bundle = lzt::create_command_bundle(mode);
 
   ze_kernel_flags_t flag = 0;
   /* Prepare the fill function */
@@ -76,7 +77,7 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle,
     // Access to pattern buffer from host.
     std::fill(gpu_pattern_buffer, gpu_pattern_buffer + pattern_memory_count, 0);
     uint16_t pattern_base = lzt::generate_value<uint16_t>();
-    run_functions(cmd_bundle, is_immediate, fill_function, test_function,
+    run_functions(cmd_bundle, mode, fill_function, test_function,
                   gpu_pattern_buffer, pattern_base, host_expected_output_buffer,
                   gpu_expected_output_buffer, host_found_output_buffer,
                   gpu_found_output_buffer);
@@ -121,7 +122,8 @@ void thread_kernel_create_destroy(ze_module_handle_t module_handle,
   lzt::destroy_command_bundle(cmd_bundle);
 }
 
-void run_functions(lzt::zeCommandBundle &cmd_bundle, bool is_immediate,
+void run_functions(lzt::command_bundle &cmd_bundle,
+                   lzt::command_list_mode_t mode,
                    ze_kernel_handle_t fill_function,
                    ze_kernel_handle_t test_function, void *pattern_memory,
                    uint16_t pattern_base, uint64_t *host_expected_output_buffer,
@@ -243,8 +245,9 @@ LZT_TEST_F(
       lzt::create_module(device, "test_fill_device_memory_multi_thread.spv");
 
   for (uint32_t i = 0; i < num_threads; i++) {
-    threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
-                                               module_handle, i, false);
+    threads[i] = std::make_unique<std::thread>(
+        thread_kernel_create_destroy, module_handle, i,
+        lzt::command_list_mode_t::regular);
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {
@@ -266,8 +269,9 @@ LZT_TEST_F(
       lzt::create_module(device, "test_fill_device_memory_multi_thread.spv");
 
   for (uint32_t i = 0; i < num_threads; i++) {
-    threads[i] = std::make_unique<std::thread>(thread_kernel_create_destroy,
-                                               module_handle, i, true);
+    threads[i] = std::make_unique<std::thread>(
+        thread_kernel_create_destroy, module_handle, i,
+        lzt::command_list_mode_t::immediate);
   }
 
   for (uint32_t i = 0; i < num_threads; i++) {

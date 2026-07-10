@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2025 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -54,11 +54,11 @@ public:
                 ze_image_format_layout_t base_layout,
                 ze_image_format_layout_t convert_layout,
                 ze_image_format_type_t format_type, enum TestType test,
-                bool is_immediate, bool is_shared_system) {
+                lzt::command_list_mode_t mode, bool is_shared_system) {
     LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format_type;
     LOG_INFO << "LAYOUT: BASE - " << base_layout << " CONVERT - "
              << convert_layout;
-    auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle(mode);
     std::string kernel_name = get_kernel(format_type, image_type);
     LOG_DEBUG << "kernel_name = " << kernel_name;
     ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
@@ -318,7 +318,7 @@ class zeImageLayoutOneOrNoKernelTests
     : public ImageLayoutFixture,
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_type_t,
-                     ze_image_format_layout_t, bool>> {
+                     ze_image_format_layout_t, lzt::command_list_mode_t>> {
 protected:
   void TearDown() override {
     ImageLayoutFixture::TearDown();
@@ -337,9 +337,8 @@ LZT_TEST_P(zeImageLayoutOneOrNoKernelTests,
   }
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
-  auto is_immediate = std::get<3>(GetParam());
-  run_test(image_type, layout, layout, format, IMAGE_OBJECT_ONLY, is_immediate,
-           false);
+  auto mode = std::get<3>(GetParam());
+  run_test(image_type, layout, layout, format, IMAGE_OBJECT_ONLY, mode, false);
 }
 
 LZT_TEST_P(
@@ -352,9 +351,8 @@ LZT_TEST_P(
   }
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
-  auto is_immediate = std::get<3>(GetParam());
-  run_test(image_type, layout, layout, format, ONE_KERNEL_ONLY, is_immediate,
-           false);
+  auto mode = std::get<3>(GetParam());
+  run_test(image_type, layout, layout, format, ONE_KERNEL_ONLY, mode, false);
 }
 
 LZT_TEST_P(
@@ -368,9 +366,8 @@ LZT_TEST_P(
   }
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
-  auto is_immediate = std::get<3>(GetParam());
-  run_test(image_type, layout, layout, format, IMAGE_OBJECT_ONLY, is_immediate,
-           true);
+  auto mode = std::get<3>(GetParam());
+  run_test(image_type, layout, layout, format, IMAGE_OBJECT_ONLY, mode, true);
 }
 
 LZT_TEST_P(
@@ -384,9 +381,8 @@ LZT_TEST_P(
   }
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
-  auto is_immediate = std::get<3>(GetParam());
-  run_test(image_type, layout, layout, format, ONE_KERNEL_ONLY, is_immediate,
-           true);
+  auto mode = std::get<3>(GetParam());
+  run_test(image_type, layout, layout, format, ONE_KERNEL_ONLY, mode, true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -394,35 +390,40 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UINT),
                        ::testing::ValuesIn(lzt::image_format_layout_uint),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutSIntFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_SINT),
                        ::testing::ValuesIn(lzt::image_format_layout_sint),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutUNormFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UNORM),
                        ::testing::ValuesIn(lzt::image_format_layout_unorm),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutSNormFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_SNORM),
                        ::testing::ValuesIn(lzt::image_format_layout_snorm),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 INSTANTIATE_TEST_SUITE_P(
     TestLayoutFloatFormat, zeImageLayoutOneOrNoKernelTests,
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
                        ::testing::ValuesIn(lzt::image_format_layout_float),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 using LayoutPair =
     std::pair<ze_image_format_layout_t, ze_image_format_layout_t>;
@@ -446,17 +447,18 @@ const std::vector<LayoutPair> float_layout_pairs = {
 
 class zeImageLayoutTwoKernelsTests
     : public ImageLayoutFixture,
-      public ::testing::WithParamInterface<std::tuple<
-          ze_image_type_t, ze_image_format_type_t, bool, LayoutPair>> {
+      public ::testing::WithParamInterface<
+          std::tuple<ze_image_type_t, ze_image_format_type_t,
+                     lzt::command_list_mode_t, LayoutPair>> {
 public:
   void run_test_two_kernels(ze_image_type_t image_type,
                             ze_image_format_layout_t base_layout,
                             ze_image_format_layout_t convert_layout,
                             ze_image_format_type_t format_type,
-                            enum TestType test, bool is_immediate,
+                            enum TestType test, lzt::command_list_mode_t mode,
                             bool is_shared_system) {
-    run_test(image_type, base_layout, convert_layout, format_type, test,
-             is_immediate, is_shared_system);
+    run_test(image_type, base_layout, convert_layout, format_type, test, mode,
+             is_shared_system);
     if (!skip_message.str().empty()) {
       LOG_INFO << skip_message.str();
     }
@@ -473,10 +475,10 @@ LZT_TEST_P(zeImageLayoutTwoKernelsTests,
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto format = std::get<1>(GetParam());
-  auto is_immediate = std::get<2>(GetParam());
+  auto mode = std::get<2>(GetParam());
   auto layout_pair = std::get<3>(GetParam());
   run_test_two_kernels(image_type, layout_pair.first, layout_pair.second,
-                       format, TWO_KERNEL_CONVERT, is_immediate, false);
+                       format, TWO_KERNEL_CONVERT, mode, false);
 }
 
 LZT_TEST_P(zeImageLayoutTwoKernelsTests,
@@ -488,10 +490,10 @@ LZT_TEST_P(zeImageLayoutTwoKernelsTests,
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
   auto format = std::get<1>(GetParam());
-  auto is_immediate = std::get<2>(GetParam());
+  auto mode = std::get<2>(GetParam());
   auto layout_pair = std::get<3>(GetParam());
   run_test_two_kernels(image_type, layout_pair.first, layout_pair.second,
-                       format, TWO_KERNEL_CONVERT, is_immediate, true);
+                       format, TWO_KERNEL_CONVERT, mode, true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -501,21 +503,23 @@ INSTANTIATE_TEST_SUITE_P(
                                          ZE_IMAGE_FORMAT_TYPE_SINT,
                                          ZE_IMAGE_FORMAT_TYPE_UNORM,
                                          ZE_IMAGE_FORMAT_TYPE_SNORM),
-                       ::testing::Bool(),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate),
                        ::testing::ValuesIn(integer_layout_pairs)));
 
 INSTANTIATE_TEST_SUITE_P(
     LayoutTwoKernelsFloatParam, zeImageLayoutTwoKernelsTests,
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
-                       ::testing::Bool(),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate),
                        ::testing::ValuesIn(float_layout_pairs)));
 
 class zeImageDepthFormatLayoutTests
     : public ImageLayoutFixture,
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_type_t,
-                     ze_image_format_layout_t, bool>> {
+                     ze_image_format_layout_t, lzt::command_list_mode_t>> {
 protected:
   void TearDown() override {
     ImageLayoutFixture::TearDown();
@@ -576,12 +580,12 @@ LZT_TEST_P(zeImageDepthFormatLayoutTests,
   }
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
-  auto is_immediate = std::get<3>(GetParam());
+  auto mode = std::get<3>(GetParam());
 
   LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format;
   LOG_INFO << "LAYOUT - " << layout << " (Depth swizzle: D, 0, 0, 0)";
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle(mode);
   image_dims = get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
@@ -623,12 +627,12 @@ LZT_TEST_P(
   }
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
-  auto is_immediate = std::get<3>(GetParam());
+  auto mode = std::get<3>(GetParam());
 
   LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format;
   LOG_INFO << "LAYOUT - " << layout << " (Depth swizzle: D, 0, 0, 0)";
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle(mode);
   std::string kernel_name = get_kernel(format, image_type);
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
 
@@ -714,12 +718,12 @@ LZT_TEST_P(
   }
   auto format = std::get<1>(GetParam());
   auto layout = std::get<2>(GetParam());
-  auto is_immediate = std::get<3>(GetParam());
+  auto mode = std::get<3>(GetParam());
 
   LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format;
   LOG_INFO << "LAYOUT - " << layout << " (Depth swizzle: D, 0, 0, 0)";
 
-  auto cmd_bundle = lzt::create_command_bundle(is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle(mode);
   image_dims = get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
@@ -759,13 +763,15 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_FLOAT),
                        ::testing::Values(ZE_IMAGE_FORMAT_LAYOUT_16,
                                          ZE_IMAGE_FORMAT_LAYOUT_32),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 INSTANTIATE_TEST_SUITE_P(
     TestDepthFormatLayoutUNorm, zeImageDepthFormatLayoutTests,
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
                        ::testing::Values(ZE_IMAGE_FORMAT_TYPE_UNORM),
                        ::testing::Values(ZE_IMAGE_FORMAT_LAYOUT_8),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 } // namespace

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022-2025 Intel Corporation
+ * Copyright (C) 2022-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -103,7 +103,8 @@ LZT_TEST_F(
 }
 
 void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
-    zeVirtualMemoryTests &test, bool is_host_memory, bool is_immediate) {
+    zeVirtualMemoryTests &test, bool is_host_memory,
+    lzt::command_list_mode_t mode) {
   ze_memory_access_attribute_t access = ZE_MEMORY_ACCESS_ATTRIBUTE_FORCE_UINT32;
   size_t memorySize = 0;
   lzt::query_page_size(test.context, test.device, test.allocationSize,
@@ -139,7 +140,7 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
   const uint32_t input_pattern = 0x99999999;
   const uint32_t output_pattern = 0x66666666;
 
-  auto bundle = lzt::create_command_bundle(test.device, is_immediate);
+  auto bundle = lzt::create_command_bundle(test.device, mode);
   lzt::reset_command_list(bundle.list);
 
   std::vector<ze_memory_access_attribute_t> memoryAccessFlags = {
@@ -206,28 +207,28 @@ LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenHostVirtualMemoryReservationThenSettingTheMemoryAccessAttributeReturnsSuccess) {
   RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
-      *this, true, false);
+      *this, true, lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenHostVirtualMemoryReservationThenSettingTheMemoryAccessAttributeOnImmediateCmdListReturnsSuccess) {
   RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
-      *this, true, true);
+      *this, true, lzt::command_list_mode_t::immediate);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenDeviceVirtualMemoryReservationThenSettingTheMemoryAccessAttributeReturnsSuccess) {
   RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
-      *this, false, false);
+      *this, false, lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenDeviceVirtualMemoryReservationThenSettingTheMemoryAccessAttributeOnImmediateCmdListReturnsSuccess) {
   RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
-      *this, false, true);
+      *this, false, lzt::command_list_mode_t::immediate);
 }
 
 LZT_TEST_F(
@@ -295,8 +296,9 @@ LZT_TEST_F(
 }
 
 void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
-    zeVirtualMemoryTests &test, bool is_host_memory, bool is_immediate) {
-  auto bundle = lzt::create_command_bundle(test.device, is_immediate);
+    zeVirtualMemoryTests &test, bool is_host_memory,
+    lzt::command_list_mode_t mode) {
+  auto bundle = lzt::create_command_bundle(test.device, mode);
 
   if (is_host_memory) {
 #ifdef __linux__
@@ -368,14 +370,14 @@ LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemorySucceeds) {
   RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
-      *this, false, false);
+      *this, false, lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemoryOnImmediateCommandListSucceeds) {
   RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
-      *this, false, true);
+      *this, false, lzt::command_list_mode_t::immediate);
 }
 
 LZT_TEST_F(
@@ -383,7 +385,7 @@ LZT_TEST_F(
     GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualHostMemorySucceeds) {
 #ifdef __linux__
   RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
-      *this, true, false);
+      *this, true, lzt::command_list_mode_t::regular);
 #else
   GTEST_SKIP() << "Physical host memory is unsupported on Windows";
 #endif
@@ -394,14 +396,14 @@ LZT_TEST_F(
     GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualHostMemoryOnImmediateCommandListSucceeds) {
 #ifdef __linux__
   RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
-      *this, true, true);
+      *this, true, lzt::command_list_mode_t::immediate);
 #else
   GTEST_SKIP() << "Physical host memory is unsupported on Windows";
 #endif
 }
 
 void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemory(
-    zeVirtualMemoryTests &test, bool is_immediate) {
+    zeVirtualMemoryTests &test, lzt::command_list_mode_t mode) {
   uint32_t numDevices = lzt::get_ze_device_count();
   std::vector<ze_device_handle_t> devices;
   std::vector<ze_device_handle_t> potential_devices =
@@ -424,8 +426,7 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
   } else {
     reservedPhysicalMemoryArray.resize(devices.size());
   }
-  auto bundle =
-      lzt::create_command_bundle(test.context, devices[0], is_immediate);
+  auto bundle = lzt::create_command_bundle(test.context, devices[0], mode);
 
   lzt::query_page_size(test.context, test.device, 0, &test.pageSize);
   test.allocationSize = test.pageSize;
@@ -488,18 +489,18 @@ LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemoryThenMemoryCheckSucceeds) {
   RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemory(
-      *this, false);
+      *this, lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemoryOnImmediateCmdListThenMemoryCheckSucceeds) {
   RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemory(
-      *this, true);
+      *this, lzt::command_list_mode_t::immediate);
 }
 
 void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKernel(
-    zeVirtualMemoryTests &test, bool is_immediate) {
+    zeVirtualMemoryTests &test, lzt::command_list_mode_t mode) {
   uint32_t numDevices = lzt::get_ze_device_count();
   std::vector<ze_device_handle_t> devices;
   std::vector<ze_device_handle_t> potential_devices =
@@ -522,8 +523,7 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   } else {
     reservedPhysicalMemoryArray.resize(devices.size());
   }
-  auto bundle =
-      lzt::create_command_bundle(test.context, devices[0], is_immediate);
+  auto bundle = lzt::create_command_bundle(test.context, devices[0], mode);
 
   lzt::query_page_size(test.context, test.device, 0, &test.pageSize);
   test.allocationSize = test.pageSize;
@@ -630,14 +630,14 @@ LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKernelThenResultsinValidData) {
   RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKernel(
-      *this, false);
+      *this, lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKernelOnImmediateCmdListThenResultsinValidData) {
   RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKernel(
-      *this, true);
+      *this, lzt::command_list_mode_t::immediate);
 }
 
 enum MemoryReservationTestType {
@@ -647,7 +647,7 @@ enum MemoryReservationTestType {
 };
 
 void dataCheckMemoryReservations(enum MemoryReservationTestType type,
-                                 bool is_immediate) {
+                                 lzt::command_list_mode_t mode) {
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t rootDevice = lzt::zeDevice::get_instance()->get_device();
   std::vector<ze_device_handle_t> devices;
@@ -687,7 +687,7 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
     FAIL() << "Invalid Memory Reservation Test Type";
   }
 
-  auto bundle = lzt::create_command_bundle(rootDevice, is_immediate);
+  auto bundle = lzt::create_command_bundle(rootDevice, mode);
 
   lzt::query_page_size(context, rootDevice, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
@@ -766,14 +766,16 @@ LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMultiMappedReadWriteMemoryOnOneDeviceThenFillAndCopyWithMappedVirtualMemorySucceeds) {
   dataCheckMemoryReservations(
-      MemoryReservationTestType::MEMORY_RESERVATION_SINGLE_DEVICE, false);
+      MemoryReservationTestType::MEMORY_RESERVATION_SINGLE_DEVICE,
+      lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMultiMappedReadWriteMemoryOnOneDeviceThenFillAndCopyWithMappedVirtualMemoryOnImmediateCmdListSucceeds) {
   dataCheckMemoryReservations(
-      MemoryReservationTestType::MEMORY_RESERVATION_SINGLE_DEVICE, true);
+      MemoryReservationTestType::MEMORY_RESERVATION_SINGLE_DEVICE,
+      lzt::command_list_mode_t::immediate);
 }
 
 LZT_TEST_F(
@@ -782,7 +784,7 @@ LZT_TEST_F(
   dataCheckMemoryReservations(
       MemoryReservationTestType::
           MEMORY_RESERVATION_SINGLE_ROOT_DEVICE_MULTI_SUB_DEVICES,
-      false);
+      lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
@@ -791,25 +793,28 @@ LZT_TEST_F(
   dataCheckMemoryReservations(
       MemoryReservationTestType::
           MEMORY_RESERVATION_SINGLE_ROOT_DEVICE_MULTI_SUB_DEVICES,
-      true);
+      lzt::command_list_mode_t::immediate);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMultiMappedReadWriteMemoryOnMultipleRootDevicesThenFillAndCopyWithMappedVirtualMemorySucceeds) {
   dataCheckMemoryReservations(
-      MemoryReservationTestType::MEMORY_RESERVATION_MULTI_ROOT_DEVICES, false);
+      MemoryReservationTestType::MEMORY_RESERVATION_MULTI_ROOT_DEVICES,
+      lzt::command_list_mode_t::regular);
 }
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMultiMappedReadWriteMemoryOnMultipleRootDevicesThenFillAndCopyWithMappedVirtualMemoryOnImmediateCmdListSucceeds) {
   dataCheckMemoryReservations(
-      MemoryReservationTestType::MEMORY_RESERVATION_MULTI_ROOT_DEVICES, true);
+      MemoryReservationTestType::MEMORY_RESERVATION_MULTI_ROOT_DEVICES,
+      lzt::command_list_mode_t::immediate);
 }
 
 class zeVirtualMemoryMultiMappingTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<ze_memory_type_t, bool>> {
+      public ::testing::WithParamInterface<
+          std::tuple<ze_memory_type_t, lzt::command_list_mode_t>> {
 protected:
   void SetUp() override {
     device = lzt::get_default_device(lzt::get_default_driver());
@@ -827,7 +832,7 @@ LZT_TEST_P(
     givenSinglePhysicalHostMemoryMappedToMultipleVirtualMemoryRangeThenReadAndWriteResultsAreCorrect) {
 #ifdef __linux__
   const ze_memory_type_t aux_buffer_type = std::get<0>(GetParam());
-  const bool is_immediate = std::get<1>(GetParam());
+  const lzt::command_list_mode_t mode = std::get<1>(GetParam());
 
   constexpr size_t alloc_size = 1ul << 26;
 
@@ -891,7 +896,7 @@ LZT_TEST_P(
 
   // GPU copy test with cross check
   int8_t seven = 7;
-  auto bundle = lzt::create_command_bundle(device, is_immediate);
+  auto bundle = lzt::create_command_bundle(device, mode);
   lzt::append_memory_fill(bundle.list, aux_buffer, &seven, sizeof(seven),
                           alloc_size, nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
@@ -940,7 +945,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_HOST,
                                          ZE_MEMORY_TYPE_DEVICE,
                                          ZE_MEMORY_TYPE_SHARED),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 LZT_TEST_F(
     zeVirtualMemoryTests,

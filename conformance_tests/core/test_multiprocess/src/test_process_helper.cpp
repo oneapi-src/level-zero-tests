@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 
   LOG_INFO << "child";
   uint32_t proc_number = static_cast<uint32_t>(std::stoi(argv[1]));
-  bool is_immediate = std::stoi(argv[2]) == 0 ? false : true;
+  lzt::command_list_mode_t mode = lzt::from_string(argv[2]);
   bool is_stress_test = std::stoi(argv[3]) == 0 ? false : true;
 
   auto driver = lzt::get_default_driver();
@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
   size_t deviceIndex = proc_number % devices.size();
   auto device = devices[deviceIndex];
   auto device_properties = lzt::get_device_properties(device);
-  auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+  auto cmd_bundle = lzt::create_command_bundle(device, mode);
 
   auto module =
       lzt::create_module(devices[deviceIndex], "multi_process_add.spv");
@@ -79,18 +79,14 @@ int main(int argc, char **argv) {
                                 0, nullptr);
   }
 
-  lzt::close_command_list(cmd_bundle.list);
-  if (is_stress_test) {
+  if (is_stress_test && mode != lzt::command_list_mode_t::immediate) {
+    lzt::close_command_bundle(cmd_bundle);
     for (int i = 0; i < 1000; i++) {
-      lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list,
-                                 nullptr);
+      lzt::submit_command_bundle(cmd_bundle);
     }
+    lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
   } else {
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
-  }
-
-  if (is_stress_test) {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
   }
 
   lzt::destroy_command_bundle(cmd_bundle);

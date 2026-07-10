@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2025 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -22,7 +22,8 @@ namespace {
 using lzt::to_u32;
 
 class zeCommandListAppendImageCopyWithSwizzleTests
-    : public ::testing::TestWithParam<std::tuple<ze_image_type_t, bool>> {
+    : public ::testing::TestWithParam<
+          std::tuple<ze_image_type_t, lzt::command_list_mode_t>> {
 protected:
   void SetUp() override {
     if (!(lzt::image_support())) {
@@ -42,7 +43,7 @@ protected:
   void create_in_out_images(ze_image_type_t image_type);
 
 public:
-  void run_test(ze_image_type_t image_type, bool is_immediate,
+  void run_test(ze_image_type_t image_type, lzt::command_list_mode_t mode,
                 bool is_shared_system);
 
   static const bool skip_array_type = false;
@@ -56,7 +57,8 @@ public:
 };
 
 void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
-    ze_image_type_t image_type, bool is_immediate, bool is_shared_system) {
+    ze_image_type_t image_type, lzt::command_list_mode_t mode,
+    bool is_shared_system) {
   LOG_INFO << "TYPE - " << image_type;
 
   std::string kernel_name = "swizzle_test_" + shortened_string(image_type);
@@ -78,7 +80,7 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
     inbuff[i] = 0x12345678;
   }
 
-  auto bundle = lzt::create_command_bundle(is_immediate);
+  auto bundle = lzt::create_command_bundle(mode);
 
   uint32_t group_size_x, group_size_y, group_size_z;
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
@@ -169,8 +171,8 @@ LZT_TEST_P(
                 image_type) == supported_image_types.end()) {
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
-  auto is_immediate = std::get<1>(GetParam());
-  run_test(image_type, is_immediate, false);
+  auto mode = std::get<1>(GetParam());
+  run_test(image_type, mode, false);
 }
 
 LZT_TEST_P(
@@ -182,13 +184,14 @@ LZT_TEST_P(
                 image_type) == supported_image_types.end()) {
     GTEST_SKIP() << "Unsupported type: " << lzt::to_string(image_type);
   }
-  auto is_immediate = std::get<1>(GetParam());
-  run_test(image_type, is_immediate, true);
+  auto mode = std::get<1>(GetParam());
+  run_test(image_type, mode, true);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     SwizzleTestsParam, zeCommandListAppendImageCopyWithSwizzleTests,
     ::testing::Combine(::testing::ValuesIn(lzt::image_types_buffer_excluded),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 } // namespace

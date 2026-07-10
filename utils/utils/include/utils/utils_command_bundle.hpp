@@ -11,7 +11,6 @@
 
 #include <cstdint>
 #include <type_traits>
-#include <variant>
 
 #include <level_zero/ze_api.h>
 
@@ -25,7 +24,8 @@ ze_context_handle_t get_default_context();
 enum class command_list_mode_t {
   regular = 0,
   immediate,
-  immediate_append_regular
+  immediate_append_regular,
+  immediate_append_regular_with_params
 };
 
 // https://en.cppreference.com/cpp/language/attributes/no_unique_address
@@ -34,6 +34,12 @@ enum class command_list_mode_t {
 #else
 #define LZT_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
+
+namespace detail {
+struct no_queue {};
+struct no_append_list {};
+struct no_pnext {};
+} // namespace detail
 
 // ---------------------------------------------------------------------------
 // Compile-time-mode command bundle.
@@ -49,16 +55,25 @@ template <command_list_mode_t Mode> struct command_bundle_t {
   static constexpr bool has_queue = (Mode == command_list_mode_t::regular);
 
   static constexpr bool has_append_list =
-      (Mode == command_list_mode_t::immediate_append_regular);
+      (Mode == command_list_mode_t::immediate_append_regular ||
+       Mode == command_list_mode_t::immediate_append_regular_with_params);
+
+  static constexpr bool has_pnext =
+      (Mode == command_list_mode_t::immediate_append_regular_with_params);
 
   LZT_NO_UNIQUE_ADDRESS
-  std::conditional_t<has_queue, ze_command_queue_handle_t, std::monostate>
+  std::conditional_t<has_queue, ze_command_queue_handle_t, detail::no_queue>
       queue{};
   ze_command_list_handle_t list = nullptr;
 
   LZT_NO_UNIQUE_ADDRESS std::conditional_t<
-      has_append_list, ze_command_list_handle_t, std::monostate>
+      has_append_list, ze_command_list_handle_t, detail::no_append_list>
       append_list{};
+
+  // Forwarded as pNext by submit in the immediate_append_regular_with_params
+  // mode; absent in every other mode.
+  LZT_NO_UNIQUE_ADDRESS
+  std::conditional_t<has_pnext, const void *, detail::no_pnext> append_pnext{};
 
   // Returns the list that callers should append commands to. For
   // immediate_append_regular this is the recorded (append) list; for the
@@ -110,7 +125,7 @@ template <command_list_mode_t Mode, class... Args>
 command_bundle_t<Mode> create_command_bundle(Args... args) {
   auto legacy = create_command_bundle(args..., detail::mode_is_immediate(Mode));
   ze_command_list_handle_t append_list = nullptr;
-  if constexpr (Mode == command_list_mode_t::immediate_append_regular) {
+  if constexpr (command_bundle_t<Mode>::has_append_list) {
     append_list = create_command_list(args...);
   }
   return detail::make_bundle<Mode>(legacy, append_list);
@@ -125,7 +140,7 @@ command_bundle_t<Mode> create_command_bundle(
                                       list_flags, ordinal,
                                       detail::mode_is_immediate(Mode));
   ze_command_list_handle_t append_list = nullptr;
-  if constexpr (Mode == command_list_mode_t::immediate_append_regular) {
+  if constexpr (command_bundle_t<Mode>::has_append_list) {
     append_list =
         create_command_list(get_default_context(), device, list_flags, ordinal);
   }
@@ -142,7 +157,7 @@ command_bundle_t<Mode> create_command_bundle(
                                       priority, list_flags, ordinal, index,
                                       detail::mode_is_immediate(Mode));
   ze_command_list_handle_t append_list = nullptr;
-  if constexpr (Mode == command_list_mode_t::immediate_append_regular) {
+  if constexpr (command_bundle_t<Mode>::has_append_list) {
     append_list = create_command_list(context, device, list_flags, ordinal);
   }
   return detail::make_bundle<Mode>(legacy, append_list);
@@ -154,7 +169,7 @@ void close_command_bundle([[maybe_unused]] command_bundle_t<Mode> &bundle) {
     close_command_list(bundle.list);
   } else if constexpr (Mode == command_list_mode_t::immediate) {
     // no-op
-  } else if constexpr (Mode == command_list_mode_t::immediate_append_regular) {
+  } else if constexpr (command_bundle_t<Mode>::has_append_list) {
     close_command_list(bundle.append_list);
   } else {
     static_assert(detail::always_false<Mode>::value,
@@ -171,6 +186,11 @@ void submit_command_bundle([[maybe_unused]] command_bundle_t<Mode> &bundle) {
   } else if constexpr (Mode == command_list_mode_t::immediate_append_regular) {
     ze_command_list_handle_t append = bundle.append_list;
     append_command_lists_immediate_exp(bundle.list, 1, &append);
+  } else if constexpr (Mode == command_list_mode_t::
+                                   immediate_append_regular_with_params) {
+    ze_command_list_handle_t append = bundle.append_list;
+    append_command_lists_immediate_with_params(
+        bundle.list, 1, &append, bundle.append_pnext, nullptr, 0, nullptr);
   } else {
     static_assert(detail::always_false<Mode>::value,
                   "Unsupported command_list_mode_t in submit_command_bundle");
@@ -182,7 +202,9 @@ void sync_command_bundle(command_bundle_t<Mode> &bundle, uint64_t timeout) {
   if constexpr (Mode == command_list_mode_t::regular) {
     synchronize(bundle.queue, timeout);
   } else if constexpr (Mode == command_list_mode_t::immediate ||
-                       Mode == command_list_mode_t::immediate_append_regular) {
+                       Mode == command_list_mode_t::immediate_append_regular ||
+                       Mode == command_list_mode_t::
+                                   immediate_append_regular_with_params) {
     synchronize_command_list_host(bundle.list, timeout);
   } else {
     static_assert(detail::always_false<Mode>::value,
@@ -196,7 +218,7 @@ void reset_command_bundle(command_bundle_t<Mode> &bundle) {
     reset_command_list(bundle.list);
   } else if constexpr (Mode == command_list_mode_t::immediate) {
     // no-op
-  } else if constexpr (Mode == command_list_mode_t::immediate_append_regular) {
+  } else if constexpr (command_bundle_t<Mode>::has_append_list) {
     reset_command_list(bundle.append_list);
     reset_command_list(bundle.list);
   } else {
@@ -232,6 +254,7 @@ struct command_bundle {
   ze_command_queue_handle_t queue = nullptr;
   ze_command_list_handle_t list = nullptr;
   ze_command_list_handle_t append_list = nullptr;
+  const void *append_pnext = nullptr;
   command_list_mode_t mode = command_list_mode_t::regular;
 
   ze_command_list_handle_t record_list() const {
@@ -281,6 +304,8 @@ void reset_command_bundle(command_bundle &bundle);
 void sync_command_bundle(command_bundle &bundle, uint64_t timeout);
 void destroy_command_bundle(command_bundle bundle);
 
+std::string to_string(const command_list_mode_t mode);
+command_list_mode_t from_string(const std::string &str);
 } // namespace level_zero_tests
 
 #endif // level_zero_tests_UTILS_COMMAND_BUNDLE_HPP

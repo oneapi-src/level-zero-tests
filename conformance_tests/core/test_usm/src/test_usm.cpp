@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -23,7 +23,7 @@ using lzt::to_u32;
 class zeDriverMemoryMigrationPageFaultTestsMultiDevice
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<uint32_t, uint32_t, bool, bool>> {
+          std::tuple<uint32_t, uint32_t, bool, lzt::command_list_mode_t>> {
 public:
   void run_functions(const ze_device_handle_t device, ze_module_handle_t module,
                      void *pattern_memory, uint64_t pattern_memory_count,
@@ -32,7 +32,8 @@ public:
                      uint64_t *gpu_expected_output_buffer,
                      uint64_t *host_found_output_buffer,
                      uint64_t *gpu_found_output_buffer, uint32_t output_count,
-                     ze_context_handle_t context, bool is_immediate) {
+                     ze_context_handle_t context,
+                     lzt::command_list_mode_t mode) {
     ze_kernel_flags_t flag = 0;
     /* Prepare the fill function */
     ze_kernel_handle_t fill_function =
@@ -80,8 +81,8 @@ public:
                             &output_count);
 
     auto cmd_bundle = lzt::create_command_bundle(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+        context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
     // if groupSize is greater then memory count, then at least one thread group
     // should be dispatched
@@ -137,7 +138,7 @@ public:
     uint32_t memory_size_factor;
     /* The bool value which decides p2p access */
     bool p2p_access_enabled;
-    bool is_immediate;
+    lzt::command_list_mode_t mode;
   } MemoryTestArguments_t;
 
   void memoryMigrationPageFaultTests(MemoryTestArguments_t test_arguments) {
@@ -244,7 +245,7 @@ public:
                     pattern_memory_count, pattern_base,
                     host_expected_output_buffer, gpu_expected_output_buffer,
                     host_found_output_buffer, gpu_found_output_buffer,
-                    output_count_, context, test_arguments.is_immediate);
+                    output_count_, context, test_arguments.mode);
 
       LOG_DEBUG << "check output buffer copied from device";
       bool memory_test_failure = false;
@@ -314,7 +315,7 @@ public:
                       host_expected_output_buffer_1,
                       gpu_expected_output_buffer_1, host_found_output_buffer_1,
                       gpu_found_output_buffer_1, output_count_, context,
-                      test_arguments.is_immediate);
+                      test_arguments.mode);
 
         LOG_DEBUG << "End of p2p access by device :" << index;
 
@@ -494,7 +495,7 @@ public:
                     pattern_memory_count, pattern_base,
                     host_expected_output_buffer, gpu_expected_output_buffer,
                     host_found_output_buffer, gpu_found_output_buffer,
-                    output_count_, context, test_arguments.is_immediate);
+                    output_count_, context, test_arguments.mode);
 
       LOG_DEBUG << "check output buffer copied from device";
       bool memory_test_failure = false;
@@ -568,7 +569,7 @@ LZT_TEST_P(
       std::get<0>(GetParam()), // driver index
       std::get<1>(GetParam()), // memory size factor, rounded up to uint16_t
       std::get<2>(GetParam()), // p2p access flag
-      std::get<3>(GetParam())  // immediate cmdlist flag
+      std::get<3>(GetParam())  // mode
   };
   memoryMigrationPageFaultTests(test_arguments);
 }
@@ -581,32 +582,35 @@ LZT_TEST_P(
       std::get<0>(GetParam()), // driver index
       std::get<1>(GetParam()), // memory size factor, rounded up to uint16_t
       std::get<2>(GetParam()), // p2p access flag
-      std::get<3>(GetParam())  // immediate cmdlist flag
+      std::get<3>(GetParam())  // mode
   };
   memoryMigrationPageFaultTests(test_arguments);
 }
 
-INSTANTIATE_TEST_SUITE_P(TestAllInputPermuntationsForSingleDevice,
-                         zeDriverMemoryMigrationPageFaultTestsSingleDevice,
-                         ::testing::Combine(::testing::Values(0),
-                                            ::testing::Values(1024 * 1024 * 64,
-                                                              1024 * 1024,
-                                                              1024 * 64),
-                                            ::testing::Values(0),
-                                            ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(
+    TestAllInputPermuntationsForSingleDevice,
+    zeDriverMemoryMigrationPageFaultTestsSingleDevice,
+    ::testing::Combine(::testing::Values(0),
+                       ::testing::Values(1024 * 1024 * 64, 1024 * 1024,
+                                         1024 * 64),
+                       ::testing::Values(0),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
-INSTANTIATE_TEST_SUITE_P(TestAllInputPermuntationsForMultiDevice,
-                         zeDriverMemoryMigrationPageFaultTestsMultiDevice,
-                         ::testing::Combine(::testing::Values(0),
-                                            ::testing::Values(1024 * 1024 * 64,
-                                                              1024 * 1024,
-                                                              1024 * 64),
-                                            ::testing::Values(1),
-                                            ::testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(
+    TestAllInputPermuntationsForMultiDevice,
+    zeDriverMemoryMigrationPageFaultTestsMultiDevice,
+    ::testing::Combine(::testing::Values(0),
+                       ::testing::Values(1024 * 1024 * 64, 1024 * 1024,
+                                         1024 * 64),
+                       ::testing::Values(1),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 class zeConcurrentAccessToMemoryTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<size_t, bool>> {};
+      public ::testing::WithParamInterface<
+          std::tuple<size_t, lzt::command_list_mode_t>> {};
 LZT_TEST_P(
     zeConcurrentAccessToMemoryTests,
     GivenSharedMemoryDividedIntoTwoChunksWhenBothHostAndDeviceAccessAChunkConcurrentlyThenSuccessIsReturned) {
@@ -624,7 +628,7 @@ LZT_TEST_P(
 
   size_t size_shared_memory = std::get<0>(GetParam());
   size_t size_of_chunk = size_shared_memory / 2;
-  bool is_immediate = std::get<1>(GetParam());
+  lzt::command_list_mode_t mode = std::get<1>(GetParam());
   ze_context_handle_t context = lzt::create_context();
   auto memory_shared =
       lzt::allocate_shared_memory(size_shared_memory, 1, 0, 0, device, context);
@@ -634,18 +638,18 @@ LZT_TEST_P(
   uint8_t *host_mem = static_cast<uint8_t *>(memory_shared);
   uint8_t *device_mem = static_cast<uint8_t *>(memory_shared) + size_of_chunk;
   auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
   ;
 
   lzt::append_memory_fill(cmd_bundle.list, static_cast<uint8_t *>(device_mem),
                           &pattern, pattern_size, size_of_chunk, nullptr);
   lzt::close_command_list(cmd_bundle.list);
-  if (!is_immediate) {
+  if (mode != lzt::command_list_mode_t::immediate) {
     lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
   }
   memset(host_mem, 0x0, size_of_chunk);
-  if (is_immediate) {
+  if (mode == lzt::command_list_mode_t::immediate) {
     lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
   } else {
     lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
@@ -664,11 +668,12 @@ INSTANTIATE_TEST_SUITE_P(
     VaryMemorySize, zeConcurrentAccessToMemoryTests,
     ::testing::Combine(::testing::Values(8 * 1024, 16 * 1024, 32 * 1024,
                                          64 * 1024, 128 * 1024),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
+template <lzt::command_list_mode_t Mode>
 static void
-test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices,
-                                bool is_immediate) {
+test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
 
   devices.erase(std::remove_if(
                     devices.begin(), devices.end(),
@@ -699,10 +704,9 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices,
   uint8_t pattern = 0x01;
 
   for (size_t i = 0U; i < devices.size(); i++) {
-    auto cmd_bundle = lzt::create_command_bundle(devices[i], is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle<Mode>(devices[i]);
     lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size,
                             memory_size, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
     lzt::destroy_command_bundle(cmd_bundle);
 
@@ -721,7 +725,7 @@ LZT_TEST(
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
-  test_multi_device_shared_memory(devices, false);
+  test_multi_device_shared_memory<lzt::command_list_mode_t::regular>(devices);
 }
 
 LZT_TEST(
@@ -730,7 +734,7 @@ LZT_TEST(
   auto driver = lzt::get_default_driver();
   auto devices = lzt::get_devices(driver);
 
-  test_multi_device_shared_memory(devices, true);
+  test_multi_device_shared_memory<lzt::command_list_mode_t::immediate>(devices);
 }
 
 LZT_TEST(
@@ -742,7 +746,8 @@ LZT_TEST(
   for (auto device : lzt::get_devices(driver)) {
     auto subdevices = lzt::get_ze_sub_devices(device);
 
-    test_multi_device_shared_memory(subdevices, false);
+    test_multi_device_shared_memory<lzt::command_list_mode_t::regular>(
+        subdevices);
   }
 }
 
@@ -755,7 +760,8 @@ LZT_TEST(
   for (auto device : lzt::get_devices(driver)) {
     auto subdevices = lzt::get_ze_sub_devices(device);
 
-    test_multi_device_shared_memory(subdevices, true);
+    test_multi_device_shared_memory<lzt::command_list_mode_t::immediate>(
+        subdevices);
   }
 }
 

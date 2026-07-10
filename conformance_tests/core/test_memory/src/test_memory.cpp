@@ -227,7 +227,7 @@ public:
 
     auto bundle = lzt::create_command_bundle<Mode>(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0);
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
 
     lzt::append_memory_fill(bundle.record_list(), memory, &pattern2, 1, size,
                             nullptr);
@@ -704,7 +704,7 @@ LZT_TEST_F(zeMemFreeExtTests,
 class zeMemFreeExtMultipleTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<size_t, uint32_t, uint32_t, bool>> {};
+          std::tuple<size_t, uint32_t, uint32_t, lzt::command_list_mode_t>> {};
 
 LZT_TEST_P(
     zeMemFreeExtMultipleTests,
@@ -722,7 +722,7 @@ LZT_TEST_P(
   uint32_t num_loops = std::get<2>(GetParam());
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
 
-  const bool is_immediate = std::get<3>(GetParam());
+  const auto mode = std::get<3>(GetParam());
 
   uint8_t pattern[num_buffers_max];
   uint8_t *dev_fill_buf[num_buffers_max];
@@ -744,7 +744,7 @@ LZT_TEST_P(
       const ze_context_handle_t context = lzt::create_context();
       auto bundle = lzt::create_command_bundle(
           context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-          ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+          ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, mode);
 
       for (uint32_t i = 0; i < num_buffers; i++) {
         dev_fill_buf[i] = static_cast<uint8_t *>(lzt::allocate_device_memory(
@@ -770,10 +770,8 @@ LZT_TEST_P(
         lzt::append_barrier(bundle.list);
       }
 
-      lzt::close_command_list(bundle.list);
-      if (!is_immediate) {
-        lzt::execute_command_lists(bundle.queue, 1, &bundle.list, nullptr);
-      }
+      lzt::close_command_bundle(bundle);
+      lzt::submit_command_bundle(bundle);
 
       for (uint32_t i = 0; i < num_buffers; i++) {
         EXPECT_ZE_RESULT_SUCCESS(
@@ -782,11 +780,7 @@ LZT_TEST_P(
             zeMemFreeExt(context, &memfreedesc, dev_copy_buf[i]));
       }
 
-      if (is_immediate) {
-        lzt::synchronize_command_list_host(bundle.list, UINT64_MAX);
-      } else {
-        lzt::synchronize(bundle.queue, UINT64_MAX);
-      }
+      lzt::sync_command_bundle(bundle, UINT64_MAX);
 
       for (uint32_t i = 0; i < num_buffers; i++) {
         bool failed = false;
@@ -812,7 +806,8 @@ INSTANTIATE_TEST_SUITE_P(
     TestDeferAndBlockingPermuatations, zeMemFreeExtMultipleTests,
     ::testing::Combine(::testing::Values(500000, 1000000, 5000000, 10000000),
                        ::testing::Values(5, 10), ::testing::Values(100),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 #endif
 

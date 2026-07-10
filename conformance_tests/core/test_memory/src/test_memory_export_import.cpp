@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021-2023 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -47,7 +47,7 @@ typedef enum class _test_memory_type_t {
 
 typedef struct {
   int fd;
-  bool is_immediate;
+  lzt::command_list_mode_t mode;
   test_memory_type_t test_memory_type;
 } thread_args;
 
@@ -159,11 +159,13 @@ void *allocate_exported_memory(
   return exported_memory;
 }
 
-ze_result_t export_memory(
-    ze_context_handle_t context, ze_device_handle_t device, bool is_immediate,
-    size_t size, uint8_t pattern, test_memory_type_t test_memory_type,
-    ze_external_memory_type_flag_t external_memory_type_flag,
-    void **exported_memory, int *fd, ze_image_handle_t *image_handle) {
+ze_result_t
+export_memory(ze_context_handle_t context, ze_device_handle_t device,
+              lzt::command_list_mode_t mode, size_t size, uint8_t pattern,
+              test_memory_type_t test_memory_type,
+              ze_external_memory_type_flag_t external_memory_type_flag,
+              void **exported_memory, int *fd,
+              ze_image_handle_t *image_handle) {
 
   auto result = ZE_RESULT_SUCCESS;
 
@@ -175,8 +177,8 @@ ze_result_t export_memory(
   // Fill the allocated memory with some pattern so we can verify
   // it was exported successfully
   auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   lzt::append_memory_fill(cmd_bundle.list, *exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
@@ -184,10 +186,6 @@ ze_result_t export_memory(
     lzt::append_barrier(cmd_bundle.list);
     lzt::append_image_copy_from_mem(cmd_bundle.list, *image_handle,
                                     *exported_memory, nullptr);
-  }
-  // An immediate command list is not required to be closed or reset
-  if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
   }
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
@@ -278,7 +276,7 @@ ze_result_t import_memory(ze_context_handle_t context,
 #ifdef __linux__
 
 static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
-                           bool is_immediate,
+                           lzt::command_list_mode_t mode,
                            test_memory_type_t test_memory_type) {
   int fd;
   const char *socket_path = "external_memory_socket";
@@ -290,7 +288,8 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
   fs::path helper = bp::search_path("test_import_helper", paths);
   bp::child import_memory_helper(
       helper,
-      bp::args({driver_id, is_immediate ? "1" : "0",
+      bp::args({driver_id,
+                mode == lzt::command_list_mode_t::immediate ? "1" : "0",
                 test_memory_type != test_memory_type_t::TEST_MEMORY_TYPE_HOST
                     ? "1"
                     : "0"}),
@@ -349,7 +348,8 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
 #else
 static int send_handle(std::string driver_id, bp::opstream &child_input,
                        uint64_t handle, lzt::lztWin32HandleTestType handle_type,
-                       bool is_immediate, test_memory_type_t test_memory_type) {
+                       lzt::command_list_mode_t mode,
+                       test_memory_type_t test_memory_type) {
   // launch a new process that exports memory
   fs::path helper_path(fs::current_path() / "memory");
   std::vector<fs::path> paths;
@@ -358,7 +358,8 @@ static int send_handle(std::string driver_id, bp::opstream &child_input,
   fs::path helper = bp::search_path("test_import_helper", paths);
   bp::child import_memory_helper(
       helper,
-      bp::args({driver_id, is_immediate ? "1" : "0",
+      bp::args({driver_id,
+                mode == lzt::command_list_mode_t::immediate ? "1" : "0",
                 test_memory_type != test_memory_type_t::TEST_MEMORY_TYPE_HOST
                     ? "1"
                     : "0"}),
@@ -425,34 +426,34 @@ static int send_handle(std::string driver_id, bp::opstream &child_input,
 class zeDeviceGetExternalMemoryProperties : public ::testing::Test {
 protected:
   void RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
-      bool is_immediate, test_memory_type_t test_memory_type);
+      lzt::command_list_mode_t mode, test_memory_type_t test_memory_type);
   void RunGivenValidDeviceWhenImportingMemoryTest(
-      bool is_immediate, test_memory_type_t test_memory_type);
+      lzt::command_list_mode_t mode, test_memory_type_t test_memory_type);
   void RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      bool is_immediate, test_memory_type_t test_memory_type,
+      lzt::command_list_mode_t mode, test_memory_type_t test_memory_type,
       ze_external_memory_type_flag_t external_memory_type_flag,
       lzt::lztWin32HandleTestType handle_test_type);
   void
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-      bool is_immediate, test_memory_type_t test_memory_type);
+      lzt::command_list_mode_t mode, test_memory_type_t test_memory_type);
   void
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-      bool is_immediate, test_memory_type_t test_memory_type);
+      lzt::command_list_mode_t mode, test_memory_type_t test_memory_type);
   void RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      bool is_immediate, test_memory_type_t test_memory_type,
+      lzt::command_list_mode_t mode, test_memory_type_t test_memory_type,
       ze_external_memory_type_flag_t external_memory_type_flag);
   void
   RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-      bool is_immediate);
+      lzt::command_list_mode_t mode);
   void
   RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-      bool is_immediate);
+      lzt::command_list_mode_t mode);
 };
 
 #ifdef __linux__
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-        bool is_immediate, test_memory_type_t test_memory_type) {
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -469,9 +470,9 @@ void zeDeviceGetExternalMemoryProperties::
   ze_image_handle_t export_image_handle;
 
   ASSERT_ZE_RESULT_SUCCESS(
-      export_memory(context, device, is_immediate, size, pattern,
-                    test_memory_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF,
-                    &exported_memory, &fd, &export_image_handle));
+      export_memory(context, device, mode, size, pattern, test_memory_type,
+                    ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
+                    &export_image_handle));
   EXPECT_NE(fd, 0);
 
   /* Import exported Memory As DMA_BUF*/
@@ -483,8 +484,8 @@ void zeDeviceGetExternalMemoryProperties::
     GTEST_SKIP();
   }
   auto import_cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   void *imported_memory = nullptr;
   ze_image_handle_t import_image_handle;
@@ -534,8 +535,8 @@ void memory_import_thread(thread_args *args) {
     GTEST_SKIP();
   }
   auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, args->is_immediate);
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, args->mode);
 
   size_t size = 1024;
   void *imported_memory = nullptr;
@@ -572,7 +573,7 @@ void memory_import_thread(thread_args *args) {
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-        bool is_immediate, test_memory_type_t test_memory_type) {
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -587,8 +588,8 @@ void zeDeviceGetExternalMemoryProperties::
   void *exported_memory = nullptr;
   int fd = 0;
   ze_image_handle_t image_handle;
-  ASSERT_ZE_RESULT_SUCCESS(export_memory(context, device, is_immediate, size,
-                                         pattern, test_memory_type,
+  ASSERT_ZE_RESULT_SUCCESS(export_memory(context, device, mode, size, pattern,
+                                         test_memory_type,
                                          ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF,
                                          &exported_memory, &fd, &image_handle));
   EXPECT_NE(fd, 0);
@@ -596,7 +597,7 @@ void zeDeviceGetExternalMemoryProperties::
   // spawn a new thread and pass fd as argument
   thread_args args = {};
   args.fd = fd;
-  args.is_immediate = is_immediate;
+  args.mode = mode;
   args.test_memory_type = test_memory_type;
   std::thread thread(memory_import_thread, &args);
 
@@ -611,7 +612,7 @@ void zeDeviceGetExternalMemoryProperties::
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
-        bool is_immediate, test_memory_type_t test_memory_type) {
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -627,8 +628,8 @@ void zeDeviceGetExternalMemoryProperties::
   int fd = 0;
   ze_image_handle_t image_handle;
 
-  ASSERT_ZE_RESULT_SUCCESS(export_memory(context, device, is_immediate, size,
-                                         pattern, test_memory_type,
+  ASSERT_ZE_RESULT_SUCCESS(export_memory(context, device, mode, size, pattern,
+                                         test_memory_type,
                                          ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF,
                                          &exported_memory, &fd, &image_handle));
   EXPECT_NE(fd, 0);
@@ -658,7 +659,7 @@ void zeDeviceGetExternalMemoryProperties::
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenImportingMemoryTest(
-        bool is_immediate, test_memory_type_t test_memory_type) {
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
@@ -671,15 +672,14 @@ void zeDeviceGetExternalMemoryProperties::
     GTEST_SKIP();
   }
   auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   // set up request to import the external memory handle
   auto driver_properties = lzt::get_driver_properties(driver);
   bp::opstream child_input;
-  auto imported_fd =
-      get_imported_fd(lzt::to_string(driver_properties.uuid), child_input,
-                      is_immediate, test_memory_type);
+  auto imported_fd = get_imported_fd(lzt::to_string(driver_properties.uuid),
+                                     child_input, mode, test_memory_type);
 
   size_t size = 1024;
   void *imported_memory = nullptr;
@@ -721,7 +721,7 @@ void zeDeviceGetExternalMemoryProperties::
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-        bool is_immediate) {
+        lzt::command_list_mode_t mode) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
@@ -737,9 +737,9 @@ void zeDeviceGetExternalMemoryProperties::
   // Launch child process that exports device memory filled with pattern 0xAB
   auto driver_properties = lzt::get_driver_properties(driver);
   bp::opstream child_input;
-  auto imported_fd = get_imported_fd(
-      lzt::to_string(driver_properties.uuid), child_input, is_immediate,
-      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+  auto imported_fd =
+      get_imported_fd(lzt::to_string(driver_properties.uuid), child_input, mode,
+                      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 
   const size_t size = 1024;
 
@@ -773,12 +773,9 @@ void zeDeviceGetExternalMemoryProperties::
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
   auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, mode);
   lzt::append_memory_copy(cmd_bundle.list, verification_memory, virtual_address,
                           size);
-  if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
-  }
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   LOG_DEBUG << "Importer sending done msg " << std::endl;
@@ -801,7 +798,7 @@ void zeDeviceGetExternalMemoryProperties::
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-        bool is_immediate, test_memory_type_t test_memory_type,
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type,
         ze_external_memory_type_flag_t external_memory_type_flag,
         lzt::lztWin32HandleTestType handle_test_type) {
   GTEST_SKIP() << "Test Not Supported on Linux";
@@ -809,14 +806,14 @@ void zeDeviceGetExternalMemoryProperties::
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        bool is_immediate, test_memory_type_t test_memory_type,
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type,
         ze_external_memory_type_flag_t external_memory_type_flag) {
   GTEST_SKIP() << "Test Not Supported on Linux";
 }
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-        bool is_immediate) {
+        lzt::command_list_mode_t mode) {
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
@@ -840,7 +837,7 @@ void zeDeviceGetExternalMemoryProperties::
   ze_image_handle_t image_handle;
 
   ASSERT_ZE_RESULT_SUCCESS(
-      export_memory(context, device, is_immediate, size, pattern,
+      export_memory(context, device, mode, size, pattern,
                     test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
                     ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, &exported_memory, &fd,
                     &image_handle));
@@ -876,12 +873,9 @@ void zeDeviceGetExternalMemoryProperties::
   auto verification_memory = lzt::allocate_host_memory(size);
   auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, mode);
   lzt::append_memory_copy(cmd_bundle.list, verification_memory, virtual_address,
                           size);
-  if (!is_immediate) {
-    lzt::close_command_list(cmd_bundle.list);
-  }
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (size_t i = 0; i < size; i++) {
@@ -901,7 +895,7 @@ void zeDeviceGetExternalMemoryProperties::
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        bool is_immediate, test_memory_type_t test_memory_type,
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type,
         ze_external_memory_type_flag_t external_memory_type_flag) {
 
   auto driver = lzt::get_default_driver();
@@ -921,7 +915,7 @@ void zeDeviceGetExternalMemoryProperties::
   ze_image_handle_t image_handle;
 
   ASSERT_ZE_RESULT_SUCCESS(export_memory(
-      context, device, is_immediate, size, pattern, test_memory_type,
+      context, device, mode, size, pattern, test_memory_type,
       external_memory_type_flag, &exported_memory, &fd, &image_handle));
   EXPECT_NE(fd, 0);
 
@@ -934,43 +928,43 @@ void zeDeviceGetExternalMemoryProperties::
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-        bool is_immediate, test_memory_type_t test_memory_type) {
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type) {
   GTEST_SKIP() << "Test Not Supported on Windows";
 }
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-        bool is_immediate, test_memory_type_t test_memory_type) {
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type) {
   GTEST_SKIP() << "Test Not Supported on Windows";
 }
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
-        bool is_immediate, test_memory_type_t test_memory_type) {
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type) {
   GTEST_SKIP() << "Test Not Supported on Windows";
 }
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenImportingMemoryTest(
-        bool is_immediate, test_memory_type_t test_memory_type) {
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type) {
   GTEST_SKIP() << "Test Not Supported on Windows";
 }
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-        bool is_immediate) {
+        lzt::command_list_mode_t mode) {
   GTEST_SKIP() << "Test Not Supported on Windows";
 }
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-        bool is_immediate) {
+        lzt::command_list_mode_t mode) {
   GTEST_SKIP() << "Test Not Supported on Windows";
 }
 
 void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-        bool is_immediate, test_memory_type_t test_memory_type,
+        lzt::command_list_mode_t mode, test_memory_type_t test_memory_type,
         ze_external_memory_type_flag_t external_memory_type_flag,
         lzt::lztWin32HandleTestType handle_test_type) {
   auto driver = lzt::get_default_driver();
@@ -994,7 +988,7 @@ void zeDeviceGetExternalMemoryProperties::
   ze_image_handle_t image_handle;
 
   ASSERT_ZE_RESULT_SUCCESS(export_memory(
-      context, device, is_immediate, size, pattern, test_memory_type,
+      context, device, mode, size, pattern, test_memory_type,
       external_memory_type_flag, &exported_memory, &fd, &image_handle));
   EXPECT_NE(fd, 0);
 
@@ -1010,7 +1004,7 @@ void zeDeviceGetExternalMemoryProperties::
   int child_result =
       send_handle(lzt::to_string(driver_properties.uuid), child_input,
                   reinterpret_cast<uint64_t>(export_handle.handle),
-                  handle_test_type, is_immediate, test_memory_type);
+                  handle_test_type, mode, test_memory_type);
 
   // cleanup
   if (exported_memory) {
@@ -1030,63 +1024,72 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryAsDMABufThenSameThreadCanImportBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryAsDMABufOnImmediateCmdListThenSameThreadCanImportBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryAsDMABufThenOtherThreadCanImportBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryAsDMABufOnImmediateCmdListThenOtherThreadCanImportBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryAsDMABufOnImmediateCmdListThenHostCanMMAPBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenImportingMemoryThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32,
       lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
 }
@@ -1095,7 +1098,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32,
       lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
 }
@@ -1104,7 +1108,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT,
       lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
 }
@@ -1113,7 +1118,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT,
       lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
 }
@@ -1122,7 +1128,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3DTextureThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE);
 }
 
@@ -1130,7 +1137,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3DTextureOnImmediateCmdListThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE);
 }
 
@@ -1138,7 +1146,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3DTextureKmtThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT);
 }
 
@@ -1146,7 +1155,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3DTextureKmtOnImmediateCmdListThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT);
 }
 
@@ -1154,7 +1164,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3D12HeapThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP);
 }
 
@@ -1162,7 +1173,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3D12HeapOnImmediateCmdListThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP);
 }
 
@@ -1170,7 +1182,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
 }
 
@@ -1178,7 +1191,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingMemoryWithD3D12ResourceOnImmediateCmdListThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_DEVICE,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
 }
 
@@ -1188,62 +1202,71 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryAsDMABufThenSameThreadCanImportBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST);
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryAsDMABufOnImmediateCmdListThenSameThreadCanImportBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST);
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryAsDMABufThenOtherThreadCanImportBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST);
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryAsDMABufOnImmediateCmdListThenOtherThreadCanImportBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST);
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST);
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryAsDMABufOnImmediateCmdListThenHostCanMMAPBufferContainingValidData) {
   RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST);
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST);
 }
 
 LZT_TEST_F(zeDeviceGetExternalMemoryProperties,
            GivenValidHostWhenImportingMemoryThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST);
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST);
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32,
       lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
 }
@@ -1252,7 +1275,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32,
       lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
 }
@@ -1261,7 +1285,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT,
       lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
 }
@@ -1270,7 +1295,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
   RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT,
       lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
 }
@@ -1279,7 +1305,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryWithD3DTextureThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE);
 }
 
@@ -1287,7 +1314,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryWithD3DTextureOnImmediateCmdListThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE);
 }
 
@@ -1295,7 +1323,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryWithD3DTextureKmtThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT);
 }
 
@@ -1303,7 +1332,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryWithD3DTextureKmtOnImmediateCmdListThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT);
 }
 
@@ -1311,7 +1341,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryWithD3D12HeapThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP);
 }
 
@@ -1319,7 +1350,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryWithD3D12HeapOnImmediateCmdListThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP);
 }
 
@@ -1327,7 +1359,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      false, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::regular,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
 }
 
@@ -1335,7 +1368,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidHostWhenExportingMemoryWithD3D12ResourceOnImmediateCmdListThenResourceSuccessfullyExported) {
   RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-      true, test_memory_type_t::TEST_MEMORY_TYPE_HOST,
+      lzt::command_list_mode_t::immediate,
+      test_memory_type_t::TEST_MEMORY_TYPE_HOST,
       ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
 }
 
@@ -1352,7 +1386,7 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryAsDMABufThenSameThreadCanImportBufferContainingValidData) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-        false, image_type);
+        lzt::command_list_mode_t::regular, image_type);
   }
 }
 
@@ -1361,7 +1395,7 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryAsDMABufOnImmediateCmdListThenSameThreadCanImportBufferContainingValidData) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
-        true, image_type);
+        lzt::command_list_mode_t::immediate, image_type);
   }
 }
 
@@ -1370,7 +1404,7 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryAsDMABufThenOtherThreadCanImportBufferContainingValidData) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-        false, image_type);
+        lzt::command_list_mode_t::regular, image_type);
   }
 }
 
@@ -1379,7 +1413,7 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryAsDMABufOnImmediateCmdListThenOtherThreadCanImportBufferContainingValidData) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
-        true, image_type);
+        lzt::command_list_mode_t::immediate, image_type);
   }
 }
 
@@ -1387,7 +1421,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidImageWhenExportingMemoryAsDMABufThenHostCanMMAPBufferContainingValidData) {
   for (auto image_type : image_memory_types) {
-    RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(false, image_type);
+    RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
+        lzt::command_list_mode_t::regular, image_type);
   }
 }
 
@@ -1395,14 +1430,16 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidImageWhenExportingMemoryAsDMABufOnImmediateCmdListThenHostCanMMAPBufferContainingValidData) {
   for (auto image_type : image_memory_types) {
-    RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(true, image_type);
+    RunGivenValidDeviceWhenExportingMemoryAsDMABufTest(
+        lzt::command_list_mode_t::immediate, image_type);
   }
 }
 
 LZT_TEST_F(zeDeviceGetExternalMemoryProperties,
            GivenValidImageWhenImportingMemoryThenImportedBufferHasCorrectData) {
   for (auto image_type : image_memory_types) {
-    RunGivenValidDeviceWhenImportingMemoryTest(false, image_type);
+    RunGivenValidDeviceWhenImportingMemoryTest(
+        lzt::command_list_mode_t::regular, image_type);
   }
 }
 
@@ -1410,7 +1447,8 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidImageWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData) {
   for (auto image_type : image_memory_types) {
-    RunGivenValidDeviceWhenImportingMemoryTest(true, image_type);
+    RunGivenValidDeviceWhenImportingMemoryTest(
+        lzt::command_list_mode_t::immediate, image_type);
   }
 }
 
@@ -1419,7 +1457,8 @@ LZT_TEST_F(
     GivenValidImageWhenImportingMemoryWithNTHandleThenImportedBufferHasCorrectData) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-        false, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32,
+        lzt::command_list_mode_t::regular, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32,
         lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
   }
 }
@@ -1429,7 +1468,8 @@ LZT_TEST_F(
     GivenValidImageWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-        true, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32,
+        lzt::command_list_mode_t::immediate, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32,
         lzt::lztWin32HandleTestType::LZT_OPAQUE_WIN32);
   }
 }
@@ -1439,7 +1479,8 @@ LZT_TEST_F(
     GivenValidImageWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-        false, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT,
+        lzt::command_list_mode_t::regular, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT,
         lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
   }
 }
@@ -1449,7 +1490,8 @@ LZT_TEST_F(
     GivenValidImageWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenImportingMemoryWithNTHandleTest(
-        true, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT,
+        lzt::command_list_mode_t::immediate, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_OPAQUE_WIN32_KMT,
         lzt::lztWin32HandleTestType::LZT_KMT_WIN32);
   }
 }
@@ -1459,7 +1501,8 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryWithD3DTextureThenResourceSuccessfullyExported) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        false, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE);
+        lzt::command_list_mode_t::regular, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE);
   }
 }
 
@@ -1468,7 +1511,8 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryWithD3DTextureOnImmediateCmdListThenResourceSuccessfullyExported) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        true, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE);
+        lzt::command_list_mode_t::immediate, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE);
   }
 }
 
@@ -1477,7 +1521,8 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryWithD3DTextureKmtThenResourceSuccessfullyExported) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        false, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT);
+        lzt::command_list_mode_t::regular, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT);
   }
 }
 
@@ -1486,7 +1531,8 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryWithD3DTextureKmtOnImmediateCmdListThenResourceSuccessfullyExported) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        true, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT);
+        lzt::command_list_mode_t::immediate, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE_KMT);
   }
 }
 
@@ -1495,7 +1541,8 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryWithD3D12HeapThenResourceSuccessfullyExported) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        false, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP);
+        lzt::command_list_mode_t::regular, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP);
   }
 }
 
@@ -1504,7 +1551,8 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryWithD3D12HeapOnImmediateCmdListThenResourceSuccessfullyExported) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        true, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP);
+        lzt::command_list_mode_t::immediate, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_HEAP);
   }
 }
 
@@ -1513,7 +1561,8 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryWithD3D12ResourceThenResourceSuccessfullyExported) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        false, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
+        lzt::command_list_mode_t::regular, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
   }
 }
 
@@ -1522,7 +1571,8 @@ LZT_TEST_F(
     GivenValidImageWhenExportingMemoryWithD3D12ResourceOnImmediateCmdListThenResourceSuccessfullyExported) {
   for (auto image_type : image_memory_types) {
     RunGivenValidDeviceWhenExportingMemoryWithD3DTest(
-        true, image_type, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
+        lzt::command_list_mode_t::immediate, image_type,
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE);
   }
 }
 
@@ -1530,28 +1580,28 @@ LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressContainingValidData) {
   RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-      false);
+      lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenValidDeviceWhenExportingDeviceMemoryAsDMABufOnImmediateCmdListThenCanImportIntoPhysicalMemAndMapToVirtualAddressContainingValidData) {
   RunGivenValidDeviceWhenExportingDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-      true);
+      lzt::command_list_mode_t::immediate);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenChildProcessExportsDeviceMemoryAsDMABufThenCanImportIntoPhysicalMemAndMapToVirtualAddressContainingValidData) {
   RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-      false);
+      lzt::command_list_mode_t::regular);
 }
 
 LZT_TEST_F(
     zeDeviceGetExternalMemoryProperties,
     GivenChildProcessExportsDeviceMemoryAsDMABufOnImmediateCmdListThenCanImportIntoPhysicalMemAndMapToVirtualAddressContainingValidData) {
   RunGivenValidDeviceWhenChildProcessExportsMemoryThenCanImportIntoPhysicalMemAndMapToVirtualAddressTest(
-      true);
+      lzt::command_list_mode_t::immediate);
 }
 
 } // namespace

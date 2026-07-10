@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022-2025 Intel Corporation
+ * Copyright (C) 2022-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -31,14 +31,15 @@ const std::vector<shared_memory_type> shared_memory_types = {SHARED_LOCAL,
 
 class KernelAtomicLoadStoreTests
     : public ::testing::Test,
-      public ::testing::WithParamInterface<std::tuple<
-          ze_memory_type_t, ze_memory_type_t, shared_memory_type, bool>> {
+      public ::testing::WithParamInterface<
+          std::tuple<ze_memory_type_t, ze_memory_type_t, shared_memory_type,
+                     lzt::command_list_mode_t>> {
 
 public:
   void launchAtomicLoadStore(ze_device_handle_t device, int *input_data,
-                             int *output_data, bool is_immediate) {
+                             int *output_data, lzt::command_list_mode_t mode) {
     // set up
-    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle(device, mode);
 
     int *expected_data =
         static_cast<int *>(lzt::allocate_host_memory(size * sizeof(int)));
@@ -99,7 +100,7 @@ LZT_TEST_P(
   ze_memory_type_t input_memory_type = std::get<0>(GetParam());
   ze_memory_type_t output_memory_type = std::get<1>(GetParam());
   shared_memory_type shared_mem = std::get<2>(GetParam());
-  bool is_immediate = std::get<3>(GetParam());
+  lzt::command_list_mode_t mode = std::get<3>(GetParam());
   auto context = lzt::get_default_context();
 
   for (auto driver : lzt::get_all_driver_handles()) {
@@ -190,7 +191,7 @@ LZT_TEST_P(
       EXPECT_NE(input_data, nullptr);
       EXPECT_NE(output_data, nullptr);
 
-      launchAtomicLoadStore(device, input_data, output_data, is_immediate);
+      launchAtomicLoadStore(device, input_data, output_data, mode);
 
       // cleanup
       if (shared_mem == SHARED_SYSTEM) {
@@ -216,7 +217,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Combine(::testing::ValuesIn(atomic_memory_types),
                        ::testing::ValuesIn(atomic_memory_types),
                        ::testing::ValuesIn(shared_memory_types),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 class AtomicAccessTests : public ::testing::Test {};
 

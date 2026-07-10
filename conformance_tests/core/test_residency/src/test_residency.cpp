@@ -256,8 +256,8 @@ LZT_TEST_F(
   }
 }
 
-void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest() {
   const uint32_t size = 5;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
@@ -275,7 +275,7 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
     }
 
     // set up
-    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle<Mode>(device);
 
     module = lzt::create_module(device, "residency_tests.spv");
     kernel = lzt::create_function(module, ZE_KERNEL_FLAG_FORCE_RESIDENCY,
@@ -305,9 +305,8 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
     lzt::set_argument_value(kernel, 1, sizeof(uint32_t), &size);
-    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
-                                0, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                                nullptr, 0, nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     // cleanup
@@ -331,17 +330,19 @@ void RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
 LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagThenMemoryIsMadeResidentAndUpdatedCorrectly) {
-  RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(false);
+  RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagOnImmediateCmdListThenMemoryIsMadeResidentAndUpdatedCorrectly) {
-  RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest(true);
+  RunGivenSharedMemoryWhenMakingMemoryResidentUsingKernelFlagTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
-void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
-    bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest() {
   const uint32_t size = 5;
   ze_module_handle_t module;
   ze_kernel_handle_t kernel;
@@ -361,7 +362,7 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
                 "system memory";
     }
     // set up
-    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle<Mode>(device);
 
     module = lzt::create_module(device, "residency_tests.spv");
     kernel = lzt::create_function(module, ZE_KERNEL_FLAG_FORCE_RESIDENCY,
@@ -390,9 +391,8 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
     lzt::set_argument_value(kernel, 1, sizeof(uint32_t), &size);
-    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
-                                0, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                                nullptr, 0, nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     // cleanup
@@ -417,13 +417,15 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(
 LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagThenMemoryIsMadeResidentAndUpdatedCorrectly) {
-  RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(false);
+  RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST_F(
     zeContextMakeResidentTests,
     GivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagOnImmediateCmdListThenMemoryIsMadeResidentAndUpdatedCorrectly) {
-  RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest(true);
+  RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 class zeContextEvictMemoryTests : public zeContextMakeResidentTests {};

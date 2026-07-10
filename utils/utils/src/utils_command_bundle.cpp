@@ -25,6 +25,9 @@ command_bundle to_runtime(command_bundle_t<Mode> b) {
   if constexpr (command_bundle_t<Mode>::has_append_list) {
     r.append_list = b.append_list;
   }
+  if constexpr (command_bundle_t<Mode>::has_pnext) {
+    r.append_pnext = b.append_pnext;
+  }
   r.mode = Mode;
   return r;
 }
@@ -39,6 +42,9 @@ command_bundle_t<Mode> to_typed(const command_bundle &b) {
   if constexpr (command_bundle_t<Mode>::has_append_list) {
     t.append_list = b.append_list;
   }
+  if constexpr (command_bundle_t<Mode>::has_pnext) {
+    t.append_pnext = b.append_pnext;
+  }
   return t;
 }
 
@@ -52,6 +58,9 @@ decltype(auto) dispatch_mode(command_list_mode_t mode, F &&f) {
   case command_list_mode_t::immediate_append_regular:
     return f
         .template operator()<command_list_mode_t::immediate_append_regular>();
+  case command_list_mode_t::immediate_append_regular_with_params:
+    return f.template
+    operator()<command_list_mode_t::immediate_append_regular_with_params>();
   }
   std::abort();
 }
@@ -170,6 +179,36 @@ void destroy_command_bundle(command_bundle bundle) {
   dispatch_mode(bundle.mode, [&]<command_list_mode_t M>() {
     destroy_command_bundle<M>(to_typed<M>(bundle));
   });
+}
+
+std::string to_string(const command_list_mode_t mode) {
+  switch (mode) {
+  case command_list_mode_t::regular:
+    return "regular";
+  case command_list_mode_t::immediate:
+    return "immediate";
+  case command_list_mode_t::immediate_append_regular:
+    return "zeCommandListImmediateAppendCommandListsExp";
+  case command_list_mode_t::immediate_append_regular_with_params:
+    return "zeCommandListImmediateAppendCommandListsWithParameters";
+  default:
+    return "Unknown command_list_mode_t value: " +
+           std::to_string(static_cast<int>(mode));
+  }
+}
+
+command_list_mode_t from_string(const std::string &str) {
+  if (str == "regular") {
+    return command_list_mode_t::regular;
+  } else if (str == "immediate") {
+    return command_list_mode_t::immediate;
+  } else if (str == "zeCommandListImmediateAppendCommandListsExp") {
+    return command_list_mode_t::immediate_append_regular;
+  } else if (str == "zeCommandListImmediateAppendCommandListsWithParameters") {
+    return command_list_mode_t::immediate_append_regular_with_params;
+  } else {
+    throw std::invalid_argument("Unknown command_list_mode_t string: " + str);
+  }
 }
 
 } // namespace level_zero_tests

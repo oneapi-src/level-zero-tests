@@ -236,17 +236,15 @@ LZT_TEST_F(
 
 class P2PImageCopyMemory
     : public P2PImageCopy,
-      public ::testing::WithParamInterface<std::tuple<ze_memory_type_t, bool>> {
-};
+      public ::testing::WithParamInterface<
+          std::tuple<ze_memory_type_t, lzt::command_list_mode_t>> {};
 
 LZT_TEST_P(
     P2PImageCopyMemory,
     GivenTwoDevicesAndImageOnDeviceWhenCopiedToMemoryOnOtherDeviceThenResultIsCorrect) {
   if (skip)
     return;
-  bool is_immediate = std::get<1>(GetParam());
-  auto mode = is_immediate ? lzt::command_list_mode_t::immediate
-                           : lzt::command_list_mode_t::regular;
+  auto mode = std::get<1>(GetParam());
   auto cmd_bundle_dev0 = lzt::create_command_bundle(
       lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
@@ -308,9 +306,7 @@ LZT_TEST_P(
     GivenTwoDevicesAndImageOnDeviceWhenCopiedFromMemoryOnOtherDeviceThenResultIsCorrect) {
   if (skip)
     return;
-  bool is_immediate = std::get<1>(GetParam());
-  auto mode = is_immediate ? lzt::command_list_mode_t::immediate
-                           : lzt::command_list_mode_t::regular;
+  auto mode = std::get<1>(GetParam());
   auto cmd_bundle_dev0 = lzt::create_command_bundle(
       lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
@@ -368,9 +364,7 @@ LZT_TEST_P(
     GivenTwoDevicesAndImageOnRemoteDeviceWhenCopiedToMemoryOnLocalDeviceThenResultIsCorrect) {
   if (skip)
     return;
-  bool is_immediate = std::get<1>(GetParam());
-  auto mode = is_immediate ? lzt::command_list_mode_t::immediate
-                           : lzt::command_list_mode_t::regular;
+  auto mode = std::get<1>(GetParam());
   auto cmd_bundle_dev0 = lzt::create_command_bundle(
       lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
@@ -428,9 +422,7 @@ LZT_TEST_P(
     GivenTwoDevicesAndImageOnRemoteDeviceWhenCopiedFromMemoryOnLocalDeviceThenResultIsCorrect) {
   if (skip)
     return;
-  bool is_immediate = std::get<1>(GetParam());
-  auto mode = is_immediate ? lzt::command_list_mode_t::immediate
-                           : lzt::command_list_mode_t::regular;
+  auto mode = std::get<1>(GetParam());
   auto cmd_bundle_dev0 = lzt::create_command_bundle(
       lzt::get_default_context(), dev0, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
@@ -491,6 +483,7 @@ INSTANTIATE_TEST_SUITE_P(
     P2PImageMemory, P2PImageCopyMemory,
     ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_DEVICE,
                                          ZE_MEMORY_TYPE_SHARED),
-                       ::testing::Bool()));
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 } // namespace

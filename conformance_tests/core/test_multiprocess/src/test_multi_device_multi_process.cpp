@@ -24,7 +24,7 @@ namespace {
 constexpr size_t num_processes = 8;
 
 void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
-    int is_immediate, int is_stress_test) {
+    lzt::command_list_mode_t mode, int is_stress_test) {
 
   std::array<int, num_processes> process_results;
   std::vector<bp::child> processes;
@@ -39,7 +39,7 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
     fs::path helper = bp::search_path("test_process_helper", paths);
     bp::child execute_kernel_process(
         helper,
-        bp::args({std::to_string(i), std::to_string(is_immediate),
+        bp::args({std::to_string(i), to_string(mode),
                   std::to_string(is_stress_test)}),
         child_env);
     processes.push_back(std::move(execute_kernel_process));
@@ -55,19 +55,22 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
 
 LZT_TEST(MultiProcessTests,
          GivenMultipleProcessesUsingMultipleDevicesKernelsExecuteCorrectly) {
-  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(0, 0);
+  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
+      lzt::command_list_mode_t::regular, 0);
 }
 
 LZT_TEST(
     MultiProcessTests,
     GivenMultipleProcessesUsingMultipleDevicesKernelsExecuteOnImmediateCmdListCorrectly) {
-  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(1, 0);
+  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
+      lzt::command_list_mode_t::immediate, 0);
 }
 
 LZT_TEST(
     MultiProcessTests,
     GivenMultipleProcessesUsingMultipleSubDevicesThenKernelIsStressedAndExecuteSuccessfully) {
-  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(0, 1);
+  RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
+      lzt::command_list_mode_t::regular, 1);
 }
 
 } // namespace

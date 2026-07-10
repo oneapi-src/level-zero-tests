@@ -73,12 +73,12 @@ static WorkerRegistrar
 
 static constexpr uint32_t kernel_elem_count = 256;
 static constexpr uint64_t event_sync_timeout = 60'000'000'000ULL;
-static constexpr size_t kernel_buf_size =
-    kernel_elem_count * sizeof(uint32_t);
+static constexpr size_t kernel_buf_size = kernel_elem_count * sizeof(uint32_t);
+template <lzt::command_list_mode_t Mode>
 static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
                                             ze_device_handle_t device,
-                                            uint32_t *dst, bool is_immediate,
-                                            int pid, int child_index) {
+                                            uint32_t *dst, int pid,
+                                            int child_index) {
   uint32_t *src = static_cast<uint32_t *>(
       lzt::allocate_shared_memory(kernel_buf_size, 1, 0, 0, device, context));
   uint32_t *result_buf = static_cast<uint32_t *>(
@@ -119,8 +119,7 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
   dispatch.groupCountY = 1;
   dispatch.groupCountZ = 1;
 
-  lzt::zeCommandBundle bundle =
-      lzt::create_command_bundle(context, device, 0, is_immediate);
+  auto bundle = lzt::create_command_bundle<Mode>(context, device, 0u);
 
   lzt::append_launch_function(bundle.list, kernel, &dispatch, event1, 0,
                               nullptr);
@@ -132,17 +131,9 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
       << "[child=" << child_index << " pid=" << pid
       << "] Kernel launched, waiting for completion and synchronizing with "
          "host...";
-  if (is_immediate) {
-    lzt::synchronize_command_list_host(bundle.list, event_sync_timeout);
-    LOG_INFO << "[child=" << child_index << " pid=" << pid
-             << "] Immediate command list synchronized with host completed";
-  } else {
-    lzt::close_command_list(bundle.list);
-    lzt::execute_and_sync_command_bundle(bundle, event_sync_timeout);
-    LOG_INFO << "[child=" << child_index << " pid=" << pid
-             << "] Command list registered execution and host synchronization "
-                "completed";
-  }
+  lzt::execute_and_sync_command_bundle(bundle, event_sync_timeout);
+  LOG_INFO << "[child=" << child_index << " pid=" << pid
+           << "] Command list execution and host synchronization completed";
 
   lzt::event_host_synchronize(event2, event_sync_timeout);
   LOG_INFO << "[child=" << child_index << " pid=" << pid
@@ -177,7 +168,8 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
   }
 }
 
-static void run_kernel_worker(bool is_immediate, int child_index) {
+template <lzt::command_list_mode_t Mode>
+static void run_kernel_worker(int child_index) {
   lzt::ze_init(ZE_INIT_FLAG_GPU_ONLY);
   int pid = getpid();
 
@@ -187,8 +179,7 @@ static void run_kernel_worker(bool is_immediate, int child_index) {
 
   uint32_t *dst = static_cast<uint32_t *>(
       lzt::allocate_shared_memory(kernel_buf_size, 1, 0, 0, device, context));
-  run_simple_test_kernel_with_dst(context, device, dst, is_immediate, pid,
-                                  child_index);
+  run_simple_test_kernel_with_dst<Mode>(context, device, dst, pid, child_index);
 
   lzt::free_memory(context, dst);
   lzt::destroy_context(context);
@@ -196,12 +187,12 @@ static void run_kernel_worker(bool is_immediate, int child_index) {
 
 static WorkerRegistrar
     s_kernel_immediate_worker("kernel_immediate", [](int child_index) {
-      run_kernel_worker(true, child_index);
+      run_kernel_worker<lzt::command_list_mode_t::immediate>(child_index);
     });
 
 static WorkerRegistrar
     s_kernel_registered_worker("kernel_registered", [](int child_index) {
-      run_kernel_worker(false, child_index);
+      run_kernel_worker<lzt::command_list_mode_t::regular>(child_index);
     });
 
 int child_work(int child_index, ChildResults *shm,
@@ -289,7 +280,7 @@ static void run_children_and_verify(int num_children,
   }
 
 #else  // POSIX
-  std::vector<pid_t> pids(num_children);
+  std::vector<pid_t> pids(static_cast<size_t>(num_children));
   for (int i = 0; i < num_children; ++i) {
     pid_t pid = fork();
     if (pid == -1) {

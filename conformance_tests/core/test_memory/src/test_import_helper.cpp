@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021-2023 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -41,7 +41,9 @@ int main(int argc, char **argv) {
   auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
-  bool is_immediate = (argv[2][0] != '0');
+  lzt::command_list_mode_t mode = (argv[2][0] != '0')
+                                      ? lzt::command_list_mode_t::immediate
+                                      : lzt::command_list_mode_t::regular;
   bool is_device = (argv[3][0] != '0');
 
 #ifdef __linux__
@@ -84,8 +86,8 @@ int main(int argc, char **argv) {
   }
 
   auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   uint8_t pattern = 0xAB;
   lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
@@ -216,8 +218,8 @@ int main(int argc, char **argv) {
   } while (!pipeCommandSuccess); // repeat loop if ERROR_MORE_DATA
 
   auto cmd_bundle = lzt::create_command_bundle(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   void *imported_memory;
   auto size = 1024;

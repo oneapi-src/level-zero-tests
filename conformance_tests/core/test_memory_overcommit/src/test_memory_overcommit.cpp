@@ -24,7 +24,7 @@ enum shared_memory_type { SHARED_LOCAL, SHARED_CROSS, SHARED_SYSTEM };
 class zeDriverMemoryOvercommitTests
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<uint32_t, uint32_t, uint32_t, bool>> {
+          std::tuple<uint32_t, uint32_t, uint32_t, lzt::command_list_mode_t>> {
 protected:
   ze_module_handle_t create_module(ze_context_handle_t context,
                                    const ze_device_handle_t device,
@@ -56,7 +56,8 @@ protected:
                      uint64_t *gpu_expected_output_buffer,
                      uint64_t *host_found_output_buffer,
                      uint64_t *gpu_found_output_buffer, uint32_t output_count,
-                     ze_context_handle_t context, bool is_immediate) {
+                     ze_context_handle_t context,
+                     lzt::command_list_mode_t mode) {
     ze_kernel_desc_t fill_function_description = {};
     fill_function_description.stype = ZE_STRUCTURE_TYPE_KERNEL_DESC;
 
@@ -111,7 +112,7 @@ protected:
 
     auto cmd_bundle = lzt::create_command_bundle(
         context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, mode);
 
     ze_group_count_t thread_group_dimensions = {1, 1, 1};
 
@@ -281,7 +282,7 @@ protected:
                               uint32_t memory_size_multiple,
                               ze_memory_type_t memory_type,
                               shared_memory_type shr_mem_type,
-                              bool is_immediate) {
+                              lzt::command_list_mode_t mode) {
 
     LOG_INFO << "TEST ARGUMENTS "
              << "driver_index " << driver_index << " device_in_driver_index "
@@ -449,7 +450,7 @@ protected:
                   pattern_memory_count, pattern_base,
                   host_expected_output_buffer, gpu_expected_output_buffer,
                   host_found_output_buffer, gpu_found_output_buffer,
-                  output_count_, context, is_immediate);
+                  output_count_, context, mode);
 
     LOG_INFO << "call free memory";
     if (memory_type == ZE_MEMORY_TYPE_SHARED && shr_mem_type == SHARED_SYSTEM) {
@@ -524,8 +525,8 @@ protected:
      * multiple.
      */
     uint32_t memory_size_multiple;
-    /* Whether to use immediate command list in the test */
-    bool is_immediate;
+    /* Command list mode to use in the test */
+    lzt::command_list_mode_t mode;
   } MemoryTestArguments_t;
 
   uint32_t use_this_ordinal_on_device_ = 0;
@@ -547,11 +548,11 @@ LZT_TEST_P(
   uint32_t driver_index = test_arguments.driver_index;
   uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
   uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
-  bool is_immediate = test_arguments.is_immediate;
+  auto mode = test_arguments.mode;
 
   test_memory_overcommit(driver_index, device_in_driver_index,
                          memory_size_multiple, ZE_MEMORY_TYPE_DEVICE,
-                         SHARED_LOCAL, is_immediate);
+                         SHARED_LOCAL, mode);
 }
 
 LZT_TEST_P(
@@ -568,11 +569,11 @@ LZT_TEST_P(
   uint32_t driver_index = test_arguments.driver_index;
   uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
   uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
-  bool is_immediate = test_arguments.is_immediate;
+  auto mode = test_arguments.mode;
 
   test_memory_overcommit(driver_index, device_in_driver_index,
                          memory_size_multiple, ZE_MEMORY_TYPE_SHARED,
-                         SHARED_LOCAL, is_immediate);
+                         SHARED_LOCAL, mode);
 }
 
 LZT_TEST_P(
@@ -589,11 +590,11 @@ LZT_TEST_P(
   uint32_t driver_index = test_arguments.driver_index;
   uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
   uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
-  bool is_immediate = test_arguments.is_immediate;
+  auto mode = test_arguments.mode;
 
   test_memory_overcommit(driver_index, device_in_driver_index,
                          memory_size_multiple, ZE_MEMORY_TYPE_SHARED,
-                         SHARED_SYSTEM, is_immediate);
+                         SHARED_SYSTEM, mode);
 }
 
 LZT_TEST_P(
@@ -610,16 +611,18 @@ LZT_TEST_P(
   uint32_t driver_index = test_arguments.driver_index;
   uint32_t device_in_driver_index = test_arguments.device_in_driver_index;
   uint32_t memory_size_multiple = test_arguments.memory_size_multiple;
-  bool is_immediate = test_arguments.is_immediate;
+  auto mode = test_arguments.mode;
 
   test_memory_overcommit(driver_index, device_in_driver_index,
                          memory_size_multiple, ZE_MEMORY_TYPE_SHARED,
-                         SHARED_CROSS, is_immediate);
+                         SHARED_CROSS, mode);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     TestAllInputPermuntations, zeDriverMemoryOvercommitTests,
     ::testing::Combine(::testing::Values(0), ::testing::Values(0),
-                       ::testing::Values(1, 2, 4), ::testing::Bool()));
+                       ::testing::Values(1, 2, 4),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate)));
 
 } // namespace

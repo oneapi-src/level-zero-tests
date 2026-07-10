@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -135,7 +135,8 @@ void make_resident_evict_API(ze_module_handle_t module) {
   }
 }
 
-void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
+void indirect_access_Kernel(ze_module_handle_t module,
+                            lzt::command_list_mode_t mode) {
   ze_kernel_handle_t kernel;
 
   auto context = lzt::get_default_context();
@@ -163,7 +164,7 @@ void indirect_access_Kernel(ze_module_handle_t module, bool is_immediate) {
 
   for (size_t iter = 0U; iter < thread_iters; iter++) {
     // set up
-    auto cmd_bundle = lzt::create_command_bundle(device, is_immediate);
+    auto cmd_bundle = lzt::create_command_bundle(device, mode);
     kernel = lzt::create_function(module, ZE_KERNEL_FLAG_FORCE_RESIDENCY,
                                   "residency_function");
 
@@ -288,8 +289,8 @@ LZT_TEST(
       lzt::create_module(device, "residency_tests_multi_thread.spv");
 
   for (size_t i = 0U; i < num_threads; i++) {
-    threads.push_back(std::unique_ptr<std::thread>(
-        new std::thread(indirect_access_Kernel, module, false)));
+    threads.push_back(std::unique_ptr<std::thread>(new std::thread(
+        indirect_access_Kernel, module, lzt::command_list_mode_t::regular)));
   }
 
   for (size_t i = 0U; i < num_threads; i++) {
@@ -313,8 +314,8 @@ LZT_TEST(
       lzt::create_module(device, "residency_tests_multi_thread.spv");
 
   for (size_t i = 0U; i < num_threads; i++) {
-    threads.push_back(std::unique_ptr<std::thread>(
-        new std::thread(indirect_access_Kernel, module, true)));
+    threads.push_back(std::unique_ptr<std::thread>(new std::thread(
+        indirect_access_Kernel, module, lzt::command_list_mode_t::immediate)));
   }
 
   for (size_t i = 0U; i < num_threads; i++) {

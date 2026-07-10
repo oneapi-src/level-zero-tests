@@ -878,14 +878,15 @@ LZT_TEST(
   }
 }
 
-void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
+template <lzt::command_list_mode_t Mode>
+void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest() {
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto context = lzt::create_context(driver);
 
-  auto cmd_bundle = lzt::create_command_bundle(
+  auto cmd_bundle = lzt::create_command_bundle<Mode>(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
+      ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
 
   auto module = lzt::create_module(context, device, "module_add.spv");
   auto kernel = lzt::create_function(module, "module_add_constant_2");
@@ -920,13 +921,12 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
-  lzt::append_memory_copy(cmd_bundle.list, buffer_b, buffer_a, size);
-  lzt::append_barrier(cmd_bundle.list);
-  lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr, 0,
-                              nullptr);
-  lzt::append_barrier(cmd_bundle.list);
-  lzt::append_memory_copy(cmd_bundle.list, buffer_a, buffer_b, size);
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::append_memory_copy(cmd_bundle.record_list(), buffer_b, buffer_a, size);
+  lzt::append_barrier(cmd_bundle.record_list());
+  lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                              nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_bundle.record_list());
+  lzt::append_memory_copy(cmd_bundle.record_list(), buffer_a, buffer_b, size);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   auto timestamps_1 = lzt::get_global_timestamps(device);
@@ -975,13 +975,15 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(bool is_immediate) {
 LZT_TEST(
     TimestampsTest,
     GivenExecutedKernelWhenGettingGlobalTimestampsThenDeviceAndHostTimestampDurationsAreClose) {
-  RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(false);
+  RunGivenExecutedKernelWhenGettingGlobalTimestampsTest<
+      lzt::command_list_mode_t::regular>();
 }
 
 LZT_TEST(
     TimestampsTest,
     GivenExecutedKernelWhenGettingGlobalTimestampsOnImmediateCmdListThenDeviceAndHostTimestampDurationsAreClose) {
-  RunGivenExecutedKernelWhenGettingGlobalTimestampsTest(true);
+  RunGivenExecutedKernelWhenGettingGlobalTimestampsTest<
+      lzt::command_list_mode_t::immediate>();
 }
 
 LZT_TEST(DeviceStatusTest,
