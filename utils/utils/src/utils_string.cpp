@@ -1120,6 +1120,34 @@ std::string to_string(const zes_engine_type_flag_t flag) {
   }
 }
 
+std::string to_string(const ze_memory_access_attribute_t attribute) {
+  switch (attribute) {
+  case ZE_MEMORY_ACCESS_ATTRIBUTE_NONE:
+    return "ZE_MEMORY_ACCESS_ATTRIBUTE_NONE";
+  case ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE:
+    return "ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE";
+  case ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY:
+    return "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY";
+  default:
+    return "Unknown ze_memory_access_attribute_t value: " +
+           std::to_string(static_cast<int>(attribute));
+  }
+}
+
+std::string to_string(const ze_device_readonly_memory_capability_t capability) {
+  switch (capability) {
+  case ZE_DEVICE_READONLY_MEMORY_CAPABILITY_NONE:
+    return "ZE_DEVICE_READONLY_MEMORY_CAPABILITY_NONE";
+  case ZE_DEVICE_READONLY_MEMORY_CAPABILITY_HINT:
+    return "ZE_DEVICE_READONLY_MEMORY_CAPABILITY_HINT";
+  case ZE_DEVICE_READONLY_MEMORY_CAPABILITY_ENFORCED:
+    return "ZE_DEVICE_READONLY_MEMORY_CAPABILITY_ENFORCED";
+  default:
+    return "Unknown ze_device_readonly_memory_capability_t value: " +
+           std::to_string(static_cast<int>(capability));
+  }
+}
+
 } // namespace level_zero_tests
 
 std::ostream &operator<<(std::ostream &os, const ze_api_version_t &x) {

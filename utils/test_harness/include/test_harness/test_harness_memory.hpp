@@ -200,6 +200,11 @@ void virtual_memory_map(ze_context_handle_t context,
                         const void *reservedVirtualMemory, size_t size,
                         ze_physical_mem_handle_t physical_memory, size_t offset,
                         ze_memory_access_attribute_t access);
+void virtual_memory_map(ze_context_handle_t context,
+                        const void *reservedVirtualMemory, size_t size,
+                        ze_physical_mem_handle_t physical_memory, size_t offset,
+                        ze_memory_access_attribute_t access,
+                        ze_result_t &result);
 void virtual_memory_unmap(ze_context_handle_t hContext,
                           const void *reservedVirtualMemory, size_t size);
 size_t create_page_aligned_size(size_t requested_size, size_t page_size);

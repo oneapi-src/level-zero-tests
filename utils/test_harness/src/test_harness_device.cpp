@@ -159,16 +159,34 @@ ze_device_properties_t get_device_properties(ze_device_handle_t device) {
 
 ze_device_properties_t get_device_properties(ze_device_handle_t device,
                                              ze_structure_type_t stype) {
+  return get_device_properties(device, stype, nullptr);
+}
+
+ze_device_properties_t get_device_properties(ze_device_handle_t device,
+                                             ze_structure_type_t stype,
+                                             void *p_next) {
   auto device_initial = device;
   ze_device_properties_t properties = {};
   if (stype == ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES_1_2) {
     properties.stype = stype;
+    properties.pNext = p_next;
   } else {
     properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+    properties.pNext = p_next;
   }
   EXPECT_ZE_RESULT_SUCCESS(zeDeviceGetProperties(device, &properties));
   EXPECT_EQ(device, device_initial);
   return properties;
+}
+
+ze_device_readonly_memory_ext_properties_t
+get_device_readonly_memory_ext_properties(ze_device_handle_t device) {
+  ze_device_readonly_memory_ext_properties_t ro_props = {};
+  ro_props.stype = ZE_STRUCTURE_TYPE_DEVICE_READONLY_MEMORY_EXT_PROPERTIES;
+  ro_props.pNext = nullptr;
+
+  get_device_properties(device, ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, &ro_props);
+  return ro_props;
 }
 
 ze_device_compute_properties_t

@@ -69,6 +69,8 @@ std::string to_string(const ze_mutable_command_list_exp_flags_t flag);
 std::string to_string(const ze_mutable_command_exp_flag_t flag);
 std::string to_string(const zet_device_debug_property_flag_t flag);
 std::string to_string(const zes_engine_type_flag_t flag);
+std::string to_string(const ze_memory_access_attribute_t attribute);
+std::string to_string(const ze_device_readonly_memory_capability_t capability);
 ze_image_format_layout_t to_layout(const std::string layout);
 ze_image_format_type_t to_format_type(const std::string format_type);
 ze_image_flags_t to_image_flag(const std::string flag);

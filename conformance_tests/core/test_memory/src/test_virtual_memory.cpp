@@ -32,6 +32,23 @@ protected:
   void TearDown() override {}
 
 public:
+  void
+  set_virtual_mem_access_and_verify(ze_memory_access_attribute_t new_access) {
+    ze_memory_access_attribute_t access =
+        ZE_MEMORY_ACCESS_ATTRIBUTE_FORCE_UINT32;
+    size_t memory_size = 0;
+    lzt::virtual_memory_reservation_get_access(
+        context, reservedVirtualMemory, allocationSize, &access, &memory_size);
+    LOG_INFO << "Changing virtual memory access from " << lzt::to_string(access)
+             << " to " << lzt::to_string(new_access) << '\n';
+    lzt::virtual_memory_reservation_set_access(context, reservedVirtualMemory,
+                                               allocationSize, new_access);
+    lzt::virtual_memory_reservation_get_access(
+        context, reservedVirtualMemory, allocationSize, &access, &memory_size);
+    EXPECT_EQ(access, new_access);
+    EXPECT_GE(memory_size, allocationSize);
+  }
+
   ze_context_handle_t context;
   ze_device_handle_t device;
   size_t pageSize = 1ul << 21;
@@ -136,71 +153,173 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
   void *memory_out =
       lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
 
-  const uint32_t zero_pattern = 0;
   const uint32_t input_pattern = 0x99999999;
   const uint32_t output_pattern = 0x66666666;
 
   auto bundle = lzt::create_command_bundle(test.device, mode);
-  lzt::reset_command_list(bundle.list);
 
   std::vector<ze_memory_access_attribute_t> memoryAccessFlags = {
-      ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE,
+      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY,
       ZE_MEMORY_ACCESS_ATTRIBUTE_NONE};
 
-  lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
-                          test.allocationSize, reservedPhysicalMemory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
-
   for (auto accessFlags : memoryAccessFlags) {
-    lzt::virtual_memory_reservation_set_access(
-        test.context, test.reservedVirtualMemory, test.allocationSize,
-        accessFlags);
-    lzt::virtual_memory_reservation_get_access(
-        test.context, test.reservedVirtualMemory, test.allocationSize, &access,
-        &memorySize);
-    EXPECT_EQ(accessFlags, access);
-
-    lzt::append_memory_fill(bundle.list, test.reservedVirtualMemory,
-                            &zero_pattern, sizeof(zero_pattern),
-                            test.allocationSize, nullptr);
-    lzt::append_memory_fill(bundle.list, memory_out, &output_pattern,
-                            sizeof(output_pattern), test.allocationSize,
-                            nullptr);
-    lzt::append_memory_fill(bundle.list, memory_in, &input_pattern,
-                            sizeof(input_pattern), test.allocationSize,
-                            nullptr);
-    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(bundle.list, test.reservedVirtualMemory, memory_in,
-                            test.allocationSize, nullptr);
-    lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(bundle.list, memory_out, test.reservedVirtualMemory,
-                            test.allocationSize, nullptr);
-    lzt::close_command_list(bundle.list);
-    lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
-
-    uint32_t output_value = reinterpret_cast<uint32_t *>(memory_out)[0];
+    LOG_INFO << "ze_memory_access_attribute_t: " << lzt::to_string(accessFlags);
+    bool map_failed = false;
+    ze_result_t map_result = ZE_RESULT_SUCCESS;
 
     switch (accessFlags) {
-    case ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE:
-      EXPECT_EQ(output_value, input_pattern);
-      break;
-    case ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY:
-      EXPECT_EQ(output_value, zero_pattern);
-      break;
-    default:
-      EXPECT_EQ(output_value, ~input_pattern);
-      break;
-    };
-  }
+    case ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE: {
+      lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
+                              test.allocationSize, reservedPhysicalMemory, 0,
+                              ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, map_result);
+      if (map_result != ZE_RESULT_SUCCESS) {
+        map_failed = true;
+        break;
+      }
+      test.set_virtual_mem_access_and_verify(
+          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
 
-  lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
-                            test.allocationSize);
+      lzt::append_memory_fill(bundle.record_list(), memory_out, &output_pattern,
+                              sizeof(output_pattern), test.allocationSize,
+                              nullptr);
+      lzt::append_memory_fill(bundle.record_list(), memory_in, &input_pattern,
+                              sizeof(input_pattern), test.allocationSize,
+                              nullptr);
+      lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+      lzt::append_memory_copy(bundle.record_list(), test.reservedVirtualMemory,
+                              memory_in, test.allocationSize, nullptr);
+      lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+      lzt::append_memory_copy(bundle.record_list(), memory_out,
+                              test.reservedVirtualMemory, test.allocationSize,
+                              nullptr);
+      lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+      EXPECT_EQ(reinterpret_cast<uint32_t *>(memory_out)[0], input_pattern);
+
+      lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                test.allocationSize);
+      break;
+    }
+    case ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY: {
+      const auto readonly_capability =
+          lzt::get_device_readonly_memory_ext_properties(test.device)
+              .readonlyCapability;
+      LOG_INFO << "ze_device_readonly_memory_capability_t: "
+               << lzt::to_string(readonly_capability);
+      if (readonly_capability ==
+          ZE_DEVICE_READONLY_MEMORY_CAPABILITY_ENFORCED) {
+        // Read-only is hardware-enforced: writing the range would fault.
+        // The write is never issued against the read-only range.
+        lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
+                                test.allocationSize, reservedPhysicalMemory, 0,
+                                ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, map_result);
+        if (map_result != ZE_RESULT_SUCCESS) {
+          map_failed = true;
+          break;
+        }
+        test.set_virtual_mem_access_and_verify(
+            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+        lzt::append_memory_fill(
+            bundle.record_list(), test.reservedVirtualMemory, &input_pattern,
+            sizeof(input_pattern), test.allocationSize, nullptr);
+        lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+        lzt::reset_command_bundle(bundle);
+        lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                  test.allocationSize);
+
+        lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
+                                test.allocationSize, reservedPhysicalMemory, 0,
+                                ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, map_result);
+        if (map_result != ZE_RESULT_SUCCESS) {
+          map_failed = true;
+          break;
+        }
+        test.set_virtual_mem_access_and_verify(
+            ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY);
+
+        // Reads are permitted on a read-only range, so the seeded value must
+        // read back.
+        lzt::append_memory_fill(bundle.record_list(), memory_out,
+                                &output_pattern, sizeof(output_pattern),
+                                test.allocationSize, nullptr);
+        lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+        lzt::append_memory_copy(bundle.record_list(), memory_out,
+                                test.reservedVirtualMemory, test.allocationSize,
+                                nullptr);
+        lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+        EXPECT_EQ(reinterpret_cast<uint32_t *>(memory_out)[0], input_pattern);
+      } else {
+        // Read-only has no effect (NONE) or is a non-faulting hint: a GPU write
+        // to the range will not fault.
+        lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
+                                test.allocationSize, reservedPhysicalMemory, 0,
+                                ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, map_result);
+        if (map_result != ZE_RESULT_SUCCESS) {
+          map_failed = true;
+          break;
+        }
+        test.set_virtual_mem_access_and_verify(
+            ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY);
+
+        lzt::append_memory_fill(bundle.record_list(), memory_out,
+                                &output_pattern, sizeof(output_pattern),
+                                test.allocationSize, nullptr);
+        lzt::append_memory_fill(bundle.record_list(), memory_in, &input_pattern,
+                                sizeof(input_pattern), test.allocationSize,
+                                nullptr);
+        lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+        lzt::append_memory_copy(bundle.record_list(),
+                                test.reservedVirtualMemory, memory_in,
+                                test.allocationSize, nullptr);
+        lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+        lzt::append_memory_copy(bundle.record_list(), memory_out,
+                                test.reservedVirtualMemory, test.allocationSize,
+                                nullptr);
+        lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+        if (readonly_capability == ZE_DEVICE_READONLY_MEMORY_CAPABILITY_HINT) {
+          LOG_WARNING << "Read-only is a performance hint; write result is "
+                         "unpredictable, skipping value check.";
+        } else {
+          EXPECT_EQ(reinterpret_cast<uint32_t *>(memory_out)[0], input_pattern);
+        }
+      }
+
+      lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                test.allocationSize);
+      break;
+    }
+    case ZE_MEMORY_ACCESS_ATTRIBUTE_NONE:
+    default:
+      // The range is inaccessible; any GPU read or write would fault on an
+      // enforcing device, so only the map/get access round-trip is validated.
+      lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
+                              test.allocationSize, reservedPhysicalMemory, 0,
+                              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, map_result);
+      if (map_result != ZE_RESULT_SUCCESS) {
+        map_failed = true;
+        break;
+      }
+      test.set_virtual_mem_access_and_verify(ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+      lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                test.allocationSize);
+      break;
+    }
+
+    lzt::reset_command_bundle(bundle);
+
+    if (map_failed) {
+      ADD_FAILURE() << "zeVirtualMemMap failed with result " << map_result;
+      LOG_WARNING << "Skipping remaining access-attribute permutations after "
+                     "zeVirtualMemMap failure.";
+      break;
+    }
+  }
 
   lzt::free_memory(memory_in);
   lzt::free_memory(memory_out);
   lzt::physical_memory_destroy(test.context, reservedPhysicalMemory);
   lzt::virtual_memory_free(test.context, test.reservedVirtualMemory,
                            test.allocationSize);
+  lzt::destroy_command_bundle(bundle);
 }
 
 LZT_TEST_F(

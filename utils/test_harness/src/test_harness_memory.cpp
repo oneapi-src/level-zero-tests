@@ -643,9 +643,20 @@ void physical_memory_destroy(ze_context_handle_t context,
 void virtual_memory_map(ze_context_handle_t context,
                         const void *reservedVirtualMemory, size_t size,
                         ze_physical_mem_handle_t physical_memory, size_t offset,
+                        ze_memory_access_attribute_t access,
+                        ze_result_t &result) {
+  result = zeVirtualMemMap(context, reservedVirtualMemory, size,
+                           physical_memory, offset, access);
+}
+
+void virtual_memory_map(ze_context_handle_t context,
+                        const void *reservedVirtualMemory, size_t size,
+                        ze_physical_mem_handle_t physical_memory, size_t offset,
                         ze_memory_access_attribute_t access) {
-  EXPECT_ZE_RESULT_SUCCESS(zeVirtualMemMap(context, reservedVirtualMemory, size,
-                                           physical_memory, offset, access));
+  ze_result_t result = ZE_RESULT_SUCCESS;
+  virtual_memory_map(context, reservedVirtualMemory, size, physical_memory,
+                     offset, access, result);
+  EXPECT_ZE_RESULT_SUCCESS(result);
 }
 
 void virtual_memory_unmap(ze_context_handle_t context,
